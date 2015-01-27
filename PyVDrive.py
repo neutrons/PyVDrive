@@ -110,6 +110,13 @@ class PyVDrive:
         
         return
         
+    def setEventFilter(self, projname, logname, minvalue, maxvalue, step):
+        """ Set event file
+        """
+        self._checkProjectExistence(projname, "set event filter.")
+
+        self.
+
         
     def _checkProjectExistence(self, projname, operation):
         """ Check wehtehr a project (name) does exist
@@ -119,3 +126,4 @@ class PyVDrive:
                 projname, operation))
         
         return
+

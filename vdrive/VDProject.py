@@ -1,10 +1,5 @@
 import sys
 
-sys.path.append("/home/wzz/Mantid/Code/debug/bin/")
-
-import mantid
-import mantid.simpleapi as mtd
-
 class VDProject:
     """
     """
@@ -21,6 +16,8 @@ class VDProject:
         """ Add a new data file to project
         """
         self._dataset.append(datafilename)
+
+        return
         
         
         
@@ -53,12 +50,22 @@ class ReductioProject(VDProject):
         self._paramDict = paramdict
         
         return
+
+
+    def setFilter(self):
+        """ Set events filter for chopping the data
+        """
+
         
     def reduce(self):
+        """ Reduce by calling SNSPowderReduction
         """
-        """
-        mtd.SNSPowderReduction()
-        
+        import SNSPowderReductionLite as PRL
+
+        pdd = PRL.SNSPowderReductionLite(calibfile=self._calibfilename)
+
+        raise NotImplementedError("From here!")
+
         return
         
  
