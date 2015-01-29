@@ -115,7 +115,7 @@ class PyVDrive:
         """
         self._checkProjectExistence(projname, "set event filter.")
 
-        self.
+        return
 
         
     def _checkProjectExistence(self, projname, operation):
