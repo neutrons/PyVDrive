@@ -27,7 +27,14 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNew"/>
+    <widget class="QMenu" name="menuNew">
+     <property name="title">
+      <string>New</string>
+     </property>
+     <addaction name="actionReduction_Project"/>
+     <addaction name="actionAnalysis_Project"/>
+    </widget>
+    <addaction name="menuNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionClose"/>
     <addaction name="separator"/>
@@ -35,6 +42,7 @@
     <addaction name="actionSave_As"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -62,18 +70,24 @@
      <item row="0" column="0">
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QTreeView" name="treeView"/>
+        <widget class="QTreeWidget" name="treeWidget_Project">
+         <column>
+          <property name="text">
+           <string>Project</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>File</string>
+          </property>
+         </column>
+        </widget>
        </item>
       </layout>
      </item>
     </layout>
    </widget>
   </widget>
-  <action name="actionNew">
-   <property name="text">
-    <string>New</string>
-   </property>
-  </action>
   <action name="actionOpen">
    <property name="text">
     <string>Open</string>
@@ -107,6 +121,16 @@
   <action name="actionSave_Setup">
    <property name="text">
     <string>Save Setup</string>
+   </property>
+  </action>
+  <action name="actionReduction_Project">
+   <property name="text">
+    <string>Reduction Project</string>
+   </property>
+  </action>
+  <action name="actionAnalysis_Project">
+   <property name="text">
+    <string>Analysis Project</string>
    </property>
   </action>
  </widget>

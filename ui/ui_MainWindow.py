@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Thu Jan 29 17:16:45 2015
+# Created: Fri Jan 30 11:46:39 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -35,6 +35,8 @@ class Ui_MainWindow(object):
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuVDrive_2_0 = QtGui.QMenu(self.menubar)
         self.menuVDrive_2_0.setObjectName(_fromUtf8("menuVDrive_2_0"))
+        self.menuNew = QtGui.QMenu(self.menuVDrive_2_0)
+        self.menuNew.setObjectName(_fromUtf8("menuNew"))
         self.menuEdit = QtGui.QMenu(self.menubar)
         self.menuEdit.setObjectName(_fromUtf8("menuEdit"))
         self.menuReduction = QtGui.QMenu(self.menubar)
@@ -51,14 +53,12 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.treeView = QtGui.QTreeView(self.dockWidgetContents)
-        self.treeView.setObjectName(_fromUtf8("treeView"))
-        self.horizontalLayout.addWidget(self.treeView)
+        self.treeWidget_Project = QtGui.QTreeWidget(self.dockWidgetContents)
+        self.treeWidget_Project.setObjectName(_fromUtf8("treeWidget_Project"))
+        self.horizontalLayout.addWidget(self.treeWidget_Project)
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
         self.dock_.setWidget(self.dockWidgetContents)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dock_)
-        self.actionNew = QtGui.QAction(MainWindow)
-        self.actionNew.setObjectName(_fromUtf8("actionNew"))
         self.actionOpen = QtGui.QAction(MainWindow)
         self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
         self.actionClose = QtGui.QAction(MainWindow)
@@ -73,7 +73,13 @@ class Ui_MainWindow(object):
         self.actionNewReduction.setObjectName(_fromUtf8("actionNewReduction"))
         self.actionSave_Setup = QtGui.QAction(MainWindow)
         self.actionSave_Setup.setObjectName(_fromUtf8("actionSave_Setup"))
-        self.menuVDrive_2_0.addAction(self.actionNew)
+        self.actionReduction_Project = QtGui.QAction(MainWindow)
+        self.actionReduction_Project.setObjectName(_fromUtf8("actionReduction_Project"))
+        self.actionAnalysis_Project = QtGui.QAction(MainWindow)
+        self.actionAnalysis_Project.setObjectName(_fromUtf8("actionAnalysis_Project"))
+        self.menuNew.addAction(self.actionReduction_Project)
+        self.menuNew.addAction(self.actionAnalysis_Project)
+        self.menuVDrive_2_0.addAction(self.menuNew.menuAction())
         self.menuVDrive_2_0.addAction(self.actionOpen)
         self.menuVDrive_2_0.addAction(self.actionClose)
         self.menuVDrive_2_0.addSeparator()
@@ -81,6 +87,7 @@ class Ui_MainWindow(object):
         self.menuVDrive_2_0.addAction(self.actionSave_As)
         self.menuVDrive_2_0.addSeparator()
         self.menuVDrive_2_0.addAction(self.actionQuit)
+        self.menuVDrive_2_0.addSeparator()
         self.menuReduction.addAction(self.actionNewReduction)
         self.menuReduction.addAction(self.actionSave_Setup)
         self.menubar.addAction(self.menuVDrive_2_0.menuAction())
@@ -93,9 +100,11 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
         self.menuVDrive_2_0.setTitle(_translate("MainWindow", "File", None))
+        self.menuNew.setTitle(_translate("MainWindow", "New", None))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
         self.menuReduction.setTitle(_translate("MainWindow", "Reduction", None))
-        self.actionNew.setText(_translate("MainWindow", "New", None))
+        self.treeWidget_Project.headerItem().setText(0, _translate("MainWindow", "Project", None))
+        self.treeWidget_Project.headerItem().setText(1, _translate("MainWindow", "File", None))
         self.actionOpen.setText(_translate("MainWindow", "Open", None))
         self.actionClose.setText(_translate("MainWindow", "Close", None))
         self.actionSave.setText(_translate("MainWindow", "Save", None))
@@ -103,4 +112,6 @@ class Ui_MainWindow(object):
         self.actionQuit.setText(_translate("MainWindow", "Quit", None))
         self.actionNewReduction.setText(_translate("MainWindow", "New", None))
         self.actionSave_Setup.setText(_translate("MainWindow", "Save Setup", None))
+        self.actionReduction_Project.setText(_translate("MainWindow", "Reduction Project", None))
+        self.actionAnalysis_Project.setText(_translate("MainWindow", "Analysis Project", None))
 
