@@ -67,13 +67,13 @@ class AppTemplateMain(QtGui.QMainWindow):
         
         # Launch dialog for project name
         # FIXME - this multithreading also fails
-        p = Process(target=self.showProjectNameWindow, args=('good',))
-        p.start()
-        p.join()
+        # p = Process(target=self.showProjectNameWindow, args=('good',))
+        # p.start()
+        # p.join()
         
         
-        #self.projnamewindow = npj.MyProjectNameWindow(self)
-        #self.projnamewindow.show()
+        self.projnamewindow = npj.MyProjectNameWindow(self)
+        self.projnamewindow.show()
         
         # wait: this is not good!  
         # FIXME - the window does not launch after show().  It might be launched after this method is returned? 

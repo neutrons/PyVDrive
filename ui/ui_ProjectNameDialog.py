@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui_ProjectNameDiaglog.ui'
+# Form implementation generated from reading ui file 'ui_ProjectNameDialog.ui'
 #
-# Created: Fri Jan 30 11:59:49 2015
-#      by: PyQt4 UI code generator 4.11.2
+# Created: Fri Jan 30 15:25:03 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -26,6 +26,7 @@ except AttributeError:
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
+        Dialog.setWindowModality(QtCore.Qt.WindowModal)
         Dialog.resize(469, 137)
         self.verticalLayout = QtGui.QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
