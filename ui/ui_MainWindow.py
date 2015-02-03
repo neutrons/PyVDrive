@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Fri Jan 30 11:46:39 2015
+# Created: Tue Feb  3 12:19:15 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,12 +26,12 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(1027, 814)
+        MainWindow.resize(849, 744)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1027, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 849, 25))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuVDrive_2_0 = QtGui.QMenu(self.menubar)
         self.menuVDrive_2_0.setObjectName(_fromUtf8("menuVDrive_2_0"))
@@ -41,6 +41,8 @@ class Ui_MainWindow(object):
         self.menuEdit.setObjectName(_fromUtf8("menuEdit"))
         self.menuReduction = QtGui.QMenu(self.menubar)
         self.menuReduction.setObjectName(_fromUtf8("menuReduction"))
+        self.menuHelp = QtGui.QMenu(self.menubar)
+        self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName(_fromUtf8("statusbar"))
@@ -73,11 +75,19 @@ class Ui_MainWindow(object):
         self.actionNewReduction.setObjectName(_fromUtf8("actionNewReduction"))
         self.actionSave_Setup = QtGui.QAction(MainWindow)
         self.actionSave_Setup.setObjectName(_fromUtf8("actionSave_Setup"))
-        self.actionReduction_Project = QtGui.QAction(MainWindow)
-        self.actionReduction_Project.setObjectName(_fromUtf8("actionReduction_Project"))
+        self.actionFile_New_Reduction = QtGui.QAction(MainWindow)
+        self.actionFile_New_Reduction.setObjectName(_fromUtf8("actionFile_New_Reduction"))
         self.actionAnalysis_Project = QtGui.QAction(MainWindow)
         self.actionAnalysis_Project.setObjectName(_fromUtf8("actionAnalysis_Project"))
-        self.menuNew.addAction(self.actionReduction_Project)
+        self.actionReduction_NewSetup = QtGui.QAction(MainWindow)
+        self.actionReduction_NewSetup.setObjectName(_fromUtf8("actionReduction_NewSetup"))
+        self.actionDelete = QtGui.QAction(MainWindow)
+        self.actionDelete.setObjectName(_fromUtf8("actionDelete"))
+        self.actionLoad_Setup = QtGui.QAction(MainWindow)
+        self.actionLoad_Setup.setObjectName(_fromUtf8("actionLoad_Setup"))
+        self.actionReset = QtGui.QAction(MainWindow)
+        self.actionReset.setObjectName(_fromUtf8("actionReset"))
+        self.menuNew.addAction(self.actionFile_New_Reduction)
         self.menuNew.addAction(self.actionAnalysis_Project)
         self.menuVDrive_2_0.addAction(self.menuNew.menuAction())
         self.menuVDrive_2_0.addAction(self.actionOpen)
@@ -88,11 +98,16 @@ class Ui_MainWindow(object):
         self.menuVDrive_2_0.addSeparator()
         self.menuVDrive_2_0.addAction(self.actionQuit)
         self.menuVDrive_2_0.addSeparator()
-        self.menuReduction.addAction(self.actionNewReduction)
+        self.menuReduction.addAction(self.actionReduction_NewSetup)
+        self.menuReduction.addAction(self.actionReset)
+        self.menuReduction.addSeparator()
+        self.menuReduction.addAction(self.actionLoad_Setup)
         self.menuReduction.addAction(self.actionSave_Setup)
+        self.menuReduction.addSeparator()
         self.menubar.addAction(self.menuVDrive_2_0.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuReduction.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -103,6 +118,7 @@ class Ui_MainWindow(object):
         self.menuNew.setTitle(_translate("MainWindow", "New", None))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
         self.menuReduction.setTitle(_translate("MainWindow", "Reduction", None))
+        self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.treeWidget_Project.headerItem().setText(0, _translate("MainWindow", "Project", None))
         self.treeWidget_Project.headerItem().setText(1, _translate("MainWindow", "File", None))
         self.actionOpen.setText(_translate("MainWindow", "Open", None))
@@ -112,6 +128,10 @@ class Ui_MainWindow(object):
         self.actionQuit.setText(_translate("MainWindow", "Quit", None))
         self.actionNewReduction.setText(_translate("MainWindow", "New", None))
         self.actionSave_Setup.setText(_translate("MainWindow", "Save Setup", None))
-        self.actionReduction_Project.setText(_translate("MainWindow", "Reduction Project", None))
+        self.actionFile_New_Reduction.setText(_translate("MainWindow", "Reduction Project", None))
         self.actionAnalysis_Project.setText(_translate("MainWindow", "Analysis Project", None))
+        self.actionReduction_NewSetup.setText(_translate("MainWindow", "New Setup", None))
+        self.actionDelete.setText(_translate("MainWindow", "Delete", None))
+        self.actionLoad_Setup.setText(_translate("MainWindow", "Load Setup", None))
+        self.actionReset.setText(_translate("MainWindow", "Reset", None))
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1027</width>
-    <height>814</height>
+    <width>849</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,8 +19,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1027</width>
-     <height>22</height>
+     <width>849</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuVDrive_2_0">
@@ -31,7 +31,7 @@
      <property name="title">
       <string>New</string>
      </property>
-     <addaction name="actionReduction_Project"/>
+     <addaction name="actionFile_New_Reduction"/>
      <addaction name="actionAnalysis_Project"/>
     </widget>
     <addaction name="menuNew"/>
@@ -53,8 +53,12 @@
     <property name="title">
      <string>Reduction</string>
     </property>
-    <addaction name="actionNewReduction"/>
+    <addaction name="actionReduction_NewSetup"/>
+    <addaction name="actionReset"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Setup"/>
     <addaction name="actionSave_Setup"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -129,7 +133,7 @@
     <string>Save Setup</string>
    </property>
   </action>
-  <action name="actionReduction_Project">
+  <action name="actionFile_New_Reduction">
    <property name="text">
     <string>Reduction Project</string>
    </property>
@@ -137,6 +141,26 @@
   <action name="actionAnalysis_Project">
    <property name="text">
     <string>Analysis Project</string>
+   </property>
+  </action>
+  <action name="actionReduction_NewSetup">
+   <property name="text">
+    <string>New Setup</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionLoad_Setup">
+   <property name="text">
+    <string>Load Setup</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="text">
+    <string>Reset</string>
    </property>
   </action>
  </widget>

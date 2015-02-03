@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_ProjectNameDialog.ui'
 #
-# Created: Fri Jan 30 15:25:03 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Mon Feb  2 11:54:28 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 

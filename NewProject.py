@@ -17,50 +17,56 @@ from ui.ui_ProjectNameDialog import *
 class MyProjectNameWindow(QWidget):
     """ Pop up dialog window
     """
+   
+    # establish signal for communication - must be before constructor
+    mySignal = QtCore.pyqtSignal(int)
+
     def __init__(self, parent):
         """ Init
         """
         QWidget.__init__(self)
 
-        self.ui = Ui_Dialog()
-        self.ui.setupUi(self)
-        
-        print "Initalized"
-        
+        # Parent
         self.myParent = parent
         
+        # Set up widigets
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self)
+       
         # Set event handler
         QtCore.QObject.connect(self.ui.pushButton, QtCore.SIGNAL('clicked()'),
             self.quitCreateNew)
 
-        #QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.quit)
+        QtCore.QObject.connect(self.ui.pushButton_2, QtCore.SIGNAL('clicked()'), self.quitAbort)
+
+        self.mySignal.connect(self.myParent.newReductionProject_Step2)
+
+        return
         
         
     def quitCreateNew(self):
         """ Quit for creating new project
         """
-        projectanme = str(elf.ui.lineEdit.text())
+        projectname = str(self.ui.lineEdit.text())
         if len(projectname) == 0:
             projectname = "new project"
         
-        #self.myParent.newprojectname = projectname
+        self.myParent.newprojectname = projectname
+
+        # Emit signal to parent
+        sigVal = 1
+        self.mySignal.emit(sigVal)
         
         self.close()
         
         return
 
-    def setMessage(self, errmsg):
-        """ Set message
+
+    def quitAbort(self):
+        """ Quit and abort the operation
         """
-        #self.ui.label_errmsg.setWordWrap(True)
-        #self.ui.label_errmsg.setText(errmsg)
+        self.myParent.newprojectname = "%6--0$22"
 
-        return
-
-
-    def quit(self):
-        """ Quit
-        """
-        #self.close()
+        self.close()
 
         return
