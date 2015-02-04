@@ -12,16 +12,18 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-#import GUI components generated from Qt Designer .ui file
+""" import GUI components generated from Qt Designer .ui file """
 from ui.ui_MainWindow import *
 
-#import PyVDrive library
-import PyVDrive as vdrive
+""" import PyVDrive library """
+import Ui_VDrive as vdrive
 
-import ReductionWindow as rdwn
-import NewProject as npj
+import Window_ReductionSetup as rdwn
+import Dialog_NewProject as npj
 
-class AppTemplateMain(QtGui.QMainWindow):
+class VDrivePlot(QtGui.QMainWindow):
+    """ Main GUI class for VDrive 
+    """
     
     #initialize app
     def __init__(self, parent=None):
@@ -116,7 +118,6 @@ class AppTemplateMain(QtGui.QMainWindow):
     def newReductionProject_Step2(self, val):
         """
         """
-        import PyVDrive as pvdrive
 
         prepend = "NewProject" + str(val) + ": "
         print "Got signal from 'NewProject' as %s.  New project name = %s." % (prepend,
@@ -201,7 +202,7 @@ class AppTemplateMain(QtGui.QMainWindow):
     
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)
-    myapp = AppTemplateMain()
+    myapp = VDrivePlot()
     myapp.show()
 
     exit_code=app.exec_()
