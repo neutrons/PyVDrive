@@ -7,7 +7,7 @@
 import vdrive
 import vdrive.VDProject as vp
 
-class PyVDrive:
+class VDriveAPI:
     """ Class PyVDrive
     """
     def __init__(self):
@@ -72,8 +72,11 @@ class PyVDrive:
         self._projectDict[projname].reduce()
         
         
-    def addData(self, projname, datafilename):
+    def addDataFile(self, projname, datafilename):
         """ Add data
+        Argument:
+         - projname: used to identify project object
+         - datafilename: new data file to add
         """
         self._checkProjectExistence(projname, "add data set")
         
@@ -81,9 +84,27 @@ class PyVDrive:
         
         return
         
+    def addExperimentRuns(self, projname, operation, ipts, runnumberlist, autofindcal):
+        """ Add data file to project name by run number
+        
+        Return :: (boolean, string)
+        """
+        # check input
+        if self._checkProjectExistence(projname, operation) is False:
+            return (False, "Project %s does not exist." % (projname))
+        
+        # get calibration vanadium automatically
+        if autofindcal is True:
+            import vdrive.vulcan_util
+            autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts)
+       
+        # add runs
+        self._projectDict[projname].add()
+        
+        
         
     def setCalibFile(self, projname, calfilename):
-        """ Set calibration file in reduction mode
+        """ Set calibration file in reduction mode in manual mode
         """
         self._checkProjectExistence(projname, "set calibration file")
         

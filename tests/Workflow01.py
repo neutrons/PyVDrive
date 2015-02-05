@@ -4,21 +4,29 @@
 #
 ################################################################################
 
-import PyVDrive as pvdrive
+import sys
+sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 
-myworkflow = pvdrive.PyVDrive()
+import PyVDrive.Ui_VDrive as vdapi
+
+myworkflow = vdapi.VDriveAPI()
 
 # initlalize a new project
 if myworkflow.hasProject(projname='Test001'):
     myworkflow.deleteProject(projname='Test0001')
 myworkflow.newProject(projname = "Test001", projtype = "reduction")
 
-# new project should add data
-myworkflow.addData('Test001', [1234, 1235, 1237])
+# new project should add data and locate calibration file automatically
+ipts = 10311
+runs= range(57080, 57100)
+myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+
+
+raise NotImplementedError("Implemented so far...")
 
 # add auxiliary file
-myworkflow.setCalibFile('Test001','dummycalib.dat')
-myworkflow.setCharactFile('Test001','dummychar.txt')
+#myworkflow.setCalibFile('Test001','dummycalib.dat')
+#myworkflow.setCharactFile('Test001','dummychar.txt')
 
 
 outputdir = "/tmp/"

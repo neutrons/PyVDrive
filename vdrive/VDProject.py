@@ -1,4 +1,6 @@
 import sys
+import os
+import os.path
 
 class VDProject:
     """
@@ -7,7 +9,6 @@ class VDProject:
         """
         """
         self._name = projname
-        self._calibfilename = None
         self._dataset = []
         
         return
@@ -29,11 +30,28 @@ class ReductioProject(VDProject):
         """
         VDProject.__init__(self, projname)
         
+        # calibration file dictionary: key = data file name without full path
+        self._datacalibfiledict = {}
+        # calibration file to run look up table: key = calibration file with fullpath. value = list
+        self._calibfiledatadict = {}
         
-    def setCalibrationFile(self, calibfilename):
+        
+    def setCalibrationFile(self, datafilenames, calibfilename):
         """ Set the calibration file
         """
-        self._calibfilename = calibfilename
+        for datafilename in datafilenames:
+            basefilename = os.path.basename(datafilenames)
+        
+            self._datacalibfiledict[basefilename] = calibfilename
+            
+            if self._calibfiledatadict.has_key(calibfilename) is False:
+                self._calibfiledatadict[calibfilename] = []
+            self._calibfiledatadict[calibfilename].append(datafilename)
+        
+        # ENDFOR(datafilename)
+    
+        return
+        
         
     def setCharacterFile(self, characerfilename):
         """ Set characterization file
