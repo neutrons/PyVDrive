@@ -19,7 +19,12 @@ myworkflow.newProject(projname = "Test001", projtype = "reduction")
 # new project should add data and locate calibration file automatically
 ipts = 10311
 runs= range(57080, 57100)
-myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+
+criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
+myworkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
+status, errmsg = myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+if status is False:
+    print "Error: \n", errmsg
 
 
 raise NotImplementedError("Implemented so far...")

@@ -35,6 +35,18 @@ class ReductioProject(VDProject):
         # calibration file to run look up table: key = calibration file with fullpath. value = list
         self._calibfiledatadict = {}
         
+    def addDataFileSets(self, reddatasets):
+        """ Add data file and calibration file sets 
+        """
+        for datafile, vcalfile in reddatasets:
+            databasefname = os.path.basename(datafile)
+            self._datacalibfiledict[databasefname] = vcalfile
+            if self._calibfiledatadict.has_key(vcalfile) is False:
+                self._calibfiledatadict[vcalfile] = []
+            self._calibfiledatadict[vcalfile].append(datafile)
+        # ENDFOR
+        
+        return
         
     def setCalibrationFile(self, datafilenames, calibfilename):
         """ Set the calibration file

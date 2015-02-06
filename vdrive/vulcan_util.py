@@ -4,18 +4,43 @@
 
 import os
 
-def locateVulcanVRecordFile(ipts):
+def locateVulcanVRecordFile(basepath):
     """ Get the path and name of a VULCAN's vanadium record file
     """
-    raise NotImplementedError("ASAP1")
-    return ""
+    relpath = "shared/Calibrationfiles/Instrument/Standard/Vanadium"
+    relpathname = os.path.join(relpath, "VRecord.txt")    
+    vrecordfilename = os.path.join(basepath, relpathname)
+
+    return vrecordfilename
     
     
-def locateVulcanExpRecordFile(ipts):
+def locateVulcanExpRecordFile(ipts, basepath):
     """ Get the path and name of a VULCAN's experiment record file
     """
-    raise NotImplementedError("ASAP2")
-    return ""
+    relpath = "IPTS-%d/shared/" % (int(ipts))
+    relpathname = os.path.join(relpath, "AutoRecord.txt")
+    exprecordfilename = os.path.join(basepath, relpathname)
+    
+    return exprecordfilename
+    
+    
+def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
+    """ Add a list of run numbers and check whether they are valid or not.
+    """
+    errmsg = ""
+    
+    # build the name according to the convention
+    run = int(runnumber)
+    relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run, run)
+    nxsfilename = os.path.join(basepath, relpathname)
+    
+    # check existence of file
+    if os.path.isfile(nxsfilename) is False:
+        good = False
+        errmsg =  "Run %d does not exist in IPTS %d." % (run)
+        return (False, errmsg)
+    
+    return (True, nxsfilename)
     
     
 def checkIPTSExist(ipts, basepath):
@@ -47,20 +72,20 @@ class AutoVanadiumCalibrationLocator:
         
         # import v-record
         if vrecordfile is None:
-            vrecordfile = locateVulcanVRecordFile(self._ipts)
+            vrecordfile = locateVulcanVRecordFile(basepath)
         if os.path.isfile(vrecordfile) is False:
             raise NotImplementedError("VRecord file %s does not exist." % (vrecordfile))
         self._importVRecord(vrecordfile)
         
         # import auto record
         if autorecordfile is None:
-            autorecordfile = locateVulcanExpRecordFile(ipts)
+            autorecordfile = locateVulcanExpRecordFile(ipts, basepath)
         if os.path.isfile(autorecordfile) is False:
             raise NotImplementedError("Experimetn record file %s does not exist." % (autorecordfile))
-        self._importExperimentRecord(autoreordfile)
+        self._importExperimentRecord(autorecordfile)
         
         # runs
-        self._runs = None
+        self._runs = []
         
         return
         
@@ -75,35 +100,15 @@ class AutoVanadiumCalibrationLocator:
         numrunsadded = 0
         errmsg = ""
         for run in runs:
-            run = int(runs)
+            run = int(run)
             if self._expRecordDict.has_key(run):
                 self._runs.append(run)
-                numrunsadded ++ 1
+                numrunsadded += 1
             else:
                 errmsg += "Run %d does not exist in IPTS %d (record file)\n" % (run, self._ipts)
         # ENDFOR
         
-        return (numrunsaded, errmsg)
-        
-        
-    def locatedRuns(self, runs):
-        """ Add a list of run numbers and check whether they are valid or not.
-        """
-        errmsg = ""
-        
-        numrunsadded = 0
-        for run in runs:
-            run = int(run)
-            relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (self._ipts, run, run)
-            nxsfilename = os.path.join(basepath, relpathname)
-            if os.path.isfile(nxsfilename) is True:
-                self._nxsFileList.append(nxsfilname)
-                numrunsadded ++ 1
-            else:
-                errmsg += "Run %d does not exist in IPTS %d\n" % (run, self._ipts)
-        # ENDFOR
-        
-        return (numrunsaded, errmsg)
+        return (numrunsadded, errmsg)
         
         
     def locateCalibrationFile(self, criterion):
@@ -129,9 +134,11 @@ class AutoVanadiumCalibrationLocator:
             # loop around criterion to remove all van runs that does not meet the requirement         
             for (logname, valuetype) in criterion:
                 cvalue = self._expRecordDict[run][logname]
+                #print "Run %d Match log %s = %s." % (run, logname, cvalue)
                 for vanrun in vancadidaterunlist:
                     good = False
                     vanvalue = self._vanRecordDict[vanrun][logname]
+                    #print "\tVanadium %d log %s = %s." % (vanrun, logname, vanvalue)
                     if valuetype == 'int':
                         if int(cvalue) == int(vanvalue):
                             good = True
@@ -150,7 +157,10 @@ class AutoVanadiumCalibrationLocator:
             if len(vancadidaterunlist) == 0:
                 print "Error: There is no match for run %d. " % (run)
             elif len(vancadidaterunlist) > 1:
-                print "Error: There are too many vanadium runs matching to run %d." % (run)
+                print "Error: There are too many vanadium runs (%d out of %d) matching to run %d.\
+                        The latest vnadium run is picked up. " % (
+                        len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
+                runvandict[run] = sorted(vancadidaterunlist)[-1]
             else:
                 runvandict[run] = vancadidaterunlist[0]
         # ENDFOR (run)
@@ -170,6 +180,7 @@ class AutoVanadiumCalibrationLocator:
         # parse title line
         titlelist = []
         for iline in xrange(len(lines)):
+            line = lines[iline]
             line = line.strip()
             if len(line) == 0:
                 continue
@@ -187,6 +198,8 @@ class AutoVanadiumCalibrationLocator:
         
         # parse content line
         dataset = []
+        errmsg = ""
+        numvanruns = 0
         for line in lines:
             line = line.strip()
             if len(line) == 0 or line.startswith('#') is True:
@@ -201,9 +214,15 @@ class AutoVanadiumCalibrationLocator:
             
             # check
             if len(datarow) != len(titlelist):
-                print "Line %s has different number of items %d from titles %d." % (line, len(datarow),
+                errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
                     len(titlelist))
+                continue
+
+            numvanruns += 1
+            dataset.append(datarow)
         # ENDFOR
+
+        print "Number of vanadium runs added = %d" % (numvanruns)
             
         # build dictionary
         self._vanRecordDict = {}
@@ -221,6 +240,10 @@ class AutoVanadiumCalibrationLocator:
                 datadict[title] = value
             # ENDFOR (ititle)
             self._vanRecordDict[run] = datadict
+
+        # error message
+        if len(errmsg) > 0:
+            print "Error during import vanadium profile data: \n", errmsg, "\n"
         
         return        
         
@@ -238,7 +261,7 @@ class AutoVanadiumCalibrationLocator:
         # parse title line
         titlelist = []
         for iline in xrange(len(lines)):
-            line = line.strip()
+            line = lines[iline].strip()
             if len(line) == 0:
                 continue
             elif line.startswith('#') is True:
@@ -255,6 +278,7 @@ class AutoVanadiumCalibrationLocator:
         
         # parse content line
         dataset = []
+        errmsg = ""
         for line in lines:
             line = line.strip()
             if len(line) == 0 or line.startswith('#') is True:
@@ -269,8 +293,12 @@ class AutoVanadiumCalibrationLocator:
             
             # check
             if len(datarow) != len(titlelist):
-                print "Line %s has different number of items %d from titles %d." % (line, len(datarow),
+                errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
                     len(titlelist))
+                continue
+
+            # add to data set
+            dataset.append(datarow)
         # ENDFOR
             
         # build dictionary
@@ -289,6 +317,12 @@ class AutoVanadiumCalibrationLocator:
                 datadict[title] = value
             # ENDFOR (ititle)
             self._expRecordDict[run] = datadict
+
+        # output error message
+        if len(errmsg) > 0: 
+            print "Error during importing AutoRecord.txt:\n%s\n" % (errmsg)
+
+        print "There are %d runs that are found in record file %s." % (len(self._expRecordDict.keys()), exprecfile)
         
         return 
         

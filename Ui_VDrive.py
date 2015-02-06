@@ -14,7 +14,11 @@ class VDriveAPI:
         """ Init
         """
         self._projectDict = {}
+
+        self._vanCalibCriteriaDict = {}
         
+        self._basePath = '/SNS/VULCAN'
+
         return
         
         
@@ -31,8 +35,9 @@ class VDriveAPI:
                 % (projname) )        
         
         # new project
-        if projtype == 'reduction':
-           newproject = vp.ReductioProject(projname)
+        if projtype == 'reduction': 
+            newproject = vp.ReductioProject(projname)
+            self._vanCalibCriteriaDict[projname] = [] 
         elif projtype == 'analysis':
             newproject = vp.AnalysisProject(projname)
         
@@ -83,24 +88,75 @@ class VDriveAPI:
         self._projectDict[projname].addData(datafilename)
         
         return
+
+    def setVanadiumCalibrationMatchCriterion(self, projname, criterialist):
+        """ Set the criteria list for matching the vanadium calibration file
+        for a reduction project
+        """
+        if self._vanCalibCriteriaDict.has_key(projname) is False:
+            return (False, "Unable to locate reduction project %s " % (projname))
+
+        if isinstance(criterialist, list) is False:
+            return (False, "Input criterial list must be list!")
+
+        self._vanCalibCriteriaDict[projname] = criterialist
+
+        return (True, "")
         
     def addExperimentRuns(self, projname, operation, ipts, runnumberlist, autofindcal):
         """ Add data file to project name by run number
         
         Return :: (boolean, string)
-        """
+        """ 
+        import vdrive.vulcan_util
+
         # check input
         if self._checkProjectExistence(projname, operation) is False:
             return (False, "Project %s does not exist." % (projname))
         
         # get calibration vanadium automatically
         if autofindcal is True:
-            import vdrive.vulcan_util
+            # auto mode to link data file to calibration file
+
+            # check whether it is good for finding calibration automatically
+            if len(self._vanCalibCriteriaDict[projname]) == 0:
+                return (False, "Unable to match vanadium calibration file because criteria list is empty.")
+
             autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts)
+           
+            # add runs
+            numrunsadded, errmsg = autofinder.addRuns(runnumberlist)
+            print "There are %d runs that are added among %d in input list." % (numrunsadded, len(runnumberlist))
+            print "Error: \n%s\n-------------------------------\n" % (errmsg)
+
+            # do match for calibration
+
+            runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
+        
+        else:
+            # manual mode to link data file to calibration file
+            runvanrndict = {}
+            
+        # build the list of data file/calibration file pair 
+        datacalfilesets = []
+        runwithcallist = runvanrundict.keys()
+        for run in runnumberlist:
+            exist, datafile = vdrive.vulcan_util.locateRun(ipts, run, self._basePath)
+            if exist is True:
+                if run in runwithcallist:
+                    vancalrun = runvanrundict[run]
+                else:
+                    vancalrun = None
+                datacalfilesets.append( (datafile, vancalrun) )
+                print "Run %d : File = %s, Calibration = %s" % (run, datafile, str(vancalrun))
+            else:
+                print "Run %d : %s." % (run, datafile)
+        # ENDFOR (run)    
        
         # add runs
-        self._projectDict[projname].add()
-        
+        self._projectDict[projname].addDataFileSets(datacalfilesets)
+
+        return (True, "")
         
         
     def setCalibFile(self, projname, calfilename):
