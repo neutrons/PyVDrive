@@ -2,6 +2,7 @@
 
 #import utility modules
 import sys
+import os
 
 #import PyQt modules
 from PyQt4 import QtGui, QtCore, Qt
@@ -20,29 +21,53 @@ import Ui_VDrive as vdrive
 
 import Window_ReductionSetup as rdwn
 import Dialog_NewProject as npj
+import Dialog_AppLog as dlglog
 
 class VDrivePlot(QtGui.QMainWindow):
     """ Main GUI class for VDrive 
-    """
+    """ 
+    # Define signals to child windows as None(s) 
+    myLogSignal = QtCore.pyqtSignal(str)
     
     #initialize app
     def __init__(self, parent=None):
+        """ Init
+        """
         #setup main window
         QtGui.QMainWindow.__init__(self, parent)
-        self.setWindowTitle("App Template Main")
+        self.setWindowTitle("VDrivePlot Main")
         self.ui = Ui_MainWindow() #defined in ui_AppTemplate.py
         self.ui.setupUi(self)
+
+        #-----------------------------------------------------------------------
+        # Defining status variables
+        #-----------------------------------------------------------------------
+        # new project
+        self._myWorkflow = vdrive.VDriveAPI()
+
+        # controls to the sub windows
+        self._openSubWindows = []
         
         #-----------------------------------------------------------------------
         # add action support for menu
         #-----------------------------------------------------------------------
         # submenu 'File'
         self.connect(self.ui.actionFile_New_Reduction, QtCore.SIGNAL('triggered()'), 
-                self.newReductionProject)
+                self.doNewReductionProject)
+
+        self.connect(self.ui.action_OpenProject, QtCore.SIGNAL('triggered()'),
+                self.doLoadProject)
+
+        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'), 
+                self.confirmExit)
 
         # submenu 'Reduction'
         self.connect(self.ui.actionReduction_NewSetup, QtCore.SIGNAL('triggered()'),
-                self.setupReduction)
+                self.doSetupReduction)
+
+        # submenue 'View'
+        self.connect(self.ui.actionLog_Window, QtCore.SIGNAL('triggered()'),
+                self.doShowAppLog)
 
 
         # Project tree widget
@@ -61,7 +86,7 @@ class VDrivePlot(QtGui.QMainWindow):
         addAction.triggered.connect(self.addFile)
         self.ui.treeWidget_Project.addAction(addAction)
         setupReductionAction = QtGui.QAction('Setup', self)
-        setupReductionAction.triggered.connect(self.setupReduction)
+        setupReductionAction.triggered.connect(self.doSetupReduction)
         self.ui.treeWidget_Project.addAction(setupReductionAction)
         self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
@@ -72,19 +97,33 @@ class VDrivePlot(QtGui.QMainWindow):
         #self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'), self.confirmExit)
         #add signal/slot connection for pushbutton exit request
         #self.connect(self.ui.pushButtonExit, QtCore.SIGNAL('clicked()'), self.confirmExit)
+
+
+        # Child windows
+        self._myLogDialog = None
+
+
+        return
+
         
     def confirmExit(self):
         reply = QtGui.QMessageBox.question(self, 'Message', "Are you sure to quit?", 
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         
+        for iws in xrange(len(self._openSubWindows)):
+            self._openSubWindows[iws].close()
+
         if reply == QtGui.QMessageBox.Yes:
         #close application
             self.close()
         else:
         #do nothing and return
             pass     
+
+
+    #------------ New projects -----------------------------------------------------
             
-    def newReductionProject(self):
+    def doNewReductionProject(self):
         """ New reduction project
         """
         import time
@@ -116,23 +155,85 @@ class VDrivePlot(QtGui.QMainWindow):
     # add slot for NewProject signal to connect to
     @QtCore.pyqtSlot(int)
     def newReductionProject_Step2(self, val):
+        """ New reduction project as a call from a secondary window
         """
-        """
-
         prepend = "NewProject" + str(val) + ": "
         print "Got signal from 'NewProject' as %s.  New project name = %s." % (prepend,
                 self.newprojectname)
 
-        # new project
-        myworkflow = pvdrive.PyVDrive()
 
-        # initlalize a new project
-        myworkflow.newProject(projname = self.newprojectname, projtype = "reduction")
-      
+        # initlalize a new project and register
+        self._myWorkflow.newProject(projname = self.newprojectname, projtype = "reduction")
+
+        # added to project tree
         project1 = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
         self.ui.treeWidget_Project.expandItem(project1) 
 
         return
+
+    #------------ END New projects -------------------------------------------------
+
+    #------------ Load & Save projects ----------------------------------------------------
+    def doLoadProject(self):
+        """ Load a project with prompt
+        """
+        self._addLogInformation("User plans to load a project from a file.")
+
+        # Launch a a window for file name: this is a blocking session
+        continueselect = True
+        curdir = os.curdir
+        while continueselect is True:
+            filter="All files (*.*);;Pickle (*.p);;NXSPE (*.nxspe)" 
+            fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File(s)', curdir,filter)
+            print [str(file) for file in fileList]
+            if len(fileList) == 1:
+                continueselect = False
+
+        # Load
+        self._addLogInformation("Loading project file %s." % (fileList[0]))
+        status, rvalue = self._myWorkflow.loadProject(fileList[0])
+        if status is True:
+            projtype, projname = rvalue
+        else:
+            self._myWorkflow.addLogError("Loading project error due to %s" % (rvalue))
+            return
+
+        # added to project tree
+        project_item = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [projname, ""])
+        self.ui.treeWidget_Project.expandItem(project_item) 
+
+        return
+         
+
+    def doSaveProject(self):
+        """ Load a project with prompt
+        """
+        self._addLogInformation("User plans to load a project from a file.")
+
+        # Launch a a window for file name: this is a blocking session
+        continueselect = True
+        curdir = os.curdir
+        while continueselect is True:
+            filter="All files (*.*);;Pickle (*.p);;NXSPE (*.nxspe)" 
+            fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File(s)', curdir,filter)
+            print [str(file) for file in fileList]
+            if len(fileList) == 1:
+                continueselect = False
+
+        # Load
+        self._addLogInformation("Loading project file %s." % (fileList[0]))
+        self._myWorkflow.loadProject(fileList[0])
+
+        return
+         
+
+    #------------ END Load projects ------------------------------------------------
+
+
+    def getReductionProjectNames(self):
+        """ Get the names of all reduction projects
+        """
+        return self._myWorkflow.getReductionProjectNames()
 
     def projectOperation(self):
         """
@@ -179,17 +280,43 @@ class VDrivePlot(QtGui.QMainWindow):
         print "Hello!  Reduction is selected!"
        
 
-    def setupReduction(self):
+    def doSetupReduction(self):
         """
         """
         print "Hello! Reduction is selected in menu bar."
     
         # lauch window
-        self._reductionWindow = rdwn.MyReductionWindow()
+        self._reductionWindow = rdwn.MyReductionWindow(self)
         self._reductionWindow.show()
 
+        self._openSubWindows.append(self._reductionWindow)
+
         return
-        
+
+    def doShowAppLog(self):
+        """ Show App Log
+        """
+        # 2 status
+        print "[DB] action log window is checked = ", self.ui.actionLog_Window.isChecked()
+        # NOTE: this method is called after the action.  so if it is not checked before.  after it is clicked,
+        #       the state is changed to isChecked() = True
+        if self.ui.actionLog_Window.isChecked() is True:
+            # show window 
+            if self._myLogDialog is None:
+                # create log and lauch
+                self._myLogDialog = dlglog.MyAppLogDialog(self)
+                self.myLogSignal.connect(self._myLogDialog.setText)
+            self._myLogDialog.show()
+
+        else:
+            # close
+            if self._myLogDialog is not None:
+                self._myLogDialog.close()
+            else:
+                raise NotImplementedError("State machine error for AppLogDialog")
+
+        return
+
         
     def showProjectNameWindow(self, signal):
         """
@@ -199,6 +326,29 @@ class VDrivePlot(QtGui.QMainWindow):
         projnamewindow.show()
     
         return
+
+
+    def _addLogInformation(self, logstr):
+        """ Add log at information level
+        """
+        self._myWorkflow.addLogInformation(logstr)
+
+        # Emit signal to parent
+        if self.myLogSignal is not None: 
+            sigVal = logstr
+            self.myLogSignal.emit(sigVal)
+
+        print "---> Should send out a signal to update log window: %s." % (logstr)
+
+        return
+
+
+    def getLogText(self):
+        """ 
+        """
+        self._myLogList = []
+        
+
     
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

@@ -5,14 +5,14 @@
 ################################################################################
 
 import sys
-sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
+# sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 
 import PyVDrive.Ui_VDrive as vdapi
 
 myworkflow = vdapi.VDriveAPI()
 
 # initlalize a new project
-if myworkflow.hasProject(projname='Test001'):
+if myworkflow.hasProject(projname='Test001')[0] is True:
     myworkflow.deleteProject(projname='Test0001')
 myworkflow.newProject(projname = "Test001", projtype = "reduction")
 
@@ -25,6 +25,11 @@ myworkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
 status, errmsg = myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
 if status is False:
     print "Error: \n", errmsg
+
+myworkflow.saveProject('r', 'Test001', '/home/wzz/Projects/PyVDrive/PyVDrive/tests/test001.p')
+myworkflow.deleteProject('r', 'Test001')
+
+myworkflow.loadProject('/home/wzz/Projects/PyVDrive/PyVDrive/tests/test001.p')
 
 
 raise NotImplementedError("Implemented so far...")

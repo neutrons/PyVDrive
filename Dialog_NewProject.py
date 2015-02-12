@@ -39,6 +39,10 @@ class MyProjectNameWindow(QWidget):
 
         QtCore.QObject.connect(self.ui.pushButton_2, QtCore.SIGNAL('clicked()'), self.quitAbort)
 
+        QtCore.QObject.connect(self.ui.lineEdit, QtCore.SIGNAL('returnPressed()'),
+                self.quitCreateNew)
+
+        # Customerized event 
         self.mySignal.connect(self.myParent.newReductionProject_Step2)
 
         return

@@ -19,10 +19,13 @@ class VDProject:
         self._dataset.append(datafilename)
 
         return
+
+    def name(self):
+        return self._name
         
         
         
-class ReductioProject(VDProject):
+class ReductionProject(VDProject):
     """
     """
     def __init__(self, projname):

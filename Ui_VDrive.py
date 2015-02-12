@@ -3,23 +3,44 @@
 # - A GUI application will call this class for data reduction and analysis;
 # - User can write script on this class to reduce and analyze data;
 ################################################################################
+import pickle
+
+import PyVDrive
+import PyVDrive.vdrive
+import PyVDrive.vdrive.VDProject
 
 import vdrive
 import vdrive.VDProject as vp
 
 class VDriveAPI:
-    """ Class PyVDrive
+    """ Class PyVDrive to mananger a sets of reduction and analysis projects
     """
     def __init__(self):
         """ Init
         """
-        self._projectDict = {}
+        # reduction projects
+        self._rProjectDict = {}
 
+        # analysis projects
+        self._aProjectDict = {}
+
+        # FIXME - should move to other layers
         self._vanCalibCriteriaDict = {}
-        
-        self._basePath = '/SNS/VULCAN'
+       
+        # defaults
+        self._myInstrument = "VULCAN"
+        self._basePath = '/SNS/%s' % (self._myInstrument)
+
+        # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, warning and error
+        self._myLogList = []
 
         return
+
+
+    def getReductionProjectNames(self):
+        """ Get the names of all reduction projects
+        """
+        return sorted(self._rProjectDict.keys())
         
         
     def newProject(self, projname, projtype):
@@ -30,44 +51,106 @@ class VDriveAPI:
             raise NotImplementedError("Project type %s is not supported." % (projtype))
         
         # check available to add this new project
-        if self._projectDict.has_key(projname):
+        if self._rProjectDict.has_key(projname) and projtype == 'reduction':
+            raise NotImplementedError("Project with name %s has existed.  Unable to add a new project with sname name." 
+                % (projname) )        
+        elif self._aProjectDict.has_key(projname) and projtype == 'fit':
             raise NotImplementedError("Project with name %s has existed.  Unable to add a new project with sname name." 
                 % (projname) )        
         
-        # new project
+        # new project and register
         if projtype == 'reduction': 
-            newproject = vp.ReductioProject(projname)
+            newproject = vp.ReductionProject(projname)
             self._vanCalibCriteriaDict[projname] = [] 
+            self._rProjectDict[projname] = newproject
         elif projtype == 'analysis':
             newproject = vp.AnalysisProject(projname)
+            self._aProjectDict[projname] = newproject
         
-        # add project to dictionary
-        self._projectDict[projname] = newproject
-                        
         return False
         
         
     def loadProject(self, projfilename):
         """ Load an existing project
         """
-        raise NotImplementedError("Implement ASAP")
+        # FIXME - Pickle may not be used in future.
+        project = pickle.load(open(projfilename, 'r'))
+        projname = project.name()
+
+        if isinstance(project, PyVDrive.vdrive.VDProject.ReductionProject) is True:
+            self._rProjectDict[project.name()] = project
+            projtype = 'r'
+
+        elif isinstance(project, PyVDrive.vdrive.VDProject.AnalysisProject) is True:
+            self._aProjectDict[project.name()] = project
+            projtype = 'a'
+
+        else:
+            raise NotImplementedError("Project %s is of an unsupported type %s." % (projfilename,
+                project.__class__.__name__))
         
+        return (True, (projtype, projname))
+
+
+    def saveProject(self, projtype, projname, proffilename):
+        """ Save an existing (in the memory) to a project file
+        """
+        # check whether the project exists or not
+        if projtype == 'r':
+            # reduction project
+            if self._rProjectDict.has_key(projname) is False:
+                return (False, "Reduction project %s does not exist." % (projname))
+            else:
+                project = self._rProjectDict[projname]
         
-        return False
+        elif projtype == 'a':
+            # analysis project
+            if self._aProjectDict.has_key(projname) is False:
+                return (False, "Analysis project %s does not exist." % (projname))
+            else:
+                project = self._aProjectDict[projname]
+
+        else:
+            # exceptin
+            raise NotImplementedError("Project type %s is not supported." % (projtype))
+
+        # FIXME - Use a better file than pickle later
+        # save
+        pickle.dump(project, open(proffilename, 'w'))
+
+        return (True, "")
+
         
     def hasProject(self, projname):
         """ 
         """
-        return self._projectDict.has_key(projname)
+        hasproject = False
+        projecttype = ''
+
+        if self._rProjectDict.has_key(projname) is True:
+            hasproject = True
+            projecttype += 'r'
+
+        if self._aProjectDict.has_key(projname) is True:
+            hasproject = True
+            projecttype += 'a'
+
+        return (hasproject, projecttype)
         
         
-    def deleteProject(self, projname):
+    def deleteProject(self, projtype, projname):
         """ Delete an existing project
         """
-        self._checkProjectNotExistence(projname)
-        raise NotImplementedError("Implement ASAP")
+        self._checkProjectExistence(projname, "delete project")
+
+        if projtype == 'r':
+            self._rProjectDict.pop(projname)
+        elif projtype == 'a':
+            self._aProjectDict.pop(projname)
+        else:
+            return (False, "Project type is not supported.")
         
-        return False
+        return (True, "")
         
     def reduce(self, projname):
         """ Reduce the data
@@ -154,7 +237,9 @@ class VDriveAPI:
         # ENDFOR (run)    
        
         # add runs
-        self._projectDict[projname].addDataFileSets(datacalfilesets)
+        # FIXME - only applied to reduction project?
+        thisproject = self._rProjectDict[projname]
+        thisproject.addDataFileSets(datacalfilesets)
 
         return (True, "")
         
@@ -198,9 +283,17 @@ class VDriveAPI:
     def _checkProjectExistence(self, projname, operation):
         """ Check wehtehr a project (name) does exist
         """
-        if self._projectDict.has_key(projname) is False:
+        # FIXME - how about to combine with self.hasProject()???
+        if self.hasProject(projname)[0] is False:
             raise NotImplementedError("Project %s exists. Unable to proceed the operation %s." % (
                 projname, operation))
         
+        return
+
+    def addLogInformation(self, logstr):
+        """ Add a log information at information level
+        """
+        self._myLogList.append( ('i', logstr) )
+
         return
 
