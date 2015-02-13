@@ -58,6 +58,9 @@ class VDrivePlot(QtGui.QMainWindow):
         self.connect(self.ui.action_OpenProject, QtCore.SIGNAL('triggered()'),
                 self.doLoadProject)
 
+        self.connect(self.ui.action_SaveProject, QtCore.SIGNAL('triggered()'),
+                self.doSaveProject)
+
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'), 
                 self.confirmExit)
 
@@ -101,6 +104,7 @@ class VDrivePlot(QtGui.QMainWindow):
 
         # Child windows
         self._myLogDialog = None
+        self._reductionWindow = None
 
 
         return
@@ -208,21 +212,23 @@ class VDrivePlot(QtGui.QMainWindow):
     def doSaveProject(self):
         """ Load a project with prompt
         """
-        self._addLogInformation("User plans to load a project from a file.")
+        self._addLogInformation("User plans to save a project to a file.")
 
-        # Launch a a window for file name: this is a blocking session
-        continueselect = True
+        # Find out which project to save
+        # FIXME - a method???
+        curitem = self.ui.treeWidget_Project.currentItem()
+        projectname = str(curitem.text(0))
+
+        # Get file name to save
         curdir = os.curdir
-        while continueselect is True:
-            filter="All files (*.*);;Pickle (*.p);;NXSPE (*.nxspe)" 
-            fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File(s)', curdir,filter)
-            print [str(file) for file in fileList]
-            if len(fileList) == 1:
-                continueselect = False
+        filter="Pickle (*.p);;NXSPE (*.nxspe)" 
+        sfile = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', curdir,filter))
 
-        # Load
-        self._addLogInformation("Loading project file %s." % (fileList[0]))
-        self._myWorkflow.loadProject(fileList[0])
+        # Save
+        self._addLogInformation("About to saving project %s to %s. " % (projectname, sfile))
+        status, errmsg = self._myWorkflow.saveProject('r', projectname, sfile)
+
+        self._addLogInformation("Save project = %s; Error: %s." % (str(status), errmsg))
 
         return
          
@@ -273,23 +279,30 @@ class VDrivePlot(QtGui.QMainWindow):
     def renameSlot(self):
         print "Renaming slot called"
         
-            
-    def showMenuMessage1(self):
-        """ 
-        """
-        print "Hello!  Reduction is selected!"
-       
 
     def doSetupReduction(self):
-        """
+        """ Lauch reduction setup window
         """
         print "Hello! Reduction is selected in menu bar."
     
-        # lauch window
-        self._reductionWindow = rdwn.MyReductionWindow(self)
-        self._reductionWindow.show()
+        # create and setup
+        if self._reductionWindow is None: 
+            self._reductionWindow = rdwn.MyReductionWindow(self) 
 
-        self._openSubWindows.append(self._reductionWindow)
+            projnames = sorted(self._myWorkflow.getProjectNames())
+
+            self._reductionWindow.setProjectNames(projnames) 
+            self._openSubWindows.append(self._reductionWindow)
+
+        # Find out which project to save
+        # FIXME - a method???
+        curitem = self.ui.treeWidget_Project.currentItem()
+        currprojname = str(curitem.text(0))
+        status, errmsg = self._reductionWindow.setCurrentProject(currprojname)
+        self._addLogInformation(errmsg)
+        
+        # show
+        self._reductionWindow.show()
 
         return
 
@@ -347,7 +360,36 @@ class VDrivePlot(QtGui.QMainWindow):
         """ 
         """
         self._myLogList = []
-        
+
+
+    #------------------------------------------
+    # Reduction related event handlers
+    #------------------------------------------
+    def setRuns(self, ipts, runs):
+        """
+        """
+        self._tmpIPTS = ipts
+        self._tmpRuns = runs
+
+        return
+
+    @QtCore.pyqtSlot(str)
+    def evtAddRuns(self, val):
+        """
+        Arguments: 
+        - val :: string as project name
+        """
+        # project name
+        projname = str(val)
+
+        # runs
+        # FIXME - need to add the option to match runs automatically 
+        status, result = self._myWorkflow.addExperimentRuns(projname, 'reduction', self._tmpIPTS, self._tmpRuns, False)
+        msg = result[0]
+        runsadded = result[1]
+        self._treeAddRuns(projname, runsadded)
+
+        return
 
     
 if __name__=="__main__":

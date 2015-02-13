@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Thu Feb 12 11:19:48 2015
+# Created: Fri Feb 13 14:18:36 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -74,8 +74,8 @@ class Ui_MainWindow(object):
         self.action_OpenProject.setObjectName(_fromUtf8("action_OpenProject"))
         self.actionClose = QtGui.QAction(MainWindow)
         self.actionClose.setObjectName(_fromUtf8("actionClose"))
-        self.actionSave = QtGui.QAction(MainWindow)
-        self.actionSave.setObjectName(_fromUtf8("actionSave"))
+        self.action_SaveProject = QtGui.QAction(MainWindow)
+        self.action_SaveProject.setObjectName(_fromUtf8("action_SaveProject"))
         self.actionSave_As = QtGui.QAction(MainWindow)
         self.actionSave_As.setObjectName(_fromUtf8("actionSave_As"))
         self.actionQuit = QtGui.QAction(MainWindow)
@@ -105,7 +105,7 @@ class Ui_MainWindow(object):
         self.menuVDrive_2_0.addAction(self.action_OpenProject)
         self.menuVDrive_2_0.addAction(self.actionClose)
         self.menuVDrive_2_0.addSeparator()
-        self.menuVDrive_2_0.addAction(self.actionSave)
+        self.menuVDrive_2_0.addAction(self.action_SaveProject)
         self.menuVDrive_2_0.addAction(self.actionSave_As)
         self.menuVDrive_2_0.addSeparator()
         self.menuVDrive_2_0.addAction(self.actionQuit)
@@ -139,8 +139,10 @@ class Ui_MainWindow(object):
         self.action_OpenProject.setText(_translate("MainWindow", "Open", None))
         self.action_OpenProject.setShortcut(_translate("MainWindow", "Ctrl+O", None))
         self.actionClose.setText(_translate("MainWindow", "Close", None))
-        self.actionSave.setText(_translate("MainWindow", "Save", None))
+        self.action_SaveProject.setText(_translate("MainWindow", "Save", None))
+        self.action_SaveProject.setShortcut(_translate("MainWindow", "Ctrl+S", None))
         self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
+        self.actionSave_As.setShortcut(_translate("MainWindow", "Ctrl+Shift+S", None))
         self.actionQuit.setText(_translate("MainWindow", "Quit", None))
         self.actionQuit.setShortcut(_translate("MainWindow", "Ctrl+Q", None))
         self.actionNewReduction.setText(_translate("MainWindow", "New", None))
@@ -154,4 +156,5 @@ class Ui_MainWindow(object):
         self.actionLoad_Setup.setText(_translate("MainWindow", "Load Setup", None))
         self.actionReset.setText(_translate("MainWindow", "Reset", None))
         self.actionLog_Window.setText(_translate("MainWindow", "Log Window", None))
+        self.actionLog_Window.setShortcut(_translate("MainWindow", "Ctrl+L", None))
 

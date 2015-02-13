@@ -17,6 +17,10 @@ from ui.ui_ReductionSetup import *
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
     """
+    # define signals
+    myAddRunsSignal = pyqtSignal(str)
+
+    # class
     def __init__(self, parent):
         """ Init
         """
@@ -40,21 +44,27 @@ class MyReductionWindow(QWidget):
         #---------------------------------
         # project selection 
         QtCore.QObject.connect(self.ui.pushButton_selectproject, 
-                QtCore.SIGNAL('clicked()'), self.selectProject)
+                QtCore.SIGNAL('clicked()'), self.doSelectProject)
 
         # add runs/file for reduction
         QtCore.QObject.connect(self.ui.pushButton_addRuns,
-                QtCore.SIGNAL('clicked()'), self.addRuns)
+                QtCore.SIGNAL('clicked()'), self.doAddRuns)
 
 
         # quit
         QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.quit)
 
-        #---------------------------------
-        # Setup GUI event handlers
-        #---------------------------------
-        self.ui.comboBox_projectNames.addItems(self._myParent.getReductionProjectNames())
+        # Customerized event 
+        self.myAddRunsSignal.connect(self._myParent.evtAddRuns)
 
+        # FIXME - Remove this section after debugging 
+        #---------------- Debug Setup ---------------------------------
+        self.ui.lineEdit_ipts.setText('10311')
+        self.ui.lineEdit_runstart.setText('57075')
+        self.ui.lineEdit_runend.setText('57100')
+        #--------------------------------------------------------------
+
+        return
 
     def setMessage(self, errmsg):
         """ Set message
@@ -65,22 +75,45 @@ class MyReductionWindow(QWidget):
         return
 
 
-    def selectProject(self):
+    def setProjectNames(self, projnames):
+        """ Set project names
+        """
+        # self.ui.comboBox_projectNames.addItems(self._myParent.getReductionProjectNames())
+        self.ui.comboBox_projectNames.addItems(projnames)
+
+        return
+
+    def setCurrentProject(self, projname):
+        """ Set current project name
+        """
+        index = self.ui.comboBox_projectNames.findText(projname)
+        if index < 0:
+            return (False, "Project %s does not exist in project list." % (projname))
+
+        self.ui.comboBox_projectNames.setCurrentIndex(index)
+        self._myProjectName = projname
+
+        return (True, "Set project %s with index %d as current project."%(projname, index))
+
+
+    def doSelectProject(self):
         """ select projects by name
         """
-        projname = self.ui.comboBox_projectNames.currentText()
-        print "Project %s is selected. " % (str(projname))
+        self._myProjectName = str(self.ui.comboBox_projectNames.currentText())
+        print "Project %s is selected. " % (str( self._myProjectName))
+
+        # FIXME - Need to wipe out previous setup and fill in the new ones
 
         return
 
 
-    def addRuns(self):
+    def doAddRuns(self):
         """ add IPTS-run numbers to 
         """
         # get data from GUI
         ipts = str(self.ui.lineEdit_ipts.text())
         runstart = str(self.ui.lineEdit_runstart.text())
-        runend = str(self.ui.lineEdit_runstart.text())
+        runend = str(self.ui.lineEdit_runend.text())
 
         logmsg = "Get IPTS %s Run %s to %s." % (ipts, runstart, runend)
         print "Log: %s" % (logmsg)
@@ -106,7 +139,11 @@ class MyReductionWindow(QWidget):
 
         logmsg = "Adding ITPS-%d runs: %s. " % (ipts, str(runnumberlist))
             
+        # add runs to project: self._myProjectName
+        self._myParent.setRuns(ipts, runnumberlist)
+        self.myAddRunsSignal.emit(self._myProjectName) 
 
+        return
 
 
     def quit(self):

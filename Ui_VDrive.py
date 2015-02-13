@@ -46,6 +46,10 @@ class VDriveAPI:
     def newProject(self, projname, projtype):
         """ Add a new project
         """         
+        # Convert to str
+        projname = str(projname)
+        projtype = str(projtype)
+
         # check project type
         if projtype != 'reduction' and projtype != 'fit':
             raise NotImplementedError("Project type %s is not supported." % (projtype))
@@ -92,14 +96,21 @@ class VDriveAPI:
         return (True, (projtype, projname))
 
 
-    def saveProject(self, projtype, projname, proffilename):
+    def saveProject(self, projtype, projname, projfilename):
         """ Save an existing (in the memory) to a project file
         """
+        # Convert to strs
+        projtype = str(projtype)
+        projname = str(projname)
+        projfilename = str(projfilename)
+
         # check whether the project exists or not
         if projtype == 'r':
             # reduction project
             if self._rProjectDict.has_key(projname) is False:
-                return (False, "Reduction project %s does not exist." % (projname))
+                existingprojects = self._rProjectDict.keys()
+                return (False, "Reduction project %s does not exist. Existing projects:  %s" % (
+                    projname, str(existingprojects)))
             else:
                 project = self._rProjectDict[projname]
         
@@ -116,9 +127,20 @@ class VDriveAPI:
 
         # FIXME - Use a better file than pickle later
         # save
-        pickle.dump(project, open(proffilename, 'w'))
+        pickle.dump(project, open(projfilename, 'w'))
 
         return (True, "")
+
+
+    def getProjectNames(self):
+        """ Return the names of all projects
+        """
+        projnames = []
+
+        projnames.extend(self._rProjectDict.keys())
+        projnames.extend(self._aProjectDict.keys())
+
+        return projnames
 
         
     def hasProject(self, projname):
