@@ -1,3 +1,5 @@
+import sys
+import os
 import math
 import numpy
 
@@ -50,6 +52,9 @@ class MyReductionWindow(QWidget):
         QtCore.QObject.connect(self.ui.pushButton_addRuns,
                 QtCore.SIGNAL('clicked()'), self.doAddRuns)
 
+        # setup tabs
+        QtCore.QObject.connect(self.ui.pushButton_browseBaseDataPath,
+                QtCore.SIGNAL('clicked()'), self.doBrowseBaseDataPath)
 
         # quit
         QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.quit)
@@ -62,6 +67,7 @@ class MyReductionWindow(QWidget):
         self.ui.lineEdit_ipts.setText('10311')
         self.ui.lineEdit_runstart.setText('57075')
         self.ui.lineEdit_runend.setText('57100')
+        self.ui.lineEdit_baseDataPath.setText('/SNS/VULCAN/')
         #--------------------------------------------------------------
 
         return
@@ -145,6 +151,15 @@ class MyReductionWindow(QWidget):
 
         return
 
+    def doBrowseBaseDataPath(self):
+        """ 
+        """
+        # TODO - doc on method
+        home = getHomeDir()
+        basedatadir = str(QtGui.QFileDialog.getExistingDirectory(self,'Get Directory',home))
+        self.ui.lineEdit_baseDataPath.setText(basedatadir)
+
+        return
 
     def quit(self):
         """ Quit
@@ -152,3 +167,13 @@ class MyReductionWindow(QWidget):
         self.close()
 
         return
+
+def getHomeDir():
+    """ Get home directory
+    """ 
+    if sys.platform == 'win32': 
+        home = os.path.expanduser("~") 
+    else: 
+        home=os.getenv("HOME") 
+        
+    return home

@@ -297,9 +297,10 @@ class VDrivePlot(QtGui.QMainWindow):
         # Find out which project to save
         # FIXME - a method???
         curitem = self.ui.treeWidget_Project.currentItem()
-        currprojname = str(curitem.text(0))
-        status, errmsg = self._reductionWindow.setCurrentProject(currprojname)
-        self._addLogInformation(errmsg)
+        if curitem is not None: 
+            currprojname = str(curitem.text(0)) 
+            status, errmsg = self._reductionWindow.setCurrentProject(currprojname) 
+            self._addLogInformation(errmsg)
         
         # show
         self._reductionWindow.show()
