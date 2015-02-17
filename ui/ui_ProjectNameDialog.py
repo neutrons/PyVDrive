@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_ProjectNameDialog.ui'
 #
-# Created: Mon Feb  9 13:59:50 2015
-#      by: PyQt4 UI code generator 4.11.2
+# Created: Tue Feb 17 08:40:57 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -57,7 +57,15 @@ class Ui_Dialog(object):
         self.horizontalLayout_3.addWidget(self.pushButton)
         spacerItem4 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem4)
-        self.gridLayout.addLayout(self.horizontalLayout_3, 1, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout_3, 2, 0, 1, 1)
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.comboBox_projectTypes = QtGui.QComboBox(Dialog)
+        self.comboBox_projectTypes.setObjectName(_fromUtf8("comboBox_projectTypes"))
+        self.comboBox_projectTypes.addItem(_fromUtf8(""))
+        self.comboBox_projectTypes.addItem(_fromUtf8(""))
+        self.horizontalLayout.addWidget(self.comboBox_projectTypes)
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -67,4 +75,6 @@ class Ui_Dialog(object):
         self.label.setText(_translate("Dialog", "Project Name", None))
         self.pushButton_2.setText(_translate("Dialog", "Cancel", None))
         self.pushButton.setText(_translate("Dialog", "Create Project", None))
+        self.comboBox_projectTypes.setItemText(0, _translate("Dialog", "Reduction Project", None))
+        self.comboBox_projectTypes.setItemText(1, _translate("Dialog", "Analysis Project", None))
 

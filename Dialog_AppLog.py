@@ -60,3 +60,22 @@ class MyAppLogDialog(QWidget):
         """
         self.close()
 
+    def confirmExit(self):
+        reply = QtGui.QMessageBox.question(self, 'Message',
+        "Are you sure to quit?", QtGui.QMessageBox.Yes | 
+        QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+        
+        if reply == QtGui.QMessageBox.Yes:
+        #close application
+            self.close()
+        else:
+        #do nothing and return
+            pass     
+
+    def closeEvent(self,event):
+        #Here using an event handler to handle the case when the application is closed where the main app is informed that the child app has closed
+        #Description for events can be found here: http://pyqt.sourceforge.net/Docs/PyQt4/qevent.html
+        #The method name 'closeEvent' is formatted precisely as required in order to handle the application close event
+        #See the QEvent Class Detailed Description for more information
+
+        return

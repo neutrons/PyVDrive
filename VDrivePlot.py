@@ -114,15 +114,35 @@ class VDrivePlot(QtGui.QMainWindow):
         reply = QtGui.QMessageBox.question(self, 'Message', "Are you sure to quit?", 
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         
+
+        if reply == QtGui.QMessageBox.Yes:
+            #close application 
+            self._exitApp()
+            self.close()
+        else: 
+            #do nothing and return
+            pass     
+
+        return
+
+    def closeEvent(self, event=None):
+        """
+        """
+        self.confirmExit()
+        
+        event.accept()
+
+        return
+
+
+    def _exitApp(self):
+        """ Close all the child windows before 
+        """
+        # close all child windows
         for iws in xrange(len(self._openSubWindows)):
             self._openSubWindows[iws].close()
 
-        if reply == QtGui.QMessageBox.Yes:
-        #close application
-            self.close()
-        else:
-        #do nothing and return
-            pass     
+        return
 
 
     #------------ New projects -----------------------------------------------------
@@ -321,6 +341,7 @@ class VDrivePlot(QtGui.QMainWindow):
                 self._myLogDialog = dlglog.MyAppLogDialog(self)
                 self.myLogSignal.connect(self._myLogDialog.setText)
             self._myLogDialog.show()
+            self._openSubWindows.append(self._myLogDialog)
 
         else:
             # close
@@ -335,9 +356,9 @@ class VDrivePlot(QtGui.QMainWindow):
     def showProjectNameWindow(self, signal):
         """
         """           
-        print "Good....", signal
-        projnamewindow = npj.MyProjectNameWindow(None)
-        projnamewindow.show()
+        self._projnamewindow = npj.MyProjectNameWindow(None)
+        self._projnamewindow.show() 
+        self._openSubWindows.append(self._projnamewindow)
     
         return
 
