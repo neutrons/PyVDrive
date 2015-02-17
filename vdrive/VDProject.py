@@ -10,6 +10,7 @@ class VDProject:
         """
         self._name = projname
         self._dataset = []
+        self._baseDataPath = None
         
         return
         
@@ -20,9 +21,22 @@ class VDProject:
 
         return
 
+    def getBaseDataPath(self):
+        """ Get the base data path of the project
+        """
+        return self._baseDataPath
+
     def name(self):
         return self._name
-        
+       
+
+    def setBaseDataPath(self, datadir):
+        """ Set base data path such as /SNS/VULCAN/
+        to locate the data via run number and IPTS
+        """
+        self._baseDataPath = datadir
+
+        return
         
         
 class ReductionProject(VDProject):
@@ -50,6 +64,17 @@ class ReductionProject(VDProject):
         # ENDFOR
         
         return
+
+
+    def getDataFilePairs(self):
+        """ Get to know 
+        """
+        pairlist = []
+        for datafile in self._datacalibfiledict.keys():
+            pairlist.append( (datafile, self._datacalibfiledict[datafile]) )
+
+        return pairlist
+
         
     def setCalibrationFile(self, datafilenames, calibfilename):
         """ Set the calibration file

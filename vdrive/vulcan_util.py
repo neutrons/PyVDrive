@@ -37,7 +37,7 @@ def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
     # check existence of file
     if os.path.isfile(nxsfilename) is False:
         good = False
-        errmsg =  "Run %d does not exist in IPTS %d." % (run)
+        errmsg =  "Run %d does not exist in IPTS %d.  NeXus file cannot be found at %s. " % (run, ipts, nxsfilename)
         return (False, errmsg)
     
     return (True, nxsfilename)
@@ -48,12 +48,12 @@ def checkIPTSExist(ipts, basepath):
     """
     ipts = int(ipts)
     iptsdir = os.path.join(basepath, "IPTS-%d"%(ipts))
-    print "IPTS directory = ", iptsdir
+    msg = "IPTS directory: %s" %(iptsdir)
     
     if os.path.isdir(iptsdir) is True:
-        return True
+        return (True, msg)
     
-    return False    
+    return (False, msg)
     
 
 class AutoVanadiumCalibrationLocator:
@@ -63,9 +63,9 @@ class AutoVanadiumCalibrationLocator:
         """ Initialization
         """
         # check whether the IPTS exist
-        iptsgood = checkIPTSExist(ipts, basepath)
+        iptsgood, msg = checkIPTSExist(ipts, basepath)
         if iptsgood is False:
-            raise NotImplementedError("IPTS %d does not exist for VULCAN" % (ipts))
+            raise NotImplementedError("IPTS %d does not exist for VULCAN. FYI: %s" % (ipts, msg))
         
         # ipts number
         self._ipts = ipts

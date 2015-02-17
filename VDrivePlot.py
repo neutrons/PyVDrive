@@ -28,6 +28,7 @@ class VDrivePlot(QtGui.QMainWindow):
     """ 
     # Define signals to child windows as None(s) 
     myLogSignal = QtCore.pyqtSignal(str)
+    mySideBarSignal = QtCore.pyqtSignal(str)
     
     #initialize app
     def __init__(self, parent=None):
@@ -106,18 +107,23 @@ class VDrivePlot(QtGui.QMainWindow):
         self._myLogDialog = None
         self._reductionWindow = None
 
+        # Close signal
+        self._closeFromAction = False
+
 
         return
 
         
     def confirmExit(self):
+        """ Exit with confirmation
+        """
         reply = QtGui.QMessageBox.question(self, 'Message', "Are you sure to quit?", 
                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
-        
-
+       
+        # FIXME - This cause the modal issue on Mac OSX!
         if reply == QtGui.QMessageBox.Yes:
             #close application 
-            self._exitApp()
+            self._closeFromAction = True
             self.close()
         else: 
             #do nothing and return
@@ -128,8 +134,10 @@ class VDrivePlot(QtGui.QMainWindow):
     def closeEvent(self, event=None):
         """
         """
-        self.confirmExit()
-        
+        # close all child windows without prompting for saving and etc. 
+        for iws in xrange(len(self._openSubWindows)):
+            self._openSubWindows[iws].close()
+       
         event.accept()
 
         return
@@ -138,9 +146,6 @@ class VDrivePlot(QtGui.QMainWindow):
     def _exitApp(self):
         """ Close all the child windows before 
         """
-        # close all child windows
-        for iws in xrange(len(self._openSubWindows)):
-            self._openSubWindows[iws].close()
 
         return
 
@@ -226,8 +231,71 @@ class VDrivePlot(QtGui.QMainWindow):
         project_item = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [projname, ""])
         self.ui.treeWidget_Project.expandItem(project_item) 
 
+        # initialize the table widget
+        self._initReductionProjectTable(projname)
+
         return
-         
+
+    def _initReductionProjectTable(self, projname):
+        """ 
+        """
+        # load project
+        status, errmsg, datapairlist = self._myWorkflow.getDataFiles(projname)
+        if status is False:
+            self._addLogInformation(errmsg)
+            return
+        
+        # get some information
+        numrows = len(datapairlist)
+
+        # clear
+        self.ui.tableWidget_generalInfo.setRowCount(0)
+        self.ui.tableWidget_generalInfo.setColumnCount(0)
+
+
+        # init
+        self.ui.tableWidget_generalInfo.setColumnCount(3)
+        self.ui.tableWidget_generalInfo.setRowCount(numrows)
+
+        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
+       
+        # set values
+        if numrows == 0:
+            self._addLogInformation("There is no data file that has been added to project %s yet." % (projname))
+            return
+        else:
+            self._addLogInformation("There are %d data files that have been added to project %s." % (numrows, projname))
+
+
+        iline = 0
+        for datapair in datapairlist:
+            # data 
+            item = QtGui.QTableWidgetItem()
+            item.setText(datapair[0])
+            self.ui.tableWidget_generalInfo.setItem(iline, 0, item)
+
+            # van run to calibrate
+            item = QtGui.QTableWidgetItem()
+
+            vanrun = datapair[1]
+            if vanrun is None:
+                item.setText("") 
+            else:
+                item.setText(str(vanrun))
+            self.ui.tableWidget_generalInfo.setItem(iline, 1, item)
+
+            # set reduce check box
+            if vanrun is None:
+                state = False
+            else:
+                state = True
+            addCheckboxToWSTCell(self.ui.tableWidget_generalInfo, iline, 2, state)
+
+            iline += 1
+        # ENDFOR(datapair)
+
+        return
+
 
     def doSaveProject(self):
         """ Load a project with prompt
@@ -384,6 +452,7 @@ class VDrivePlot(QtGui.QMainWindow):
         self._myLogList = []
 
 
+
     #------------------------------------------
     # Reduction related event handlers
     #------------------------------------------
@@ -413,6 +482,35 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
+#-------------------------------------------------------------------------
+# External methods
+#-------------------------------------------------------------------------
+def addCheckboxToWSTCell(table, row, col, state):
+    #function to add a new select checkbox to a cell in a table row
+    #won't add a new checkbox if one already exists
+    if state == '':
+        state=False
+    #check if cellWidget exitst
+    if table.cellWidget(row,col) != None:
+        table.cellWidget(row,col).setChecked(state)
+    else:
+        #case to add checkbox
+
+        checkbox = QtGui.QCheckBox()
+        checkbox.setText('Select')
+        checkbox.setChecked(state)
+        
+        #adding a widget which will be inserted into the table cell
+        #then centering the checkbox within this widget which in turn,
+        #centers it within the table column :-)
+        QW=QtGui.QWidget()
+        cbLayout=QtGui.QHBoxLayout(QW)
+        cbLayout.addWidget(checkbox)
+        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
+        cbLayout.setContentsMargins(0,0,0,0)
+        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
+
+    return
     
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)
