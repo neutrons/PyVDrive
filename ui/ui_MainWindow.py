@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Fri Feb 13 14:18:36 2015
-#      by: PyQt4 UI code generator 4.11.2
+# Created: Wed Feb 18 08:49:27 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -38,12 +38,10 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.tableWidget_generalInfo, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 963, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 963, 22))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuVDrive_2_0 = QtGui.QMenu(self.menubar)
         self.menuVDrive_2_0.setObjectName(_fromUtf8("menuVDrive_2_0"))
-        self.menuNew = QtGui.QMenu(self.menuVDrive_2_0)
-        self.menuNew.setObjectName(_fromUtf8("menuNew"))
         self.menuEdit = QtGui.QMenu(self.menubar)
         self.menuEdit.setObjectName(_fromUtf8("menuEdit"))
         self.menuReduction = QtGui.QMenu(self.menubar)
@@ -99,9 +97,9 @@ class Ui_MainWindow(object):
         self.actionLog_Window = QtGui.QAction(MainWindow)
         self.actionLog_Window.setCheckable(True)
         self.actionLog_Window.setObjectName(_fromUtf8("actionLog_Window"))
-        self.menuNew.addAction(self.actionFile_New_Reduction)
-        self.menuNew.addAction(self.actionAnalysis_Project)
-        self.menuVDrive_2_0.addAction(self.menuNew.menuAction())
+        self.actionFile_New = QtGui.QAction(MainWindow)
+        self.actionFile_New.setObjectName(_fromUtf8("actionFile_New"))
+        self.menuVDrive_2_0.addAction(self.actionFile_New)
         self.menuVDrive_2_0.addAction(self.action_OpenProject)
         self.menuVDrive_2_0.addAction(self.actionClose)
         self.menuVDrive_2_0.addSeparator()
@@ -129,7 +127,6 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
         self.menuVDrive_2_0.setTitle(_translate("MainWindow", "File", None))
-        self.menuNew.setTitle(_translate("MainWindow", "New", None))
         self.menuEdit.setTitle(_translate("MainWindow", "Edit", None))
         self.menuReduction.setTitle(_translate("MainWindow", "Reduction", None))
         self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
@@ -139,6 +136,7 @@ class Ui_MainWindow(object):
         self.action_OpenProject.setText(_translate("MainWindow", "Open", None))
         self.action_OpenProject.setShortcut(_translate("MainWindow", "Ctrl+O", None))
         self.actionClose.setText(_translate("MainWindow", "Close", None))
+        self.actionClose.setShortcut(_translate("MainWindow", "Ctrl+W", None))
         self.action_SaveProject.setText(_translate("MainWindow", "Save", None))
         self.action_SaveProject.setShortcut(_translate("MainWindow", "Ctrl+S", None))
         self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
@@ -151,10 +149,13 @@ class Ui_MainWindow(object):
         self.actionFile_New_Reduction.setToolTip(_translate("MainWindow", "New a Reduction Project", None))
         self.actionFile_New_Reduction.setShortcut(_translate("MainWindow", "Ctrl+N", None))
         self.actionAnalysis_Project.setText(_translate("MainWindow", "Analysis Project", None))
-        self.actionReduction_NewSetup.setText(_translate("MainWindow", "New Setup", None))
+        self.actionReduction_NewSetup.setText(_translate("MainWindow", "Open Setup", None))
+        self.actionReduction_NewSetup.setShortcut(_translate("MainWindow", "Ctrl+Shift+R", None))
         self.actionDelete.setText(_translate("MainWindow", "Delete", None))
         self.actionLoad_Setup.setText(_translate("MainWindow", "Load Setup", None))
         self.actionReset.setText(_translate("MainWindow", "Reset", None))
         self.actionLog_Window.setText(_translate("MainWindow", "Log Window", None))
         self.actionLog_Window.setShortcut(_translate("MainWindow", "Ctrl+L", None))
+        self.actionFile_New.setText(_translate("MainWindow", "New", None))
+        self.actionFile_New.setShortcut(_translate("MainWindow", "Ctrl+N", None))
 

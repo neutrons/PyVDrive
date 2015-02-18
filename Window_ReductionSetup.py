@@ -141,7 +141,7 @@ class MyReductionWindow(QWidget):
         elif len(runend) == 0:
             runnumberlist.append(int(runstart))
         else:
-            runnumberlist.append(range(int(runstart), int(runend)+1))
+            runnumberlist.extend(range(int(runstart), int(runend)+1))
 
         logmsg = "Adding ITPS-%d runs: %s. " % (ipts, str(runnumberlist))
             

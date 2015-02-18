@@ -30,6 +30,7 @@ class VDriveAPI:
         # defaults
         self._myInstrument = "VULCAN"
         self._baseDataPath = '/SNS/%s' % (self._myInstrument)
+        self._vanadiumRecordFile = None
 
         # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, warning and error
         self._myLogList = []
@@ -60,7 +61,7 @@ class VDriveAPI:
 
         # check input
         if self._checkProjectExistence(projname, operation) is False:
-            return (False, "Project %s does not exist." % (projname))
+            return (False, "Project %s does not exist." % (projname), None)
 
         # get handler on project
         try: 
@@ -74,7 +75,7 @@ class VDriveAPI:
 
             # check whether it is good for finding calibration automatically
             if len(self._vanCalibCriteriaDict[projname]) == 0:
-                return (False, "Unable to match vanadium calibration file because criteria list is empty.")
+                return (False, "Unable to match vanadium calibration file because criteria list is empty.", None)
 
             autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, curproject.getBaseDataPath())
            
@@ -95,6 +96,7 @@ class VDriveAPI:
         datacalfilesets = []
         runwithcallist = runvanrundict.keys()
         for run in runnumberlist:
+            print "[DB] Load run '%s'." % (str(run))
             exist, datafile = vdrive.vulcan_util.locateRun(ipts, run, curproject.getBaseDataPath())
             if exist is True:
                 if run in runwithcallist:
@@ -176,7 +178,20 @@ class VDriveAPI:
             projecttype += 'a'
 
         return (hasproject, projecttype)
-        
+
+    
+    def info(self, projname):
+        """
+        """
+        if self._rProjectDict.has_key(projname):
+            info = self._rProjectDict[projname].info()
+            return (True, "Reduction information:\n%s" % (info))
+
+        elif self._aProjectDict.has_key(projname):
+            info = self._aProjectDict[projname].info()
+            return (True, "Analysis information:\n%s" % (info))
+
+        return (False, "Project %s does not exist." % (projname))
         
         
     def newProject(self, projname, projtype):
@@ -200,10 +215,13 @@ class VDriveAPI:
         
         # new project and register
         if projtype == 'reduction': 
+            # create a reduction project
             newproject = vp.ReductionProject(projname)
             self._vanCalibCriteriaDict[projname] = [] 
             self._rProjectDict[projname] = newproject
+            self._rProjectDict[projname].setVanadiumDatabaseFile(self._vanadiumRecordFile)
         elif projtype == 'analysis':
+            # create an analysis project
             newproject = vp.AnalysisProject(projname)
             self._aProjectDict[projname] = newproject
         
@@ -277,6 +295,13 @@ class VDriveAPI:
 
         return
 
+    def setDefaultVanadiumDatabaseFile(self, vandbfile):
+        """ Set the default/global vanadium database file
+        """
+        self._vanadiumRecordFile = vandbfile
+
+        return
+
 
     def setDataPath(self, projname, basedatapath):
         """ Set the base data path to a project
@@ -290,6 +315,26 @@ class VDriveAPI:
 
         return (True, "")
 
+
+    def setReductionFlags(self, projname, filepairlist):
+        """ Turn on the flag to reduce for files in the list
+        """
+        try:
+            project = self._rProjectDict[projname]
+        except KeyError:
+            return (False, "Reduction project %s does not exist." % (projname))
+
+        numflagson = 0
+        for filename, rflag in filepairlist: 
+            good = project.setReductionFlag(filename, rflag)
+            if good is True:
+                numflagson += 1
+        # ENDFOR
+
+        if numflagson == 0:
+            return (False, "None of the input files that exist in the project %s." % (projname))
+
+        return (True, "")
 
         
     def reduce(self, projname):
@@ -340,7 +385,7 @@ class VDriveAPI:
         """
         self._checkProjectExistence(projname, "set characterization file")
         
-        self._projectDict[projname].setParameters(reductionparamdict)
+        self._rProjectDict[projname].setParameters(reductionparamdict)
         
         return
         

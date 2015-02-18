@@ -23,6 +23,8 @@ import Window_ReductionSetup as rdwn
 import Dialog_NewProject as npj
 import Dialog_AppLog as dlglog
 
+import config
+
 class VDrivePlot(QtGui.QMainWindow):
     """ Main GUI class for VDrive 
     """ 
@@ -45,7 +47,11 @@ class VDrivePlot(QtGui.QMainWindow):
         #-----------------------------------------------------------------------
         # new project
         self._myWorkflow = vdrive.VDriveAPI()
+        self._myWorkflow.setDefaultDataPath(config.defaultDataPath)
 
+        # statis variables
+        self._tableCurrentProject = None
+        
         # controls to the sub windows
         self._openSubWindows = []
         
@@ -53,8 +59,8 @@ class VDrivePlot(QtGui.QMainWindow):
         # add action support for menu
         #-----------------------------------------------------------------------
         # submenu 'File'
-        self.connect(self.ui.actionFile_New_Reduction, QtCore.SIGNAL('triggered()'), 
-                self.doNewReductionProject)
+        self.connect(self.ui.actionFile_New, QtCore.SIGNAL('triggered()'), 
+                self.doNewProject)
 
         self.connect(self.ui.action_OpenProject, QtCore.SIGNAL('triggered()'),
                 self.doLoadProject)
@@ -87,7 +93,7 @@ class VDrivePlot(QtGui.QMainWindow):
         #
         # This is the right way to use right mouse operation for pop-up sub menu 
         addAction = QtGui.QAction('Add', self)
-        addAction.triggered.connect(self.addFile)
+        addAction.triggered.connect(self.doAddFile)
         self.ui.treeWidget_Project.addAction(addAction)
         setupReductionAction = QtGui.QAction('Setup', self)
         setupReductionAction.triggered.connect(self.doSetupReduction)
@@ -152,7 +158,7 @@ class VDrivePlot(QtGui.QMainWindow):
 
     #------------ New projects -----------------------------------------------------
             
-    def doNewReductionProject(self):
+    def doNewProject(self):
         """ New reduction project
         """
         import time
@@ -236,66 +242,6 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
-    def _initReductionProjectTable(self, projname):
-        """ 
-        """
-        # load project
-        status, errmsg, datapairlist = self._myWorkflow.getDataFiles(projname)
-        if status is False:
-            self._addLogInformation(errmsg)
-            return
-        
-        # get some information
-        numrows = len(datapairlist)
-
-        # clear
-        self.ui.tableWidget_generalInfo.setRowCount(0)
-        self.ui.tableWidget_generalInfo.setColumnCount(0)
-
-
-        # init
-        self.ui.tableWidget_generalInfo.setColumnCount(3)
-        self.ui.tableWidget_generalInfo.setRowCount(numrows)
-
-        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
-       
-        # set values
-        if numrows == 0:
-            self._addLogInformation("There is no data file that has been added to project %s yet." % (projname))
-            return
-        else:
-            self._addLogInformation("There are %d data files that have been added to project %s." % (numrows, projname))
-
-
-        iline = 0
-        for datapair in datapairlist:
-            # data 
-            item = QtGui.QTableWidgetItem()
-            item.setText(datapair[0])
-            self.ui.tableWidget_generalInfo.setItem(iline, 0, item)
-
-            # van run to calibrate
-            item = QtGui.QTableWidgetItem()
-
-            vanrun = datapair[1]
-            if vanrun is None:
-                item.setText("") 
-            else:
-                item.setText(str(vanrun))
-            self.ui.tableWidget_generalInfo.setItem(iline, 1, item)
-
-            # set reduce check box
-            if vanrun is None:
-                state = False
-            else:
-                state = True
-            addCheckboxToWSTCell(self.ui.tableWidget_generalInfo, iline, 2, state)
-
-            iline += 1
-        # ENDFOR(datapair)
-
-        return
-
 
     def doSaveProject(self):
         """ Load a project with prompt
@@ -337,7 +283,7 @@ class VDrivePlot(QtGui.QMainWindow):
         # This is how to created a popup menu
         self.menu = QtGui.QMenu(self)
         addAction = QtGui.QAction('Add File', self)
-        addAction.triggered.connect(self.addFile)
+        addAction.triggered.connect(self.doAddFile)
         self.menu.addAction(addAction)
 
         renameAction = QtGui.QAction('Rename', self)
@@ -351,13 +297,17 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
 
-    def addFile(self):
+    def doAddFile(self):
         """ Add file
         """
+        newdatafiledialog = Dialog_NewRuns()
+
+
         print "Add a new file to current project"
         curitem = self.ui.treeWidget_Project.currentItem()
         # 
-        print "Add file to ", curitem, " with parent = ", curitem.parent(), " data = ", curitem.data(0,0), " data = ", curitem.text(0), curitem.text(1)
+        print "Add file to ", curitem, " with parent = ", curitem.parent(), " data = ", \
+                curitem.data(0,0), " data = ", curitem.text(0), curitem.text(1)
         
         #Add file to  <PyQt4.QtGui.QTreeWidgetItem object at 0x7fe454028f28>
 
@@ -446,6 +396,21 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
 
+    def _addLogError(self, logstr):
+        """ Add log at information level
+        """
+        self._myWorkflow.addLogInformation(logstr)
+
+        # Emit signal to parent
+        if self.myLogSignal is not None: 
+            sigVal = logstr
+            self.myLogSignal.emit(sigVal)
+
+        print "---> Should send out a signal to update log window: %s." % (logstr)
+
+        return
+
+
     def getLogText(self):
         """ 
         """
@@ -475,12 +440,141 @@ class VDrivePlot(QtGui.QMainWindow):
 
         # runs
         # FIXME - need to add the option to match runs automatically 
-        status, result = self._myWorkflow.addExperimentRuns(projname, 'reduction', self._tmpIPTS, self._tmpRuns, False)
-        msg = result[0]
-        runsadded = result[1]
+        status, errmsg, datafilesets = self._myWorkflow.addExperimentRuns(projname, 'reduction', self._tmpIPTS, self._tmpRuns, True)
+
+        if status is False:
+            self._addLogError(errmsg)
+            return
+
+        runsadded = []
+        for dp in datafilesets:
+            dfile = dp[0]
+            runsadded.append(dfile)
         self._treeAddRuns(projname, runsadded)
+        self._tableAddRuns(projname, datafilesets)
 
         return
+
+    #---- Private methods for table and tree 
+
+    def _initReductionProjectTable(self, projname):
+        """ 
+        """
+        # load project
+        status, errmsg, datapairlist = self._myWorkflow.getDataFiles(projname)
+        if status is False:
+            self._addLogInformation(errmsg)
+            return
+        
+        # get some information
+        numrows = len(datapairlist)
+
+        # clear
+        self.ui.tableWidget_generalInfo.setRowCount(0)
+        self.ui.tableWidget_generalInfo.setColumnCount(0)
+
+
+        # init
+        self.ui.tableWidget_generalInfo.setColumnCount(3)
+        self.ui.tableWidget_generalInfo.setRowCount(numrows)
+
+        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
+       
+        # set values
+        if numrows == 0:
+            self._addLogInformation("There is no data file that has been added to project %s yet." % (projname))
+            return
+        else:
+            self._addLogInformation("There are %d data files that have been added to project %s." % (numrows, projname))
+
+        # set to table
+        self._tableAddRuns(projname, datapairlist)
+
+
+        return
+
+    def _tableAddRuns(self, projname, datapairlist):
+        """ Add new runs to table
+
+        Argument:
+         - projname ::
+         - datapairlist :: list of pair of (data file and run)
+        """
+        if self._tableCurrentProject is None:
+            # Initialize
+            self._tableCurrentProject = projname
+        
+            # clear
+            self.ui.tableWidget_generalInfo.setRowCount(0)
+            self.ui.tableWidget_generalInfo.setColumnCount(0)
+
+            # init
+            self.ui.tableWidget_generalInfo.setColumnCount(3)
+
+            # FIXME - Only work for reductionp project
+
+        # check project name
+        if projname != self._tableCurrentProject:
+            raise NotImplementedError("[DB1248] Need to implement the algorithm to switch between projects.")
+
+        # Set lines
+        numrows = self.ui.tableWidget_generalInfo.rowCount()
+        numrows += len(datapairlist)
+        self.ui.tableWidget_generalInfo.setRowCount(numrows)
+
+        # Set rows
+        iline = 0
+        for datapair in datapairlist:
+            # data 
+            item = QtGui.QTableWidgetItem()
+            item.setText(datapair[0])
+            self.ui.tableWidget_generalInfo.setItem(iline, 0, item)
+
+            # van run to calibrate
+            item = QtGui.QTableWidgetItem()
+
+            vanrun = datapair[1]
+            if vanrun is None:
+                item.setText("") 
+            else:
+                item.setText(str(vanrun))
+            self.ui.tableWidget_generalInfo.setItem(iline, 1, item)
+
+            # set reduce check box
+            if vanrun is None:
+                state = False
+            else:
+                state = True
+            addCheckboxToWSTCell(self.ui.tableWidget_generalInfo, iline, 2, state)
+
+            iline += 1
+        # ENDFOR(datapair)
+
+        return
+
+    def _treeAddRuns(self, projname, runsadded, usebasefilename=True):
+        """ Add runs/file names to reduce to the tree widget
+        """
+        # NOTE: The procedure to add items to tree is 
+        #       1. create a new QTreeWidgetItem with parent set up (a<--b)
+        #       2. call the QTreeWidget (the root) to expandItem   (a-->b)
+
+        curitem = self.ui.treeWidget_Project.currentItem()
+
+        if len(runsadded) == 0:
+            self._addLogInformation("No run is found and added to project %s." % (projname))
+
+        #for run in sorted(runsadded):
+        for run in sorted(runsadded):
+            if usebasefilename is True:
+                run = os.path.basename(run)
+
+            newrunw = QtGui.QTreeWidgetItem(curitem, ["", run])
+            self.ui.treeWidget_Project.expandItem(newrunw)
+
+        return
+
+
 
 #-------------------------------------------------------------------------
 # External methods

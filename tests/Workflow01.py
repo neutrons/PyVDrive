@@ -10,14 +10,19 @@ import os.path
 # sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 
 import PyVDrive.Ui_VDrive as vdapi
+import PyVDrive.config as vconfig
+
+print "Default data path = ", vconfig.defaultDataPath
 
 myworkflow = vdapi.VDriveAPI()
+
 
 # initlalize a new project
 if myworkflow.hasProject(projname='Test001')[0] is True:
     myworkflow.deleteProject(projname='Test0001')
 myworkflow.newProject(projname = "Test001", projtype = "reduction")
-myworkflow.setDataPath(projname = 'Test001', basedatapath = '/Users/wzz/Projects/SNSData/VULCAN')
+myworkflow.setDataPath(projname = 'Test001', basedatapath = vconfig.defaultDataPath)
+#myworkflow.setDataPath(projname = 'Test001', basedatapath = '/Users/wzz/Projects/SNSData/VULCAN')
 
 # new project should add data and locate calibration file automatically
 ipts = 10311
@@ -58,11 +63,36 @@ projfilename = os.path.join(curdir, 'test001a.p')
 myworkflow.saveProject('r', 'Test001', projfilename)
 
 # get the information of runs
-datacalpairlist = myworkflow.getDataFiles('Test001')
+status, errmsg, datacalpairlist = myworkflow.getDataFiles('Test001')
 msg = "Data file and calibration file for reduction:\n"
 for datapair in sorted(datacalpairlist):
-    msg += "%-20s\t\t%-20s\n" % (datapair[0], datapair[1])
+    msg += "%-20s\t\t%-20s\n" % (str(datapair[0]), str(datapair[1]))
 print msg
+
+# select the runs to reduce
+filestoreduce = [('VULCAN_57075_event.nxs', True), 
+    ('VULCAN_57076_event.nxs', True), 
+    ('VULCAN_57077_event.nxs', True),
+    ('VULCAN_57080_event.nxs', False)]
+myworkflow.setReductionFlags('Test001', filestoreduce)
+print myworkflow.info('Test001')[1]
+
+# set up reduction parameters
+outputdir = os.getcwd()
+
+paramdict = {
+        "Instrument": "VULCAN",
+        "Extension": "_event.nxs",
+        "PreserveEvents": True,
+        "Binning" : -0.001,
+        "OutputDirectory" : outputdir, 
+        "NormalizeByCurrent":  False,
+        "FilterBadPulses": False,
+        "CompressTOFTolerance": False,
+        "FrequencyLogNames": "skf1.speed",
+        "WaveLengthLogNames": "skf12.lambda"
+        }
+myworkflow.setReductionParameters('Test001', paramdict)
 
 
 raise NotImplementedError("Implemented so far...")
@@ -72,7 +102,6 @@ raise NotImplementedError("Implemented so far...")
 #myworkflow.setCharactFile('Test001','dummychar.txt')
 
 
-outputdir = "/tmp/"
 
 # set reduction parameters
 paramdict = {

@@ -33,14 +33,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <widget class="QMenu" name="menuNew">
-     <property name="title">
-      <string>New</string>
-     </property>
-     <addaction name="actionFile_New_Reduction"/>
-     <addaction name="actionAnalysis_Project"/>
-    </widget>
-    <addaction name="menuNew"/>
+    <addaction name="actionFile_New"/>
     <addaction name="action_OpenProject"/>
     <addaction name="actionClose"/>
     <addaction name="separator"/>
@@ -123,6 +116,9 @@
    <property name="text">
     <string>Close</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
   </action>
   <action name="action_SaveProject">
    <property name="text">
@@ -176,7 +172,10 @@
   </action>
   <action name="actionReduction_NewSetup">
    <property name="text">
-    <string>New Setup</string>
+    <string>Open Setup</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
    </property>
   </action>
   <action name="actionDelete">
@@ -203,6 +202,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="actionFile_New">
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
  </widget>

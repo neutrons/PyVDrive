@@ -10,7 +10,7 @@ class VDProject:
         """
         self._name = projname
         self._dataset = []
-        self._baseDataPath = None
+        self._baseDataPath = None 
         
         return
         
@@ -51,11 +51,18 @@ class ReductionProject(VDProject):
         self._datacalibfiledict = {}
         # calibration file to run look up table: key = calibration file with fullpath. value = list
         self._calibfiledatadict = {}
+        # vanadium record (database) file
+        self._vanadiumRecordFile = None
+        # flags to reduce specific data set: key = file with full path
+        self._reductionFlagDict = {}
+
+        return
         
     def addDataFileSets(self, reddatasets):
         """ Add data file and calibration file sets 
         """
         for datafile, vcalfile in reddatasets:
+            self.addData(datafile)
             databasefname = os.path.basename(datafile)
             self._datacalibfiledict[databasefname] = vcalfile
             if self._calibfiledatadict.has_key(vcalfile) is False:
@@ -75,6 +82,23 @@ class ReductionProject(VDProject):
 
         return pairlist
 
+    def getVanadiumRecordFile(self):
+        """
+        """
+        return self._vanadiumRecordFile
+
+    def info(self):
+        """ Return information in nice format
+        """
+        ibuf = "%-50s \t%-30s\t %-5s\n" % ("File name", "Vanadium run", "Reduce?")
+        for filename in self._dataset:
+            basename = os.path.basename(filename)
+            vanrun = self._datacalibfiledict[basename]
+            reduceBool = self._reductionFlagDict[filename]
+            ibuf += "%-50s \t%-30s\t %-5s\n" % (filename, str(vanrun), str(reduceBool))
+        # ENDFOR
+
+        return ibuf
         
     def setCalibrationFile(self, datafilenames, calibfilename):
         """ Set the calibration file
@@ -91,7 +115,13 @@ class ReductionProject(VDProject):
         # ENDFOR(datafilename)
     
         return
-        
+
+    def setVanadiumDatabaseFile(self, datafilename):
+        """ Set the vanadium data base file
+        """
+        self._vanadiumRecordFile = datafilename
+
+        return
         
     def setCharacterFile(self, characerfilename):
         """ Set characterization file
@@ -114,6 +144,29 @@ class ReductionProject(VDProject):
         """ Set events filter for chopping the data
         """
 
+        return
+
+
+    def setReductionFlag(self, filename, flag):
+        """ Turn on the reduction flag for a file of this project
+
+        Assumption: if the file name is not the name in full path, then 
+        there is only one file name with the same base name
+        """
+        # check with full name
+        exist = filename in self._dataset
+        if exist:
+            self._reductionFlagDict[filename] = flag
+            return True
+
+        # check as base name
+        for fpname in self._dataset:
+            basename = os.path.basename(fpname)
+            if basename == filename:
+                self._reductionFlagDict[fpname] = flag
+                return True
+
+        return False
         
     def reduce(self):
         """ Reduce by calling SNSPowderReduction
