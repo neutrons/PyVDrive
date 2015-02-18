@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>730</width>
+    <height>385</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>730</width>
+    <height>300</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>PyQt Table Example</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QTableWidget" name="tableWidgetTable1">
+        <property name="minimumSize">
+         <size>
+          <width>451</width>
+          <height>221</height>
+         </size>
+        </property>
+        <property name="rowCount">
+         <number>10</number>
+        </property>
+        <property name="columnCount">
+         <number>5</number>
+        </property>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <row/>
+        <column/>
+        <column/>
+        <column/>
+        <column/>
+        <column/>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>201</width>
+          <height>250</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>201</width>
+          <height>201</height>
+         </size>
+        </property>
+        <property name="title">
+         <string>Table Controls</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QPushButton" name="pushButtonSelectAll">
+           <property name="text">
+            <string>Select All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonDeSelectAll">
+           <property name="text">
+            <string>De-Select All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonRemoveEmptyRows">
+           <property name="minimumSize">
+            <size>
+             <width>181</width>
+             <height>23</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Remove Empty Rows</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonDeleteSelectedRows">
+           <property name="minimumSize">
+            <size>
+             <width>181</width>
+             <height>23</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Delete Selected Row(s)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonAddRows">
+           <property name="minimumSize">
+            <size>
+             <width>181</width>
+             <height>23</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Add Row(s)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonMoveRowsUp">
+           <property name="minimumSize">
+            <size>
+             <width>181</width>
+             <height>23</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Move Selected Row(s) Up</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonMoveRowsDown">
+           <property name="minimumSize">
+            <size>
+             <width>181</width>
+             <height>23</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Move Selected Row(s) Down</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>730</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>tableWidgetTable1</sender>
+   <signal>clicked(QModelIndex)</signal>
+   <receiver>tableWidgetTable1</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>261</x>
+     <y>192</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>192</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
