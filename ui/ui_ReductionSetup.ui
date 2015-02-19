@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1292</width>
-    <height>1315</height>
+    <width>913</width>
+    <height>1046</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -94,7 +94,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_advsetup">
         <attribute name="title">
@@ -136,7 +136,7 @@
           </widget>
          </item>
          <item row="0" column="1" colspan="2">
-          <widget class="QLineEdit" name="lineEdit_2"/>
+          <widget class="QLineEdit" name="lineEdit_timeFocusTable"/>
          </item>
          <item row="3" column="0">
           <widget class="QLabel" name="label_22">
@@ -159,7 +159,7 @@
           </widget>
          </item>
          <item row="1" column="1" colspan="2">
-          <widget class="QLineEdit" name="lineEdit_3"/>
+          <widget class="QLineEdit" name="lineEdit_vanDBFile"/>
          </item>
          <item row="3" column="3" colspan="2">
           <widget class="QLineEdit" name="lineEdit_5">
@@ -217,6 +217,16 @@
           </widget>
          </item>
          <item row="1" column="5">
+          <widget class="QPushButton" name="pushButton_vanDBCriteriaSetup">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Launch a dialog box to set up criteria for search corresponding vanadium runs by vanadium database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Criteria</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="5">
           <spacer name="horizontalSpacer_12">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -249,7 +259,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_7"/>
+            <widget class="QLineEdit" name="lineEdit_binsize"/>
            </item>
            <item>
             <spacer name="horizontalSpacer_13">
@@ -265,14 +275,14 @@
             </spacer>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox">
+            <widget class="QCheckBox" name="checkBox_sumRuns">
              <property name="text">
               <string>Sum Runs</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox_3">
+            <widget class="QCheckBox" name="checkBox_filterBadPulses">
              <property name="text">
               <string>Filter Bad Pulses</string>
              </property>
@@ -283,7 +293,7 @@
          <item row="1" column="0">
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QCheckBox" name="checkBox_2">
+            <widget class="QCheckBox" name="checkBox_chopData">
              <property name="text">
               <string>Chop Data</string>
              </property>
@@ -308,10 +318,10 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_8"/>
+            <widget class="QLineEdit" name="lineEdit_gsasPRMFile"/>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_8">
+            <widget class="QPushButton" name="pushButton_gsasPRM">
              <property name="text">
               <string>Bowse</string>
              </property>
@@ -342,6 +352,29 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_13">
            <item>
+            <widget class="QRadioButton" name="radioButto_filterByTime">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_20">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Preferred</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QLabel" name="label_14">
              <property name="text">
               <string>Start Time</string>
@@ -349,7 +382,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_10"/>
+            <widget class="QLineEdit" name="lineEdit_filterStartTime"/>
            </item>
            <item>
             <widget class="QLabel" name="label_15">
@@ -359,7 +392,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_11"/>
+            <widget class="QLineEdit" name="lineEdit_filterStopTime"/>
            </item>
            <item>
             <widget class="QLabel" name="label_16">
@@ -369,7 +402,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_12"/>
+            <widget class="QLineEdit" name="lineEdit_filterTimeStep"/>
            </item>
            <item>
             <spacer name="horizontalSpacer_16">
@@ -395,6 +428,29 @@
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_14">
+           <item>
+            <widget class="QRadioButton" name="radioButton_filterByFile">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_21">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Preferred</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
            <item>
             <widget class="QLabel" name="label_21">
              <property name="toolTip">
@@ -440,6 +496,29 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_15">
            <item>
+            <widget class="QRadioButton" name="radioButton_filterByLog">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_22">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Preferred</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QLabel" name="label_tabSampleLog">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -459,7 +538,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="comboBox_3">
+            <widget class="QComboBox" name="comboBox_sampleLogNames">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -496,6 +575,22 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_16">
            <item>
+            <spacer name="horizontalSpacer_23">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Preferred</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QLabel" name="label_19">
              <property name="text">
               <string>Min Value</string>
@@ -503,7 +598,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_15"/>
+            <widget class="QLineEdit" name="lineEdit_minLogValue"/>
            </item>
            <item>
             <widget class="QLabel" name="label_20">
@@ -513,7 +608,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_14"/>
+            <widget class="QLineEdit" name="lineEdit_maxLogValue"/>
            </item>
            <item>
             <widget class="QLabel" name="label_18">
@@ -523,7 +618,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_13"/>
+            <widget class="QLineEdit" name="lineEdit_logValueStep"/>
            </item>
            <item>
             <spacer name="horizontalSpacer_19">
@@ -657,7 +752,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit"/>
+      <widget class="QLineEdit" name="lineEdit_nexusFile"/>
      </item>
      <item>
       <widget class="QPushButton" name="pushButton_browseNxsFile">
@@ -942,7 +1037,7 @@
       </widget>
      </item>
      <item row="0" column="4">
-      <widget class="QCheckBox" name="checkBox_4">
+      <widget class="QCheckBox" name="checkBox_reduceinfo">
        <property name="text">
         <string>See Info</string>
        </property>
