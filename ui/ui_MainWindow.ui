@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>963</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuVDrive_2_0">
@@ -58,6 +58,8 @@
     <addaction name="actionLoad_Setup"/>
     <addaction name="actionSave_Setup"/>
     <addaction name="separator"/>
+    <addaction name="actionAdd_Runs"/>
+    <addaction name="actionDelete_Runs"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -210,6 +212,16 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionAdd_Runs">
+   <property name="text">
+    <string>Add Runs</string>
+   </property>
+  </action>
+  <action name="actionDelete_Runs">
+   <property name="text">
+    <string>Delete Runs</string>
    </property>
   </action>
  </widget>

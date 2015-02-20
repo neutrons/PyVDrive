@@ -81,16 +81,9 @@ class VDrivePlot(QtGui.QMainWindow):
 
 
         # Project tree widget
-        #        self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('mousePressEvent()'),
-        #                self.projectOperation)
-        #        self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemPressed()'),
-        #                self.projectOperation)
-        #        self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemClicked()'),
-        #                self.projectOperation)
-        #
-        #        self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemSelectionChanged()'),
-        #                self.projectOperation)
-        #
+        self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemSelectionChanged()'),
+            self.doChangeTreeMenu)
+ 
         # This is the right way to use right mouse operation for pop-up sub menu 
         addAction = QtGui.QAction('Add', self)
         addAction.triggered.connect(self.doAddFile)
@@ -154,9 +147,51 @@ class VDrivePlot(QtGui.QMainWindow):
         """
 
         return
+        
+    #------------ Information Tree Handling ------------------------------------
+    def doChangeTreeMenu(self):
+        """ Change the tree menu if it is on different level
+        """
+        currTreeItem = self.ui.treeWidget_Project.currentItem()
+        col0 = currTreeItem.text(0)
+        col1 = currTreeItem.text(1)
+        print "Item is changed: ", str(col0), str(col1)
+        
+        actions = self.ui.treeWidget_Project.actions()
+        if len(actions) == 0:
+            self._setTreeLevel1Actions()
+        else:
+            self._clearTreeActions()
+            
+        return
+        
+        
+    def _clearTreeActions(self):
+        """ Clear all the actions of the tree widget
+        """
+        actions = self.ui.treeWidget_Project.actions()
+        for action in actions:
+            print action.whatsThis(), " | ", action.text()
+            self.ui.treeWidget_Project.removeAction(action)
+        # ENDFOR (action)
+        
+        return
+        
+    def _setTreeLevel1Actions(self):         
+        """
+        """
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        addAction = QtGui.QAction('Add', self)
+        addAction.triggered.connect(self.doAddFile)
+        self.ui.treeWidget_Project.addAction(addAction)
+        setupReductionAction = QtGui.QAction('Setup', self)
+        setupReductionAction.triggered.connect(self.doSetupReduction)
+        self.ui.treeWidget_Project.addAction(setupReductionAction)
+        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        
+        return
 
-
-    #------------ New projects -----------------------------------------------------
+    #------------ New projects -------------------------------------------------
             
     def doNewProject(self):
         """ New reduction project
