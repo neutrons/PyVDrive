@@ -51,11 +51,16 @@ class MyProjectNameWindow(QWidget):
     def quitCreateNew(self):
         """ Quit for creating new project
         """
+        # project name
         projectname = str(self.ui.lineEdit.text())
         if len(projectname) == 0:
             projectname = "new project"
+       
+        # project type
+        projecttype = str(self.ui.comboBox_projectTypes.currentText()).split()[0].lower()
         
         self.myParent.newprojectname = projectname
+        self.myParent.newprojecttype = projecttype
 
         # Emit signal to parent
         sigVal = 1

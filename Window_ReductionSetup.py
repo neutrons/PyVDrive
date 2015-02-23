@@ -15,6 +15,7 @@ except AttributeError:
         return s
         
 from ui.ui_ReductionSetup import *
+from vdrive.
 
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
@@ -51,6 +52,10 @@ class MyReductionWindow(QWidget):
         # add runs/file for reduction
         QtCore.QObject.connect(self.ui.pushButton_addRuns,
                 QtCore.SIGNAL('clicked()'), self.doAddRuns)
+
+        # calibration setup
+        QtCore.QObject.connect(self.ui.pushButton_vanDBFile, 
+                QtCore.SIGNAL('clicked()'), self.doBrowseVanDBFile)
 
         # setup tabs
         QtCore.QObject.connect(self.ui.pushButton_browseBaseDataPath,
@@ -152,12 +157,52 @@ class MyReductionWindow(QWidget):
         return
 
     def doBrowseBaseDataPath(self):
-        """ 
+        """ Prompt a dialog box for selecting the home directory
         """
         # TODO - doc on method
         home = getHomeDir()
         basedatadir = str(QtGui.QFileDialog.getExistingDirectory(self,'Get Directory',home))
         self.ui.lineEdit_baseDataPath.setText(basedatadir)
+
+        # TODO - use a dictionary of class to hold all information of the reduction setup
+        self._myParent._myWorkflow.setDataPath(projname = self._myProjectName, 
+                basedatapath = vconfig.defaultDataPath)
+        
+        return
+
+    def doBrowseVanDBFile(self):
+        """ Prompt a dialog box for selecting vanadium database file
+        """ 
+        # get vanadium database file via dialog
+        fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', home, filter)
+        vandbfile = str(fileList[0])
+        self.ui.lineEdit_vanDBFile.setText(vandbfile)
+
+        # launch the window to ask user to set up match criteria
+        vandbfilelogs = vulcan_util.getLogsList(vandbfile)
+
+        self._vanDBCriteriaWindow = Dialog_VanDBCriteriaList(self)
+        self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs)
+        self._vanDBCriteriaWindow.setDefaults(config.defaultVanDBCriteria)
+        self._vanDBCriteriaWindow.show()
+
+        return
+
+
+    @QtCore.pyqtSlot(str)
+    def _handleBrowseVanDBFile(self):
+        """ Second step to handle vanadium database match up
+        """
+        # check
+        if len(self._criteriaList) == 0:
+            raise NotImplementedError("No criterial is setup")
+
+
+        # FIXME - where should this file go? 
+        self._myParnet._myWorkflow.setVanadiumCalibrationMatchCriterion(self._myProjectName,
+                self._criterialList)
+        #self._myParent.setVanadiumDatabaseFile(vandbfile)
+
 
         return
 

@@ -54,6 +54,41 @@ def checkIPTSExist(ipts, basepath):
         return (True, msg)
     
     return (False, msg)
+
+
+def getLogsList(vandbfile):
+    """ Get the log list from vanadium database file (van record.txt)
+    """
+    try:
+        vfile = open(vrecordfile,'r')
+        lines = vfile.readlines()
+        vfile.close()
+    except IOError as ioe:
+        return (False, str(ioe))
+        
+    # parse title line
+    titlelist = []
+    for iline in xrange(len(lines)):
+        line = lines[iline]
+        line = line.strip()
+
+        # skip the comment line and empty line
+        if len(line) == 0:
+            continue
+        elif line.startswith('#') is True:
+            continue
+            
+        terms = line.split('\t')
+        if terms[0].strip().isdigit() is True:
+            # skip if starts with a number
+            continue
+        else:
+            for term in terms:
+                titlelist.append(term.strip())
+            break
+
+    return titlelist
+
     
 
 class AutoVanadiumCalibrationLocator:

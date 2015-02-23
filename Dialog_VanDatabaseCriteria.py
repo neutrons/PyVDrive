@@ -12,13 +12,14 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-#import version information
-from _version import __version__
-
-#import constants from config.py
-import config
-
+# #import version information
+# from _version import __version__
+# 
+# #import constants from config.py
+# import config
+# 
 #import GUI components generated from Qt Designer .ui file
+from ui.
 from ui_table_1 import *
 
 try:
@@ -26,7 +27,7 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-class TableMain(QtGui.QMainWindow):
+class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
     
     #initialize app
     def __init__(self,parent=None):
@@ -114,6 +115,53 @@ class TableMain(QtGui.QMainWindow):
             self.ui.tableWidgetTable1.setSortingEnabled(True)
         else:
             self.ui.tableWidgetTable1.setSortingEnabled(False)
+
+        # ... 
+        self._myLogUseDict = {} # key: string for log sample value: boolean
+
+        return
+
+
+    def clear(self):
+        """ Clear the selection
+        """
+        self._myLogUseDict.clear()
+
+        return
+
+
+    def setAllChoices(self, vandbfilelogs):
+        """ Set the logs to match for the vanadium
+        dabase file to the GUI
+        """
+        # check
+        if isinstance(vandbfilelogs, list):
+            raise NotImplementedError("Input for setAllChoices() must be a list of strings")
+
+        # set value and dictionary
+        for logname in vandbfilelogs:
+            self._myLogUseDict[logname] = False
+            self._doAppendRow( (logname, False) )
+
+        return
+
+    # Event Hanling
+    def doSelectQuit(self):
+        """ Select and quit
+        """
+        # Do it 
+        for logname in self._myLogUseDict:
+            if self._myLogUseDict[logname] is True: 
+                self._myParent._criteriaList.append(logname)
+
+        # send out a signal
+        self.Q.... ... continue
+
+        # close myself
+        self.close()
+
+        return
+
         
         
     #Button callbacks

@@ -202,18 +202,11 @@ class VDrivePlot(QtGui.QMainWindow):
         print "A new reduction project is to be created and added to project tree"
         
         self.newprojectname = None  
+        self.newprojectname = None
         
         # Launch dialog for project name
         self.projnamewindow = npj.MyProjectNameWindow(self)
         self.projnamewindow.show()
-
-        # Wait for user to input
-        # waitforuser = True
-        # while waitforuser is True:
-        #     if self.newprojectname is None:
-        #         time.sleep(1)
-        #     else:
-        #         waitforuser = False
 
         if self.newprojectname == "%6--0$22":
             print "User aborts the operation to create a new reduction project"
@@ -228,12 +221,12 @@ class VDrivePlot(QtGui.QMainWindow):
         """ New reduction project as a call from a secondary window
         """
         prepend = "NewProject" + str(val) + ": "
-        print "Got signal from 'NewProject' as %s.  New project name = %s." % (prepend,
-                self.newprojectname)
+        print "Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
+                self.newprojectname, self.newprojecttype)
 
 
         # initlalize a new project and register
-        self._myWorkflow.newProject(projname = self.newprojectname, projtype = "reduction")
+        self._myWorkflow.newProject(projname = self.newprojectname, projtype = self.newprojecttype)
 
         # added to project tree
         project1 = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
