@@ -15,7 +15,7 @@ except AttributeError:
         return s
         
 from ui.ui_ReductionSetup import *
-from vdrive.
+import vdrive.vulcan_util
 
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
@@ -174,12 +174,14 @@ class MyReductionWindow(QWidget):
         """ Prompt a dialog box for selecting vanadium database file
         """ 
         # get vanadium database file via dialog
+        home = os.getcwd()
+        filter = "All files (*.*);;Text files (*.txt)"
         fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', home, filter)
         vandbfile = str(fileList[0])
         self.ui.lineEdit_vanDBFile.setText(vandbfile)
 
         # launch the window to ask user to set up match criteria
-        vandbfilelogs = vulcan_util.getLogsList(vandbfile)
+        vandbfilelogs = vdrive.vulcan_util.getLogsList(vandbfile)
 
         self._vanDBCriteriaWindow = Dialog_VanDBCriteriaList(self)
         self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs)
