@@ -47,7 +47,8 @@ class VDrivePlot(QtGui.QMainWindow):
         #-----------------------------------------------------------------------
         # new project
         self._myWorkflow = vdrive.VDriveAPI()
-        self._myWorkflow.setDefaultDataPath(config.defaultDataPath)
+
+        self.config = {}
 
         # statis variables
         self._tableCurrentProject = None
@@ -109,6 +110,49 @@ class VDrivePlot(QtGui.QMainWindow):
         # Close signal
         self._closeFromAction = False
 
+        # Set up defaults
+        self._setupDefaults()
+        # from the import set some other 
+        self._myWorkflow.setDefaultDataPath(self.config["default.BaseDataPath"])
+
+        return
+
+
+    def _setupDefaults(self):
+        """ Set up defaults 
+        """
+        # import config module
+        try:
+            import config
+            setEmpties = False
+        except ImportError:
+            setEmpties = True
+
+        # setting empties
+        self.config["default.BaseDataPath"] = ""
+        self.config["default.VanadiumDataBaseFile"] = ""
+
+        # set defaults
+        if setEmpties is False:
+            # TODO - THIS PART IS STILL EXPANDING
+
+            # data path
+            for dp in config.defaultDataPath:
+                if os.path.exists(dp) is True:
+                    self.config["default.BaseDataPath"] = dp
+                    break
+
+            # vanadium dabase file
+            defaultVanDBFiles = config.defaultVanadiumDataBaseFile
+            for vfile in defaultVanDBFiles:
+                if os.path.exists(vfile) is True:
+                    self.config["default.VanadiumDataBaseFile"] = vfile
+                    break
+            # ENDFOR (vfile)
+
+        # ENDIF
+
+        print self.config
 
         return
 
@@ -468,6 +512,7 @@ class VDrivePlot(QtGui.QMainWindow):
 
         # runs
         # FIXME - need to add the option to match runs automatically 
+        print "Projec name = ", projname, "IPTS = ", self._tmpIPTS, "Runs = ", self._tmpRuns
         status, errmsg, datafilesets = self._myWorkflow.addExperimentRuns(projname, 'reduction', self._tmpIPTS, self._tmpRuns, True)
 
         if status is False:

@@ -15,6 +15,7 @@ except AttributeError:
         return s
         
 from ui.ui_ReductionSetup import *
+import Dialog_VanDatabaseCriteria # MyVanadiumDatabaseCriterialDialog
 import vdrive.vulcan_util
 
 class MyReductionWindow(QWidget):
@@ -57,6 +58,9 @@ class MyReductionWindow(QWidget):
         QtCore.QObject.connect(self.ui.pushButton_vanDBFile, 
                 QtCore.SIGNAL('clicked()'), self.doBrowseVanDBFile)
 
+        QtCore.QObject.connect(self.ui.pushButton_vanDBCriteriaSetup,
+                QtCore.SIGNAL('clicked()'), self.doShowVanCriteriaWindow)
+
         # setup tabs
         QtCore.QObject.connect(self.ui.pushButton_browseBaseDataPath,
                 QtCore.SIGNAL('clicked()'), self.doBrowseBaseDataPath)
@@ -67,12 +71,18 @@ class MyReductionWindow(QWidget):
         # Customerized event 
         self.myAddRunsSignal.connect(self._myParent.evtAddRuns)
 
+        # TODO - Set the defaults
+        self._myProjectName = None
+
+        self.ui.lineEdit_baseDataPath.setText(self._myParent.config["default.BaseDataPath"])
+        print "Default of Base Data Path:", str(self.ui.lineEdit_baseDataPath.text())
+        self.ui.lineEdit_vanDBFile.setText(self._myParent.config["default.VanadiumDataBaseFile"])
+
         # FIXME - Remove this section after debugging 
         #---------------- Debug Setup ---------------------------------
         self.ui.lineEdit_ipts.setText('10311')
         self.ui.lineEdit_runstart.setText('57075')
         self.ui.lineEdit_runend.setText('57100')
-        self.ui.lineEdit_baseDataPath.setText('/SNS/VULCAN/')
         #--------------------------------------------------------------
 
         return
@@ -159,8 +169,12 @@ class MyReductionWindow(QWidget):
     def doBrowseBaseDataPath(self):
         """ Prompt a dialog box for selecting the home directory
         """
-        # TODO - doc on method
-        home = getHomeDir()
+        # Prompty a dialog bos for selecting base data path
+        if len(str(self.ui.lineEdit_baseDataPath.text())) > 0:
+            home = str(self.ui.lineEdit_baseDataPath.text())
+        else: 
+            home = getHomeDir()
+
         basedatadir = str(QtGui.QFileDialog.getExistingDirectory(self,'Get Directory',home))
         self.ui.lineEdit_baseDataPath.setText(basedatadir)
 
@@ -174,19 +188,40 @@ class MyReductionWindow(QWidget):
         """ Prompt a dialog box for selecting vanadium database file
         """ 
         # get vanadium database file via dialog
-        home = os.getcwd()
-        filter = "All files (*.*);;Text files (*.txt)"
-        fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', home, filter)
+        defaultfilename = str(self.ui.lineEdit_vanDBFile.text())
+        if len(defaultfilename) > 0: 
+            homedir = os.path.dirname(defaultfilename)
+            if os.path.exists(homedir) is False:
+                homedir = os.getcwd()
+        else:
+            homedir = os.getcwd()
+
+        vandbfilter = "Text files (*.txt);;All files (*.*)"
+        fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', homedir, vandbfilter)
+        if len(fileList) == 0:
+            self._myParent._addLogInformation("No vanadium dabase file is selected");
+            return
         vandbfile = str(fileList[0])
         self.ui.lineEdit_vanDBFile.setText(vandbfile)
 
         # launch the window to ask user to set up match criteria
-        vandbfilelogs = vdrive.vulcan_util.getLogsList(vandbfile)
+        vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
+        print vandbfilelogs
 
-        self._vanDBCriteriaWindow = Dialog_VanDBCriteriaList(self)
-        self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs)
-        self._vanDBCriteriaWindow.setDefaults(config.defaultVanDBCriteria)
+        self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
+        self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
+        # self._vanDBCriteriaWindow.setDefaults(config.defaultVanDBCriteria)
         self._vanDBCriteriaWindow.show()
+
+        return
+
+    def doShowVanCriteriaWindow(self):
+        """ Show vanadium database matchup criteria window
+        """
+        if self._vanDBCriteriaWindow is not None: 
+            self._vanDBCriteriaWindow.show()
+        else:
+            self._myParent._addLogInformation("Vanadium criteria window cannot be opened because vanadium files has not been setup.")
 
         return
 
@@ -198,7 +233,6 @@ class MyReductionWindow(QWidget):
         # check
         if len(self._criteriaList) == 0:
             raise NotImplementedError("No criterial is setup")
-
 
         # FIXME - where should this file go? 
         self._myParnet._myWorkflow.setVanadiumCalibrationMatchCriterion(self._myProjectName,
@@ -212,6 +246,16 @@ class MyReductionWindow(QWidget):
         """ Quit
         """
         self.close()
+
+        return
+
+    def setVanMatchCriteria(self, criterialist):
+        """ 
+        """
+        self._vanDBCriteriaList = criterialist
+
+        self._myParent._myWorkflow.setVanadiumCalibrationMatchCriterion(
+                self._myProjectName, self._vanDBCriteriaList)
 
         return
 

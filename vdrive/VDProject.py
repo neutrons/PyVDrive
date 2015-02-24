@@ -34,7 +34,11 @@ class VDProject:
         """ Set base data path such as /SNS/VULCAN/
         to locate the data via run number and IPTS
         """
-        self._baseDataPath = datadir
+        if isinstance(datadir, str) is True: 
+            self._baseDataPath = datadir
+
+        else:
+            raise NotImplementedError("Unable to set base data path with unsupported format %s." % (str(type(datadir))))
 
         return
         

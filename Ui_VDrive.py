@@ -291,7 +291,10 @@ class VDriveAPI:
     def setDefaultDataPath(self, basedatapath):
         """ Set the global/default data path for all projects
         """
-        self._baseDataPath = basedatapath
+        if isinstance(basedatapath, str) is True: 
+            self._baseDataPath = basedatapath
+        else:
+            raise NotImplementedError("Unable to set base data path with unsupported type %s." % (str(type(basedatapath))))
 
         return
 

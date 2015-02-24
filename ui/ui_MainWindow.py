@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Wed Feb 18 08:49:27 2015
+# Created: Tue Feb 24 11:46:33 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -38,7 +38,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.addWidget(self.tableWidget_generalInfo, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 963, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 963, 25))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuVDrive_2_0 = QtGui.QMenu(self.menubar)
         self.menuVDrive_2_0.setObjectName(_fromUtf8("menuVDrive_2_0"))
@@ -99,6 +99,10 @@ class Ui_MainWindow(object):
         self.actionLog_Window.setObjectName(_fromUtf8("actionLog_Window"))
         self.actionFile_New = QtGui.QAction(MainWindow)
         self.actionFile_New.setObjectName(_fromUtf8("actionFile_New"))
+        self.actionAdd_Runs = QtGui.QAction(MainWindow)
+        self.actionAdd_Runs.setObjectName(_fromUtf8("actionAdd_Runs"))
+        self.actionDelete_Runs = QtGui.QAction(MainWindow)
+        self.actionDelete_Runs.setObjectName(_fromUtf8("actionDelete_Runs"))
         self.menuVDrive_2_0.addAction(self.actionFile_New)
         self.menuVDrive_2_0.addAction(self.action_OpenProject)
         self.menuVDrive_2_0.addAction(self.actionClose)
@@ -114,6 +118,8 @@ class Ui_MainWindow(object):
         self.menuReduction.addAction(self.actionLoad_Setup)
         self.menuReduction.addAction(self.actionSave_Setup)
         self.menuReduction.addSeparator()
+        self.menuReduction.addAction(self.actionAdd_Runs)
+        self.menuReduction.addAction(self.actionDelete_Runs)
         self.menuView.addAction(self.actionLog_Window)
         self.menubar.addAction(self.menuVDrive_2_0.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -158,4 +164,6 @@ class Ui_MainWindow(object):
         self.actionLog_Window.setShortcut(_translate("MainWindow", "Ctrl+L", None))
         self.actionFile_New.setText(_translate("MainWindow", "New", None))
         self.actionFile_New.setShortcut(_translate("MainWindow", "Ctrl+N", None))
+        self.actionAdd_Runs.setText(_translate("MainWindow", "Add Runs", None))
+        self.actionDelete_Runs.setText(_translate("MainWindow", "Delete Runs", None))
 

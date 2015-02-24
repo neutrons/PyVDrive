@@ -19,15 +19,14 @@ except AttributeError:
 # import config
 # 
 #import GUI components generated from Qt Designer .ui file
-from ui.
-from ui_table_1 import *
+from ui.ui_VanDatabaseCriterialSetup import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
+class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
     
     #initialize app
     def __init__(self,parent=None):
@@ -35,6 +34,9 @@ class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self,parent)
         self.ui = Ui_MainWindow() #defined in ui_AppTemplate.py
         self.ui.setupUi(self)
+
+        # Parnet
+        self._myParent = parent
     
         #add action exit for File --> Exit menu option
         self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'), self.confirmExit)
@@ -49,74 +51,41 @@ class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
         #add signal/slot connection for pushbutton delete selected rows
         self.connect(self.ui.pushButtonDeleteSelectedRows, QtCore.SIGNAL('clicked()'), self.deleteRows)
         #add signal/slot connection for pushbutton add rows
-        self.connect(self.ui.pushButtonAddRows, QtCore.SIGNAL('clicked()'), self.addRow)
+        # self.connect(self.ui.pushButtonAddRows, QtCore.SIGNAL('clicked()'), self.addRow)
         #add signal/slot connection for pushbutton move selected rows up
         self.connect(self.ui.pushButtonMoveRowsUp, QtCore.SIGNAL('clicked()'), self.moveRowsUp)
         #add signal/slot connection for pushbutton move selected rows down
         self.connect(self.ui.pushButtonMoveRowsDown, QtCore.SIGNAL('clicked()'), self.moveRowsDown)
+
+        #
+        self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
+                self.doSaveQuit)
+
+        # 
+        self.connect(self.ui.tableWidgetTable1, QtCore.SIGNAL('cellChanged()'),
+                self.doCheckChangedCellValue)
+
+        # 
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'), 
+                self.doCancelQuit)
+
         
         #define column headings
-        tmpHdr=['First Name','Last Name','Favorite Ice Cream','Favorite Color','Status']
+        # tmpHdr=['First Name','Last Name','Favorite Ice Cream','Favorite Color','Status']
+        tmpHdr=['Log Name','Status', 'Type', 'Example']
         NHdrs=len(tmpHdr)
         HzHeaders=['']*NHdrs
-        HzHeaders[config.firstName]=tmpHdr[0]
-        HzHeaders[config.lastName]=tmpHdr[1]
-        HzHeaders[config.favIceCream]=tmpHdr[2]
-        HzHeaders[config.favColor]=tmpHdr[3]
-        HzHeaders[config.select]=tmpHdr[4]        
-            
-            
-        self.ui.tableWidgetTable1.setHorizontalHeaderLabels(HzHeaders)
-        
-        
-        #for demo purposes, place some stuff in the table
-        #add Jean
-        row=0
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Jean")) 
-        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.firstName,item)         
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Bilheux")) 
-        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.lastName,item)  
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Chocolate")) 
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.favIceCream,item)         
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Blue")) 
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.favColor,item)      
-        addCheckboxToWSTCell(self.ui.tableWidgetTable1,row,config.select,True)
-        
-        #now add Wenduo
-        row=1
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Wenduo")) 
-        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.firstName,item)         
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Zhou")) 
-        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.lastName,item)  
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Vanila")) 
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.favIceCream,item)         
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Red")) 
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row,config.favColor,item)    
-        addCheckboxToWSTCell(self.ui.tableWidgetTable1,row,config.select,False)
-        
-        #enable sorting for the table
-        if config.colSort:
-            self.ui.tableWidgetTable1.setSortingEnabled(True)
-        else:
-            self.ui.tableWidgetTable1.setSortingEnabled(False)
+        HzHeaders[0] = tmpHdr[0]
+        HzHeaders[1] = tmpHdr[1]
+        HzHeaders[2] = tmpHdr[2]
+        HzHeaders[3] = tmpHdr[3]
 
-        # ... 
+        self.ui.tableWidgetTable1.setHorizontalHeaderLabels(HzHeaders)
+        self.ui.tableWidgetTable1.setColumnCount(4)
+            
+        # class variables
+        self._numRows = 0
+        
         self._myLogUseDict = {} # key: string for log sample value: boolean
 
         return
@@ -130,22 +99,136 @@ class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
         return
 
 
-    def setAllChoices(self, vandbfilelogs):
+    def setAllChoices(self, vandbfilelogs, logexamples):
         """ Set the logs to match for the vanadium
         dabase file to the GUI
         """
         # check
-        if isinstance(vandbfilelogs, list):
+        if isinstance(vandbfilelogs, list) is False:
             raise NotImplementedError("Input for setAllChoices() must be a list of strings")
+        if len(logexamples) != len(vandbfilelogs):
+            raise NotImplementedError("Input for setAllChoices() should have two lists with same sizes.")
 
         # set value and dictionary
-        for logname in vandbfilelogs:
-            self._myLogUseDict[logname] = False
-            self._doAppendRow( (logname, False) )
+        for irow in xrange(len(vandbfilelogs)):
+            logname = vandbfilelogs[irow]
+            example = logexamples[irow]
+            irow = self._appendRow( [logname, False, "float", example] )
+            self._myLogUseDict[logname] = (irow, "float", False)
+
+        return
+
+    def _appendRow(self, rowitemlist):
+        """ Append a row to the table
+        """
+        # check
+        if isinstance(rowitemlist, list) is False:
+            raise NotImplementedError("Input rowlist is not a list")
+
+        logname = rowitemlist[0]
+        useit = rowitemlist[1]
+        datatype = rowitemlist[2]
+        example = rowitemlist[3]
+
+        # append a row and set value
+        row = self._numRows
+        self._numRows += 1
+
+        # insert a new row if it is over the limit
+        if self._numRows > self.ui.tableWidgetTable1.rowCount():
+            self.ui.tableWidgetTable1.insertRow(row)
+
+        # log name
+        item=QtGui.QTableWidgetItem()
+        item.setText(_fromUtf8(logname)) 
+        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+        self.ui.tableWidgetTable1.setItem(row, 0, item)         
+
+        # used
+        item=QtGui.QTableWidgetItem()
+        item.setText(_fromUtf8("Blue")) 
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        self.ui.tableWidgetTable1.setItem(row, 1, item)      
+        addCheckboxToWSTCell(self.ui.tableWidgetTable1, row, 1, useit)
+
+        # type
+        item=QtGui.QTableWidgetItem()
+        item.setText(_fromUtf8("Blue"))
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        self.ui.tableWidgetTable1.setItem(row, 2, item)      
+        addComboboxToWSTCell(self.ui.tableWidgetTable1, row, 2, useit)
+
+        # example
+        item=QtGui.QTableWidgetItem()
+        item.setText(_fromUtf8(example)) 
+        item.setFlags(item.flags()) 
+        self.ui.tableWidgetTable1.setItem(row, 3, item)         
+
+        print "Row %d: Log name = %s" % (row, logname)
+
+        return row
+
+    def selectLogs(self, lognamelist):
+        """ Select the log names
+        """
+        for logname in lognamelist:
+            if self._myLogUseDict[logname][1] is False:
+                self._setItemValue(self._myLogUseDict[logname][0], 1, True)
+        # ENDFOR
+
+        return
+
+    def deselectLots(self, lognamelist):
+        """ Deselect the log names
+        """
+        for logname in lognamelist:
+            if self._myLogUseDict[logname][1] is True:
+                self._setItemValue(self._myLogUseDict[logname][0], 1, False)
+        # ENDFOR
+
+        return
+
+    def _setItemValue(self, irow, icol, value):
+        """ Set value to an item in the table
+        """
+        if isinstance(value, bool): 
+            self.ui.tableWidgetTable1.cellWidget(irow, icol).setChecked(value)
+        else:
+            raise NotImplementedError("Not supported yet [1000]")
 
         return
 
     # Event Hanling
+    def doCheckChangedCellValue(self):
+        """ Respond as a cell value changed
+        """
+        # FIXME No use!!!
+        print "There is some value changed."
+
+        return
+
+
+    def doSaveQuit(self):
+        """ Save the choice and quit
+        """
+        # save and close
+        returnlist = []
+        numrows = self.ui.tableWidgetTable1.rowCount()
+        print "Number of rows = ", numrows
+        for irow in xrange(numrows):
+            if self.ui.tableWidgetTable1.cellWidget(irow, 1).checkState() == 2:
+                logname = str(self.ui.tableWidgetTable1.item(irow, 0).text())
+                datatype = str(self.ui.tableWidgetTable1.cellWidget(irow, 2).currentText()).lower()
+                returnlist.append((logname, datatype))
+                print "Criteria selected: %s of type %s." % (logname, datatype)
+
+        self.close()
+
+        # call parent
+        self._myParent.setVanMatchCriteria(returnlist)
+
+        return
+
     def doSelectQuit(self):
         """ Select and quit
         """
@@ -155,13 +238,20 @@ class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
                 self._myParent._criteriaList.append(logname)
 
         # send out a signal
-        self.Q.... ... continue
+        # FIXME - Useless unless you can make doCheckChangedCellValue() work!
+        raise  NotImplementedError("continue from here... [834]") 
 
         # close myself
         self.close()
 
         return
 
+    def doCancelQuit(self):
+        """ Cancel and quit 
+        """
+        self.close()
+
+        return
         
         
     #Button callbacks
@@ -269,11 +359,10 @@ class Dialog_VanDatabaseCriteria(QtGui.QMainWindow):
         #now use widget width to determine process table column width
         Ncol=float(table.columnCount())
         colWidth=float(w)/(Ncol+0.33)
-        table.setColumnWidth(config.firstName,colWidth) #PID
-        table.setColumnWidth(config.lastName,colWidth) #User
-        table.setColumnWidth(config.favIceCream,colWidth) #CPU%
-        table.setColumnWidth(config.favColor,colWidth) #MEM%
-        table.setColumnWidth(config.select,colWidth) #Name
+        table.setColumnWidth(0,colWidth) #Log name
+        table.setColumnWidth(1,colWidth) #Select?
+        table.setColumnWidth(2,colWidth) #Data type
+        table.setColumnWidth(2,colWidth) #Example
 
     
 def moveRows(table,dir):
@@ -404,8 +493,34 @@ def addCheckboxToWSTCell(table,row,col,state):
         #case to add checkbox
 
         checkbox = QtGui.QCheckBox()
-        checkbox.setText('Select')
+        checkbox.setText('')
         checkbox.setChecked(state)
+        
+        #adding a widget which will be inserted into the table cell
+        #then centering the checkbox within this widget which in turn,
+        #centers it within the table column :-)
+        QW=QtGui.QWidget()
+        cbLayout=QtGui.QHBoxLayout(QW)
+        cbLayout.addWidget(checkbox)
+        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
+        cbLayout.setContentsMargins(0,0,0,0)
+        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
+
+
+def addComboboxToWSTCell(table,row,col,state):
+    #function to add a new select checkbox to a cell in a table row
+    #won't add a new checkbox if one already exists
+    if state == '':
+        state=False
+    #check if cellWidget exitst
+    if table.cellWidget(row,col) != None:
+        print "Not None!"
+        table.cellWidget(row,col).setChecked(state)
+    else:
+        #case to add checkbox
+
+        checkbox = QtGui.QComboBox()
+        checkbox.addItems(["Float", "Integer", "String"])
         
         #adding a widget which will be inserted into the table cell
         #then centering the checkbox within this widget which in turn,

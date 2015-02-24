@@ -47,6 +47,7 @@ def checkIPTSExist(ipts, basepath):
     """ Check whether an IPTS number is valid
     """
     ipts = int(ipts)
+    print "[DB] base path = ", basepath, " type = ", type(basepath)
     iptsdir = os.path.join(basepath, "IPTS-%d"%(ipts))
     msg = "IPTS directory: %s" %(iptsdir)
     
@@ -58,9 +59,11 @@ def checkIPTSExist(ipts, basepath):
 
 def getLogsList(vandbfile):
     """ Get the log list from vanadium database file (van record.txt)
+    The returned value will be a list of tuples.  
+    In each tuple, there are log name and one example
     """
     try:
-        vfile = open(vrecordfile,'r')
+        vfile = open(vandbfile,'r')
         lines = vfile.readlines()
         vfile.close()
     except IOError as ioe:
@@ -86,9 +89,35 @@ def getLogsList(vandbfile):
             for term in terms:
                 titlelist.append(term.strip())
             break
+    # ENDFOR(iline)
 
-    return titlelist
+    # parse an example line
+    examples = []
+    errmsg = ""
+    numvanruns = 0
+    for line in lines:
+        line = line.strip()
+        if len(line) == 0 or line.startswith('#') is True:
+            continue
+        terms = line.split('\t')
+        if terms[0].strip().isdigit() is False:
+            continue
+            
+        datarow = []
+        for term in terms:
+            datarow.append(term.strip())
+        
+        # check
+        if len(datarow) != len(titlelist):
+            errmsg += "Line \n'%s'\nhas different number of items %d from titles %d.\n" % (line, len(datarow),
+                len(titlelist))
+            continue
+        
+        examples = datarow
+        break
+    # ENDFOR
 
+    return (titlelist, examples)
     
 
 class AutoVanadiumCalibrationLocator:
@@ -166,20 +195,27 @@ class AutoVanadiumCalibrationLocator:
             # get the full list of runs
             vancadidaterunlist = self._vanRecordDict.keys()  
             
-            # loop around criterion to remove all van runs that does not meet the requirement         
+            # loop around criterion to remove all van runs that does not meet the requirement      
+            numfail = 0
             for (logname, valuetype) in criterion:
-                cvalue = self._expRecordDict[run][logname]
+                try: 
+                    cvalue = self._expRecordDict[run][logname]
+                except KeyError as e:
+                    print "[DB300] Log %s is not supported in Vulcan auto log." % (logname)
+                    numfail += 1
+                    continue
+
                 #print "Run %d Match log %s = %s." % (run, logname, cvalue)
                 for vanrun in vancadidaterunlist:
                     good = False
                     vanvalue = self._vanRecordDict[vanrun][logname]
                     #print "\tVanadium %d log %s = %s." % (vanrun, logname, vanvalue)
-                    if valuetype == 'int':
+                    if valuetype.startswith('int'):
                         if int(cvalue) == int(vanvalue):
                             good = True
-                    elif valuetype == 'str':
+                    elif valuetype.startswith('str'):
                         good = (cvalue == vanvalue)
-                    elif valuetype == 'float':
+                    elif valuetype.startswith('float'):
                         if abs(float(cvalue)-float(vanvalue)) < 1.:
                             good = True
                     else:
@@ -188,6 +224,9 @@ class AutoVanadiumCalibrationLocator:
                     if good is False:
                         vancadidaterunlist.remove(vanrun)
             # ENDFOR (criterion)
+
+            if numfail == len(criterion):
+                raise NotImplementedError("None of the log name in criterion is supported by Vulcan's auto log.")
             
             if len(vancadidaterunlist) == 0:
                 print "Error: There is no match for run %d. " % (run)

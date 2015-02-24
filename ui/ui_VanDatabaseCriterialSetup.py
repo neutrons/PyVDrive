@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_VanDatabaseCriterialSetup.ui'
 #
-# Created: Thu Feb 19 15:24:07 2015
-#      by: PyQt4 UI code generator 4.11.2
+# Created: Tue Feb 24 11:46:33 2015
+#      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -37,14 +37,8 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.tableWidgetTable1 = QtGui.QTableWidget(self.centralwidget)
-        self.tableWidgetTable1.setMinimumSize(QtCore.QSize(451, 221))
-        self.tableWidgetTable1.setRowCount(10)
-        self.tableWidgetTable1.setColumnCount(5)
-        self.tableWidgetTable1.setObjectName(_fromUtf8("tableWidgetTable1"))
-        self.horizontalLayout.addWidget(self.tableWidgetTable1)
+        self.gridLayout_2 = QtGui.QGridLayout()
+        self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
         self.groupBox = QtGui.QGroupBox(self.centralwidget)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
@@ -70,10 +64,6 @@ class Ui_MainWindow(object):
         self.pushButtonDeleteSelectedRows.setMinimumSize(QtCore.QSize(181, 23))
         self.pushButtonDeleteSelectedRows.setObjectName(_fromUtf8("pushButtonDeleteSelectedRows"))
         self.verticalLayout.addWidget(self.pushButtonDeleteSelectedRows)
-        self.pushButtonAddRows = QtGui.QPushButton(self.groupBox)
-        self.pushButtonAddRows.setMinimumSize(QtCore.QSize(181, 23))
-        self.pushButtonAddRows.setObjectName(_fromUtf8("pushButtonAddRows"))
-        self.verticalLayout.addWidget(self.pushButtonAddRows)
         self.pushButtonMoveRowsUp = QtGui.QPushButton(self.groupBox)
         self.pushButtonMoveRowsUp.setMinimumSize(QtCore.QSize(181, 23))
         self.pushButtonMoveRowsUp.setObjectName(_fromUtf8("pushButtonMoveRowsUp"))
@@ -82,11 +72,23 @@ class Ui_MainWindow(object):
         self.pushButtonMoveRowsDown.setMinimumSize(QtCore.QSize(181, 23))
         self.pushButtonMoveRowsDown.setObjectName(_fromUtf8("pushButtonMoveRowsDown"))
         self.verticalLayout.addWidget(self.pushButtonMoveRowsDown)
-        self.horizontalLayout.addWidget(self.groupBox)
-        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+        self.pushButton_saveQuit = QtGui.QPushButton(self.groupBox)
+        self.pushButton_saveQuit.setObjectName(_fromUtf8("pushButton_saveQuit"))
+        self.verticalLayout.addWidget(self.pushButton_saveQuit)
+        self.pushButton_cancel = QtGui.QPushButton(self.groupBox)
+        self.pushButton_cancel.setObjectName(_fromUtf8("pushButton_cancel"))
+        self.verticalLayout.addWidget(self.pushButton_cancel)
+        self.gridLayout_2.addWidget(self.groupBox, 0, 1, 1, 1)
+        self.tableWidgetTable1 = QtGui.QTableWidget(self.centralwidget)
+        self.tableWidgetTable1.setMinimumSize(QtCore.QSize(451, 221))
+        self.tableWidgetTable1.setRowCount(10)
+        self.tableWidgetTable1.setColumnCount(5)
+        self.tableWidgetTable1.setObjectName(_fromUtf8("tableWidgetTable1"))
+        self.gridLayout_2.addWidget(self.tableWidgetTable1, 0, 0, 1, 1)
+        self.gridLayout.addLayout(self.gridLayout_2, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 774, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 774, 22))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -116,9 +118,10 @@ class Ui_MainWindow(object):
         self.pushButtonDeSelectAll.setText(_translate("MainWindow", "De-Select All", None))
         self.pushButtonRemoveEmptyRows.setText(_translate("MainWindow", "Remove Empty Rows", None))
         self.pushButtonDeleteSelectedRows.setText(_translate("MainWindow", "Delete Selected Row(s)", None))
-        self.pushButtonAddRows.setText(_translate("MainWindow", "Add Row(s)", None))
         self.pushButtonMoveRowsUp.setText(_translate("MainWindow", "Move Selected Row(s) Up", None))
         self.pushButtonMoveRowsDown.setText(_translate("MainWindow", "Move Selected Row(s) Down", None))
+        self.pushButton_saveQuit.setText(_translate("MainWindow", "Save & Quit", None))
+        self.pushButton_cancel.setText(_translate("MainWindow", "Cancel", None))
         self.menuFile.setTitle(_translate("MainWindow", "File", None))
         self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
