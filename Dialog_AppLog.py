@@ -39,12 +39,24 @@ class MyAppLogDialog(QWidget):
     def setText(self, val):
         """
         """
+        #Example: 
+        #self.ui.textBrowser_Log.setHtml("""<body>
+        #    <h1>Key</h1>
+        #    <div style='color:red;'>
+        #    GREEN = Overall Progress is 80% or above
+        #    YELLOW = Overall Progress between 65%-79%
+        #    Orange = Overall Progress is 64% or below
+        #    </div>
+        #    </body>"""
+        #    )
+
         text = "Signal to add text:  Value = " + str(val) + "."
 
         self._myContent += text + "\n\n"
 
         # text = self._myParent.getLogText()
         self.ui.textBrowser_Log.setText(self._myContent)
+
 
         return
 

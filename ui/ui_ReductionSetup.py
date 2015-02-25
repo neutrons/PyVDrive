@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_ReductionSetup.ui'
 #
-# Created: Thu Feb 19 15:24:07 2015
+# Created: Wed Feb 25 15:18:37 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,9 +26,11 @@ except AttributeError:
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName(_fromUtf8("Form"))
-        Form.resize(913, 1046)
+        Form.resize(886, 934)
         self.gridLayout = QtGui.QGridLayout(Form)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        self.gridLayout.addItem(spacerItem, 5, 0, 1, 1)
         self.horizontalLayout_9 = QtGui.QHBoxLayout()
         self.horizontalLayout_9.setSpacing(2)
         self.horizontalLayout_9.setSizeConstraint(QtGui.QLayout.SetNoConstraint)
@@ -63,8 +65,6 @@ class Ui_Form(object):
         self.line.setObjectName(_fromUtf8("line"))
         self.horizontalLayout_9.addWidget(self.line)
         self.gridLayout.addLayout(self.horizontalLayout_9, 6, 0, 1, 1)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        self.gridLayout.addItem(spacerItem, 5, 0, 1, 1)
         self.horizontalLayout_5 = QtGui.QHBoxLayout()
         self.horizontalLayout_5.setObjectName(_fromUtf8("horizontalLayout_5"))
         self.tab_calibSetup = QtGui.QTabWidget(Form)
@@ -481,7 +481,14 @@ class Ui_Form(object):
         self.gridLayout_6.addWidget(self.pushButton_quit, 0, 6, 1, 1)
         self.gridLayout.addLayout(self.gridLayout_6, 9, 0, 1, 1)
         spacerItem25 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        self.gridLayout.addItem(spacerItem25, 10, 0, 1, 1)
+        self.gridLayout.addItem(spacerItem25, 11, 0, 1, 1)
+        self.horizontalLayout_17 = QtGui.QHBoxLayout()
+        self.horizontalLayout_17.setObjectName(_fromUtf8("horizontalLayout_17"))
+        self.progressBar = QtGui.QProgressBar(Form)
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.horizontalLayout_17.addWidget(self.progressBar)
+        self.gridLayout.addLayout(self.horizontalLayout_17, 10, 0, 1, 1)
 
         self.retranslateUi(Form)
         self.tab_calibSetup.setCurrentIndex(0)

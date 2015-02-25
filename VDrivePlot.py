@@ -447,6 +447,7 @@ class VDrivePlot(QtGui.QMainWindow):
         # create and setup
         if self._reductionWindow is None: 
             self._reductionWindow = rdwn.MyReductionWindow(self) 
+            self._reductionWindow.resize(1200, 800)
 
             projnames = sorted(self._myWorkflow.getProjectNames())
 
