@@ -94,6 +94,8 @@ class VDrivePlot(QtGui.QMainWindow):
         self.ui.treeWidget_Project.addAction(setupReductionAction)
         self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
+        self._treeCurrentLevel = 1
+
         # App counter
         self.ui.appCntr = 1
     
@@ -196,17 +198,32 @@ class VDrivePlot(QtGui.QMainWindow):
     def doChangeTreeMenu(self):
         """ Change the tree menu if it is on different level
         """
+        # identify whether the tree level will be changed or not
         currTreeItem = self.ui.treeWidget_Project.currentItem()
-        col0 = currTreeItem.text(0)
-        col1 = currTreeItem.text(1)
+        col0 = str(currTreeItem.text(0)).strip()
+        col1 = str(currTreeItem.text(1)).strip()
         print "Item is changed: ", str(col0), str(col1)
-        
-        actions = self.ui.treeWidget_Project.actions()
-        if len(actions) == 0:
+
+        if len(col0) == 0 and len(col1) > 0:
+            currLevel = 2
+        elif len(col1) == 0 and len(col0) > 0:
+            currLevel = 1
+        else:
+            raise NotImplementedError("This is an unsupported and weird case.")
+
+        # return if there is no change in level
+        if currLevel == self._treeCurrentLevel:
+            return
+
+        # reset 
+        self._treeCurrentLevel = currLevel
+        self._clearTreeActions()
+
+        if self._treeCurrentLevel == 1:
             self._setTreeLevel1Actions()
         else:
-            self._clearTreeActions()
-            
+            self._setTreeLevel2Actions()
+
         return
         
         
@@ -221,6 +238,32 @@ class VDrivePlot(QtGui.QMainWindow):
         
         return
         
+    def _setTreeLevel1Actions(self):         
+        """
+        """
+        # TODO - Docs
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        addAction = QtGui.QAction('Add', self)
+        addAction.triggered.connect(self.doAddFile)
+        self.ui.treeWidget_Project.addAction(addAction)
+        setupReductionAction = QtGui.QAction('Setup', self)
+        setupReductionAction.triggered.connect(self.doSetupReduction)
+        self.ui.treeWidget_Project.addAction(setupReductionAction)
+        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        
+        return
+
+    def _setTreeLevel2Actions(self):         
+        """
+        """
+        # TODO - Docs
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        delAction = QtGui.QAction('Delete (Run)', self)
+        delAction.triggered.connect(self.doDeleteRun)
+        self.ui.treeWidget_Project.addAction(delAction)
+
+        return
+
     def _setTreeLevel1Actions(self):         
         """
         """
@@ -385,6 +428,12 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
+    def doDeleteRun(self):
+        """
+        """
+        # TODO - Docs and make it work!
+
+        return
 
     def renameSlot(self):
         print "Renaming slot called"
@@ -548,10 +597,19 @@ class VDrivePlot(QtGui.QMainWindow):
 
 
         # init
+        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
+        tmpHdr=['Log Name','Status', 'Type']
+        NHdrs=len(tmpHdr)
+        HzHeaders=['']*NHdrs
+        HzHeaders[0] = tmpHdr[0]
+        HzHeaders[1] = tmpHdr[1]
+        HzHeaders[2] = tmpHdr[2]
+
+        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(HzHeaders)
+        self.ui.tableWidget_generalInfo.setColumnCount(3)
+
         self.ui.tableWidget_generalInfo.setColumnCount(3)
         self.ui.tableWidget_generalInfo.setRowCount(numrows)
-
-        self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
        
         # set values
         if numrows == 0:

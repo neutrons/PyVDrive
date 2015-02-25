@@ -131,6 +131,33 @@ class VDriveAPI:
         
         return (True, "")
 
+    def deleteRuns(self, projname, filenamelist):
+        """ Delete some runs/data files from a project
+        """
+        # check project's existence
+        project, errmsg = self._checkProjectExistence(projname, "delete runs/data files")
+        if project is None:
+            return (False, errmsg)
+      
+        # delete files
+        errmsg = ""
+        numfails = 0 
+        for filename in filenamelist: 
+            execstatus, errmsg = project.deleteData(filename)
+            if execstatus is False:
+                errmsg += errmsg + "\n"
+                numfails += 1
+            # ENDIF
+        # ENDFOR(filename)
+
+        if numfails == len(filenamelist):
+            r = False
+        else:
+            r = True
+
+        return (r, errmsg)
+        
+
     def getDataFiles(self, projname):
         """ Get names of the data files and their calibration files
         of a reduction project
@@ -402,13 +429,22 @@ class VDriveAPI:
         
     def _checkProjectExistence(self, projname, operation):
         """ Check wehtehr a project (name) does exist
+        Return :: (project/None, errmsg)
         """
         # FIXME - how about to combine with self.hasProject()???
-        if self.hasProject(projname)[0] is False:
-            raise NotImplementedError("Project %s exists. Unable to proceed the operation %s." % (
-                projname, operation))
+        hasproject, projtype = self.hasProject(projname)
+        if hasproject is False:
+            project = None
+            errmsg = "Project %s exists. Unable to proceed the operation %s." % (
+                projname, operation)
+        elif projtype == 'a':
+            project = self._aProjectDict[projname]
+            errmsg = ""
+        else:
+            project = self._rProjectDict[projname]
+            errmsg = ""
         
-        return
+        return (project, errmsg)
 
     def addLogInformation(self, logstr):
         """ Add a log information at information level

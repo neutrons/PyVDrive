@@ -21,7 +21,7 @@ myworkflow = vdapi.VDriveAPI()
 if myworkflow.hasProject(projname='Test001')[0] is True:
     myworkflow.deleteProject(projname='Test0001')
 myworkflow.newProject(projname = "Test001", projtype = "reduction")
-myworkflow.setDataPath(projname = 'Test001', basedatapath = vconfig.defaultDataPath)
+myworkflow.setDataPath(projname = 'Test001', basedatapath = vconfig.defaultDataPath[0])
 #myworkflow.setDataPath(projname = 'Test001', basedatapath = '/Users/wzz/Projects/SNSData/VULCAN')
 
 # new project should add data and locate calibration file automatically
@@ -76,6 +76,13 @@ filestoreduce = [('VULCAN_57075_event.nxs', True),
     ('VULCAN_57080_event.nxs', False)]
 myworkflow.setReductionFlags('Test001', filestoreduce)
 print myworkflow.info('Test001')[1]
+
+
+# delete some run
+execstatus, errmsg = myworkflow.deleteRuns('Test001', ['arrow.nxs', 'sword.nxs'])
+print execstatus, errmsg
+execstatus, errmsg = myworkflow.deleteRuns('Test0001', ['VULCAN_57080_event.nxs'])
+print execstatus, errmsg
 
 # set up reduction parameters
 outputdir = os.getcwd()

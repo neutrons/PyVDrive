@@ -65,6 +65,10 @@ class MyReductionWindow(QWidget):
         QtCore.QObject.connect(self.ui.pushButton_browseBaseDataPath,
                 QtCore.SIGNAL('clicked()'), self.doBrowseBaseDataPath)
 
+        # reduction
+        QtCore.QObject.connect(self.ui.pushButton_reduceData, 
+                QtCore.SIGNAL('clicked()'), self.doReduceData)
+
         # quit
         QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.quit)
 
@@ -225,6 +229,24 @@ class MyReductionWindow(QWidget):
 
         return
 
+    def doReduceData(self):
+        """ Do reduction
+        collect the information in this window and call reduction in the main window
+        """
+        # collect information
+
+        # set to the parent as a dictionary
+
+        # disable all controls
+        self._disableControls(True)
+        self.ui.pushButton_reduceData.setDisabled(True)
+
+        # reduce by calling parent one
+
+        # enable all controls
+        self.ui.pushButton_reduceData.setDisabled(False)
+
+        return
 
     @QtCore.pyqtSlot(str)
     def _handleBrowseVanDBFile(self):
@@ -258,6 +280,23 @@ class MyReductionWindow(QWidget):
                 self._myProjectName, self._vanDBCriteriaList)
 
         return
+
+    # Enable and disable controls
+    def _disableControls(self, value):
+        """
+        """
+        self.ui.lineEdit_timeFocusTable.setDisabled(value)
+        self.ui.lineEdit_vanDBFile.setDisabled(value)
+        self.ui.lineEdit_binsize.setDisabled(value)
+
+        self.ui.pushButton_timeFocusTableFile.setEnabled(not value)
+        self.ui.pushButton_vanDBFile.setEnabled(not value)
+        self.ui.pushButton_vanDBCriteriaSetup.setEnabled(not value)
+        self.ui.pushButton_gsasPRM.setEnabled(not value)
+
+        return
+
+
 
 def getHomeDir():
     """ Get home directory

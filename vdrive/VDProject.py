@@ -21,6 +21,11 @@ class VDProject:
 
         return
 
+    def deleteData(self, datafilename):
+        """ Delete a data file in the project
+        """
+        self._dataset.remove(datafilename) 
+
     def getBaseDataPath(self):
         """ Get the base data path of the project
         """
@@ -62,13 +67,21 @@ class ReductionProject(VDProject):
 
         return
         
+    def addData(self, datafilename):
+        """ Add a new data file to project
+        """
+        raise NotImplementedError("addData is private")
+
     def addDataFileSets(self, reddatasets):
         """ Add data file and calibration file sets 
         """
         for datafile, vcalfile in reddatasets:
-            self.addData(datafile)
+            # data file list
+            self._dataset.append(datafile)
+            # data file / van cal dict
             databasefname = os.path.basename(datafile)
             self._datacalibfiledict[databasefname] = vcalfile
+            # van cal /data file dict
             if self._calibfiledatadict.has_key(vcalfile) is False:
                 self._calibfiledatadict[vcalfile] = []
             self._calibfiledatadict[vcalfile].append(datafile)
@@ -76,6 +89,34 @@ class ReductionProject(VDProject):
         
         return
 
+    def deleteData(self, datafilename):
+        """ Delete a data: override base class
+        Arguments: 
+         - datafilename :: data file name with full path
+        """
+        # search data file list
+        if datafilename not in self._dataset:
+            # a base file name is used
+            for dfname in self._dataset:
+                basename = os.path.basename(dfname)
+                if basename == datafilename:
+                    datafilename = dfname
+                    break
+            # END(for)
+        # ENDIF
+
+        if datafilename not in self._dataset:
+            return (False, "data file %s is not in the project" % (datafilename))
+
+        # remove from dataset
+        self._dataset.remove(datafilename)
+        # remove from data file/van cal dict
+        basename = os.path.basename(datafilename)
+        vanfilename = self._datacalibfiledict.pop(basename)
+        # remove from van cal/data file dict
+        self._calibfiledatadict.pop(vanfilename)
+
+        return (True, "")
 
     def getDataFilePairs(self):
         """ Get to know 
@@ -105,20 +146,38 @@ class ReductionProject(VDProject):
         return ibuf
         
     def setCalibrationFile(self, datafilenames, calibfilename):
-        """ Set the calibration file
+        """ Set the calibration file to a set of data file in the 
+        project
+        Arguments:
+         - datafilenames :: list of data file with full path
         """
+        errmsg = ""
+        numfails = 0
+
         for datafilename in datafilenames:
+            # check whether they exist in the project
+            if datafilename not in self._dataset:
+                errmsg += "Data file %s does not exist.\n" % (datafilename)
+                numfails += 1
+                continue
+
+            # get base name
             basefilename = os.path.basename(datafilenames)
-        
+            # data file/calib dict 
             self._datacalibfiledict[basefilename] = calibfilename
-            
+           
+            # calib / data file dict
             if self._calibfiledatadict.has_key(calibfilename) is False:
                 self._calibfiledatadict[calibfilename] = []
             self._calibfiledatadict[calibfilename].append(datafilename)
-        
         # ENDFOR(datafilename)
+
+        if numfails == len(datafilenames):
+            r = False
+        else:
+            r = True
     
-        return
+        return (r, errmsg)
 
     def setVanadiumDatabaseFile(self, datafilename):
         """ Set the vanadium data base file
