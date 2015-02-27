@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Tue Feb 24 11:46:33 2015
+# Created: Wed Feb 25 23:56:52 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -103,6 +103,8 @@ class Ui_MainWindow(object):
         self.actionAdd_Runs.setObjectName(_fromUtf8("actionAdd_Runs"))
         self.actionDelete_Runs = QtGui.QAction(MainWindow)
         self.actionDelete_Runs.setObjectName(_fromUtf8("actionDelete_Runs"))
+        self.actionView_OpenPlot = QtGui.QAction(MainWindow)
+        self.actionView_OpenPlot.setObjectName(_fromUtf8("actionView_OpenPlot"))
         self.menuVDrive_2_0.addAction(self.actionFile_New)
         self.menuVDrive_2_0.addAction(self.action_OpenProject)
         self.menuVDrive_2_0.addAction(self.actionClose)
@@ -121,6 +123,7 @@ class Ui_MainWindow(object):
         self.menuReduction.addAction(self.actionAdd_Runs)
         self.menuReduction.addAction(self.actionDelete_Runs)
         self.menuView.addAction(self.actionLog_Window)
+        self.menuView.addAction(self.actionView_OpenPlot)
         self.menubar.addAction(self.menuVDrive_2_0.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuReduction.menuAction())
@@ -166,4 +169,6 @@ class Ui_MainWindow(object):
         self.actionFile_New.setShortcut(_translate("MainWindow", "Ctrl+N", None))
         self.actionAdd_Runs.setText(_translate("MainWindow", "Add Runs", None))
         self.actionDelete_Runs.setText(_translate("MainWindow", "Delete Runs", None))
+        self.actionView_OpenPlot.setText(_translate("MainWindow", "Plot", None))
+        self.actionView_OpenPlot.setShortcut(_translate("MainWindow", "Ctrl+P", None))
 
