@@ -38,6 +38,7 @@ class Window_GPPlot(QMainWindow):
         self.ui.setupUi(self)
 
         # Event handling
+        # button controls
         self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'), 
                 self.doPlotPrevRun)
 
@@ -47,6 +48,28 @@ class Window_GPPlot(QMainWindow):
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                 self.doPlotRun)
 
+        # on-graph operation
+        self.ui.graphicsView.mpl_connect('button_press_event', self.on_mouseDownEvent)
+
+        # Initialize graph
+        # TODO - Refactor this part
+        vecx, vecy, xlim, ylim = self.computeMock()
+        self.ui.mainplot = self.ui.graphicsView.getPlot()
+        self.mainline = self.ui.mainplot.plot(vecx, vecy, 'r-')
+
+        leftx = [xlim[0], xlim[0]]
+        lefty = [ylim[0], ylim[1]]
+        self.leftslideline = self.ui.mainplot.plot(leftx, lefty, 'b--')
+        rightx = [xlim[1], xlim[1]]
+        righty = [ylim[0], ylim[1]]
+        self.rightslideline = self.ui.mainplot.plot(rightx, righty, 'g--')
+        upperx = [xlim[0], xlim[1]]
+        uppery = [ylim[1], ylim[1]]
+        self.upperslideline = self.ui.mainplot.plot(upperx, uppery, 'b--')
+        lowerx = [xlim[0], xlim[1]]
+        lowery = [ylim[0], ylim[0]]
+        self.lowerslideline = self.ui.mainplot.plot(lowerx, lowery, 'g--')
+        
         # Validator
         # FIXME - Add validators... 
 
@@ -83,7 +106,9 @@ class Window_GPPlot(QMainWindow):
                 return (False, "No valid ... ")
 
         # get current run and plot
-        ... ...
+        dataset = self._myParent.getData(runnumber=run)
+
+        self._plotData(dataset)
 
         
 
@@ -99,9 +124,73 @@ class Window_GPPlot(QMainWindow):
         print "Plot next run"
 
 
+    #--------------------------------------------------------------------
+    # Event handling methods: WxPython canvas operation
+    #--------------------------------------------------------------------
+    def on_mouseDownEvent(self, event):
+        """ Respond to pick up a value with mouse down event
+        """
+        x = event.xdata
+        y = event.ydata
+
+        if x is not None and y is not None:
+            msg = "You've clicked on a bar with coords:\n %f, %f" % (x, y)
+            QMessageBox.information(self, "Click!", msg)
+
+        return
 
 
+    def _plot(self, plotindex):
+        """ Plot data with vec_x and vec_y
+        """
+        # Get limits of x
+        xmin = min(vecx)
+        xmax = max(vecx)
+        ymin = min(vecy)
+        ymax = max(vecy)
 
+        # Reset graph's data range
+        self.ui.mainplot.set_xlim(xmin, xmax)
+        self.ui.mainplot.set_ylim(ymin, ymax)
+
+        # Reset x- and y-axi label
+        self.ui.mainplot.set_xlabel('Time (seconds)', fontsize=13)
+        self.ui.mainplot.set_ylabel('Counts', fontsize=13)
+
+        # Set up main line
+        setp(self.plotlinelist[plotindex], xdata=vecx, ydata=vecy)
+
+        # Show the change
+        self.ui.graphicsView.draw()
+
+        return
+
+    #--------------------------------------------------------------------
+    # For testing purpose
+    #--------------------------------------------------------------------
+    def computeMock(self):
+        """ Compute vecx and vecy as mocking
+        """
+        import random, math
+
+        x0 = 0.
+        xf = 1.
+        dx = 0.1
+
+        vecx = []
+        vecy = []
+
+        x = x0
+        while x < xf:
+            y = 0.0
+            vecx.append(x)
+            vecy.append(y)
+            x += dx
+
+        xlim = [x0, xf]
+        ylim = [-1., 1]
+
+        return (vecx, vecy, xlim, ylim)
 
 
 def testmain(argv):
