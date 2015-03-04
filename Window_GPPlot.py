@@ -11,6 +11,9 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
+import matplotlib
+import matplotlib.pyplot
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -55,7 +58,9 @@ class Window_GPPlot(QMainWindow):
         # TODO - Refactor this part
         vecx, vecy, xlim, ylim = self.computeMock()
         self.ui.mainplot = self.ui.graphicsView.getPlot()
+
         self.mainline = self.ui.mainplot.plot(vecx, vecy, 'r-')
+        self.plotlinelist = [self.mainline]
 
         leftx = [xlim[0], xlim[0]]
         lefty = [ylim[0], ylim[1]]
@@ -81,35 +86,68 @@ class Window_GPPlot(QMainWindow):
         return
 
     #--------------------------------------------------------------------
+    # Set up
+    #--------------------------------------------------------------------
+    def setRuns(self, runslist):
+        """ Set available runs
+        """
+        # set 
+        for run in runslist:
+            self._runList.append(run)
+
+        # add runs to combo box
+        self.ui.comboBox_runs.addItems(self._runList)
+
+        return
+
+
+    def clearRuns(self):
+        # clear
+        self._runList = []
+
+        # clear combo box
+        self.ui.comboBox_runs.clear()
+
+        return
+
+
+
+    #--------------------------------------------------------------------
     # Event handling methods
     #--------------------------------------------------------------------
     def doPlotRun(self):
         """ Plot the current run
         """
-        print "Plot current run"
+        print "Plot user specified run"
       
         # attempt to read line edit input
         try: 
-            run = int(self.ui.lineEdit_run)
+            run = self.ui.lineEdit_run.text()
             if run in self._runList:
                 usecombobox = False
+            else:
+                usecombobox = True
         except ValueError as e:
             usecombobox = True
 
         # attempt to read from combo box
         if usecombobox is True:
             try: 
-                run = int(self.ui.comboBox_runs.currentText())
+                run = self.ui.comboBox_runs.currentText()
                 if run not in self._runList: 
+                    print  "Run %s from combo box is not a valid run." % (run)
                     return (False, "No line edit input... ")
             except ValueError as e:
+                print "No valid ... "
                 return (False, "No valid ... ")
 
+        print "Run %s is selected." % (run)
         # get current run and plot
-        dataset = self._myParent.getData(runnumber=run)
+        vecx, vecy, notelist = self._myParent.getData(runnumber=run)
 
-        self._plotData(dataset)
+        self._plot(vecx, vecy, plotindex=0)
 
+        return
         
 
     def doPlotPrevRun(self):
@@ -140,7 +178,7 @@ class Window_GPPlot(QMainWindow):
         return
 
 
-    def _plot(self, plotindex):
+    def _plot(self, vecx, vecy, plotindex):
         """ Plot data with vec_x and vec_y
         """
         # Get limits of x
@@ -158,7 +196,7 @@ class Window_GPPlot(QMainWindow):
         self.ui.mainplot.set_ylabel('Counts', fontsize=13)
 
         # Set up main line
-        setp(self.plotlinelist[plotindex], xdata=vecx, ydata=vecy)
+        matplotlib.pyplot.setp(self.plotlinelist[plotindex], xdata=vecx, ydata=vecy)
 
         # Show the change
         self.ui.graphicsView.draw()
@@ -193,11 +231,63 @@ class Window_GPPlot(QMainWindow):
         return (vecx, vecy, xlim, ylim)
 
 
+class MockParent:
+    """ Mocking parent for universal purpose
+    """
+    def __init__(self):
+        """ Init
+        """
+        self._arrayX, self._arrayY, self._noteList = self._parseData()
+
+        return
+
+
+    def _parseData(self):
+        datafile = open('./tests/mockdata.dat', 'r')
+        rawlines = datafile.readlines()
+        datafile.close()
+
+        xlist = []
+        ylist = []
+        tlist = []
+
+        for rline in rawlines:
+            line = rline.strip()
+            if len(line) == 0:
+                continue
+
+            terms = line.split()
+            x = float(terms[0])
+            y = float(terms[1])
+            t = terms[0]
+
+            xlist.append(x)
+            ylist.append(y)
+            tlist.append(t)
+
+        x_array = numpy.array(xlist)
+        y_array = numpy.array(ylist)
+
+        return x_array, y_array, tlist
+
+
+
+    def getData(self, runnumber):
+        """ Form two numpy array for plotting
+        """
+        return (self._arrayX, self._arrayY, self._noteList)
+
 def testmain(argv):
     """ Main method for testing purpose
     """
+    parent = MockParent()
+
+
     app = QtGui.QApplication(argv)
-    myapp = Window_GPPlot()
+
+    # my plot window app
+    myapp = Window_GPPlot(parent)
+    myapp.setRuns(['002271'])
     myapp.show()
 
     exit_code=app.exec_()
