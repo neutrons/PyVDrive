@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_ReductionSetup.ui'
 #
-# Created: Wed Feb 25 15:18:37 2015
+# Created: Fri Mar 13 17:22:44 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -109,10 +109,10 @@ class Ui_Form(object):
         self.lineEdit_5 = QtGui.QLineEdit(self.tab_advsetup)
         self.lineEdit_5.setEnabled(False)
         self.lineEdit_5.setObjectName(_fromUtf8("lineEdit_5"))
-        self.gridLayout_4.addWidget(self.lineEdit_5, 3, 3, 1, 2)
+        self.gridLayout_4.addWidget(self.lineEdit_5, 3, 3, 1, 3)
         self.checkBox_autoVanRun = QtGui.QCheckBox(self.tab_advsetup)
         self.checkBox_autoVanRun.setObjectName(_fromUtf8("checkBox_autoVanRun"))
-        self.gridLayout_4.addWidget(self.checkBox_autoVanRun, 1, 4, 1, 1)
+        self.gridLayout_4.addWidget(self.checkBox_autoVanRun, 1, 5, 1, 1)
         self.pushButton_vanDBFile = QtGui.QPushButton(self.tab_advsetup)
         self.pushButton_vanDBFile.setObjectName(_fromUtf8("pushButton_vanDBFile"))
         self.gridLayout_4.addWidget(self.pushButton_vanDBFile, 1, 3, 1, 1)
@@ -123,7 +123,7 @@ class Ui_Form(object):
         self.lineEdit_6 = QtGui.QLineEdit(self.tab_advsetup)
         self.lineEdit_6.setEnabled(False)
         self.lineEdit_6.setObjectName(_fromUtf8("lineEdit_6"))
-        self.gridLayout_4.addWidget(self.lineEdit_6, 2, 4, 1, 1)
+        self.gridLayout_4.addWidget(self.lineEdit_6, 2, 5, 1, 1)
         self.label_6 = QtGui.QLabel(self.tab_advsetup)
         self.label_6.setObjectName(_fromUtf8("label_6"))
         self.gridLayout_4.addWidget(self.label_6, 0, 0, 1, 1)
@@ -133,7 +133,7 @@ class Ui_Form(object):
         self.gridLayout_4.addWidget(self.lineEdit_4, 2, 1, 1, 1)
         self.pushButton_vanDBCriteriaSetup = QtGui.QPushButton(self.tab_advsetup)
         self.pushButton_vanDBCriteriaSetup.setObjectName(_fromUtf8("pushButton_vanDBCriteriaSetup"))
-        self.gridLayout_4.addWidget(self.pushButton_vanDBCriteriaSetup, 1, 5, 1, 1)
+        self.gridLayout_4.addWidget(self.pushButton_vanDBCriteriaSetup, 1, 4, 1, 1)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.gridLayout_4.addItem(spacerItem1, 0, 5, 1, 1)
         self.tab_calibSetup.addTab(self.tab_advsetup, _fromUtf8(""))
@@ -509,7 +509,7 @@ class Ui_Form(object):
         self.label_6.setToolTip(_translate("Form", "<html><head/><body><p>Time focussing table file.  In PD, it was named as \'calibration file\'</p></body></html>", None))
         self.label_6.setText(_translate("Form", "Time Focusing Table", None))
         self.pushButton_vanDBCriteriaSetup.setToolTip(_translate("Form", "<html><head/><body><p>Launch a dialog box to set up criteria for search corresponding vanadium runs by vanadium database file</p></body></html>", None))
-        self.pushButton_vanDBCriteriaSetup.setText(_translate("Form", "Criteria", None))
+        self.pushButton_vanDBCriteriaSetup.setText(_translate("Form", "Set up criteria", None))
         self.tab_calibSetup.setTabText(self.tab_calibSetup.indexOf(self.tab_advsetup), _translate("Form", "Calibration Setup", None))
         self.label_11.setText(_translate("Form", "Bin Size", None))
         self.checkBox_sumRuns.setText(_translate("Form", "Sum Runs", None))

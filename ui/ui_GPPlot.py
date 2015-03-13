@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_GPPlot.ui'
 #
-# Created: Wed Feb 25 23:56:52 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Fri Mar 13 17:22:44 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -23,8 +23,6 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
-import MplFigureCanvas as mfc
-
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
@@ -35,8 +33,7 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        #self.graphicsView = QtGui.QGraphicsView(self.centralwidget)
-        self.graphicsView = mfc.Qt4MplCanvas(self.centralwidget)
+        self.graphicsView = QtGui.QGraphicsView(self.centralwidget)
         self.graphicsView.setObjectName(_fromUtf8("graphicsView"))
         self.horizontalLayout.addWidget(self.graphicsView)
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
@@ -48,9 +45,9 @@ class Ui_MainWindow(object):
         self.pushButton_nextView = QtGui.QPushButton(self.centralwidget)
         self.pushButton_nextView.setObjectName(_fromUtf8("pushButton_nextView"))
         self.verticalLayout.addWidget(self.pushButton_nextView)
-        self.pushButton = QtGui.QPushButton(self.centralwidget)
-        self.pushButton.setObjectName(_fromUtf8("pushButton"))
-        self.verticalLayout.addWidget(self.pushButton)
+        self.pushButton_cancel = QtGui.QPushButton(self.centralwidget)
+        self.pushButton_cancel.setObjectName(_fromUtf8("pushButton_cancel"))
+        self.verticalLayout.addWidget(self.pushButton_cancel)
         self.gridLayout.addLayout(self.verticalLayout, 0, 1, 2, 1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
@@ -101,7 +98,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
         self.pushButton_prevView.setText(_translate("MainWindow", "Previous", None))
         self.pushButton_nextView.setText(_translate("MainWindow", "Next", None))
-        self.pushButton.setText(_translate("MainWindow", "PushButton", None))
+        self.pushButton_cancel.setText(_translate("MainWindow", "Cancel", None))
         self.label.setText(_translate("MainWindow", "Run", None))
         self.pushButton_plot.setText(_translate("MainWindow", "Plot", None))
         self.menuFile.setTitle(_translate("MainWindow", "File", None))

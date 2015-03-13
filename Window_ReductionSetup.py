@@ -225,7 +225,21 @@ class MyReductionWindow(QWidget):
         if self._vanDBCriteriaWindow is not None: 
             self._vanDBCriteriaWindow.show()
         else:
-            self._myParent._addLogInformation("Vanadium criteria window cannot be opened because vanadium files has not been setup.")
+            vandbfile = str(self.ui.lineEdit_vanDBFile.text())
+
+            if os.path.exists(vandbfile) and os.path.isFile(vandbfile):
+                # launch the window to ask user to set up match criteria
+                vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
+                print vandbfilelogs
+
+                self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
+                self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
+                self._vanDBCriteriaWindow.show()
+
+            else:
+                # van database file is not setup.  
+                self._myParent._addLogInformation("Vanadium criteria window cannot be openeda \
+                        because vanadium files has not been setup.")
 
         return
 
