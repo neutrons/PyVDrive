@@ -82,12 +82,6 @@ class MyReductionWindow(QWidget):
         print "Default of Base Data Path:", str(self.ui.lineEdit_baseDataPath.text())
         self.ui.lineEdit_vanDBFile.setText(self._myParent.config["default.VanadiumDataBaseFile"])
 
-        # FIXME - Remove this section after debugging 
-        #---------------- Debug Setup ---------------------------------
-        self.ui.lineEdit_ipts.setText('10311')
-        self.ui.lineEdit_runstart.setText('57075')
-        self.ui.lineEdit_runend.setText('57100')
-        #--------------------------------------------------------------
 
         return
 

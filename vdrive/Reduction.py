@@ -1,3 +1,9 @@
+##########
+#
+# Methods refactored from SNSPowderReduction for better flexibility to merged into PyVDrive
+#
+##########
+
 def focus(self, nxsfilename, calib, filterWall, splitwksp=None, preserveEvents=True):
     """ Load, (optional) split and focus data in chunks
     Arguments:
@@ -118,56 +124,57 @@ def focus(self, nxsfilename, calib, filterWall, splitwksp=None, preserveEvents=T
                 UnwrapRef=self._LRef, LowResRef=self._DIFCref, LowResSpectrumOffset=self._lowResTOFoffset,\ 
                 CropWavelengthMin=self._wavelengthMin, **(focuspos))
 
-
-for iws in xrange(temp.getNumberHistograms()):
-spec = temp.getSpectrum(iws)
-self.log().debug("[DBx131] ws %d: spectrum ID = %d. " % (iws, spec.getSpectrumNo()))
-if preserveEvents is True and isinstance(temp, mantid.api._api.IEventWorkspace) is True:
-self.log().information("After being aligned and focussed workspace %s; Number of events = %d of chunk %d " % (str(temp),\
-temp.getNumberEvents(), ichunk))
-# Rename and/or add to workspace of same splitter but different chunk
-wkspname = wksp
-if numwksp > 1:
-wkspname += "_%s" % ( (str(temp)).split("_")[-1] )
-if firstChunkList[itemp]:
-self.log().debug("[F1145] Slot %d is renamed to %s" % (itemp, wkspname))
-wksplist[itemp] = api.RenameWorkspace(InputWorkspace=temp, OutputWorkspace=wkspname)
-firstChunkList[itemp] = False
-else:
-wksplist[itemp] = api.Plus(LHSWorkspace=wksplist[itemp], RHSWorkspace=temp, OutputWorkspace=wksplist[itemp])
-api.DeleteWorkspace(temp)
-# ENDIF
-# ENDFOR (spliited workspaces)
-# ENDFOR Chunk
-self.log().information("[F1207] Number of workspace in workspace list after loading by chunks = %d. " %(len(wksplist)))
-
-if (self.iparmFile is not None) and (len(self.iparmFile) > 0): 
-    # When chunks are added, add iparamFile 
+        if DEBUGOUTPUT is True:
+            for iws in xrange(temp.getNumberHistograms()):
+                spec = temp.getSpectrum(iws)
+                self.log().debug("[DBx131] ws %d: spectrum ID = %d. " % (iws, spec.getSpectrumNo()))
+                
+            if preserveEvents is True and isinstance(temp, mantid.api._api.IEventWorkspace) is True:
+                self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
+                    of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
+    
+            
+        # Rename and/or add to workspace of same splitter but different chunk
+        wkspname = wksp
+        if numwksp > 1:
+            wkspname += "_%s" % ( (str(temp)).split("_")[-1] )
+        wksplist[itemp] = api.RenameWorkspace(InputWorkspace=temp, OutputWorkspace=wkspname)
+    # ENDFOR (itemp)
+    
+    
+    
+def setupGSASIParmFileName(wksplist, iparmfilename):
+    """ Set up GSAS instrument parameter names
+    """
     for itemp in xrange(numwksp): 
-        wksplist[itemp].getRun()['iparm_file'] = self.iparmFile 
-
-# comparess events
-for itemp in xrange(numwksp): 
-    if wksplist[itemp].id() == EVENT_WORKSPACE_ID: 
-        wksplist[itemp] = api.CompressEvents(InputWorkspace=wksplist[itemp],\ 
+        wksplist[itemp].getRun()['iparm_file'] = iparmfilename 
+    
+    return
+    
+def compressEvents(wksplist):
+    """ Compress events
+    """
+    for itemp in xrange(numwksp): 
+        if wksplist[itemp].id() == EVENT_WORKSPACE_ID: 
+            wksplist[itemp] = api.CompressEvents(InputWorkspace=wksplist[itemp],\ 
                 OutputWorkspace=wksplist[itemp], Tolerance=COMPRESS_TOL_TOF) # 100ns
-
-# normalize by current
-try:
-    if self._normalisebycurrent is True:
-        wksplist[itemp] = api.NormaliseByCurrent(InputWorkspace=wksplist[itemp],
-        OutputWorkspace=wksplist[itemp])
+                
+def normalizeByCurrent(wksplist):
+    """ normalize by current
+    """
+    for itemp in xrange(len(wksplist)):
+        wksplist[itemp] = api.NormaliseByCurrent(InputWorkspace=wksplist[itemp],\
+            OutputWorkspace=wksplist[itemp])
         wksplist[itemp].getRun()['gsas_monitor'] = 1
-except Exception, e:
-    self.log().warning(str(e))
+    # ENDFOR
+    
+    return
+    
+    
+def exportForAnalysis(wksplist, filetypelist):
+    """
+    """
+    for itemp in xrange(len(wksplist)):
+        _save(wksplist[itemp], filetypelist)
 
-
-# save file
-self._save(wksplist[itemp], self._info, False, True)
-self.log().information("Done focussing data of %d." % (itemp))
-self.log().information("[E1207] Number of workspace in workspace list after clean = %d. " %(len(wksplist)))
-# About return
-if splitwksp is None:
-return wksplist[0]
-else:
-return wksplist
+    return

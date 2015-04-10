@@ -1,6 +1,6 @@
 ################################################################################
 #
-#This is a script showing a typical workflow to work with VDrive
+# This is a script showing a typical workflow to work with VDrive via VDriveAPI
 #
 ################################################################################
 
@@ -15,7 +15,6 @@ import PyVDrive.config as vconfig
 print "Default data path = ", vconfig.defaultDataPath
 
 myworkflow = vdapi.VDriveAPI()
-
 
 # initlalize a new project
 if myworkflow.hasProject(projname='Test001')[0] is True:

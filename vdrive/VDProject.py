@@ -270,4 +270,4 @@ class AnalysisProject(VDProject):
 
         # FIXME - Consider single-spectrum GSS file only!
 
-        return (True, [ws.readX(0), ws.readY(0), ws.readE(0))
+        return (True, [ws.readX(0), ws.readY(0), ws.readE(0)])
