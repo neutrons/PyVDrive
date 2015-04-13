@@ -9,7 +9,7 @@ Use cases
   c) New 'Reduction setup' window;
   d) In 'reduction setup' window, select *Project*
   e) 'Browse' vanadium database file 
-  >  upgrade 1: if *vanadium data base file* is a valid file name, there is no need to show the *file dialog box* again;
+    (x)  upgrade 1: if *vanadium data base file* is a valid file name, there is no need to show the *file dialog box* again;
   >  upgrade 2: use a config file to pre-select some log names for matching;
   f) PushButton 'Add' to add IPTS/runs to pool for reduction;
   >  upgrade 1: pop out a window to show the matched vanadium runs for all the added runs for future setup;

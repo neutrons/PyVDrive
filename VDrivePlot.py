@@ -80,7 +80,6 @@ class VDrivePlot(QtGui.QMainWindow):
         self.connect(self.ui.actionLog_Window, QtCore.SIGNAL('triggered()'),
                 self.doShowAppLog)
 
-
         # Project tree widget
         self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemSelectionChanged()'),
             self.doChangeTreeMenu)

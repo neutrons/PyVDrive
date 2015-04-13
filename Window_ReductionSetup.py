@@ -186,25 +186,34 @@ class MyReductionWindow(QWidget):
         """ Prompt a dialog box for selecting vanadium database file
         """ 
         # get vanadium database file via dialog
+        vandbfile = None
         defaultfilename = str(self.ui.lineEdit_vanDBFile.text())
         if len(defaultfilename) > 0: 
-            homedir = os.path.dirname(defaultfilename)
-            if os.path.exists(homedir) is False:
-                homedir = os.getcwd()
+            if os.path.isfile(defaultfilenmae) is True:
+                vandbfile = defaultfilename
+            else: 
+                homedir = os.path.dirname(defaultfilename) 
+                if os.path.exists(homedir) is False: 
+                    homedir = os.getcwd()
+            # ENDIF
         else:
             homedir = os.getcwd()
+        # ENDIFELSE(defaultfilename is empty)
 
-        vandbfilter = "Text files (*.txt);;All files (*.*)"
-        fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', homedir, vandbfilter)
-        if len(fileList) == 0:
-            self._myParent._addLogInformation("No vanadium dabase file is selected");
-            return
-        vandbfile = str(fileList[0])
-        self.ui.lineEdit_vanDBFile.setText(vandbfile)
+        # get vanadium db file via dialog
+        if vandbfile is None:
+            vandbfilter = "Text files (*.txt);;All files (*.*)"
+            fileList = QtGui.QFileDialog.getOpenFileNames(self, 'Open File', homedir, vandbfilter)
+            if len(fileList) == 0:
+                self._myParent._addLogInformation("No vanadium dabase file is selected");
+                return
+            vandbfile = str(fileList[0])
+            # set value back to line edit
+            self.ui.lineEdit_vanDBFile.setText(vandbfile)
 
         # launch the window to ask user to set up match criteria
         vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
-        print vandbfilelogs
+        #print vandbfilelogs
 
         self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
         self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
