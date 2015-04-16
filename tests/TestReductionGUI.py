@@ -1,6 +1,8 @@
 ################################################################################
 # Test of GUI for Data Reduction
 ################################################################################
+import time
+
 #import PyQt modules
 from PyQt4 import QtGui, QtCore, Qt
 
@@ -28,9 +30,11 @@ if __name__=="__main__":
     myapp.doNewProject()
     myapp.projnamewindow.ui.lineEdit.setText('MockNewReductionProj')
     myapp.projnamewindow.quitCreateNew()
+    time.sleep(0.1)
     
     # step 2: launch a new redcution window
     myapp.doSetupReduction()
+    myapp._reductionWindow.setCurrentProject('MockNewReductionProj')
     
     # 2.0 Set up IPTS, start run and end run
     myapp._reductionWindow.ui.lineEdit_ipts.setText('10311')
@@ -39,7 +43,13 @@ if __name__=="__main__":
     
     # 2.1 Set up vanadium 
     myapp._reductionWindow.doBrowseVanDBFile()
+    myapp._reductionWindow._vanDBCriteriaWindow.doSaveQuit()
+    
+    # 2.2 Add runs
+    myapp._reductionWindow.doAddRuns()
 
+    # 2.3 Configure reduction parameters
+    myapp._reductionWindow.ui.lineEdit_binSize.setText('-0.001')
     
     
 

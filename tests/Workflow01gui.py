@@ -3,32 +3,33 @@
 # This is a script showing a typical workflow to work with VDrive via VDriveAPI
 #
 ################################################################################
-
 import sys
 import os
 import os.path
-# sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 
 import PyVDrive.Ui_VDrive as vdapi
 
-# create a workflow 
+# Initalize a workflow 
 myworkflow = vdapi.VDriveAPI()
 
 # initlalize a new project
-if myworkflow.hasProject(projname='Test001')[0] is True:
-    myworkflow.deleteProject(projname='Test0001')
-myworkflow.newProject(projname = "Test001", projtype = "reduction")
-myworkflow.setDataPath(projname = 'Test001')
-#myworkflow.setDataPath(projname = 'Test001', basedatapath = vconfig.defaultDataPath[0])
-#myworkflow.setDataPath(projname = 'Test001', basedatapath = '/Users/wzz/Projects/SNSData/VULCAN')
+projname = 'MocknewReductionProj'
+if myworkflow.hasProject(projname=projname)[0] is True:
+    myworkflow.deleteProject(projname=projname)
+myworkflow.newProject(projname=projname, projtype = "reduction")
+myworkflow.setDataPath(projname=projname)
 
-# new project should add data and locate calibration file automatically
+# Set IPTS
 ipts = 10311
-runs= range(57070, 57078)
 
-criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
-myworkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
-status, errmsg, datafilesets = myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+# Set up vanadium run 
+# criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
+vanMatchList = myworkflow._myConfig['vanadium.SampleLogToMatch']
+myworkflow.setVanadiumCalibrationMatchCriterion(projname, vanMatchList)
+
+# New project should add data and locate calibration file automatically
+runs= range(57075, 57100)
+status, errmsg, datafilesets = myworkflow.addExperimentRuns(projname, 'reduction', ipts, runs, True)
 if status is False:
     print "Error: \n", errmsg
 else:
@@ -40,14 +41,14 @@ else:
 # save and load project
 curdir = os.getcwd()
 projfilename = os.path.join(curdir, 'test001.p')
-myworkflow.saveProject('r', 'Test001', projfilename)
-myworkflow.deleteProject('r', 'Test001')
+myworkflow.saveProject('r', projname, projfilename)
+myworkflow.deleteProject('r', projname)
 
 myworkflow.loadProject(projfilename)
 
 # add another few runs
 runs= range(57079, 57099)
-status, errmsg, datafilesets = myworkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, False)
+status, errmsg, datafilesets = myworkflow.addExperimentRuns(projname, 'reduction', ipts, runs, False)
 if status is False:
     print "Error: \n", errmsg
 else:
@@ -58,10 +59,10 @@ else:
 
 # save data file again
 projfilename = os.path.join(curdir, 'test001a.p')
-myworkflow.saveProject('r', 'Test001', projfilename)
+myworkflow.saveProject('r', projname, projfilename)
 
 # get the information of runs
-status, errmsg, datacalpairlist = myworkflow.getDataFiles('Test001')
+status, errmsg, datacalpairlist = myworkflow.getDataFiles(projname)
 msg = "Data file and calibration file for reduction:\n"
 for datapair in sorted(datacalpairlist):
     msg += "%-20s\t\t%-20s\n" % (str(datapair[0]), str(datapair[1]))
@@ -73,13 +74,13 @@ filestoreduce = [('VULCAN_57075_event.nxs', True),
     ('VULCAN_57077_event.nxs', True),
     ('VULCAN_57080_event.nxs', False)]
 myworkflow.setReductionFlags('Test001', filestoreduce)
-print myworkflow.info('Test001')[1]
+print myworkflow.info(projname)[1]
 
 
 # delete some run
-execstatus, errmsg = myworkflow.deleteRuns('Test001', ['arrow.nxs', 'sword.nxs'])
+execstatus, errmsg = myworkflow.deleteRuns(projname, ['arrow.nxs', 'sword.nxs'])
 print execstatus, errmsg
-execstatus, errmsg = myworkflow.deleteRuns('Test0001', ['VULCAN_57080_event.nxs'])
+execstatus, errmsg = myworkflow.deleteRuns(projname, ['VULCAN_57080_event.nxs'])
 print execstatus, errmsg
 
 # set up reduction parameters
@@ -97,7 +98,8 @@ paramdict = {
         "FrequencyLogNames": "skf1.speed",
         "WaveLengthLogNames": "skf12.lambda"
         }
-myworkflow.setReductionParameters('Test001', paramdict)
+myworkflow.setReductionParameters(projname, paramdict)
+myworkflow.reduce(projname)
 
 
 raise NotImplementedError("Implemented so far...")

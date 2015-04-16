@@ -3,6 +3,7 @@
 # - A GUI application will call this class for data reduction and analysis;
 # - User can write script on this class to reduce and analyze data;
 ################################################################################
+import os
 import pickle
 
 import PyVDrive
@@ -32,12 +33,14 @@ class VDriveAPI:
         self._baseDataPath = '/SNS/%s' % (self._myInstrument)
         self._vanadiumRecordFile = None
 
-        # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, warning and error
+        # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, 
+        # ... warning and error
         self._myLogList = []
+
+        self._loadConfig()
 
         return
 
-    
     def addDataFile(self, projname, datafilename):
         """ Add data
         Argument:
@@ -45,7 +48,8 @@ class VDriveAPI:
          - datafilename: new data file to add
         """
         self._checkProjectExistence(projname, "add data set")
-        
+       
+        raise NotImplementedError('_projectDict is removed.')
         self._projectDict[projname].addData(datafilename)
         
         return
@@ -71,21 +75,23 @@ class VDriveAPI:
 
         # get calibration vanadium automatically
         if autofindcal is True:
-            # auto mode to link data file to calibration file
+            # Entering auto mode to link data file to calibration file
 
             # check whether it is good for finding calibration automatically
             if len(self._vanCalibCriteriaDict[projname]) == 0:
-                return (False, "Unable to match vanadium calibration file because criteria list is empty.", None)
+                return (False, "Unable to match vanadium calibration file because \
+                        criteria list is empty.", None)
 
-            autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, curproject.getBaseDataPath())
+            autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, \
+                    curproject.getBaseDataPath())
            
             # add runs
             numrunsadded, errmsg = autofinder.addRuns(runnumberlist)
-            print "There are %d runs that are added among %d in input list." % (numrunsadded, len(runnumberlist))
+            print "There are %d runs that are added among %d in input list." % (numrunsadded,
+                    len(runnumberlist))
             print "Error: \n%s\n-------------------------------\n" % (errmsg, )
 
             # do match for calibration
-
             runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
         
         else:
@@ -120,7 +126,9 @@ class VDriveAPI:
     def deleteProject(self, projtype, projname):
         """ Delete an existing project
         """
-        self._checkProjectExistence(projname, "delete project")
+        project, errmsg = self._checkProjectExistence(projname, "delete project")
+        if project is None:
+            raise NotImplementedError(errmsg) 
 
         if projtype == 'r':
             self._rProjectDict.pop(projname)
@@ -315,15 +323,15 @@ class VDriveAPI:
         return (True, "")
 
     
-    def setDefaultDataPath(self, basedatapath):
-        """ Set the global/default data path for all projects
-        """
-        if isinstance(basedatapath, str) is True: 
-            self._baseDataPath = basedatapath
-        else:
-            raise NotImplementedError("Unable to set base data path with unsupported type %s." % (str(type(basedatapath))))
+    # def setDefaultDataPath(self, basedatapath):
+    #     """ Set the global/default data path for all projects
+    #     """
+    #     if isinstance(basedatapath, str) is True: 
+    #         self._baseDataPath = basedatapath
+    #     else:
+    #         raise NotImplementedError("Unable to set base data path with unsupported type %s." % (str(type(basedatapath))))
 
-        return
+    #     return
 
     def setDefaultVanadiumDatabaseFile(self, vandbfile):
         """ Set the default/global vanadium database file
@@ -333,7 +341,21 @@ class VDriveAPI:
         return
 
 
-    def setDataPath(self, projname, basedatapath):
+    def setCalibration(self, projname, datafilename, calibrun):
+        """ Set a calibration run (van run) to a data file in a reduction project
+        """
+        try: 
+            project = self._rProjectDict[projname]
+        except KeyError:
+            return (False, "Reduction project %s does not exist." % (projname))
+
+        project.setCalibrationFile([datafilename], calibrun)
+
+        return
+
+
+
+    def setDataPath(self, projname, basedatapath=None):
         """ Set the base data path to a project
         """
         try: 
@@ -341,6 +363,11 @@ class VDriveAPI:
         except KeyError:
             return (False, "Reduction project %s does not exist." % (projname))
 
+        # set up from default
+        if basedatapath is None:
+            basedatapath = self._myConfig['default.BaseDataPath']
+
+        # set data path to particular project
         project.setBaseDataPath(basedatapath)
 
         return (True, "")
@@ -370,21 +397,31 @@ class VDriveAPI:
     def reduce(self, projname):
         """ Reduce the data
         """
-        self._checkProjectExistence(projname, "reduce powder diffraction")
-        
-        self._projectDict[projname].reduce()
-        
+        project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
+        if project is None:
+            raise NotImplementedError(errmsg)
+
+        else:
+            project.reduce()
+
+        return
         
 
     def setVanadiumCalibrationMatchCriterion(self, projname, criterialist):
         """ Set the criteria list for matching the vanadium calibration file
         for a reduction project
+        Arguments:
+         - criterialist :: list of 2-tuples as (sample-log-name, data-type)
         """
         if self._vanCalibCriteriaDict.has_key(projname) is False:
             return (False, "Unable to locate reduction project %s " % (projname))
 
         if isinstance(criterialist, list) is False:
             return (False, "Input criterial list must be list!")
+
+        for c in criterialist:
+            if isinstance(c, tuple) is False:
+                raise NotImplementedError("Elements in criterialist must be 2-tuples")
 
         self._vanCalibCriteriaDict[projname] = criterialist
 
@@ -396,6 +433,7 @@ class VDriveAPI:
         """
         self._checkProjectExistence(projname, "set calibration file")
         
+        raise NotImplementedError('_projectDict is removed.')
         self._projectDict[projname].setCalibrationFile(calfilename)
         
         return
@@ -406,6 +444,7 @@ class VDriveAPI:
         """
         self._checkProjectExistence(projname, "set characterization file")
         
+        raise NotImplementedError('_projectDict is removed.')
         self._projectDict[projname].setCharacterFile(charactfilename)
         
         return
@@ -427,6 +466,17 @@ class VDriveAPI:
         return
 
         
+    def addLogInformation(self, logstr):
+        """ Add a log information at information level
+        """
+        self._myLogList.append( ('i', logstr) )
+
+        return
+
+    #--------------------------------------------------------------------------
+    # Private methods
+    #--------------------------------------------------------------------------
+
     def _checkProjectExistence(self, projname, operation):
         """ Check wehtehr a project (name) does exist
         Return :: (project/None, errmsg)
@@ -446,10 +496,33 @@ class VDriveAPI:
         
         return (project, errmsg)
 
-    def addLogInformation(self, logstr):
-        """ Add a log information at information level
+    def _loadConfig(self):
+        """ Load and possibly set up configuration directory
         """
-        self._myLogList.append( ('i', logstr) )
+        # vdrive configuration directory
+        homdir = os.path.expanduser("~")
+        configdir = os.path.join(homdir, ".vdrive")
+        if os.path.exists(configdir) is False:
+            os.makedirs(configdir)
 
-        return
+        # copy over the configuration file if local does not have 
+        localconffname = os.path.join(os.getcwd(), 'config.py')
+        if os.path.exists(localconffname) is False:
+            configfile = os.path.join(configdir, 'config.py')
+            if os.path.exists(configfile) is True: 
+                shutil.copyfile(configfile, localconffname)
+            else:
+                print "No configuration file can be found."
+                return False
+        # ENDIF
+
+        try:
+            import config
+        except ImportError as e:
+            print e
+            raise e
+        else:
+            self._myConfig = config.configdict
+
+        return True
 

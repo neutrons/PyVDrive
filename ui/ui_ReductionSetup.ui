@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>886</width>
-    <height>934</height>
+    <width>1041</width>
+    <height>972</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -94,7 +94,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="tab_advsetup">
         <attribute name="title">
@@ -246,11 +246,18 @@
          <string>General Setup</string>
         </attribute>
         <layout class="QGridLayout" name="gridLayout_2">
-         <item row="2" column="0">
-          <layout class="QHBoxLayout" name="horizontalLayout_8"/>
-         </item>
          <item row="0" column="0">
           <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <item>
+            <widget class="QLabel" name="label_binMin">
+             <property name="text">
+              <string>TOF Min</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_binMin"/>
+           </item>
            <item>
             <widget class="QLabel" name="label_11">
              <property name="text">
@@ -259,10 +266,63 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="lineEdit_binsize"/>
+            <widget class="QLineEdit" name="lineEdit_binSize"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_binMax">
+             <property name="text">
+              <string>TOF Max</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_binMax"/>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_binUnit">
+             <item>
+              <property name="text">
+               <string>TOF</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>dSpacing</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Momentum Transfer (Q)</string>
+              </property>
+             </item>
+            </widget>
            </item>
            <item>
             <spacer name="horizontalSpacer_13">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item row="1" column="0">
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <item>
+            <widget class="QCheckBox" name="checkBox_chopData">
+             <property name="text">
+              <string>Chop Data</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_26">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
@@ -282,22 +342,71 @@
             </widget>
            </item>
            <item>
+            <spacer name="horizontalSpacer_27">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QCheckBox" name="checkBox_filterBadPulses">
              <property name="text">
               <string>Filter Bad Pulses</string>
              </property>
             </widget>
            </item>
+           <item>
+            <spacer name="horizontalSpacer_25">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
-         <item row="1" column="0">
-          <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <item row="2" column="0">
+          <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
-            <widget class="QCheckBox" name="checkBox_chopData">
+            <widget class="QLabel" name="label_17">
              <property name="text">
-              <string>Chop Data</string>
+              <string>Output Dir</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_outputDir"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_browseOutputDir">
+             <property name="text">
+              <string>Browse</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_24">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>

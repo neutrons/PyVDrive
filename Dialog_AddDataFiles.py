@@ -12,33 +12,160 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-# #import version information
-# from _version import __version__
-# 
-# #import constants from config.py
-# import config
-# 
 #import GUI components generated from Qt Designer .ui file
-from ui.ui_VanDatabaseCriterialSetup import *
+from ui.ui_AddDataToReduce import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
-    
-    #initialize app
-    def __init__(self, parent, configdict):
-        #setup main window
+
+#------------------------------------------------------------------------------
+# Essential External Methods
+#------------------------------------------------------------------------------
+
+def addCheckboxToWSTCell(table, row, col, state):
+    """ function to add a new select checkbox to a cell in a table row
+    won't add a new checkbox if one already exists
+    """
+    # Convert state to boolean
+    if state is None:
+        state = False
+    elif isinstance(state, str) is True:
+        if state.lower() == 'true':
+            state = True
+        elif state.lower() == 'false':
+            state = False
+        else:
+            state = bool(int(state))
+    elif isinstance(state, int) is True:
+        state = bool(state)
+    elif isinstance(state, bool) is True:
+        pass
+    else:
+        raise NotImplementedError("Input state %s of type %s is not accepted." % (str(state),
+            str(type(state))))
+    # ENDIF
+
+    #check if cellWidget exitst
+    if table.cellWidget(row,col) != None:
+        # existing: just set the value
+        table.cellWidget(row,col).setChecked(state)
+    else:
+        #case to add checkbox
+        checkbox = QtGui.QCheckBox()
+        checkbox.setText('')
+        checkbox.setChecked(state)
+        
+        #adding a widget which will be inserted into the table cell
+        #then centering the checkbox within this widget which in turn,
+        #centers it within the table column :-)
+        QW=QtGui.QWidget()
+        cbLayout=QtGui.QHBoxLayout(QW)
+        cbLayout.addWidget(checkbox)
+        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
+        cbLayout.setContentsMargins(0,0,0,0)
+        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
+
+    return
+
+
+def addComboboxToWSTCell(table, row, col, itemlist, curindex):
+    """ function to add a new select checkbox to a cell in a table row
+    won't add a new checkbox if one already exists
+
+    Arguments:
+     - row
+     - col
+     - itemlist :: list of string for combo box
+     - curindex :: current index for the item get selected
+    """
+    # Check and set up input
+    if curindex is None:
+        curindex = 0
+
+    # Check if cellWidget exitst
+    if table.cellWidget(row,col) != None:
+        # Existing: set to current index
+        table.cellWidget(row,col).setCurrentIndex(curindex)
+    else:
+        # Case to add QComboBox
+        # check input
+        if isinstance(itemlist, list) is False:
+            raise NotImplementedError("Input *itemlist* must be list!")
+        qlist = []
+        for item in itemlist:
+            qlist.append(str(item))
+        combobox = QtGui.QComboBox()
+        combobox.addItems(qlist)
+        
+        #adding a widget which will be inserted into the table cell
+        #then centering the checkbox within this widget which in turn,
+        #centers it within the table column :-)
+        QW=QtGui.QWidget()
+        cbLayout=QtGui.QHBoxLayout(QW)
+        cbLayout.addWidget(combobox)
+        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
+        cbLayout.setContentsMargins(0,0,0,0)
+        table.setCellWidget(row,col, combobox) #if just adding the checkbox directly
+        combobox.setCurrentIndex(curindex)
+    # ENDIFELSE
+
+    return
+
+
+class MyAddDataFilesDialog(QtGui.QMainWindow):
+    """ GUI (sub) application to add data files to reduce
+    Purpose:
+    1. User can see view all data files to be reduced;
+    2. User can select the vanadium run for matching
+    """
+    # Define signal
+    myAddRunsSignal = QtCore.pyqtSignal(str, list)
+
+
+    # Class
+    def __init__(self, parent, configdict=None, tableheaderdict=None):
+        """ setup main window
+        """
+        # Base class initialization and set up GUI
         QtGui.QMainWindow.__init__(self,parent)
-        self.ui = Ui_MainWindow() #defined in ui_AppTemplate.py
+        self.ui = Ui_MainWindow() 
         self.ui.setupUi(self)
 
-        # Parnet
+        # Parnet & config
         self._myParent = parent
         self._myConfig = configdict
-    
+        if self._myParent is not None: 
+            self._myProjectName = self._myParent._myProjectName
+        else:
+            self._myProjectName = ""
+
+        # Sub-app specific event handling 
+        # save and quit
+        self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
+                self.doSaveQuit)
+
+        # cancel
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'), 
+                self.doCancelQuit)
+
+        # cell value changed
+        self.connect(self.ui.tableWidgetTable1, QtCore.SIGNAL('cellChanged()'),
+                self.doCheckChangedCellValue)
+
+        # Set up table
+        if tableheaderdict is not None and isinstance(tableheaderdict, dict) is True:
+            self.setupTable(tableheaderdict)
+
+        # Signal
+        if self._myParent is not None: 
+            self.myAddRunsSignal.connect(self._myParent.evtAddRuns)
+            self.myAddRunsSignal.connect(self._myParent.getParent().evtAddRuns)
+
+
+        """ Other features ...  
         #add action exit for File --> Exit menu option
         self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'), self.confirmExit)
         #add action exit for 'About' information
@@ -59,41 +186,170 @@ class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
         self.connect(self.ui.pushButtonMoveRowsUp, QtCore.SIGNAL('clicked()'), self.moveRowsUp)
         #add signal/slot connection for pushbutton move selected rows down
         self.connect(self.ui.pushButtonMoveRowsDown, QtCore.SIGNAL('clicked()'), self.moveRowsDown)
+        """
+        return
 
-        #
-        self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
-                self.doSaveQuit)
+    #--------------------------------------------------------------------------
+    # Methods to access, set up and update table
+    #--------------------------------------------------------------------------
+    def appendRows(self, rowlist):
+        """ Append rows to table (public method)
+        """
+        # check
+        if isinstance(rowlist, list) is False:
+            raise NotImplementedError("Input for appendRows() must be a list of strings")
 
-        # 
-        self.connect(self.ui.tableWidgetTable1, QtCore.SIGNAL('cellChanged()'),
-                self.doCheckChangedCellValue)
-
-        # 
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'), 
-                self.doCancelQuit)
-
-        
-        #define column headings
-        # tmpHdr=['First Name','Last Name','Favorite Ice Cream','Favorite Color','Status']
-        tmpHdr=['Log Name','Status', 'Type', 'Example']
-        NHdrs=len(tmpHdr)
-        HzHeaders=['']*NHdrs
-        HzHeaders[0] = tmpHdr[0]
-        HzHeaders[1] = tmpHdr[1]
-        HzHeaders[2] = tmpHdr[2]
-        HzHeaders[3] = tmpHdr[3]
-
-        self.ui.tableWidgetTable1.setHorizontalHeaderLabels(HzHeaders)
-        self.ui.tableWidgetTable1.setColumnCount(4)
-            
-        # class variables
-        self._numRows = 0
-        
-        self._myLogUseDict = {} # key: string for log sample value: boolean
+        # set value and dictionary
+        for irow in xrange(len(rowlist)):
+            temprow = rowlist[irow]
+            if isinstance(temprow, list) is False or len(temprow) != self._numCols:
+                print "Row %d is either not a list or a list with different sizes than table. Skipped!" % (irow)
+                continue
+            else: 
+                irow = self._appendRow(temprow)
+            # ENDIFELSE
+        # ENDFOR
 
         return
 
 
+    def setupTable(self, tableheaderdict):
+        """ Set up Table dynamically
+        """
+        # check input
+        if isinstance(tableheaderdict, dict) is False:
+            raise NotImplementedError("setupTable takes dictoary as input.")
+
+        # set up header
+        headerlist = tableheaderdict['Headers']
+        if isinstance(headerlist, list) is False:
+            raise NotImplementedError("Element 'Headers' is not list.")
+        self._numCols = len(headerlist)
+        self.ui.tableWidgetTable1.setColumnCount(self._numCols)
+        self.ui.tableWidgetTable1.setHorizontalHeaderLabels(headerlist)
+
+        self._colType = tableheaderdict['CellType']
+        if isinstance(self._colType, list) is False or len(self._colType) != self._numCols:
+            raise NotImplementedError("Element 'CellType' is not list or has different \
+                    size than 'Headers'")
+
+        # row
+        self._numRows = 0
+
+        return
+
+    def _appendRow(self, rowitemlist):
+        """ Append a row to the table (private method)
+        Assuming that the input rowitemlist is checked with type and size in the caller
+        """
+        # Append a row and set value
+        self.ui.tableWidgetTable1.insertRow(self._numRows)
+        irow = self._numRows
+        self._numRows += 1
+
+        # Set up the items of the new row
+        useit = True
+        for itemindex in xrange(len(rowitemlist)):
+            # get value
+            itemvalue = rowitemlist[itemindex]
+
+            # get a widget for item
+            cellitem=QtGui.QTableWidgetItem()
+            cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+
+            if self._colType[itemindex] == 'text': 
+                # regualr text/label 
+                cellitem.setText(_fromUtf8(itemvalue)) 
+                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem)
+
+            elif self._colType[itemindex] == 'checkbox':
+                # a check box
+                cellitem.setText(_fromUtf8(''))
+                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem)
+                state = itemvalue
+                addCheckboxToWSTCell(self.ui.tableWidgetTable1, irow, itemindex, state)
+
+            elif self._colType[itemindex] == 'combobox':
+                # a combo box
+                cellitem.setText(_fromUtf8(''))
+                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem) 
+                addComboboxToWSTCell(self.ui.tableWidgetTable1, irow, itemindex, itemvalue, 0)
+
+            else:
+                raise NotImplementedError('Cell type %s is not supported!' % (self._colType[itemindex]))
+
+            # ENDIFELSE
+        # ENDFOR
+
+        return 
+     
+    #--------------------------------------------------------------------------
+    # Methods to handling GUI events
+    #--------------------------------------------------------------------------
+    def doCheckChangedCellValue(self):
+        """ Respond as a cell value changed
+        """
+        # FIXME No use!!!
+        print "There is some value changed."
+
+        return
+
+    def doCancelQuit(self):
+        """ Cancel and quit 
+        """
+        # Emit signal
+        self.myAddRunsSignal.emit(self._myProjectName, [])
+
+        # Quit
+        self.close()
+
+        return
+
+
+    def doSaveQuit(self):
+        """ Save the choice and quit: this is very specific to the caller!
+        """
+        # Get the list to return
+        returnlist = []
+        numrows = self.ui.tableWidgetTable1.rowCount()
+        for irow in xrange(numrows):
+            try:
+                term0 = str(self.ui.tableWidgetTable1.item(irow, 0).text())
+                term1 = str(self.ui.tableWidgetTable1.cellWidget(irow, 1).currentText())
+                returnlist.append([term0, term1])
+                print "%s\t%s" % (term0, term1)
+            except AttributeError:
+                break
+        # ENDIF
+
+        # Emit signal
+        self.myAddRunsSignal.emit(self._myProjectName, returnlist)
+
+        # Close
+        self.close()
+
+        return
+
+    def doSelectQuit(self):
+        """ Select and quit
+        """
+        # Do it 
+        for logname in self._myLogUseDict:
+            if self._myLogUseDict[logname] is True: 
+                self._myParent._criteriaList.append(logname)
+
+        # send out a signal
+        # FIXME - Useless unless you can make doCheckChangedCellValue() work!
+        raise  NotImplementedError("continue from here... [834]") 
+
+        # close myself
+        self.close()
+
+        return
+
+    #--------------------------------------------------------------------------
+    # Others... 
+    #--------------------------------------------------------------------------
     def clear(self):
         """ Clear the selection
         """
@@ -102,77 +358,6 @@ class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
         return
 
 
-    def setAllChoices(self, vandbfilelogs, logexamples):
-        """ Set the logs to match for the vanadium
-        dabase file to the GUI
-        """
-        # check
-        if isinstance(vandbfilelogs, list) is False:
-            raise NotImplementedError("Input for setAllChoices() must be a list of strings")
-        if len(logexamples) != len(vandbfilelogs):
-            raise NotImplementedError("Input for setAllChoices() should have two lists with same sizes.")
-
-        # set value and dictionary
-        for irow in xrange(len(vandbfilelogs)):
-            logname = vandbfilelogs[irow]
-            example = logexamples[irow]
-            irow = self._appendRow( [logname, False, "float", example] )
-            self._myLogUseDict[logname] = (irow, "float", False)
-
-        # Load configuration
-        self._loadDefaultConfig()
-
-        return
-
-    def _appendRow(self, rowitemlist):
-        """ Append a row to the table
-        """
-        # check
-        if isinstance(rowitemlist, list) is False:
-            raise NotImplementedError("Input rowlist is not a list")
-
-        logname = rowitemlist[0]
-        useit = rowitemlist[1]
-        datatype = rowitemlist[2]
-        example = rowitemlist[3]
-
-        # append a row and set value
-        row = self._numRows
-        self._numRows += 1
-
-        # insert a new row if it is over the limit
-        if self._numRows > self.ui.tableWidgetTable1.rowCount():
-            self.ui.tableWidgetTable1.insertRow(row)
-
-        # log name
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8(logname)) 
-        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row, 0, item)         
-
-        # used
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Blue")) 
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row, 1, item)      
-        addCheckboxToWSTCell(self.ui.tableWidgetTable1, row, 1, useit)
-
-        # type
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8("Blue"))
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        self.ui.tableWidgetTable1.setItem(row, 2, item)      
-        addComboboxToWSTCell(self.ui.tableWidgetTable1, row, 2, useit)
-
-        # example
-        item=QtGui.QTableWidgetItem()
-        item.setText(_fromUtf8(example)) 
-        item.setFlags(item.flags()) 
-        self.ui.tableWidgetTable1.setItem(row, 3, item)         
-
-        print "Row %d: Log name = %s" % (row, logname)
-
-        return row
 
     def selectLogs(self, lognamelist):
         """ Select the log names
@@ -204,71 +389,12 @@ class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
 
         return
 
-    # Event Hanling
-    def doCheckChangedCellValue(self):
-        """ Respond as a cell value changed
-        """
-        # FIXME No use!!!
-        print "There is some value changed."
-
-        return
-
-
-    def doSaveQuit(self):
-        """ Save the choice and quit
-        """
-        # save and close
-        returnlist = []
-        numrows = self.ui.tableWidgetTable1.rowCount()
-        print "Number of rows = ", numrows
-        for irow in xrange(numrows):
-            if self.ui.tableWidgetTable1.cellWidget(irow, 1).checkState() == 2:
-                logname = str(self.ui.tableWidgetTable1.item(irow, 0).text())
-                datatype = str(self.ui.tableWidgetTable1.cellWidget(irow, 2).currentText()).lower()
-                returnlist.append((logname, datatype))
-                print "Criteria selected: %s of type %s." % (logname, datatype)
-
-        self.close()
-
-        # call parent
-        self._myParent.setVanMatchCriteria(returnlist)
-
-        return
-
-    def doSelectQuit(self):
-        """ Select and quit
-        """
-        # Do it 
-        for logname in self._myLogUseDict:
-            if self._myLogUseDict[logname] is True: 
-                self._myParent._criteriaList.append(logname)
-
-        # send out a signal
-        # FIXME - Useless unless you can make doCheckChangedCellValue() work!
-        raise  NotImplementedError("continue from here... [834]") 
-
-        # close myself
-        self.close()
-
-        return
-
-    def doCancelQuit(self):
-        """ Cancel and quit 
-        """
-        self.close()
-
-        return
 
     def _loadDefaultConfig(self):
         """ Load default configuration, i.e., sample logs that are used for matching
         """
-        defaultloglist = self._myConfig['vanadium.SampleLogToMatch']
-        defaultlognamelist = []
-        for tp in defaultloglist:
-            if isinstance(tp, tuple) is False:
-                raise NotImplementedError("vanadium.SampleLogToMatch must be a list of 2-tuple.")
-            defaultlognamelist.append(tp[0])
-
+        defaultlognamelist = self._myConfig['vanadium.SampleLogToMatch']
+        
         # loop over the form rows
         numrows = self.ui.tableWidgetTable1.rowCount()
         for irow in xrange(numrows):
@@ -510,63 +636,21 @@ def DeSelectAll(self,table,selCol):
             addCheckboxToWSTCell(table,i,selCol,False)
 
 
-def addCheckboxToWSTCell(table,row,col,state):
-    #function to add a new select checkbox to a cell in a table row
-    #won't add a new checkbox if one already exists
-    if state == '':
-        state=False
-    #check if cellWidget exitst
-    if table.cellWidget(row,col) != None:
-        table.cellWidget(row,col).setChecked(state)
-    else:
-        #case to add checkbox
-
-        checkbox = QtGui.QCheckBox()
-        checkbox.setText('')
-        checkbox.setChecked(state)
-        
-        #adding a widget which will be inserted into the table cell
-        #then centering the checkbox within this widget which in turn,
-        #centers it within the table column :-)
-        QW=QtGui.QWidget()
-        cbLayout=QtGui.QHBoxLayout(QW)
-        cbLayout.addWidget(checkbox)
-        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
-        cbLayout.setContentsMargins(0,0,0,0)
-        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
-
-
-def addComboboxToWSTCell(table,row,col,state):
-    #function to add a new select checkbox to a cell in a table row
-    #won't add a new checkbox if one already exists
-    if state == '':
-        state=False
-    #check if cellWidget exitst
-    if table.cellWidget(row,col) != None:
-        print "Not None!"
-        table.cellWidget(row,col).setChecked(state)
-    else:
-        #case to add checkbox
-
-        checkbox = QtGui.QComboBox()
-        checkbox.addItems(["Float", "Integer", "String"])
-        
-        #adding a widget which will be inserted into the table cell
-        #then centering the checkbox within this widget which in turn,
-        #centers it within the table column :-)
-        QW=QtGui.QWidget()
-        cbLayout=QtGui.QHBoxLayout(QW)
-        cbLayout.addWidget(checkbox)
-        cbLayout.setAlignment(QtCore.Qt.AlignCenter)
-        cbLayout.setContentsMargins(0,0,0,0)
-        table.setCellWidget(row,col, checkbox) #if just adding the checkbox directly
-
-
 
 #Main program
 if __name__=="__main__":
+    """ Test Main """
+    # Test case
+    tmpHdr  = ['Log Name', 'Match', 'Status', 'Example']
+    tmpType = ['text', 'combobox', 'checkbox', 'text']
+
+    row0 = ['AAA', ['1', '2', '3'], 'True',  'blabla..aaa']
+    row1 = ['BBB', ['9', '8', '7', '6'], 'False', 'blabla..bbb']
+
+    # Start application
     app = QtGui.QApplication(sys.argv)
-    myapp = TableMain()
+    myapp = MyAddDataFilesDialog(None, None, {'Headers': tmpHdr, 'CellType': tmpType})
+    myapp.appendRows([row0, row1])
     myapp.show()
 
     exit_code=app.exec_()

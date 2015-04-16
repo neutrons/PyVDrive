@@ -125,6 +125,11 @@ class AutoVanadiumCalibrationLocator:
     """
     def __init__(self, ipts, basepath="/SNS/VULCAN/", vrecordfile=None, autorecordfile=None):
         """ Initialization
+        Arguments:
+         - ipts     :: ipts number
+         - basepath :: base data path
+         - vrecordfile :: name of the vanadium runs record file
+         - autorecordfile :: name of experiment record file, i.e., 'AutoRecord.txt'
         """
         # check whether the IPTS exist
         iptsgood, msg = checkIPTSExist(ipts, basepath)
@@ -145,7 +150,8 @@ class AutoVanadiumCalibrationLocator:
         if autorecordfile is None:
             autorecordfile = locateVulcanExpRecordFile(ipts, basepath)
         if os.path.isfile(autorecordfile) is False:
-            raise NotImplementedError("Experimetn record file %s does not exist." % (autorecordfile))
+            raise NotImplementedError("Experiment record file %s does not exist." % 
+                    (autorecordfile))
         self._importExperimentRecord(autorecordfile)
         
         # runs
@@ -229,14 +235,16 @@ class AutoVanadiumCalibrationLocator:
                 raise NotImplementedError("None of the log name in criterion is supported by Vulcan's auto log.")
             
             if len(vancadidaterunlist) == 0:
+                # unable to find vanadium run to match
                 print "Error: There is no match for run %d. " % (run)
-            elif len(vancadidaterunlist) > 1:
-                print "Error: There are too many vanadium runs (%d out of %d) matching to run %d.\
-                        The latest vnadium run is picked up. " % (
-                        len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
-                runvandict[run] = sorted(vancadidaterunlist)[-1]
             else:
-                runvandict[run] = vancadidaterunlist[0]
+                # find one or more vanadium runs. sorted with reversed order (new on top)
+                runvandict[run] = sorted(vancadidaterunlist, reverse=True)
+
+                if len(vancadidaterunlist) > 1:
+                    print "There are too many vanadium runs (%d out of %d) matching to run %d.  \
+                            The latest vnadium run is picked up. " % (
+                                    len(vancadidaterunlist), len(self._vanRecordDict.keys()), run)
         # ENDFOR (run)
         
         return runvandict

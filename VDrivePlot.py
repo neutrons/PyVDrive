@@ -48,8 +48,6 @@ class VDrivePlot(QtGui.QMainWindow):
         # new project
         self._myWorkflow = vdrive.VDriveAPI()
 
-        self.config = {}
-
         # statis variables
         self._tableCurrentProject = None
         
@@ -114,7 +112,7 @@ class VDrivePlot(QtGui.QMainWindow):
         # Set up defaults
         self._setupDefaults()
         # from the import set some other 
-        self._myWorkflow.setDefaultDataPath(self.config["default.BaseDataPath"])
+        # self._myWorkflow.setDataPath()
 
         return
 
@@ -122,38 +120,34 @@ class VDrivePlot(QtGui.QMainWindow):
     def _setupDefaults(self):
         """ Set up defaults 
         """
-        # import config module
-        try:
-            import config
-            setEmpties = False
-        except ImportError:
-            setEmpties = True
+        # # import config module
+        # try:
+        #     import config
+        #     setEmpties = False
+        # except ImportError:
+        #     setEmpties = True
 
-        # setting empties
-        self.config["default.BaseDataPath"] = ""
-        self.config["default.VanadiumDataBaseFile"] = ""
+        # # set defaults
+        # if setEmpties is False:
+        #     # TODO - THIS PART IS STILL EXPANDING
 
-        # set defaults
-        if setEmpties is False:
-            # TODO - THIS PART IS STILL EXPANDING
+        #     # data path
+        #     for dp in config.defaultDataPath:
+        #         if os.path.exists(dp) is True:
+        #             self.config["default.BaseDataPath"] = dp
+        #             break
 
-            # data path
-            for dp in config.defaultDataPath:
-                if os.path.exists(dp) is True:
-                    self.config["default.BaseDataPath"] = dp
-                    break
+        #     # vanadium dabase file
+        #     defaultVanDBFiles = config.defaultVanadiumDataBaseFile
+        #     for vfile in defaultVanDBFiles:
+        #         if os.path.exists(vfile) is True:
+        #             self.config["default.VanadiumDataBaseFile"] = vfile
+        #             break
+        #     # ENDFOR (vfile)
 
-            # vanadium dabase file
-            defaultVanDBFiles = config.defaultVanadiumDataBaseFile
-            for vfile in defaultVanDBFiles:
-                if os.path.exists(vfile) is True:
-                    self.config["default.VanadiumDataBaseFile"] = vfile
-                    break
-            # ENDFOR (vfile)
+        # # ENDIF
 
-        # ENDIF
-
-        print self.config
+        # print self.config
 
         return
 
@@ -445,7 +439,7 @@ class VDrivePlot(QtGui.QMainWindow):
     
         # create and setup
         if self._reductionWindow is None: 
-            self._reductionWindow = rdwn.MyReductionWindow(self) 
+            self._reductionWindow = rdwn.MyReductionWindow(self, self._myWorkflow._myConfig) 
             self._reductionWindow.resize(1200, 800)
 
             projnames = sorted(self._myWorkflow.getProjectNames())
@@ -460,6 +454,8 @@ class VDrivePlot(QtGui.QMainWindow):
             currprojname = str(curitem.text(0)) 
             status, errmsg = self._reductionWindow.setCurrentProject(currprojname) 
             self._addLogInformation(errmsg)
+        else:
+            print "[Log Warning] No project in tree widget is set."
         
         # show
         self._reductionWindow.show()
@@ -542,38 +538,40 @@ class VDrivePlot(QtGui.QMainWindow):
     #------------------------------------------
     # Reduction related event handlers
     #------------------------------------------
-    def setRuns(self, ipts, runs):
+    def setRuns(self, projname, ipts, runs):
+        """ Add runs to 
         """
-        """
-        self._tmpIPTS = ipts
-        self._tmpRuns = runs
-
-        return
-
-    @QtCore.pyqtSlot(str)
-    def evtAddRuns(self, val):
-        """
-        Arguments: 
-        - val :: string as project name
-        """
-        # project name
-        projname = str(val)
-
-        # runs
-        # FIXME - need to add the option to match runs automatically 
-        print "Projec name = ", projname, "IPTS = ", self._tmpIPTS, "Runs = ", self._tmpRuns
-        status, errmsg, datafilesets = self._myWorkflow.addExperimentRuns(projname, 'reduction', self._tmpIPTS, self._tmpRuns, True)
+        status, errmsg, datafilesets = self._myWorkflow.addExperimentRuns(projname, \
+                'reduction', ipts, runs, True)
 
         if status is False:
             self._addLogError(errmsg)
             return
+        
+        # self._tmpIPTS = ipts
+        # self._tmpRuns = runs
 
+        return datafilesets
+
+    @QtCore.pyqtSlot(str, list)
+    def evtAddRuns(self, projname, datacallist):
+        """
+        Arguments: 
+         - projname :: string as project name
+         - datacallist :: data/van run list
+        """
         runsadded = []
-        for dp in datafilesets:
-            dfile = dp[0]
-            runsadded.append(dfile)
+
+        for datafile, calrun in datacallist:
+            # add to list 
+            runsadded.append(datafile)
+
+            # set to project
+            self._myWorkflow.setCalibration(projname, datafile, calrun)
+        # ENDFOR
+        
         self._treeAddRuns(projname, runsadded)
-        self._tableAddRuns(projname, datafilesets)
+        self._tableAddRuns(projname, datacallist)
 
         return
 
@@ -631,22 +629,26 @@ class VDrivePlot(QtGui.QMainWindow):
          - projname ::
          - datapairlist :: list of pair of (data file and run)
         """
+        # Create the table if it does not exist
         if self._tableCurrentProject is None:
             # Initialize
             self._tableCurrentProject = projname
         
-            # clear
+            # Clear
             self.ui.tableWidget_generalInfo.setRowCount(0)
-            self.ui.tableWidget_generalInfo.setColumnCount(0)
+            self.ui.tableWidget_generalInfo.setColumnCount(10)
 
-            # init
+            # Setup the table
             self.ui.tableWidget_generalInfo.setColumnCount(3)
-
+            headerlist = ['Run/Data File', 'Vanadium Run', 'Reduce']
+            self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(headerlist)
             # FIXME - Only work for reductionp project
+        # ENDIF
 
         # check project name
         if projname != self._tableCurrentProject:
-            raise NotImplementedError("[DB1248] Need to implement the algorithm to switch between projects.")
+            raise NotImplementedError("[DB1248] Need to implement the algorithm \
+                    to switch between projects.")
 
         # Set lines
         numrows = self.ui.tableWidget_generalInfo.rowCount()
@@ -691,9 +693,11 @@ class VDrivePlot(QtGui.QMainWindow):
         #       2. call the QTreeWidget (the root) to expandItem   (a-->b)
 
         curitem = self.ui.treeWidget_Project.currentItem()
+        print "[DB] current item = ", str(curitem)
 
         if len(runsadded) == 0:
             self._addLogInformation("No run is found and added to project %s." % (projname))
+            print "No run is found and added to project %s." % (projname)
 
         #for run in sorted(runsadded):
         for run in sorted(runsadded):

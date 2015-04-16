@@ -56,7 +56,7 @@ class ReductionProject(VDProject):
         """
         VDProject.__init__(self, projname)
         
-        # calibration file dictionary: key = data file name without full path
+        # calibration file dictionary: key = base data file name, value = (cal file list, index)
         self._datacalibfiledict = {}
         # calibration file to run look up table: key = calibration file with fullpath. value = list
         self._calibfiledatadict = {}
@@ -75,16 +75,23 @@ class ReductionProject(VDProject):
     def addDataFileSets(self, reddatasets):
         """ Add data file and calibration file sets 
         """
-        for datafile, vcalfile in reddatasets:
+        for datafile, vcalfilelist in reddatasets:
             # data file list
             self._dataset.append(datafile)
-            # data file / van cal dict
+            # data file and set default to 0th element
             databasefname = os.path.basename(datafile)
-            self._datacalibfiledict[databasefname] = vcalfile
+            self._datacalibfiledict[databasefname] = (vcalfilelist, 0)
+
+
+            # FIXME : This will be moved to a stage that is just before reduction
             # van cal /data file dict
-            if self._calibfiledatadict.has_key(vcalfile) is False:
-                self._calibfiledatadict[vcalfile] = []
-            self._calibfiledatadict[vcalfile].append(datafile)
+            # print "_calibfiledatadict: ", type(self._calibfiledatadict)
+            # print "key: ", vcalfile
+
+            # raise NotImplementedError("Need to determine the calibration file first!")
+            # if self._calibfiledatadict.has_key(vcalfile) is False:
+            #     self._calibfiledatadict[vcalfile] = []
+            # # self._calibfiledatadict[vcalfile].append(datafile)
         # ENDFOR
         
         return
@@ -114,7 +121,8 @@ class ReductionProject(VDProject):
         basename = os.path.basename(datafilename)
         vanfilename = self._datacalibfiledict.pop(basename)
         # remove from van cal/data file dict
-        self._calibfiledatadict.pop(vanfilename)
+        # FIXME - _calibfiledatadict will be set up only before reduction
+        # self._calibfiledatadict.pop(vanfilename)
 
         return (True, "")
 
@@ -139,8 +147,14 @@ class ReductionProject(VDProject):
         for filename in self._dataset:
             basename = os.path.basename(filename)
             vanrun = self._datacalibfiledict[basename]
-            reduceBool = self._reductionFlagDict[filename]
-            ibuf += "%-50s \t%-30s\t %-5s\n" % (filename, str(vanrun), str(reduceBool))
+            try: 
+                reduceBool = self._reductionFlagDict[filename]
+            except KeyError as e:
+                # print "Existing keys for self._reductionFlagDict are : %s." % (
+                #         str(sorted(self._reductionFlagDict.keys())))
+                ibuf += "%-50s \tUnable to reduce!\n" % (filename)
+            else: 
+                ibuf += "%-50s \t%-30s\t %-5s\n" % (filename, str(vanrun), str(reduceBool))
         # ENDFOR
 
         return ibuf

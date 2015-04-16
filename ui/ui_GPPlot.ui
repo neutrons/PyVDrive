@@ -115,12 +115,30 @@
     </property>
     <addaction name="actionSave"/>
    </widget>
+   <widget class="QMenu" name="menuTool">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionNormalize_to_Vanadium"/>
+    <addaction name="actionNormalize_to_Proton_Charge"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuTool"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
+   </property>
+  </action>
+  <action name="actionNormalize_to_Vanadium">
+   <property name="text">
+    <string>Normalize to Vanadium</string>
+   </property>
+  </action>
+  <action name="actionNormalize_to_Proton_Charge">
+   <property name="text">
+    <string>Normalize to Proton Charge</string>
    </property>
   </action>
  </widget>

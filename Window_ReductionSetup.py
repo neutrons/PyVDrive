@@ -16,6 +16,7 @@ except AttributeError:
         
 from ui.ui_ReductionSetup import *
 import Dialog_VanDatabaseCriteria # MyVanadiumDatabaseCriterialDialog
+import Dialog_AddDataFiles
 import vdrive.vulcan_util
 
 class MyReductionWindow(QWidget):
@@ -25,14 +26,16 @@ class MyReductionWindow(QWidget):
     myAddRunsSignal = pyqtSignal(str)
 
     # class
-    def __init__(self, parent):
+    def __init__(self, parent, config):
         """ Init
         """
         # call base
         QWidget.__init__(self)
 
-        # parent
+        # parent & config
         self._myParent = parent
+        self._myConfig = config
+
 
         # set up UI
         self.ui = Ui_Form()
@@ -78,10 +81,16 @@ class MyReductionWindow(QWidget):
         # TODO - Set the defaults
         self._myProjectName = None
 
-        self.ui.lineEdit_baseDataPath.setText(self._myParent.config["default.BaseDataPath"])
-        print "Default of Base Data Path:", str(self.ui.lineEdit_baseDataPath.text())
-        self.ui.lineEdit_vanDBFile.setText(self._myParent.config["default.VanadiumDataBaseFile"])
+        self.ui.lineEdit_baseDataPath.setText(
+                self._myParent._myWorkflow._myConfig["default.BaseDataPath"])
+        self.ui.lineEdit_vanDBFile.setText(
+                self._myParent._myWorkflow._myConfig["default.VanadiumDataBaseFile"])
+        self.ui.lineEdit_timeFocusTable.setText(
+                self._myParent._myWorkflow._myConfig['default.timeFocusFile'])
 
+
+        print "Default of Base Data Path:", str(self.ui.lineEdit_baseDataPath.text())
+        print "Default of Vanadium Data File Path:", str(self.ui.lineEdit_vanDBFile.text())
 
         return
 
@@ -129,7 +138,7 @@ class MyReductionWindow(QWidget):
     def doAddRuns(self):
         """ add IPTS-run numbers to 
         """
-        # get data from GUI
+        # get ipts and runs from GUI
         ipts = str(self.ui.lineEdit_ipts.text())
         runstart = str(self.ui.lineEdit_runstart.text())
         runend = str(self.ui.lineEdit_runend.text())
@@ -137,7 +146,7 @@ class MyReductionWindow(QWidget):
         logmsg = "Get IPTS %s Run %s to %s." % (ipts, runstart, runend)
         print "Log: %s" % (logmsg)
 
-        # parse
+        # parse and build list of run numbers
         if len(ipts) == 0:
             logmsg = "Error: IPTS must be given for adding runs." 
             print logmsg
@@ -157,10 +166,35 @@ class MyReductionWindow(QWidget):
             runnumberlist.extend(range(int(runstart), int(runend)+1))
 
         logmsg = "Adding ITPS-%d runs: %s. " % (ipts, str(runnumberlist))
-            
-        # add runs to project: self._myProjectName
-        self._myParent.setRuns(ipts, runnumberlist)
-        self.myAddRunsSignal.emit(self._myProjectName) 
+          
+        # 2-Steps to add runs to a project instance
+        # a) Add all runs to project and let project to decide which runs to be taken 
+        runfilecallist = self._myParent.setRuns(self._myProjectName, ipts, runnumberlist)
+        if runfilecallist is None:
+            return False
+
+        # b) Launch the dialog window for user to determine the vanadium runs
+        filecallist = [] 
+        for dfname, vanruns in runfilecallist:
+            dfname = os.path.basename(dfname)
+            filecallist.append( [dfname, vanruns] )
+       
+        tableinfodict = {
+                'Headers':  ['Run/Data File', 'Vanadium  Run'],
+                'CellType': ['text', 'combobox']}
+        self._myCalibMatchWindow = Dialog_AddDataFiles.MyAddDataFilesDialog(self, \
+                self._myConfig, tableinfodict)
+        self._myCalibMatchWindow.appendRows(filecallist) 
+        self._myCalibMatchWindow.show()
+
+        # ... Disable some buttons to avoid miss operation
+        # FIXME - Should be a method such _blockReduction()
+        self.ui.pushButton_addRuns.setEnabled(False)
+
+        # b) Launch a dialog for user to determine the vanadium/calibration runs
+
+
+        # self.myAddRunsSignal.emit(self._myProjectName) 
 
         return
 
@@ -189,7 +223,7 @@ class MyReductionWindow(QWidget):
         vandbfile = None
         defaultfilename = str(self.ui.lineEdit_vanDBFile.text())
         if len(defaultfilename) > 0: 
-            if os.path.isfile(defaultfilenmae) is True:
+            if os.path.isfile(defaultfilename) is True:
                 vandbfile = defaultfilename
             else: 
                 homedir = os.path.dirname(defaultfilename) 
@@ -215,7 +249,9 @@ class MyReductionWindow(QWidget):
         vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
         #print vandbfilelogs
 
-        self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
+        self._vanDBCriteriaWindow = \
+            Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self,
+                    self._myConfig)
         self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
         # self._vanDBCriteriaWindow.setDefaults(config.defaultVanDBCriteria)
         self._vanDBCriteriaWindow.show()
@@ -250,20 +286,52 @@ class MyReductionWindow(QWidget):
         """ Do reduction
         collect the information in this window and call reduction in the main window
         """
+        import time
+
         # collect information
 
         # set to the parent as a dictionary
 
         # disable all controls
-        self._disableControls(True)
-        self.ui.pushButton_reduceData.setDisabled(True)
+        self._setEnabledReductionWidgets(False)
+        self.ui.pushButton_reduceData.setEnabled(False)
 
         # reduce by calling parent one
+        # FIXME It is a mock for GUI
+        for i in xrange(100):
+            time.sleep(0.1)
+            self.ui.progressBar.setValue(i+1)
 
         # enable all controls
-        self.ui.pushButton_reduceData.setDisabled(False)
+        self._setEnabledReductionWidgets(True)
+        self.ui.pushButton_reduceData.setEnabled(True)
 
         return
+
+
+    #--------------------------------------------------------------------------
+    # Methods to get access to private variable
+    #--------------------------------------------------------------------------
+    def getParent(self):
+        """
+        """
+        return self._myParent
+
+
+    #--------------------------------------------------------------------------
+    # Singal handling methods
+    #--------------------------------------------------------------------------
+    @QtCore.pyqtSlot(str, list)
+    def evtAddRuns(self, pname, vlist):
+        """
+        """
+        print "Get signal for %s: List size = %d" % (pname,  len(vlist))
+
+        # re-enable some widgets
+        self.ui.pushButton_addRuns.setEnabled(True) 
+
+        return
+
 
     @QtCore.pyqtSlot(str)
     def _handleBrowseVanDBFile(self):
@@ -299,12 +367,12 @@ class MyReductionWindow(QWidget):
         return
 
     # Enable and disable controls
-    def _disableControls(self, value):
-        """
+    def _setEnabledReductionWidgets(self, value):
+        """ Enable/disable widgets during reduction
         """
         self.ui.lineEdit_timeFocusTable.setDisabled(value)
         self.ui.lineEdit_vanDBFile.setDisabled(value)
-        self.ui.lineEdit_binsize.setDisabled(value)
+        self.ui.lineEdit_binSize.setDisabled(value)
 
         self.ui.pushButton_timeFocusTableFile.setEnabled(not value)
         self.ui.pushButton_vanDBFile.setEnabled(not value)
