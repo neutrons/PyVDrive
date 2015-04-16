@@ -54,7 +54,7 @@ myworkflow.deleteProject('r', projname)
 myworkflow.loadProject(projfilename)
 
 # 8. Add another few runs
-runs= range(57079, 57099)
+runs= range(57101, 57104)
 status, errmsg, datafilesets = myworkflow.addExperimentRuns(projname, 'reduction', ipts, runs, False)
 if status is False:
     print "Error: \n", errmsg

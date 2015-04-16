@@ -1,6 +1,8 @@
 import sys
 import os
-import os.path
+import os.path 
+
+import SNSPowderReductionLite as PRL
 
 class VDProject:
     """
@@ -47,10 +49,34 @@ class VDProject:
 
         return
         
+
+    def _generateFileName(self, runnumber, iptsstr):
+        """ Generate a NeXus file name with full path with essential information
+
+        Arguments:
+         - runnumber :: integer run number
+         - iptsstr   :: string for IPTS.  It can be either an integer or in format as IPTS-####. 
+        """
+        # Parse run number and IPTS number
+        run = int(runnumber)
+        iptsstr = str(iptsstr).lower().split('ipts-')[-1]
+        ipts = int(iptsstr)
+
+        # Build file name with path
+        # FIXME : VULCAN only now!
+        nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs'%(ipts, run, run))
+        if os.path.exists(nxsfname) is False:
+            print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % (nxsfname)
+        else:
+            print "[DB] Successfully generate an existing NeXus file with name %s." % (nxsfname)
+
+        return nxsfname
+
         
 class ReductionProject(VDProject):
-    """
-    """
+    """ Class to handle reducing powder diffraction data
+    """ 
+
     def __init__(self, projname):
         """
         """
@@ -63,7 +89,9 @@ class ReductionProject(VDProject):
         # vanadium record (database) file
         self._vanadiumRecordFile = None
         # flags to reduce specific data set: key = file with full path
-        self._reductionFlagDict = {}
+        self._reductionFlagDict = {} 
+        # dictionary to map vanadium run with IPTS. key: integer  
+        self._myVanRunIptsDict = {}
 
         return
         
@@ -95,6 +123,15 @@ class ReductionProject(VDProject):
         # ENDFOR
         
         return
+
+    def addVanadiumIPTSInfo(self, vaniptsdict):
+        """ Add vanadium's IPTS information for future locating NeXus file
+        """
+        for vanrun in vaniptsdict.keys():
+            self._myVanRunIptsDict[int(vanrun)] = vaniptsdict[vanrun]
+
+        return
+
 
     def deleteData(self, datafilename):
         """ Delete a data: override base class
@@ -158,6 +195,94 @@ class ReductionProject(VDProject):
         # ENDFOR
 
         return ibuf
+
+
+    def reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
+        """ Focus and process the selected data sets to powder diffraction data
+        for GSAS/Fullprof/ format
+
+        Workflow:
+         1. Get a list of runs to reduce;
+         2. Get a list of vanadium runs for them;
+         3. Reduce all vanadium runs;
+         4. Reduce (and possibly chop) runs;
+
+        Arguments:
+         - 
+        """
+        # Build list of files to reduce
+        rundict = {}
+        runbasenamelist = []
+        for run in self._reductionFlagDict.keys():
+            if self._reductionFlagDict[run] is True:
+                basenamerun = os.path.basename(run)
+                rundict[basenamerun] = (run, None)
+                runbasenamelist.append(basenamerun)
+        # ENDFOR
+        print "[DB] Runs to reduce: %s." % (str(runbasenamelist))
+
+        # Build list of vanadium runs
+        vanrunlist = []
+        if normByVanadium is True:
+            for runbasename in sorted(self._datacalibfiledict.keys()):
+                if (runbasename in runbasenamelist) is True:
+                    print "[DB] Run %s has vanadium mapped: %s" % (runbasename, str(self._datacalibfiledict[runbasename]))
+                    candidlist = self._datacalibfiledict[runbasename][0]
+                    vanindex = self._datacalibfiledict[runbasename][1]
+                    vanrunlist.append(int(candidlist[vanindex]))
+
+                    rundict[runbasename] = (rundict[runbasename][0], int(candidlist[vanindex]))
+                # ENDIF
+            # ENDFOR
+            vanrunlist = list(set(vanrunlist))
+        # ENDIF
+        print "[DB] Vanadium runs (to reduce): %s" % (str(vanrunlist))
+
+        # from vanadium run to create vanadium file 
+        vanfilenamedict = {}
+        for vrun in vanrunlist:
+            vanfilename = self._generateFileName(vrun, self._myVanRunIptsDict[int(vrun)])
+            vanfilenamedict[int(vrun)] = vanfilename
+        # ENDFOR
+
+        # Reduce all vanadium runs
+        vanPdrDict = {}
+        for vrun in vanrunlist:
+            vrunfilename = vanfilenamedict[vrun]
+            vpdr = PRL.SNSPowderReductionLite(vrunfilename)
+            vpdr.reducePDData(params={}, vrun=None, chopdata=False)
+            vanPdrDict[vrun] = vpdr
+        # ENDFOR
+
+        # Reduce all 
+        runPdrDict = {}
+        for basenamerun in sorted(rundict.keys()):
+            # reduce 
+            fullpathfname = rundict[basenamerun][0]
+            vanrun = rundict[basenamerun][1]
+
+            runpdr = PRL.SNSPowderReductionLite()
+            # optinally chop
+            if eventFilteringSetup is not None: 
+                runpdr.setupEventFiltering(eventFilteringSetup)
+                doChopData = True
+            else:
+                doChopData = False
+            # ENDIF
+
+            # vanadium
+            if vanPdrDict.has_key(vanrun) is True:
+                runpdr.reducePDData(params={}, vrun=vanPdrDict[vanrun], chopdata=doChopData)
+            else:
+                runpdr.reducePDData(params={}, vrun=None, chopdata=doChopData)
+
+        raise NotImplementedError("Implemented to here so far....")
+
+        pdd = PRL.SNSPowderReductionLite(calibfile=self._calibfilename)
+
+
+        return
+        
         
     def setCalibrationFile(self, datafilenames, calibfilename):
         """ Set the calibration file to a set of data file in the 
@@ -193,19 +318,18 @@ class ReductionProject(VDProject):
     
         return (r, errmsg)
 
-    def setVanadiumDatabaseFile(self, datafilename):
-        """ Set the vanadium data base file
-        """
-        self._vanadiumRecordFile = datafilename
-
-        return
-        
     def setCharacterFile(self, characerfilename):
         """ Set characterization file
         """
         self._characterfilename = characerfilename
         
         
+
+    def setFilter(self):
+        """ Set events filter for chopping the data
+        """
+
+        return
     def setParameters(self, paramdict):
         """ Set parameters in addition to those necessary
         """
@@ -215,14 +339,6 @@ class ReductionProject(VDProject):
         self._paramDict = paramdict
         
         return
-
-
-    def setFilter(self):
-        """ Set events filter for chopping the data
-        """
-
-        return
-
 
     def setReductionFlag(self, filename, flag):
         """ Turn on the reduction flag for a file of this project
@@ -245,18 +361,13 @@ class ReductionProject(VDProject):
 
         return False
         
-    def reduce(self):
-        """ Reduce by calling SNSPowderReduction
+    def setVanadiumDatabaseFile(self, datafilename):
+        """ Set the vanadium data base file
         """
-        import SNSPowderReductionLite as PRL
-
-        pdd = PRL.SNSPowderReductionLite(calibfile=self._calibfilename)
-
-        raise NotImplementedError("From here!")
+        self._vanadiumRecordFile = datafilename
 
         return
         
- 
         
 class AnalysisProject(VDProject):
     """

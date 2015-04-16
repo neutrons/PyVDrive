@@ -63,17 +63,17 @@ class VDriveAPI:
         """ 
         import vdrive.vulcan_util
 
-        # check input
+        # Check input
         if self._checkProjectExistence(projname, operation) is False:
             return (False, "Project %s does not exist." % (projname), None)
 
-        # get handler on project
+        # Get the handler on project
         try: 
             curproject = self._rProjectDict[projname]
         except KeyError:
             return (False, "Project %s does not exist." % (projname), None)
 
-        # get calibration vanadium automatically
+        # Get calibration vanadium automatically
         if autofindcal is True:
             # Entering auto mode to link data file to calibration file
 
@@ -91,12 +91,15 @@ class VDriveAPI:
                     len(runnumberlist))
             print "Error: \n%s\n-------------------------------\n" % (errmsg, )
 
-            # do match for calibration
+            # do match for calibration & export IPTS of all vanadium runs to locate NeXus file
             runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
-        
+            vaniptsdict = autofinder.getVanRunLogs('IPTS')
+
         else:
             # manual mode to link data file to calibration file
+            print "Add run: ", runnumberlist
             runvanrundict = {}
+            vaniptsdict = {}
             
         # build the list of data file/calibration file pair 
         datacalfilesets = []
@@ -119,6 +122,7 @@ class VDriveAPI:
         # FIXME - only applied to reduction project?
         thisproject = self._rProjectDict[projname]
         thisproject.addDataFileSets(datacalfilesets)
+        thisproject.addVanadiumIPTSInfo(vaniptsdict)
 
         return (True, "", datacalfilesets)
         
@@ -199,7 +203,7 @@ class VDriveAPI:
     
         
     def hasProject(self, projname):
-        """ 
+        """  Check wehther a certain project does exist
         """
         hasproject = False
         projecttype = ''
@@ -402,7 +406,7 @@ class VDriveAPI:
             raise NotImplementedError(errmsg)
 
         else:
-            project.reduce()
+            project.reduceToPDData()
 
         return
         

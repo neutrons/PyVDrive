@@ -73,11 +73,18 @@
     <addaction name="actionLog_Window"/>
     <addaction name="actionView_OpenPlot"/>
    </widget>
+   <widget class="QMenu" name="menuQuick_Start">
+    <property name="title">
+     <string>Quick Start</string>
+    </property>
+    <addaction name="actionStart_New_Project"/>
+   </widget>
    <addaction name="menuVDrive_2_0"/>
    <addaction name="menuEdit"/>
    <addaction name="menuReduction"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuQuick_Start"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dock_">
@@ -231,6 +238,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionStart_New_Project">
+   <property name="text">
+    <string>Start New Project</string>
    </property>
   </action>
  </widget>

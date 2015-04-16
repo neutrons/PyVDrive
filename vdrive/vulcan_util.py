@@ -179,12 +179,29 @@ class AutoVanadiumCalibrationLocator:
         # ENDFOR
         
         return (numrunsadded, errmsg)
+
+
+    def getVanRunLogs(self, logname):
+        """ Get a specific log's value of all vanadium runs
+        Arguments:
+         - logname :: string as the name of the log to have value exported
+
+        Return :: dictionary (key: run, value: log value)
+        """
+        rdict = {}
+        for run in self._vanRecordDict.keys():
+            rdict[run] = self._vanRecordDict[run][logname]
+
+        return rdict
         
         
     def locateCalibrationFile(self, criterion):
-        """ 
+        """ Locate matched vanadium runs for each run added to this instance
+
         Arguments
          - criterion :: list of the criterion to match between run and 
+
+        Return :: dictionary (key = run number, value = vanadium runs)
         """
         # check
         if len(self._runs) == 0:

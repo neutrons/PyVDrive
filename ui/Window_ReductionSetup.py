@@ -138,9 +138,9 @@ class MyReductionWindow(QWidget):
 
 
     def doAddRuns(self):
-        """ add IPTS-run numbers to 
+        """ add IPTS-run numbers to current reduction project
         """
-        # get ipts and runs from GUI
+        # Get IPTS and runs from GUI
         ipts = str(self.ui.lineEdit_ipts.text())
         runstart = str(self.ui.lineEdit_runstart.text())
         runend = str(self.ui.lineEdit_runend.text())
@@ -148,7 +148,7 @@ class MyReductionWindow(QWidget):
         logmsg = "Get IPTS %s Run %s to %s." % (ipts, runstart, runend)
         print "Log: %s" % (logmsg)
 
-        # parse and build list of run numbers
+        # Parse and build list of run numbers
         if len(ipts) == 0:
             logmsg = "Error: IPTS must be given for adding runs." 
             print logmsg
@@ -246,6 +246,7 @@ class MyReductionWindow(QWidget):
             vandbfile = str(fileList[0])
             # set value back to line edit
             self.ui.lineEdit_vanDBFile.setText(vandbfile)
+        # ENDIF
 
         # launch the window to ask user to set up match criteria
         vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)

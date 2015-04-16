@@ -44,14 +44,6 @@ def focus(self, nxsfilename, calib, filterWall, splitwksp=None, preserveEvents=T
         wksplist.append(None)
         self.log().debug("F1141A: Number of workspace to process = %d" %(numwksp))
 
-    # Load data 
-    rawinpws = api.Load(nxsfilename, filterWall)
-    # debug output 
-    if rawinpws.id() == EVENT_WORKSPACE_ID:
-        # Event workspace
-        self.log().debug("F1141C There are %d events after data is loaded in workspace %s." % (
-            rawinpws.getNumberEvents(), str(rawinpws)))
-    # ENDIF(rawinpws.id)
 
     # Filter events if possible
     if temp.id() == EVENT_WORKSPACE_ID and dosplit is True:
