@@ -12,7 +12,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import ui.ui_AppLog
+import ui_AppLog
 
 class MyAppLogDialog(QWidget):
     """

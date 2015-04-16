@@ -12,7 +12,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-from ui.ui_ProjectNameDialog import *
+from ui_ProjectNameDialog import *
 
 class MyProjectNameWindow(QWidget):
     """ Pop up dialog window

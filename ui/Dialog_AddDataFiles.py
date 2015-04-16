@@ -13,7 +13,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 #import GUI components generated from Qt Designer .ui file
-from ui.ui_AddDataToReduce import *
+from ui_AddDataToReduce import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

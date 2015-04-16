@@ -14,10 +14,12 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-from ui.ui_ReductionSetup import *
+from ui_ReductionSetup import *
 import Dialog_VanDatabaseCriteria # MyVanadiumDatabaseCriterialDialog
 import Dialog_AddDataFiles
-import vdrive.vulcan_util
+
+import PyVDrive
+import PyVDrive.vdrive.vulcan_util
 
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
@@ -246,7 +248,7 @@ class MyReductionWindow(QWidget):
             self.ui.lineEdit_vanDBFile.setText(vandbfile)
 
         # launch the window to ask user to set up match criteria
-        vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
+        vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)
         #print vandbfilelogs
 
         self._vanDBCriteriaWindow = \
@@ -268,7 +270,7 @@ class MyReductionWindow(QWidget):
 
             if os.path.exists(vandbfile) and os.path.isFile(vandbfile):
                 # launch the window to ask user to set up match criteria
-                vandbfilelogs, vanlogexamples = vdrive.vulcan_util.getLogsList(vandbfile)
+                vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)
                 print vandbfilelogs
 
                 self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)

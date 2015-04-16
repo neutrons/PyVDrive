@@ -19,9 +19,9 @@ from ui.ui_MainWindow import *
 """ import PyVDrive library """
 import Ui_VDrive as vdrive
 
-import Window_ReductionSetup as rdwn
-import Dialog_NewProject as npj
-import Dialog_AppLog as dlglog
+import ui.Window_ReductionSetup as rdwn
+import ui.Dialog_NewProject as npj
+import ui.Dialog_AppLog as dlglog
 
 import config
 
