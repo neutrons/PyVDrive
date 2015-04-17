@@ -12,9 +12,36 @@ mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
 sys.path.append(mantidpath)
 
 import mantid
-import mantid.simpleapi as mtd
+import mantid.simpleapi as mantidapi
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
+
+DEBUGMODE = True
+DEBUGDIR = os.path.join(homedir, 'Temp')
+
+
+class AlignFocusParameters:
+    """ Class to contain align and focus parameters
+    """
+    def __init__(self):
+        """ Init 
+        """
+        refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
+        calibrationfilename = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
+        characterfilename = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
+
+        self._focusFileName     = calibrationfilename
+        self._binning           = -0.001
+        self._preserveEvents    = True
+        self._LRef              = 0   # default = 0
+        self._DIFCref           = 0
+        self._compressTolerance = 0.01
+        self._removePromptPulseWidth = 0.0
+        self._lowResTOFoffset   = -1
+        self._wavelengthMin     = 0.0
+
+        return
+
 
 class SNSPowderReductionLite:
     """ Class SNSPowderReductionLite 
@@ -25,7 +52,7 @@ class SNSPowderReductionLite:
 
     It supports event chopping. 
     """
-    def __init__(self, nxsfilename):
+    def __init__(self, nxsfilename, isvanadium=False):
         """ Init
         """
         # Set up parameters
@@ -36,17 +63,32 @@ class SNSPowderReductionLite:
 
         # min, step, max
         self._binParam = [None, -0.01, None]
+        
+        # Is vanadium
+        self._isVanadiumRun = bool(isvanadium)
+
+        # Define class variables
+        if self._isVanadiumRun is True:
+            self._vanRunWS = None
+            self._vanPeakFWHM = 7
+            self._vanPeakTol = 0.05 
+            self._vanSmoothing = "20,2"
+        else:
+            self._anyRunWSList = []
+
+        # general align and focussing
 
         return
 
 
-    def reducePDData(self, params, vrun, chopdata):
+    def reducePDData(self, params, vrun=None, bkgdrun=None, chopdata=False):
         """ Reduce powder diffraction data
         This is the core functional methods of this class
 
         Arguments:
-         - params :: dictionary to set up reduction parameters
-         - vrun :: an SNSPowderReductionLite instance for reduced vanadium run
+         - params   :: dictionary to set up reduction parameters
+         - vrun     :: an SNSPowderReductionLite instance for reduced vanadium run
+         - bkgdrun  :: an SNSPowderReductionLite instance for reduced background run
          - dochopdata :: a boolean as the flag to chop data 
         """
         # Load file 
@@ -57,9 +99,11 @@ class SNSPowderReductionLite:
             wksplist = self._chopData(wksp)
         else:
             wksplist = [wksp]
+        
+        # Clear previous result if there is any
+        self._anyRunWSList.clear()
 
         # Align and focus
-        self._reducedWkspList = []
         for wksp in wksplist:   
             focusedwksp = self._doFocusAlign(wksp)
             self._reducedWkspList.append(focusedwksp)
@@ -67,12 +111,78 @@ class SNSPowderReductionLite:
         return 
 
 
-    def reduceProcessVanadiumData(self, params):
-        """
-        """
-        # TODO - ASAP
+    def reduceVanadiumData(self, params):
+        """ Reduce vanadium data and strip vanadium peaks
 
-        return
+        Return :: reduced workspace or None if failed to reduce
+        """
+        # Check status 
+        if self._isVanadiumRun is False:
+            raise NotImplementedError("This object is not set as a Vanadium run.")
+
+        # Load data from file
+        wksp = self._loadData()
+
+        # Compress event 
+        # FIXME - Understand Tolerance/COMPRESS_TOL_TOF 
+        COMPRESS_TOL_TOF = 0.01
+        wksp = mantidapi.CompressEvents(InputWorkspace=wksp,
+                                     OutputWorkspace=wksp.name(),
+                                     Tolerance=COMPRESS_TOL_TOF) # 10ns
+
+        # Do absorption and multiple scattering correction in TOF with sample parameters set
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(), 
+                                   Target="TOF")
+        mantidapi.SetSampleMaterial(InputWorkspace=wksp, 
+                                 ChemicalFormula="V", 
+                                 SampleNumberDensity=0.0721)
+        wksp = mantidapi.MultipleScatteringCylinderAbsorption(InputWorkspace=wksp, 
+                                                           OutputWorkspace=wksp.name())
+
+        # Align and focus
+        wksp = self._doAlignFocus(wksp, AlignFocusParameters())
+
+        # Strip vanadium peaks in d-spacd
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(), 
+                                   Target="dSpacing")
+        if DEBUGMODE is True:
+            filename = os.path.join(DEBUGDIR, wksp.name()+"_beforeStripVPeak.nxs")
+            mantidapi.SaveNexusProcessed(InputWorkspace=wksp,
+                                         FileName= filename)
+
+        wksp = mantidapi.StripVanadiumPeaks(InputWorkspace=wksp, 
+                                         OutputWorkspace=wksp.name(), 
+                                         FWHM=self._vanPeakFWHM, 
+                                         PeakPositionTolerance=self._vanPeakTol,
+                                         BackgroundType="Quadratic", 
+                                         HighBackground=True)
+
+        if DEBUGMODE is True:
+            filename = os.path.join(DEBUGDIR, wksp.name()+"_afterStripVPeaks.nxs")
+            mantidapi.SaveNexusProcessed(InputWorkspace=wksp,
+                                         FileName= filename)
+        # Smooth
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(),
+                                   Target="TOF")
+        wksp = mantidapi.FFTSmooth(InputWorkspace=wksp, 
+                                OutputWorkspace=wksp.name(), 
+                                Filter="Butterworth", 
+                                Params=self._vanSmoothing,
+                                IgnoreXBins=True,
+                                AllSpectra=True)
+        wksp = mantidapi.SetUncertainties(InputWorkspace=wksp, 
+                                       OutputWorkspace=wksp.name())
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(), 
+                                   Target="TOF")
+
+        if wksp is not None: 
+            self._vanRunWS = wksp
+
+        return wksp
 
 
     def setVanadium(self, vanws, vanbkgdws):
@@ -150,13 +260,6 @@ class SNSPowderReductionLite:
         self._filterMode = 'NONE'
 
 
-
-    def reducePowderData(self, dataws, bkgdws, vanws, keeporiginal):
-        """ Reduce a single powder data
-        """
-        raise NotImplementedError("Need to look into SNSPowderReduction")
-
-
     #---------------------------------------------------------------------------
     # Private Methods
     #---------------------------------------------------------------------------
@@ -189,7 +292,7 @@ class SNSPowderReductionLite:
         return reducedlist
 
 
-    def _doAlignFocus(self, eventwksp):
+    def _doAlignFocus(self, eventwksp, params):
         """ Align and focus raw event workspaces
 
         Current examle
@@ -213,31 +316,24 @@ class SNSPowderReductionLite:
 
         Return: focussed event workspace
         """
-        # FIXME - ignored 'focuspos = self._focusPos' temporarily
-        COMPRESS_TOL_TOF = float(self.getProperty("CompressTOFTolerance").value)
-        if COMPRESS_TOL_TOF < 0.:
-            COMPRESS_TOL_TOF = 0.01
+        # Validate input
+        if eventwksp.id() != EVENT_WORKSPACE_ID:
+            raise NotImplementedError("Input must be an EventWorkspace for align and focus")
+        elif isinstance(params, AlignFocusParameters) is False:
+            raise NotImplementedError("Input parameter must be of class AlignFocusParameters")
 
-        # TODO - Set up variables via class config
-
-        outws = mtd.AlignAndFocusPowder(
-                InputWorkspace  = eventwksp, 
-                OutputWorkspace = eventwksp,   # in-place align and focus
-                CalFileName     = self._focusFileName, 
-                Params          = self._binning, 
-                #Dspacing        = self._bin_in_dspace,
-                #DMin            = self._info["d_min"], 
-                #DMax            = self._info["d_max"], 
-                #TMin            = self._info["tof_min"], 
-                #TMax            = self._info["tof_max"],
-                PreserveEvents  = self._flagPreserveEvents,
-                UnwrapRef       = self._LRef,    # default = 0
-                LowResRef       = self._DIFCref, # default = 0
-                RemovePromptPulseWidth  = self._removePromptPulseWidth, # default = 0.0
-                CompressTolerance       = COMPRESS_TOL_TOF,             
-                LowResSpectrumOffset    = self._lowResTOFoffset,        # default = -1
-                CropWavelengthMin       = self._wavelengthMin,          # defalut = 0.0
-                ) #, **(focuspos))
+        outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp, 
+                                              OutputWorkspace = eventwksp,   # in-place align and focus
+                                              CalFileName     = params._focusFileName, 
+                                              Params          = params._binning, 
+                                              PreserveEvents  = params._preserveEvents,
+                                              UnwrapRef       = params._LRef,    # default = 0
+                                              LowResRef       = params._DIFCref, # default = 0
+                                              RemovePromptPulseWidth  = params._removePromptPulseWidth, # default = 0.0
+                                              CompressTolerance       = params._compressTolerance,
+                                              LowResSpectrumOffset    = params._lowResTOFoffset,        # default = -1
+                                              CropWavelengthMin       = params._wavelengthMin,          # defalut = 0.0
+                                              ) #, **(focuspos))
 
         #if DEBUGOUTPUT is True:
         #    for iws in xrange(temp.getNumberHistograms()):
@@ -275,7 +371,7 @@ class SNSPowderReductionLite:
         """ Load data
         """  
         # FIXME - ignored 'filterWall' here
-        rawinpws = mtd.Load(self._myRawNeXusFileName)
+        rawinpws = mantidapi.Load(self._myRawNeXusFileName)
         
         # debug output 
         if rawinpws.id() == EVENT_WORKSPACE_ID:
@@ -305,29 +401,7 @@ class SNSPowderReductionLite:
 
 
     def _processVanadium(self):
+        """ Process reduced vanadium runs
         """ 
-        """ 
-        # FIXME TODO - ASAP
-        if vanRun.id() == EVENT_WORKSPACE_ID:
-                        vanRun = api.CompressEvents(InputWorkspace=vanRun, OutputWorkspace=vanRun,
-                                                    Tolerance=COMPRESS_TOL_TOF) # 10ns
-
-        # do the absorption correction
-        vanRun = api.ConvertUnits(InputWorkspace=vanRun, OutputWorkspace=vanRun, Target="TOF")
-        api.SetSampleMaterial(InputWorkspace=vanRun, ChemicalFormula="V", SampleNumberDensity=0.0721)
-        vanRun = api.MultipleScatteringCylinderAbsorption(InputWorkspace=vanRun, OutputWorkspace=vanRun)
-
-        self._doAlignFocus()
-
-        vanRun = api.ConvertUnits(InputWorkspace=vanRun, OutputWorkspace=vanRun, Target="dSpacing")
-        vanRun = api.StripVanadiumPeaks(InputWorkspace=vanRun, OutputWorkspace=vanRun, FWHM=self._vanPeakFWHM,\
-                           PeakPositionTolerance=self.getProperty("VanadiumPeakTol").value,\
-                                           BackgroundType="Quadratic", HighBackground=True)
-        vanRun = api.ConvertUnits(InputWorkspace=vanRun, OutputWorkspace=vanRun, Target="TOF")
-        vanRun = api.FFTSmooth(InputWorkspace=vanRun, OutputWorkspace=vanRun, Filter="Butterworth",\
-                  Params=self._vanSmoothing,IgnoreXBins=True,AllSpectra=True)
-        vanRun = api.SetUncertainties(InputWorkspace=vanRun, OutputWorkspace=vanRun)
-        vanRun = api.ConvertUnits(InputWorkspace=vanRun, OutputWorkspace=vanRun, Target="TOF")
-        
 
         return

@@ -44,6 +44,23 @@ VDrive is an application that is driven by use cases.
   2) User says 'Add';
   3) VDrivePlot scans all the runs under that IPTS;
   4) VDrivePlot matches the vanadium runs according to user's specification; and lists all the matched v-runs in an order.
+  
+  
+  
+Reduction
+---------
+
+Process vanadium run
+====================
+
+ 1. Compress events;
+ 2. SetSampleMaterial;
+ 3. MultipleScatteringCylinderAbsorption;
+ 4. Align and focus;
+ 5. StripVanadiumPeaks;
+ 6. FFTSmooth;
+ 7. SetUncertainties;
+
 
 
 
@@ -73,6 +90,8 @@ New Features
   * Instread: VDriveAPI._myConfigObj  (_)
 
 3. Load the selected VDrive logs to match in config
+
+
 
 
 

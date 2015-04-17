@@ -249,32 +249,41 @@ class ReductionProject(VDProject):
         vanPdrDict = {}
         for vrun in vanrunlist:
             vrunfilename = vanfilenamedict[vrun]
-            vpdr = PRL.SNSPowderReductionLite(vrunfilename)
-            vpdr.reducePDData(params={}, vrun=None, chopdata=False)
+            vpdr = PRL.SNSPowderReductionLite(vrunfilename, isvanadium=True) 
+            vanws = vpdr.reduceVanadiumData(params={})
+            if vanws is None:
+                raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
             vanPdrDict[vrun] = vpdr
         # ENDFOR
 
         # Reduce all 
         runPdrDict = {}
         for basenamerun in sorted(rundict.keys()):
-            # reduce 
+            # reduce regular powder diffraction data
             fullpathfname = rundict[basenamerun][0]
             vanrun = rundict[basenamerun][1]
 
-            runpdr = PRL.SNSPowderReductionLite()
+            
+            runpdr = PRL.SNSPowderReductionLite(fullpathfname,  isvanadium=False)
+
             # optinally chop
+            doChopData = False
             if eventFilteringSetup is not None: 
                 runpdr.setupEventFiltering(eventFilteringSetup)
                 doChopData = True
-            else:
-                doChopData = False
             # ENDIF
 
-            # vanadium
-            if vanPdrDict.has_key(vanrun) is True:
-                runpdr.reducePDData(params={}, vrun=vanPdrDict[vanrun], chopdata=doChopData)
+            # set up vanadium
+            if vanPdrDict.has_key(vanrun) is True and normByVanadium is True:
+                vrun = vanPdrDict[vanrun]
             else:
-                runpdr.reducePDData(params={}, vrun=None, chopdata=doChopData)
+                vrun = None
+            # ENDIF (vrun)
+
+            # reduce data
+            runpdr.reducePDData(params=AlignFocusParameters(), 
+                                vrun=vrun,
+                                chopdata=doChopData)
 
         raise NotImplementedError("Implemented to here so far....")
 
