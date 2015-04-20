@@ -39,9 +39,13 @@ class MyReductionWindow(QWidget):
         self._myConfig = config
 
 
-        # set up UI
+        # set up UI & initial values
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+
+        self.ui.checkBox_autoVanRun.setChecked(True)
+
+        self._myDataPlotWindow  = None
 
         #---------------------------------
         # Set up validation
@@ -171,8 +175,10 @@ class MyReductionWindow(QWidget):
           
         # 2-Steps to add runs to a project instance
         # a) Add all runs to project and let project to decide which runs to be taken 
-        runfilecallist = self._myParent.setRuns(self._myProjectName, ipts, runnumberlist)
+        autofindcal = self.ui.checkBox_autoVanRun.isChecked()
+        runfilecallist = self._myParent.setRuns(self._myProjectName, ipts, runnumberlist, autofindcal)
         if runfilecallist is None:
+            print "Run file calibration list is None!"
             return False
 
         # b) Launch the dialog window for user to determine the vanadium runs
@@ -194,7 +200,6 @@ class MyReductionWindow(QWidget):
         self.ui.pushButton_addRuns.setEnabled(False)
 
         # b) Launch a dialog for user to determine the vanadium/calibration runs
-
 
         # self.myAddRunsSignal.emit(self._myProjectName) 
 
@@ -289,28 +294,55 @@ class MyReductionWindow(QWidget):
         """ Do reduction
         collect the information in this window and call reduction in the main window
         """
-        import time
+        # Get project name
+        if self._myProjectName is None:
+            raise NotImplementedError("It is logically wrong for _myProjectName not setup at doReduceData()")
+        else:
+            projname = self._myProjectName
 
-        # collect information
+        # Collect runs to reduce: go through main window's table
+        reductionlist = self._myParent.getReductionList()
+        setstatus, msg = self._myParent.getWorkflowObj().setReductionFlags(projname, reductionlist)
+        if setstatus is False:
+            print msg
 
-        # set to the parent as a dictionary
+        # FIXME - Set parameters...
+        ## Collect reduction parameters
+        #paramdict = {
+        #        "Instrument": "VULCAN",
+        #        "Extension": "_event.nxs",
+        #        "PreserveEvents": True,
+        #        "Binning" : -0.001,
+        #        "OutputDirectory" : outputdir, 
+        #        "NormalizeByCurrent":  False,
+        #        "FilterBadPulses": False,
+        #        "CompressTOFTolerance": False,
+        #        "FrequencyLogNames": "skf1.speed",
+        #        "WaveLengthLogNames": "skf12.lambda"
+        #        }
+        #self._myParent.getWorkflowObj().setReductionParameters(projname, paramdict)
 
-        # disable all controls
+        # disable all controls during reduction
         self._setEnabledReductionWidgets(False)
         self.ui.pushButton_reduceData.setEnabled(False)
 
-        # reduce by calling parent one
-        # FIXME It is a mock for GUI
-        for i in xrange(100):
-            time.sleep(0.1)
-            self.ui.progressBar.setValue(i+1)
+        # Reduce data
+        self._myParent.getWorkflowObj().reduceData(projname)
+        # # FIXME It is a mock for GUI
+        # for i in xrange(100):
+        #     self.ui.progressBar.setValue(i+1)
 
-        # enable all controls
+        # enable all controls after reduction
         self._setEnabledReductionWidgets(True)
         self.ui.pushButton_reduceData.setEnabled(True)
 
-        return
+        # If reduction is successful, launch post data processing window
+        if self._myParent.getWorkflowObj().isReductionSuccessful(projname)[0] is True: 
+            self._showDataPlotWindow(projname)
+        else:
+            print "Error: %s" % (self._myParent.getWorkflowObj().isReductionSuccessful(projname)[1])
 
+        return
 
     #--------------------------------------------------------------------------
     # Methods to get access to private variable
@@ -384,6 +416,21 @@ class MyReductionWindow(QWidget):
 
         return
 
+
+    def _showDataPlotWindow(self, projname):
+        """ Show data plot window
+        """
+        # Create data plot and processing widget 
+        if self._myDataPlotWindow is None:
+            self._myDataPlotwindow = Window_DataPlotProcess.MyDataPlotProcessWindow(self)
+
+        # Set current project
+        self._myDataPlotwindow.setProject(projname)
+
+        # Show 
+        self._myDataPlotwindow.show()
+
+        return
 
 
 def getHomeDir():

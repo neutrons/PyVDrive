@@ -93,6 +93,12 @@ class ReductionProject(VDProject):
         # dictionary to map vanadium run with IPTS. key: integer  
         self._myVanRunIptsDict = {}
 
+        # Reduction status
+        self._lastReductionSuccess = None
+
+        # Reduction result dictionary
+        self._myRunPdrDict = {}
+
         return
         
     def addData(self, datafilename):
@@ -197,6 +203,14 @@ class ReductionProject(VDProject):
         return ibuf
 
 
+    def isSuccessful(self):
+        """ Check whether last reduction is successful
+
+        Return :: boolean
+        """
+        return self._lastReductionSuccess
+
+
     def reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
         """ Focus and process the selected data sets to powder diffraction data
         for GSAS/Fullprof/ format
@@ -208,8 +222,10 @@ class ReductionProject(VDProject):
          4. Reduce (and possibly chop) runs;
 
         Arguments:
-         - 
+         - normByVanadium :: flag to normalize by vanadium
         """
+        self._lastReductionSuccess = False
+
         # Build list of files to reduce
         rundict = {}
         runbasenamelist = []
@@ -220,6 +236,8 @@ class ReductionProject(VDProject):
                 runbasenamelist.append(basenamerun)
         # ENDFOR
         print "[DB] Runs to reduce: %s." % (str(runbasenamelist))
+        if len(rundict.keys()) == 0:
+            return (False, 'No run is selected to reduce!')
 
         # Build list of vanadium runs
         vanrunlist = []
@@ -228,10 +246,22 @@ class ReductionProject(VDProject):
                 if (runbasename in runbasenamelist) is True:
                     print "[DB] Run %s has vanadium mapped: %s" % (runbasename, str(self._datacalibfiledict[runbasename]))
                     candidlist = self._datacalibfiledict[runbasename][0]
+                    if candidlist is None:
+                        # no mapped vanadium
+                        continue
+                    elif isinstance(candidlist, list) is False:
+                        # unsupported case
+                        raise NotImplementedError("Vanadium candidate list 'candidlist' must be either list or None. \
+                                Now it is %s." % (str(candidlist)))
                     vanindex = self._datacalibfiledict[runbasename][1]
-                    vanrunlist.append(int(candidlist[vanindex]))
-
-                    rundict[runbasename] = (rundict[runbasename][0], int(candidlist[vanindex]))
+                    try:
+                        vanrunlist.append(int(candidlist[vanindex]))
+                        rundict[runbasename] = (rundict[runbasename][0], int(candidlist[vanindex]))
+                    except TypeError as te:
+                        print "[Warning] Van run in candidate list is %s.  \
+                                Cannot be converted to van run du to %s. " % (str(candidlist[vanindex]), str(te))
+                    except IndexError as ie:
+                        raise ie
                 # ENDIF
             # ENDFOR
             vanrunlist = list(set(vanrunlist))
@@ -257,14 +287,12 @@ class ReductionProject(VDProject):
         # ENDFOR
 
         # Reduce all 
-        runPdrDict = {}
         for basenamerun in sorted(rundict.keys()):
             # reduce regular powder diffraction data
             fullpathfname = rundict[basenamerun][0]
             vanrun = rundict[basenamerun][1]
-
             
-            runpdr = PRL.SNSPowderReductionLite(fullpathfname,  isvanadium=False)
+            runpdr = PRL.SNSPowderReductionLite(fullpathfname, isvanadium=False)
 
             # optinally chop
             doChopData = False
@@ -281,16 +309,16 @@ class ReductionProject(VDProject):
             # ENDIF (vrun)
 
             # reduce data
-            runpdr.reducePDData(params=AlignFocusParameters(), 
+            runpdr.reducePDData(params=PRL.AlignFocusParameters(), 
                                 vrun=vrun,
                                 chopdata=doChopData)
 
-        raise NotImplementedError("Implemented to here so far....")
+            self._myRunPdrDict[basenamerun] = runpdr
+        # ENDFOR(basenamerun)
 
-        pdd = PRL.SNSPowderReductionLite(calibfile=self._calibfilename)
+        self._lastReductionSuccess = True
 
-
-        return
+        return (True, '')
         
         
     def setCalibrationFile(self, datafilenames, calibfilename):

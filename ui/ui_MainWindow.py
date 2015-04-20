@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_MainWindow.ui'
 #
-# Created: Wed Feb 25 23:56:52 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Mon Apr 20 15:59:00 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -50,6 +50,8 @@ class Ui_MainWindow(object):
         self.menuHelp.setObjectName(_fromUtf8("menuHelp"))
         self.menuView = QtGui.QMenu(self.menubar)
         self.menuView.setObjectName(_fromUtf8("menuView"))
+        self.menuQuick_Start = QtGui.QMenu(self.menubar)
+        self.menuQuick_Start.setObjectName(_fromUtf8("menuQuick_Start"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName(_fromUtf8("statusbar"))
@@ -105,6 +107,8 @@ class Ui_MainWindow(object):
         self.actionDelete_Runs.setObjectName(_fromUtf8("actionDelete_Runs"))
         self.actionView_OpenPlot = QtGui.QAction(MainWindow)
         self.actionView_OpenPlot.setObjectName(_fromUtf8("actionView_OpenPlot"))
+        self.actionStart_New_Project = QtGui.QAction(MainWindow)
+        self.actionStart_New_Project.setObjectName(_fromUtf8("actionStart_New_Project"))
         self.menuVDrive_2_0.addAction(self.actionFile_New)
         self.menuVDrive_2_0.addAction(self.action_OpenProject)
         self.menuVDrive_2_0.addAction(self.actionClose)
@@ -124,11 +128,13 @@ class Ui_MainWindow(object):
         self.menuReduction.addAction(self.actionDelete_Runs)
         self.menuView.addAction(self.actionLog_Window)
         self.menuView.addAction(self.actionView_OpenPlot)
+        self.menuQuick_Start.addAction(self.actionStart_New_Project)
         self.menubar.addAction(self.menuVDrive_2_0.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuReduction.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
+        self.menubar.addAction(self.menuQuick_Start.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -140,6 +146,7 @@ class Ui_MainWindow(object):
         self.menuReduction.setTitle(_translate("MainWindow", "Reduction", None))
         self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.menuView.setTitle(_translate("MainWindow", "View", None))
+        self.menuQuick_Start.setTitle(_translate("MainWindow", "Quick Start", None))
         self.treeWidget_Project.headerItem().setText(0, _translate("MainWindow", "Project", None))
         self.treeWidget_Project.headerItem().setText(1, _translate("MainWindow", "File", None))
         self.action_OpenProject.setText(_translate("MainWindow", "Open", None))
@@ -171,4 +178,5 @@ class Ui_MainWindow(object):
         self.actionDelete_Runs.setText(_translate("MainWindow", "Delete Runs", None))
         self.actionView_OpenPlot.setText(_translate("MainWindow", "Plot", None))
         self.actionView_OpenPlot.setShortcut(_translate("MainWindow", "Ctrl+P", None))
+        self.actionStart_New_Project.setText(_translate("MainWindow", "Start New Project", None))
 

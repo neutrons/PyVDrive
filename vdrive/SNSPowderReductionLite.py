@@ -74,6 +74,7 @@ class SNSPowderReductionLite:
             self._vanPeakTol = 0.05 
             self._vanSmoothing = "20,2"
         else:
+            # FIXME - any application???
             self._anyRunWSList = []
 
         # general align and focussing
@@ -86,7 +87,7 @@ class SNSPowderReductionLite:
         This is the core functional methods of this class
 
         Arguments:
-         - params   :: dictionary to set up reduction parameters
+         - params   :: AlignFocusParameters object
          - vrun     :: an SNSPowderReductionLite instance for reduced vanadium run
          - bkgdrun  :: an SNSPowderReductionLite instance for reduced background run
          - dochopdata :: a boolean as the flag to chop data 
@@ -100,19 +101,28 @@ class SNSPowderReductionLite:
         else:
             wksplist = [wksp]
         
-        # Clear previous result if there is any
-        self._anyRunWSList.clear()
+        # Clear previous result if there is any without removing previos objects
+        self._anyRunWSList = []
 
         # Align and focus
         for wksp in wksplist:   
-            focusedwksp = self._doFocusAlign(wksp)
-            self._reducedWkspList.append(focusedwksp)
+            # Focus
+            focusedwksp = self._doAlignFocus(wksp, params)
+
+            if vrun is not None:
+                focusedwksp = focusedwksp._normByVanadium(wksp)
+
+            self._anyRunWSList.append(focusedwksp)
+        # ENDFOR
 
         return 
 
 
     def reduceVanadiumData(self, params):
         """ Reduce vanadium data and strip vanadium peaks
+
+        Argumements:
+         - params :: AlignFocusParameters object
 
         Return :: reduced workspace or None if failed to reduce
         """
@@ -141,7 +151,9 @@ class SNSPowderReductionLite:
                                                            OutputWorkspace=wksp.name())
 
         # Align and focus
-        wksp = self._doAlignFocus(wksp, AlignFocusParameters())
+        if params is None:
+            params = AlignFocusParameters()
+        wksp = self._doAlignFocus(wksp, params)
 
         # Strip vanadium peaks in d-spacd
         wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 

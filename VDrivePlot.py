@@ -152,6 +152,17 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
         
+    def closeEvent(self, event=None):
+        """
+        """
+        # close all child windows without prompting for saving and etc. 
+        for iws in xrange(len(self._openSubWindows)):
+            self._openSubWindows[iws].close()
+       
+        event.accept()
+
+        return
+
     def confirmExit(self):
         """ Exit with confirmation
         """
@@ -169,25 +180,25 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
-    def closeEvent(self, event=None):
+    #---------------------------------------------------------------------------
+    # Widget event handling methods
+    #---------------------------------------------------------------------------
+    def doAddFile(self):
+        """ Add file
         """
-        """
-        # close all child windows without prompting for saving and etc. 
-        for iws in xrange(len(self._openSubWindows)):
-            self._openSubWindows[iws].close()
-       
-        event.accept()
-
-        return
+        newdatafiledialog = Dialog_NewRuns()
 
 
-    def _exitApp(self):
-        """ Close all the child windows before 
-        """
-
-        return
+        print "Add a new file to current project"
+        curitem = self.ui.treeWidget_Project.currentItem()
+        # 
+        print "Add file to ", curitem, " with parent = ", curitem.parent(), " data = ", \
+                curitem.data(0,0), " data = ", curitem.text(0), curitem.text(1)
         
-    #------------ Information Tree Handling ------------------------------------
+        #Add file to  <PyQt4.QtGui.QTreeWidgetItem object at 0x7fe454028f28>
+
+        return
+
     def doChangeTreeMenu(self):
         """ Change the tree menu if it is on different level
         """
@@ -219,104 +230,14 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
         
-        
-    def _clearTreeActions(self):
-        """ Clear all the actions of the tree widget
-        """
-        actions = self.ui.treeWidget_Project.actions()
-        for action in actions:
-            print action.whatsThis(), " | ", action.text()
-            self.ui.treeWidget_Project.removeAction(action)
-        # ENDFOR (action)
-        
-        return
-        
-    def _setTreeLevel1Actions(self):         
+    def doDeleteRun(self):
         """
         """
-        # TODO - Docs
-        # This is the right way to use right mouse operation for pop-up sub menu 
-        addAction = QtGui.QAction('Add', self)
-        addAction.triggered.connect(self.doAddFile)
-        self.ui.treeWidget_Project.addAction(addAction)
-        setupReductionAction = QtGui.QAction('Setup', self)
-        setupReductionAction.triggered.connect(self.doSetupReduction)
-        self.ui.treeWidget_Project.addAction(setupReductionAction)
-        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        
-        return
-
-    def _setTreeLevel2Actions(self):         
-        """
-        """
-        # TODO - Docs
-        # This is the right way to use right mouse operation for pop-up sub menu 
-        delAction = QtGui.QAction('Delete (Run)', self)
-        delAction.triggered.connect(self.doDeleteRun)
-        self.ui.treeWidget_Project.addAction(delAction)
+        # TODO - Docs and make it work!
 
         return
 
-    def _setTreeLevel1Actions(self):         
-        """
-        """
-        # This is the right way to use right mouse operation for pop-up sub menu 
-        addAction = QtGui.QAction('Add', self)
-        addAction.triggered.connect(self.doAddFile)
-        self.ui.treeWidget_Project.addAction(addAction)
-        setupReductionAction = QtGui.QAction('Setup', self)
-        setupReductionAction.triggered.connect(self.doSetupReduction)
-        self.ui.treeWidget_Project.addAction(setupReductionAction)
-        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        
-        return
-
-    #------------ New projects -------------------------------------------------
             
-    def doNewProject(self):
-        """ New reduction project
-        """
-        import time
-        from multiprocessing import Process
-        
-        print "A new reduction project is to be created and added to project tree"
-        
-        self.newprojectname = None  
-        self.newprojectname = None
-        
-        # Launch dialog for project name
-        self.projnamewindow = npj.MyProjectNameWindow(self)
-        self.projnamewindow.show()
-
-        if self.newprojectname == "%6--0$22":
-            print "User aborts the operation to create a new reduction project"
-        else:
-            print "New project name is ", self.newprojectname
-        
-        return
-
-    # add slot for NewProject signal to connect to
-    @QtCore.pyqtSlot(int)
-    def newReductionProject_Step2(self, val):
-        """ New reduction project as a call from a secondary window
-        """
-        prepend = "NewProject" + str(val) + ": "
-        print "Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
-                self.newprojectname, self.newprojecttype)
-
-
-        # initlalize a new project and register
-        self._myWorkflow.newProject(projname = self.newprojectname, projtype = self.newprojecttype)
-
-        # added to project tree
-        project1 = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
-        self.ui.treeWidget_Project.expandItem(project1) 
-
-        return
-
-    #------------ END New projects -------------------------------------------------
-
-    #------------ Load & Save projects ----------------------------------------------------
     def doLoadProject(self):
         """ Load a project with prompt
         """
@@ -350,6 +271,27 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
+    def doNewProject(self):
+        """ New reduction project
+        """
+        import time
+        from multiprocessing import Process
+        
+        print "A new reduction project is to be created and added to project tree"
+        
+        self.newprojectname = None  
+        self.newprojectname = None
+        
+        # Launch dialog for project name
+        self.projnamewindow = npj.MyProjectNameWindow(self)
+        self.projnamewindow.show()
+
+        if self.newprojectname == "%6--0$22":
+            print "User aborts the operation to create a new reduction project"
+        else:
+            print "New project name is ", self.newprojectname
+        
+        return
 
     def doSaveProject(self):
         """ Load a project with prompt
@@ -374,64 +316,6 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
          
-
-    #------------ END Load projects ------------------------------------------------
-
-
-    def getReductionProjectNames(self):
-        """ Get the names of all reduction projects
-        """
-        return self._myWorkflow.getReductionProjectNames()
-
-    def projectOperation(self):
-        """
-        """
-        print "Project is pressed"
-
-        # This is how to created a popup menu
-        self.menu = QtGui.QMenu(self)
-        addAction = QtGui.QAction('Add File', self)
-        addAction.triggered.connect(self.doAddFile)
-        self.menu.addAction(addAction)
-
-        renameAction = QtGui.QAction('Rename', self)
-        renameAction.triggered.connect(self.renameSlot)
-        self.menu.addAction(renameAction)
-        self.menu.popup(QtGui.QCursor.pos())
-
-        curitem = self.ui.treeWidget_Project.currentItem()
-        print curitem
-
-        return
-
-
-    def doAddFile(self):
-        """ Add file
-        """
-        newdatafiledialog = Dialog_NewRuns()
-
-
-        print "Add a new file to current project"
-        curitem = self.ui.treeWidget_Project.currentItem()
-        # 
-        print "Add file to ", curitem, " with parent = ", curitem.parent(), " data = ", \
-                curitem.data(0,0), " data = ", curitem.text(0), curitem.text(1)
-        
-        #Add file to  <PyQt4.QtGui.QTreeWidgetItem object at 0x7fe454028f28>
-
-        return
-
-    def doDeleteRun(self):
-        """
-        """
-        # TODO - Docs and make it work!
-
-        return
-
-    def renameSlot(self):
-        print "Renaming slot called"
-        
-
     def doSetupReduction(self):
         """ Lauch reduction setup window
         """
@@ -487,7 +371,136 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
+
+    #---------------------------------------------------------------------------
+    # Event handling methods
+    #---------------------------------------------------------------------------
+    @QtCore.pyqtSlot(str, list)
+    def evtAddRuns(self, projname, datacallist):
+        """
+        Arguments: 
+         - projname :: string as project name
+         - datacallist :: data/van run list
+        """
+        runsadded = []
+
+        for datafile, calrun in datacallist:
+            # add to list 
+            runsadded.append(datafile)
+
+            # set to project
+            self._myWorkflow.setCalibration(projname, datafile, calrun)
+        # ENDFOR
         
+        self._treeAddRuns(projname, runsadded)
+        self._tableAddRuns(projname, datacallist)
+
+        return
+
+    # add slot for NewProject signal to connect to
+    @QtCore.pyqtSlot(int) 
+    def evtCreateReductionProject(self, val):
+        """ New reduction project as a call from a secondary window
+        """
+        prepend = "NewProject" + str(val) + ": "
+        print "Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
+                self.newprojectname, self.newprojecttype)
+
+
+        # initlalize a new project and register
+        self._myWorkflow.newProject(projname = self.newprojectname, projtype = self.newprojecttype)
+
+        # added to project tree
+        project1 = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
+        self.ui.treeWidget_Project.expandItem(project1) 
+
+        return
+
+
+    #---------------------------------------------------------------------------
+    # Methods to get information from Main GUI 
+    # Implemented for child-windows/dialogs
+    #---------------------------------------------------------------------------
+    def getLogText(self):
+        """ 
+        """
+        # TODO - ASAP
+        self._myLogList = []
+
+        return "IMPLEMENT ASAP"
+
+
+    def getReductionList(self):
+        """ Get the data to reduce from reduction table
+
+        Return :: list of 2-tuple (data file name, vanadium run/None)
+        """
+        reductionlist = []
+
+        numrows = self.ui.tableWidget_generalInfo.rowCount()
+        for irow in xrange(numrows):
+            # get the checkbox widget to see whether it is to get reduced
+            reducewidget = self.ui.tableWidget_generalInfo.cellWidget(irow, 2)
+            doreduce = reducewidget.isChecked()
+
+            # read cell 0 and 1
+            datafname = str(self.ui.tableWidget_generalInfo.item(irow, 0).text())
+            # NOTE : van run is not needed here.  It is just for information for user
+            # vanrun = str(self.ui.tableWidget_generalInfo.item(irow, 1).text())
+            # if vanrun.isdigit() is True:
+            #     vanrun = int(vanrun)
+            # else:
+            #     vanrun = None
+
+            # add to output list
+            reductionlist.append( (datafname, doreduce) )
+            # EDNDIF
+        # ENFOR
+                
+        return reductionlist
+
+    def getReductionProjectNames(self):
+        """ Get the names of all reduction projects
+        """
+        return self._myWorkflow.getReductionProjectNames()
+
+
+    def getWorkflowObj(self):
+        """ Get my controller workflow object
+        It is mostly used by its children
+        """
+        return self._myWorkflow
+
+    
+    #---------------------------------------------------------------------------
+    # Others..
+    #---------------------------------------------------------------------------
+    def projectOperation(self):
+        """
+        """
+        print "Project is pressed"
+
+        # This is how to created a popup menu
+        self.menu = QtGui.QMenu(self)
+        addAction = QtGui.QAction('Add File', self)
+        addAction.triggered.connect(self.doAddFile)
+        self.menu.addAction(addAction)
+
+        renameAction = QtGui.QAction('Rename', self)
+        renameAction.triggered.connect(self.renameSlot)
+        self.menu.addAction(renameAction)
+        self.menu.popup(QtGui.QCursor.pos())
+
+        curitem = self.ui.treeWidget_Project.currentItem()
+        print curitem
+
+        return
+
+
+    def renameSlot(self):
+        print "Renaming slot called"
+        
+
     def showProjectNameWindow(self, signal):
         """
         """           
@@ -498,6 +511,35 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
 
+    #------------------------------------------
+    # Reduction related event handlers
+    #------------------------------------------
+    def setRuns(self, projname, ipts, runs, autofindcal):
+        """ Add runs to a project
+
+        Return :: a list of 2-tuple (string as file name, list of van run/None)
+        """
+        status, errmsg, datafilesets = \
+                self._myWorkflow.addExperimentRuns(projname = projname, 
+                                                   operation ='reduction', 
+                                                   ipts = ipts, 
+                                                   runnumberlist = runs, 
+                                                   autofindcal = autofindcal)
+        # addExperimentRuns(self, projname, operation, ipts, runnumberlist, autofindcal):
+
+        if status is False:
+            self._addLogError(errmsg)
+            return
+        
+        # self._tmpIPTS = ipts
+        # self._tmpRuns = runs
+
+        return datafilesets
+
+
+    #---------------------------------------------------------------------------
+    # Private methods 
+    #---------------------------------------------------------------------------
     def _addLogInformation(self, logstr):
         """ Add log at information level
         """
@@ -528,57 +570,28 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
 
-    def getLogText(self):
-        """ 
+    def _clearTreeActions(self):
+        """ Clear all the actions of the tree widget
         """
-        self._myLogList = []
-
-
-
-    #------------------------------------------
-    # Reduction related event handlers
-    #------------------------------------------
-    def setRuns(self, projname, ipts, runs):
-        """ Add runs to 
-        """
-        status, errmsg, datafilesets = self._myWorkflow.addExperimentRuns(projname, \
-                'reduction', ipts, runs, True)
-
-        if status is False:
-            self._addLogError(errmsg)
-            return
+        actions = self.ui.treeWidget_Project.actions()
+        for action in actions:
+            print action.whatsThis(), " | ", action.text()
+            self.ui.treeWidget_Project.removeAction(action)
+        # ENDFOR (action)
         
-        # self._tmpIPTS = ipts
-        # self._tmpRuns = runs
-
-        return datafilesets
-
-    @QtCore.pyqtSlot(str, list)
-    def evtAddRuns(self, projname, datacallist):
-        """
-        Arguments: 
-         - projname :: string as project name
-         - datacallist :: data/van run list
-        """
-        runsadded = []
-
-        for datafile, calrun in datacallist:
-            # add to list 
-            runsadded.append(datafile)
-
-            # set to project
-            self._myWorkflow.setCalibration(projname, datafile, calrun)
-        # ENDFOR
+        return
         
-        self._treeAddRuns(projname, runsadded)
-        self._tableAddRuns(projname, datacallist)
+    def _exitApp(self):
+        """ Close all the child windows before 
+        """
+        # TODO - Need to set up some information
 
         return
-
-    #---- Private methods for table and tree 
+        
 
     def _initReductionProjectTable(self, projname):
-        """ 
+        """ Initialize reduction project table: 
+        Widget: (1) self.ui.tableWidget_generalInfo
         """
         # load project
         status, errmsg, datapairlist = self._myWorkflow.getDataFiles(projname)
@@ -592,7 +605,6 @@ class VDrivePlot(QtGui.QMainWindow):
         # clear
         self.ui.tableWidget_generalInfo.setRowCount(0)
         self.ui.tableWidget_generalInfo.setColumnCount(0)
-
 
         # init
         self.ui.tableWidget_generalInfo.setHorizontalHeaderLabels(['File', 'Van Run', 'Reduce'])
@@ -619,11 +631,50 @@ class VDrivePlot(QtGui.QMainWindow):
         # set to table
         self._tableAddRuns(projname, datapairlist)
 
+        return
+
+    def _setTreeLevel1Actions(self):         
+        """
+        """
+        # TODO - Docs
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        addAction = QtGui.QAction('Add', self)
+        addAction.triggered.connect(self.doAddFile)
+        self.ui.treeWidget_Project.addAction(addAction)
+        setupReductionAction = QtGui.QAction('Setup', self)
+        setupReductionAction.triggered.connect(self.doSetupReduction)
+        self.ui.treeWidget_Project.addAction(setupReductionAction)
+        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        
+        return
+
+    def _setTreeLevel2Actions(self):         
+        """
+        """
+        # TODO - Docs
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        delAction = QtGui.QAction('Delete (Run)', self)
+        delAction.triggered.connect(self.doDeleteRun)
+        self.ui.treeWidget_Project.addAction(delAction)
 
         return
 
+    def _setTreeLevel1Actions(self):         
+        """
+        """
+        # This is the right way to use right mouse operation for pop-up sub menu 
+        addAction = QtGui.QAction('Add', self)
+        addAction.triggered.connect(self.doAddFile)
+        self.ui.treeWidget_Project.addAction(addAction)
+        setupReductionAction = QtGui.QAction('Setup', self)
+        setupReductionAction.triggered.connect(self.doSetupReduction)
+        self.ui.treeWidget_Project.addAction(setupReductionAction)
+        #self.ui.treeWidget_Project.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        
+        return
+
     def _tableAddRuns(self, projname, datapairlist):
-        """ Add new runs to table
+        """ Add new runs to table: self.ui.tableWidget_generalInfo.
 
         Argument:
          - projname ::

@@ -43,7 +43,7 @@ class MyProjectNameWindow(QWidget):
                 self.quitCreateNew)
 
         # Customerized event 
-        self.mySignal.connect(self.myParent.newReductionProject_Step2)
+        self.mySignal.connect(self.myParent.evtCreateReductionProject)
 
         return
         

@@ -21,7 +21,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import ui.ui_GPPlot
+import ui_GPPlot
 
 class Window_GPPlot(QMainWindow):
     """ Class for general-puposed plot window
@@ -37,87 +37,65 @@ class Window_GPPlot(QMainWindow):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui.ui_GPPlot.Ui_MainWindow()
+        self.ui = ui_GPPlot.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # Event handling
-        # button controls
+        # push buttons 
         self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'), 
-                self.doPlotPrevRun)
-
+                self.doPlotRunPrev)
         self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
-                self.doPlotNextRun)
-
+                self.doPlotRunNext)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                self.doPlotRun)
+                self.doPlotRunSelected)
+
+        self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
+                self.doNormByCurrent)
+        self.connect(self.ui.pushButton_nomByVanadium, QtCore.SIGNAL('clicked()'),
+                self.doNormByVanadium)
+        self.connect(self.ui.pushButton_stripVPeaks, QtCore.SIGNAL('clicked()'),
+                self.doStripVanPeaks)
+
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                self.doQuit)
 
         # on-graph operation
         self.ui.graphicsView.mpl_connect('button_press_event', self.on_mouseDownEvent)
 
-        # Initialize graph
-        # TODO - Refactor this part
-        vecx, vecy, xlim, ylim = self.computeMock()
-        self.ui.mainplot = self.ui.graphicsView.getPlot()
-
-        self.mainline = self.ui.mainplot.plot(vecx, vecy, 'r-')
-        self.plotlinelist = [self.mainline]
-
-        leftx = [xlim[0], xlim[0]]
-        lefty = [ylim[0], ylim[1]]
-        self.leftslideline = self.ui.mainplot.plot(leftx, lefty, 'b--')
-        rightx = [xlim[1], xlim[1]]
-        righty = [ylim[0], ylim[1]]
-        self.rightslideline = self.ui.mainplot.plot(rightx, righty, 'g--')
-        upperx = [xlim[0], xlim[1]]
-        uppery = [ylim[1], ylim[1]]
-        self.upperslideline = self.ui.mainplot.plot(upperx, uppery, 'b--')
-        lowerx = [xlim[0], xlim[1]]
-        lowery = [ylim[0], ylim[0]]
-        self.lowerslideline = self.ui.mainplot.plot(lowerx, lowery, 'g--')
-        
-        # Validator
-        # FIXME - Add validators... 
+        # Input validator
+        # FIXME / TODO - Add validators... 
 
         # Class status variable
         self._runList = []
         self._currRun = None
         self._currRunIndex = 0
 
+        # Initialze graph
+        self._initFigureCanvas()
+
         return
 
-    #--------------------------------------------------------------------
-    # Set up
-    #--------------------------------------------------------------------
-    def setRuns(self, runslist):
-        """ Set available runs
+    #---------------------------------------------------------------------------
+    # Widget event handling methods
+    #---------------------------------------------------------------------------
+    def doNormByCurrent(self):
+        """ Normalize by current/proton charge
         """
-        # set 
-        for run in runslist:
-            self._runList.append(run)
-
-        # add runs to combo box
-        self.ui.comboBox_runs.addItems(self._runList)
+        # TODO - ASAP
 
         return
 
-
-    def clearRuns(self):
-        # clear
-        self._runList = []
-
-        # clear combo box
-        self.ui.comboBox_runs.clear()
+    def doNormByVanadium(self):
+        """ Normalize by vanadium spectrum
+        """
+        # TODO - ASAP
 
         return
 
-
-
-    #--------------------------------------------------------------------
-    # Event handling methods
-    #--------------------------------------------------------------------
-    def doPlotRun(self):
+    def doPlotRunSelected(self):
         """ Plot the current run
         """
+        # TODO - ASAP ASAP ASAP
         print "Plot user specified run"
       
         # attempt to read line edit input
@@ -150,16 +128,72 @@ class Window_GPPlot(QMainWindow):
         return
         
 
-    def doPlotPrevRun(self):
+    def doPlotRunPrev(self):
         """ Plot the previous run
         """
+        # TODO - ASAP ASAP ASAP
         print "Plot previous run"
 
 
-    def doPlotNextRun(self):
+    def doPlotRunRun(self):
         """ Plot the next run
         """
+        # TODO - ASAP ASAP ASAP
         print "Plot next run"
+
+    
+    def doStripVanPeaks(self):
+        """ Strip vanadium peaks
+        """
+        # TODO - ASAP ASAP
+
+        return
+
+
+    #---------------------------------------------------------------------------
+    # Set up
+    #---------------------------------------------------------------------------
+    def resetRuns(self):
+        """ Reset runs in comboBox_runs 
+        """
+        # clear
+        del self._runList[:]
+
+        # clear combo box
+        self.ui.comboBox_runs.clear()
+
+        return
+
+    def setCurrentRun(self, run):
+        """ Set current run to a specified value
+        If this run does not exist in _runList, it is not accepted
+        """
+        if run in self._runList:
+            qindex = self._runList.index(run)
+            self.ui.comboBox_runs.setCurrentIndex(qindex)
+        else:
+            print "Run %s does not exist!" % (run)
+
+        return
+
+
+    def setRuns(self, runslist):
+        """ Add runs shown in runs list to comboBox_runs
+        """ 
+        # Add run to _runList
+        for run in runslist:
+            if run not in self._runList: 
+                self._runList.append(run)
+        # ENDFOR
+
+        # Sort by value
+        self._runList = sorted(self._runList)
+
+        # Set the sorted lsit to combo box
+        self.ui.comboBox_runs.clear() 
+        self.ui.comboBox_runs.addItems(self._runList)
+
+        return
 
 
     #--------------------------------------------------------------------
@@ -175,6 +209,38 @@ class Window_GPPlot(QMainWindow):
             msg = "You've clicked on a bar with coords:\n %f, %f" % (x, y)
             QMessageBox.information(self, "Click!", msg)
 
+        return
+
+    #---------------------------------------------------------------------------
+    # Private methods
+    #---------------------------------------------------------------------------
+    def _initFigureCanvas(self):
+        """ Initialize graph
+        """
+        # TODO - ASAP
+
+        if False: 
+            # 
+            # TODO - Refactor this part
+            vecx, vecy, xlim, ylim = self.computeMock()
+            self.ui.mainplot = self.ui.graphicsView.getPlot()
+
+            self.mainline = self.ui.mainplot.plot(vecx, vecy, 'r-')
+            self.plotlinelist = [self.mainline]
+
+            leftx = [xlim[0], xlim[0]]
+            lefty = [ylim[0], ylim[1]]
+            self.leftslideline = self.ui.mainplot.plot(leftx, lefty, 'b--')
+            rightx = [xlim[1], xlim[1]]
+            righty = [ylim[0], ylim[1]]
+            self.rightslideline = self.ui.mainplot.plot(rightx, righty, 'g--')
+            upperx = [xlim[0], xlim[1]]
+            uppery = [ylim[1], ylim[1]]
+            self.upperslideline = self.ui.mainplot.plot(upperx, uppery, 'b--')
+            lowerx = [xlim[0], xlim[1]]
+            lowery = [ylim[0], ylim[0]]
+            self.lowerslideline = self.ui.mainplot.plot(lowerx, lowery, 'g--')
+        
         return
 
 
@@ -203,41 +269,13 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-    #--------------------------------------------------------------------
-    # For testing purpose
-    #--------------------------------------------------------------------
-    def computeMock(self):
-        """ Compute vecx and vecy as mocking
-        """
-        import random, math
-
-        x0 = 0.
-        xf = 1.
-        dx = 0.1
-
-        vecx = []
-        vecy = []
-
-        x = x0
-        while x < xf:
-            y = 0.0
-            vecx.append(x)
-            vecy.append(y)
-            x += dx
-
-        xlim = [x0, xf]
-        ylim = [-1., 1]
-
-        return (vecx, vecy, xlim, ylim)
-
-
 class MockParent:
     """ Mocking parent for universal purpose
     """
     def __init__(self):
         """ Init
         """
-        self._arrayX, self._arrayY, self._noteList = self._parseData()
+        # self._arrayX, self._arrayY, self._noteList = self._parseData()
 
         return
 
@@ -270,6 +308,33 @@ class MockParent:
 
         return x_array, y_array, tlist
 
+    #--------------------------------------------------------------------
+    # For testing purpose
+    #--------------------------------------------------------------------
+    def computeMock(self):
+        """ Compute vecx and vecy as mocking
+        """
+        import random, math
+
+        x0 = 0.
+        xf = 1.
+        dx = 0.1
+
+        vecx = []
+        vecy = []
+
+        x = x0
+        while x < xf:
+            y = 0.0
+            vecx.append(x)
+            vecy.append(y)
+            x += dx
+
+        xlim = [x0, xf]
+        ylim = [-1., 1]
+
+        return (vecx, vecy, xlim, ylim)
+
 
 
     def getData(self, runnumber):
@@ -282,12 +347,11 @@ def testmain(argv):
     """
     parent = MockParent()
 
-
     app = QtGui.QApplication(argv)
 
     # my plot window app
     myapp = Window_GPPlot(parent)
-    myapp.setRuns(['002271'])
+    # myapp.setRuns(['002271'])
     myapp.show()
 
     exit_code=app.exec_()

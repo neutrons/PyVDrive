@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_ReductionSetup.ui'
 #
-# Created: Wed Apr 15 09:58:16 2015
+# Created: Mon Apr 20 15:59:00 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName(_fromUtf8("Form"))
-        Form.resize(886, 934)
+        Form.resize(1041, 972)
         self.gridLayout = QtGui.QGridLayout(Form)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
@@ -526,7 +526,7 @@ class Ui_Form(object):
         self.gridLayout.addLayout(self.horizontalLayout_17, 10, 0, 1, 1)
 
         self.retranslateUi(Form)
-        self.tab_calibSetup.setCurrentIndex(1)
+        self.tab_calibSetup.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):

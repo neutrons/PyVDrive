@@ -108,4 +108,4 @@ paramdict = {
         "WaveLengthLogNames": "skf12.lambda"
         }
 myworkflow.setReductionParameters(projname, paramdict)
-myworkflow.reduce(projname)
+myworkflow.reduceData(projname)

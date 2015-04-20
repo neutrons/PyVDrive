@@ -93,7 +93,8 @@ def addComboboxToWSTCell(table, row, col, itemlist, curindex):
         # Case to add QComboBox
         # check input
         if isinstance(itemlist, list) is False:
-            raise NotImplementedError("Input *itemlist* must be list!")
+            raise NotImplementedError("Input 'itemlist' must be list! Current input is of type '%s'", 
+                    str(type(itemlist)))
         qlist = []
         for item in itemlist:
             qlist.append(str(item))
@@ -194,10 +195,14 @@ class MyAddDataFilesDialog(QtGui.QMainWindow):
     #--------------------------------------------------------------------------
     def appendRows(self, rowlist):
         """ Append rows to table (public method)
+        
+        Arguments: 
+         - rowlist :: list of 2-tuple:  (1) string as data file name, 
+                                        (2) list of vanadium run/None
         """
         # check
         if isinstance(rowlist, list) is False:
-            raise NotImplementedError("Input for appendRows() must be a list of strings")
+            raise NotImplementedError("Input for appendRows() must be a list (of 2-tuple, string and list of int)")
 
         # set value and dictionary
         for irow in xrange(len(rowlist)):
@@ -241,6 +246,10 @@ class MyAddDataFilesDialog(QtGui.QMainWindow):
     def _appendRow(self, rowitemlist):
         """ Append a row to the table (private method)
         Assuming that the input rowitemlist is checked with type and size in the caller
+
+        Arguments: 
+         - rowitemlist :: 2-tuple:  (1) string as data file name, 
+                                    (2) list of vanadium run/None
         """
         # Append a row and set value
         self.ui.tableWidgetTable1.insertRow(self._numRows)
@@ -271,6 +280,12 @@ class MyAddDataFilesDialog(QtGui.QMainWindow):
 
             elif self._colType[itemindex] == 'combobox':
                 # a combo box
+                # correct input
+                if itemvalue is None:
+                    itemvalue = []
+                elif isinstance(itemvalue, str) is False:
+                    itemvalue = [str(itemvalue)]
+
                 cellitem.setText(_fromUtf8(''))
                 self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem) 
                 addComboboxToWSTCell(self.ui.tableWidgetTable1, irow, itemindex, itemvalue, 0)

@@ -59,7 +59,7 @@ class VDriveAPI:
         """ Add data file to project name by run number
         If auto vanadium run location mode is on, then a run-vanadium run is added. 
         
-        Return :: (boolean, string)
+        Return :: (boolean, errmsg, list of 2-tuple, filename/list of van_run (or None))
         """ 
         import vdrive.vulcan_util
 
@@ -106,8 +106,8 @@ class VDriveAPI:
         runwithcallist = runvanrundict.keys()
         for run in runnumberlist:
             print "[DB] Load run '%s'." % (str(run))
-            exist, datafile = vdrive.vulcan_util.locateRun(ipts, run, curproject.getBaseDataPath())
-            if exist is True:
+            runexist, datafile = vdrive.vulcan_util.locateRun(ipts, run, curproject.getBaseDataPath())
+            if runexist is True:
                 if run in runwithcallist:
                     vancalrun = runvanrundict[run]
                 else:
@@ -231,6 +231,19 @@ class VDriveAPI:
             return (True, "Analysis information:\n%s" % (info))
 
         return (False, "Project %s does not exist." % (projname))
+
+
+    def isReductionSuccessful(self, projname):
+        """ Check whether previous reduction is successful or not
+        """
+        # Get project
+        try: 
+            rdproj = self._rProjectDict[projname]
+        except KeyError:
+            return (False, "Project %s does not exist." % (projname))
+
+        # Return
+        return (rdproj.isSuccessful(), '')
         
         
     def newProject(self, projname, projtype):
@@ -379,6 +392,9 @@ class VDriveAPI:
 
     def setReductionFlags(self, projname, filepairlist):
         """ Turn on the flag to reduce for files in the list
+
+        Arguments: 
+         - projname :: string as the name of reduction project
         """
         try:
             project = self._rProjectDict[projname]
@@ -398,15 +414,15 @@ class VDriveAPI:
         return (True, "")
 
         
-    def reduce(self, projname):
+    def reduceData(self, projname):
         """ Reduce the data
         """
         project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
         if project is None:
             raise NotImplementedError(errmsg)
-
         else:
-            project.reduceToPDData()
+            # FIXME - Need a control for normByVanadium!
+            status, errmsg = project.reduceToPDData(normByVanadium=True)
 
         return
         
