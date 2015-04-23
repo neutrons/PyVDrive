@@ -13,6 +13,9 @@ import PyVDrive.vdrive.VDProject
 import vdrive
 import vdrive.VDProject as vp
 
+VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768, 
+        0.7134,0.7566,0.8089,0.8737,0.9571,1.0701,1.2356,1.5133,2.1401]
+
 class VDriveAPI:
     """ Class PyVDrive to mananger a sets of reduction and analysis projects
     """
@@ -168,11 +171,41 @@ class VDriveAPI:
             r = True
 
         return (r, errmsg)
+
+
+    def getReducedData(self, projname, datafilename, unit=None):
+        """ Get reduced data from a ReductionProject
+
+        Arguments: 
+         - unit :: required unit for the output data X.  If None, then no requirement on output unit
+
+        Return :: Dictionary (key = spectrum number, value = 2-tuple (vecx, vecy))
+        """
+        # Validate
+        if self._rProjectDict.has_key(projname) is False:
+            raise NotImplementedError('Project %s does not exist.'%(projname))
+        else:
+            project = self._rProjectDict[projname]
+
+        if project.hasData(datafilename) is False:
+            raise NotImplementedError('Project %s does not have run %s.'%(projname, datafilename))
+
+        # Get data
+        reduceddatadict = project.getReducedData(datafilename, unit)
+        if reduceddatadict is None:
+            raise NotImplementedError('Run %s is not reduced in project %s.'%(datafilename, projname))
+        else:
+            for iws in reduceddatadict.keys():
+                print "[DB UI-Reduced] iws = %d, vecx = ", reduceddatadict[iws][0], ", vecy = ", reduceddatadict[iws][1]
+
+        return reduceddatadict
         
 
     def getDataFiles(self, projname):
         """ Get names of the data files and their calibration files
         of a reduction project
+        
+        Return :: 3-tuple.  Status, Error Message, List of file pair
         """
         # get data files
         try:
@@ -185,6 +218,17 @@ class VDriveAPI:
         datafilelist = project.getDataFilePairs()
 
         return (True, "", datafilelist)
+
+
+    def getProcessedVanadium(self, projname, datafilename):
+        """ Get data sets from processed vanadium runs
+        """
+        project = self._rProjectDict[projname]
+        vandatadict, history = project.getProcessedVanadium(datafilename)
+        print "[DB Ui_VDrive] History = ", history
+
+        return vandatadict
+        
 
     def getProjectNames(self):
         """ Return the names of all projects
@@ -200,8 +244,31 @@ class VDriveAPI:
         """ Get the names of all reduction projects
         """
         return sorted(self._rProjectDict.keys())
-    
-        
+
+
+    def getTempSmoothedVanadium(self, projname, datafilename):
+        """
+        """
+        project = self._rProjectDict[projname]
+        smoothdatadict = project.getTempSmoothedVanadium(datafilename)
+
+        return smoothdatadict
+
+
+    def getVanadiumPeakPosList(self, dmin, dmax):
+        """
+
+        Return :: a list of sorted peak positions in dSpacing
+        """
+        peaklist = []
+        for peakpos in VanadiumPeakPositions:
+            if peakpos >= dmin and peakpos <= dmax:
+                peaklist.append(peakpos)
+        # ENDFOR
+
+        return sorted(peaklist)
+       
+
     def hasProject(self, projname):
         """  Check wehther a certain project does exist
         """
@@ -484,6 +551,26 @@ class VDriveAPI:
         self._checkProjectExistence(projname, "set event filter.")
 
         return
+
+
+    def smoothVanadiumData(self, projname, datafilename):
+        """ Smooth vanadium data
+        """
+        project = self._rProjectDict[projname]
+
+        status, errmsg = project.smoothVanadiumData(datafilename=datafilename)
+
+        return status, errmsg
+
+
+    def stripVanadiumPeaks(self, projname, datafilename):
+        """ Strip vanadium peaks
+        """
+        project = self._rProjectDict[projname]
+
+        status, errmsg = project.stripVanadiumPeaks(datafilename=datafilename)
+
+        return status, errmsg
 
         
     def addLogInformation(self, logstr):

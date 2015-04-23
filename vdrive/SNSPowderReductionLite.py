@@ -67,6 +67,8 @@ class SNSPowderReductionLite:
         # Is vanadium
         self._isVanadiumRun = bool(isvanadium)
 
+        self._anyRunWSList = []
+
         # Define class variables
         if self._isVanadiumRun is True:
             self._vanRunWS = None
@@ -74,12 +76,52 @@ class SNSPowderReductionLite:
             self._vanPeakTol = 0.05 
             self._vanSmoothing = "20,2"
         else:
-            # FIXME - any application???
-            self._anyRunWSList = []
+            # FIXME - Need to get a way to set up these parameters!
+            self._vanRunWS = None
+            self._vanPeakFWHM = 7
+            self._vanPeakTol = 0.05 
+            self._vanSmoothing = "20,2"
+
+        self._tempSmoothedVanadiumWS = None
 
         # general align and focussing
 
         return
+        
+    def getProcessedVanadium(self):
+        """ Get processed vanadium data 
+        """
+        return self._processedVanadiumWS
+
+
+    def getReducedWorkspace(self, unit, listindex=0):
+        """ Get the reduced matrix workspace
+        Arguments: 
+         - unit :: target unit; If None, then no need to convert unit
+        """
+        # FIXME - Need more consideration 
+
+        retws = self._anyRunWSList[listindex]
+       
+        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
+            # no request of target unit or target unit is same as current unit
+            return retws
+
+        # convert unit
+        retws = mantidapi.ConvertUnits(InputWorkspace=retws, 
+                                       OutputWorkspace=retws.name(), 
+                                       Target=unit, 
+                                       EMode='Elastic')
+        
+        # set back to class list
+        self._anyRunWSList[listindex] = retws
+        
+        return retws
+
+    def getTempSmoothedVanadium(self):
+        """
+        """
+        return self._tempSmoothedVanadiumWS
 
 
     def reducePDData(self, params, vrun=None, bkgdrun=None, chopdata=False):
@@ -249,7 +291,7 @@ class SNSPowderReductionLite:
         return
 
 
-    def setSampleLogFilter(self, logname, minvalue, maxvalue, step):
+    def setSampleLogFilter(self, logname, minvalue, maxvalue, step): 
         """ Set event filter by sample log
         """
         # set event mode
@@ -271,6 +313,53 @@ class SNSPowderReductionLite:
         """
         self._filterMode = 'NONE'
 
+
+    def stripVanadiumPeaks(self):
+        """ 
+        """
+        # FIXME - Make sure there is one and only 1 workspace
+        wksp = self._anyRunWSList[0]
+
+        # Strip vanadium peaks in d-spacd
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                      OutputWorkspace=wksp.name(), 
+                                      Target="dSpacing")
+        self._anyRunWSList[0] = wksp
+
+        wksp = mantidapi.StripVanadiumPeaks(InputWorkspace=wksp, 
+                                            OutputWorkspace=wksp.name()+"_van", 
+                                            FWHM=self._vanPeakFWHM, 
+                                            PeakPositionTolerance=self._vanPeakTol,
+                                            BackgroundType="Quadratic", 
+                                            HighBackground=True)
+        self._processedVanadiumWS = wksp
+
+        return (True, '')
+
+    def smoothVanadiumSpectra(self):
+        """
+        """
+        wksp = self._processedVanadiumWS
+
+        # Smooth
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(),
+                                   Target="TOF")
+        wksp = mantidapi.FFTSmooth(InputWorkspace=wksp, 
+                                OutputWorkspace=wksp.name(), 
+                                Filter="Butterworth", 
+                                Params=self._vanSmoothing,
+                                IgnoreXBins=True,
+                                AllSpectra=True)
+        wksp = mantidapi.SetUncertainties(InputWorkspace=wksp, 
+                                       OutputWorkspace=wksp.name())
+        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
+                                   OutputWorkspace=wksp.name(), 
+                                   Target="TOF")
+
+        self._processedVanadiumWS = wksp
+
+        return
 
     #---------------------------------------------------------------------------
     # Private Methods
@@ -328,6 +417,7 @@ class SNSPowderReductionLite:
 
         Return: focussed event workspace
         """
+        # FIXME/TODO ASAP - How to set up parameter???
         # Validate input
         if eventwksp.id() != EVENT_WORKSPACE_ID:
             raise NotImplementedError("Input must be an EventWorkspace for align and focus")

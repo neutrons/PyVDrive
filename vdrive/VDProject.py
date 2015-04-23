@@ -2,6 +2,14 @@ import sys
 import os
 import os.path 
 
+# FIXME : This is for local development only!
+homedir = os.path.expanduser('~')
+mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
+sys.path.append(mantidpath)
+
+import mantid
+import mantid.simpleapi as mantidapi
+
 import SNSPowderReductionLite as PRL
 
 class VDProject:
@@ -12,6 +20,7 @@ class VDProject:
         """
         self._name = projname
         self._dataset = []
+        self._baseDataFileNameList = []
         self._baseDataPath = None 
         
         return
@@ -20,6 +29,7 @@ class VDProject:
         """ Add a new data file to project
         """
         self._dataset.append(datafilename)
+        self._baseDataFileNameList.append(os.path.basename(datafilename))
 
         return
 
@@ -27,11 +37,27 @@ class VDProject:
         """ Delete a data file in the project
         """
         self._dataset.remove(datafilename) 
+        self._baseDataFileNameList.remove(os.path.basename(datafilename))
+
+        return
 
     def getBaseDataPath(self):
         """ Get the base data path of the project
         """
         return self._baseDataPath
+
+
+    def hasData(self, datafilename):
+        """ Check whether project has such data file 
+        """
+        if self._dataset.count(datafilename) == 1:
+            # Check data set with full name
+            return True
+        elif self._baseDataFileNameList.count(datafilename) == 1:
+            # Check data set with base name
+            return True
+
+        return False
 
     def name(self):
         return self._name
@@ -114,6 +140,7 @@ class ReductionProject(VDProject):
             self._dataset.append(datafile)
             # data file and set default to 0th element
             databasefname = os.path.basename(datafile)
+            self._baseDataFileNameList.append(databasefname)
             self._datacalibfiledict[databasefname] = (vcalfilelist, 0)
 
 
@@ -144,6 +171,7 @@ class ReductionProject(VDProject):
         Arguments: 
          - datafilename :: data file name with full path
         """
+        # FIXME - A better file indexing data structure should be used
         # search data file list
         if datafilename not in self._dataset:
             # a base file name is used
@@ -177,6 +205,88 @@ class ReductionProject(VDProject):
             pairlist.append( (datafile, self._datacalibfiledict[datafile]) )
 
         return pairlist
+        
+    def getProcessedVanadium(self, run):
+        """          vandatalist, history = project.
+        """
+        runbasename = os.path.basename(run)
+
+        returndict = None
+        if self._myRunPdrDict.has_key(runbasename):
+            runpdr = self._myRunPdrDict[runbasename]
+            ws = runpdr.getProcessedVanadium()
+            
+            if ws is not None:
+                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
+
+                returndict = {}
+                for iws in xrange(ws.getNumberHistograms()):
+                    vecx = ws.readX(iws)[:]
+                    vecy = ws.readY(iws)[:]
+                    print type(vecx), type(vecy)
+                    returndict[iws] = (vecx, vecy)
+                    print "[DB Vanadium] iws = %d, vecx = "%(iws), str(vecx)
+                # ENDFOR
+            # ENDIF
+        # ENDIF
+        
+        return (returndict, "Blabla;blabla")
+
+
+    def getReducedData(self, run, unit):
+        """ Get reduced data including all spectra
+
+        Arguments: 
+         - unit :: target unit for the output X vector.  If unit is None, then no request
+
+        Return :: dictionary: key = spectrum number, value = 2-tuple (vecx, vecy)
+        """
+        runbasename = os.path.basename(run)
+
+        if self._myRunPdrDict.has_key(runbasename): 
+            runpdr = self._myRunPdrDict[runbasename]
+            ws = runpdr.getReducedWorkspace(unit)
+
+            newws = mantidapi.ConvertToPointData(InputWorkspace=ws)
+
+            returndict = {}
+            for iws in xrange(ws.getNumberHistograms()):
+                vecx = newws.readX(iws)[:]
+                vecy = newws.readY(iws)[:]
+                returndict[iws] = (vecx, vecy)
+            # ENDFOR
+
+        else:
+            # Not reduced
+            returndict = None
+
+        return returndict
+
+
+    def getTempSmoothedVanadium(self, run):
+        """
+        """
+        runbasename = os.path.basename(run)
+        
+        returndict = None
+        if self._myRunPdrDict.has_key(runbasename):
+            runpdr = self._myRunPdrDict[runbasename]
+            ws = runpdr.getTempSmoothedVanadium()
+            
+            if ws is not None:
+                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
+
+                returndict = {}
+                for iws in xrange(ws.getNumberHistograms()):
+                    vecx = ws.readX(iws)[:]
+                    vecy = ws.readY(iws)[:]
+                    returndict[iws] = (vecx, vecy)
+                # ENDFOR
+            # ENDIF
+        # ENDIF
+        
+        return (returndict)
+
 
     def getVanadiumRecordFile(self):
         """
@@ -201,6 +311,13 @@ class ReductionProject(VDProject):
         # ENDFOR
 
         return ibuf
+
+    def hasData(self, datafilename):
+        """ Check whether project has such data file 
+        """
+        # Check data set with full name
+        if self._dataset.count(datafilename) == 1:
+            return True
 
 
     def isSuccessful(self):
@@ -405,7 +522,17 @@ class ReductionProject(VDProject):
 
         return
         
-        
+    def stripVanadiumPeaks(self, datafilename): 
+        """ Strip vanadium peaks from a reduced run
+        """
+        basefname = os.path.basename(datafilename)
+        reductmanager = self._myRunPdrDict[basefname]
+
+        status, errmsg = reductmanager.stripVanadiumPeaks()
+
+        return status, errmsg
+
+
 class AnalysisProject(VDProject):
     """
     """

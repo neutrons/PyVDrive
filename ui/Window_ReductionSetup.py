@@ -20,6 +20,7 @@ import Dialog_AddDataFiles
 
 import PyVDrive
 import PyVDrive.vdrive.vulcan_util
+import Window_GPPlot
 
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
@@ -422,13 +423,26 @@ class MyReductionWindow(QWidget):
         """
         # Create data plot and processing widget 
         if self._myDataPlotWindow is None:
-            self._myDataPlotwindow = Window_DataPlotProcess.MyDataPlotProcessWindow(self)
-
+            self._myDataPlotWindow = Window_GPPlot.Window_GPPlot(self._myParent)
         # Set current project
-        self._myDataPlotwindow.setProject(projname)
+        self._myDataPlotWindow.setProject(projname)
+
+        # Set up run
+        status, errmsg, datafilepairlist = self._myParent.getWorkflowObj().getDataFiles(projname)
+        print datafilepairlist
+        runlist = []
+        for filepair in datafilepairlist:
+            runlist.append(filepair[0])
+        if len(runlist) is False:
+            raise NotImplementedError('Empty run list.')
+        runlist = sorted(runlist)
+        self._myDataPlotWindow.setRuns(runlist)
+
+        # Set current run
+        self._myDataPlotWindow.setCurrentRun(runlist[0])
 
         # Show 
-        self._myDataPlotwindow.show()
+        self._myDataPlotWindow.show()
 
         return
 

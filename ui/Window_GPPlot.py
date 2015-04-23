@@ -51,19 +51,32 @@ class Window_GPPlot(QMainWindow):
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                 self.doNormByCurrent)
-        self.connect(self.ui.pushButton_nomByVanadium, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.pushButton_normByVanadium, QtCore.SIGNAL('clicked()'),
                 self.doNormByVanadium)
+
+        self.connect(self.ui.pushButton_showVanadiumPeaks, QtCore.SIGNAL('clicked()'),
+                self.doShowVanadiumPeaks)
         self.connect(self.ui.pushButton_stripVPeaks, QtCore.SIGNAL('clicked()'),
                 self.doStripVanPeaks)
+        self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
+                self.doSmoothVanadium)
 
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                 self.doQuit)
 
+        # combo boxes
+        self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
+                self.doPlotSelectedSpectra)
+
         # on-graph operation
-        self.ui.graphicsView.mpl_connect('button_press_event', self.on_mouseDownEvent)
+        # FIXME : Disabled for future developing
+        #self.ui.graphicsView_mainPlot.canvas.mpl_connect('button_press_event', self.on_mouseDownEvent)
 
         # Input validator
         # FIXME / TODO - Add validators... 
+
+        # GUI event handling flag
+        self._respondToComboBoxSpectraListChange = False
 
         # Class status variable
         self._runList = []
@@ -95,12 +108,10 @@ class Window_GPPlot(QMainWindow):
     def doPlotRunSelected(self):
         """ Plot the current run
         """
-        # TODO - ASAP ASAP ASAP
-        print "Plot user specified run"
-      
-        # attempt to read line edit input
+        print '------------------------  PLOTTING ------------------------------'
+        # Attempt 1 to read line edit input
         try: 
-            run = self.ui.lineEdit_run.text()
+            run = str(self.ui.lineEdit_run.text())
             if run in self._runList:
                 usecombobox = False
             else:
@@ -108,10 +119,10 @@ class Window_GPPlot(QMainWindow):
         except ValueError as e:
             usecombobox = True
 
-        # attempt to read from combo box
+        # Attempt 2 to read from combo box
         if usecombobox is True:
             try: 
-                run = self.ui.comboBox_runs.currentText()
+                run = str(self.ui.comboBox_runs.currentText())
                 if run not in self._runList: 
                     print  "Run %s from combo box is not a valid run." % (run)
                     return (False, "No line edit input... ")
@@ -121,9 +132,34 @@ class Window_GPPlot(QMainWindow):
 
         print "Run %s is selected." % (run)
         # get current run and plot
-        vecx, vecy, notelist = self._myParent.getData(runnumber=run)
+        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, run)
 
-        self._plot(vecx, vecy, plotindex=0)
+        print "Check point 1"
+
+        # set up the spectrum combobox
+        self._respondToComboBoxSpectraListChange = False
+        self.ui.comboBox_spectraList.clear()
+        self.ui.comboBox_spectraList.addItem('%s: All'%(run))
+
+        # Plot spectra
+        print "Number of spectra: %d" % (len(reduceddatalist.keys()))
+        self._clearPlot()
+        for spectrum in sorted(reduceddatalist.keys()): 
+            vecx, vecy = reduceddatalist[spectrum]
+            label = "%s-%d"%(run, spectrum)
+            self._plot(vecx, vecy, label=label, overplot=True)
+
+            # add to comobox
+            self.ui.comboBox_spectraList.addItem("%s: %d" % (run, spectrum))
+        # ENDFOR
+
+        # Update class variable
+        self._currRun = run
+        self._currSpectrum = 'All'
+
+        self._respondToComboBoxSpectraListChange = True
+
+        print '------------------------  ENDING ------------------------------'
 
         return
         
@@ -135,17 +171,138 @@ class Window_GPPlot(QMainWindow):
         print "Plot previous run"
 
 
-    def doPlotRunRun(self):
+    def doPlotRunNext(self):
         """ Plot the next run
         """
         # TODO - ASAP ASAP ASAP
         print "Plot next run"
 
+
+    def doPlotSelectedSpectra(self):
+        """
+        """
+        # Return if it is not set to reponding mode
+        if self._respondToComboBoxSpectraListChange is False:
+            return
+
+        # Parse option
+        plotspectraoption = str(self.ui.comboBox_spectraList.currentText())
+        terms = plotspectraoption.split(':')
+        runstr = terms[0].strip()
+        spectrumstr = terms[1].strip()
+        if spectrumstr == 'All':
+            print "Plot all spectrum"
+        else:
+            iws = int(spectrumstr)
+            self._currSpectrum = iws
+            print "Plot spectrum %d" % (iws)
+
+        # Get current run and plot
+        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, runstr)
+
+        # Plot spectra
+        firsttouch = True
+        for spectrum in sorted(reduceddatalist.keys()): 
+
+            if spectrumstr == 'All' or iws == spectrum:
+                vecx, vecy = reduceddatalist[spectrum]
+                label = "%s-%d"%(runstr, spectrum)
+
+                if firsttouch is True:
+                    overplot = False
+                else:
+                    overplot = True
+
+                self._plot(vecx, vecy, label=label, overplot=overplot)
+
+                firsttouch = False
+            # ENDIF (spectrum)
+        # ENDFOR
+
+        return
+
+
+    def doShowVanadiumPeaks(self):
+        """ Convert reduced data to d-spacing, re-plot and plot vanadium peaks
+        """
+        if self._currSpectrum == 'All':
+            print "Unable to show vanadium peaks with all spectra on canvas.  Pick up 1"
+
+        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, self._currRun, unit='dSpacing') 
+        
+        vecx, vecy = reduceddatalist[self._currSpectrum] 
+        label = "%s-%d"%(self._currRun, self._currSpectrum)
+        self._plot(vecx, vecy, label=label, overplot=False)
+
+        # Get vanadium peak and plot
+        vanpeakposlist = self._myParent.getWorkflowObj().getVanadiumPeakPosList(min(vecx), max(vecy))
+        self._plotPeakIndicators(vanpeakposlist)
+
+        return
+
+
+    def doQuit(self):
+        """ Quit
+        """
+        self.close()
+
+        return
+
+
+    def doSmoothVanadium(self):
+        """ Smooth vanadium data
+        """
+        status, errmsg = self._myParent.getWorkflowObj().smoothVanadiumData(self._myProjectName, 
+                self._currRun)
+        if status is False:
+            raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
+
+        # get pre-smooth data
+        vandatadict = self._myParent.getWorkflowObj().getProcessedVanadium(self._myProjectName, self._currRun)
+        vanvecx, vanvecy = vandatadict[self._currSpectrum]
+
+        # get smoothed but temporary data
+        smoothdatadict = self._myParent.getWorkflowObj().getTempSmoothedVanadium(self._myProjectName, self._currRun)
+        smoothvecx, smoothvecy = smoothdatadict[self._currSpectrum]
+
+        # plot
+        self._clearPlot()
+        self._plot(vanvecx, vanvecy, label='vanadium', color='black', marker='.', overplot=True)
+        self._plot(smoothvecx, smoothvecy, label='smoothed', color='red', marker='None', overplot=True)
+
+        return
+
     
     def doStripVanPeaks(self):
         """ Strip vanadium peaks
         """
-        # TODO - ASAP ASAP
+        status, errmsg = self._myParent.getWorkflowObj().stripVanadiumPeaks(self._myProjectName, 
+                self._currRun)
+
+        if status is False:
+            raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
+
+        reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, self._currRun)
+        vandatadict = self._myParent.getWorkflowObj().getProcessedVanadium(self._myProjectName, self._currRun)
+        print "[DB] Type of reduced data  dict: ", str(type(reduceddatadict)), " keys: ", str(reduceddatadict.keys())
+        print "[DB] Type of vanadium data dict: ", str(type(vandatadict))    , " keys: ", str(vandatadict.keys())
+        print "[DB] Current spectrum = %d" % (self._currSpectrum)
+
+        origvecx, origvecy = reduceddatadict[self._currSpectrum]
+        vanvecx, vanvecy = vandatadict[self._currSpectrum]
+
+        print "[DB] doStripVanPeaks: OrigX.size = %d, OrigY.size=%d"%(len(origvecx), len(origvecy)), origvecx, origvecy
+        print "[DB] doStripVanPeaks: VanDX.size = %d, VanDY.size=%d"%(len(vanvecx), len(vanvecy)), vanvecx, vanvecy
+
+        diffvecx = vanvecx
+        diffvecy = origvecy - vanvecy
+        maxdiffy = max(diffvecy)
+        diffvecy = diffvecy - 1.5*maxdiffy
+
+        self._clearPlot()
+        self._plot(origvecx, origvecy, label='original', color='black', marker='.', overplot=False) 
+        self._plot(vanvecx, vanvecy, label='van peak stripped', color='red', marker='.', overplot=True)
+        self._plot(diffvecx, diffvecy, label='diff', color='green', marker='+', overplot=True)
 
         return
 
@@ -171,8 +328,18 @@ class Window_GPPlot(QMainWindow):
         if run in self._runList:
             qindex = self._runList.index(run)
             self.ui.comboBox_runs.setCurrentIndex(qindex)
+            self.ui.label_currentRun.setText(str(run))
         else:
             print "Run %s does not exist!" % (run)
+
+        return
+
+
+    def setProject(self, vdprojectname):
+        """ Set VDProject's name  for future reference
+        """
+        self._myProjectName = vdprojectname
+        self.ui.labe_currentProject.setText(vdprojectname)
 
         return
 
@@ -214,6 +381,14 @@ class Window_GPPlot(QMainWindow):
     #---------------------------------------------------------------------------
     # Private methods
     #---------------------------------------------------------------------------
+    def _clearPlot(self):
+        """ 
+        """ 
+        self.ui.graphicsView_mainPlot.clearAllLines()
+
+        return
+
+
     def _initFigureCanvas(self):
         """ Initialize graph
         """
@@ -244,30 +419,47 @@ class Window_GPPlot(QMainWindow):
         return
 
 
-    def _plot(self, vecx, vecy, plotindex):
+    def _plot(self, vecx, vecy, label, overplot, color='black', marker='.', xlabel=None):
         """ Plot data with vec_x and vec_y
         """
-        # Get limits of x
-        xmin = min(vecx)
-        xmax = max(vecx)
-        ymin = min(vecy)
-        ymax = max(vecy)
+        # Remove all previous lines on canvas if overplot is not selected
+        if overplot is False:
+            self.ui.graphicsView_mainPlot.clearAllLines()
 
-        # Reset graph's data range
-        self.ui.mainplot.set_xlim(xmin, xmax)
-        self.ui.mainplot.set_ylim(ymin, ymax)
+        # Plot
+        self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color=color, marker=marker, label=label, xlabel=xlabel)
 
-        # Reset x- and y-axi label
-        self.ui.mainplot.set_xlabel('Time (seconds)', fontsize=13)
-        self.ui.mainplot.set_ylabel('Counts', fontsize=13)
+        # Re-set XY limit
+        if overplot is False:
+            xmin = min(vecx)
+            xmax = max(vecx)
+            dx = xmax-xmin
 
-        # Set up main line
-        matplotlib.pyplot.setp(self.plotlinelist[plotindex], xdata=vecx, ydata=vecy)
+            ymin = min(vecy)
+            ymax = max(vecy)
+            dy = ymax-ymin
 
-        # Show the change
-        self.ui.graphicsView.draw()
+            self.ui.graphicsView_mainPlot.setXYLimits(xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
+        # ENDIF
 
         return
+
+    def _plotPeakIndicators(self, peakposlist):
+        """ Plot indicators for peaks
+        """ 
+        rangex = self.ui.graphicsView_mainPlot.getXLimit()
+        rangey = self.ui.graphicsView_mainPlot.getYLimit()
+
+        for pos in peakposlist:
+            if pos >= rangex[0] and pos <= rangex[1]:
+                vecx = numpy.array([pos, pos])
+                vecy = numpy.array([rangey[0], rangey[1]])
+                self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color='red', linestyle='--') 
+        # ENDFOR
+        
+        return
+
+
 
 class MockParent:
     """ Mocking parent for universal purpose

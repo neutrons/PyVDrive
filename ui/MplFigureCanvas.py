@@ -127,6 +127,16 @@ class Qt4MplPlotView(QtGui.QWidget):
         """ Get ...
         """
         return self.canvas.getLastPlotIndexKey()
+
+    def getXLimit(self):
+        """ Get limit of Y-axis
+        """
+        return self.canvas.axes.get_xlim()
+
+    def getYLimit(self):
+        """ Get limit of Y-axis
+        """
+        return self.canvas.axes.get_ylim()
         
     def removePlot(self, ikey):
         """
@@ -185,15 +195,15 @@ class Qt4MplPlotView(QtGui.QWidget):
             
         return (marker, color)
         
-    def setXYLimit(self, xmin, xmax, ymin, ymax):
-        """ Set X-Y limit automatically
-        """
-        self.canvas.axes.set_xlim([xmin, xmax])
-        self.canvas.axes.set_ylim([ymin, ymax])
-        
-        self.canvas.draw()
-        
-        return
+    #def setXYLimit(self, xmin, xmax, ymin, ymax):
+    #    """ Set X-Y limit automatically
+    #    """
+    #    self.canvas.axes.set_xlim([xmin, xmax])
+    #    self.canvas.axes.set_ylim([ymin, ymax])
+    #    
+    #    self.canvas.draw()
+    #    
+    #    return
         
     def setAutoLineMarkerColorCombo(self):
         """
@@ -221,6 +231,7 @@ class Qt4MplCanvas(FigureCanvas):
         """
         # Instantialize matplotlib Figure
         self.fig = Figure()
+        self.fig.patch.set_facecolor('white')
         self.axes = self.fig.add_subplot(111) # return: matplotlib.axes.AxesSubplot
 
         # Initialize parent class and set parent
