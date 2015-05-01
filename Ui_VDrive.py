@@ -6,12 +6,14 @@
 import os
 import pickle
 
-import PyVDrive
-import PyVDrive.vdrive
-import PyVDrive.vdrive.VDProject
+#import PyVDrive
+#import PyVDrive.vdrive
+#import PyVDrive.vdrive.VDProject
+#import PyVDrive.vdrive.FacilityUtil as futil
 
 import vdrive
-import vdrive.VDProject as vp
+import vdrive.VDProject as vdproj
+import vdrive.FacilityUtil as futil
 
 VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768, 
         0.7134,0.7566,0.8089,0.8737,0.9571,1.0701,1.2356,1.5133,2.1401]
@@ -33,6 +35,7 @@ class VDriveAPI:
        
         # defaults
         self._myInstrument = "VULCAN"
+        self._dataRootPath = '/SNS/'
         self._baseDataPath = '/SNS/%s' % (self._myInstrument)
         self._vanadiumRecordFile = None
 
@@ -335,13 +338,13 @@ class VDriveAPI:
         # new project and register
         if projtype == 'reduction': 
             # create a reduction project
-            newproject = vp.ReductionProject(projname)
+            newproject = vdproj.ReductionProject(projname)
             self._vanCalibCriteriaDict[projname] = [] 
             self._rProjectDict[projname] = newproject
             self._rProjectDict[projname].setVanadiumDatabaseFile(self._vanadiumRecordFile)
         elif projtype == 'analysis':
             # create an analysis project
-            newproject = vp.AnalysisProject(projname)
+            newproject = vdproj.AnalysisProject(projname)
             self._aProjectDict[projname] = newproject
         
         newproject.setBaseDataPath(self._baseDataPath)
@@ -406,7 +409,31 @@ class VDriveAPI:
 
         return (True, "")
 
-    
+
+    def searchFilesIPTS(self, projectname, ipts):
+        """ Search files under IPTS
+
+        Exceptions: KeyError, RuntimeError
+
+        Return :: (run-status-flag, error message)
+        """
+        # Get project 
+        vdriveproj = self._rProjectDict[projectname]
+
+        # Search runs under IPTS according
+        myfacility = futil.FacilityUtilityHelper(self._myInstrument)
+        myfacility.setRootPath(self._dataRootPath)
+
+        doexist = myfacility.setIPTS(ipts)
+        if doexist is False:
+            raise RuntimeError("IPTS %d does not exist." % (ipts))
+
+        # FIXME: Make 
+        myfacility.searchRuns()
+
+        return (True, '')
+
+
     # def setDefaultDataPath(self, basedatapath):
     #     """ Set the global/default data path for all projects
     #     """

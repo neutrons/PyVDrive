@@ -1,8 +1,9 @@
+#pylint: disable=invalid-name,relative-import,too-many-lines,too-many-instance-attributes,too-many-statements,line-too-longtoo-many-locals,attribute-defined-outside-init
 # -*- coding: utf-8 -*-
 
 # Form implementation generated from reading ui file 'ui_GPPlot.ui'
 #
-# Created: Thu Apr 23 10:27:54 2015
+# Created: Fri May  1 14:41:21 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!

@@ -78,10 +78,14 @@ class VDrivePlot(QtGui.QMainWindow):
         self.connect(self.ui.actionLog_Window, QtCore.SIGNAL('triggered()'),
                 self.doShowAppLog)
 
+        # sub-menu 'Quick Start'
+        self.connect(self.ui.actionStart_New_Project, QtCore.SIGNAL('triggered()'),
+                self.doNewProject)
+
         # Project tree widget
         self.connect(self.ui.treeWidget_Project, QtCore.SIGNAL('itemSelectionChanged()'),
             self.doChangeTreeMenu)
- 
+
         # This is the right way to use right mouse operation for pop-up sub menu 
         addAction = QtGui.QAction('Add', self)
         addAction.triggered.connect(self.doAddFile)
@@ -406,13 +410,35 @@ class VDrivePlot(QtGui.QMainWindow):
         print "Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
                 self.newprojectname, self.newprojecttype)
 
-
-        # initlalize a new project and register
+        # Initlalize a new project and register
         self._myWorkflow.newProject(projname = self.newprojectname, projtype = self.newprojecttype)
 
-        # added to project tree
-        project1 = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
-        self.ui.treeWidget_Project.expandItem(project1) 
+        # Added to project tree
+        newprojectwidget = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
+        self.ui.treeWidget_Project.expandItem(newprojectwidget) 
+
+        # Add runs if the given project name is a valid IPTS number by NEW WINDOW
+        # NOTE: Feature to add files automatically will launch another window.  Thus it is better to 
+        #       put it in GUI rather than workflow control class
+        if self.newprojectname.lower().startswith('ipts') is True: 
+            ipts = None
+            if self.newprojectname[4].isdigit() is True:
+                try: 
+                    ipts = int(self.newprojectname[4:])
+                except ValueError:
+                    self._logError("Unable to convert %s to IPTS number." % (self.newprojectname[4:]))
+            else:
+                try: 
+                    ipts = int(self.newprojectname[5:])
+                except ValueError:
+                    self._logError("Unable to convert %s to IPTS number." % (self.newprojectname[5:]))
+            
+            if ipts is not None:
+                status, errmsg = self._myWorkflow.searchFilesIPTS(self.newprojectname, ipts)
+                if status is True:
+                    self.showITPSFileWindow()
+            # ENDIF
+        # ENDIF
 
         return
 
@@ -499,7 +525,28 @@ class VDrivePlot(QtGui.QMainWindow):
 
     def renameSlot(self):
         print "Renaming slot called"
-        
+
+
+
+    def showITPSFileWindow(self, projname):
+        """
+        """
+        # TODO Doc
+        self._iptsRunWindow = SelectRunsDialog(self)
+       
+        # TODO ASAP (1) Make it work!
+        self._registerSubWindow(self._iptsRunWindow)
+
+        # Append rows: each row is a period of experiments
+        runinfolist = self._myWorkflow.getIptsRunInfo(projname)
+        for rinfo in runinfolist:
+            self._iptsRunWindow.appendRow(rinfo[0], rinfo[1], rinfo[2], rinfo[3], True)
+
+        # Show window
+        self._iptsRunWindow.show()
+
+        return
+
 
     def showProjectNameWindow(self, signal):
         """
