@@ -49,6 +49,11 @@ class SelectRunsDialog(QtGui.QMainWindow):
         self.ui.tableWidget.setColumnCount(5)
         self.ui.tableWidget.setHorizontalHeaderLabels(headerlist)
 
+        # Table controlling variable
+        self._numRows = self.ui.tableWidget.rowCount()
+        self._currRowIndex = 0
+
+
         return
 
     # FIXME - Clean the code!
@@ -57,23 +62,34 @@ class SelectRunsDialog(QtGui.QMainWindow):
     # Methods to access, set up and update table
     #--------------------------------------------------------------------------
     def appendRow(self, startdate, enddate, startrun, endrun, select):
-        """ Append a row to table
+        """ Append a row to the project table
         """
-        # TODO - Doc
-        # TODO - Check input
-        startdate = str(startdate)
-        enddate = str(enddate)
-        startrun = str(startrun)
-        endrun = str(endrun)
+        # Validate input
+        try:
+            startrun = int(startrun)
+            endrun = int(endrun)
+            if isinstance(select, bool) is False:
+                raise ValueError("Select should be a boolean")
+        except ValueError as e:
+            raise e
+        
+        # Format to strings
+       startrun = str(int(startrun))
+       endrun = str(endrun)
+       startdate = str(startdate)
+       enddate = str(enddate)
 
         # Append a row and set value
-        # FIXME - Need a class variable to judge whether a new row is required or not
-        self.ui.tableWidget.insertRow(0)
-        # TODO self._numRows += 1
-        # FIXME irow should be set properly
-        irow = 0
+        if self._currRowIndex == self._numRows-1:
+            # current row is the last row: insert a row
+            self.ui.tableWidget.insertRow(self._currRowIndex)
+            self._numRows += 1
+
+        # Update current row
+        self._currRowIndex += 1
 
         # start date
+        irow = self._currRowIndex
         cellitem=QtGui.QTableWidgetItem()
         cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
         cellitem.setText(_fromUtf8(startdate)) 
@@ -96,13 +112,12 @@ class SelectRunsDialog(QtGui.QMainWindow):
         cellitem.setText(_fromUtf8(endrun)) 
         self.ui.tableWidget.setItem(irow, 3, cellitem)
 
-        # TODO - Add widget for the selection
-
-        # Resize!
+        # FIXME/TEST - Add widget for the selection
+        gutil.addTableCheckbox(self.ui.tableWidget, irow, 4, select)
+        
+        # Resize of the width of each new cell
         self.ui.tableWidget.resizeColumnsToContents()
-        #tableResult->setVisible(false);
-        #tableResult->resizeColumnsToContents();
-        #tableResult->setVisible(true);
+
         return
 
 

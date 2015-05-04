@@ -234,10 +234,13 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
         
-    def doDeleteRun(self):
+    def doDeleteRunFromProjTree(self):
+        """ Delete a run from a project from the project tree
         """
-        """
-        # TODO - Docs and make it work!
+        # Delete runs from a project
+        projectname, run = self._getCurrentProjectFromTree()
+
+        self._myWorflow.deleteRunFromProject(projectname, run)
 
         return
 
@@ -333,7 +336,7 @@ class VDrivePlot(QtGui.QMainWindow):
             projnames = sorted(self._myWorkflow.getProjectNames())
 
             self._reductionWindow.setProjectNames(projnames) 
-            self._openSubWindows.append(self._reductionWindow)
+            self._registerSubWindow(self._reductionWindow)
 
         # Find out which project to save
         # FIXME - a method???
@@ -354,7 +357,7 @@ class VDrivePlot(QtGui.QMainWindow):
         """ Show App Log
         """
         # 2 status
-        print "[DB] action log window is checked = ", self.ui.actionLog_Window.isChecked()
+        self._logDebug("Action log window is checked = ", self.ui.actionLog_Window.isChecked())
         # NOTE: this method is called after the action.  so if it is not checked before.  after it is clicked,
         #       the state is changed to isChecked() = True
         if self.ui.actionLog_Window.isChecked() is True:
@@ -364,7 +367,7 @@ class VDrivePlot(QtGui.QMainWindow):
                 self._myLogDialog = dlglog.MyAppLogDialog(self)
                 self.myLogSignal.connect(self._myLogDialog.setText)
             self._myLogDialog.show()
-            self._openSubWindows.append(self._myLogDialog)
+            self._registerSubWindow(self._myLogDialog)
 
         else:
             # close
@@ -529,12 +532,10 @@ class VDrivePlot(QtGui.QMainWindow):
 
 
     def showITPSFileWindow(self, projname):
+        """ Show the child window for files/runs belonged to an IPTS
         """
-        """
-        # TODO Doc
+        # Start a new window and register it
         self._iptsRunWindow = SelectRunsDialog(self)
-       
-        # TODO ASAP (1) Make it work!
         self._registerSubWindow(self._iptsRunWindow)
 
         # Append rows: each row is a period of experiments
@@ -553,7 +554,7 @@ class VDrivePlot(QtGui.QMainWindow):
         """           
         self._projnamewindow = npj.MyProjectNameWindow(None)
         self._projnamewindow.show() 
-        self._openSubWindows.append(self._projnamewindow)
+        self._registerSubWindow(self._projnamewindow)
     
         return
 
@@ -631,7 +632,8 @@ class VDrivePlot(QtGui.QMainWindow):
     def _exitApp(self):
         """ Close all the child windows before 
         """
-        # TODO - Need to set up some information
+        # FIXME - Who called me???
+        raise NotImplementedError("Who calls me?")
 
         return
         
@@ -680,10 +682,23 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
+    def _registerSubWindow(self, windowobj):
+        """ Register a child window for VDrivePlot
+        """
+        # Check whether this window has been registered
+        if self._openSubdWindows.count(windowobj) > 0:
+            self._logError("Child window has been appended to child windows list already.")
+            raise RuntimeError("Programming error for registering one window twice.")
+
+        self._childWindows.append(windowobj)
+        self._openSubWindows.append(
+
+        return
+
+
     def _setTreeLevel1Actions(self):         
+        """ Set project level actions for project tree
         """
-        """
-        # TODO - Docs
         # This is the right way to use right mouse operation for pop-up sub menu 
         addAction = QtGui.QAction('Add', self)
         addAction.triggered.connect(self.doAddFile)
@@ -696,12 +711,11 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
     def _setTreeLevel2Actions(self):         
+        """ Set run level actions for project tree
         """
-        """
-        # TODO - Docs
         # This is the right way to use right mouse operation for pop-up sub menu 
         delAction = QtGui.QAction('Delete (Run)', self)
-        delAction.triggered.connect(self.doDeleteRun)
+        delAction.triggered.connect(self.doDeleteRunFromProjTree)
         self.ui.treeWidget_Project.addAction(delAction)
 
         return
