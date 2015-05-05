@@ -42,6 +42,7 @@ class VDriveAPI:
         # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, 
         # ... warning and error
         self._myLogList = []
+        self._projRunInfoDict = {}
 
         self._loadConfig()
 
@@ -221,6 +222,29 @@ class VDriveAPI:
         datafilelist = project.getDataFilePairs()
 
         return (True, "", datafilelist)
+
+
+    def getIptsRunInfo(self, ipts):
+        """ Get runs' information of an IPTS under a project name
+        """
+        # Validate
+        if self._iptsRunDict.has_key(ipts) is False:
+            raise KeyError('In iptsRunDict, there is no key for IPTS %d'%(ipts))
+
+        periodtimefilelist = self._iptsRunDict[ipts]
+
+        for timefilelsit in periodtimefilelist: 
+            startrun_ctime = time.ctime(timefilelist[0][0])
+            endrun_ctime = time.ctime(timefilelist[-1][0])
+            startrun = timefilelist[0][1]
+            endrun = timefilelist[-1][1]
+
+            returnlist.append([startrun_ctime, endrun_ctime, startrun, endrun])
+
+        # ENDFOR
+
+        return returnlist
+
 
 
     def getProcessedVanadium(self, projname, datafilename):
@@ -415,7 +439,7 @@ class VDriveAPI:
 
         Exceptions: KeyError, RuntimeError
 
-        Return :: (run-status-flag, error message)
+        Return :: (run-status-flag, error message/dictionary
         """
         # Get project 
         vdriveproj = self._rProjectDict[projectname]
@@ -428,8 +452,8 @@ class VDriveAPI:
         if doexist is False:
             raise RuntimeError("IPTS %d does not exist." % (ipts))
 
-        # FIXME: Make 
-        myfacility.searchRuns()
+        # Search runs 
+        self._projRunInfoDict[projname][ipts] = myfacility.searchRuns()
 
         return (True, '')
 

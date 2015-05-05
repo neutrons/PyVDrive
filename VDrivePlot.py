@@ -439,7 +439,7 @@ class VDrivePlot(QtGui.QMainWindow):
             if ipts is not None:
                 status, errmsg = self._myWorkflow.searchFilesIPTS(self.newprojectname, ipts)
                 if status is True:
-                    self.showITPSFileWindow()
+                    self.showIPTSFileWindow()
             # ENDIF
         # ENDIF
 
@@ -531,7 +531,7 @@ class VDrivePlot(QtGui.QMainWindow):
 
 
 
-    def showITPSFileWindow(self, projname):
+    def showIPTSFileWindow(self, projname):
         """ Show the child window for files/runs belonged to an IPTS
         """
         # Start a new window and register it

@@ -70,6 +70,9 @@ class FacilityUtilityHelper(object):
         """ Search files under IPTS imbed
 
         Exceptions: NotImplementedError, 
+
+        Return: a list of list of 2-tuple.  Each element list contains runs that are in same experiment.  
+                Element of sub list is 2-tuple as epoch time and file name with full path
         """
         # Check status
         if self._iptsNo is None:
@@ -86,13 +89,36 @@ class FacilityUtilityHelper(object):
                 filenamelist.append(filename)
         # ENDFOR
 
-        # TODO 1: Get detailed creation time information
+        # Get detailed creation time information: element is 2-tuple (epochtime, filename)
+        timefilelist = []
+        for filename in filenamelist:
+            create_time = os.path.getctime(filename)
+            timefilelist.append((create_time, filename))
+        # ENDFOR
+        timefilelist = sorted(timefilelist)
 
-        # TODO 2: Find delta T more than 2 days
+        # Find delta T more than 2 days
+        # FIXME - Use 7 days as default
+        deltaT = 7*24*3600
 
-        # TODO 3: Split Files into different groups and get the begin and end time 
+        periodlist = []
+        sublist = time0]
+        timeprev = timefilelist[0][0]
+       
+        for i in xrange(1, len(timefilelist)):
+            timenow = timefilelist[i][0]
+            if timenow-timeprev < deltaT:
+                # append current one to the list
+                sublist.append(timefilelist[i])
+            else:
+                # start a new element in the period list as time are too sparse
+                periodlist.append(sublist[:])
+                sublist = []
+            # ENDIF
+        # ENDFOR
+        periodlist.append(sublist)
 
-        return sorted(filenamelist)
+        return periodlist
 
 
     def setIPTS(self, ipts):

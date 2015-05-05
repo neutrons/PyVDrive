@@ -450,23 +450,28 @@ class SNSPowderReductionLite:
         return outws
 
 
-    def _filterBadPulese(self, wksp):
+    def _filterBadPulese(self, wksp, lowercutoff):
         """ Filter bad pulse
+        Arguments: 
+         - lowercutoff :: float as (self._filterBadPulses)
         """
-        # TODO - ASAP
-        if self._filterBadPulses > 0.:
-            isEventWS = isinstance(wksp, mantid.api._api.IEventWorkspace)
-            if isEventWS is True:
-                # Event workspace: record original number of events
-                numeventsbefore =  wksp.getNumberEvents()
+        # Validate
+        isEventWS = isinstance(wksp, mantid.api._api.IEventWorkspace)
+        if isEventWS is True:
+            # Event workspace: record original number of events
+            numeventsbefore =  wksp.getNumberEvents()
+        else:
+            raise RuntimeError("Input workspace %s is not event workspace but of type %s." % (
+                wksp.name(), wksp.__class__.__name__))
+        # ENDIFELSE
 
-            wksp = api.FilterBadPulses(InputWorkspace=wksp, OutputWorkspace=wksp,
-                                       LowerCutoff=self._filterBadPulses)
+        wksp = mantidapi.FilterBadPulses(InputWorkspace=wksp, OutputWorkspace=wksp, 
+                LowerCutoff=)
 
-            if isEventWS is True:
-                # Event workspace
-                self.log().information("FilterBadPulses reduces number of events from %d to %d (under %s percent) of workspace %s." % (\
-                        numeventsbefore, wksp.getNumberEvents(), str(self._filterBadPulses), str(wksp)))
+        print "[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) of workspace %s." % (
+                numeventsbefore, wksp.getNumberEvents(), lowercutoff, str(wksp))
+
+        return wksp
 
     
     def _loadData(self):
@@ -485,19 +490,14 @@ class SNSPowderReductionLite:
         return rawinpws
 
 
-    def _noralizeByCurrent(self):
+    def _noralizeByCurrent(self, wksp):
+        """  Normalize the workspace by proton charge, i.e., current
         """ 
-        """
-        # TODO - ASAP
-        try:
-            if self._normalisebycurrent is True:
-                vanRun = api.NormaliseByCurrent(InputWorkspace=vanRun,
-                                                OutputWorkspace=vanRun)
-                vanRun.getRun()['gsas_monitor'] = 1
-        except Exception, e:
-            self.log().warning(str(e))
+        outws = mantidapi.NormaliseByCurrent(InputWorkspace=wksp,
+                                             OutputWorkspace=vanRun)
+        outws.getRun()['gsas_monitor'] = 1
 
-
+        outws
 
         return
 

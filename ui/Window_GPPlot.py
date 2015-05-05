@@ -94,14 +94,18 @@ class Window_GPPlot(QMainWindow):
     def doNormByCurrent(self):
         """ Normalize by current/proton charge
         """
-        # TODO - ASAP
+        execstatus, errmsg = self.getWorkflow().normalizeByCurrent(self._currProjectName, self._currRun)
+        if execstatus is False:
+            self.getLog().logError(errmsg)
 
         return
 
     def doNormByVanadium(self):
         """ Normalize by vanadium spectrum
         """
-        # TODO - ASAP
+        execstatus, errmsg = self.getWorkflow().normalizeByVanadium(self._currProjectName, self._currRun)
+        if execstatus is False:
+            self.getLog().logError(errmsg)
 
         return
 
@@ -167,13 +171,56 @@ class Window_GPPlot(QMainWindow):
     def doPlotRunPrev(self):
         """ Plot the previous run
         """
-        # TODO - ASAP ASAP ASAP
-        print "Plot previous run"
+        # Get previous run
+        if self._currRunIndex == 0:
+            self.getLog().logError("There is no previous run.  Run %s is the first." % (self._currRun))
+        else:
+            self._currRunIndex -= 1
+            self._currRun = self._runList[self._currRunIndex]
+       
+        # FIXME - Refactor!
+        print "Run %s is selected." % (run)
+        # get current run and plot
+        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, run)
 
+        print "Check point 1"
+
+        # set up the spectrum combobox
+        self._respondToComboBoxSpectraListChange = False
+        self.ui.comboBox_spectraList.clear()
+        self.ui.comboBox_spectraList.addItem('%s: All'%(run))
+
+        # Plot spectra
+        print "Number of spectra: %d" % (len(reduceddatalist.keys()))
+        self._clearPlot()
+        for spectrum in sorted(reduceddatalist.keys()): 
+            vecx, vecy = reduceddatalist[spectrum]
+            label = "%s-%d"%(run, spectrum)
+            self._plot(vecx, vecy, label=label, overplot=True)
+
+            # add to comobox
+            self.ui.comboBox_spectraList.addItem("%s: %d" % (run, spectrum))
+        # ENDFOR
+
+        # Update class variable
+        self._currRun = run
+        self._currSpectrum = 'All'
+
+        self._respondToComboBoxSpectraListChange = True
+
+        print '------------------------  ENDING ------------------------------'
+
+        return
 
     def doPlotRunNext(self):
         """ Plot the next run
         """
+        if self._currRunIndex == len(self._runList)-1:
+            self.getLog().logError("There is no next run.  Run %d is the last run in the list." % (self._currRunIndex))
+        else:
+        self._runList = []
+        self._currRun = None
+        self._currRunIndex = 0
         # TODO - ASAP ASAP ASAP
         print "Plot next run"
 
