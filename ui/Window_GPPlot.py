@@ -216,13 +216,13 @@ class Window_GPPlot(QMainWindow):
         """ Plot the next run
         """
         if self._currRunIndex == len(self._runList)-1:
-            self.getLog().logError("There is no next run.  Run %d is the last run in the list." % (self._currRunIndex))
+            self.getLog().logError("There is no next run.  Run %d is the last run in the list." % (
+                self._currRunIndex))
         else:
-        self._runList = []
-        self._currRun = None
-        self._currRunIndex = 0
-        # TODO - ASAP ASAP ASAP
-        print "Plot next run"
+            # TODO - ASAP ASAP ASAP
+            raise NotImplementedError("ASAP")
+
+        return
 
 
     def doPlotSelectedSpectra(self):

@@ -66,12 +66,13 @@ class FacilityUtilityHelper(object):
         return timelist
 
 
-    def searchRuns(self):
+    def searchRuns(self, deltaDays):
         """ Search files under IPTS imbed
 
         Exceptions: NotImplementedError, 
 
-        Return: a list of list of 2-tuple.  Each element list contains runs that are in same experiment.  
+        Return: a list of list of 2-tuple.  
+                Each element list contains runs that are in same experiment.  
                 Element of sub list is 2-tuple as epoch time and file name with full path
         """
         # Check status
@@ -91,32 +92,46 @@ class FacilityUtilityHelper(object):
 
         # Get detailed creation time information: element is 2-tuple (epochtime, filename)
         timefilelist = []
+        print "[DB] Number of files = ", len(filenamelist)
         for filename in filenamelist:
             create_time = os.path.getctime(filename)
+            print "Creation time = ", create_time, filename
             timefilelist.append((create_time, filename))
         # ENDFOR
         timefilelist = sorted(timefilelist)
 
         # Find delta T more than 2 days
-        # FIXME - Use 7 days as default
-        deltaT = 7*24*3600
+        # TODO : Need an elegant algorithm/method to set up the output list
+        deltaT = deltaDays*24*3600.
+        print "[DB] Delta T = %f" % (deltaT)
 
         periodlist = []
-        sublist = time0]
+        sublist = [timefilelist[1]]
         timeprev = timefilelist[0][0]
        
         for i in xrange(1, len(timefilelist)):
             timenow = timefilelist[i][0]
-            if timenow-timeprev < deltaT:
+            timediff = timenow-timeprev
+            if  timediff < deltaT:
                 # append current one to the list
                 sublist.append(timefilelist[i])
             else:
                 # start a new element in the period list as time are too sparse
                 periodlist.append(sublist[:])
-                sublist = []
+                # append first one 
+                sublist = [timefilelist[i]]
+                timeprev = timefilelist[i][0]
+                print "[DB] Appending file %d  b/c time diff = %f" % (i, timediff)
             # ENDIF
+
         # ENDFOR
         periodlist.append(sublist)
+
+        # DEBUG OUTPUT
+        gindex = 0
+        for sublist in periodlist:
+            print "Group ", gindex, " Start @ ", sublist[0][0], " Size = ", len(sublist)
+            gindex += 1
 
         return periodlist
 

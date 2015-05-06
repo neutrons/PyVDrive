@@ -20,11 +20,13 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-import GuiUtility as guiutil
+import GuiUtility as gutil
 
 class SelectRunsDialog(QtGui.QMainWindow):
     """ GUI (sub) application to select runs
     """
+    mySetupSignal = QtCore.pyqtSignal(list)
+
     # Class
     def __init__(self, parent):
         """ setup main window
@@ -51,155 +53,17 @@ class SelectRunsDialog(QtGui.QMainWindow):
 
         # Table controlling variable
         self._numRows = self.ui.tableWidget.rowCount()
-        self._currRowIndex = 0
+        self._currRowIndex = -1
 
+        # Project related parameters
+        self._myProjectName = "N/A"
+        self._myIPTS = -1
 
-        return
-
-    # FIXME - Clean the code!
-
-    #--------------------------------------------------------------------------
-    # Methods to access, set up and update table
-    #--------------------------------------------------------------------------
-    def appendRow(self, startdate, enddate, startrun, endrun, select):
-        """ Append a row to the project table
-        """
-        # Validate input
-        try:
-            startrun = int(startrun)
-            endrun = int(endrun)
-            if isinstance(select, bool) is False:
-                raise ValueError("Select should be a boolean")
-        except ValueError as e:
-            raise e
-        
-        # Format to strings
-       startrun = str(int(startrun))
-       endrun = str(endrun)
-       startdate = str(startdate)
-       enddate = str(enddate)
-
-        # Append a row and set value
-        if self._currRowIndex == self._numRows-1:
-            # current row is the last row: insert a row
-            self.ui.tableWidget.insertRow(self._currRowIndex)
-            self._numRows += 1
-
-        # Update current row
-        self._currRowIndex += 1
-
-        # start date
-        irow = self._currRowIndex
-        cellitem=QtGui.QTableWidgetItem()
-        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(startdate)) 
-        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
-        #cellitem.setSizePolicy(sizePolicy)
-        self.ui.tableWidget.setItem(irow, 0, cellitem)
-
-        cellitem=QtGui.QTableWidgetItem()
-        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(enddate)) 
-        self.ui.tableWidget.setItem(irow, 1, cellitem)
-
-        cellitem=QtGui.QTableWidgetItem()
-        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(startrun)) 
-        self.ui.tableWidget.setItem(irow, 2, cellitem)
-
-        cellitem=QtGui.QTableWidgetItem()
-        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(endrun)) 
-        self.ui.tableWidget.setItem(irow, 3, cellitem)
-
-        # FIXME/TEST - Add widget for the selection
-        gutil.addTableCheckbox(self.ui.tableWidget, irow, 4, select)
-        
-        # Resize of the width of each new cell
-        self.ui.tableWidget.resizeColumnsToContents()
+        # TODO doc...
+        self.mySetupSignal.connect(self._myParent.evtSetupShowReductionWindow)
 
         return
 
-
-    def setupTable(self, tableheaderdict):
-        """ Set up Table dynamically
-        """
-        # check input
-        if isinstance(tableheaderdict, dict) is False:
-            raise NotImplementedError("setupTable takes dictoary as input.")
-
-        # set up header
-        headerlist = tableheaderdict['Headers']
-        if isinstance(headerlist, list) is False:
-            raise NotImplementedError("Element 'Headers' is not list.")
-        self._numCols = len(headerlist)
-        self.ui.tableWidgetTable1.setColumnCount(self._numCols)
-        self.ui.tableWidgetTable1.setHorizontalHeaderLabels(headerlist)
-
-        self._colType = tableheaderdict['CellType']
-        if isinstance(self._colType, list) is False or len(self._colType) != self._numCols:
-            raise NotImplementedError("Element 'CellType' is not list or has different \
-                    size than 'Headers'")
-
-        # row
-        self._numRows = 0
-
-        return
-
-    def _appendRow(self, rowitemlist):
-        """ Append a row to the table (private method)
-        Assuming that the input rowitemlist is checked with type and size in the caller
-
-        Arguments: 
-         - rowitemlist :: 2-tuple:  (1) string as data file name, 
-                                    (2) list of vanadium run/None
-        """
-        # Append a row and set value
-        self.ui.tableWidgetTable1.insertRow(self._numRows)
-        irow = self._numRows
-        self._numRows += 1
-
-        # Set up the items of the new row
-        useit = True
-        for itemindex in xrange(len(rowitemlist)):
-            # get value
-            itemvalue = rowitemlist[itemindex]
-
-            # get a widget for item
-            cellitem=QtGui.QTableWidgetItem()
-            cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-
-            if self._colType[itemindex] == 'text': 
-                # regualr text/label 
-                cellitem.setText(_fromUtf8(itemvalue)) 
-                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem)
-
-            elif self._colType[itemindex] == 'checkbox':
-                # a check box
-                cellitem.setText(_fromUtf8(''))
-                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem)
-                state = itemvalue
-                addCheckboxToWSTCell(self.ui.tableWidgetTable1, irow, itemindex, state)
-
-            elif self._colType[itemindex] == 'combobox':
-                # a combo box
-                # correct input
-                if itemvalue is None:
-                    itemvalue = []
-                elif isinstance(itemvalue, str) is False:
-                    itemvalue = [str(itemvalue)]
-
-                cellitem.setText(_fromUtf8(''))
-                self.ui.tableWidgetTable1.setItem(irow, itemindex, cellitem) 
-                addComboboxToWSTCell(self.ui.tableWidgetTable1, irow, itemindex, itemvalue, 0)
-
-            else:
-                raise NotImplementedError('Cell type %s is not supported!' % (self._colType[itemindex]))
-
-            # ENDIFELSE
-        # ENDFOR
-
-        return 
      
     #--------------------------------------------------------------------------
     # Methods to handling GUI events
@@ -221,65 +85,105 @@ class SelectRunsDialog(QtGui.QMainWindow):
         """ Save the choice and quit: this is very specific to the caller!
         """
         # Get the list to return
-        returnlist = []
-        numrows = self.ui.tableWidgetTable1.rowCount()
-        for irow in xrange(numrows):
-            try:
-                term0 = str(self.ui.tableWidgetTable1.item(irow, 0).text())
-                term1 = str(self.ui.tableWidgetTable1.cellWidget(irow, 1).currentText())
-                returnlist.append([term0, term1])
-                print "%s\t%s" % (term0, term1)
-            except AttributeError:
-                break
-        # ENDIF
+        signallist = [self._myProjectName, self._myIPTS] 
 
-        # Emit signal
-        self.myAddRunsSignal.emit(self._myProjectName, returnlist)
+        numrows = self.ui.tableWidget.rowCount()
+        for irow in xrange(numrows): 
+            selected = self.ui.tableWidget.cellWidget(irow, 4).isChecked()
+            if selected is True:
+                startrun = int(self.ui.tableWidget.item(irow, 2).text())
+                endrun   = int(self.ui.tableWidget.item(irow, 3).text())
+                print "Selected runs: from %d to %d." % (startrun, endrun)
+                signallist.append( (startrun, endrun) )
+            # ENDIF
+        # ENDFOR
 
-        # Close
+        # Emit signal for parent
+        self.mySetupSignal.emit(signallist)
+
+        # Close window
         self.close()
 
         return
-
-    def doSelectQuit(self):
-        """ Select and quit
-        """
-        # Do it 
-        for logname in self._myLogUseDict:
-            if self._myLogUseDict[logname] is True: 
-                self._myParent._criteriaList.append(logname)
-
-        # send out a signal
-        # FIXME - Useless unless you can make doCheckChangedCellValue() work!
-        raise  NotImplementedError("continue from here... [834]") 
-
-        # close myself
-        self.close()
-
-        return
-
-    #--------------------------------------------------------------------------
-    # Others... 
-    #--------------------------------------------------------------------------
-    def clear(self):
-        """ Clear the selection
-        """
-        self._myLogUseDict.clear()
-
-        return
-
-    def confirmExit(self):
-        reply = QtGui.QMessageBox.question(self, 'Message',
-        "Are you sure to quit?", QtGui.QMessageBox.Yes | 
-        QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         
-        if reply == QtGui.QMessageBox.Yes:
-        #close application
-            self.close()
-        else:
-        #do nothing and return
-            pass     
-    
+    #--------------------------------------------------------------------------
+    # Methods to access, set up and update table
+    #--------------------------------------------------------------------------
+    def appendRow(self, startdate, enddate, startrun, endrun, select):
+        """ Append a row to the project table
+        """
+        # Validate input
+        try:
+            startrun = int(startrun)
+            endrun = int(endrun)
+            if isinstance(select, bool) is False:
+                raise ValueError("Select should be a boolean")
+        except ValueError as e:
+            raise e
+        
+        # Format to strings
+        startrun = str(int(startrun))
+        endrun = str(endrun)
+        startdate = str(startdate)
+        enddate = str(enddate)
+
+        # Append a row and set value
+        if self._currRowIndex == self._numRows-1:
+            # current row is the last row: insert a row
+            self.ui.tableWidget.insertRow(self._numRows)
+            self._numRows += 1
+
+        # Update current row
+        self._currRowIndex += 1
+
+        # start date
+        irow = self._currRowIndex
+
+        print "[DB] Table Current Index = ", irow, " to set items", \
+                " number of rows = ", self.ui.tableWidget.rowCount()
+
+        # TODO : The 4 lines of script can be put to a method
+        cellitem=QtGui.QTableWidgetItem()
+        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+        cellitem.setText(_fromUtf8(startdate)) 
+        self.ui.tableWidget.setItem(irow, 0, cellitem)
+
+        cellitem=QtGui.QTableWidgetItem()
+        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+        cellitem.setText(_fromUtf8(enddate)) 
+        self.ui.tableWidget.setItem(irow, 1, cellitem)
+
+        cellitem=QtGui.QTableWidgetItem()
+        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+        cellitem.setText(_fromUtf8(startrun)) 
+        self.ui.tableWidget.setItem(irow, 2, cellitem)
+
+        cellitem=QtGui.QTableWidgetItem()
+        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+        cellitem.setText(_fromUtf8(endrun)) 
+        self.ui.tableWidget.setItem(irow, 3, cellitem)
+
+        # Add widget for the selection
+        gutil.addCheckboxToWSTCell(self.ui.tableWidget, irow, 4, select)
+        
+        # Resize of the width of each new cell
+        self.ui.tableWidget.resizeColumnsToContents()
+
+        return
+
+
+    def setRunInfo(self, projectname, ipts):
+        # TODO - Doc
+        """ 
+        """
+        self._myProjectName = projectname
+        self._myIPTS = int(ipts)
+
+        title = "Project %s :  Add runs of IPTS-%d" % (self._myProjectName,
+                self._myIPTS)
+        self.ui.label_title.setText(title)
+
+        return
 
 
 if __name__=="__main__":

@@ -15,9 +15,8 @@ except AttributeError:
 from ui_ProjectNameDialog import *
 
 class MyProjectNameWindow(QWidget):
-    """ Pop up dialog window
+    """ Pop up dialog window for creating a new project
     """
-   
     # establish signal for communication - must be before constructor
     mySignal = QtCore.pyqtSignal(int)
 
@@ -27,28 +26,29 @@ class MyProjectNameWindow(QWidget):
         QWidget.__init__(self)
 
         # Parent
-        self.myParent = parent
+        self._myParent = parent
         
         # Set up widigets
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
        
         # Set event handler
-        QtCore.QObject.connect(self.ui.pushButton, QtCore.SIGNAL('clicked()'),
-            self.quitCreateNew)
+        QtCore.QObject.connect(self.ui.pushButton_newProject, QtCore.SIGNAL('clicked()'), 
+                self.doCreateProjectQuit)
 
-        QtCore.QObject.connect(self.ui.pushButton_2, QtCore.SIGNAL('clicked()'), self.quitAbort)
+        QtCore.QObject.connect(self.ui.pushButton_2, QtCore.SIGNAL('clicked()'), 
+                self.quitAbort)
 
         QtCore.QObject.connect(self.ui.lineEdit, QtCore.SIGNAL('returnPressed()'),
-                self.quitCreateNew)
+                self.doCreateProjectQuit)
 
         # Customerized event 
-        self.mySignal.connect(self.myParent.evtCreateReductionProject)
+        self.mySignal.connect(self._myParent.evtCreateReductionProject)
 
         return
         
         
-    def quitCreateNew(self):
+    def doCreateProjectQuit(self):
         """ Quit for creating new project
         """
         # project name
@@ -59,11 +59,22 @@ class MyProjectNameWindow(QWidget):
         # project type
         projecttype = str(self.ui.comboBox_projectTypes.currentText()).split()[0].lower()
         
-        self.myParent.newprojectname = projectname
-        self.myParent.newprojecttype = projecttype
+        self._myParent.newprojectname = projectname
+        self._myParent.newprojecttype = projecttype
 
-        # Emit signal to parent
-        sigVal = 1
+        # possible IPTS delta-days
+        deltaDay_str = str(self.ui.comboBox_deltaDays.currentText()) 
+        if deltaDay_str.startswith('Per Day') is True:
+            deltaD = 1
+        elif deltaDay_str.startswith('Per Week') is True:
+            deltaD = 7
+        elif deltaDay_str.startswith('Per Month') is True:
+            deltaD = 30
+        else:
+            raise NotImplementedError("Delta Days %d is not recognized."%(deltaDay_str))
+
+        # Emit signal to parent to create reduction project
+        sigVal = deltaD
         self.mySignal.emit(sigVal)
         
         self.close()
@@ -74,7 +85,7 @@ class MyProjectNameWindow(QWidget):
     def quitAbort(self):
         """ Quit and abort the operation
         """
-        self.myParent.newprojectname = "%6--0$22"
+        self._myParent.newprojectname = "%6--0$22"
 
         self.close()
 

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_selectRuns.ui'
 #
-# Created: Fri May  1 16:47:30 2015
+# Created: Wed May  6 15:27:46 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -33,9 +33,27 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.horizontalLayout_2 = QtGui.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
+        self.label_title = QtGui.QLabel(self.centralwidget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_title.sizePolicy().hasHeightForWidth())
+        self.label_title.setSizePolicy(sizePolicy)
+        self.label_title.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.label_title.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_title.setObjectName(_fromUtf8("label_title"))
+        self.horizontalLayout_2.addWidget(self.label_title)
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout_3 = QtGui.QHBoxLayout()
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
         self.tableWidget = QtGui.QTableWidget(self.centralwidget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.tableWidget.sizePolicy().hasHeightForWidth())
+        self.tableWidget.setSizePolicy(sizePolicy)
         self.tableWidget.setObjectName(_fromUtf8("tableWidget"))
         self.tableWidget.setColumnCount(5)
         self.tableWidget.setRowCount(0)
@@ -83,6 +101,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
+        self.label_title.setText(_translate("MainWindow", "(Title)", None))
         item = self.tableWidget.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "Start Date", None))
         item = self.tableWidget.horizontalHeaderItem(1)

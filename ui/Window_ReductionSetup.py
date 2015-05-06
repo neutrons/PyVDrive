@@ -22,6 +22,8 @@ import PyVDrive
 import PyVDrive.vdrive.vulcan_util
 import Window_GPPlot
 
+# TODO - Clean codes
+
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
     """
@@ -280,7 +282,8 @@ class MyReductionWindow(QWidget):
                 vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)
                 print vandbfilelogs
 
-                self._vanDBCriteriaWindow = Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
+                self._vanDBCriteriaWindow = \
+                        Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
                 self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
                 self._vanDBCriteriaWindow.show()
 
@@ -295,6 +298,8 @@ class MyReductionWindow(QWidget):
         """ Do reduction
         collect the information in this window and call reduction in the main window
         """
+        # TODO - Launch the reduction form window!
+
         # Get project name
         if self._myProjectName is None:
             raise NotImplementedError("It is logically wrong for _myProjectName not setup at doReduceData()")
@@ -392,6 +397,27 @@ class MyReductionWindow(QWidget):
 
         return
 
+
+    def setupAutoFileAddMode(self, projectname, ipts, runstart, runend):
+        # TODO Doc
+        """ 
+        """
+        # TODO : self.ui.comboBox_projectNames should set to projectname
+
+        self.ui.lineEdit_ipts.setText(str(ipts))
+
+        self.ui.label_SectionAddFiles.setText('Auto File Addition Mode')
+
+        # TODO ... set others ... lineEdit_runend, pushButton_addRuns
+        self.ui.lineEdit_runstart.setText(str(runstart))
+        self.ui.lineEdit_runstart.setEnabled(False)
+
+        # Set up the current project
+        self._myProjectName = projectname
+
+        return
+
+
     def setVanMatchCriteria(self, criterialist):
         """ 
         """
@@ -401,6 +427,7 @@ class MyReductionWindow(QWidget):
                 self._myProjectName, self._vanDBCriteriaList)
 
         return
+
 
     # Enable and disable controls
     def _setEnabledReductionWidgets(self, value):

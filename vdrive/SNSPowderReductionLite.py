@@ -466,7 +466,7 @@ class SNSPowderReductionLite:
         # ENDIFELSE
 
         wksp = mantidapi.FilterBadPulses(InputWorkspace=wksp, OutputWorkspace=wksp, 
-                LowerCutoff=)
+                LowerCutoff=lowercutoff)
 
         print "[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) of workspace %s." % (
                 numeventsbefore, wksp.getNumberEvents(), lowercutoff, str(wksp))

@@ -22,6 +22,7 @@ import Ui_VDrive as vdrive
 import ui.Window_ReductionSetup as rdwn
 import ui.Dialog_NewProject as npj
 import ui.Dialog_AppLog as dlglog
+import ui.Dialog_SelectRuns as dlgsr
 
 import config
 
@@ -323,12 +324,15 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
          
-    def doSetupReduction(self):
+    def doSetupReduction(self, automode=False, project="", ipts=None, runstart=None, runend=None):
+        # TODO - Doc for method
         """ Lauch reduction setup window
+
+        Arguments: 
+         - automode :: Boolean default as false
+         - 
         """
-        print "Hello! Reduction is selected in menu bar."
-    
-        # create and setup
+        # Create and set up reduction window
         if self._reductionWindow is None: 
             self._reductionWindow = rdwn.MyReductionWindow(self, self._myWorkflow._myConfig) 
             self._reductionWindow.resize(1200, 800)
@@ -347,6 +351,10 @@ class VDrivePlot(QtGui.QMainWindow):
             self._addLogInformation(errmsg)
         else:
             print "[Log Warning] No project in tree widget is set."
+
+        # Auto mode
+        if automode is True:
+            self._reductionWindow.setupAutoFileAddMode(project, ipts, runstart, runend)
         
         # show
         self._reductionWindow.show()
@@ -409,8 +417,9 @@ class VDrivePlot(QtGui.QMainWindow):
     def evtCreateReductionProject(self, val):
         """ New reduction project as a call from a secondary window
         """
-        prepend = "NewProject" + str(val) + ": "
-        print "Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
+        # Information output
+        prepend = "NewProject_" + str(val) + ": "
+        print "[INFO] Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
                 self.newprojectname, self.newprojecttype)
 
         # Initlalize a new project and register
@@ -425,6 +434,7 @@ class VDrivePlot(QtGui.QMainWindow):
         #       put it in GUI rather than workflow control class
         if self.newprojectname.lower().startswith('ipts') is True: 
             ipts = None
+            deltaD = int(val)
             if self.newprojectname[4].isdigit() is True:
                 try: 
                     ipts = int(self.newprojectname[4:])
@@ -437,12 +447,51 @@ class VDrivePlot(QtGui.QMainWindow):
                     self._logError("Unable to convert %s to IPTS number." % (self.newprojectname[5:]))
             
             if ipts is not None:
-                status, errmsg = self._myWorkflow.searchFilesIPTS(self.newprojectname, ipts)
+                status, errmsg = self._myWorkflow.searchFilesIPTS(self.newprojectname, ipts, deltaD)
                 if status is True:
-                    self.showIPTSFileWindow()
+                    self.showIPTSFileWindow(self.newprojectname, ipts)
             # ENDIF
+        else:
+            # Show reduction window
+            self.doSetupReduction()
         # ENDIF
 
+        return
+    
+    @QtCore.pyqtSlot(list)
+    def evtSetupShowReductionWindow(self, val):
+        """ Event handling to set up and show reduction window
+        Requiring: (1) project name; (2) range of runs
+        """
+        # Parse signal
+        projname = val[0]
+        ipts = val[1] 
+        numrunset = len(val)-2
+        print "[DB] %d sets of runs are selected." % (numrunset)
+
+        gui_runstart = 1000000000000
+        gui_runend = 0
+        for i in xrange(numrunset):
+            # parse signal
+            runstart = val[i+2][0]
+            runend = val[i+2][1]
+            # add runs/files to project
+            self._myWorkflow.addAutoFoundRuns(projname, ipts, runstart)
+            # update gui run range
+            if runstart < gui_runstart:
+                gui_runstart = runstart
+            if runend > gui_runend:
+                gui_runend = runend
+
+            print "[DB] Auto IPTS Search: Run from %d to %d." % (runstart, runend)
+        # ENDFOR
+
+        # Launch reduction window
+        self.doSetupReduction(automode=True, project=projname, ipts=ipts, 
+                runstart=gui_runstart, runend=gui_runend)
+
+        # TODO - ASAP Add files to project tree
+        
         return
 
 
@@ -531,20 +580,27 @@ class VDrivePlot(QtGui.QMainWindow):
 
 
 
-    def showIPTSFileWindow(self, projname):
+    def showIPTSFileWindow(self, projname, ipts):
         """ Show the child window for files/runs belonged to an IPTS
+
+        Arguments: 
+         - ipts :: int for IPTS
         """
         # Start a new window and register it
-        self._iptsRunWindow = SelectRunsDialog(self)
+        self._iptsRunWindow = dlgsr.SelectRunsDialog(self)
         self._registerSubWindow(self._iptsRunWindow)
 
         # Append rows: each row is a period of experiments
-        runinfolist = self._myWorkflow.getIptsRunInfo(projname)
+        self._iptsRunWindow.setRunInfo(projname, ipts)
+
+        runinfolist = self._myWorkflow.getIptsRunInfo(ipts)
         for rinfo in runinfolist:
+            print "[DB] IPTS-Run Info: ", rinfo
             self._iptsRunWindow.appendRow(rinfo[0], rinfo[1], rinfo[2], rinfo[3], True)
 
         # Show window
         self._iptsRunWindow.show()
+
 
         return
 
@@ -686,12 +742,11 @@ class VDrivePlot(QtGui.QMainWindow):
         """ Register a child window for VDrivePlot
         """
         # Check whether this window has been registered
-        if self._openSubdWindows.count(windowobj) > 0:
+        if self._openSubWindows.count(windowobj) > 0:
             self._logError("Child window has been appended to child windows list already.")
             raise RuntimeError("Programming error for registering one window twice.")
 
-        self._childWindows.append(windowobj)
-        self._openSubWindows.append(
+        self._openSubWindows.append(windowobj)
 
         return
 

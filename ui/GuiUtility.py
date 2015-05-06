@@ -1,3 +1,4 @@
+from PyQt4 import QtGui, QtCore
 
 def addCheckboxToWSTCell(table, row, col, state):
     """ function to add a new select checkbox to a cell in a table row

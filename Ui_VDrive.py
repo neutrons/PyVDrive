@@ -5,6 +5,7 @@
 ################################################################################
 import os
 import pickle
+import time
 
 #import PyVDrive
 #import PyVDrive.vdrive
@@ -13,7 +14,8 @@ import pickle
 
 import vdrive
 import vdrive.VDProject as vdproj
-import vdrive.FacilityUtil as futil
+import vdrive.FacilityUtil as futil 
+import vdrive.vulcan_util
 
 VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768, 
         0.7134,0.7566,0.8089,0.8737,0.9571,1.0701,1.2356,1.5133,2.1401]
@@ -42,12 +44,56 @@ class VDriveAPI:
         # logging for tuple (logtype, log message), logtype = 'i', 'w', 'e' as information, 
         # ... warning and error
         self._myLogList = []
-        self._projRunInfoDict = {}
+
+        # Dictionary for runs/nexus file name+time of an IPTS
+        # key = ITPS, value =list of list of 2-tuple (time, file-name)
+        self._iptsRunInfoDict = {}
 
         self._loadConfig()
 
         return
 
+
+    def addAutoFoundRuns(self, projname, ipts, runstart):
+        # TODO Doc
+        """ Add runs from auto-ITPS-run locator 
+        """
+        # FIXME - only applied to reduction project?
+
+        # Get project
+        if self._rProjectDict.has_key(projname) is False:
+            # TODO finish
+            raise RuntimeError("Project .... ")
+
+        project = self._rProjectDict[projname]
+
+        # Get run info dictionary
+        if self._iptsRunInfoDict.has_key(ipts) is False:
+            # TODO finish
+            print self._iptsRunInfoDict.keys()
+            raise Note
+
+        timefilelist = self._iptsRunInfoDict[ipts]
+       
+        # Init
+        datacalfilesets = []
+        # Find matched list and add files to project
+        for sublist in timefilelist:
+            if sublist[0][1].count(str(runstart)) == 1:
+                # Find the right sub-list
+                for tftuple in sublist:
+                    filename = tftuple[1]
+                    datacalfilesets.append( (filename, None) )
+                # ENDFOR
+            # ENDIF
+        # ENDFOR
+      
+        # Add project
+        project.addDataFileSets(datacalfilesets)
+
+        return
+        
+        
     def addDataFile(self, projname, datafilename):
         """ Add data
         Argument:
@@ -60,7 +106,7 @@ class VDriveAPI:
         self._projectDict[projname].addData(datafilename)
         
         return
-
+        
 
     def addExperimentRuns(self, projname, operation, ipts, runnumberlist, autofindcal):
         """ Add data file to project name by run number
@@ -68,7 +114,6 @@ class VDriveAPI:
         
         Return :: (boolean, errmsg, list of 2-tuple, filename/list of van_run (or None))
         """ 
-        import vdrive.vulcan_util
 
         # Check input
         if self._checkProjectExistence(projname, operation) is False:
@@ -132,6 +177,15 @@ class VDriveAPI:
         thisproject.addVanadiumIPTSInfo(vaniptsdict)
 
         return (True, "", datacalfilesets)
+        
+        
+    def addLogInformation(self, logstr):
+        """ Add a log information at information level
+        """
+        self._myLogList.append( ('i', logstr) )
+
+        return
+
         
         
     def deleteProject(self, projtype, projname):
@@ -227,18 +281,24 @@ class VDriveAPI:
     def getIptsRunInfo(self, ipts):
         """ Get runs' information of an IPTS under a project name
         """
+        ipts = int(ipts)
+
         # Validate
-        if self._iptsRunDict.has_key(ipts) is False:
+        if self._iptsRunInfoDict.has_key(ipts) is False:
+            print "[DB] Input IPTS = ", ipts, " of type ", type(ipts)
+            print "[DB] IPTS-Run-Dict keys:", self._iptsRunInfoDict.keys()
             raise KeyError('In iptsRunDict, there is no key for IPTS %d'%(ipts))
 
-        periodtimefilelist = self._iptsRunDict[ipts]
+        periodtimefilelist = self._iptsRunInfoDict[ipts]
 
-        for timefilelsit in periodtimefilelist: 
+        returnlist = []
+        for timefilelist in periodtimefilelist: 
             startrun_ctime = time.ctime(timefilelist[0][0])
             endrun_ctime = time.ctime(timefilelist[-1][0])
-            startrun = timefilelist[0][1]
-            endrun = timefilelist[-1][1]
+            startrun = timefilelist[0][1].split('/')[-1].split('_')[1]
+            endrun = timefilelist[-1][1].split('/')[-1].split('_')[1]
 
+            print "[DB] IPTS %d from %s to %s" % (ipts, startrun, endrun)
             returnlist.append([startrun_ctime, endrun_ctime, startrun, endrun])
 
         # ENDFOR
@@ -434,7 +494,7 @@ class VDriveAPI:
         return (True, "")
 
 
-    def searchFilesIPTS(self, projectname, ipts):
+    def searchFilesIPTS(self, projectname, ipts, deltaDays):
         """ Search files under IPTS
 
         Exceptions: KeyError, RuntimeError
@@ -453,7 +513,7 @@ class VDriveAPI:
             raise RuntimeError("IPTS %d does not exist." % (ipts))
 
         # Search runs 
-        self._projRunInfoDict[projname][ipts] = myfacility.searchRuns()
+        self._iptsRunInfoDict[ipts] = myfacility.searchRuns(deltaDays)
 
         return (True, '')
 
@@ -622,14 +682,6 @@ class VDriveAPI:
         status, errmsg = project.stripVanadiumPeaks(datafilename=datafilename)
 
         return status, errmsg
-
-        
-    def addLogInformation(self, logstr):
-        """ Add a log information at information level
-        """
-        self._myLogList.append( ('i', logstr) )
-
-        return
 
     #--------------------------------------------------------------------------
     # Private methods

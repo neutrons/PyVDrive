@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>469</width>
-    <height>137</height>
+    <width>554</width>
+    <height>272</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,6 +25,9 @@
         <string>Project Name</string>
        </property>
       </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEdit"/>
      </item>
      <item>
       <spacer name="horizontalSpacer">
@@ -43,7 +46,18 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit"/>
+      <widget class="QComboBox" name="comboBox_projectTypes">
+       <item>
+        <property name="text">
+         <string>Reduction Project</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Analysis Project</string>
+        </property>
+       </item>
+      </widget>
      </item>
      <item>
       <spacer name="horizontalSpacer_2">
@@ -79,9 +93,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="pushButton_newProject">
        <property name="text">
-        <string>Cancel</string>
+        <string>Create Project</string>
        </property>
       </widget>
      </item>
@@ -99,9 +113,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="pushButton_2">
        <property name="text">
-        <string>Create Project</string>
+        <string>Cancel</string>
        </property>
       </widget>
      </item>
@@ -123,18 +137,46 @@
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QComboBox" name="comboBox_projectTypes">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>For auto-loading complete IPTS</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_deltaDays">
        <item>
         <property name="text">
-         <string>Reduction Project</string>
+         <string>Per Day</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Analysis Project</string>
+         <string>Per Week</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Per Month</string>
         </property>
        </item>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_6">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>
