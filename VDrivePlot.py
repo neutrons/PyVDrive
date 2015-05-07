@@ -325,12 +325,14 @@ class VDrivePlot(QtGui.QMainWindow):
         return
          
     def doSetupReduction(self, automode=False, project="", ipts=None, runstart=None, runend=None):
-        # TODO - Doc for method
-        """ Lauch reduction setup window
+        """ Lauch reduction setup window with optional preset
 
         Arguments: 
          - automode :: Boolean default as false
-         - 
+         - project  :: string as project name
+         - ipts     :: IPTS number
+         - runstart :: integer as staring run number
+         - runend   :: integer as ending run number
         """
         # Create and set up reduction window
         if self._reductionWindow is None: 
@@ -490,7 +492,9 @@ class VDrivePlot(QtGui.QMainWindow):
         self.doSetupReduction(automode=True, project=projname, ipts=ipts, 
                 runstart=gui_runstart, runend=gui_runend)
 
-        # TODO - ASAP Add files to project tree
+        # Add files to project tree
+        runslist = self._myWorkflow.getRuns(projname)
+        self._treeAddRuns(projname, runslist, usebasefilename=True):
         
         return
 
@@ -775,7 +779,7 @@ class VDrivePlot(QtGui.QMainWindow):
 
         return
 
-    def _setTreeLevel1Actions(self):         
+    def _setTreeLevel1Actions_duplicate(self):         
         """
         """
         # This is the right way to use right mouse operation for pop-up sub menu 

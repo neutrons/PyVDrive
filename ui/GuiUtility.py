@@ -1,5 +1,26 @@
 from PyQt4 import QtGui, QtCore
 
+def setTextToQTableCell(table, irow, icol, text):
+    """ Set up a regular text cell in a QTableWidget
+
+    Arguments: 
+     - table    :: QTableWidget
+     - irow     :: integer as row number
+     - icol     :: integer as column number
+     - text     :: string as the text to be set to the cell
+    """
+    # Validate
+    irow = int(irow)
+    icol = int(icol)
+
+    # Set up
+    cellitem = QtGui.QTableWidgetItem()
+    cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+    cellitem.setText(_fromUtf8(str(text))
+    self.ui.tableWidget.setItem(irow, icol, cellitem)
+
+    return
+
 def addCheckboxToWSTCell(table, row, col, state):
     """ function to add a new select checkbox to a cell in a table row
     won't add a new checkbox if one already exists

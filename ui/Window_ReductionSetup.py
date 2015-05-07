@@ -399,21 +399,20 @@ class MyReductionWindow(QWidget):
 
 
     def setupAutoFileAddMode(self, projectname, ipts, runstart, runend):
-        # TODO Doc
-        """ 
+        """  Set the reduction set up window to auto-IPTS run searching mode
+        i.e., project and IPTS are set up.
         """
         # TODO : self.ui.comboBox_projectNames should set to projectname
 
-        self.ui.lineEdit_ipts.setText(str(ipts))
-
-        self.ui.label_SectionAddFiles.setText('Auto File Addition Mode')
-
-        # TODO ... set others ... lineEdit_runend, pushButton_addRuns
-        self.ui.lineEdit_runstart.setText(str(runstart))
-        self.ui.lineEdit_runstart.setEnabled(False)
-
         # Set up the current project
         self._myProjectName = projectname
+        # Set up IPTS
+        self.ui.lineEdit_ipts.setText(str(ipts))
+
+        #self.ui.label_SectionAddFiles.setText('Auto File Addition Mode')
+        #self.ui.lineEdit_runstart.setText(str(runstart))
+        #self.ui.lineEdit_runstart.setEnabled(False)
+
 
         return
 

@@ -24,8 +24,11 @@ import GuiUtility as gutil
 
 class SelectRunsDialog(QtGui.QMainWindow):
     """ GUI (sub) application to select runs
+
+    One window works for 1 project/IPTS
     """
     mySetupSignal = QtCore.pyqtSignal(list)
+    myCancelSignal = QtCore.pyqtSignal(int)
 
     # Class
     def __init__(self, parent):
@@ -59,7 +62,7 @@ class SelectRunsDialog(QtGui.QMainWindow):
         self._myProjectName = "N/A"
         self._myIPTS = -1
 
-        # TODO doc...
+        # Signals emit from this GUI
         self.mySetupSignal.connect(self._myParent.evtSetupShowReductionWindow)
 
         return
@@ -72,8 +75,7 @@ class SelectRunsDialog(QtGui.QMainWindow):
         """ Cancel and quit 
         """
         # Emit signal
-        # TODO - Set up signal
-        # self.myAddRunsSignal.emit(self._myProjectName, [])
+        self.myCancelSignal.emit()
 
         # Quit
         self.close()
@@ -142,12 +144,16 @@ class SelectRunsDialog(QtGui.QMainWindow):
         print "[DB] Table Current Index = ", irow, " to set items", \
                 " number of rows = ", self.ui.tableWidget.rowCount()
 
-        # TODO : The 4 lines of script can be put to a method
-        cellitem=QtGui.QTableWidgetItem()
-        cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-        cellitem.setText(_fromUtf8(startdate)) 
-        self.ui.tableWidget.setItem(irow, 0, cellitem)
 
+        #  The 4 lines of script can be put to a method
+        gutil.setTextToQTableCell(table, irow, icol, text):
+        #cellitem=QtGui.QTableWidgetItem()
+        #cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
+        #cellitem.setText(_fromUtf8(startdate)) 
+        #self.ui.tableWidget.setItem(irow, 0, cellitem)
+
+
+        # FIXME After testing, replace all the scripts to function call
         cellitem=QtGui.QTableWidgetItem()
         cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
         cellitem.setText(_fromUtf8(enddate)) 
@@ -173,8 +179,12 @@ class SelectRunsDialog(QtGui.QMainWindow):
 
 
     def setRunInfo(self, projectname, ipts):
-        # TODO - Doc
-        """ 
+        """ Set ITPS project information to this window
+        and set the title line
+
+        Arguments: 
+         - projectname
+         - ipts
         """
         self._myProjectName = projectname
         self._myIPTS = int(ipts)

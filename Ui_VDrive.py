@@ -55,23 +55,32 @@ class VDriveAPI:
 
 
     def addAutoFoundRuns(self, projname, ipts, runstart):
-        # TODO Doc
         """ Add runs from auto-ITPS-run locator 
+
+        Note: there will be no vanadium file bound to any run, 
+              they shall be set up later. 
+
+        Arguments: 
+         - projname :: name of project
+         - ipts     :: integer as IPTS number
+         - runstart :: integer as starting run number
         """
         # FIXME - only applied to reduction project?
 
+        # Validate
+        ipts = int(ipts)
+        runstart = int(runstart)
+
         # Get project
         if self._rProjectDict.has_key(projname) is False:
-            # TODO finish
-            raise RuntimeError("Project .... ")
+            raise RuntimeError("Project %s does not exist in reduction projects."%(projname))
 
         project = self._rProjectDict[projname]
 
         # Get run info dictionary
         if self._iptsRunInfoDict.has_key(ipts) is False:
-            # TODO finish
-            print self._iptsRunInfoDict.keys()
-            raise Note
+            raise RuntimeError("IPTS %d has not been searched for runs. Search IPTS are %s."%(ipts, 
+                str(self.._iptsRunInfoDict.keys()))
 
         timefilelist = self._iptsRunInfoDict[ipts]
        
