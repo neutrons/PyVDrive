@@ -100,8 +100,10 @@ class SNSPowderReductionLite:
          - unit :: target unit; If None, then no need to convert unit
         """
         # FIXME - Need more consideration 
-
+        # TODO - Try and catch
         retws = self._anyRunWSList[listindex]
+        print "[DB] Type of reduced workspace: ", type(retws)
+        print "[DB] Name of reduced workspace: ", str(retws)
        
         if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
             # no request of target unit or target unit is same as current unit
@@ -424,8 +426,9 @@ class SNSPowderReductionLite:
         elif isinstance(params, AlignFocusParameters) is False:
             raise NotImplementedError("Input parameter must be of class AlignFocusParameters")
 
+        outwsname = eventwksp.name()+"_Foc_TOF"
         outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp, 
-                                              OutputWorkspace = eventwksp,   # in-place align and focus
+                                              OutputWorkspace = outwsname,   # in-place align and focus
                                               CalFileName     = params._focusFileName, 
                                               Params          = params._binning, 
                                               PreserveEvents  = params._preserveEvents,
@@ -478,7 +481,8 @@ class SNSPowderReductionLite:
         """ Load data
         """  
         # FIXME - ignored 'filterWall' here
-        rawinpws = mantidapi.Load(self._myRawNeXusFileName)
+        outwsname = os.path.basename(self._myRawNeXusFileName).split('.')[0]
+        rawinpws = mantidapi.Load(self._myRawNeXusFileName, OutputWorkspace=outwsname)
         
         # debug output 
         if rawinpws.id() == EVENT_WORKSPACE_ID:

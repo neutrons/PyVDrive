@@ -23,6 +23,9 @@ VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768
 class VDriveAPI:
     """ Class PyVDrive to mananger a sets of reduction and analysis projects
     """
+
+    # Define signal
+
     def __init__(self):
         """ Init
         """
@@ -266,6 +269,19 @@ class VDriveAPI:
                 print "[DB UI-Reduced] iws = %d, vecx = ", reduceddatadict[iws][0], ", vecy = ", reduceddatadict[iws][1]
 
         return reduceddatadict
+
+
+    def getReducedRuns(self, projectname):
+        # TODO - Doc
+        """ 
+
+        Return :: list of data files
+        """
+        # TODO Doc
+        if self._rProjectDict.has_key(projectname) is False:
+            raise KeyError("Project %s does not exist in reduction projects."%(projectname))
+
+        return self._rProjectDict[projectname].getReducedRuns()
         
 
     def getDataFiles(self, projname):
@@ -600,7 +616,7 @@ class VDriveAPI:
 
         return (True, "")
 
-        
+       
     def reduceData(self, projname):
         """ Reduce the data
         """
@@ -610,6 +626,9 @@ class VDriveAPI:
         else:
             # FIXME - Need a control for normByVanadium!
             status, errmsg = project.reduceToPDData(normByVanadium=True)
+
+        # Signal
+        #self.myReductoionCompleteSignal.emit(1234)
 
         return
         

@@ -29,7 +29,8 @@ class MyReductionWindow(QWidget):
     """ Pop up dialog window
     """
     # define signals
-    myAddRunsSignal = pyqtSignal(str)
+    myAddRunsSignal = pyqtSignal(str) 
+    myReduceDataSignal = QtCore.pyqtSignal(str)
 
     # class
     def __init__(self, parent, config):
@@ -389,13 +390,10 @@ class MyReductionWindow(QWidget):
         self._setEnabledReductionWidgets(False)
         self.ui.pushButton_reduceData.setEnabled(False)
 
-        # Reduce data
+        # Reduce data 
         self._myParent.getWorkflowObj().reduceData(projectname)
-        # # FIXME It is a mock for GUI
-        # for i in xrange(100):
-        #     self.ui.progressBar.setValue(i+1)
 
-        # enable all controls after reduction
+        # Enable all controls after reduction
         self._setEnabledReductionWidgets(True)
         self.ui.pushButton_reduceData.setEnabled(True)
 
@@ -406,8 +404,7 @@ class MyReductionWindow(QWidget):
             print "Error: %s" % (self._myParent.getWorkflowObj().isReductionSuccessful(projectname)[1])
 
         return
-
-
+    
     @QtCore.pyqtSlot(str)
     def _handleBrowseVanDBFile(self):
         """ Second step to handle vanadium database match up
@@ -488,18 +485,19 @@ class MyReductionWindow(QWidget):
         self._myDataPlotWindow.setProject(projname)
 
         # Set up run
-        status, errmsg, datafilepairlist = self._myParent.getWorkflowObj().getDataFiles(projname)
-        print datafilepairlist
-        runlist = []
-        for filepair in datafilepairlist:
-            runlist.append(filepair[0])
-        if len(runlist) is False:
-            raise NotImplementedError('Empty run list.')
-        runlist = sorted(runlist)
-        self._myDataPlotWindow.setRuns(runlist)
+        try:
+            reducedfilelist = self._myParent.getWorkflowObj().getReducedRuns(projname)
+            runlist = []
+            for datafilename in reducedfilelist:
+                runlist.append(os.path.basename(datafilename))
+            runlist = sorted(runlist)
+            self._myDataPlotWindow.setRuns(runlist)
+        except KeyError as e:
+            self._logError(str(e))
 
         # Set current run
-        self._myDataPlotWindow.setCurrentRun(runlist[0])
+        if len(runlist) > 0: 
+            self._myDataPlotWindow.setCurrentRun(runlist[0])
 
         # Show 
         self._myDataPlotWindow.show()

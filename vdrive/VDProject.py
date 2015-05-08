@@ -47,6 +47,12 @@ class VDProject:
         return self._baseDataPath
 
 
+    def getReducedRuns(self):
+        # TODO - Doc
+        """
+        """
+        return self._myRunPdrDict.keys()
+
     def hasData(self, datafilename):
         """ Check whether project has such data file 
         """
@@ -245,7 +251,14 @@ class ReductionProject(VDProject):
 
         if self._myRunPdrDict.has_key(runbasename): 
             runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.getReducedWorkspace(unit)
+            ws = runpdr.getReducedWorkspace(unit) 
+            
+            print "[DB] Get workspace for %s with unit %s" % (runbasename, unit)
+            if ws is not None:
+                print "[DB] Get Workspace with type %s." % (str(type(ws)))
+                print "[DB] Get workspace %s."%(ws.name())
+            else:
+                print "[DB] No workspace is obtained from PDR."
 
             newws = mantidapi.ConvertToPointData(InputWorkspace=ws)
 
@@ -436,6 +449,7 @@ class ReductionProject(VDProject):
         self._lastReductionSuccess = True
 
         return (True, '')
+
         
         
     def setCalibrationFile(self, datafilenames, calibfilename):
