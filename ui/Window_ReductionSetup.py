@@ -23,8 +23,6 @@ import PyVDrive.vdrive.vulcan_util
 import PyVDrive.vdrive.FacilityUtil as futil
 import Window_GPPlot
 
-# TODO - Clean codes
-
 class MyReductionWindow(QWidget):
     """ Pop up dialog window
     """
@@ -84,7 +82,7 @@ class MyReductionWindow(QWidget):
                 QtCore.SIGNAL('clicked()'), self.doReduceData)
 
         # quit
-        QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.quit)
+        QtCore.QObject.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'), self.doQuit)
 
         # Customerized event 
         self.myAddRunsSignal.connect(self._myParent.evtAddRuns)
@@ -105,47 +103,9 @@ class MyReductionWindow(QWidget):
 
         return
 
-    def setMessage(self, errmsg):
-        """ Set message
-        """
-        #self.ui.label_errmsg.setWordWrap(True)
-        #self.ui.label_errmsg.setText(errmsg)
-
-        return
-
-
-    def setProjectNames(self, projnames):
-        """ Set project names
-        """
-        # self.ui.comboBox_projectNames.addItems(self._myParent.getReductionProjectNames())
-        self.ui.comboBox_projectNames.addItems(projnames)
-
-        return
-
-    def setCurrentProject(self, projname):
-        """ Set current project name
-        """
-        index = self.ui.comboBox_projectNames.findText(projname)
-        if index < 0:
-            return (False, "Project %s does not exist in project list." % (projname))
-
-        self.ui.comboBox_projectNames.setCurrentIndex(index)
-        self._myProjectName = projname
-
-        return (True, "Set project %s with index %d as current project."%(projname, index))
-
-
-    def doSelectProject(self):
-        """ select projects by name
-        """
-        self._myProjectName = str(self.ui.comboBox_projectNames.currentText())
-        print "Project %s is selected. " % (str( self._myProjectName))
-
-        # FIXME - Need to wipe out previous setup and fill in the new ones
-
-        return
-
-
+    #---------------------------------------------------------------------------
+    # Methods to hand GUI widgets operations (events)
+    #---------------------------------------------------------------------------
     def doAddRuns(self):
         """ add IPTS-run numbers to current reduction project
         """
@@ -210,6 +170,7 @@ class MyReductionWindow(QWidget):
 
         return
 
+
     def doBrowseBaseDataPath(self):
         """ Prompt a dialog box for selecting the home directory
         """
@@ -227,6 +188,7 @@ class MyReductionWindow(QWidget):
                 basedatapath = vconfig.defaultDataPath)
         
         return
+
 
     def doBrowseVanDBFile(self):
         """ Prompt a dialog box for selecting vanadium database file
@@ -270,31 +232,15 @@ class MyReductionWindow(QWidget):
         self._vanDBCriteriaWindow.show()
 
         return
-
-    def doShowVanCriteriaWindow(self):
-        """ Show vanadium database matchup criteria window
+        
+    
+    def doQuit(self):
+        """ Quit
         """
-        if self._vanDBCriteriaWindow is not None: 
-            self._vanDBCriteriaWindow.show()
-        else:
-            vandbfile = str(self.ui.lineEdit_vanDBFile.text())
-
-            if os.path.exists(vandbfile) and os.path.isFile(vandbfile):
-                # launch the window to ask user to set up match criteria
-                vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)
-                print vandbfilelogs
-
-                self._vanDBCriteriaWindow = \
-                        Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
-                self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
-                self._vanDBCriteriaWindow.show()
-
-            else:
-                # van database file is not setup.  
-                self._myParent._addLogInformation("Vanadium criteria window cannot be openeda \
-                        because vanadium files has not been setup.")
+        self.close()
 
         return
+        
 
     def doReduceData(self):
         """ Do reduction
@@ -327,16 +273,42 @@ class MyReductionWindow(QWidget):
         #myapp.appendRow(10023, 54323, None, True)
         #myapp.appendRow(10023, 54333, None, False)
 
+        return        
+        
+    def doSelectProject(self):
+        """ select projects by name
+        """
+        self._myProjectName = str(self.ui.comboBox_projectNames.currentText())
+        print "Project %s is selected. " % (str( self._myProjectName))
+
+        # FIXME - Need to wipe out previous setup and fill in the new ones
+
         return
 
-    #--------------------------------------------------------------------------
-    # Methods to get access to private variable
-    #--------------------------------------------------------------------------
-    def getParent(self):
+    def doShowVanCriteriaWindow(self):
+        """ Show vanadium database matchup criteria window
         """
-        """
-        return self._myParent
+        if self._vanDBCriteriaWindow is not None: 
+            self._vanDBCriteriaWindow.show()
+        else:
+            vandbfile = str(self.ui.lineEdit_vanDBFile.text())
 
+            if os.path.exists(vandbfile) and os.path.isFile(vandbfile):
+                # launch the window to ask user to set up match criteria
+                vandbfilelogs, vanlogexamples = PyVDrive.vdrive.vulcan_util.getLogsList(vandbfile)
+                print vandbfilelogs
+
+                self._vanDBCriteriaWindow = \
+                        Dialog_VanDatabaseCriteria.MyVanadiumDatabaseCriterialDialog(self)
+                self._vanDBCriteriaWindow.setAllChoices(vandbfilelogs, vanlogexamples)
+                self._vanDBCriteriaWindow.show()
+
+            else:
+                # van database file is not setup.  
+                self._myParent._addLogInformation("Vanadium criteria window cannot be openeda \
+                        because vanadium files has not been setup.")
+
+        return
 
     #--------------------------------------------------------------------------
     # Singal handling methods
@@ -349,6 +321,26 @@ class MyReductionWindow(QWidget):
 
         # re-enable some widgets
         self.ui.pushButton_addRuns.setEnabled(True) 
+
+        return
+       
+
+    # FIXME - Think of removing it!
+    @QtCore.pyqtSlot(str)
+    def evtSetVanDBFile(self):
+        """ Second step to handle vanadium database match up
+        original name: _handleBrowseVanDBFile
+        """
+        raise NotImplementedError("No one use!")
+        # check
+        if len(self._criteriaList) == 0:
+            raise NotImplementedError("No criterial is setup")
+
+        # FIXME - where should this file go? 
+        self._myParnet._myWorkflow.setVanadiumCalibrationMatchCriterion(self._myProjectName,
+                self._criterialList)
+        #self._myParent.setVanadiumDatabaseFile(vandbfile)
+
 
         return
 
@@ -404,31 +396,59 @@ class MyReductionWindow(QWidget):
             print "Error: %s" % (self._myParent.getWorkflowObj().isReductionSuccessful(projectname)[1])
 
         return
-    
-    @QtCore.pyqtSlot(str)
-    def _handleBrowseVanDBFile(self):
-        """ Second step to handle vanadium database match up
+
+        
+    #--------------------------------------------------------------------------
+    # Methods to get access to private variable
+    #--------------------------------------------------------------------------
+    def getParent(self):
         """
-        # check
-        if len(self._criteriaList) == 0:
-            raise NotImplementedError("No criterial is setup")
+        """
+        return self._myParent
 
-        # FIXME - where should this file go? 
-        self._myParnet._myWorkflow.setVanadiumCalibrationMatchCriterion(self._myProjectName,
-                self._criterialList)
-        #self._myParent.setVanadiumDatabaseFile(vandbfile)
 
+    def setCurrentProject(self, projname):
+        """ Set current project name
+        """
+        index = self.ui.comboBox_projectNames.findText(projname)
+        if index < 0:
+            return (False, "Project %s does not exist in project list." % (projname))
+
+        self.ui.comboBox_projectNames.setCurrentIndex(index)
+        self._myProjectName = projname
+
+        return (True, "Set project %s with index %d as current project."%(projname, index))
+
+
+        
+    def setMessage(self, errmsg):
+        """ Set message
+        """
+        #self.ui.label_errmsg.setWordWrap(True)
+        #self.ui.label_errmsg.setText(errmsg)
 
         return
 
-    def quit(self):
-        """ Quit
+
+    def setProjectNames(self, projnames):
+        """ Set project names
         """
-        self.close()
+        # self.ui.comboBox_projectNames.addItems(self._myParent.getReductionProjectNames())
+        self.ui.comboBox_projectNames.addItems(projnames)
 
         return
 
 
+    def setVanMatchCriteria(self, criterialist):
+        """ 
+        """
+        self._vanDBCriteriaList = criterialist
+
+        self._myParent._myWorkflow.setVanadiumCalibrationMatchCriterion(
+                self._myProjectName, self._vanDBCriteriaList)
+
+        return
+        
     def setupAutoFileAddMode(self, projectname, ipts, runstart, runend):
         """  Set the reduction set up window to auto-IPTS run searching mode
         i.e., project and IPTS are set up.
@@ -446,17 +466,10 @@ class MyReductionWindow(QWidget):
 
 
         return
-
-
-    def setVanMatchCriteria(self, criterialist):
-        """ 
-        """
-        self._vanDBCriteriaList = criterialist
-
-        self._myParent._myWorkflow.setVanadiumCalibrationMatchCriterion(
-                self._myProjectName, self._vanDBCriteriaList)
-
-        return
+        
+    #-
+    # Private methods
+    #-
 
 
     # Enable and disable controls
