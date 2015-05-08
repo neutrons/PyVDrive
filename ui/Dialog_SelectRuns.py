@@ -13,14 +13,9 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 #import GUI components generated from Qt Designer .ui file
+import GuiUtility as gutil
 from ui_selectRuns import *
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    _fromUtf8 = lambda s: s
-
-import GuiUtility as gutil
 
 class SelectRunsDialog(QtGui.QMainWindow):
     """ GUI (sub) application to select runs
@@ -144,9 +139,8 @@ class SelectRunsDialog(QtGui.QMainWindow):
         print "[DB] Table Current Index = ", irow, " to set items", \
                 " number of rows = ", self.ui.tableWidget.rowCount()
 
-
         #  The 4 lines of script can be put to a method
-        gutil.setTextToQTableCell(table, irow, icol, text):
+        gutil.setTextToQTableCell(self.ui.tableWidget, irow, 0, startdate)
         #cellitem=QtGui.QTableWidgetItem()
         #cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
         #cellitem.setText(_fromUtf8(startdate)) 

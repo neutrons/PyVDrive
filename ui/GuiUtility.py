@@ -1,5 +1,11 @@
 from PyQt4 import QtGui, QtCore
 
+#include this try/except block to remap QString needed when using IPython
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
+
 def setTextToQTableCell(table, irow, icol, text):
     """ Set up a regular text cell in a QTableWidget
 
@@ -16,8 +22,8 @@ def setTextToQTableCell(table, irow, icol, text):
     # Set up
     cellitem = QtGui.QTableWidgetItem()
     cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
-    cellitem.setText(_fromUtf8(str(text))
-    self.ui.tableWidget.setItem(irow, icol, cellitem)
+    cellitem.setText(_fromUtf8(str(text)))
+    table.setItem(irow, icol, cellitem)
 
     return
 

@@ -2,6 +2,8 @@
 # Utility methods for VULCAN
 ####
 
+# TODO/FIXME : Clean the code
+
 import os
 
 def locateVulcanVRecordFile(basepath):

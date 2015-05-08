@@ -175,6 +175,29 @@ class FacilityUtilityHelper(object):
 
 # ENDCLASS
 
+################################################################################
+# External Methods
+################################################################################
+
+def getIptsRunFromFileName(nxsfilename):
+    # TODO Doc
+    """
+    """
+    basename = os.path.basename(nxsfilename)
+
+    # Get IPTS
+    if basename == nxsfilename:
+        # not a full path
+        ipts = None
+    else:
+        # TODO Make it right
+        I == dont.know
+
+    # Get run number
+    runnumber = int(basename.split('_')[1])
+
+    return (ipts, runnumber)
+
 
 def setGPDateTime(epochtime):
     """ Reset epoch time to standard end time

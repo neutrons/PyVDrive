@@ -25,6 +25,7 @@ import ui.Dialog_AppLog as dlglog
 import ui.Dialog_SelectRuns as dlgsr
 
 import config
+import PyVDrive.vdrive.FacilityUtil as futil
 
 class VDrivePlot(QtGui.QMainWindow):
     """ Main GUI class for VDrive 
@@ -493,8 +494,17 @@ class VDrivePlot(QtGui.QMainWindow):
                 runstart=gui_runstart, runend=gui_runend)
 
         # Add files to project tree
-        runslist = self._myWorkflow.getRuns(projname)
-        self._treeAddRuns(projname, runslist, usebasefilename=True):
+        execstatus, errmsg, datafilepairlist = self._myWorkflow.getDataFiles(projname)
+        runslist = []
+        for dpair in datafilepairlist:
+            print dpair
+            runslist.append(dpair[0])
+
+        if execstatus is True: 
+            self._treeAddRuns(projname, runslist, usebasefilename=True)
+            self._tableAddRuns(projname, runslist)
+        else:
+            self._logError(errmsg) 
         
         return
 
@@ -512,10 +522,10 @@ class VDrivePlot(QtGui.QMainWindow):
         return "IMPLEMENT ASAP"
 
 
-    def getReductionList(self):
+    def getReductionList(self, selectedlist=None):
         """ Get the data to reduce from reduction table
 
-        Return :: list of 2-tuple (data file name, vanadium run/None)
+        Return :: list of 2-tuple (data file name, reduce?)
         """
         reductionlist = []
 
@@ -523,10 +533,24 @@ class VDrivePlot(QtGui.QMainWindow):
         for irow in xrange(numrows):
             # get the checkbox widget to see whether it is to get reduced
             reducewidget = self.ui.tableWidget_generalInfo.cellWidget(irow, 2)
-            doreduce = reducewidget.isChecked()
+            # date file
+            datafname = str(self.ui.tableWidget_generalInfo.item(irow, 0).text())
+
+            # override
+            doreduce = False
+            if selectedlist is not None: 
+                ipts, runnumber = futil.getIptsRunFromFileName(datafname)
+                print "check run %d in file %s within list %s." % (runnumber, datafname, str(selectedlist))
+                if runnumber in selectedlist:
+                    doreduce = True
+                    reducewidget.setChecked(True)
+                # ENDIF
+            # ENDIF
+
+            if doreduce is False: 
+                doreduce = reducewidget.isChecked()
 
             # read cell 0 and 1
-            datafname = str(self.ui.tableWidget_generalInfo.item(irow, 0).text())
             # NOTE : van run is not needed here.  It is just for information for user
             # vanrun = str(self.ui.tableWidget_generalInfo.item(irow, 1).text())
             # if vanrun.isdigit() is True:
@@ -540,6 +564,7 @@ class VDrivePlot(QtGui.QMainWindow):
         # ENFOR
                 
         return reductionlist
+
 
     def getReductionProjectNames(self):
         """ Get the names of all reduction projects
@@ -793,7 +818,7 @@ class VDrivePlot(QtGui.QMainWindow):
         
         return
 
-    def _tableAddRuns(self, projname, datapairlist):
+    def _tableAddRuns(self, projname, datapairlist, selectAll=None):
         """ Add new runs to table: self.ui.tableWidget_generalInfo.
 
         Argument:
@@ -830,14 +855,22 @@ class VDrivePlot(QtGui.QMainWindow):
         iline = 0
         for datapair in datapairlist:
             # data 
+        
+            # accept 2 situation
+            if isinstance(datapair, str):
+                run = datapair
+                vanrun = None
+            elif isinstance(datapair, list) or isinstance(datapair, tuple):
+                run = datapair[0]
+                vanrun = datapair[1]
+
             item = QtGui.QTableWidgetItem()
-            item.setText(datapair[0])
+            item.setText(run)
             self.ui.tableWidget_generalInfo.setItem(iline, 0, item)
 
             # van run to calibrate
             item = QtGui.QTableWidgetItem()
 
-            vanrun = datapair[1]
             if vanrun is None:
                 item.setText("") 
             else:
@@ -845,14 +878,21 @@ class VDrivePlot(QtGui.QMainWindow):
             self.ui.tableWidget_generalInfo.setItem(iline, 1, item)
 
             # set reduce check box
-            if vanrun is None:
-                state = False
+            if selectAll is None:
+                # Auto decide to select all or not
+                if vanrun is None:
+                    state = False
+                else:
+                    state = True
             else:
-                state = True
+                state = bool(selectAll)
             addCheckboxToWSTCell(self.ui.tableWidget_generalInfo, iline, 2, state)
 
             iline += 1
         # ENDFOR(datapair)
+
+        # Resize column width
+        self.ui.tableWidget_generalInfo.resizeColumnsToContents()
 
         return
 
@@ -864,7 +904,20 @@ class VDrivePlot(QtGui.QMainWindow):
         #       2. call the QTreeWidget (the root) to expandItem   (a-->b)
 
         curitem = self.ui.treeWidget_Project.currentItem()
-        print "[DB] current item = ", str(curitem)
+        print "[DB] Project-Tree: current item = ", str(curitem)
+
+        # Set the current item if never set up
+        if curitem is None:
+            treewidgetlist = self.ui.treeWidget_Project.findItems(projname, QtCore.Qt.MatchRegExp, column=0)
+            if len(treewidgetlist) == 0:
+                item00 = self.ui.treeWidget_Project.itemAt(0, 0)
+                text00 = item00.text()
+                print "[DB] No matched item found in project-tree '%s'." % (str(text00))
+            elif len(treewidgetlist) > 1:
+                print "[DB] How come more than 1 matched?"
+
+            curitem = treewidgetlist[0]
+        # ENDIF
 
         if len(runsadded) == 0:
             self._addLogInformation("No run is found and added to project %s." % (projname))

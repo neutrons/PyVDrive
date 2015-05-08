@@ -20,6 +20,7 @@ import Dialog_AddDataFiles
 
 import PyVDrive
 import PyVDrive.vdrive.vulcan_util
+import PyVDrive.vdrive.FacilityUtil as futil
 import Window_GPPlot
 
 # TODO - Clean codes
@@ -298,17 +299,73 @@ class MyReductionWindow(QWidget):
         """ Do reduction
         collect the information in this window and call reduction in the main window
         """
-        # TODO - Launch the reduction form window!
+        import Dialog_FinalSelectRunToReduce
 
         # Get project name
         if self._myProjectName is None:
-            raise NotImplementedError("It is logically wrong for _myProjectName not setup at doReduceData()")
+            raise NotImplementedError("It is logically wrong for _myProjectName not \
+                    setup at doReduceData()")
         else:
             projname = self._myProjectName
 
-        # Collect runs to reduce: go through main window's table
-        reductionlist = self._myParent.getReductionList()
-        setstatus, msg = self._myParent.getWorkflowObj().setReductionFlags(projname, reductionlist)
+        # Launch the reduction form window!
+        self._myFinalSelectionDialog = Dialog_FinalSelectRunToReduce.FinalSelectRunToReduceDialog(self)
+        self._myParent._registerSubWindow(self._myFinalSelectionDialog)
+        self._myFinalSelectionDialog.setRunInfo(projname, -1)
+        # Set up table
+        execstatus, errmsg, datafilepairlist = self._myParent._myWorkflow.getDataFiles(projname)
+        for dpair in datafilepairlist:
+            ipts, run = futil.getIptsRunFromFileName(dpair[0])
+            self._myFinalSelectionDialog.appendRow(-1, run, None, True)
+
+        self._myFinalSelectionDialog.show()
+
+        #myapp.setRunInfo("GUI Unit Test", 10023)
+
+        #myapp.appendRow(10023, 54321, None, True)
+        #myapp.appendRow(10023, 54323, None, True)
+        #myapp.appendRow(10023, 54333, None, False)
+
+        return
+
+    #--------------------------------------------------------------------------
+    # Methods to get access to private variable
+    #--------------------------------------------------------------------------
+    def getParent(self):
+        """
+        """
+        return self._myParent
+
+
+    #--------------------------------------------------------------------------
+    # Singal handling methods
+    #--------------------------------------------------------------------------
+    @QtCore.pyqtSlot(str, list)
+    def evtAddRuns(self, pname, vlist):
+        """
+        """
+        print "Get signal for %s: List size = %d" % (pname,  len(vlist))
+
+        # re-enable some widgets
+        self.ui.pushButton_addRuns.setEnabled(True) 
+
+        return
+
+    @QtCore.pyqtSlot(str, list)
+    def evtReduceData(self, projectname, selectedlist):
+        # TODO - Doc
+        """ 
+        Arguments: 
+         - runlist :: list of integer as runs to reduce
+        """
+        # Arguments
+        projectname = str(projectname)
+
+        # Get flag from form
+        reductionlist = self._myParent.getReductionList(selectedlist)
+
+        # Reduction list 
+        setstatus, msg = self._myParent.getWorkflowObj().setReductionFlags(projectname, reductionlist)
         if setstatus is False:
             print msg
 
@@ -333,7 +390,7 @@ class MyReductionWindow(QWidget):
         self.ui.pushButton_reduceData.setEnabled(False)
 
         # Reduce data
-        self._myParent.getWorkflowObj().reduceData(projname)
+        self._myParent.getWorkflowObj().reduceData(projectname)
         # # FIXME It is a mock for GUI
         # for i in xrange(100):
         #     self.ui.progressBar.setValue(i+1)
@@ -343,33 +400,10 @@ class MyReductionWindow(QWidget):
         self.ui.pushButton_reduceData.setEnabled(True)
 
         # If reduction is successful, launch post data processing window
-        if self._myParent.getWorkflowObj().isReductionSuccessful(projname)[0] is True: 
-            self._showDataPlotWindow(projname)
+        if self._myParent.getWorkflowObj().isReductionSuccessful(projectname)[0] is True: 
+            self._showDataPlotWindow(projectname)
         else:
-            print "Error: %s" % (self._myParent.getWorkflowObj().isReductionSuccessful(projname)[1])
-
-        return
-
-    #--------------------------------------------------------------------------
-    # Methods to get access to private variable
-    #--------------------------------------------------------------------------
-    def getParent(self):
-        """
-        """
-        return self._myParent
-
-
-    #--------------------------------------------------------------------------
-    # Singal handling methods
-    #--------------------------------------------------------------------------
-    @QtCore.pyqtSlot(str, list)
-    def evtAddRuns(self, pname, vlist):
-        """
-        """
-        print "Get signal for %s: List size = %d" % (pname,  len(vlist))
-
-        # re-enable some widgets
-        self.ui.pushButton_addRuns.setEnabled(True) 
+            print "Error: %s" % (self._myParent.getWorkflowObj().isReductionSuccessful(projectname)[1])
 
         return
 

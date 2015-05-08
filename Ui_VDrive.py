@@ -80,7 +80,7 @@ class VDriveAPI:
         # Get run info dictionary
         if self._iptsRunInfoDict.has_key(ipts) is False:
             raise RuntimeError("IPTS %d has not been searched for runs. Search IPTS are %s."%(ipts, 
-                str(self.._iptsRunInfoDict.keys()))
+                str(self._iptsRunInfoDict.keys())))
 
         timefilelist = self._iptsRunInfoDict[ipts]
        
@@ -272,7 +272,7 @@ class VDriveAPI:
         """ Get names of the data files and their calibration files
         of a reduction project
         
-        Return :: 3-tuple.  Status, Error Message, List of file pair
+        Return :: 3-tuple.  Status, Error Message, List of file pair (data file, vanadium)
         """
         # get data files
         try:
@@ -704,8 +704,9 @@ class VDriveAPI:
         hasproject, projtype = self.hasProject(projname)
         if hasproject is False:
             project = None
-            errmsg = "Project %s exists. Unable to proceed the operation %s." % (
-                projname, operation)
+            errmsg = "Project %s (%s) does not exists. Unable to proceed the operation %s." % (
+                projname, str(type(projectname)), operation)
+            errmsg += "\nReduction projects: %s."%(self._rProjectDict.keys())
         elif projtype == 'a':
             project = self._aProjectDict[projname]
             errmsg = ""
