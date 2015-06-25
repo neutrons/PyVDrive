@@ -244,11 +244,9 @@ def setGPDateTime(epochtime):
     return
 
 
-if __name__ == "__main__":
-    """ Testing
+def testmain():
     """
-    import sys
-
+    """
     mhelper = FacilityUtilityHelper('vulcan')
     mhelper.setRootPath('/SNS/')
     exists = mhelper.setIPTS(12240)
@@ -281,3 +279,37 @@ if __name__ == "__main__":
     print time1
     setGPDateTime(time.mktime(time1))
     print
+
+
+def utilmain(argv):
+    """ Get a list of runs under an IPTS    
+    """
+    mhelper = FacilityUtilityHelper('vulcan')
+    mhelper.setRootPath('/SNS/')
+    exists = mhelper.setIPTS(10076)
+    if exists is False:
+        print "IPTS 12240 does not exist."
+        sys.exit(1)
+
+    timefilenamelistlist = mhelper.searchRuns(100000)
+
+    # suppose only 1 item in list
+    timefilenamelist = sorted(timefilenamelistlist[0])
+
+    wbuf = ""
+    for timefilename in timefilenamelist:
+        wbuf += "%s\n" % (timefilename[1])
+
+    ofile = open("List10076.txt", "w")
+    ofile.write(wbuf)
+    ofile.close()
+
+
+
+
+if __name__ == "__main__":
+    """ Testing
+    """
+    import sys
+
+    utilmain(sys.argv)

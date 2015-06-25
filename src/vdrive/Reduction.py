@@ -108,12 +108,12 @@ def focus(self, nxsfilename, calib, filterWall, splitwksp=None, preserveEvents=T
         # align and focus 
         focuspos = self._focusPos
         temp = api.AlignAndFocusPowder(InputWorkspace=temp, OutputWorkspace=temp, 
-                CalFileName=calib, Params=self._binning, Dspacing=self._bin_in_dspace,\ 
+                CalFileName=calib, Params=self._binning, Dspacing=self._bin_in_dspace, \
                 DMin=self._info["d_min"], DMax=self._info["d_max"], \
-                TMin=self._info["tof_min"], TMax=self._info["tof_max"],\ 
-                PreserveEvents=preserveEvents,\ 
-                RemovePromptPulseWidth=self._removePromptPulseWidth, CompressTolerance=COMPRESS_TOL_TOF,\ 
-                UnwrapRef=self._LRef, LowResRef=self._DIFCref, LowResSpectrumOffset=self._lowResTOFoffset,\ 
+                TMin=self._info["tof_min"], TMax=self._info["tof_max"], \
+                PreserveEvents=preserveEvents, \
+                RemovePromptPulseWidth=self._removePromptPulseWidth, CompressTolerance=COMPRESS_TOL_TOF, \
+                UnwrapRef=self._LRef, LowResRef=self._DIFCref, LowResSpectrumOffset=self._lowResTOFoffset, \
                 CropWavelengthMin=self._wavelengthMin, **(focuspos))
 
         if DEBUGOUTPUT is True:
@@ -148,7 +148,7 @@ def compressEvents(wksplist):
     """
     for itemp in xrange(numwksp): 
         if wksplist[itemp].id() == EVENT_WORKSPACE_ID: 
-            wksplist[itemp] = api.CompressEvents(InputWorkspace=wksplist[itemp],\ 
+            wksplist[itemp] = api.CompressEvents(InputWorkspace=wksplist[itemp],\
                 OutputWorkspace=wksplist[itemp], Tolerance=COMPRESS_TOL_TOF) # 100ns
                 
 def normalizeByCurrent(wksplist):

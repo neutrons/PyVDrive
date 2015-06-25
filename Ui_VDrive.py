@@ -740,6 +740,7 @@ class VDriveAPI:
         """
         # vdrive configuration directory
         homdir = os.path.expanduser("~")
+        print "Home directory: ", homdir
         configdir = os.path.join(homdir, ".vdrive")
         if os.path.exists(configdir) is False:
             os.makedirs(configdir)
@@ -753,6 +754,9 @@ class VDriveAPI:
             else:
                 print "No configuration file can be found."
                 return False
+        else:
+            print "No local configuration file.  Using default!"
+
         # ENDIF
 
         try:
@@ -761,6 +765,7 @@ class VDriveAPI:
             print e
             raise e
         else:
+            print "Set myConfig from config.configdict"
             self._myConfig = config.configdict
 
         return True
