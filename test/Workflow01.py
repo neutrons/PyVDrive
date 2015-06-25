@@ -18,6 +18,7 @@ myworkflow = vdapi.VDriveAPI()
 if myworkflow.hasProject(projname='Test001')[0] is True:
     myworkflow.deleteProject(projname='Test0001')
 myworkflow.newProject(projname = "Test001", projtype = "reduction")
+#myworkflow.newProject("Test001", "reduction")
 myworkflow.setDataPath(projname = 'Test001')
 #myworkflow.setDataPath(projname = 'Test001', basedatapath = vconfig.defaultDataPath[0])
 #myworkflow.setDataPath(projname = 'Test001', basedatapath = '/Users/wzz/Projects/SNSData/VULCAN')

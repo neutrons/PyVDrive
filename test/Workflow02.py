@@ -18,9 +18,12 @@ myProjectName = 'Test002'
 
 if myworkflow.hasProject(projname=myProjectName)[0] is True:
     myworkflow.deleteProject(projname=myProjectName)
-myworkflow.newProject(projname = myProjectName, projtype = "analysis")
 
-# with data path is set up, need to manually add all GSAS data under the specified directory
-myworkflow.addData(projname=myProjectname, datadir='/Users/wzz/.../IPTS-???')
+if False:
+    Myworkflow.newProject(projname = myProjectName, projtype = "analysis")
+    
+    # with data path is set up, need to manually add all GSAS data under the specified directory
+    Myworkflow.addData(projname=myProjectname, datadir='/Users/wzz/.../IPTS-???')
 
-
+else:
+    print "Testing has not been finished yet"
