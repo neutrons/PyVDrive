@@ -6,5 +6,6 @@ Feature: Wenduo Zhou
 		Given I am using PyVDrive
 
 	Scenario: Reduce data in one run of VULCAN
-		Given I input IPTS, run number, calibration file name and etc.
+		Given I input IPTS, run number, calibration file name and etc
+		Then I reduce the data
 		Then I should see a matrix workspace generated
