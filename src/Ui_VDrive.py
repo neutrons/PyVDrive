@@ -738,34 +738,40 @@ class VDriveAPI:
     def _loadConfig(self):
         """ Load and possibly set up configuration directory
         """
-        # vdrive configuration directory
-        homdir = os.path.expanduser("~")
-        print "Home directory: ", homdir
-        configdir = os.path.join(homdir, ".vdrive")
-        if os.path.exists(configdir) is False:
-            os.makedirs(configdir)
+        # TODO - Need to find a solution on how to let user to config
+        ## First priority: configuration file from root and prepare to copy
+        #import_from_root = True
 
-        # copy over the configuration file if local does not have 
-        localconffname = os.path.join(os.getcwd(), 'config.py')
-        if os.path.exists(localconffname) is False:
-            configfile = os.path.join(configdir, 'config.py')
-            if os.path.exists(configfile) is True: 
-                shutil.copyfile(configfile, localconffname)
-            else:
-                print "No configuration file can be found."
-                return False
-        else:
-            print "No local configuration file.  Using default!"
+        #homdir = os.path.expanduser("~")
+        #configdir = os.path.join(homdir, ".vdrive")
+        #if os.path.exists(configdir) is True:
 
-        # ENDIF
+
+        #else:
+        #    os.makedirs(configdir)
+        #    import_from_root = False
+
+        ## copy over the configuration file if local does not have 
+        #localconffname = os.path.join(os.getcwd(), 'config.py')
+        #if os.path.exists(localconffname) is False:
+        #    configfile = os.path.join(configdir, 'config.py')
+        #    if os.path.exists(configfile) is True: 
+        #        shutil.copyfile(configfile, localconffname)
+        #    else:
+        #        print "No configuration file can be found."
+        #        return False
+        #else:
+        #    print "No local configuration file.  Using default!"
+
+        ## ENDIF
 
         try:
-            import config
+            import PyVDrive.config as config
         except ImportError as e:
-            print e
+            print "Unable to load configuration due to %s." % (str(e))
             raise e
         else:
-            print "Set myConfig from config.configdict"
+            print "Set myConfig from PyVDrive.config.configdict"
             self._myConfig = config.configdict
 
         return True
