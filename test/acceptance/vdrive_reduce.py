@@ -89,7 +89,7 @@ def reduceData(step):
     wkflow.setReductionParameters('Test001', paramdict)
 
     # reduce
-    wkflow.reduce('Test001')
+    wkflow.reduceData('Test001')
 
     return
 
