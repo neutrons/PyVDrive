@@ -48,6 +48,8 @@ class Window_GPPlot(QMainWindow):
                 self.doPlotRunNext)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                 self.doPlotRunSelected)
+        self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
+                self.doPlotAllRuns)
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                 self.doNormByCurrent)
@@ -109,10 +111,61 @@ class Window_GPPlot(QMainWindow):
 
         return
 
+
+    def doPlotAllRuns(self):
+        """ Plot all runs in a fill plot style
+        """
+        print '------------------------  PLOTTING (2D) ------------------------------'
+        # Get list of all reduced data
+        runlist = self._myParent.getWorkflowObj().getReducedRuns(self._myProjectName)
+        print "[DB] Number of reduced runs = %d" % (len(runlist))
+
+        # Convert the workspaces to 2D vector
+        vecylist = []
+        yticklabels = []
+        xmin = None
+        xmax = None
+
+        # FIXME - Should have a selection!
+        ikey = 0
+
+        for runno in runlist:
+            # put y values to list for constructing 2D array
+            # TODO : Remove vecx, vecy = self._myControl.getVectorToPlot(expno, scanno)
+            reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, runno)
+            specid = sorted(reduceddatadict.keys())[ikey]
+            vecx, vecy = reduceddatadict[specid]
+
+            print "[DB] VecY Size = %d." % (len(vecy))
+            vecylist.append(vecy)
+            # yticklabels.append('Exp %d Scan %d' % (expno, scanno))
+            #print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
+
+            # set up range of x
+            if xmin is None:
+                xmin = vecx[0]
+                xmax = vecx[-1]
+            # ENDIF
+        # ENDFOR
+
+        dim2array = numpy.array(vecylist)
+        print "[DB] Type of 2D array: %s." % (str(type(dim2array)))
+        self._plot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, ymax=len(vecylist), clearimage=True)
+
+        ## Plot
+        #holdprev=False
+        #self.ui.graphicsView_mergeRun.clearAllLines()
+        #self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, \
+        #    ymax=len(vecylist), holdprev=holdprev, yticklabels=yticklabels)
+
+        print '------------------------  ENDING   (2D) ------------------------------'
+
+        return
+
+
     def doPlotRunSelected(self):
         """ Plot the current run
         """
-        print '------------------------  PLOTTING ------------------------------'
         # Attempt 1 to read line edit input
         try: 
             run = str(self.ui.lineEdit_run.text())
@@ -138,8 +191,6 @@ class Window_GPPlot(QMainWindow):
         # get current run and plot
         reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, run)
 
-        print "Check point 1"
-
         # set up the spectrum combobox
         self._respondToComboBoxSpectraListChange = False
         self.ui.comboBox_spectraList.clear()
@@ -162,8 +213,6 @@ class Window_GPPlot(QMainWindow):
         self._currSpectrum = 'All'
 
         self._respondToComboBoxSpectraListChange = True
-
-        print '------------------------  ENDING ------------------------------'
 
         return
         
@@ -490,6 +539,20 @@ class Window_GPPlot(QMainWindow):
         # ENDIF
 
         return
+
+
+    def _plot2D(self, array2d, xmin, xmax, ymin, ymax, clearimage=True):
+        """ Plot 2D
+        self._plot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, ymax=len(vecylist), clearimage=True)
+        """
+        # Clear image
+        if clearimage is True:
+            self.ui.graphicsView_mainPlot.clearCanvas()
+
+        # Add 2D plot 
+        self.ui.graphicsView_mainPlot.addPlot2D(array2d, xmin, xmax, ymin, ymax, holdprev=False, yticklabels=None)
+
+
 
     def _plotPeakIndicators(self, peakposlist):
         """ Plot indicators for peaks

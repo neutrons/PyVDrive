@@ -13,10 +13,13 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-        
+
+
 from ui_ReductionSetup import *
 import Dialog_VanDatabaseCriteria # MyVanadiumDatabaseCriterialDialog
 import Dialog_AddDataFiles
+
+sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages')
 
 import PyVDrive
 import PyVDrive.vdrive.vulcan_util
@@ -383,6 +386,12 @@ class MyReductionWindow(QWidget):
         self.ui.pushButton_reduceData.setEnabled(False)
 
         # Reduce data 
+        try:
+            tofMin = float(self.ui.lineEdit_binMin.text())
+            tofMax = float(self.ui.lineEdit_binMax.text())
+            self._myParent.getWorkflowObj().setTOFRange(tofMin, tofMax)
+        except ValueError:
+            pass 
         self._myParent.getWorkflowObj().reduceData(projectname)
 
         # Enable all controls after reduction

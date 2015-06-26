@@ -85,6 +85,8 @@ class SNSPowderReductionLite:
         self._tempSmoothedVanadiumWS = None
 
         # general align and focussing
+        self._tofMin = None
+        self._tofMax = None
 
         return
         
@@ -126,7 +128,7 @@ class SNSPowderReductionLite:
         return self._tempSmoothedVanadiumWS
 
 
-    def reducePDData(self, params, vrun=None, bkgdrun=None, chopdata=False):
+    def reducePDData(self, params, vrun=None, bkgdrun=None, chopdata=False, tofmin=None, tofmax=None):
         """ Reduce powder diffraction data
         This is the core functional methods of this class
 
@@ -151,10 +153,15 @@ class SNSPowderReductionLite:
         # Align and focus
         for wksp in wksplist:   
             # Focus
-            focusedwksp = self._doAlignFocus(wksp, params)
-
+            print "[DB] Do Align and Focus: TOF range: ", tofmin, tofmax
+            focusedwksp = self._doAlignFocus(wksp, params, tofmin, tofmax)
+            # Normalize by vanadium
             if vrun is not None:
                 focusedwksp = focusedwksp._normByVanadium(wksp)
+            # Check unit
+            # FIXME Test Only Now!
+            numspec = focusedwksp.getNumberHistograms()
+            print "[DB] Range of X = %f, %f." % (focusedwksp.readX(0)[0], focusedwksp.readX(0)[-1])
 
             self._anyRunWSList.append(focusedwksp)
         # ENDFOR
@@ -395,7 +402,7 @@ class SNSPowderReductionLite:
         return reducedlist
 
 
-    def _doAlignFocus(self, eventwksp, params):
+    def _doAlignFocus(self, eventwksp, params, tofmin=None, tofmax=None):
         """ Align and focus raw event workspaces
 
         Current examle
@@ -449,6 +456,11 @@ class SNSPowderReductionLite:
         #        self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
         #            of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
         ## ENDIFELSE
+        if tofmin is not None and tofmax is not None:
+            params = "%.5f, %.5f, %.5f"%(tofmin, params._binning, tofmax)
+            print "[DB] Params to rebin = %s." %(params)
+            outws = mantidapi.Rebin(InputWorkspace=outws, Params=params,
+                    PreserveEvents=True, OutputWorkspace=outwsname)
 
         return outws
 

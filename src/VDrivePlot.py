@@ -296,9 +296,9 @@ class VDrivePlot(QtGui.QMainWindow):
         self.projnamewindow.show()
 
         if self.newprojectname == "%6--0$22":
-            print "User aborts the operation to create a new reduction project"
+            print "[INFO] User aborts the operation to create a new reduction project."
         else:
-            print "New project name is ", self.newprojectname
+            print "[DB] New project will be created. Current name is %s (== None). " %(self.newprojectname)
         
         return
 
@@ -350,6 +350,7 @@ class VDrivePlot(QtGui.QMainWindow):
         curitem = self.ui.treeWidget_Project.currentItem()
         if curitem is not None: 
             currprojname = str(curitem.text(0)) 
+            print "[DB] VDrivePlot::SetupReduction Current project name is %s." % (currprojname)
             status, errmsg = self._reductionWindow.setCurrentProject(currprojname) 
             self._addLogInformation(errmsg)
         else:
@@ -422,7 +423,7 @@ class VDrivePlot(QtGui.QMainWindow):
         """
         # Information output
         prepend = "NewProject_" + str(val) + ": "
-        print "[INFO] Got signal from 'NewProject' as %s.  New project name = %s of type %s." % (prepend,
+        print "[INFO] Got signal from '(dialog) NewProject' as %s.  New project name = %s of type %s." % (prepend,
                 self.newprojectname, self.newprojecttype)
 
         # Initlalize a new project and register
@@ -431,6 +432,7 @@ class VDrivePlot(QtGui.QMainWindow):
         # Added to project tree
         newprojectwidget = QtGui.QTreeWidgetItem(self.ui.treeWidget_Project, [self.newprojectname, ""])
         self.ui.treeWidget_Project.expandItem(newprojectwidget) 
+        self.ui.treeWidget_Project.setCurrentItem(newprojectwidget)
 
         # Add runs if the given project name is a valid IPTS number by NEW WINDOW
         # NOTE: Feature to add files automatically will launch another window.  Thus it is better to 

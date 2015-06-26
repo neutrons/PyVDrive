@@ -52,6 +52,10 @@ class VDriveAPI:
         # key = ITPS, value =list of list of 2-tuple (time, file-name)
         self._iptsRunInfoDict = {}
 
+        # FIXME - It may cause trouble if there is more than 1 reduction project
+        self._tofMin = None
+        self._tofMaa = None
+
         self._loadConfig()
 
         return
@@ -625,6 +629,9 @@ class VDriveAPI:
             raise NotImplementedError(errmsg)
         else:
             # FIXME - Need a control for normByVanadium!
+            if self._tofMin is not None and self._tofMax is not None:
+                project.setTOFRange(self._tofMin, self._tofMax)
+
             status, errmsg = project.reduceToPDData(normByVanadium=True)
 
         # Signal
@@ -632,6 +639,14 @@ class VDriveAPI:
 
         return
         
+    def setTOFRange(self, tofmin, tofmax):
+        """ set range of TOF for output
+        """
+        self._tofMin = tofmin
+        self._tofMax = tofmax
+
+        return
+ 
 
     def setVanadiumCalibrationMatchCriterion(self, projname, criterialist):
         """ Set the criteria list for matching the vanadium calibration file
@@ -724,7 +739,7 @@ class VDriveAPI:
         if hasproject is False:
             project = None
             errmsg = "Project %s (%s) does not exists. Unable to proceed the operation %s." % (
-                projname, str(type(projectname)), operation)
+                projname, str(type(projname)), operation)
             errmsg += "\nReduction projects: %s."%(self._rProjectDict.keys())
         elif projtype == 'a':
             project = self._aProjectDict[projname]

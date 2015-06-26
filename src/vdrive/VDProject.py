@@ -130,6 +130,9 @@ class ReductionProject(VDProject):
 
         # Reduction result dictionary
         self._myRunPdrDict = {}
+        
+        self._tofMin = None
+        self._tofMax = None
 
         return
         
@@ -441,7 +444,8 @@ class ReductionProject(VDProject):
             # reduce data
             runpdr.reducePDData(params=PRL.AlignFocusParameters(), 
                                 vrun=vrun,
-                                chopdata=doChopData)
+                                chopdata=doChopData, 
+                                tofmin=self._tofMin, tofmax=self._tofMax)
 
             self._myRunPdrDict[basenamerun] = runpdr
         # ENDFOR(basenamerun)
@@ -498,6 +502,7 @@ class ReductionProject(VDProject):
         """
 
         return
+
     def setParameters(self, paramdict):
         """ Set parameters in addition to those necessary
         """
@@ -528,7 +533,15 @@ class ReductionProject(VDProject):
                 return True
 
         return False
-        
+
+    def setTOFRange(self, tofmin, tofmax):
+        """ set range of TOF
+        """
+        self._tofMin = tofmin
+        self._tofMax = tofmax
+
+        return
+
     def setVanadiumDatabaseFile(self, datafilename):
         """ Set the vanadium data base file
         """
