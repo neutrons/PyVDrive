@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_ReductionSetup.ui'
 #
-# Created: Mon Apr 20 15:59:00 2015
+# Created: Fri Jun 26 16:52:38 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -507,11 +507,16 @@ class Ui_Form(object):
         self.checkBox_reduceinfo = QtGui.QCheckBox(Form)
         self.checkBox_reduceinfo.setObjectName(_fromUtf8("checkBox_reduceinfo"))
         self.gridLayout_6.addWidget(self.checkBox_reduceinfo, 0, 4, 1, 1)
-        spacerItem27 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        spacerItem27 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         self.gridLayout_6.addItem(spacerItem27, 0, 5, 1, 1)
         spacerItem28 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
         self.gridLayout_6.addItem(spacerItem28, 0, 1, 1, 1)
         self.pushButton_quit = QtGui.QPushButton(Form)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_quit.sizePolicy().hasHeightForWidth())
+        self.pushButton_quit.setSizePolicy(sizePolicy)
         self.pushButton_quit.setObjectName(_fromUtf8("pushButton_quit"))
         self.gridLayout_6.addWidget(self.pushButton_quit, 0, 6, 1, 1)
         self.gridLayout.addLayout(self.gridLayout_6, 9, 0, 1, 1)
