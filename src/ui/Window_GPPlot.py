@@ -136,7 +136,7 @@ class Window_GPPlot(QMainWindow):
             specid = sorted(reduceddatadict.keys())[ikey]
             vecx, vecy = reduceddatadict[specid]
 
-            print "[DB] VecY Size = %d." % (len(vecy))
+            print "[DB] Add Run %s, VecY Size = %d." % (runno, len(vecy))
             vecylist.append(vecy)
             # yticklabels.append('Exp %d Scan %d' % (expno, scanno))
             #print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
