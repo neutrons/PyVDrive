@@ -456,6 +456,11 @@ class SNSPowderReductionLite:
         #        self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
         #            of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
         ## ENDIFELSE
+
+        # Normalize by current
+        # FIXME - Should be an optional operation by input argument
+        outws = self._normalizeByCurrent(outws)
+
         if tofmin is not None and tofmax is not None:
             params = "%.5f, %.5f, %.5f"%(tofmin, params._binning, tofmax)
             print "[DB] Params to rebin = %s." %(params)
@@ -506,16 +511,16 @@ class SNSPowderReductionLite:
         return rawinpws
 
 
-    def _noralizeByCurrent(self, wksp):
+    def _normalizeByCurrent(self, wksp):
         """  Normalize the workspace by proton charge, i.e., current
         """ 
+        outwsname = str(wksp)
         outws = mantidapi.NormaliseByCurrent(InputWorkspace=wksp,
-                                             OutputWorkspace=vanRun)
+                                             OutputWorkspace=outwsname)
+
         outws.getRun()['gsas_monitor'] = 1
 
-        outws
-
-        return
+        return outws
 
 
     def _processVanadium(self):

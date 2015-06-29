@@ -85,6 +85,9 @@ class Window_GPPlot(QMainWindow):
         self._currRun = None
         self._currRunIndex = 0
 
+        # Flag
+        self._canvasMode2D = False
+
         # Initialze graph
         self._initFigureCanvas()
 
@@ -129,7 +132,10 @@ class Window_GPPlot(QMainWindow):
         # FIXME - Should have a selection!
         ikey = 0
 
-        for runno in runlist:
+        sizesame = True
+        prevsize = -1
+
+        for runno in sorted(runlist):
             # put y values to list for constructing 2D array
             # TODO : Remove vecx, vecy = self._myControl.getVectorToPlot(expno, scanno)
             reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, runno)
@@ -137,6 +143,12 @@ class Window_GPPlot(QMainWindow):
             vecx, vecy = reduceddatadict[specid]
 
             print "[DB] Add Run %s, VecY Size = %d." % (runno, len(vecy))
+            if prevsize >= 0 and len(vecx) != prevsize:
+                sizesame = False
+                break
+            else:
+                prevsize = len(vecx)
+
             vecylist.append(vecy)
             # yticklabels.append('Exp %d Scan %d' % (expno, scanno))
             #print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
@@ -147,6 +159,12 @@ class Window_GPPlot(QMainWindow):
                 xmax = vecx[-1]
             # ENDIF
         # ENDFOR
+
+        # Return if unable to plot in 2D
+        if sizesame is False:
+            # TODO - Make it a pop-up error window.
+            print "[Error] Unable to do 2D plot because the size of Y vectors of all the workspaces are not same!"
+            return
 
         dim2array = numpy.array(vecylist)
         print "[DB] Type of 2D array: %s." % (str(type(dim2array)))
@@ -522,6 +540,10 @@ class Window_GPPlot(QMainWindow):
         if overplot is False:
             self.ui.graphicsView_mainPlot.clearAllLines()
 
+        if self._canvasMode2D is True:
+            self.ui.graphicsView_mainPlot.clearCanvas()
+            self._canvasMode2D = False
+
         # Plot
         self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color=color, marker=marker, label=label, xlabel=xlabel)
 
@@ -552,6 +574,9 @@ class Window_GPPlot(QMainWindow):
         # Add 2D plot 
         self.ui.graphicsView_mainPlot.addPlot2D(array2d, xmin, xmax, ymin, ymax, holdprev=False, yticklabels=None)
 
+        self._canvasMode2D = True
+
+        return
 
 
     def _plotPeakIndicators(self, peakposlist):
