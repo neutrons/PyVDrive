@@ -369,7 +369,8 @@ class VDrivePlot(QtGui.QMainWindow):
         """ Show App Log
         """
         # 2 status
-        self._logDebug("Action log window is checked = ", self.ui.actionLog_Window.isChecked())
+        self._logDebug("Action log window is checked = %s. "%(
+            str(self.ui.actionLog_Window.isChecked())))
         # NOTE: this method is called after the action.  so if it is not checked before.  after it is clicked,
         #       the state is changed to isChecked() = True
         if self.ui.actionLog_Window.isChecked() is True:
@@ -768,6 +769,21 @@ class VDrivePlot(QtGui.QMainWindow):
         self._tableAddRuns(projname, datapairlist)
 
         return
+
+
+    def _logDebug(self, message):
+        """ Log in debug level 
+        """
+        # FIXME - Make it right with console output and panel output
+        print "[Debug] %s." % (message)
+
+    def _logError(self, message):
+        """ Log for error message
+        """
+        # FIXME - Make it right with console output and panel output
+        print "[Error] %s." % (message)
+
+        
 
     def _registerSubWindow(self, windowobj):
         """ Register a child window for VDrivePlot

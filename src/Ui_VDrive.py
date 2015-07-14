@@ -127,13 +127,23 @@ class VDriveAPI:
     def addExperimentRuns(self, projname, operation, ipts, runnumberlist, autofindcal):
         """ Add data file to project name by run number
         If auto vanadium run location mode is on, then a run-vanadium run is added. 
-        
-        Return :: (boolean, errmsg, list of 2-tuple, filename/list of van_run (or None))
-        """ 
 
+        Arguments:
+         - projname ::
+         - operation :: string as the operation/functionality as description
+         - runnumberlist ::
+         - autofindcal ::
+        
+        Return :: 3-tuple
+          (1) boolean, 
+          (2) errmsg, 
+          (3) list of 2-tuple, filename/list of van_run (or None)
+        """ 
         # Check input
         if self._checkProjectExistence(projname, operation) is False:
-            return (False, "Project %s does not exist." % (projname), None)
+            message = "Project %s does not exist." % (projname)
+            print "[Lettuce] Return False due to %s." % (message)
+            return (False, message, None)
 
         # Get the handler on project
         try: 
@@ -147,8 +157,9 @@ class VDriveAPI:
 
             # check whether it is good for finding calibration automatically
             if len(self._vanCalibCriteriaDict[projname]) == 0:
-                return (False, "Unable to match vanadium calibration file because \
-                        criteria list is empty.", None)
+                message = "Unable to match vanadium calibration file because criteria list is empty."
+                print "[Lettuce] Return False due to %s." % (message)
+                return (False, message, None)
 
             autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, \
                     curproject.getBaseDataPath())
@@ -162,7 +173,6 @@ class VDriveAPI:
             # do match for calibration & export IPTS of all vanadium runs to locate NeXus file
             runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
             vaniptsdict = autofinder.getVanRunLogs('IPTS')
-
         else:
             # manual mode to link data file to calibration file
             print "Add run: ", runnumberlist
@@ -202,7 +212,6 @@ class VDriveAPI:
 
         return
 
-        
         
     def deleteProject(self, projtype, projname):
         """ Delete an existing project
@@ -452,17 +461,26 @@ class VDriveAPI:
         if projtype == 'reduction': 
             # create a reduction project
             newproject = vdproj.ReductionProject(projname)
-            self._vanCalibCriteriaDict[projname] = [] 
+            self._vanCalibCriteriaDict[projname] = {}
             self._rProjectDict[projname] = newproject
             self._rProjectDict[projname].setVanadiumDatabaseFile(self._vanadiumRecordFile)
+
+            # Set up configuration
+            try:
+                self._vanCalibCriteriaDict[projname] = \
+                    self._myConfig['vanadium.SampleLogToMatch']
+            except KeyError as e:
+                self._logError('Unable to set vanadium.SampleLogToMatch to new project %s due to %s. '%(
+                    projname, str(e)))
+
         elif projtype == 'analysis':
             # create an analysis project
             newproject = vdproj.AnalysisProject(projname)
             self._aProjectDict[projname] = newproject
-        
+       
         newproject.setBaseDataPath(self._baseDataPath)
 
-        return False
+        return True
         
         
     def loadProject(self, projfilename):
@@ -750,6 +768,7 @@ class VDriveAPI:
         
         return (project, errmsg)
 
+
     def _loadConfig(self):
         """ Load and possibly set up configuration directory
         """
@@ -786,8 +805,8 @@ class VDriveAPI:
             print "Unable to load configuration due to %s." % (str(e))
             raise e
         else:
-            print "Set myConfig from PyVDrive.config.configdict"
+            print "[Lettuce] Set myConfig from PyVDrive.config.configdict"
             self._myConfig = config.configdict
 
-        return True
 
+        return True
