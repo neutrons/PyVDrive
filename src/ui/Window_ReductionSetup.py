@@ -143,10 +143,10 @@ class MyReductionWindow(QWidget):
           
         # 2-Steps to add runs to a project instance
         # a) Add all runs to project and let project to decide which runs to be taken 
-        autofindcal = self.ui.checkBox_autoVanRun.isChecked()
+        autofindcal = self.ui.checkBox_autoVanRun.isChecked() 
         runfilecallist = self._myParent.setRuns(self._myProjectName, ipts, runnumberlist, autofindcal)
         if runfilecallist is None:
-            print "Run file calibration list is None!"
+            print "[Error] Run file calibration list is None!  Return from doAddRuns with False"
             return False
 
         # b) Launch the dialog window for user to determine the vanadium runs

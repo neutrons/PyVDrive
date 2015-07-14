@@ -58,11 +58,23 @@ def setupReduction(step):
     # IPTS and runs
     ipts = 10311
     runs= range(57070, 57078)
-    criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
-    # set vanadium calibration (new project should add data and locate calibration file automatically)
-    wkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
-    # add experiment 
-    status, errmsg, datafilesets = wkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+
+    # FIXME : Should be put to 2 different test cases in future
+    if False:
+        # Manual setup
+        wkflow.setVanadiumFile('/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt')
+        criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
+        # set vanadium calibration (new project should add data and locate calibration file automatically)
+        wkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
+        # add experiment 
+        status, errmsg, datafilesets = wkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
+
+    else:
+        # Automatic setup
+        r = wkflow.addExperimentRuns(projname='Test001', operation='Add Experiment Runs', ipts=ipts, 
+                runnumberlist=runs, autofindcal=True)
+    # ENDIFELSE
+
 
     return
 

@@ -205,10 +205,11 @@ class AutoVanadiumCalibrationLocator:
 
         Return :: dictionary (key = run number, value = vanadium runs)
         """
-        # check
+        # Check input's validity
+        if isinstance(criterion, list) is False:
+            raise NotImplementedError('Input argument criterion is not List')
         if len(self._runs) == 0:
             return (False, "No run number in the list to locate")
-            
         if len(criterion) == 0:
             return (False, "No criteria is defined by user.")
             
