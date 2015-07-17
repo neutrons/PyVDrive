@@ -53,8 +53,9 @@ class VDriveAPI:
         self._iptsRunInfoDict = {}
 
         # FIXME - It may cause trouble if there is more than 1 reduction project
-        self._tofMin = None
-        self._tofMaa = None
+        # Removed momenterily 
+        # self._tofMin = None
+        # self._tofMaa = None
 
         self._loadConfig()
 
@@ -503,6 +504,37 @@ class VDriveAPI:
                 project.__class__.__name__))
         
         return (True, (projtype, projname))
+    
+           
+    def reduceData(self, projname, normByVan, tofmin, tofmax):
+        """ Reduce the data
+        Others... (projname='Test001', normByVan=False)
+        
+        Arguments: 
+         - projname
+         - normByVan :: 
+        """
+        # Check
+        if isinstance(normByVan, bool) is False:
+            raise RuntimeError("Argument normByVan must be bool.")        
+        
+        project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
+        if project is None:
+            raise NotImplementedError(errmsg)
+        else:
+            print "[Lettuce] Project is found for reducing data."
+        
+        # Reduce
+        if tofmin is not None and tofmax is not None:
+            project.setTOFRange(tofmin, tofmax)
+
+        status, errmsg = project.reduceToPDData(normByVanadium=normByVan)
+        print "[Lettuce] Reduce status: %s, Message: %s." % (str(status), str(errmsg))
+
+        # Signal
+        #self.myReductoionCompleteSignal.emit(1234)
+
+        return
 
 
     def saveProject(self, projtype, projname, projfilename):
@@ -594,8 +626,21 @@ class VDriveAPI:
         project.setCalibrationFile([datafilename], calibrun)
 
         return
-
-
+    
+    
+    def setCalibrationFile(self, projname, calibfilename):
+        """ Set calibration/time focussing file
+        """
+        try: 
+            project = self._rProjectDict[projname]
+        except KeyError:
+            return (False, "Reduction project %s does not exist." % (projname))
+        
+        doexist = project.setDetCalFile(calibfilename)
+        if doexist is False:
+            print "[Warning] Detector calibration file %s cannot be found."%(calibfilename)
+        
+        return
 
     def setDataPath(self, projname, basedatapath=None):
         """ Set the base data path to a project
@@ -613,6 +658,15 @@ class VDriveAPI:
         project.setBaseDataPath(basedatapath)
 
         return (True, "")
+    
+    def setInstrumentName(self, instrument):
+        """ Set insturment name
+        """
+        if isinstance(instrument, str) is False:
+            raise RuntimeError("Input argument for instrument must be of type string.")
+        self._myInstrument = instrument
+        
+        return
 
 
     def setReductionFlags(self, projname, filepairlist):
@@ -620,6 +674,7 @@ class VDriveAPI:
 
         Arguments: 
          - projname :: string as the name of reduction project
+         - fileparilist :: list of tuples as "base" file name and boolean flag
         """
         try:
             project = self._rProjectDict[projname]
@@ -637,25 +692,7 @@ class VDriveAPI:
             return (False, "None of the input files that exist in the project %s." % (projname))
 
         return (True, "")
-
-       
-    def reduceData(self, projname):
-        """ Reduce the data
-        """
-        project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
-        if project is None:
-            raise NotImplementedError(errmsg)
-        else:
-            # FIXME - Need a control for normByVanadium!
-            if self._tofMin is not None and self._tofMax is not None:
-                project.setTOFRange(self._tofMin, self._tofMax)
-
-            status, errmsg = project.reduceToPDData(normByVanadium=True)
-
-        # Signal
-        #self.myReductoionCompleteSignal.emit(1234)
-
-        return
+    
         
     def setTOFRange(self, tofmin, tofmax):
         """ set range of TOF for output

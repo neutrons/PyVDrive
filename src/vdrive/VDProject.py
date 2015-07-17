@@ -114,6 +114,8 @@ class ReductionProject(VDProject):
         """
         VDProject.__init__(self, projname)
         
+        # detector calibration/focusing file
+        self._detCalFilename = None
         # calibration file dictionary: key = base data file name, value = (cal file list, index)
         self._datacalibfiledict = {}
         # calibration file to run look up table: key = calibration file with fullpath. value = list
@@ -457,11 +459,12 @@ class ReductionProject(VDProject):
         
         
     def setCalibrationFile(self, datafilenames, calibfilename):
-        """ Set the calibration file to a set of data file in the 
+        """ Set the vanadium calibration file to a set of data file in the 
         project
         Arguments:
          - datafilenames :: list of data file with full path
         """
+        # FIXME - Rename to setVanCalFile
         errmsg = ""
         numfails = 0
 
@@ -496,6 +499,15 @@ class ReductionProject(VDProject):
         self._characterfilename = characerfilename
         
         
+    def setDetCalFile(self, detcalfilename):
+        """ Set detector calibration file for focussing data
+        """
+        self._detCalFilename = detcalfilename
+        if os.path.exists(self._detCalFilename) is False:
+            return False
+        
+        return True        
+        
 
     def setFilter(self):
         """ Set events filter for chopping the data
@@ -518,6 +530,10 @@ class ReductionProject(VDProject):
 
         Assumption: if the file name is not the name in full path, then 
         there is only one file name with the same base name
+        
+        Arguments: 
+         - filename :: data file's base name
+         - flag :: reduction flag
         """
         # check with full name
         exist = filename in self._dataset
