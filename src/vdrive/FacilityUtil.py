@@ -180,8 +180,9 @@ class FacilityUtilityHelper(object):
 ################################################################################
 
 def getIptsRunFromFileName(nxsfilename):
-    # TODO Doc
-    """
+    """ Get IPTS number from a standard SNS nexus file name
+    
+    Return :: tuple as 2 int, IPTS and run number
     """
     basename = os.path.basename(nxsfilename)
 
@@ -190,8 +191,8 @@ def getIptsRunFromFileName(nxsfilename):
         # not a full path
         ipts = None
     else:
-        # TODO Make it right
-        I == dont.know
+        # Format is /SNS/VULCAN/IPTS-????/0/NeXus/VULCAN_run... 
+        ipts = int(nxsfilename.split('IPTS-')[1].split('/')[0])
 
     # Get run number
     runnumber = int(basename.split('_')[1])
