@@ -286,12 +286,10 @@ class VDriveAPI:
 
 
     def getReducedRuns(self, projectname):
-        # TODO - Doc
         """ 
-
+        Get the list of reduced runs in a reduction project
         Return :: list of data files
         """
-        # TODO Doc
         if self._rProjectDict.has_key(projectname) is False:
             raise KeyError("Project %s does not exist in reduction projects."%(projectname))
 

@@ -48,8 +48,9 @@ class VDProject:
 
 
     def getReducedRuns(self):
-        # TODO - Doc
-        """
+        """ Get the the list of the reduced runs
+        
+        Return :: list of data file names 
         """
         return self._myRunPdrDict.keys()
 
