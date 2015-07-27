@@ -17,10 +17,8 @@ import GuiUtility as gutil
 from ui_FinalSelectRunToReduce import *
 
 class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
-    # TODO Doc for class
-    """ GUI (sub) ...
+    """ GUI (sub) for select run to reduce as final decision before reduction
     """
-
     # Define signal
     mySelectSignal = QtCore.pyqtSignal(str, list) # list of int 
     myCancelSignal = QtCore.pyqtSignal(int)
@@ -62,8 +60,7 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
     # Methods to handle GUI events
     #--------------------------------------------------------------------------
     def doClearAllSelection(self):
-        # TODO Doc
-        """ 
+        """ Clear all selected runs for not reduction
         """
         numrows = self.ui.tableWidget.rowCount()
         for irow in xrange(numrows):
@@ -73,8 +70,8 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
 
 
     def doSelectAll(self):
-        # TODO Doc
-
+        """ Select all runs to reduce
+        """
         numrows = self.ui.tableWidget.rowCount()
         for irow in xrange(numrows):
             self.ui.tableWidget.cellWidget(irow, 3).setChecked(True)
@@ -83,20 +80,20 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
 
 
     def doQuitContinueReduce(self):
-        # TODO Doc
-
-        # Collect ...
+        """ Quit dialog window and continue to reduce data
+        """
+        # Collect runs to reduce
         retlist = []
         numrows = self.ui.tableWidget.rowCount()
         for irow in xrange(numrows):
             if self.ui.tableWidget.cellWidget(irow, 3).isChecked() is True:
                 retlist.append(int(str(self.ui.tableWidget.item(irow, 0).text())))
 
-
-        print retlist
+        print "[DB] Runs to reduce: ", retlist
 
         self.mySelectSignal.emit(self._myProjectName, retlist)
 
+        # Close window
         self.close()
 
         return
@@ -107,8 +104,13 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
     # Methods to access, set up and update table
     #--------------------------------------------------------------------------
     def appendRow(self, ipts, run, vanrun, select):
-        # TODO Doc
         """ Append a row to the project table
+        
+        Arguments:
+        - ipts :: ITPS number
+        - run  :: run number
+        - vanrun :: run number for vanadium run
+        - select :: whether this run is selected to reduce
         """
         # Validate input
         try:

@@ -4,8 +4,10 @@
 # - User can write script on this class to reduce and analyze data;
 ################################################################################
 import os
+import sys
 import pickle
 import time
+from os.path import expanduser
 
 #import PyVDrive
 #import PyVDrive.vdrive
@@ -102,8 +104,8 @@ class VDriveAPI:
                     filename = tftuple[1]
                     datacalfilesets.append( (filename, None) )
                 # ENDFOR
-            # ENDIF
-        # ENDFOR
+            # END_IF
+        # END_FOR
       
         # Add project
         project.addDataFileSets(datacalfilesets)
@@ -144,7 +146,7 @@ class VDriveAPI:
         if self._checkProjectExistence(projname, operation) is False:
             message = "Project %s does not exist." % (projname)
             print "[Lettuce] Return False due to %s." % (message)
-            return (False, message, None)
+            return False, message, None
 
         # Get the handler on project
         try: 
@@ -160,20 +162,19 @@ class VDriveAPI:
             if len(self._vanCalibCriteriaDict[projname]) == 0:
                 message = "Unable to match vanadium calibration file because criteria list is empty."
                 print "[Lettuce] Return False due to %s." % (message)
-                return (False, message, None)
+                return False, message, None
 
-            autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, \
-                    curproject.getBaseDataPath())
+            auto_finder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, curproject.getBaseDataPath())
            
             # add runs
-            numrunsadded, errmsg = autofinder.addRuns(runnumberlist)
+            numrunsadded, errmsg = auto_finder.addRuns(runnumberlist)
             print "There are %d runs that are added among %d in input list." % (numrunsadded,
                     len(runnumberlist))
             print "Error: \n%s\n-------------------------------\n" % (errmsg, )
 
             # do match for calibration & export IPTS of all vanadium runs to locate NeXus file
-            runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
-            vaniptsdict = autofinder.getVanRunLogs('IPTS')
+            runvanrundict = auto_finder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
+            vaniptsdict = auto_finder.getVanRunLogs('IPTS')
         else:
             # manual mode to link data file to calibration file
             print "Add run: ", runnumberlist
@@ -203,9 +204,8 @@ class VDriveAPI:
         thisproject.addDataFileSets(datacalfilesets)
         thisproject.addVanadiumIPTSInfo(vaniptsdict)
 
-        return (True, "", datacalfilesets)
-        
-        
+        return True, '', datacalfilesets
+
     def addLogInformation(self, logstr):
         """ Add a log information at information level
         """
@@ -833,15 +833,33 @@ class VDriveAPI:
         #    print "No local configuration file.  Using default!"
 
         ## ENDIF
-
-        try:
-            import PyVDrive.config as config
-        except ImportError as e:
-            print "Unable to load configuration due to %s." % (str(e))
-            raise e
-        else:
-            print "[Lettuce] Set myConfig from PyVDrive.config.configdict"
-            self._myConfig = config.configdict
+        
+        # Try to locate configuration file in ~/.vdrive/
+        home = expanduser('~')
+        configdir = os.path.join(home, '.vdrive')
+        
+        importsuccess = False
+        if os.path.exists(configdir) is True:
+            sys.path.append(configdir)
+            try: 
+                import config
+                importsuccess = True
+            except ImportError as e:
+                print "[Error] Unable to import config from %s due to %s."\
+                      %(configdir, str(e))
+        #ENDIF
+        
+        # Try to locate configuratoin under PyVDrive (default)
+        if importsuccess is False:
+            try:    
+                import PyVDrive.config as config
+            except ImportError as e:
+                print "Unable to load configuration due to %s." % (str(e))
+                raise e
+            else:
+                print "[Lettuce] Set myConfig from PyVDrive.config.configdict"
+                self._myConfig = config.configdict
+        #ENDIF
 
 
         return True

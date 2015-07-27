@@ -12,6 +12,7 @@ import mantid.simpleapi as mantidapi
 
 import SNSPowderReductionLite as PRL
 
+
 class VDProject:
     """
     """
