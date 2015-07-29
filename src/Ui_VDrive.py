@@ -213,6 +213,16 @@ class VDriveAPI:
 
         return
 
+
+    def add_runs(self, iptsdir):
+        """
+
+        :param iptsdir:
+        :return:
+        """
+        # TODO - Implement ASAP
+        return 12345, [12, 143, 432]
+
         
     def deleteProject(self, projtype, projname):
         """ Delete an existing project

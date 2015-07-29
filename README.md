@@ -77,6 +77,14 @@ Configuration file is search automatically under * ~/.vdrve/config * under Linux
 
 A customized configuration file can be loaded as an option;
 
+Calibration
+===========
+
+Pair:
+ -rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda
+ -rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm
+
+
 Time segment file
 =================
 

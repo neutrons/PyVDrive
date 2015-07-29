@@ -6,117 +6,267 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1454</width>
-    <height>867</height>
+    <width>1504</width>
+    <height>1009</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_18">
+   <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout_32">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout">
+       <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QPushButton" name="pushButton_selectIPTS">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Select IPTS folders </string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_27"/>
-        </item>
-        <item>
-         <widget class="QTreeView" name="treeView_iptsRun">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tree widget for IPTS and runs;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Mouse-right-click menu&lt;/p&gt;&lt;p&gt;* Add runs ty IPTS&lt;/p&gt;&lt;p&gt;* Delete IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="QPushButton" name="pushButton_loadCalFile">
+           <widget class="QPushButton" name="pushButton_selectIPTS">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>Calibration files</string>
+             <string>Select IPTS folders </string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_2">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run numbers as Vanadium calibration&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <layout class="QHBoxLayout" name="horizontalLayout_27"/>
+          </item>
+          <item>
+           <widget class="QTreeView" name="treeView_iptsRun">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
-            <property name="text">
-             <string/>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tree widget for IPTS and runs;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Mouse-right-click menu&lt;/p&gt;&lt;p&gt;* Add runs ty IPTS&lt;/p&gt;&lt;p&gt;* Delete IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTreeView" name="treeView">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Model: File browser mode, default is the shared folder but allowed to go up directory&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;example: /SNS/VULCAN/IPTS-14114/shared&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
          </layout>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0">
-           <widget class="QGroupBox" name="groupBox">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QPushButton" name="pushButton_loadCalFile">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select vanadium calibration runs/files;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;if it is selected without aborting, then the line edit to its right will be disabled;&lt;/p&gt;&lt;p&gt;Default is the instrument folder belonged to IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Calibration files</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Show Details</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_calibBriefView"/>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+             <widget class="QGroupBox" name="groupBox">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;Is 'sample environment' resposible for vanadium calibration?&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic; color:#ff0000;&quot;&gt;Required for chopping data&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="title">
+               <string>Sample environments</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <widget class="QRadioButton" name="radioButton_useLoadFrame">
+                 <property name="text">
+                  <string>VULCAN loadframe</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButton_useGenericDaq">
+                 <property name="text">
+                  <string>Generic DAQ</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButton_useLogFiles">
+                 <property name="text">
+                  <string>User Log files</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_5">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select user specified log file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Select file</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_userLogFileName"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_6">
             <property name="title">
-             <string>Sample environments</string>
+             <string>Select your data</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_11">
+            <layout class="QVBoxLayout" name="verticalLayout_7">
              <item>
-              <widget class="QRadioButton" name="radioButton_useLoadFrame">
-               <property name="text">
-                <string>VULCAN loadframe</string>
+              <widget class="QTabWidget" name="tabWidget">
+               <property name="currentIndex">
+                <number>0</number>
                </property>
+               <widget class="QWidget" name="tab">
+                <attribute name="title">
+                 <string>Sequential</string>
+                </attribute>
+                <layout class="QGridLayout" name="gridLayout_5">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label">
+                   <property name="text">
+                    <string>Select first and last runs ( can be reversed)</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QLineEdit" name="lineEdit_runLast"/>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QPushButton" name="pushButton_4">
+                   <property name="text">
+                    <string>Last Run</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QPushButton" name="pushButton_runFirst">
+                   <property name="text">
+                    <string>First Run</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="lineEdit_runFiirst"/>
+                 </item>
+                 <item row="4" column="0">
+                  <spacer name="verticalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QPushButton" name="pushButton_2">
+                   <property name="text">
+                    <string>Select All</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="tab_2">
+                <attribute name="title">
+                 <string>Individual</string>
+                </attribute>
+                <layout class="QFormLayout" name="formLayout">
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                 </property>
+                 <item row="1" column="0" colspan="2">
+                  <widget class="QTableView" name="tableView_selectedRuns">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>200</height>
+                    </size>
+                   </property>
+                   <property name="sortingEnabled">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QPushButton" name="pushButton_6">
+                   <property name="text">
+                    <string> Sort runs</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QCheckBox" name="checkBox">
+                   <property name="text">
+                    <string>Decending</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>Select individual runs (type in or add from left folder tree)</string>
+                   </property>
+                   <property name="textFormat">
+                    <enum>Qt::AutoText</enum>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
               </widget>
              </item>
              <item>
-              <widget class="QRadioButton" name="radioButton_useGenericDaq">
+              <widget class="QCheckBox" name="checkBox_2">
                <property name="text">
-                <string>Generic DAQ</string>
+                <string>Chopped Run</string>
                </property>
               </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_useLogFiles">
-               <property name="text">
-                <string>User Log files</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_5">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select user specified log file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>Select file</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QTableView" name="tableView_3"/>
              </item>
             </layout>
            </widget>
@@ -124,979 +274,388 @@
          </layout>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox_6">
-          <property name="title">
-           <string>Select your data</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_7">
-           <item>
-            <widget class="QTabWidget" name="tabWidget">
-             <property name="currentIndex">
-              <number>0</number>
-             </property>
-             <widget class="QWidget" name="tab">
-              <attribute name="title">
-               <string>Sequential</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_5">
-               <item row="0" column="0" colspan="2">
-                <widget class="QLabel" name="label">
-                 <property name="text">
-                  <string>Select first and last runs ( can be reversed)</string>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QLineEdit" name="lineEdit_runLast"/>
-               </item>
-               <item row="2" column="0">
-                <widget class="QPushButton" name="pushButton_4">
-                 <property name="text">
-                  <string>Last Run</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QPushButton" name="pushButton_runFirst">
-                 <property name="text">
-                  <string>First Run</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLineEdit" name="lineEdit_runFiirst"/>
-               </item>
-               <item row="3" column="0">
-                <spacer name="verticalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tab_2">
-              <attribute name="title">
-               <string>Individual</string>
-              </attribute>
-              <layout class="QFormLayout" name="formLayout">
-               <property name="fieldGrowthPolicy">
-                <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-               </property>
-               <item row="1" column="0" colspan="2">
-                <widget class="QTableView" name="tableView_selectedRuns">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>200</height>
-                  </size>
-                 </property>
-                 <property name="sortingEnabled">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QPushButton" name="pushButton_6">
-                 <property name="text">
-                  <string> Sort runs</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QCheckBox" name="checkBox">
-                 <property name="text">
-                  <string>Decending</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0" colspan="2">
-                <widget class="QLabel" name="label_2">
-                 <property name="text">
-                  <string>Select individual runs (type in or add from left folder tree)</string>
-                 </property>
-                 <property name="textFormat">
-                  <enum>Qt::AutoText</enum>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="lineEdit_5"/>
-           </item>
-           <item>
-            <widget class="QCheckBox" name="checkBox_2">
-             <property name="text">
-              <string>Chopped Run</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_8">
-        <item>
-         <widget class="QTabWidget" name="tabWidget_5">
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="currentIndex">
-           <number>0</number>
-          </property>
-          <widget class="QWidget" name="tab_12">
-           <attribute name="title">
-            <string>CHOP</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_17">
-            <item row="0" column="0">
-             <layout class="QVBoxLayout" name="verticalLayout_31">
-              <item>
-               <widget class="QGroupBox" name="groupBox_2">
-                <property name="title">
-                 <string>Chop Options</string>
-                </property>
-                <layout class="QVBoxLayout" name="verticalLayout_27">
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_25">
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <item>
+           <widget class="QTabWidget" name="tabWidget_5">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <widget class="QWidget" name="tab_12">
+             <attribute name="title">
+              <string>CHOP</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_17">
+              <item row="0" column="0">
+               <layout class="QVBoxLayout" name="verticalLayout_31">
+                <item>
+                 <widget class="QGroupBox" name="groupBox_2">
+                  <property name="title">
+                   <string>Chop Options</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_27">
                    <item>
-                    <layout class="QGridLayout" name="gridLayout_16">
-                     <item row="0" column="0">
-                      <widget class="QCheckBox" name="checkBox_10">
-                       <property name="text">
-                        <string>Skip first</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="lineEdit_11"/>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_3">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>Seconds</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_9">
-                     <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not synchronize with log data (loadframe, DAQ, and etc.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                     </property>
-                     <property name="text">
-                      <string>Just chop neutron data</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_11">
-                     <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j, k and respect the real time. &lt;/p&gt;&lt;p&gt;without this option: the reuslt will be &lt;/p&gt;&lt;p&gt;i/file1, i/file2, ..., j/file1, j/file2, ... &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;with this option, the result will be&lt;/p&gt;&lt;p&gt;i/file1, i/file2, ...., i/fileN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                     </property>
-                     <property name="text">
-                      <string>Chop continously over runs</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_8">
-                     <property name="text">
-                      <string>Bin data after chopping</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_12">
-                     <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j and k, and remove the time lag between any consecutive runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                     </property>
-                     <property name="text">
-                      <string>Connect runs</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_26">
-                   <item>
-                    <widget class="QRadioButton" name="radioButton_15">
-                     <property name="text">
-                      <string>By constant interval</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_22">
+                    <layout class="QVBoxLayout" name="verticalLayout_25">
                      <item>
-                      <spacer name="horizontalSpacer_8">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_10"/>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_8">
-                       <property name="text">
-                        <string>Sec</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <widget class="QRadioButton" name="radioButton_14">
-                     <property name="text">
-                      <string>By picked segments</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QTabWidget" name="tabWidget_3">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="currentIndex">
-                 <number>0</number>
-                </property>
-                <widget class="QWidget" name="tab_6">
-                 <attribute name="title">
-                  <string>Load</string>
-                 </attribute>
-                 <layout class="QVBoxLayout" name="verticalLayout_28">
-                  <item>
-                   <widget class="QPushButton" name="pushButton_11">
-                    <property name="text">
-                     <string>Load time segments</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QLabel" name="label_19">
-                    <property name="text">
-                     <string>file name</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QTableView" name="tableView_2">
-                    <property name="toolTip">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Should be editable to add segments by user from UI&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                    </property>
-                    <property name="sortingEnabled">
-                     <bool>false</bool>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="tab_7">
-                 <attribute name="title">
-                  <string>Pick</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_4">
-                  <item row="0" column="0">
-                   <layout class="QVBoxLayout" name="verticalLayout_30">
-                    <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_25">
-                      <item>
-                       <widget class="QPushButton" name="pushButton_12">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>read sample log file...</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_24">
-                      <item>
-                       <widget class="QCheckBox" name="checkBox_27">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolution for plotting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>Skip every</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QLineEdit" name="lineEdit_14"/>
-                      </item>
-                      <item>
-                       <widget class="QLabel" name="label_18">
-                        <property name="text">
-                         <string>sec</string>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_26">
-                      <item>
-                       <widget class="QGroupBox" name="groupBox_14">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="title">
-                         <string>Select plot on the right</string>
-                        </property>
-                        <layout class="QFormLayout" name="formLayout_2">
-                         <item row="0" column="0">
-                          <widget class="QRadioButton" name="radioButton_24">
-                           <property name="text">
-                            <string>plot 1</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QRadioButton" name="radioButton_28">
-                           <property name="text">
-                            <string>plot 2</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QRadioButton" name="radioButton_26">
-                           <property name="text">
-                            <string>plot 3</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="1">
-                          <widget class="QRadioButton" name="radioButton_29">
-                           <property name="text">
-                            <string>plot 4</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="0">
-                          <widget class="QRadioButton" name="radioButton_27">
-                           <property name="text">
-                            <string>plot 5</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="1">
-                          <widget class="QRadioButton" name="radioButton_30">
-                           <property name="text">
-                            <string>plot 6</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item>
-                     <widget class="QGroupBox" name="groupBox_3">
-                      <property name="title">
-                       <string>Selected sample from plot</string>
-                      </property>
-                      <layout class="QVBoxLayout" name="verticalLayout_29">
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_28">
-                         <item>
-                          <widget class="QLabel" name="label_16">
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample value interval&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Interval</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QLineEdit" name="lineEdit_12"/>
-                         </item>
-                        </layout>
+                      <layout class="QGridLayout" name="gridLayout_16">
+                       <item row="0" column="0">
+                        <widget class="QCheckBox" name="checkBox_10">
+                         <property name="text">
+                          <string>Skip first</string>
+                         </property>
+                        </widget>
                        </item>
-                       <item>
-                        <layout class="QHBoxLayout" name="horizontalLayout_29">
-                         <item>
-                          <widget class="QCheckBox" name="checkBox_26">
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;minimum time for each segment from sample interval;&lt;/p&gt;&lt;p&gt;if the segment has time shorter than this setup, the statistic of the data is bad and thus to discard. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Min time</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QLineEdit" name="lineEdit_13"/>
-                         </item>
-                         <item>
-                          <widget class="QLabel" name="label_17">
-                           <property name="text">
-                            <string>Sec</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
+                       <item row="0" column="1">
+                        <widget class="QLineEdit" name="lineEdit_11"/>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QLabel" name="label_3">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="text">
+                          <string>Seconds</string>
+                         </property>
+                        </widget>
                        </item>
                       </layout>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_9">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not synchronize with log data (loadframe, DAQ, and etc.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Just chop neutron data</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_11">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j, k and respect the real time. &lt;/p&gt;&lt;p&gt;without this option: the reuslt will be &lt;/p&gt;&lt;p&gt;i/file1, i/file2, ..., j/file1, j/file2, ... &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;with this option, the result will be&lt;/p&gt;&lt;p&gt;i/file1, i/file2, ...., i/fileN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Chop continously over runs</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_8">
+                       <property name="text">
+                        <string>Bin data after chopping</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_12">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j and k, and remove the time lag between any consecutive runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Connect runs</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_26">
+                     <item>
+                      <widget class="QRadioButton" name="radioButton_15">
+                       <property name="text">
+                        <string>By constant interval</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_22">
+                       <item>
+                        <spacer name="horizontalSpacer_8">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>40</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="lineEdit_10"/>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="label_8">
+                         <property name="text">
+                          <string>Sec</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <widget class="QRadioButton" name="radioButton_14">
+                       <property name="text">
+                        <string>By picked segments</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QTabWidget" name="tabWidget_3">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="currentIndex">
+                   <number>1</number>
+                  </property>
+                  <widget class="QWidget" name="tab_6">
+                   <attribute name="title">
+                    <string>Load</string>
+                   </attribute>
+                   <layout class="QVBoxLayout" name="verticalLayout_28">
+                    <item>
+                     <widget class="QPushButton" name="pushButton_11">
+                      <property name="text">
+                       <string>Load time segments</string>
+                      </property>
                      </widget>
                     </item>
                     <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_30">
+                     <widget class="QLabel" name="label_19">
+                      <property name="text">
+                       <string>file name</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTableView" name="tableView_2">
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Should be editable to add segments by user from UI&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <property name="sortingEnabled">
+                       <bool>false</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                  <widget class="QWidget" name="tab_7">
+                   <attribute name="title">
+                    <string>Pick</string>
+                   </attribute>
+                   <layout class="QGridLayout" name="gridLayout_4">
+                    <item row="0" column="0">
+                     <layout class="QVBoxLayout" name="verticalLayout_30">
                       <item>
-                       <widget class="QPushButton" name="pushButton_17">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       <layout class="QHBoxLayout" name="horizontalLayout_25">
+                        <item>
+                         <widget class="QPushButton" name="pushButton_readSampleLogFile">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>read sample log file...</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="horizontalLayout_24">
+                        <item>
+                         <widget class="QCheckBox" name="checkBox_27">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolution for plotting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>Skip every</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="lineEdit_14"/>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="label_18">
+                          <property name="text">
+                           <string>sec</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="horizontalLayout_26">
+                        <item>
+                         <widget class="QGroupBox" name="groupBox_14">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="title">
+                           <string>Select plot on the right</string>
+                          </property>
+                          <layout class="QFormLayout" name="formLayout_2">
+                           <item row="0" column="0">
+                            <widget class="QRadioButton" name="radioButton_24">
+                             <property name="text">
+                              <string>plot 1</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QRadioButton" name="radioButton_28">
+                             <property name="text">
+                              <string>plot 2</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="1" column="0">
+                            <widget class="QRadioButton" name="radioButton_26">
+                             <property name="text">
+                              <string>plot 3</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="1" column="1">
+                            <widget class="QRadioButton" name="radioButton_29">
+                             <property name="text">
+                              <string>plot 4</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="0">
+                            <widget class="QRadioButton" name="radioButton_27">
+                             <property name="text">
+                              <string>plot 5</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="1">
+                            <widget class="QRadioButton" name="radioButton_30">
+                             <property name="text">
+                              <string>plot 6</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QGroupBox" name="groupBox_3">
+                        <property name="title">
+                         <string>Selected sample from plot</string>
                         </property>
-                        <property name="text">
-                         <string>Manual Picker</string>
-                        </property>
+                        <layout class="QVBoxLayout" name="verticalLayout_29">
+                         <item>
+                          <layout class="QHBoxLayout" name="horizontalLayout_28">
+                           <item>
+                            <widget class="QLabel" name="label_16">
+                             <property name="toolTip">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample value interval&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                             <property name="text">
+                              <string>Interval</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLineEdit" name="lineEdit_12"/>
+                           </item>
+                          </layout>
+                         </item>
+                         <item>
+                          <layout class="QHBoxLayout" name="horizontalLayout_29">
+                           <item>
+                            <widget class="QCheckBox" name="checkBox_26">
+                             <property name="toolTip">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;minimum time for each segment from sample interval;&lt;/p&gt;&lt;p&gt;if the segment has time shorter than this setup, the statistic of the data is bad and thus to discard. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                             <property name="text">
+                              <string>Min time</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLineEdit" name="lineEdit_13"/>
+                           </item>
+                           <item>
+                            <widget class="QLabel" name="label_17">
+                             <property name="text">
+                              <string>Sec</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </item>
+                        </layout>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QPushButton" name="pushButton_16">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>Pick</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QPushButton" name="pushButton_18">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save:&lt;/p&gt;&lt;p&gt;1. update to table in tab 'Load';&lt;/p&gt;&lt;p&gt;2. save to a file specified by user;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>Save</string>
-                        </property>
-                       </widget>
+                       <layout class="QHBoxLayout" name="horizontalLayout_30">
+                        <item>
+                         <widget class="QPushButton" name="pushButton_17">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>Manual Picker</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QPushButton" name="pushButton_16">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>Pick</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QPushButton" name="pushButton_18">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save:&lt;/p&gt;&lt;p&gt;1. update to table in tab 'Load';&lt;/p&gt;&lt;p&gt;2. save to a file specified by user;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>Save</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
                     </item>
                    </layout>
-                  </item>
-                 </layout>
-                </widget>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item row="1" column="0">
-             <layout class="QHBoxLayout" name="horizontalLayout_23">
-              <item>
-               <spacer name="horizontalSpacer_9">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_chopData">
-                <property name="text">
-                 <string>Do Chop</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_13">
-           <attribute name="title">
-            <string>VBIN</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_9">
-            <item row="0" column="0">
-             <layout class="QVBoxLayout" name="verticalLayout_10">
-              <item>
-               <widget class="QGroupBox" name="groupBox_10">
-                <property name="title">
-                 <string>Binning Option</string>
-                </property>
-                <layout class="QVBoxLayout" name="verticalLayout_14">
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_13">
-                   <item>
-                    <widget class="QRadioButton" name="radioButton_3">
-                     <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin size = fixed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                     </property>
-                     <property name="text">
-                      <string>Standard binning</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QRadioButton" name="radioButton_16">
-                     <property name="text">
-                      <string>Customized binning</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_12">
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_10">
-                     <item>
-                      <widget class="QLabel" name="label_9">
-                       <property name="text">
-                        <string>Bin width</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_15"/>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_12">
-                     <item>
-                      <widget class="QLabel" name="label_10">
-                       <property name="text">
-                        <string>Min tof</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_16"/>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_11">
-                     <item>
-                      <widget class="QLabel" name="label_11">
-                       <property name="text">
-                        <string>Max tof</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_17"/>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_9">
-                   <item>
-                    <widget class="QGroupBox" name="groupBox_7">
-                     <property name="title">
-                      <string>special</string>
-                     </property>
-                     <layout class="QGridLayout" name="gridLayout_8">
-                      <item row="5" column="1">
-                       <layout class="QHBoxLayout" name="horizontalLayout_4">
-                        <item>
-                         <widget class="QLabel" name="label_12">
-                          <property name="text">
-                           <string>pixel size</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLineEdit" name="lineEdit">
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of pixels to sum in vertical or horizonal direction on detectors&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QCheckBox" name="checkBox_13">
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin over pixel: sum spectrum among certain pixels. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="text">
-                         <string>bin over pixel</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="1" column="1">
-                       <layout class="QHBoxLayout" name="horizontalLayout_6">
-                        <item>
-                         <spacer name="horizontalSpacer">
-                          <property name="orientation">
-                           <enum>Qt::Horizontal</enum>
-                          </property>
-                          <property name="sizeType">
-                           <enum>QSizePolicy::Fixed</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                           <size>
-                            <width>40</width>
-                            <height>20</height>
-                           </size>
-                          </property>
-                         </spacer>
-                        </item>
-                        <item>
-                         <widget class="QRadioButton" name="radioButton_17">
-                          <property name="text">
-                           <string>Horizontal</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item row="3" column="1">
-                       <layout class="QHBoxLayout" name="horizontalLayout_7">
-                        <item>
-                         <spacer name="horizontalSpacer_2">
-                          <property name="orientation">
-                           <enum>Qt::Horizontal</enum>
-                          </property>
-                          <property name="sizeType">
-                           <enum>QSizePolicy::Fixed</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                           <size>
-                            <width>40</width>
-                            <height>20</height>
-                           </size>
-                          </property>
-                         </spacer>
-                        </item>
-                        <item>
-                         <widget class="QRadioButton" name="radioButton_18">
-                          <property name="text">
-                           <string>Vertical</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_15">
-                   <item>
-                    <widget class="QGroupBox" name="groupBox_15">
-                     <property name="title">
-                      <string>Corrections</string>
-                     </property>
-                     <layout class="QVBoxLayout" name="verticalLayout_16">
-                      <item>
-                       <widget class="QCheckBox" name="checkBox_21">
-                        <property name="text">
-                         <string>Substract backgroud</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QCheckBox" name="checkBox_22">
-                        <property name="text">
-                         <string>Normalized int to V</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QCheckBox" name="checkBox_23">
-                        <property name="text">
-                         <string>Substract special pattern</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_8">
-                        <item>
-                         <spacer name="horizontalSpacer_3">
-                          <property name="orientation">
-                           <enum>Qt::Horizontal</enum>
-                          </property>
-                          <property name="sizeType">
-                           <enum>QSizePolicy::Minimum</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                           <size>
-                            <width>40</width>
-                            <height>20</height>
-                           </size>
-                          </property>
-                         </spacer>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_15">
-                          <property name="text">
-                           <string>run#</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLineEdit" name="lineEdit_18"/>
-                        </item>
-                       </layout>
-                      </item>
-                     </layout>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_9">
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_14">
-                     <property name="text">
-                      <string>Fullprof Data</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="horizontalSpacer_4">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>40</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_13">
-                   <item>
-                    <widget class="QPushButton" name="pushButton_14">
-                     <property name="text">
-                      <string>Do BIN</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_14">
-           <attribute name="title">
-            <string>VIEW</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_11">
-            <item row="0" column="0">
-             <layout class="QVBoxLayout" name="verticalLayout_5">
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_17">
-                <item>
-                 <widget class="QGroupBox" name="groupBox_16">
-                  <property name="title">
-                   <string>VIEW Options</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_3">
-                   <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_18">
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_21">
-                       <property name="text">
-                        <string>in Q</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_20">
-                       <property name="text">
-                        <string>in r'lambda'</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_19">
-                       <property name="text">
-                        <string>in d</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_22">
-                       <property name="text">
-                        <string>in 2theta</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QGridLayout" name="gridLayout_10">
-                     <item row="1" column="0">
-                      <widget class="QLabel" name="label_13">
-                       <property name="text">
-                        <string>Min X</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="1">
-                      <widget class="QLineEdit" name="lineEdit_19"/>
-                     </item>
-                     <item row="2" column="0">
-                      <widget class="QLabel" name="label_14">
-                       <property name="text">
-                        <string>Max X</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="2" column="1">
-                      <widget class="QLineEdit" name="lineEdit_20"/>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_4">
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_16">
-                       <property name="text">
-                        <string>Normalize Int. to proton charge</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_17">
-                       <property name="text">
-                        <string>Normalize Int. to Vanadium</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_15">
-                       <property name="text">
-                        <string>Logscale intensity</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
+                  </widget>
                  </widget>
                 </item>
                </layout>
               </item>
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_6">
+              <item row="1" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_23">
                 <item>
-                 <widget class="QCheckBox" name="checkBox_20">
-                  <property name="text">
-                   <string>1D Line plot</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QCheckBox" name="checkBox_19">
-                  <property name="text">
-                   <string>3D Surface</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QCheckBox" name="checkBox_18">
-                  <property name="text">
-                   <string>2D Countour</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QCheckBox" name="checkBox_25">
-                  <property name="text">
-                   <string>vs. chosen variables in log file</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <layout class="QHBoxLayout" name="horizontalLayout_14">
-                  <item>
-                   <spacer name="horizontalSpacer_5">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeType">
-                     <enum>QSizePolicy::Fixed</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>30</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                  <item>
-                   <widget class="QComboBox" name="comboBox_7"/>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_15">
-                <item>
-                 <spacer name="horizontalSpacer_6">
+                 <spacer name="horizontalSpacer_9">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
@@ -1109,191 +668,690 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_15">
-                  <property name="toolTip">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Plot to the right... &lt;/p&gt;&lt;p&gt;Plot bank 1...2 to upper 1 and upper 2 &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                  </property>
+                 <widget class="QPushButton" name="pushButton_chopData">
                   <property name="text">
-                   <string>Do VIEW</string>
+                   <string>Do Chop</string>
                   </property>
                  </widget>
                 </item>
                </layout>
               </item>
              </layout>
-            </item>
-            <item row="1" column="0">
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_10">
-           <attribute name="title">
-            <string>VSPF</string>
-           </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_22">
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_21">
+            </widget>
+            <widget class="QWidget" name="tab_13">
+             <attribute name="title">
+              <string>VBIN</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_9">
+              <item row="0" column="0">
+               <layout class="QVBoxLayout" name="verticalLayout_10">
+                <item>
+                 <widget class="QGroupBox" name="groupBox_10">
+                  <property name="title">
+                   <string>Binning Option</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_14">
+                   <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_13">
+                     <item>
+                      <widget class="QRadioButton" name="radioButton_3">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin size = fixed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Standard binning</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QRadioButton" name="radioButton_16">
+                       <property name="text">
+                        <string>Customized binning</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_12">
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_10">
+                       <item>
+                        <widget class="QLabel" name="label_9">
+                         <property name="text">
+                          <string>Bin width</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="lineEdit_15"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_12">
+                       <item>
+                        <widget class="QLabel" name="label_10">
+                         <property name="text">
+                          <string>Min tof</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="lineEdit_16"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_11">
+                       <item>
+                        <widget class="QLabel" name="label_11">
+                         <property name="text">
+                          <string>Max tof</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="lineEdit_17"/>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_9">
+                     <item>
+                      <widget class="QGroupBox" name="groupBox_7">
+                       <property name="title">
+                        <string>special</string>
+                       </property>
+                       <layout class="QGridLayout" name="gridLayout_8">
+                        <item row="5" column="1">
+                         <layout class="QHBoxLayout" name="horizontalLayout_4">
+                          <item>
+                           <widget class="QLabel" name="label_12">
+                            <property name="text">
+                             <string>pixel size</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QLineEdit" name="lineEdit">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of pixels to sum in vertical or horizonal direction on detectors&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QCheckBox" name="checkBox_13">
+                          <property name="toolTip">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin over pixel: sum spectrum among certain pixels. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                          <property name="text">
+                           <string>bin over pixel</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <layout class="QHBoxLayout" name="horizontalLayout_6">
+                          <item>
+                           <spacer name="horizontalSpacer">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeType">
+                             <enum>QSizePolicy::Fixed</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>40</width>
+                              <height>20</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="radioButton_17">
+                            <property name="text">
+                             <string>Horizontal</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                        <item row="3" column="1">
+                         <layout class="QHBoxLayout" name="horizontalLayout_7">
+                          <item>
+                           <spacer name="horizontalSpacer_2">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeType">
+                             <enum>QSizePolicy::Fixed</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>40</width>
+                              <height>20</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="radioButton_18">
+                            <property name="text">
+                             <string>Vertical</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                       </layout>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_15">
+                     <item>
+                      <widget class="QGroupBox" name="groupBox_15">
+                       <property name="title">
+                        <string>Corrections</string>
+                       </property>
+                       <layout class="QVBoxLayout" name="verticalLayout_16">
+                        <item>
+                         <widget class="QCheckBox" name="checkBox_21">
+                          <property name="text">
+                           <string>Substract backgroud</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QCheckBox" name="checkBox_22">
+                          <property name="text">
+                           <string>Normalized int to V</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QCheckBox" name="checkBox_23">
+                          <property name="text">
+                           <string>Substract special pattern</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <layout class="QHBoxLayout" name="horizontalLayout_8">
+                          <item>
+                           <spacer name="horizontalSpacer_3">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeType">
+                             <enum>QSizePolicy::Minimum</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>40</width>
+                              <height>20</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                          <item>
+                           <widget class="QLabel" name="label_15">
+                            <property name="text">
+                             <string>run#</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QLineEdit" name="lineEdit_18"/>
+                          </item>
+                         </layout>
+                        </item>
+                       </layout>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_9">
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_14">
+                       <property name="text">
+                        <string>Fullprof Data</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <spacer name="horizontalSpacer_4">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_13">
+                     <item>
+                      <widget class="QPushButton" name="pushButton_14">
+                       <property name="text">
+                        <string>Do BIN</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_14">
+             <attribute name="title">
+              <string>VIEW</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_11">
+              <item row="0" column="0">
+               <layout class="QVBoxLayout" name="verticalLayout_5">
+                <item>
+                 <layout class="QVBoxLayout" name="verticalLayout_17">
+                  <item>
+                   <widget class="QGroupBox" name="groupBox_16">
+                    <property name="title">
+                     <string>VIEW Options</string>
+                    </property>
+                    <layout class="QVBoxLayout" name="verticalLayout_3">
+                     <item>
+                      <layout class="QVBoxLayout" name="verticalLayout_18">
+                       <item>
+                        <widget class="QRadioButton" name="radioButton_21">
+                         <property name="text">
+                          <string>in Q</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QRadioButton" name="radioButton_20">
+                         <property name="text">
+                          <string>in r'lambda'</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QRadioButton" name="radioButton_19">
+                         <property name="text">
+                          <string>in d</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QRadioButton" name="radioButton_22">
+                         <property name="text">
+                          <string>in 2theta</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QGridLayout" name="gridLayout_10">
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_13">
+                         <property name="text">
+                          <string>Min X</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QLineEdit" name="lineEdit_19"/>
+                       </item>
+                       <item row="2" column="0">
+                        <widget class="QLabel" name="label_14">
+                         <property name="text">
+                          <string>Max X</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="1">
+                        <widget class="QLineEdit" name="lineEdit_20"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="verticalLayout_4">
+                       <item>
+                        <widget class="QCheckBox" name="checkBox_16">
+                         <property name="text">
+                          <string>Normalize Int. to proton charge</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QCheckBox" name="checkBox_17">
+                         <property name="text">
+                          <string>Normalize Int. to Vanadium</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QCheckBox" name="checkBox_15">
+                         <property name="text">
+                          <string>Logscale intensity</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QVBoxLayout" name="verticalLayout_6">
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_20">
+                    <property name="text">
+                     <string>1D Line plot</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_19">
+                    <property name="text">
+                     <string>3D Surface</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_18">
+                    <property name="text">
+                     <string>2D Countour</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="checkBox_25">
+                    <property name="text">
+                     <string>vs. chosen variables in log file</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayout_14">
+                    <item>
+                     <spacer name="horizontalSpacer_5">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>30</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="comboBox_7"/>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_15">
+                  <item>
+                   <spacer name="horizontalSpacer_6">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButton_15">
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Plot to the right... &lt;/p&gt;&lt;p&gt;Plot bank 1...2 to upper 1 and upper 2 &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                    <property name="text">
+                     <string>Do VIEW</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_10">
+             <attribute name="title">
+              <string>VSPF</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_22">
               <item>
-               <widget class="QGroupBox" name="groupBox_17">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;VSPF: Peak fitting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="title">
-                 <string>VSPF Options</string>
-                </property>
-                <layout class="QVBoxLayout" name="verticalLayout_20">
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_19">
+               <layout class="QVBoxLayout" name="verticalLayout_21">
+                <item>
+                 <widget class="QGroupBox" name="groupBox_17">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;VSPF: Peak fitting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="title">
+                   <string>VSPF Options</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_20">
                    <item>
-                    <widget class="QCheckBox" name="checkBox_4">
+                    <layout class="QVBoxLayout" name="verticalLayout_19">
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_4">
+                       <property name="text">
+                        <string>Normalize Int. to proton charge</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_3">
+                       <property name="text">
+                        <string>Normalize Int. to Vanadium</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_5">
+                       <property name="text">
+                        <string>Update peak postion</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_18">
+                     <property name="title">
+                      <string>Reference run (Runr)</string>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_13">
+                      <item row="0" column="0">
+                       <widget class="QRadioButton" name="radioButton_4">
+                        <property name="text">
+                         <string>First</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1" colspan="2">
+                       <widget class="QRadioButton" name="radioButton_7">
+                        <property name="text">
+                         <string>Input</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0" colspan="2">
+                       <widget class="QRadioButton" name="radioButton_6">
+                        <property name="text">
+                         <string>Last</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QLineEdit" name="lineEdit_6"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_13">
+                     <property name="title">
+                      <string>Fitting algorithm</string>
+                     </property>
+                     <layout class="QHBoxLayout" name="horizontalLayout_16">
+                      <item>
+                       <widget class="QRadioButton" name="radioButton_23">
+                        <property name="text">
+                         <string>Gaussian</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QRadioButton" name="radioButton_25">
+                        <property name="text">
+                         <string>Tof profile</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_17">
+                     <item>
+                      <widget class="QLabel" name="label_4">
+                       <property name="text">
+                        <string>Peak list</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_9">
+                       <property name="text">
+                        <string>Load Peak ID File</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="pushButton_7">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;CALL gui TO PICK PEAKS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
                      <property name="text">
-                      <string>Normalize Int. to proton charge</string>
+                      <string>Create peak list from first run</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox_3">
-                     <property name="text">
-                      <string>Normalize Int. to Vanadium</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="checkBox_5">
-                     <property name="text">
-                      <string>Update peak postion</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <widget class="QGroupBox" name="groupBox_18">
-                   <property name="title">
-                    <string>Reference run (Runr)</string>
-                   </property>
-                   <layout class="QGridLayout" name="gridLayout_13">
-                    <item row="0" column="0">
-                     <widget class="QRadioButton" name="radioButton_4">
-                      <property name="text">
-                       <string>First</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1" colspan="2">
-                     <widget class="QRadioButton" name="radioButton_7">
-                      <property name="text">
-                       <string>Input</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0" colspan="2">
-                     <widget class="QRadioButton" name="radioButton_6">
-                      <property name="text">
-                       <string>Last</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="2">
-                     <widget class="QLineEdit" name="lineEdit_6"/>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QGroupBox" name="groupBox_13">
-                   <property name="title">
-                    <string>Fitting algorithm</string>
-                   </property>
-                   <layout class="QHBoxLayout" name="horizontalLayout_16">
-                    <item>
-                     <widget class="QRadioButton" name="radioButton_23">
-                      <property name="text">
-                       <string>Gaussian</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radioButton_25">
-                      <property name="text">
-                       <string>Tof profile</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_17">
-                   <item>
-                    <widget class="QLabel" name="label_4">
-                     <property name="text">
-                      <string>Peak list</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="pushButton_9">
-                     <property name="text">
-                      <string>Load Peak ID File</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="pushButton_7">
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;CALL gui TO PICK PEAKS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>Create peak list from first run</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QTableWidget" name="tableWidget">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>60</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <layout class="QHBoxLayout" name="horizontalLayout_18">
-                   <item>
-                    <spacer name="horizontalSpacer_7">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
+                    <widget class="QTableWidget" name="tableWidget">
+                     <property name="minimumSize">
                       <size>
-                       <width>40</width>
-                       <height>20</height>
+                       <width>0</width>
+                       <height>60</height>
                       </size>
                      </property>
-                    </spacer>
+                    </widget>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="pushButton_8">
-                     <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In the right plots show:&lt;/p&gt;&lt;p&gt;1: strain vs. run number;&lt;/p&gt;&lt;p&gt;2. peak width vs. run number; &lt;/p&gt;&lt;p&gt;3. ... &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                     </property>
+                    <layout class="QHBoxLayout" name="horizontalLayout_18">
+                     <item>
+                      <spacer name="horizontalSpacer_7">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_8">
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In the right plots show:&lt;/p&gt;&lt;p&gt;1: strain vs. run number;&lt;/p&gt;&lt;p&gt;2. peak width vs. run number; &lt;/p&gt;&lt;p&gt;3. ... &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>Do SPF</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_11">
+             <attribute name="title">
+              <string>V-GSAS</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_24">
+              <item>
+               <widget class="QGroupBox" name="groupBox_19">
+                <property name="title">
+                 <string>Banks</string>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_19">
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_23">
+                   <item>
+                    <widget class="QCheckBox" name="checkBox_6">
                      <property name="text">
-                      <string>Do SPF</string>
+                      <string>Bank 1</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QCheckBox" name="checkBox_7">
+                     <property name="text">
+                      <string>Bank 2</string>
                      </property>
                     </widget>
                    </item>
@@ -1302,245 +1360,249 @@
                 </layout>
                </widget>
               </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_11">
-           <attribute name="title">
-            <string>V-GSAS</string>
-           </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_24">
-            <item>
-             <widget class="QGroupBox" name="groupBox_19">
-              <property name="title">
-               <string>Banks</string>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_19">
-               <item>
-                <layout class="QVBoxLayout" name="verticalLayout_23">
-                 <item>
-                  <widget class="QCheckBox" name="checkBox_6">
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_20">
+                <item>
+                 <widget class="QLabel" name="label_6">
+                  <property name="text">
+                   <string>Number of phases</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="lineEdit_8"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="groupBox_4">
+                <property name="title">
+                 <string>Seed Run (runm)</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_14">
+                 <item row="0" column="0">
+                  <widget class="QRadioButton" name="radioButton_8">
                    <property name="text">
-                    <string>Bank 1</string>
+                    <string>First</string>
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QCheckBox" name="checkBox_7">
+                 <item row="0" column="1">
+                  <widget class="QRadioButton" name="radioButton_10">
                    <property name="text">
-                    <string>Bank 2</string>
+                    <string>Input</string>
                    </property>
                   </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QRadioButton" name="radioButton_9">
+                   <property name="text">
+                    <string>Last</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="lineEdit_7"/>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_20">
-              <item>
-               <widget class="QLabel" name="label_6">
-                <property name="text">
-                 <string>Number of phases</string>
-                </property>
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="lineEdit_8"/>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="groupBox_4">
-              <property name="title">
-               <string>Seed Run (runm)</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_14">
-               <item row="0" column="0">
-                <widget class="QRadioButton" name="radioButton_8">
-                 <property name="text">
-                  <string>First</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QRadioButton" name="radioButton_10">
-                 <property name="text">
-                  <string>Input</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QRadioButton" name="radioButton_9">
-                 <property name="text">
-                  <string>Last</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLineEdit" name="lineEdit_7"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="groupBox_5">
-              <property name="title">
-               <string>Reference run for strain</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_15">
-               <item row="0" column="0">
-                <widget class="QRadioButton" name="radioButton_11">
-                 <property name="text">
-                  <string>First</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QRadioButton" name="radioButton_13">
-                 <property name="text">
-                  <string>Input</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QRadioButton" name="radioButton_12">
-                 <property name="text">
-                  <string>Last</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLineEdit" name="lineEdit_9"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_21">
-              <item>
-               <widget class="QPushButton" name="pushButton_10">
-                <property name="text">
-                 <string>Do GSAS</string>
+               <widget class="QGroupBox" name="groupBox_5">
+                <property name="title">
+                 <string>Reference run for strain</string>
                 </property>
+                <layout class="QGridLayout" name="gridLayout_15">
+                 <item row="0" column="0">
+                  <widget class="QRadioButton" name="radioButton_11">
+                   <property name="text">
+                    <string>First</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QRadioButton" name="radioButton_13">
+                   <property name="text">
+                    <string>Input</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QRadioButton" name="radioButton_12">
+                   <property name="text">
+                    <string>Last</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="lineEdit_9"/>
+                 </item>
+                </layout>
                </widget>
               </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_21">
+                <item>
+                 <widget class="QPushButton" name="pushButton_10">
+                  <property name="text">
+                   <string>Do GSAS</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
              </layout>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QGridLayout" name="gridLayout_7">
-        <item row="4" column="1">
-         <widget class="QComboBox" name="comboBox_4"/>
-        </item>
-        <item row="3" column="1">
-         <widget class="QGraphicsView" name="graphicsView">
-          <property name="minimumSize">
-           <size>
-            <width>250</width>
-            <height>0</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGraphicsView" name="graphicsView_3">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>250</width>
-            <height>0</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="checkBox_24">
-          <property name="text">
-           <string>Plot also in floating windows</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QComboBox" name="comboBox_3"/>
-        </item>
-        <item row="6" column="0">
-         <widget class="QComboBox" name="comboBox_5"/>
-        </item>
-        <item row="5" column="1">
-         <widget class="QGraphicsView" name="graphicsView_6"/>
-        </item>
-        <item row="6" column="1">
-         <widget class="QComboBox" name="comboBox_6"/>
-        </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="comboBox_2"/>
-        </item>
-        <item row="4" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QComboBox" name="comboBox_8">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="comboBox">
-            <item>
-             <property name="text">
-              <string>Relative Time</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Absolute Time</string>
-             </property>
-            </item>
+            </widget>
            </widget>
           </item>
          </layout>
         </item>
-        <item row="1" column="1">
-         <widget class="QGraphicsView" name="graphicsView_4">
-          <property name="minimumSize">
-           <size>
-            <width>250</width>
-            <height>0</height>
-           </size>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="plainTextEdit_LogInfo"/>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="1">
+     <layout class="QGridLayout" name="gridLayout_7">
+      <item row="3" column="1">
+       <widget class="QGraphicsView" name="graphicsView_snapView3">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGraphicsView" name="graphicsView_snapView0">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="checkBox_24">
+        <property name="text">
+         <string>Plot also in floating windows</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QGraphicsView" name="graphicsView_5"/>
+      </item>
+      <item row="4" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QComboBox" name="comboBox_g31">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QGraphicsView" name="graphicsView_2"/>
-        </item>
-        <item row="3" column="0">
-         <widget class="QGraphicsView" name="graphicsView_5">
-          <property name="minimumSize">
-           <size>
-            <width>250</width>
-            <height>0</height>
-           </size>
-          </property>
+        <item>
+         <widget class="QComboBox" name="comboBox_g32">
+          <item>
+           <property name="text">
+            <string>Relative Time</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Absolute Time</string>
+           </property>
+          </item>
          </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="1">
+       <widget class="QGraphicsView" name="graphicsView_snapView1">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QGraphicsView" name="graphicsView_4"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QGraphicsView" name="graphicsView_snapView2">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QComboBox" name="comboBox_g11"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g12"/>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_31">
+        <item>
+         <widget class="QComboBox" name="comboBox_g21"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g22"/>
+        </item>
+       </layout>
+      </item>
+      <item row="4" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_32">
+        <item>
+         <widget class="QComboBox" name="comboBox_g41"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g42"/>
+        </item>
+       </layout>
+      </item>
+      <item row="6" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_33">
+        <item>
+         <widget class="QComboBox" name="comboBox_g51"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g52"/>
+        </item>
+       </layout>
+      </item>
+      <item row="6" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_34">
+        <item>
+         <widget class="QComboBox" name="comboBox_g61"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g62"/>
         </item>
        </layout>
       </item>
      </layout>
     </item>
-    <item row="0" column="1">
+    <item row="0" column="2">
      <widget class="QLabel" name="label_20">
       <property name="text">
        <string/>
@@ -1554,8 +1616,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1454</width>
-     <height>22</height>
+     <width>1504</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">
