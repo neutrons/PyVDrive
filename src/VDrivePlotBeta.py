@@ -27,6 +27,7 @@ import VDriveAPI as vdrive
 
 import ui.Dialog_AddRuns as dlgrun
 
+
 class VDrivePlotBeta(QtGui.QMainWindow):
     """ Main GUI class for VDrive of the beta version
     """
@@ -45,15 +46,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         # Define status variables
-        # new project
+        # new work flow
         self._myWorkflow = vdrive.VDriveAPI()
         self._calibCriteriaFile = ''
+        self._numSnapViews = 6
 
         # controls to the sub windows
         self._openSubWindows = []
 
         # Initialize widgets
-        self._initWidgets()
+        self._init_widgets()
 
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -65,20 +67,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Group widgets
         self._groupedSnapViewList = []
-
-        # TODO - Use  getattr(a, 'x') for all 6
-        graph_group0 = spview.SnapGraphicsView(self.ui.graphicsView_snapView0,
-                                              self.ui.comboBox_g11, self.ui.comboBox_g12)
-        self._groupedSnapViewList.append(graph_group0)
+        self._setup_snap_view_groups()
 
 
         return
 
-    def _initWidgets(self):
+    def _init_widgets(self):
+        """ Initialize widgets including
+        (1) project runs view
+        :return: None
         """
-
-        :return:
-        """
+        # IPTS and run tree view
         model = QtGui.QStandardItemModel()
         model.setColumnCount(2)
         model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
@@ -92,21 +91,42 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def _setup_snap_view_groups(self, num_groups):
+        """ Set up 6 snap view and control widgets groups
+        Class variable _groupSnapViewList will record all of them accordingly
+        :param num_groups: number of groups to initialize
+        :return: None
+        """
+        for i in xrange(num_groups):
+            try:
+                # get on hold of three widgets with systematic naming
+                graph_view = getattr(self.ui, 'graphicsView_snapView%d'%(i+1))
+                combo1 = getattr(self.ui, 'comboBox_g%d1'%(i+1))
+                combo2 = getattr(self.ui, 'comboBox_g%d2'%(i+1))
+            except AttributeError as e:
+                raise RuntimeError('GUI changed but python code is not changed accordingly: %s'%(str(e)))
+            else:
+                # set up group
+                graph_group = spview.SnapGraphicsView(graph_view, combo1, combo2)
+                self._groupedSnapViewList.append(graph_group)
+        # END_FOR(i)
+
+        return
 
     def do_add_runs_by_ipts(self):
         """ import runs by IPTS number
         :return: None
         """
         # Launch window
-        childwindow = dlgrun.AddRunsByIPTSDialog(self)
-        r = childwindow.exec_()
+        child_window = dlgrun.AddRunsByIPTSDialog(self)
+        r = child_window.exec_()
 
         # Return due to 'cancel'
-        if childwindow.get_ipts_dir() is None:
+        if child_window.get_ipts_dir() is None:
             return
 
         # Add ITPS
-        iptsdir = childwindow.get_ipts_dir()
+        iptsdir = child_window.get_ipts_dir()
         print "[NEXT] Add IPTS directly %s to Tree" % (iptsdir)
 
         ipts, runs = self._myWorkflow.add_runs(iptsdir)
@@ -165,15 +185,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if status is False:
             self._logError(errmsg)
         else:
-            lognamelist = retvalue
+            log_name_list = sorted(retvalue)
 
-        snapwidget =  self._groupedSnapViewList[0]
-        logwidget = spview.SampleLogView(snapwidget)
-        logwidget.setLogNames(lognamelist)
+        # Set up all 6 widgets groups
+        for i in xrange(self._numSnapViews):
+            # create a log_widget from base snap view widgets and set up
+            snap_widget = self._groupedSnapViewList[i]
+            log_widget = spview.SampleLogView(snap_widget)
+            log_widget.setLogNames(log_name_list)
 
         # Plot the first 6...
-
-        # FIXME - This is prototype
+        for i in xrange(self._numSnapViews):
 
 
         '''
