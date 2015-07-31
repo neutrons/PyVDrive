@@ -67,7 +67,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Group widgets
         self._groupedSnapViewList = []
-        self._setup_snap_view_groups()
+        self._setup_snap_view_groups(self._numSnapViews)
 
 
         return
@@ -97,12 +97,12 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :param num_groups: number of groups to initialize
         :return: None
         """
-        for i in xrange(num_groups):
+        for i in xrange(1, num_groups+1):
             try:
                 # get on hold of three widgets with systematic naming
-                graph_view = getattr(self.ui, 'graphicsView_snapView%d'%(i+1))
-                combo1 = getattr(self.ui, 'comboBox_g%d1'%(i+1))
-                combo2 = getattr(self.ui, 'comboBox_g%d2'%(i+1))
+                graph_view = getattr(self.ui, 'graphicsView_snapView%d'%(i))
+                combo1 = getattr(self.ui, 'comboBox_g%d1'%(i))
+                combo2 = getattr(self.ui, 'comboBox_g%d2'%(i))
             except AttributeError as e:
                 raise RuntimeError('GUI changed but python code is not changed accordingly: %s'%(str(e)))
             else:
@@ -196,6 +196,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Plot the first 6...
         for i in xrange(self._numSnapViews):
+            pass
 
 
         '''

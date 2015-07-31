@@ -1467,7 +1467,7 @@
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
       <item row="3" column="1">
-       <widget class="QGraphicsView" name="graphicsView_snapView3">
+       <widget class="QGraphicsView" name="graphicsView_snapView4">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1477,7 +1477,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QGraphicsView" name="graphicsView_snapView0">
+       <widget class="QGraphicsView" name="graphicsView_snapView1">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -1500,7 +1500,7 @@
        </widget>
       </item>
       <item row="5" column="1">
-       <widget class="QGraphicsView" name="graphicsView_5"/>
+       <widget class="QGraphicsView" name="graphicsView_snapView6"/>
       </item>
       <item row="4" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1528,7 +1528,7 @@
        </layout>
       </item>
       <item row="1" column="1">
-       <widget class="QGraphicsView" name="graphicsView_snapView1">
+       <widget class="QGraphicsView" name="graphicsView_snapView2">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1537,11 +1537,8 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
-       <widget class="QGraphicsView" name="graphicsView_4"/>
-      </item>
       <item row="3" column="0">
-       <widget class="QGraphicsView" name="graphicsView_snapView2">
+       <widget class="QGraphicsView" name="graphicsView_snapView3">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1599,6 +1596,9 @@
          <widget class="QComboBox" name="comboBox_g62"/>
         </item>
        </layout>
+      </item>
+      <item row="5" column="0">
+       <widget class="QGraphicsView" name="graphicsView_snapView5"/>
       </item>
      </layout>
     </item>
