@@ -4,8 +4,10 @@
 # - User can write script on this class to reduce and analyze data;
 ################################################################################
 import os
+import sys
 import pickle
 import time
+from os.path import expanduser
 
 #import PyVDrive
 #import PyVDrive.vdrive
@@ -53,8 +55,9 @@ class VDriveAPI:
         self._iptsRunInfoDict = {}
 
         # FIXME - It may cause trouble if there is more than 1 reduction project
-        self._tofMin = None
-        self._tofMaa = None
+        # Removed momenterily 
+        # self._tofMin = None
+        # self._tofMaa = None
 
         self._loadConfig()
 
@@ -101,8 +104,8 @@ class VDriveAPI:
                     filename = tftuple[1]
                     datacalfilesets.append( (filename, None) )
                 # ENDFOR
-            # ENDIF
-        # ENDFOR
+            # END_IF
+        # END_FOR
       
         # Add project
         project.addDataFileSets(datacalfilesets)
@@ -143,7 +146,7 @@ class VDriveAPI:
         if self._checkProjectExistence(projname, operation) is False:
             message = "Project %s does not exist." % (projname)
             print "[Lettuce] Return False due to %s." % (message)
-            return (False, message, None)
+            return False, message, None
 
         # Get the handler on project
         try: 
@@ -159,20 +162,19 @@ class VDriveAPI:
             if len(self._vanCalibCriteriaDict[projname]) == 0:
                 message = "Unable to match vanadium calibration file because criteria list is empty."
                 print "[Lettuce] Return False due to %s." % (message)
-                return (False, message, None)
+                return False, message, None
 
-            autofinder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, \
-                    curproject.getBaseDataPath())
+            auto_finder = vdrive.vulcan_util.AutoVanadiumCalibrationLocator(ipts, curproject.getBaseDataPath())
            
             # add runs
-            numrunsadded, errmsg = autofinder.addRuns(runnumberlist)
+            numrunsadded, errmsg = auto_finder.addRuns(runnumberlist)
             print "There are %d runs that are added among %d in input list." % (numrunsadded,
                     len(runnumberlist))
             print "Error: \n%s\n-------------------------------\n" % (errmsg, )
 
             # do match for calibration & export IPTS of all vanadium runs to locate NeXus file
-            runvanrundict = autofinder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
-            vaniptsdict = autofinder.getVanRunLogs('IPTS')
+            runvanrundict = auto_finder.locateCalibrationFile(self._vanCalibCriteriaDict[projname])
+            vaniptsdict = auto_finder.getVanRunLogs('IPTS')
         else:
             # manual mode to link data file to calibration file
             print "Add run: ", runnumberlist
@@ -202,15 +204,24 @@ class VDriveAPI:
         thisproject.addDataFileSets(datacalfilesets)
         thisproject.addVanadiumIPTSInfo(vaniptsdict)
 
-        return (True, "", datacalfilesets)
-        
-        
+        return True, '', datacalfilesets
+
     def addLogInformation(self, logstr):
         """ Add a log information at information level
         """
         self._myLogList.append( ('i', logstr) )
 
         return
+
+
+    def add_runs(self, iptsdir):
+        """
+
+        :param iptsdir:
+        :return:
+        """
+        # TODO - Implement ASAP
+        return 12345, [12, 143, 432]
 
         
     def deleteProject(self, projtype, projname):
@@ -285,12 +296,10 @@ class VDriveAPI:
 
 
     def getReducedRuns(self, projectname):
-        # TODO - Doc
         """ 
-
+        Get the list of reduced runs in a reduction project
         Return :: list of data files
         """
-        # TODO Doc
         if self._rProjectDict.has_key(projectname) is False:
             raise KeyError("Project %s does not exist in reduction projects."%(projectname))
 
@@ -503,6 +512,37 @@ class VDriveAPI:
                 project.__class__.__name__))
         
         return (True, (projtype, projname))
+    
+           
+    def reduceData(self, projname, normByVan, tofmin, tofmax):
+        """ Reduce the data
+        Others... (projname='Test001', normByVan=False)
+        
+        Arguments: 
+         - projname
+         - normByVan :: 
+        """
+        # Check
+        if isinstance(normByVan, bool) is False:
+            raise RuntimeError("Argument normByVan must be bool.")        
+        
+        project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
+        if project is None:
+            raise NotImplementedError(errmsg)
+        else:
+            print "[Lettuce] Project is found for reducing data."
+        
+        # Reduce
+        if tofmin is not None and tofmax is not None:
+            project.setTOFRange(tofmin, tofmax)
+
+        status, errmsg = project.reduceToPDData(normByVanadium=normByVan)
+        print "[Lettuce] Reduce status: %s, Message: %s." % (str(status), str(errmsg))
+
+        # Signal
+        #self.myReductoionCompleteSignal.emit(1234)
+
+        return
 
 
     def saveProject(self, projtype, projname, projfilename):
@@ -594,8 +634,21 @@ class VDriveAPI:
         project.setCalibrationFile([datafilename], calibrun)
 
         return
-
-
+    
+    
+    def setCalibrationFile(self, projname, calibfilename):
+        """ Set calibration/time focussing file
+        """
+        try: 
+            project = self._rProjectDict[projname]
+        except KeyError:
+            return (False, "Reduction project %s does not exist." % (projname))
+        
+        doexist = project.setDetCalFile(calibfilename)
+        if doexist is False:
+            print "[Warning] Detector calibration file %s cannot be found."%(calibfilename)
+        
+        return
 
     def setDataPath(self, projname, basedatapath=None):
         """ Set the base data path to a project
@@ -613,6 +666,15 @@ class VDriveAPI:
         project.setBaseDataPath(basedatapath)
 
         return (True, "")
+    
+    def setInstrumentName(self, instrument):
+        """ Set insturment name
+        """
+        if isinstance(instrument, str) is False:
+            raise RuntimeError("Input argument for instrument must be of type string.")
+        self._myInstrument = instrument
+        
+        return
 
 
     def setReductionFlags(self, projname, filepairlist):
@@ -620,6 +682,7 @@ class VDriveAPI:
 
         Arguments: 
          - projname :: string as the name of reduction project
+         - fileparilist :: list of tuples as "base" file name and boolean flag
         """
         try:
             project = self._rProjectDict[projname]
@@ -637,25 +700,7 @@ class VDriveAPI:
             return (False, "None of the input files that exist in the project %s." % (projname))
 
         return (True, "")
-
-       
-    def reduceData(self, projname):
-        """ Reduce the data
-        """
-        project, errmsg = self._checkProjectExistence(projname, "reduce powder diffraction")
-        if project is None:
-            raise NotImplementedError(errmsg)
-        else:
-            # FIXME - Need a control for normByVanadium!
-            if self._tofMin is not None and self._tofMax is not None:
-                project.setTOFRange(self._tofMin, self._tofMax)
-
-            status, errmsg = project.reduceToPDData(normByVanadium=True)
-
-        # Signal
-        #self.myReductoionCompleteSignal.emit(1234)
-
-        return
+    
         
     def setTOFRange(self, tofmin, tofmax):
         """ set range of TOF for output
@@ -798,15 +843,33 @@ class VDriveAPI:
         #    print "No local configuration file.  Using default!"
 
         ## ENDIF
-
-        try:
-            import PyVDrive.config as config
-        except ImportError as e:
-            print "Unable to load configuration due to %s." % (str(e))
-            raise e
-        else:
-            print "[Lettuce] Set myConfig from PyVDrive.config.configdict"
-            self._myConfig = config.configdict
+        
+        # Try to locate configuration file in ~/.vdrive/
+        home = expanduser('~')
+        configdir = os.path.join(home, '.vdrive')
+        
+        importsuccess = False
+        if os.path.exists(configdir) is True:
+            sys.path.append(configdir)
+            try: 
+                import config
+                importsuccess = True
+            except ImportError as e:
+                print "[Error] Unable to import config from %s due to %s."\
+                      %(configdir, str(e))
+        #ENDIF
+        
+        # Try to locate configuratoin under PyVDrive (default)
+        if importsuccess is False:
+            try:    
+                import PyVDrive.config as config
+            except ImportError as e:
+                print "Unable to load configuration due to %s." % (str(e))
+                raise e
+            else:
+                print "[Lettuce] Set myConfig from PyVDrive.config.configdict"
+                self._myConfig = config.configdict
+        #ENDIF
 
 
         return True

@@ -6,6 +6,35 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
+
+def add_runs_to_tree(treewidget, ipts, runlist):
+    """
+    :param treewidget:
+    :param ipts:
+    :param runlist:
+    :return:
+    """
+    if False:
+        model = QtGui.QStandardItemModel()
+        model.setColumnCount(2)
+        model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
+
+    #treewidget = QtGui.QTreeView(treewidget)
+    model = treewidget.model()
+
+    numrows = model.rowCount()
+    itemmain = QtGui.QStandardItem(QtCore.QString(str(ipts)))
+    itemmain.setCheckable(False)
+    model.setItem(numrows, 0, itemmain)
+    for i in xrange(len(runlist)):
+        runnumber = runlist[i]
+        item = QtGui.QStandardItem(QtCore.QString(str(runnumber)))
+        model.setItem(numrows+i+1, 1, item)
+        # itemmain.setChild(i, item) : this will add value under column 0
+
+    return
+
+
 def setTextToQTableCell(table, irow, icol, text):
     """ Set up a regular text cell in a QTableWidget
 

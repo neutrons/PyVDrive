@@ -349,10 +349,10 @@ class MyReductionWindow(QWidget):
 
     @QtCore.pyqtSlot(str, list)
     def evtReduceData(self, projectname, selectedlist):
-        # TODO - Doc
-        """ 
+        """  Event hander to reduced data
         Arguments: 
-         - runlist :: list of integer as runs to reduce
+         - projectname :: name of the reduction project
+         - runlist     :: list of integer as runs to reduce
         """
         # Arguments
         projectname = str(projectname)

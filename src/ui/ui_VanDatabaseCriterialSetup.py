@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_VanDatabaseCriterialSetup.ui'
 #
-# Created: Tue Feb 24 11:46:33 2015
-#      by: PyQt4 UI code generator 4.10.4
+# Created: Wed Jul 29 13:31:58 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -88,7 +88,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addLayout(self.gridLayout_2, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 774, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 774, 25))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))

@@ -84,10 +84,13 @@ def reduceData(step):
     """
     wkflow = mydata.get()
 
+    wkflow.setInstrumentName('VULCAN')
+    wkflow.setCalibrationFile(projname ='Test001', 
+            calibfilename = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal')
+
     # set up reduction parameters
     outputdir = os.getcwd()
     paramdict = {
-            "Instrument": "VULCAN",
             "Extension": "_event.nxs",
             "PreserveEvents": True,
             "Binning" : -0.001,
@@ -101,10 +104,19 @@ def reduceData(step):
     wkflow.setReductionParameters('Test001', paramdict)
 
     # reduce
-    wkflow.reduceData('Test001')
+    reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
+
+    wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
+    wkflow.reduceData(projname='Test001', normByVan=False, tofmin=None, tofmax=None)
 
     return
 
 @step(u'Then I should see a matrix workspace generated')
 def retrieveReducedData(step):
+    wkflow = mydata.get()
+
+    reducedrunlist = wkflow.getReducedRuns(projectname = 'Test001')
+    numredws = len(reducedrunlist)
+    assert_equals(numredws, 1)
+
     print "Retrieve reduced data"

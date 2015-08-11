@@ -24,7 +24,79 @@ Use cases
 
 VDrive is an application that is driven by use cases.
 
-* Use case: Load a reduce VULCAN data 
+* Use case: Reduce VULCAN data with VDrivePlot (Beta) without data slicing
+
+ 1. Launch VDrivePlot (beta);
+ 2. Click button **Select IPTS folders**
+ 3. The IPTS number with its children run numbers will be shown in a tree view
+ 4. User wills specify calibration file by either via button **Calibration files* or editor for run number.
+ 5. User selects sample environment with three options
+  - VULCAN loadframe
+  - Generic DAQ
+  - User log file
+ 6. User chooses **VULCAN loadframe**
+ 7. User inputs first run and last run in the *sequential* tab;
+ 8. In tab *CHOP*, user specifies the amount of time to be skipped from the beginning of the algorithm;
+ 9. User checks checkbox ** Just chop neutron data** in order not to synchronize with log data (loadframe, DAQ, and etc.)
+ 10. User checks checkbox **Chop continuously over runs**;
+  - without this option, the output files will be i/file1, i/file2, ..., j/file1, j/file2, ... for run i, j and k
+  - with this option, the result will be recorded in i/file1, i/file2, ...., i/fileN
+ 11. User checks checkbox **Connect runs**, which will chop runs i, j and k, and remove the time lag between any consecutive runs
+ 12. User chooses data-chopping scheme as 'By picked segments' in two options
+  - By constant intervals or
+  - By picked segments
+ 13. Push button **Load time segment** is thus enabled;
+ 14. User pushes button **Load time segment** to load the time segment file;
+ 15. The name of the loaded segmentation file will be shown on
+ 16.
+
+
+
+* Use case: Slice event data among multiple runs
+
+
+
+* Use case: Modify configuration
+ 1. In Menu bar, click **Tools/Configuration**;
+ 2. A configuration window is thus popped out;
+ 3. Change the setup in configuration window;
+ 4. Click button **Verify**;
+ 5. If some setup is not allowed, a warning dialog is popped out;
+ 6. Click button **Save**;
+ 7. Alternatively, click button **Save As** to save configuration file to another file other than **~/.vdrive/config**;
+
+
+
+PyVDrive Features
+-----------------
+
+Configuration
+=============
+
+Configuration file is search automatically under * ~/.vdrve/config * under Linux/MacOS or *C:\.vdrive\config*;
+
+A customized configuration file can be loaded as an option;
+
+Calibration
+===========
+
+Pair:
+ -rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda
+ -rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm
+
+
+Time segment file
+=================
+
+A test/xml file that contains the segments of time for slicing;
+
+The time segments are either in relative time to the run start time or absolute time from 1990.01.01:00:00:00
+
+
+Deprecated use cases
+--------------------
+
+* Use case: Reduce VUCLAN data with VDrivePlot_Alpha (This use case will be removed after VDrivePlot_Beta is implemented)
   a) Launch VDrivePlot;
   b) Create a new project;
   c) New 'Reduction setup' window;
@@ -72,12 +144,14 @@ Here is a detailed introduction on features that have been implemented.
 Configuration
 =============
 
-Configuration is a module to load from current working directory. 
+Configuration is a *python* module to load from current working directory. 
 It is loaded and managed by a VDriveAPI object instantiated in either
 *VDrivePlot* or test scripts. 
 
-If the current working directory does not have configuration file, then
-it will be recorded from ~/.vdrive/config.py
+The order of loading configuration is 
+ * PyVDrive.config 
+ * 
+
 
 
 

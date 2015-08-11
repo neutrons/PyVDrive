@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-#import utility modules
+# import utility modules
 import sys
 import os
 

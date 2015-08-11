@@ -100,10 +100,14 @@ class SNSPowderReductionLite:
         """ Get the reduced matrix workspace
         Arguments: 
          - unit :: target unit; If None, then no need to convert unit
+         
+        Return :: Workspace (success) or 2-tuple (False and error message)
         """
         # FIXME - Need more consideration 
-        # TODO - Try and catch
-        retws = self._anyRunWSList[listindex]
+        try:
+            retws = self._anyRunWSList[listindex]
+        except IndexError:
+            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
         print "[DB] Type of reduced workspace: ", type(retws)
         print "[DB] Name of reduced workspace: ", str(retws)
        
