@@ -127,6 +127,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Add ITPS
         iptsdir = child_window.get_ipts_dir()
+        date_range = child_window.get_date_range()
         print "[NEXT] Add IPTS directly %s to Tree" % (iptsdir)
 
         ipts, runs = self._myWorkflow.add_runs(iptsdir)

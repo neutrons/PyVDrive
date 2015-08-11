@@ -3,6 +3,7 @@
 #####
 import vdrive.VDProject as vp
 import vdrive.mantid_helper as mtd
+import vdrive.FacilityUtil as futil
 
 class VDriveAPI(object):
     """
@@ -21,16 +22,14 @@ class VDriveAPI(object):
 
         return
 
-
-    def add_runs(self, iptsdir):
+    def add_runs(self, ipts_dir):
         """
-
-        :param iptsdir:
+        Add runs under an IPTS dir to project
+        :param ipts_dir:
         :return:
         """
-        # FIXME - Copy from UI_VDrive
 
-        raise NotImplementedError('ASAP')
+
 
 
     def loadNexus(self, filename, logonly):

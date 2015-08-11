@@ -13,6 +13,7 @@ except AttributeError:
 
 import DialogAddRunsIPTS as dlgrun
 
+
 class AddRunsByIPTSDialog(QtGui.QDialog):
     """ Pop up dialog window to add runs by IPTS
     """
@@ -34,10 +35,13 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Set event handler
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
-                self.do_browse_ipts_folder)
+                               self.do_browse_ipts_folder)
 
         QtCore.QObject.connect(self.ui.pushButton_verify, QtCore.SIGNAL('clicked()'),
-                self.do_verify_ipts_folder)
+                               self.do_verify_ipts_folder)
+
+        self.connect(self.ui.pushButton_iptsInfo, QtCore.SIGNAL('clicked()'),
+                     self.do_list_ipts_info)
 
         QtCore.QObject.connect(self.ui.buttonBox_okAdd, QtCore.SIGNAL('accepted()'),
                                self.do_save_quit)
@@ -47,9 +51,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Data set
         self._iptsDir = ''
+        self._homeDir = os.path.expanduser('~')
 
         return
-
 
     def do_browse_ipts_folder(self):
         """
