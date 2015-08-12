@@ -34,6 +34,16 @@ class VDProject:
 
         return
 
+    def clear_runs(self):
+        """
+        Clear memory, i.e., loaded workspace
+        :return:
+        """
+        assert(isinstance(self._dataset, list))
+        self._dataset = []
+
+        return
+
     def deleteData(self, datafilename):
         """ Delete a data file in the project
         """

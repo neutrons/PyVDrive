@@ -60,9 +60,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         # TODO Doc
-        home = '/home/wzz'
-
-        iptsdir = str(QtGui.QFileDialog.getExistingDirectory(self,'Get Directory',home))
+        iptsdir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory', self._homeDir))
         self.ui.lineEdit_iptsDir.setText(iptsdir)
 
         return

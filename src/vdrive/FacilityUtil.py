@@ -65,6 +65,41 @@ class FacilityUtilityHelper(object):
 
         return timelist
 
+    def get_run_info(self, ipts_number):
+        """
+        :exception: RuntimeError for non-existing IPTS
+        :rtype: list
+        :param ipts_number:
+        :return: list of 3-tuples
+        """
+        # Get home directory for IPTS
+        ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % (ipts_number))
+        if os.path.exists(ipts_home_dir) is False:
+            raise RuntimeError('IPTS directory %s cannot be found.' % ipts_home_dir)
+
+        # List all files
+        all_file_list = os.listdir(ipts_home_dir)
+        run_tup_list = []
+        for file_name in all_file_list:
+            # skip non-event Nexus file
+            if file_name.endswith('_event.nxs') is False:
+                continue
+            else:
+                full_path_name = os.path.join(ipts_home_dir, file_name)
+
+            # get file information
+            ipts_number, run_number = getIptsRunFromFileName(file_name)
+            create_time = os.path.getctime(full_path_name)
+            # NOTE: This is a fix to bad /SNS/ file system
+            modify_time = os.path.getmtime(full_path_name)
+            if modify_time < create_time:
+                create_time = modify_time
+
+            # add to list for return
+            run_tup_list.append((run_number, create_time, full_path_name))
+        # END-FOR
+
+        return run_tup_list
 
     def searchRuns(self, deltaDays):
         """ Search files under IPTS imbed
@@ -135,7 +170,6 @@ class FacilityUtilityHelper(object):
 
         return periodlist
 
-
     def setIPTS(self, ipts):
         """ Set ITPS 
         """
@@ -144,16 +178,19 @@ class FacilityUtilityHelper(object):
 
         return os.path.exists(self._iptsDir)
 
-
-    def setRootPath(self, root):
+    def set_data_root_path(self, root_dir):
         """ Set up root path such as /SNS/ 
 
         Exception: 
         """
-        if self._instrumentName == "vulcan":
-            self._dataRootPath = os.path.join(root, 'VULCAN')
+        # Determine 2 cases
+        if root_dir.count(self._instrumentName.upper()) is False:
+            self._dataRootPath = os.path.join(root_dir, self._instrumentName.upper())
         else:
-            raise NotImplementedError('Instrument %s is not supported.'%(self._instrumentName))
+            self._dataRootPath = root_dir
+
+        if os.path.exists(self._dataRootPath) is False:
+            raise RuntimeError('Data root directory %s is not accessible.' % self._dataRootPath)
 
         return
 
@@ -179,6 +216,27 @@ class FacilityUtilityHelper(object):
 # External Methods
 ################################################################################
 
+def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
+                     time_pattern='%H:%M:%S'):
+    """
+    :param m_date:
+    :param m_time:
+    :param date_pattern:
+    :param time_pattern:
+    :return:
+    """
+    # Form datetime and pattern
+    date_time = '%s %s' % (m_date, m_time)
+    pattern = '%s %s' % (date_pattern, time_pattern)
+
+    # Convert to epoch
+    try:
+        epoch = int(time.mktime(time.strptime(date_time, pattern)))
+    except ValueError as e:
+        raise e
+
+    return epoch
+
 def getIptsRunFromFileName(nxsfilename):
     """ Get IPTS number from a standard SNS nexus file name
     
@@ -198,6 +256,9 @@ def getIptsRunFromFileName(nxsfilename):
     runnumber = int(basename.split('_')[1])
 
     return (ipts, runnumber)
+
+
+
 
 
 def setGPDateTime(epochtime):
@@ -249,7 +310,7 @@ def testmain():
     """
     """
     mhelper = FacilityUtilityHelper('vulcan')
-    mhelper.setRootPath('/SNS/')
+    mhelper.set_data_root_path('/SNS/')
     exists = mhelper.setIPTS(12240)
     if exists is False:
         print "IPTS 12240 does not exist."
@@ -286,7 +347,7 @@ def utilmain(argv):
     """ Get a list of runs under an IPTS    
     """
     mhelper = FacilityUtilityHelper('vulcan')
-    mhelper.setRootPath('/SNS/')
+    mhelper.set_data_root_path('/SNS/')
     exists = mhelper.setIPTS(10076)
     if exists is False:
         print "IPTS 12240 does not exist."
