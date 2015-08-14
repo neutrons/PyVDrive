@@ -67,13 +67,27 @@ class FacilityUtilityHelper(object):
 
     def get_run_info(self, ipts_number):
         """
+
+        :param ipts_number:
+        :return:
+        """
+        # TODO - Docs
+        ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % (ipts_number))
+        run_tup_list = self.get_run_info_dir(ipts_home_dir)
+
+        assert(isinstance(run_tup_list, list))
+        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), ipts_home_dir)
+
+        return run_tup_list
+
+    def get_run_info_dir(self, ipts_home_dir):
+        """
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
         :param ipts_number:
         :return: list of 3-tuples
         """
         # Get home directory for IPTS
-        ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % (ipts_number))
         if os.path.exists(ipts_home_dir) is False:
             raise RuntimeError('IPTS directory %s cannot be found.' % ipts_home_dir)
 
@@ -236,6 +250,22 @@ def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
         raise e
 
     return epoch
+
+def convert_to_date_from_epoch(epoch_time, next_day=False):
+    """
+    :param epoch_time:
+    :param next_day:
+    :return: 3-tuple (year, month, date)
+    """
+    # FIXME - Make this correct!
+    #  time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time))
+    # Out[8]: '2015-08-01 00:00:00'
+
+    year = 2015
+    month = 4
+    day = 9
+
+    return year, month, day
 
 def getIptsRunFromFileName(nxsfilename):
     """ Get IPTS number from a standard SNS nexus file name

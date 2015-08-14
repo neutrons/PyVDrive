@@ -121,17 +121,12 @@ def set_ipts_runs(step):
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
 
-    run_list = []
-    for run_tup in run_tup_list:
-        run_list.append(run_tup[0])
-    run_list = sorted(run_list)
-
     status, error_message = wk_flow.clear_runs()
     assert_equals(status, True)
 
-    status, error_message = wk_flow.add_runs(run_list)
+    status, error_message = wk_flow.add_runs(run_tup_list, ipts_number)
     assert_equals(status, True)
-    assert_equals(100, wk_flow.get_number_runs())
+    assert_equals(69, wk_flow.get_number_runs())
 
 
     """

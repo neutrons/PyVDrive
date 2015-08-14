@@ -4,6 +4,7 @@
 import os
 
 from PyQt4 import QtGui, QtCore
+import GuiUtility as gutil
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -30,15 +31,22 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui = dlgrun.Ui_Dialog()
         self.ui.setupUi(self)
 
-        # Init
+        # Init set up
         self.ui.radioButton_useNumber.setChecked(True)
+        self.ui.lineEdit_iptsDir.setDisabled(True)
+        self.ui.pushButton_browse.setDisabled(True)
 
         # Set event handler
+        self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
+                     self.do_change_data_access_mode)
+        self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
+                     self.do_change_data_access_mode)
+
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
                                self.do_browse_ipts_folder)
 
         QtCore.QObject.connect(self.ui.pushButton_verify, QtCore.SIGNAL('clicked()'),
-                               self.do_verify_ipts_folder)
+                               self.do_set_ipts_dir)
 
         self.connect(self.ui.pushButton_iptsInfo, QtCore.SIGNAL('clicked()'),
                      self.do_list_ipts_info)
@@ -49,8 +57,23 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.buttonBox_okAdd, QtCore.SIGNAL('rejected'),
                                self.do_reject_quit)
 
+        # TODO - Disable some unused widget until 'browse' or 'set' is pushed.
+
+        # Init setup for starting date and run
+        self._beginDate = '01/01/2000'
+        # FIXME - Use today for end date
+        self._endDate = '12/31/2039'
+
+        self._beginRunNumber = 0
+        self._endRunNumber = 999999999999
+
         # Data set
         self._iptsDir = ''
+        self._iptsDirFromNumber = ''
+        self._iptsDirFromDir = ''
+
+        self._dataDir = '/SNS/VULCAN'
+
         self._homeDir = os.path.expanduser('~')
 
         return
@@ -60,28 +83,100 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         # TODO Doc
-        iptsdir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory', self._homeDir))
-        self.ui.lineEdit_iptsDir.setText(iptsdir)
+        ipts_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory', self._homeDir))
+        self.ui.lineEdit_iptsDir.setText(ipts_dir)
+        self._iptsDir = ipts_dir
+        self._iptsDirFromDir = ipts_dir
 
         return
 
-    def do_verify_ipts_folder(self):
+    def do_change_data_access_mode(self):
+        """
+
+        :return:
+        """
+        # TODO - Doc
+        if self.ui.radioButton_useNumber.isChecked() is True:
+            self.ui.lineEdit_iptsNumber.setEnabled(True)
+            self.ui.pushButton_verify.setEnabled(True)
+            self.ui.lineEdit_iptsDir.setDisabled(True)
+            self.ui.pushButton_browse.setDisabled(True)
+            self._iptsDir = self._iptsDirFromNumber
+        else:
+            self.ui.lineEdit_iptsNumber.setEnabled(False)
+            self.ui.pushButton_verify.setEnabled(False)
+            self.ui.lineEdit_iptsDir.setDisabled(False)
+            self.ui.pushButton_browse.setDisabled(False)
+            self._iptsDir = self._iptsDirFromDir
+
+        return
+
+    def do_list_ipts_info(self):
         """
 
         :return:
         """
         # TODO Doc
-        if self.ui.radioButton_useNumber.isChecked():
-            ipts = int(self.ui.lineEdit_iptsNumber.text())
-            self._iptsDir = os.path.join('/SNS/VULCAN', 'IPTS-%d'%(ipts))
-        elif self.ui.radioButton_useDir.isChecked():
-            self._iptsDir = str(self.ui.lineEdit_iptsDir.text())
-        else:
-            # FIXME - Warning Popup
-            print "[Pop] Not set up correctly!"
+        # TODO Think of its feature
+
+        # TODO - Show the status of processing...Just change the background color... blinking is not easy
+
+        # Get basic information
+        try:
+            status, ret_obj = self._myParent.get_workflow().get_ipts_info(self._iptsDir)
+        except AttributeError as e:
+            gutil.pop_dialog_error(self, 'Unable to get IPTS information due to %s.' % str(e))
+            return
+
+        # Error in retrieving
+        if status is False:
+            error_message = ret_obj
+            gutil.pop_dialog_error('Unable to get IPTS information due to %s.' % (ret_obj))
+
+        # Get list
+        run_tup_list = ret_obj
+        assert(isinstance(run_tup_list, list))
+
+        # Sort by run
+        run_tup_list.sort(key=lambda x: x[0])
+        first_run = run_tup_list[0][0]
+        last_run = run_tup_list[-1][0]
+        self.ui.lineEdit_begin.setText(str(first_run))
+        self.ui.lineEdit_end.setText(str(last_run))
+
+        # Sort by date
+        run_tup_list.sort(key=lambda x: x[1])
+        date0 = QtCore.QDate(2014, 10, 23)
+        self.ui.dateEdit_begin.setDate(date0)
 
         return
 
+    def do_set_ipts_dir(self):
+        """
+
+        :return:
+        """
+        # TODO Doc
+        # Get IPTS number
+        ipts_number = gutil.parse_integer(self.ui.lineEdit_iptsNumber)
+        if ipts_number is None:
+            gutil.pop_dialog_error(self, 'IPTS number must be given!')
+            return
+
+        # Get and check IPTS directory
+        ipts_dir = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
+        if os.path.exists(ipts_dir) is False:
+            gutil.pop_dialog_error(self, 'IPTS number %d cannot be found under %s. ' % (
+                ipts_number, ipts_dir))
+            self.ui.lineEdit_iptsNumber.setStyleSheet('color:red')
+            return
+        else:
+            self.ui.lineEdit_iptsNumber.setStyleSheet('color:green')
+
+        self._iptsDir = ipts_dir
+        self._iptsDirFromNumber = ipts_dir
+
+        return
 
     def do_save_quit(self):
         """
@@ -89,9 +184,21 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         # TODO Doc
+        begin_date = self.ui.dateEdit_begin.date()
+        assert(isinstance(begin_date, QtCore.QDate))
+        self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
 
-        # FIXME - Message Pop-up
-        print "[Pop] Not set up and quit?"
+        end_date = self.ui.dateEdit_end.date()
+        assert(isinstance(end_date, QtCore.QDate))
+        self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+
+        begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
+        if begin_run is not None:
+            self._beginRunNumber = begin_run
+
+        end_run = gutil.parse_integer(self.ui.lineEdit_end)
+        if end_run is not None:
+            self._endRunNumber = end_run
 
         return
 
@@ -103,6 +210,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
+    def get_date_run_range(self):
+        """
+
+        :return:
+        """
+        # TODO - Doc
+
+        # Get date and run range
+        return self._beginDate, self._endDate, self._beginRunNumber, self._endRunNumber
+
 
     def get_ipts_dir(self):
         """
@@ -110,6 +227,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         return self._iptsDir
+
+
+
+    def set_data_root_dir(self, root_dir):
+        """
+
+        :param root_dir:
+        :return:
+        """
+        self._dataDir = root_dir
 
 
 """ Test Main """

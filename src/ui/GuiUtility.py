@@ -35,6 +35,37 @@ def add_runs_to_tree(treewidget, ipts, runlist):
     return
 
 
+def parse_integer(line_edit):
+    """
+
+    :param line_edit:
+    :return:
+    """
+    # Check input
+    assert(isinstance(line_edit, QtGui.QLineEdit))
+
+    str_value = str(line_edit.text()).strip()
+    if len(str_value) == 0:
+        return None
+
+    try:
+        int_value = int(str_value)
+    except ValueError as e:
+        raise e
+
+    return int_value
+
+
+def pop_dialog_error(parent, message):
+    """ Pop up a one-button dialog for error message
+    :param message:
+    :return:
+    """
+    QtGui.QMessageBox.information(parent, 'Error!', message)
+
+    return
+
+
 def setTextToQTableCell(table, irow, icol, text):
     """ Set up a regular text cell in a QTableWidget
 

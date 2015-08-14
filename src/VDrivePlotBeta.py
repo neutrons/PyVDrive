@@ -55,7 +55,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._openSubWindows = []
 
         # Initialize widgets
-        self._init_widgets()
+        # self._init_widgets()
 
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -126,13 +126,37 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # Add ITPS
-        iptsdir = child_window.get_ipts_dir()
-        date_range = child_window.get_date_range()
-        print "[NEXT] Add IPTS directly %s to Tree" % (iptsdir)
+        ipts_dir = child_window.get_ipts_dir()
+        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
+        print "[NEXT] Add IPTS directly %s to Tree" % (ipts_dir)
 
-        ipts, runs = self._myWorkflow.add_runs(iptsdir)
+        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            # FIXME - Pop error
+            guiutil.pop_dialog_error(self, 'blabalba')
+            return
 
-        guiutil.add_runs_to_tree(self.ui.treeView_iptsRun, ipts, runs)
+        status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            # FIXME - pop error
+            guiutil.pop_dialog_error(self, 'blabal')
+            return
+
+        status, error_message = self._myWorkflow.add_runs(ipts_dir, '121234')
+        if status is False:
+            guiutil.pop_dialog_error(self, error_message)
+            return
+
+        # Set to tree
+        self._myWorkflow.get_runs(ipts)
+        # guiutil.add_runs_to_tree(self.ui.treeView_iptsRun, ipts, runs)
+        # FIXME - Implement these 2 methods
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_number_list)
+        self.ui.treeView_runFiles.set_home_dir(home_dir, curr_dir)
 
         return
 
@@ -213,6 +237,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # ENDFOR
         '''
         raise NotImplementedError('Debut Stop Here! 342')
+
+    def get_workflow(self):
+        """
+
+        :return:
+        """
+        # TODO -Doc
+        return self._myWorkflow
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

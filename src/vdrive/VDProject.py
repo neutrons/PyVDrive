@@ -20,16 +20,34 @@ class VDProject:
         """
         """
         self._name = projname
-        self._dataset = []
+        self._dataFileDict = {}
         self._baseDataFileNameList = []
         self._baseDataPath = None 
         
+        return
+
+    def add_run(self, run_number, file_name, ipts_number):
+        """
+
+        :param run_number:
+        :param file_name:
+        :param ipts_number:
+        :return:
+        """
+        # Check input
+        assert(isinstance(run_number, int))
+        assert(isinstance(ipts_number, int))
+        assert(isinstance(file_name, str))
+
+        self._dataFileDict[run_number] = (file_name, ipts_number)
+
         return
         
     def addData(self, datafilename):
         """ Add a new data file to project
         """
-        self._dataset.append(datafilename)
+        raise NotImplementedError('To be removed!')
+        self._dataFileDict.append(datafilename)
         self._baseDataFileNameList.append(os.path.basename(datafilename))
 
         return
@@ -39,15 +57,15 @@ class VDProject:
         Clear memory, i.e., loaded workspace
         :return:
         """
-        assert(isinstance(self._dataset, list))
-        self._dataset = []
+        assert(isinstance(self._dataFileDict, dict))
+        self._dataFileDict.clear()
 
         return
 
     def deleteData(self, datafilename):
         """ Delete a data file in the project
         """
-        self._dataset.remove(datafilename) 
+        self._dataFileDict.remove(datafilename)
         self._baseDataFileNameList.remove(os.path.basename(datafilename))
 
         return
@@ -57,6 +75,13 @@ class VDProject:
         """
         return self._baseDataPath
 
+    def get_number_data_files(self):
+        """
+
+        :return:
+        """
+        # TODO -Doc
+        return len(self._dataFileDict)
 
     def getReducedRuns(self):
         """ Get the the list of the reduced runs
@@ -68,7 +93,7 @@ class VDProject:
     def hasData(self, datafilename):
         """ Check whether project has such data file 
         """
-        if self._dataset.count(datafilename) == 1:
+        if self._dataFileDict.count(datafilename) == 1:
             # Check data set with full name
             return True
         elif self._baseDataFileNameList.count(datafilename) == 1:
@@ -160,7 +185,7 @@ class ReductionProject(VDProject):
         """
         for datafile, vcalfilelist in reddatasets:
             # data file list
-            self._dataset.append(datafile)
+            self._dataFileDict.append(datafile)
             # data file and set default to 0th element
             databasefname = os.path.basename(datafile)
             self._baseDataFileNameList.append(databasefname)
@@ -196,9 +221,9 @@ class ReductionProject(VDProject):
         """
         # FIXME - A better file indexing data structure should be used
         # search data file list
-        if datafilename not in self._dataset:
+        if datafilename not in self._dataFileDict:
             # a base file name is used
-            for dfname in self._dataset:
+            for dfname in self._dataFileDict:
                 basename = os.path.basename(dfname)
                 if basename == datafilename:
                     datafilename = dfname
@@ -206,11 +231,11 @@ class ReductionProject(VDProject):
             # END(for)
         # ENDIF
 
-        if datafilename not in self._dataset:
+        if datafilename not in self._dataFileDict:
             return (False, "data file %s is not in the project" % (datafilename))
 
         # remove from dataset
-        self._dataset.remove(datafilename)
+        self._dataFileDict.remove(datafilename)
         # remove from data file/van cal dict
         basename = os.path.basename(datafilename)
         vanfilename = self._datacalibfiledict.pop(basename)
@@ -327,7 +352,7 @@ class ReductionProject(VDProject):
         """ Return information in nice format
         """
         ibuf = "%-50s \t%-30s\t %-5s\n" % ("File name", "Vanadium run", "Reduce?")
-        for filename in self._dataset:
+        for filename in self._dataFileDict:
             basename = os.path.basename(filename)
             vanrun = self._datacalibfiledict[basename]
             try: 
@@ -346,7 +371,7 @@ class ReductionProject(VDProject):
         """ Check whether project has such data file 
         """
         # Check data set with full name
-        if self._dataset.count(datafilename) == 1:
+        if self._dataFileDict.count(datafilename) == 1:
             return True
 
 
@@ -482,7 +507,7 @@ class ReductionProject(VDProject):
 
         for datafilename in datafilenames:
             # check whether they exist in the project
-            if datafilename not in self._dataset:
+            if datafilename not in self._dataFileDict:
                 errmsg += "Data file %s does not exist.\n" % (datafilename)
                 numfails += 1
                 continue
@@ -548,13 +573,13 @@ class ReductionProject(VDProject):
          - flag :: reduction flag
         """
         # check with full name
-        exist = filename in self._dataset
+        exist = filename in self._dataFileDict
         if exist:
             self._reductionFlagDict[filename] = flag
             return True
 
         # check as base name
-        for fpname in self._dataset:
+        for fpname in self._dataFileDict:
             basename = os.path.basename(fpname)
             if basename == filename:
                 self._reductionFlagDict[fpname] = flag

@@ -41,7 +41,7 @@
            <layout class="QHBoxLayout" name="horizontalLayout_27"/>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView_iptsRun">
+           <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -54,7 +54,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView">
+           <widget class="QTreeView" name="treeView_runFiles">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Model: File browser mode, default is the shared folder but allowed to go up directory&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;example: /SNS/VULCAN/IPTS-14114/shared&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -1731,6 +1731,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VdriveRunManagerTree</class>
+   <extends>QTreeView</extends>
+   <header>vdriverunmanagertree.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

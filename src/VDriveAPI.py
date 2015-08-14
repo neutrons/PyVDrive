@@ -36,22 +36,31 @@ class VDriveAPI(object):
 
         return
 
-    def add_runs(self, ipts_dir):
+    def add_runs(self, run_tup_list, ipts_number):
         """
         Add runs under an IPTS dir to project
-        :param ipts_dir:
+        :param run_tup_list: list of 3-tuple as (1) run number, (2)
         :return:
         """
-        return
+        assert(isinstance(run_tup_list, list))
+        for tup in run_tup_list:
+            assert(isinstance(tup, tuple))
+            run_number, epoch_time, file_name = tup
+            self._myProject.add_run(run_number, file_name, ipts_number)
+
+        return True, ''
 
     def clear_runs(self):
         """
 
         :return:
         """
-        self._myProject.clear_runs()
+        try:
+            self._myProject.clear_runs()
+        except TypeError as e:
+            return False, str(e)
 
-        return
+        return True, ''
 
     def filter_runs_by_date(self, run_tuple_list, start_date, end_date):
         """
@@ -64,6 +73,7 @@ class VDriveAPI(object):
         """
         # Get starting date and end date's epoch time
         try:
+            assert(isinstance(start_date, str))
             epoch_start = futil.convert_to_epoch(start_date)
             epoch_end = futil.convert_to_epoch(end_date)
             print '[DB] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
@@ -111,19 +121,34 @@ class VDriveAPI(object):
 
         return True, '', tag
 
-    def get_ipts_info(self, ipts_number):
+    def get_ipts_info(self, ipts):
         """
 
-        :param ipts_number:
+        :param ipts: integer or string as ipts number or ipts directory respectively
         :return:
         """
         # TODO - DOC
         try:
-            run_tuple_list = self._myFacilityHelper.get_run_info(ipts_number)
+            if isinstance(ipts, int):
+                ipts_number = ipts
+                run_tuple_list = self._myFacilityHelper.get_run_info(ipts_number)
+            elif isinstance(ipts, str):
+                ipts_dir = ipts
+                run_tuple_list = self._myFacilityHelper.get_run_info_dir(ipts_dir)
+            else:
+                return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
             return False, str(e)
 
         return True, run_tuple_list
+
+    def get_number_runs(self):
+        """
+
+        :return:
+        """
+        # TODO -Doc
+        return self._myProject.get_number_data_files()
 
     def getSampleLogNames(self, tag):
         """
