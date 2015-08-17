@@ -119,6 +119,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         # Launch window
         child_window = dlgrun.AddRunsByIPTSDialog(self)
+        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
         r = child_window.exec_()
 
         # Return due to 'cancel'
@@ -127,35 +128,44 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Add ITPS
         ipts_dir = child_window.get_ipts_dir()
+        ipts_number = child_window.get_ipts_number()
+        if ipts_number is None:
+            status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
+            if status is False:
+                guiutil.pop_dialog_error(ret_obj)
+                ipts_number = 0
+            else:
+                ipts_number = ret_obj
         begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
-        print "[NEXT] Add IPTS directly %s to Tree" % (ipts_dir)
 
         status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir)
         if status is True:
             run_tup_list = ret_obj
         else:
-            # FIXME - Pop error
-            guiutil.pop_dialog_error(self, 'blabalba')
+            # Pop error
+            error_message = ret_obj
+            guiutil.pop_dialog_error(self, error_message)
             return
 
         status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date)
         if status is True:
             run_tup_list = ret_obj
         else:
-            # FIXME - pop error
-            guiutil.pop_dialog_error(self, 'blabal')
+            #  pop error
+            error_message = ret_obj
+            guiutil.pop_dialog_error(self, error_message)
             return
 
-        status, error_message = self._myWorkflow.add_runs(ipts_dir, '121234')
+        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
             guiutil.pop_dialog_error(self, error_message)
             return
 
         # Set to tree
-        self._myWorkflow.get_runs(ipts)
-        # guiutil.add_runs_to_tree(self.ui.treeView_iptsRun, ipts, runs)
-        # FIXME - Implement these 2 methods
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_number_list)
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tup_list)
+        # FIXME - Need to figure out how to deal with this
+        home_dir = '/SNS/VULCAN'
+        curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_home_dir(home_dir, curr_dir)
 
         return

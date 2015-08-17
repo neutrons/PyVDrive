@@ -121,6 +121,12 @@ class VDriveAPI(object):
 
         return True, '', tag
 
+    def get_data_root_directory(self):
+        """ Get root data directory such as /SNS/VULCAN
+        :return: data root directory, such as /SNS/VULCAN
+        """
+        return self._myRootDataDir
+
     def get_ipts_info(self, ipts):
         """
 
@@ -141,6 +147,14 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, run_tuple_list
+
+    def get_ipts_number_from_dir(self, ipts_dir):
+        """ Guess IPTS number from directory
+        The routine is that there should be some called /'IPTS-????'/
+        :param ipts_dir:
+        :return: 2-tuple: integer as IPTS number; 0 as unable to find
+        """
+        return futil.get_ipts_number_from_dir(ipts_dir)
 
     def get_number_runs(self):
         """

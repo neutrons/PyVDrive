@@ -267,6 +267,32 @@ def convert_to_date_from_epoch(epoch_time, next_day=False):
 
     return year, month, day
 
+
+def get_ipts_number_from_dir(ipts_dir):
+    """ Get IPTS number from dir
+    :param ipts_dir:
+    :return: 2-tuple
+    """
+    assert(isinstance(ipts_dir, str))
+    if ipts_dir.count('IPTS-') == 0:
+        return False, 'No IPTS- involved.'
+
+    # Simple way to figure out the file system
+    terms = ipts_dir.split('IPTS-')
+    if terms[0].endswith('/'):
+        token = '/'
+    else:
+        token = '\\'
+
+    ipts_number_str = terms[1].split(token)[0]
+    try:
+        ipts_number = int(ipts_number_str)
+    except ValueError:
+        return False, 'After IPTS-, %s is not an integer' % ipts_number_str
+
+    return True, ipts_number
+
+
 def getIptsRunFromFileName(nxsfilename):
     """ Get IPTS number from a standard SNS nexus file name
     
