@@ -156,6 +156,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
+        # FIXME - Implement filter_runs_by_run()
+        status, ret_obj = self._myWorkflow.filter_runs_by_run(run_tup_list, begin_run, end_run)
+
         status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
             guiutil.pop_dialog_error(self, error_message)
@@ -166,7 +169,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # FIXME - Need to figure out how to deal with this
         home_dir = '/SNS/VULCAN'
         curr_dir = ipts_dir
-        self.ui.treeView_runFiles.set_home_dir(home_dir, curr_dir)
+        self.ui.treeView_runFiles.set_root_path(home_dir)
+        self.ui.treeView_runFiles.set_current_path(curr_dir)
 
         return
 

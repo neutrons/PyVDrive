@@ -3,6 +3,7 @@
 ########################################################
 import os
 import datetime
+import time
 
 from PyQt4 import QtGui, QtCore
 import GuiUtility as gutil
@@ -134,6 +135,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # blinking is not easy
         self.ui.label_loadingStatus.setText('Inspecting data directory %s... ...' %
                                             self._iptsDir)
+        time.sleep(0.01)
 
         # Get basic information
         try:
@@ -162,6 +164,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.lineEdit_end.setText(str(last_run))
 
         # Sort by date
+        # FIXME - make dateEdit_begin and _end correct!
         run_tup_list.sort(key=lambda x: x[1])
         date0 = QtCore.QDate(2014, 10, 23)
         self.ui.dateEdit_begin.setDate(date0)

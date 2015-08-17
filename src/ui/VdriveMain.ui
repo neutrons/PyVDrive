@@ -54,7 +54,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView_runFiles">
+           <widget class="FileSystemTreeView" name="treeView_runFiles">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Model: File browser mode, default is the shared folder but allowed to go up directory&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;example: /SNS/VULCAN/IPTS-14114/shared&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -1736,6 +1736,11 @@
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdriverunmanagertree.h</header>
+  </customwidget>
+  <customwidget>
+   <class>FileSystemTreeView</class>
+   <extends>QTreeView</extends>
+   <header>filesystemtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

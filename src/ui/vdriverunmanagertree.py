@@ -104,7 +104,6 @@ class VdriveRunManagerTree(QtGui.QTreeView):
         # TODO -Implement
         raise NotImplementedError('Implement ASAP!')
 
-
     def set_parent(self, logic_parent):
         """
         Parent is the
@@ -119,7 +118,7 @@ class VdriveRunManagerTree(QtGui.QTreeView):
         # New item
         item_main = QtGui.QStandardItem(QtCore.QString(item_value))
         item_main.setCheckable(False)
-        self.ui.treeView_main.model().setItem(row_index, column_index, item_main)
+        self.model().setItem(row_index, column_index, item_main)
 
         return
 
