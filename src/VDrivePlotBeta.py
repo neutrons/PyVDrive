@@ -55,7 +55,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._openSubWindows = []
 
         # Initialize widgets
-        self._init_widgets()
+        # self._init_widgets()
 
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -64,6 +64,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_load_calibration)
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_sample_log_file)
+
+        # Event handling for menu
+        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+                     self.evt_quit)
 
         # Group widgets
         self._groupedSnapViewList = []
@@ -119,6 +123,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         # Launch window
         child_window = dlgrun.AddRunsByIPTSDialog(self)
+        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
         r = child_window.exec_()
 
         # Return due to 'cancel'
@@ -126,13 +131,51 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # Add ITPS
-        iptsdir = child_window.get_ipts_dir()
-        date_range = child_window.get_date_range()
-        print "[NEXT] Add IPTS directly %s to Tree" % (iptsdir)
+        ipts_dir = child_window.get_ipts_dir()
+        ipts_number = child_window.get_ipts_number()
+        if ipts_number is None:
+            status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
+            if status is False:
+                guiutil.pop_dialog_error(ret_obj)
+                ipts_number = 0
+            else:
+                ipts_number = ret_obj
+        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
 
-        ipts, runs = self._myWorkflow.add_runs(iptsdir)
+        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            # Pop error
+            error_message = ret_obj
+            guiutil.pop_dialog_error(self, error_message)
+            return
 
-        guiutil.add_runs_to_tree(self.ui.treeView_iptsRun, ipts, runs)
+        status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date,
+                                                               include_end_date=True)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            #  pop error
+            error_message = ret_obj
+            guiutil.pop_dialog_error(self, error_message)
+            return
+
+        # FIXME - Implement filter_runs_by_run()
+        status, ret_obj =vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
+
+        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
+        if status is False:
+            guiutil.pop_dialog_error(self, error_message)
+            return
+
+        # Set to tree
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tup_list)
+        # FIXME - Need to figure out how to deal with this
+        home_dir = '/SNS/VULCAN'
+        curr_dir = ipts_dir
+        self.ui.treeView_runFiles.set_root_path(home_dir)
+        self.ui.treeView_runFiles.set_current_path(curr_dir)
 
         return
 
@@ -213,6 +256,21 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # ENDFOR
         '''
         raise NotImplementedError('Debut Stop Here! 342')
+
+    def evt_quit(self):
+        """
+
+        :return:
+        """
+        self.close()
+
+    def get_workflow(self):
+        """
+
+        :return:
+        """
+        # TODO -Doc
+        return self._myWorkflow
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

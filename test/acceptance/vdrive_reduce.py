@@ -5,14 +5,17 @@ import sys
 import os
 import os.path
 
+# FIXME - This only works for Linux platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.Ui_VDrive as vdapi
+import PyVDrive.VDriveAPI as vdapi
 
 class MyData:
     def __init__(self):
         """ Init
         """
         self.myObject = None
+        self._ipts = None
+        self._runs = []
 
     def __str__(self):
         """ Nice output
@@ -25,6 +28,14 @@ class MyData:
         """
         return self.myObject
 
+    def get_ipts_runs(self):
+        """
+
+        :return:
+        """
+        return self._ipts, self._runs[:]
+
+
     def set(self, inputobject):
         """ Set
         """
@@ -35,22 +46,90 @@ class MyData:
 
         return
 
-mydata = MyData()
+    def set_ipts_runs(self, ipts_number, run_tup_list):
+        """
+        Set up
+        :param ipts_number:
+        :param run_tup_list:
+        :return:
+        """
+        self._ipts = int(ipts_number)
+        self._runs = run_tup_list[:]
+        assert(self._runs, list)
 
-@step(u'I am using PyVDrive')
-def setUp(step):
-    """ Set up 
+
+my_data = MyData()
+
+# Global testing data
+ipts_number = 10311
+
+
+@step(u'I am using VDriveAPI')
+def init_workflow(step):
+    """ Set up including
     """
-    wkflow =  vdapi.VDriveAPI()
-    mydata.set(wkflow)
+    wk_flow = vdapi.VDriveAPI()
+    wk_flow.set_data_root_directory('/SNS/VULCAN')
+    wk_flow.set_working_directory('~/Temp/VDriveTest/')
+
+    my_data.set(wk_flow)
 
     return
 
-@step(u'Given I input IPTS, run number, calibration file name and etc')
-def setupReduction(step):
+
+@step(u'I get a list of runs belonged to an IPTS number')
+def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
-    wkflow = mydata.get()
+    wk_flow = my_data.get()
+
+    # Set up IPTS
+    wk_flow.set_ipts(ipts_number)
+
+    # Get runs
+    status, run_tup_list = wk_flow.get_ipts_info(ipts_number)
+    assert_equals(status, True)
+    assert_equals(len(run_tup_list), 1777)
+
+    my_data.set_ipts_runs(ipts_number, run_tup_list)
+
+    return
+
+
+@step(u'I filter the runs by date')
+def filter_runs(step):
+    """ Filter runs by date
+    """
+    wk_flow = my_data.get()
+    ipts_number, run_tup_list = my_data.get_ipts_runs()
+    assert_equals(len(run_tup_list), 1777)
+
+    start_date = '02/09/2015'
+    end_date = '02/10/2015'
+    status, filter_run_tup_list = wk_flow.filter_runs_by_date(run_tup_list, start_date, end_date)
+    assert_equals(status, True)
+    assert_equals(len(filter_run_tup_list), 69)
+
+    my_data.set_ipts_runs(ipts_number, filter_run_tup_list)
+
+    return
+
+@step(u'I input IPTS, run numbers')
+def set_ipts_runs(step):
+    """
+    """
+    wk_flow = my_data.get()
+    ipts_number, run_tup_list = my_data.get_ipts_runs()
+
+    status, error_message = wk_flow.clear_runs()
+    assert_equals(status, True)
+
+    status, error_message = wk_flow.add_runs(run_tup_list, ipts_number)
+    assert_equals(status, True)
+    assert_equals(69, wk_flow.get_number_runs())
+
+
+    """
     # new project
     wkflow.newProject(projname = "Test001", projtype = "reduction")
     # set data path with default
@@ -74,7 +153,7 @@ def setupReduction(step):
         r = wkflow.addExperimentRuns(projname='Test001', operation='Add Experiment Runs', ipts=ipts, 
                 runnumberlist=runs, autofindcal=True)
     # ENDIFELSE
-
+    """
 
     return
 
@@ -82,7 +161,7 @@ def setupReduction(step):
 def reduceData(step):
     """ Set up reduction parametera and reduce data
     """
-    wkflow = mydata.get()
+    wkflow = my_data.get()
 
     wkflow.setInstrumentName('VULCAN')
     wkflow.setCalibrationFile(projname ='Test001', 
@@ -113,7 +192,7 @@ def reduceData(step):
 
 @step(u'Then I should see a matrix workspace generated')
 def retrieveReducedData(step):
-    wkflow = mydata.get()
+    wkflow = my_data.get()
 
     reducedrunlist = wkflow.getReducedRuns(projectname = 'Test001')
     numredws = len(reducedrunlist)

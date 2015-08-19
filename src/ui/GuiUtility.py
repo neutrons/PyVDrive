@@ -1,3 +1,4 @@
+import time
 from PyQt4 import QtGui, QtCore
 
 #include this try/except block to remap QString needed when using IPython
@@ -31,6 +32,55 @@ def add_runs_to_tree(treewidget, ipts, runlist):
         item = QtGui.QStandardItem(QtCore.QString(str(runnumber)))
         model.setItem(numrows+i+1, 1, item)
         # itemmain.setChild(i, item) : this will add value under column 0
+
+    return
+
+
+def convert_to_qdate_epoch(epoch_time):
+    """
+
+    :param epoch_time:
+    :return:
+    """
+    assert(isinstance(epoch_time, float))
+
+    # Use time.struct_time
+    m_time = time.gmtime(epoch_time)
+    year = m_time.tm_year
+    month =  m_time.tm_mon
+    day = m_time.tm_mday
+
+    m_date = QtCore.QDate(year, month, day)
+
+    return m_date
+
+def parse_integer(line_edit):
+    """
+
+    :param line_edit:
+    :return:
+    """
+    # Check input
+    assert(isinstance(line_edit, QtGui.QLineEdit))
+
+    str_value = str(line_edit.text()).strip()
+    if len(str_value) == 0:
+        return None
+
+    try:
+        int_value = int(str_value)
+    except ValueError as e:
+        raise e
+
+    return int_value
+
+
+def pop_dialog_error(parent, message):
+    """ Pop up a one-button dialog for error message
+    :param message:
+    :return:
+    """
+    QtGui.QMessageBox.information(parent, 'Error!', message)
 
     return
 

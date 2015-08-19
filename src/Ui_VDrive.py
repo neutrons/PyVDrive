@@ -593,7 +593,7 @@ class VDriveAPI:
 
         # Search runs under IPTS according
         myfacility = futil.FacilityUtilityHelper(self._myInstrument)
-        myfacility.setRootPath(self._dataRootPath)
+        myfacility.set_data_root_path(self._dataRootPath)
 
         doexist = myfacility.setIPTS(ipts)
         if doexist is False:

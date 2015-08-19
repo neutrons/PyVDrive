@@ -41,7 +41,7 @@
            <layout class="QHBoxLayout" name="horizontalLayout_27"/>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView_iptsRun">
+           <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -54,7 +54,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView">
+           <widget class="FileSystemTreeView" name="treeView_runFiles">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Model: File browser mode, default is the shared folder but allowed to go up directory&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;example: /SNS/VULCAN/IPTS-14114/shared&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -1620,11 +1620,11 @@
      <height>25</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuTest">
+   <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionExit"/>
+    <addaction name="actionNewProject"/>
     <addaction name="actionOpen_Project"/>
     <addaction name="actionSave_Project"/>
     <addaction name="actionSave_Project_As"/>
@@ -1663,14 +1663,14 @@
     <addaction name="actionDelete_Runs_By_IPTS"/>
     <addaction name="actionDelete_Run"/>
    </widget>
-   <addaction name="menuTest"/>
+   <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuAbout"/>
    <addaction name="menuRuns"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionExit">
+  <action name="actionNewProject">
    <property name="text">
     <string>New Project</string>
    </property>
@@ -1709,6 +1709,9 @@
    <property name="text">
     <string>Quit</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
   </action>
   <action name="actionConfiguration_2">
    <property name="text">
@@ -1731,6 +1734,18 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VdriveRunManagerTree</class>
+   <extends>QTreeView</extends>
+   <header>vdriverunmanagertree.h</header>
+  </customwidget>
+  <customwidget>
+   <class>FileSystemTreeView</class>
+   <extends>QTreeView</extends>
+   <header>filesystemtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
