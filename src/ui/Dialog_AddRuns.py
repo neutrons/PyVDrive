@@ -135,7 +135,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # blinking is not easy
         self.ui.label_loadingStatus.setText('Inspecting data directory %s... ...' %
                                             self._iptsDir)
-        time.sleep(0.01)
+        time.sleep(0.1)
 
         # Get basic information
         try:
@@ -166,10 +166,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # Sort by date
         # FIXME - make dateEdit_begin and _end correct!
         run_tup_list.sort(key=lambda x: x[1])
-        date0 = QtCore.QDate(2014, 10, 23)
-        self.ui.dateEdit_begin.setDate(date0)
+        date_begin = gutil.convert_to_qdate_epoch(run_tup_list[0][1])
+        self.ui.dateEdit_begin.setDate(date_begin)
 
-        self.ui.label_loadingStatus.setText('IPTS directory %s' % self._iptsDir)
+        date_end = gutil.convert_to_qdate_epoch(run_tup_list[-1][1])
+        self.ui.dateEdit_end.setDate(date_end)
+
+        self.ui.label_loadingStatus.setText('IPTS directory %s: total %d runs' % (
+            self._iptsDir, len(run_tup_list)))
 
         return
 

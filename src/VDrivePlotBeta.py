@@ -65,6 +65,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_sample_log_file)
 
+        # Event handling for menu
+        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+                     self.evt_quit)
+
         # Group widgets
         self._groupedSnapViewList = []
         self._setup_snap_view_groups(self._numSnapViews)
@@ -147,7 +151,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
-        status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date)
+        status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date,
+                                                               include_end_date=True)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -157,7 +162,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # FIXME - Implement filter_runs_by_run()
-        status, ret_obj = self._myWorkflow.filter_runs_by_run(run_tup_list, begin_run, end_run)
+        status, ret_obj =vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
 
         status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
@@ -251,6 +256,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # ENDFOR
         '''
         raise NotImplementedError('Debut Stop Here! 342')
+
+    def evt_quit(self):
+        """
+
+        :return:
+        """
+        self.close()
 
     def get_workflow(self):
         """

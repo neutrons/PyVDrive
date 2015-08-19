@@ -229,7 +229,6 @@ class FacilityUtilityHelper(object):
 ################################################################################
 # External Methods
 ################################################################################
-
 def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
                      time_pattern='%H:%M:%S'):
     """
@@ -251,22 +250,17 @@ def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
 
     return epoch
 
-def convert_to_date_from_epoch(epoch_time, next_day=False):
+
+def convert_to_strtime_from_epoch(epoch_time):
     """
+
     :param epoch_time:
-    :param next_day:
-    :return: 3-tuple (year, month, date)
+    :return:
     """
-    # FIXME - Make this correct!
-    #  time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time))
-    # Out[8]: '2015-08-01 00:00:00'
+    date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time))
+    # such as : '2015-08-01 00:00:00'
 
-    year = 2015
-    month = 4
-    day = 9
-
-    return year, month, day
-
+    return date_time
 
 def get_ipts_number_from_dir(ipts_dir):
     """ Get IPTS number from dir
