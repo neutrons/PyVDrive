@@ -66,6 +66,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_load_sample_log_file)
 
         # Event handling for menu
+        # TODO - Issue 12
+        self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
+                     self.menu_save_session)
+        self.connect(self.ui.actionSave_Project_As)
+        self.connect(self.ui.actionOpen_Project)
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
                      self.evt_quit)
 

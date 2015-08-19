@@ -224,6 +224,23 @@ class VDriveAPI(object):
             vecreltimes.append(rt)
 
 
+    def load_session(self, in_file_name):
+        """
+
+        :param int_file_name:
+        :return:
+        """
+        # TODO - Issue 12
+        save_dict = futil.load_xml_file(in_file_name)
+
+        # Set from dictionary
+        # class variables
+
+        # create a VDProject
+
+
+        return
+
     def set_data_root_directory(self, root_dir):
         """
         :rtype : tuple
@@ -239,6 +256,23 @@ class VDriveAPI(object):
         self._myFacilityHelper.set_data_root_path(self._myRootDataDir)
 
         return True, ''
+
+    def save_session(self, out_file_name):
+        """ Save current session
+        :param out_file_name:
+        :return:
+        """
+        # TODO - Issue 12
+        # Create a dictionary for current set up
+        save_dict = {}
+        save_dict['myRootDataDir'] = self._myRootDataDir
+        blabla
+
+        # Write to file:
+        futil.save_to_xml(save_dict, out_file_name)
+
+        return
+
 
     def set_ipts(self, ipts_number):
         """
