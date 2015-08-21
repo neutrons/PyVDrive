@@ -12,6 +12,7 @@ import vdrive.VDProject as vp
 import vdrive.mantid_helper as mtd
 import vdrive.FacilityUtil as futil
 
+
 class VDriveAPI(object):
     """
 
@@ -22,7 +23,7 @@ class VDriveAPI(object):
         :return:
         """
         # Define class variables with defaults
-        self._instrumentName = 'VULCAN'
+        self._myInstrumentName = 'VULCAN'
         self._myRootDataDir = '/SNS/VULCAN'
         self._myWorkDir = '/tmp/'
 
@@ -30,7 +31,7 @@ class VDriveAPI(object):
 
         # Project
         self._myProject = vp.VDProject('Temp')
-        self._myFacilityHelper = futil.FacilityUtilityHelper(self._instrumentName)
+        self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
 
         #self._tempWSDict = {}
 
@@ -223,21 +224,24 @@ class VDriveAPI(object):
             rt = float(t.totalNanoseconds() - t0ns) * 1.0E-9
             vecreltimes.append(rt)
 
-
     def load_session(self, in_file_name):
         """
-
+        Load session from a session file
         :param int_file_name:
         :return:
         """
-        # TODO - Issue 12
         save_dict = futil.load_xml_file(in_file_name)
 
         # Set from dictionary
         # class variables
+        self._myInstrumentName = save_dict['myInstrumentName']
+        self._myRootDataDir = save_dict['myRootDataDir']
+        self._myWorkDir = save_dict['myWorkDir']
+
+        self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
 
         # create a VDProject
-
+        self._myProject.load_session(save_dict['myProject'])
 
         return
 
@@ -264,12 +268,11 @@ class VDriveAPI(object):
         """
         # TODO - Issue 12
         # Create a dictionary for current set up
-        save_dict = {}
+        save_dict = dict()
+        save_dict['myInstrumentName'] = self._myInstrumentName
         save_dict['myRootDataDir'] = self._myRootDataDir
-        blabla
-
-        # Write to file:
-        futil.save_to_xml(save_dict, out_file_name)
+        save_dict['myWorkDir'] = self._myWorkDir
+        save_dict['myProject'] = self._myProject.save_session(out_file_name=None)
 
         return
 
