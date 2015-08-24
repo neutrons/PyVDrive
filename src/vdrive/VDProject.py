@@ -66,6 +66,25 @@ class VDProject:
         """
         return self._baseDataPath
 
+    def get_ipts_runs(self):
+        """ Get IPTS numbers and runs
+        :return: dictionary of list. Key: ipts number, Value: list of runs belonged to ipts
+        """
+        ipts_dict = dict()
+
+        for run_number in self._dataFileDict.keys():
+            ipts_number = self._dataFileDict[run_number][1]
+            if ipts_number not in ipts_dict:
+                ipts_dict[ipts_number] = list()
+            ipts_dict[ipts_number].append(run_number)
+        # END-FOR (run_number)
+
+        # Sort
+        for ipts_number in ipts_dict.keys():
+            ipts_dict[ipts_number].sort()
+
+        return ipts_dict
+
     def get_number_data_files(self):
         """
 
