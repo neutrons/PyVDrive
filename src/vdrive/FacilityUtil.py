@@ -29,7 +29,7 @@ class FacilityUtilityHelper(object):
         elif instrument in SUPPORTEDINSTRUMENT_SHORT:
             self._instrumentName = SUPPORTEDINSTRUMENT[SUPPORTEDINSTRUMENT_SHORT.index(instrument)]
         else:
-            raise NotImplementedError("Instrument %s is not supported." % (instrument))
+            raise NotImplementedError("Instrument %s is not supported." % instrument)
 
         # Other class variables
         self._dataRootPath = ""
@@ -37,9 +37,10 @@ class FacilityUtilityHelper(object):
 
         return
 
-
     def getFilesInfo(self, filenamelist):
         """ Get files' information
+        :param filenamelist: list of string of file names
+        :return: a list of 2-tuple (time as creation time, string as file name)
         """
         timelist = []
         for filename in filenames:
@@ -67,11 +68,10 @@ class FacilityUtilityHelper(object):
 
     def get_run_info(self, ipts_number):
         """
-
-        :param ipts_number:
-        :return:
+        Get runs' information of an IPTS
+        :param ipts_number: integer as IPTS number
+        :return: list of 3-tuples
         """
-        # TODO - Docs
         ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % (ipts_number))
         run_tup_list = self.get_run_info_dir(ipts_home_dir)
 
@@ -82,10 +82,11 @@ class FacilityUtilityHelper(object):
 
     def get_run_info_dir(self, ipts_home_dir):
         """
+        Get information of runs in a directory.
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
         :param ipts_number:
-        :return: list of 3-tuples
+        :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
         """
         # Get home directory for IPTS
         if os.path.exists(ipts_home_dir) is False:
@@ -231,12 +232,12 @@ class FacilityUtilityHelper(object):
 ################################################################################
 def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
                      time_pattern='%H:%M:%S'):
-    """
-    :param m_date:
-    :param m_time:
-    :param date_pattern:
-    :param time_pattern:
-    :return:
+    """ Convert a time in string format to epoch time
+    :param m_date: input date
+    :param m_time: input time
+    :param date_pattern: format for date
+    :param time_pattern: format for time
+    :return: integer as total seconds from 1990.01.01
     """
     # Form datetime and pattern
     date_time = '%s %s' % (m_date, m_time)
