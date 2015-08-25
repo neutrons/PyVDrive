@@ -15,11 +15,13 @@ import vdrive.FacilityUtil as futil
 
 class VDriveAPI(object):
     """
-
+    Class containing the methods to reduce and analyze VULCAN data.
+    It is a pure python layer that does not consider GUI.
+    VDrivePlot is a GUI applicaton built upon this class
     """
     def __init__(self):
         """
-
+        Initialization
         :return:
         """
         # Define class variables with defaults
@@ -53,7 +55,7 @@ class VDriveAPI(object):
 
     def clear_runs(self):
         """
-
+        Clear all runs in the VProject. 
         :return:
         """
         try:
@@ -118,9 +120,9 @@ class VDriveAPI(object):
 
     def get_ipts_info(self, ipts):
         """
-
+        Get runs and their information for a certain IPTS
         :param ipts: integer or string as ipts number or ipts directory respectively
-        :return:
+        :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
         # TODO - DOC
         try:
@@ -147,10 +149,9 @@ class VDriveAPI(object):
 
     def get_number_runs(self):
         """
-
+        Get the number of runs added to project.
         :return:
         """
-        # TODO -Doc
         return self._myProject.get_number_data_files()
 
     def getSampleLogNames(self, tag):
