@@ -210,7 +210,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_load_sample_log_file(self):
         """
-
+        Load nexus file for plotting sample log. 
         :return:
         """
         # Dialog to get the file name
@@ -218,11 +218,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         home_dir = '/SNS/VULCAN/'
         file_filter="NXS (*.nxs);;All files (*.*)"
         # FIXME - Speed up for testing
-        if False:
-            log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open Sample Log File',
+        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open Sample Log File',
                                                               home_dir, file_filter))
-        else:
-            log_file_name = '/SNS/VULCAN/IPTS-14114/0/71087/NeXus/VULCAN_71087_event.nxs'
         print "About to load sample log from file %s."%(log_file_name)
 
         # Load file
@@ -267,17 +264,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def evt_quit(self):
         """
-
+        Quit application without saving
         :return:
         """
+        # FIXME - Save the session automatically before leaving
         self.close()
 
     def get_workflow(self):
         """
-
+        Get workflow instance
         :return:
         """
-        # TODO -Doc
         return self._myWorkflow
 
     def menu_save_session(self):
