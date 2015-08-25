@@ -66,6 +66,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_load_sample_log_file)
 
         # Event handling for menu
+        # TODO - Issue 12
+        self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
+                     self.menu_save_session)
+        self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
+                     self.menu_save_session_as)
+        self.connect(self.ui.actionOpen_Project, QtCore.SIGNAL('triggered()'),
+                     self.menu_load_session)
+
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
                      self.evt_quit)
 
@@ -73,6 +81,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._groupedSnapViewList = []
         self._setup_snap_view_groups(self._numSnapViews)
 
+        # Some class variable for recording status
+        self._savedSessionFileName  = None
 
         return
 
@@ -151,8 +161,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
-        status, ret_obj = self._myWorkflow.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                               include_end_date=True)
+        status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
+                                                     include_end_date=True)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -198,7 +208,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-
     def do_load_sample_log_file(self):
         """
 
@@ -242,7 +251,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         for i in xrange(self._numSnapViews):
             pass
 
-
         '''
         for i in xrange(6):
             status, errmsg, retvalue = self._myWorkflow.getSampleLogVectorByIndex(tag, logindex=i)
@@ -271,6 +279,65 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         # TODO -Doc
         return self._myWorkflow
+
+    def menu_save_session(self):
+        """
+        Save session called from menu
+        :return:
+        """
+        if self._savedSessionFileName is None:
+            self._savedSessionFileName = str(
+                QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
+                                                  'XML files (*.xml);; All files (*.*)'))
+
+        self._myWorkflow.save_session(self._savedSessionFileName)
+
+        return
+
+    def menu_save_session_as(self):
+        """
+        Save session as
+        :return:
+        """
+        saved_session_file_name = str(
+                QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
+                                                  'XML files (*.xml); All files (*.*)'))
+
+        self._myWorkflow.save_session(saved_session_file_name)
+
+        return
+
+    def menu_load_session(self):
+        """
+        Load session from file
+        :return:
+        """
+        # Get file name
+        input_file_name = str(
+            QtGui.QFileDialog.getOpenFileName(self, 'Load Session', self._myWorkflow.get_working_dir(),
+                                              'XML files (*.xml);; All files (*.*)')
+        )
+
+        # Load
+        status, input_file_name = self._myWorkflow.load_session(input_file_name)
+        if status is False:
+            guiutil.pop_dialog_error('Unable to load session from %s' % input_file_name)
+
+        # Set input file to default session back up file
+        self._savedSessionFileName = input_file_name
+
+        # Set up tree
+        # FIXME - Consider to refactor these to a method with do_add_runs_by_ipts
+        ipts_dict = self._myWorkflow.get_project_runs()
+        for ipts_number in sorted(ipts_dict.keys()):
+            self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, ipts_dict[ipts_number])
+            # FIXME - Need to figure out how to deal with this
+            home_dir = '/SNS/VULCAN'
+            curr_dir = os.path.join(home_dir, 'IPTS-%d' % ipts_number)
+            self.ui.treeView_runFiles.set_root_path(home_dir)
+            self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

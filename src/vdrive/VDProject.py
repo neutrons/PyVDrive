@@ -1,25 +1,16 @@
-import sys
 import os
-import os.path 
+import os.path
 
-# FIXME : This is for local development only!
-homedir = os.path.expanduser('~')
-mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
-sys.path.append(mantidpath)
-
-import mantid
-import mantid.simpleapi as mantidapi
-
-import SNSPowderReductionLite as PRL
+import SNSPowderReductionLite as prl
 
 
 class VDProject:
+    """ VDrive Project
     """
-    """
-    def __init__(self, projname):
+    def __init__(self, project_name):
+        """ Init
         """
-        """
-        self._name = projname
+        self._name = project_name
         self._dataFileDict = {}
         self._baseDataFileNameList = []
         self._baseDataPath = None 
@@ -28,7 +19,7 @@ class VDProject:
 
     def add_run(self, run_number, file_name, ipts_number):
         """
-
+        Add a run to project
         :param run_number:
         :param file_name:
         :param ipts_number:
@@ -75,6 +66,25 @@ class VDProject:
         """
         return self._baseDataPath
 
+    def get_ipts_runs(self):
+        """ Get IPTS numbers and runs
+        :return: dictionary of list. Key: ipts number, Value: list of runs belonged to ipts
+        """
+        ipts_dict = dict()
+
+        for run_number in self._dataFileDict.keys():
+            ipts_number = self._dataFileDict[run_number][1]
+            if ipts_number not in ipts_dict:
+                ipts_dict[ipts_number] = list()
+            ipts_dict[ipts_number].append(run_number)
+        # END-FOR (run_number)
+
+        # Sort
+        for ipts_number in ipts_dict.keys():
+            ipts_dict[ipts_number].sort()
+
+        return ipts_dict
+
     def get_number_data_files(self):
         """
 
@@ -102,9 +112,47 @@ class VDProject:
 
         return False
 
+    def load_session_from_dict(self, save_dict):
+        """ Load session from a dictionary
+        :param save_dict:
+        :return:
+        """
+        assert isinstance(save_dict, dict)
+
+        # Set
+        self._name = save_dict['name']
+        self._baseDataPath = save_dict['baseDataPath']
+        self._dataFileDict = save_dict['dataFileDict']
+        self._baseDataFileNameList = save_dict['baseDataFileNameList']
+
+        return
+
     def name(self):
+        """ Get name of the project
+        :return:
+        """
         return self._name
-       
+
+    def save_session(self, out_file_name):
+        """ Save session to a dictionary
+        :param out_file_name:
+        :return:
+        """
+        # Save to a dictionary
+        save_dict = dict()
+        save_dict['name'] = self._name
+        save_dict['dataFileDict'] = self._dataFileDict
+        save_dict['baseDataFileNameList'] = self._baseDataFileNameList
+        save_dict['baseDataPath'] = self._baseDataPath
+
+        # Return if out_file_name is None
+        if out_file_name is None:
+            return save_dict
+
+        assert isinstance(out_file_name, str)
+        futil.save_xml(save_dict, out_file_name)
+
+        return None
 
     def setBaseDataPath(self, datadir):
         """ Set base data path such as /SNS/VULCAN/
@@ -146,10 +194,10 @@ class ReductionProject(VDProject):
     """ Class to handle reducing powder diffraction data
     """ 
 
-    def __init__(self, projname):
+    def __init__(self, project_name):
         """
         """
-        VDProject.__init__(self, projname)
+        VDProject.__init__(self, project_name)
         
         # detector calibration/focusing file
         self._detCalFilename = None
@@ -451,7 +499,7 @@ class ReductionProject(VDProject):
         vanPdrDict = {}
         for vrun in vanrunlist:
             vrunfilename = vanfilenamedict[vrun]
-            vpdr = PRL.SNSPowderReductionLite(vrunfilename, isvanadium=True) 
+            vpdr = prl.SNSPowderReductionLite(vrunfilename, isvanadium=True)
             vanws = vpdr.reduceVanadiumData(params={})
             if vanws is None:
                 raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
@@ -464,7 +512,7 @@ class ReductionProject(VDProject):
             fullpathfname = rundict[basenamerun][0]
             vanrun = rundict[basenamerun][1]
             
-            runpdr = PRL.SNSPowderReductionLite(fullpathfname, isvanadium=False)
+            runpdr = prl.SNSPowderReductionLite(fullpathfname, isvanadium=False)
 
             # optinally chop
             doChopData = False
@@ -481,7 +529,7 @@ class ReductionProject(VDProject):
             # ENDIF (vrun)
 
             # reduce data
-            runpdr.reducePDData(params=PRL.AlignFocusParameters(), 
+            runpdr.reducePDData(params=prl.AlignFocusParameters(),
                                 vrun=vrun,
                                 chopdata=doChopData, 
                                 tofmin=self._tofMin, tofmax=self._tofMax)

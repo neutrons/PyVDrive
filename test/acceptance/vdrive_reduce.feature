@@ -9,6 +9,8 @@ Feature: Wenduo Zhou
 		Given I get a list of runs belonged to an IPTS number
 	  	Then I filter the runs by date
 		Then I input IPTS, run numbers
+  	   	Then I save current session to a file
+  		Then I create a new VDriveAPI project and load saved session file to it
 		# IPTS = 10311  Run = [57070, 57078]
         #Then I input names of calibration file name and etc
 		#Then I reduce the data

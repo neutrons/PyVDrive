@@ -305,11 +305,47 @@ def getIptsRunFromFileName(nxsfilename):
     # Get run number
     runnumber = int(basename.split('_')[1])
 
-    return (ipts, runnumber)
+    return ipts, runnumber
 
 
+def load_from_xml(xml_file_name):
+    """
 
+    :param xml_file_name:
+    :return:
+    """
+    import pprint, pickle
 
+    pkl_file = open(xml_file_name, 'rb')
+
+    save_dict = pickle.load(pkl_file)
+    pprint.pprint(save_dict)
+
+    pkl_file.close()
+
+    return save_dict
+
+def save_to_xml(save_dict, xml_file_name):
+    """
+    Save a dictionary to an XML file
+    :param save_dict:
+    :param xml_file_name:
+    :return:
+    """
+    # FIXME - Before the GUI tool is developed, python pickle is used temporarily
+    import pickle
+
+    output = open(xml_file_name, 'wb')
+
+    # Pickle dictionary using protocol 0.
+    pickle.dump(save_dict, output)
+
+    # Pickle the list using the highest protocol available.
+    # pickle.dump(selfref_list, output, -1)
+
+    output.close()
+
+    return
 
 def setGPDateTime(epochtime):
     """ Reset epoch time to standard end time

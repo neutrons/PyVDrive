@@ -1,5 +1,5 @@
 from lettuce import *
-from nose.tools import assert_equals
+from nose.tools import assert_equals, assert_true
 
 import sys
 import os
@@ -106,7 +106,7 @@ def filter_runs(step):
 
     start_date = '02/09/2015'
     end_date = '02/10/2015'
-    status, filter_run_tup_list = wk_flow.filter_runs_by_date(run_tup_list, start_date, end_date)
+    status, filter_run_tup_list = vdapi.filter_runs_by_date(run_tup_list, start_date, end_date)
     assert_equals(status, True)
     assert_equals(len(filter_run_tup_list), 69)
 
@@ -157,6 +157,41 @@ def set_ipts_runs(step):
 
     return
 
+@step(u'I save current session to a file')
+def save_session(step):
+    """ Save sessions
+    """
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    status, filename = wk_flow.save_session('test1234.xml')
+    assert_true(status)
+    assert_equals(filename, '/tmp/test1234.xml')
+
+
+    return
+
+@step(u'I create a new VDriveAPI project and load saved session file to it')
+def load_session(step):
+    """ Load session to a new workflow instance
+    :param step:
+    :return:
+    """
+    # Create a new workflow and load the file to the new workflow instance
+    new_wk_flow = vdapi.VDriveAPI()
+    saved_file_name = '/tmp/test1234.xml'
+    new_wk_flow.load_session(saved_file_name)
+
+    # Compare the new workflow and old one
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
+    assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())
+
+    return
+
+'''
 @step(u'Then I reduce the data')
 def reduceData(step):
     """ Set up reduction parametera and reduce data
@@ -199,3 +234,4 @@ def retrieveReducedData(step):
     assert_equals(numredws, 1)
 
     print "Retrieve reduced data"
+'''
