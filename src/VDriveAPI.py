@@ -9,8 +9,8 @@
 import os
 
 import vdrive.VDProject as vp
-import vdrive.mantid_helper as mtd
 import vdrive.FacilityUtil as futil
+import vdrive.SampleLogHelper as logHelper
 
 
 class VDriveAPI(object):
@@ -35,7 +35,8 @@ class VDriveAPI(object):
         self._myProject = vp.VDProject('Temp')
         self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
 
-        #self._tempWSDict = {}
+        # Data slicing helper
+        self._myLogHelper = None
 
         return
 
@@ -64,32 +65,6 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, ''
-
-    def loadNexus(self, filename, logonly):
-        """
-
-        :param filename:
-        :param logonly:
-        :return:
-        """
-        out_ws_name = 'templogws'
-        status, errmsg, value = mtd.loadNexus(datafilename=filename,
-                                              outwsname=out_ws_name,
-                                              metadataonly=logonly)
-        if status is False:
-            return False, errmsg, None
-
-        tag = out_ws_name
-        logws = value
-        self._tempWSDict[tag] = logws
-
-        return True, '', tag
-
-    def get_data_dir(self):
-        """ Data dir
-        :return:
-        """
-        return self._myRootDataDir
 
     def get_instrument_name(self):
         """
@@ -146,6 +121,20 @@ class VDriveAPI(object):
         :return: 2-tuple: integer as IPTS number; 0 as unable to find
         """
         return futil.get_ipts_number_from_dir(ipts_dir)
+
+    def get_run_info(self, run_number):
+        """ Get a run's information
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int)
+
+        try:
+            run_info_tuple = self._myProject.get_run_info(run_number)
+        except RuntimeError as re:
+            return False, str(re)
+
+        return True, run_info_tuple
 
     def get_number_runs(self):
         """
@@ -209,6 +198,28 @@ class VDriveAPI(object):
         for t in vectimes:
             rt = float(t.totalNanoseconds() - t0ns) * 1.0E-9
             vecreltimes.append(rt)
+
+    def init_slicing_helper(self, nxs_file_name):
+        """
+
+        :param nxs_file_name:
+        :return:
+        """
+        # TODO - DOC
+        self._myLogHelper = logHelper.SampleLogManager()
+        status, errmsg = self._myLogHelper.set_nexus_file(nxs_file_name)
+
+        return status, errmsg
+
+    def get_sample_log_names(self):
+        """
+
+        :return:
+        """
+        if self._myLogHelper is None:
+            return False, 'Log helper has not been initialized.'
+
+        return self._myLogHelper.get_sample_log_names()
 
     def load_session(self, in_file_name):
         """

@@ -26,6 +26,7 @@ import VDriveAPI as vdrive
 #import PyVDrive.vdrive.FacilityUtil as futil
 
 import ui.Dialog_AddRuns as dlgrun
+import ui.Window_LogPicker as LogPicker
 
 
 class VDrivePlotBeta(QtGui.QMainWindow):
@@ -55,7 +56,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._openSubWindows = []
 
         # Initialize widgets
-        # self._init_widgets()
+        self._init_widgets()
 
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -65,8 +66,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_sample_log_file)
 
+        # Column 2
+        self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_chop_run_state_change)
+
+        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
+                     self.pop_manual_picker)
+
         # Event handling for menu
-        # TODO - Issue 12
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
                      self.menu_save_session)
         self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
@@ -81,8 +88,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._groupedSnapViewList = []
         self._setup_snap_view_groups(self._numSnapViews)
 
+        # Sub windows
+        self._manualPikerWindow = None
+
         # Some class variable for recording status
-        self._savedSessionFileName  = None
+        self._savedSessionFileName = None
 
         return
 
@@ -91,6 +101,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         (1) project runs view
         :return: None
         """
+        '''
         # IPTS and run tree view
         model = QtGui.QStandardItemModel()
         model.setColumnCount(2)
@@ -100,8 +111,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.treeView_iptsRun.setColumnWidth(0, 90)
         self.ui.treeView_iptsRun.setColumnWidth(1, 60)
         self.ui.treeView_iptsRun.setDragEnabled(True)
+        '''
 
-        tree = QtGui.QTreeView()
+        # Chopping
+        self.ui.checkBox_chopRun.setCheckState(QtCore.Qt.Unchecked)
+        self.ui.tabWidget_reduceData.setCurrentIndex(1)
+        self.ui.tabWidget_reduceData.setTabEnabled(0, False)
+
+        # Plotting log
+        self.ui.checkBox_logSkipSec.setCheckState(QtCore.Qt.Checked)
+        self.ui.lineEdit_numSecLogSkip.setText('1')
 
         return
 
@@ -209,33 +228,48 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_load_sample_log_file(self):
-        """
-        Load nexus file for plotting sample log. 
+        """ Load nexus file for plotting sample log.
+        The file should be selected from runs in the tree
         :return:
         """
+        # Get the default file path
+        data_path = self._myWorkflow.get_data_root_directory()
+
+        status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
+        if status is True:
+            run_number = ret_obj
+            status, ret_obj = self._myWorkflow.get_run_info(run_number)
+            if status is True:
+                if data_path.startswith('/SNS/'):
+                    # get to IPTS-???/0/.. directory
+                    ipts_number = ret_obj[1]
+                    data_path = os.path.join(data_path, 'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
+                else:
+                    data_path = os.path.dirname(ret_obj[0])
+            else:
+                print 'Unable to get run from tree view: %s' % ret_obj
+        else:
+            print 'Unable to get run from tree view: %s' % ret_obj
+
         # Dialog to get the file name
-        # FIXME - homedir should be set up from configuration and previous user input
-        home_dir = '/SNS/VULCAN/'
         file_filter="NXS (*.nxs);;All files (*.*)"
-        # FIXME - Speed up for testing
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open Sample Log File',
-                                                              home_dir, file_filter))
-        print "About to load sample log from file %s."%(log_file_name)
+        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
+                                                              data_path, file_filter))
 
         # Load file
-        status, errmsg, retvalue = self._myWorkflow.loadNexus(filename=log_file_name, logonly=True)
+        status, errmsg = self._myWorkflow.init_slicing_helper(nxs_file_name=log_file_name)
         if status is False:
-            self._logError(errmsg)
+            guiutil.pop_dialog_error(errmsg)
+
+        # Get log names
+        status, ret_value = self._myWorkflow.get_sample_log_names()
+        if status is False:
+            errmsg = ret_value
+            guiutil.pop_dialog_error(errmsg)
             return
         else:
-            tag = retvalue
-
-        # Plot first 6 sample logs
-        status, errmsg, retvalue = self._myWorkflow.getSampleLogNames(tag)
-        if status is False:
-            self._logError(errmsg)
-        else:
-            log_name_list = sorted(retvalue)
+            log_name_list = sorted(ret_value)
+            print '[DB] List of log names: %s' % str(log_name_list)
 
         # Set up all 6 widgets groups
         for i in xrange(self._numSnapViews):
@@ -243,24 +277,38 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             snap_widget = self._groupedSnapViewList[i]
             log_widget = spview.SampleLogView(snap_widget)
             log_widget.setLogNames(log_name_list)
+            log_widget.set_current_log(i)
 
-        # Plot the first 6...
-        for i in xrange(self._numSnapViews):
-            pass
+        # Plot first 6 sample logs
+        do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
+        if do_skip is True:
+            num_sec_skipped = guiutil.parse_integer(self.ui.lineEdit_numSecLogSkip)
+        else:
+            num_sec_skipped = None
 
-        '''
-        for i in xrange(6):
-            status, errmsg, retvalue = self._myWorkflow.getSampleLogVectorByIndex(tag, logindex=i)
-            if status is False:
-                self._logError(errmsg)
-                continue
-            else:
-                vecx, vecy, logname = retvalue
+        for i in xrange(min(self._numSnapViews, len(log_name_list))):
+            log_name = log_name_list[i]
+            vec_time, vec_log_value = self._myWorkflow.get_sample_log_values(i)
+            self._groupedSnapViewList[i].set_current_log_name(log_name, do_skip, num_sec_skipped)
+            self._groupedSnapViewList[i].plot_data(vec_time, vec_log_value)
+        # END-FOR
 
-            self._snapGraphicsView[i].plotSampleLog(vecx, vecy, lognamelist, logname)
-        # ENDFOR
-        '''
-        raise NotImplementedError('Debut Stop Here! 342')
+        return
+
+    def evt_chop_run_state_change(self):
+        """
+        Event handling for checkbox 'chop data' is checked or unchecked
+        :return:
+        """
+        new_status = self.ui.checkBox_chopRun.checkState()
+        if new_status == QtCore.Qt.Unchecked:
+            self.ui.tabWidget_reduceData.setCurrentIndex(1)
+            self.ui.tabWidget_reduceData.setTabEnabled(0, False)
+        else:
+            self.ui.tabWidget_reduceData.setCurrentIndex(0)
+            self.ui.tabWidget_reduceData.setTabEnabled(0, True)
+
+        return
 
     def evt_quit(self):
         """
@@ -335,6 +383,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             self.ui.treeView_runFiles.set_current_path(curr_dir)
 
         return
+
+    def pop_manual_picker(self):
+        """
+        Pop out manual picker window
+        :return:
+        """
+        self._manualPikerWindow = LogPicker.Window_LogPicker(self)
+        self._manualPikerWindow.show()
+
+        return
+
+
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

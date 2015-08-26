@@ -262,7 +262,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="checkBox_2">
+              <widget class="QCheckBox" name="checkBox_chopRun">
                <property name="text">
                 <string>Chopped Run</string>
                </property>
@@ -276,7 +276,7 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_8">
           <item>
-           <widget class="QTabWidget" name="tabWidget_5">
+           <widget class="QTabWidget" name="tabWidget_reduceData">
             <property name="minimumSize">
              <size>
               <width>400</width>
@@ -419,14 +419,14 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QTabWidget" name="tabWidget_3">
+                 <widget class="QTabWidget" name="tabWidget_chopSetup">
                   <property name="toolTip">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>1</number>
+                   <number>0</number>
                   </property>
-                  <widget class="QWidget" name="tab_6">
+                  <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
                     <string>Load</string>
                    </attribute>
@@ -441,12 +441,12 @@
                     <item>
                      <widget class="QLabel" name="label_19">
                       <property name="text">
-                       <string>file name</string>
+                       <string>Time Segments</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QTableView" name="tableView_2">
+                     <widget class="QTableView" name="tableView_timeSegment">
                       <property name="toolTip">
                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Should be editable to add segments by user from UI&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
@@ -481,7 +481,7 @@
                       <item>
                        <layout class="QHBoxLayout" name="horizontalLayout_24">
                         <item>
-                         <widget class="QCheckBox" name="checkBox_27">
+                         <widget class="QCheckBox" name="checkBox_logSkipSec">
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolution for plotting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
@@ -491,7 +491,7 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLineEdit" name="lineEdit_14"/>
+                         <widget class="QLineEdit" name="lineEdit_numSecLogSkip"/>
                         </item>
                         <item>
                          <widget class="QLabel" name="label_18">
@@ -613,7 +613,7 @@
                       <item>
                        <layout class="QHBoxLayout" name="horizontalLayout_30">
                         <item>
-                         <widget class="QPushButton" name="pushButton_17">
+                         <widget class="QPushButton" name="pushButton_manualPicker">
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
@@ -1466,8 +1466,15 @@
     </item>
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
-      <item row="3" column="1">
-       <widget class="QGraphicsView" name="graphicsView_snapView4">
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="checkBox_2">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="MplGraphicsView" name="graphicsView_snapView4">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1477,7 +1484,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QGraphicsView" name="graphicsView_snapView1">
+       <widget class="MplGraphicsView" name="graphicsView_snapView1">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -1493,16 +1500,16 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_24">
+       <widget class="QCheckBox" name="checkBox_plotInFloat1">
         <property name="text">
          <string>Plot also in floating windows</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QGraphicsView" name="graphicsView_snapView6"/>
+      <item row="7" column="1">
+       <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <widget class="QComboBox" name="comboBox_g31">
@@ -1512,23 +1519,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox_g32">
-          <item>
-           <property name="text">
-            <string>Relative Time</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Absolute Time</string>
-           </property>
-          </item>
-         </widget>
+         <widget class="QComboBox" name="comboBox_g32"/>
         </item>
        </layout>
       </item>
       <item row="1" column="1">
-       <widget class="QGraphicsView" name="graphicsView_snapView2">
+       <widget class="MplGraphicsView" name="graphicsView_snapView2">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1537,8 +1533,8 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QGraphicsView" name="graphicsView_snapView3">
+      <item row="4" column="0">
+       <widget class="MplGraphicsView" name="graphicsView_snapView3">
         <property name="minimumSize">
          <size>
           <width>250</width>
@@ -1550,7 +1546,18 @@
       <item row="2" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
-         <widget class="QComboBox" name="comboBox_g11"/>
+         <widget class="QComboBox" name="comboBox_g11">
+          <item>
+           <property name="text">
+            <string>Relative Time</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Absolute Time</string>
+           </property>
+          </item>
+         </widget>
         </item>
         <item>
          <widget class="QComboBox" name="comboBox_g12"/>
@@ -1567,7 +1574,7 @@
         </item>
        </layout>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_32">
         <item>
          <widget class="QComboBox" name="comboBox_g41"/>
@@ -1577,7 +1584,7 @@
         </item>
        </layout>
       </item>
-      <item row="6" column="0">
+      <item row="8" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_33">
         <item>
          <widget class="QComboBox" name="comboBox_g51"/>
@@ -1587,7 +1594,7 @@
         </item>
        </layout>
       </item>
-      <item row="6" column="1">
+      <item row="8" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_34">
         <item>
          <widget class="QComboBox" name="comboBox_g61"/>
@@ -1597,8 +1604,36 @@
         </item>
        </layout>
       </item>
-      <item row="5" column="0">
-       <widget class="QGraphicsView" name="graphicsView_snapView5"/>
+      <item row="7" column="0">
+       <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QCheckBox" name="checkBox_28">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="checkBox_29">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QCheckBox" name="checkBox_30">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QCheckBox" name="checkBox_31">
+        <property name="text">
+         <string>CheckBox</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -1666,8 +1701,8 @@
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
-   <addaction name="menuAbout"/>
    <addaction name="menuRuns"/>
+   <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNewProject">
@@ -1753,6 +1788,11 @@
    <class>FileSystemTreeView</class>
    <extends>QTreeView</extends>
    <header>filesystemtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MplGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

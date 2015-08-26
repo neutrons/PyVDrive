@@ -53,3 +53,31 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             self.add_child_main_item(main_leaf_value, child_value)
 
         return
+
+    def get_current_run(self):
+        """ Get current run selected by mouse
+        :return:
+        """
+        # Get current index and item
+        current_index = self.currentIndex()
+        if isinstance(current_index, QtCore.QModelIndex) is False:
+            return False, 'Current index is not QModeIndex instance, but %s.' % str(type(current_index))
+
+        assert(isinstance(current_index, QtCore.QModelIndex))
+
+        current_item = self.model().itemFromIndex(current_index)
+        if isinstance(current_item, QtGui.QStandardItem) is False:
+            return False, 'Current item is not QStandardItem instance, but %s.' % str(type(current_item))
+        assert(isinstance(current_item, QtGui.QStandardItem))
+
+        if current_item.parent() is None:
+            # Top-level leaf, IPTS number
+            return False, 'Top-level leaf for IPTS number'
+
+        try:
+            value_str = str(current_item.text())
+            run = int(value_str)
+        except ValueError:
+            return False, 'Unable to convert %s to run number as integer.' % value_str
+
+        return True, run

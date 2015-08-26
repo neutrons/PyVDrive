@@ -1,5 +1,6 @@
 import PyQt4
 import PyQt4.QtGui
+from mplgraphicsview import MplGraphicsView 
 
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
@@ -12,8 +13,8 @@ class SnapGraphicsView(object):
         :return:
         """
         # Check
-        if isinstance(graphicview, PyQt4.QtGui.QGraphicsView) is False:
-            raise NotImplementedError("Input is not a QGraphicsView instance.")
+        if isinstance(graphicview, MplGraphicsView) is False:
+            raise NotImplementedError("Input is not a QGraphicsView instance, but %s" % str(type(graphicview)))
         if isinstance(combox1, PyQt4.QtGui.QComboBox) is False:
             raise NotImplementedError("Input combo1 is not a QComboBox instance.")
         if isinstance(combox2, PyQt4.QtGui.QComboBox) is False:
