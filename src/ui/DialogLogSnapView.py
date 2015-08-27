@@ -36,9 +36,18 @@ class DialogLogSnapView(QtGui.QDialog):
         self.ui.setupUi(self)
 
         # Event handling
+        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
+                     self.do_apply_change)
+
+        self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
+                     self.do_save_quit)
+
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit_no_save)
 
+        return
+
+    def do_apply_change(self):
         return
 
     def do_quit_no_save(self):
@@ -50,7 +59,10 @@ class DialogLogSnapView(QtGui.QDialog):
 
         return
 
-    def setup(self):
+    def do_save_quit(self):
+        return
+
+    def setup(self, workflow_controller, sample_log_name):
         """ Set up from parent main window
         :return:
         """

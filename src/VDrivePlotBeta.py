@@ -27,6 +27,7 @@ import VDriveAPI as vdrive
 
 import ui.Dialog_AddRuns as dlgrun
 import ui.Window_LogPicker as LogPicker
+import ui.DialogLogSnapView as dlgSnap
 
 
 class VDrivePlotBeta(QtGui.QMainWindow):
@@ -52,9 +53,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._calibCriteriaFile = ''
         self._numSnapViews = 6
 
-        # controls to the sub windows
-        self._openSubWindows = []
-
         # Initialize widgets
         self._init_widgets()
 
@@ -73,6 +71,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
                      self.pop_manual_picker)
 
+        # Column 3
+        self.connect(self.ui.checkBox_plotInFloat1, QtCore.SIGNAL('stateChanged(int)'),
+                     self.pop_snap_view)
+
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
                      self.menu_save_session)
@@ -89,7 +91,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._setup_snap_view_groups(self._numSnapViews)
 
         # Sub windows
+        # controls to the sub windows
+        self._openSubWindows = []
         self._manualPikerWindow = None
+        self._snapViewWindow = None
 
         # Some class variable for recording status
         self._savedSessionFileName = None
@@ -394,6 +399,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def pop_snap_view(self):
+        if self._snapViewWindow is None:
+            self._snapViewWindow = dlgSnap.DialogLogSnapView()
+
+        # FIXME - It is a mock now!
+        self._snapViewWindow.setup(None, None)
+
+        self._snapViewWindow.show()
+
+        return
 
 
 if __name__=="__main__":
