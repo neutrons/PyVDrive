@@ -1502,7 +1502,7 @@
       <item row="0" column="0">
        <widget class="QCheckBox" name="checkBox_plotInFloat1">
         <property name="text">
-         <string>Plot also in floating windows</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>

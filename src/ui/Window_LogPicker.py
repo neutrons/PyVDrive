@@ -2,10 +2,23 @@
 #
 # General-purposed plotting window
 #
+# pushButton_selectIPTS
+# radioButton_useLoadFrame
+# radioButton_useGenericDAQ
+# radioButton_useLogFile
+# pushButton_readLogFile
+# pushButton_prevLog
+# pushButton_nextLog
+# pushButton_saveReturn
+# pushButton_cancel
+
+# comboBox_logNames
+# graphicsView_main
+# tableWidget_segments
+# treeView_iptsRun
+#
 ########################################################################
 import sys
-import os
-import numpy
 
 from PyQt4 import QtCore, QtGui
 
@@ -18,7 +31,7 @@ except AttributeError:
 import VdriveLogPicker
 
 
-class Window_LogPicker(QtGui.QMainWindow):
+class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
@@ -51,7 +64,7 @@ def testmain(argv):
     app = QtGui.QApplication(argv)
 
     # my plot window app
-    myapp = Window_LogPicker(parent)
+    myapp = WindowLogPicker(parent)
     myapp.show()
 
     exit_code=app.exec_()
