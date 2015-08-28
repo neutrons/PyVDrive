@@ -53,16 +53,19 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_iptsInfo, QtCore.SIGNAL('clicked()'),
                      self.do_list_ipts_info)
 
-        QtCore.QObject.connect(self.ui.buttonBox_okAdd, QtCore.SIGNAL('accepted()'),
+        QtCore.QObject.connect(self.ui.pushButton_OK_2, QtCore.SIGNAL('clicked()'),
                                self.do_save_quit)
 
-        QtCore.QObject.connect(self.ui.buttonBox_okAdd, QtCore.SIGNAL('rejected'),
+        QtCore.QObject.connect(self.ui.pushButton_cancel_2, QtCore.SIGNAL('clicked()'),
                                self.do_reject_quit)
 
         # Disable some unused widget until 'browse' or 'set' is pushed.
         self.ui.pushButton_iptsInfo.setDisabled(True)
         self.ui.dateEdit_begin.setDisabled(True)
         self.ui.dateEdit_end.setDisabled(True)
+        self.ui.lineEdit_begin.setDisabled(True)
+        self.ui.lineEdit_end.setDisabled(True)
+        self.ui.pushButton_OK_2.setDisabled(True)
 
         # Init setup for starting date and run
         self._beginDate = '01/01/2000'
@@ -100,8 +103,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Enable next step
         self.ui.pushButton_iptsInfo.setEnabled(True)
-        self.ui.dateEdit_begin.setEnabled(True)
-        self.ui.dateEdit_end.setEnabled(True)
+        # self.ui.dateEdit_begin.setEnabled(True)
+        # self.ui.dateEdit_end.setEnabled(True)
 
         return
 
@@ -164,7 +167,6 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.lineEdit_end.setText(str(last_run))
 
         # Sort by date
-        # FIXME - make dateEdit_begin and _end correct!
         run_tup_list.sort(key=lambda x: x[1])
         date_begin = gutil.convert_to_qdate_epoch(run_tup_list[0][1])
         self.ui.dateEdit_begin.setDate(date_begin)
@@ -174,6 +176,13 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         self.ui.label_loadingStatus.setText('IPTS directory %s: total %d runs' % (
             self._iptsDir, len(run_tup_list)))
+
+        # Enable widgets to complete the setup
+        self.ui.dateEdit_begin.setEnabled(True)
+        self.ui.dateEdit_end.setEnabled(True)
+        self.ui.lineEdit_begin.setEnabled(True)
+        self.ui.lineEdit_end.setEnabled(True)
+        self.ui.pushButton_OK_2.setEnabled(True)
 
         return
 
@@ -209,8 +218,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Enable widgets for next step
         self.ui.pushButton_iptsInfo.setEnabled(True)
-        self.ui.dateEdit_begin.setEnabled(True)
-        self.ui.dateEdit_end.setEnabled(True)
+        # self.ui.dateEdit_begin.setEnabled(True)
+        # self.ui.dateEdit_end.setEnabled(True)
 
         return
 
@@ -241,13 +250,17 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         if end_run is not None:
             self._endRunNumber = end_run
 
+        # Quit
+        self.quit = True
+        self.close()
+
         return
 
     def do_reject_quit(self):
         """ Quit and abort the operation
         """
-        print "Cancel and Quit"
         self.quit = True
+        self.close()
 
         return
 

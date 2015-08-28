@@ -22,9 +22,6 @@ import ui.snapgraphicsview as spview
 """ import PyVDrive library """
 import VDriveAPI as vdrive
 
-#import config
-#import PyVDrive.vdrive.FacilityUtil as futil
-
 import ui.Dialog_AddRuns as dlgrun
 import ui.Window_LogPicker as LogPicker
 import ui.DialogLogSnapView as dlgSnap
@@ -170,7 +167,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if ipts_number is None:
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
             if status is False:
-                guiutil.pop_dialog_error(ret_obj)
+                guiutil.pop_dialog_error(self, ret_obj)
                 ipts_number = 0
             else:
                 ipts_number = ret_obj
@@ -292,10 +289,20 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             num_sec_skipped = None
 
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
+            # get log name and set to GUI
             log_name = log_name_list[i]
-            vec_time, vec_log_value = self._myWorkflow.get_sample_log_values(i)
-            self._groupedSnapViewList[i].set_current_log_name(log_name, do_skip, num_sec_skipped)
-            self._groupedSnapViewList[i].plot_data(vec_time, vec_log_value)
+            self._groupedSnapViewList[i].set_current_log_name(i)
+            print 'Print %d-th log with name %s' % (i, log_name)
+
+            # get log value
+            status, ret_obj = self._myWorkflow.get_sample_log_values(log_name)
+            if status is False:
+                guiutil.pop_dialog_error(ret_obj)
+                continue
+            vec_times, vec_log_value = ret_obj
+
+            # plot log value
+            self._groupedSnapViewList[i].plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
         # END-FOR
 
         return

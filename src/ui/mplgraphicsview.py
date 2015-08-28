@@ -60,10 +60,63 @@ class IndicatorManager(object):
         # Auto line ID
         self._autoLineID = 1
 
-        self._lineManager = {}
-        self._canvasLineKeyDict = {}
+        self._lineManager = dict()
+        self._canvasLineKeyDict = dict()
+        self._indicatorTypeDict = dict()  # value: 0 (horizontal), 1 (vertical), 2 (2-way)
 
         return
+
+    def add_2way_indicator(self, x, x_min, x_max, y, y_min, y_max, color):
+        """
+
+        :param x:
+        :param x_min:
+        :param x_max:
+        :param y:
+        :param y_min:
+        :param y_max:
+        :param color:
+        :return:
+        """
+        # Set up indicator ID
+        this_id = str(self._autoLineID)
+        self._autoLineID += 1
+
+        # Set up vectors
+        vec_x_horizontal = np.array([x_min, x_max])
+        vec_y_horizontal = np.array([y, y])
+
+        vec_x_vertical = np.array([x, x])
+        vec_y_vertical = np.array([y_min, y_max])
+
+        #
+        self._lineManager[this_id] = [vec_x_horizontal, vec_y_horizontal, vec_x_vertical, vec_y_vertical, color]
+        self._indicatorTypeDict[this_id] = 2
+
+        return this_id
+
+    def add_horizontal_indicator(self, y, x_min, x_max, color):
+        """
+
+        :param y:
+        :param x_min:
+        :param x_max:
+        :param color:
+        :return:
+        """
+        # Get ID
+        this_id = str(self._autoLineID)
+        self._autoLineID += 1
+
+        #
+        vec_x = np.array([x_min, x_max])
+        vec_y = np.array([y, y])
+
+        #
+        self._lineManager[this_id] = [vec_x, vec_y, color]
+        self._indicatorTypeDict[this_id] = 0
+
+        return this_id
 
     def add_vertical_indicator(self, x, y_min, y_max, color):
         """
@@ -80,6 +133,7 @@ class IndicatorManager(object):
 
         #
         self._lineManager[this_id] = [vec_x, vec_y, color]
+        self._indicatorTypeDict[this_id] = 1
 
         return this_id
 
@@ -89,7 +143,32 @@ class IndicatorManager(object):
         :param my_id:
         :return:
         """
+        if self._canvasLineKeyDict.has_key(my_id) is False:
+            raise RuntimeError('Indicator ID %s cannot be found. Current keys are %s.' % (
+                my_id, str(sorted(self._canvasLineKeyDict.keys()))
+            ))
         return self._canvasLineKeyDict[my_id]
+
+    def get_line_type(self, my_id):
+        """
+
+        :param my_id:
+        :return:
+        """
+        return self._indicatorTypeDict[my_id]
+
+    def get_2way_data(self, line_id):
+        """
+
+        :param line_id:
+        :return:
+        """
+        assert self._indicatorTypeDict.has_key(line_id)
+        assert self._indicatorTypeDict[line_id] == 2
+
+        vec_set = [self._lineManager[line_id][0:2], self._lineManager[line_id][2:4]]
+
+        return vec_set
 
     def get_data(self, line_id):
         """
@@ -154,9 +233,22 @@ class IndicatorManager(object):
         :return:
         """
         print self._lineManager[my_id][0]
-        self._lineManager[my_id][0] += dx
 
-        self._lineManager[my_id][1] += dy
+        if self._indicatorTypeDict[my_id] == 0:
+            # horizontal
+            self._lineManager[my_id][1] += dy
+
+        elif self._indicatorTypeDict[my_id] == 1:
+            # vertical
+            self._lineManager[my_id][0] += dx
+
+        elif self._indicatorTypeDict[my_id] == 2:
+            # 2-way
+            self._lineManager[my_id][2] += dx
+            self._lineManager[my_id][1] += dy
+
+        else:
+            raise RuntimeError('Unsupported indicator of type %d' % self._indicatorTypeDict[my_id])
 
         return
 
@@ -213,27 +305,118 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def add_line_set(self, vec_set, color, marker, line_style, line_width):
+        """ Add a set of line and manage together
+        :param vec_set:
+        :param color:
+        :param marker:
+        :param line_style:
+        :param line_width:
+        :return:
+        """
+        key_list = list()
+        for vec_x, vec_y in vec_set:
+            temp_key = self._myCanvas.add_plot_1d(vec_x, vec_y, color=color, marker=marker,
+                                                  line_style=line_style, line_width=line_width)
+            assert isinstance(temp_key, int)
+            assert temp_key >= 0
+            key_list.append(temp_key)
+
+        return key_list
+
     def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label="", x_label=None, y_label=None,
                     marker=None, line_style=None, line_width=1):
         """ Add a new plot
         """
-        self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style, line_width)
+        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
+                                              line_width)
 
-        #self.canvas.addPlotY2(x, y*100)
-        #self.canvas.addPlotY2([0, 1, 2], [50, 30, 15])
+        return line_key
 
-        return
+    def add_plot_1d_right(self, vec_x, vec_y, color=None, label='', marker=None, line_style=None, line_width=1):
+        """
+        Add 1 line (1-d plot) to right axis
+        :param vec_x:
+        :param vec_y:
+        :param color:
+        :param label:
+        :param marker:
+        :param line_style:
+        :param line_width:
+        :return:
+        """
+        line_key = self._myCanvas.add_1d_plot_right(vec_x,vec_y, color=color, label=label, marker=marker,
+                                                    line_style=line_style, line_width=line_width)
 
-    def addHorizontalIndicator(self, y, color):
+        return line_key
+
+    def add_2way_indicator(self, x=None, y=None, color=None, master_line=None):
+        """ Add a 2-way indicator following an existing line?
+        :param x:
+        :param y:
+        :param color:
+        :return:
+        """
+        x_min, x_max = self._myCanvas.getXLimit()
+        if x is None:
+            x = (x_min + x_max) * 0.5
+        else:
+            assert isinstance(x, float)
+
+        y_min, y_max = self._myCanvas.getYLimit()
+        if y is None:
+            y = (y_min + y_max) * 0.5
+        else:
+            assert isinstance(y, float)
+
+        if color is None:
+            color = self._myIndicatorsManager.get_next_color()
+        else:
+            assert isinstance(color, str)
+
+        my_id = self._myIndicatorsManager.add_2way_indicator(x, x_min, x_max,
+                                                             y, y_min, y_max,
+                                                             color)
+        vec_set = self._myIndicatorsManager.get_2way_data(my_id)
+
+        canvas_line_index = self.add_line_set(vec_set, color=color,
+                                              marker=self._myIndicatorsManager.get_marker(),
+                                              line_style=self._myIndicatorsManager.get_line_style(),
+                                              line_width=1)
+        self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
+
+        return my_id
+
+    def add_horizontal_indicator(self, y=None, color=None):
         """ Add an indicator line
         """
-        xmin, xmax = self._myCanvas.getXLimit()
-        vecx = numpy.array([xmin, xmax])
-        vecy = numpy.array([y, y])
+        # Default
+        if y is None:
+            y_min, y_max = self._myCanvas.getYLimit()
+            y = (y_min + y_max) * 0.5
+        else:
+            assert isinstance(y, float)
 
-        self._indicatorKey = self._myCanvas.add_plot_1d(vecx, vecy, color, line_style='--')
+        x_min, x_max = self._myCanvas.getXLimit()
 
-        return
+        # For color
+        if color is None:
+            color = self._myIndicatorsManager.get_next_color()
+        else:
+            assert isinstance(color, str)
+
+        # Form
+        my_id = self._myIndicatorsManager.add_horizontal_indicator(y, x_min, x_max, color)
+        vec_x, vec_y = self._myIndicatorsManager.get_data(my_id)
+
+        canvas_line_index = self._myCanvas.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
+                                                       color=color, marker=self._myIndicatorsManager.get_marker(),
+                                                       line_style=self._myIndicatorsManager.get_line_style(),
+                                                       line_width=1)
+
+        self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
+
+        return my_id
 
     def add_vertical_indicator(self, x=None, color=None):
         """
@@ -262,9 +445,10 @@ class MplGraphicsView(QtGui.QWidget):
         vec_x, vec_y = self._myIndicatorsManager.get_data(my_id)
 
         canvas_line_index = self._myCanvas.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
-                                                    color=color, marker=self._myIndicatorsManager.get_marker(),
-                                                    line_style=self._myIndicatorsManager.get_line_style(),
-                                                    line_width=2)
+                                                       color=color, marker=self._myIndicatorsManager.get_marker(),
+                                                       line_style=self._myIndicatorsManager.get_line_style(),
+                                                       line_width=1)
+
         self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
 
         return my_id
@@ -349,17 +533,29 @@ class MplGraphicsView(QtGui.QWidget):
         """
         return self._myCanvas.getYLimit()
 
-    def move_indicator_horizontal(self, line_id, dx):
+    def move_indicator(self, line_id, dx, dy):
         """
         Move the indicator line in horizontal
         :param line_id:
         :param dx:
         :return:
         """
-        canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(line_id)
-        self._myIndicatorsManager.shift(line_id, dx=dx, dy=0)
-        vec_x, vec_y = self._myIndicatorsManager.get_data(line_id)
-        self._myCanvas.updateLine(ikey=canvas_line_index, vecx=vec_x, vecy=vec_y)
+        # Shift value
+        self._myIndicatorsManager.shift(line_id, dx=dx, dy=dy)
+
+        # apply to plot on canvas
+        if self._myIndicatorsManager.get_line_type(line_id) < 2:
+            # horizontal or vertical
+            canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(line_id)
+            vec_x, vec_y = self._myIndicatorsManager.get_data(line_id)
+            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=vec_x, vecy=vec_y)
+        else:
+            # 2-way
+            canvas_line_index_h, canvas_line_index_v = self._myIndicatorsManager.get_canvas_line_index(line_id)
+            h_vec_set, v_vec_set = self._myIndicatorsManager.get_2way_data(line_id)
+
+            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=h_vec_set[0], vecy=h_vec_set[1])
+            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=v_vec_set[0], vecy=v_vec_set[1])
 
         return
 
@@ -564,9 +760,9 @@ class Qt4MplCanvas(FigureCanvas):
 
         return line_key
 
-
-    def addPlotY2(self, x, y, color=None, label="", xlabel=None, ylabel=None, marker=None, linestyle=None, linewidth=1):
-        """ Add second plot
+    def add_1d_plot_right(self, x, y, color=None, label="", x_label=None, ylabel=None, marker=None, linestyle=None,
+                          linewidth=1):
+        """ Add a line (1-d plot) at right axis
         """
         if self.axes2 is None:
             self.axes2 = self.axes.twinx()
@@ -575,26 +771,29 @@ class Qt4MplCanvas(FigureCanvas):
         # Hold previous data
         self.axes2.hold(True)
 
-        # process inputs and defaults
-        # self._x2 = x
-        # self._y2 = y
-
+        # Default
         if color is None:
-            color = (0,1,0,1)
+            color = (0, 1, 0, 1)
         if marker is None:
             marker = 'o'
         if linestyle is None:
             linestyle = '-'
 
+        # Special default
+        if len(label) == 0:
+            label = 'right'
+            color = 'red'
+
         # color must be RGBA (4-tuple)
         r = self.axes2.plot(x, y, color=color, marker=marker, linestyle=linestyle,
-                label=label, linewidth=linewidth) # return: list of matplotlib.lines.Line2D object
+                            label=label, linewidth=linewidth)
+        # return: list of matplotlib.lines.Line2D object
 
         self.axes2.set_aspect('auto')
 
         # set x-axis and y-axis label
-        if xlabel is not None:
-            self.axes2.set_xlabel(xlabel, fontsize=20)
+        if x_label is not None:
+            self.axes2.set_xlabel(x_label, fontsize=20)
         if ylabel is not None:
             self.axes2.set_ylabel(ylabel, fontsize=20)
 
@@ -602,16 +801,18 @@ class Qt4MplCanvas(FigureCanvas):
         self._setupLegend()
 
         # Register
+        line_key = -1
         if len(r) == 1:
-            self._lineDict[self._lineIndex] = r[0]
+            line_key = self._lineIndex
+            self._lineDict[line_key] = r[0]
+            self._lineIndex += 1
         else:
             print "Impoooooooooooooooosible!"
-        self._lineIndex += 1
 
         # Flush/commit
         self.draw()
 
-        return
+        return line_key
 
 
     def addPlot2D(self, array2d, xmin, xmax, ymin, ymax, holdprev, yticklabels=None):

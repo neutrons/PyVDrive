@@ -25,14 +25,28 @@ class SampleLogManager(object):
 
         return True, self._logNamesList
 
-    def get_sample_data(self, do_skip, num_sec_skip):
+    def get_sample_data(self, sample_log_name):
         """
 
-        :param do_skip:
-        :param num_sec_skip:
-        :return:
         """
         # TODO
+        if sample_log_name not in self._logNamesList:
+            raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
+
+        # FIXME - Get sample log from the workspace
+        """ Refer to the following
+        run = ws.getRun()
+        stress = run.getProperty('loadframe.stress')
+
+        print dir(stress)
+
+        times = stress.times
+        print times[0]
+        print times[0].totalNanoseconds()*1.0E-9
+        value = stress.value
+        print value[0]
+        print type(value) # <type 'numpy.ndarray'>
+        """
 
         return
 

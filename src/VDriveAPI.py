@@ -221,6 +221,20 @@ class VDriveAPI(object):
 
         return self._myLogHelper.get_sample_log_names()
 
+    def get_sample_log_values(self, log_name):
+        """
+
+        :param log_name:
+        :return:
+        """
+        # TODO - DOC
+        try:
+            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name)
+        except RuntimeError as e:
+            return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
+
+        return True, (vec_times, vec_value)
+
     def load_session(self, in_file_name):
         """
         Load session from a session file
