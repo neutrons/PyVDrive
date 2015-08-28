@@ -26,10 +26,10 @@
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
-         <widget class="QLineEdit" name="lineEdit"/>
+         <widget class="QLineEdit" name="lineEdit_minTime"/>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit_2"/>
+         <widget class="QLineEdit" name="lineEdit_maxTime"/>
         </item>
        </layout>
       </widget>
@@ -60,13 +60,13 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QLineEdit" name="lineEdit_4"/>
+         <widget class="QLineEdit" name="lineEdit_minLogValue"/>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit_3"/>
+         <widget class="QLineEdit" name="lineEdit_maxLogTime"/>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox">
+         <widget class="QComboBox" name="comboBox_direction">
           <property name="minimumSize">
            <size>
             <width>100</width>
@@ -161,7 +161,7 @@
       </widget>
      </item>
      <item row="0" column="3">
-      <widget class="QComboBox" name="comboBox_2">
+      <widget class="QComboBox" name="comboBox_timeType">
        <property name="minimumSize">
         <size>
          <width>140</width>

@@ -54,11 +54,12 @@ def convert_to_qdate_epoch(epoch_time):
 
     return m_date
 
+
 def parse_integer(line_edit):
     """
-
+    Parse a line edit to an integer value
     :param line_edit:
-    :return:
+    :return: integer or None
     """
     # Check input
     assert(isinstance(line_edit, QtGui.QLineEdit))
@@ -73,6 +74,27 @@ def parse_integer(line_edit):
         raise e
 
     return int_value
+
+
+def parse_float(line_edit):
+    """
+    Parse a line edit as a float number
+    :param line_edit:
+    :return: float or None
+    """
+    # Check input
+    assert(isinstance(line_edit, QtGui.QLineEdit))
+
+    str_value = str(line_edit.text()).strip()
+    if len(str_value) == 0:
+        return None
+
+    try:
+        float_value = float(str_value)
+    except ValueError as e:
+        raise e
+
+    return float_value
 
 
 def pop_dialog_error(parent, message):
