@@ -424,7 +424,7 @@
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>0</number>
+                   <number>1</number>
                   </property>
                   <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
@@ -623,7 +623,7 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QPushButton" name="pushButton_16">
+                         <widget class="QPushButton" name="pushButton_pickSlicer">
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
@@ -633,7 +633,7 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QPushButton" name="pushButton_18">
+                         <widget class="QPushButton" name="pushButton_saveSlicer">
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save:&lt;/p&gt;&lt;p&gt;1. update to table in tab 'Load';&lt;/p&gt;&lt;p&gt;2. save to a file specified by user;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>

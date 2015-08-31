@@ -64,13 +64,15 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Column 2
         self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_chop_run_state_change)
-
         self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
                      self.pop_manual_picker)
+        self.connect(self.ui.pushButton_pickSlicer, QtCore.SIGNAL('clicked()'),
+                     self.do_pick_slicer)
 
         # Column 3
         self.connect(self.ui.checkBox_plotInFloat1, QtCore.SIGNAL('stateChanged(int)'),
                      self.pop_snap_view)
+        # TODO - Make the other 6 links to the same method
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
@@ -316,6 +318,23 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def do_pick_slicer(self):
+        """ Pick up (time) slicing information and show it by indicating lines in snap view
+        :return:
+        """
+        # TODO - Get slicing information
+
+        # TODO - Create splitters by Mantid
+
+        # TODO - Apply splitters to all snap view
+
+        return
+
+    def do_save_slicer(self):
+        """ Save the slicer (splitters) for future splitting
+        :return:
+        """
+
     def evt_chop_run_state_change(self):
         """
         Event handling for checkbox 'chop data' is checked or unchecked
@@ -416,6 +435,22 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def pop_snap_view(self):
+        """ Pop out snap view dialog (window)
+        :return:
+        """
+        # TODO - Find the change of these 6 check box.  If any new box is checked, then un-check the
+        #        previously checked box
+        #        If no box is checked, close the window and return
+        #        If there are 2 checked box, find out which one is the previously checked
+
+        # TODO - Check whether there is any open window
+
+        # TODO - If window is open but not saved, pop error message
+        # TODO - If window is None or not open, then show() it
+
+
+        # TODO - Set up / re-set up log value to the sub window
+
         if self._snapViewWindow is None:
             self._snapViewWindow = dlgSnap.DialogLogSnapView()
 
