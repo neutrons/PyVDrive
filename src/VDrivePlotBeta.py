@@ -158,16 +158,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         r = child_window.exec_()
 
         # Return due to 'cancel'
-        if child_window.get_ipts_dir() is None:
+        ipts_dir = child_window.get_ipts_dir()
+        if ipts_dir is None:
             return
 
-        # Add ITPS
-        ipts_dir = child_window.get_ipts_dir()
+        # Add IPTS
         ipts_number = child_window.get_ipts_number()
         if ipts_number is None:
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
             if status is False:
-                guiutil.pop_dialog_error(self, ret_obj)
+                message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
+                guiutil.pop_dialog_error(self, message)
                 ipts_number = 0
             else:
                 ipts_number = ret_obj
@@ -192,8 +193,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
-        # FIXME - Implement filter_runs_by_run()
-        status, ret_obj =vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
+        # Filter runs by run
+        status, ret_obj = vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
+        if status is False:
+            guiutil.pop_dialog_error(ret_obj)
+            return
+        else:
+            run_tup_list = ret_obj
 
         status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
@@ -201,9 +207,15 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # Set to tree
+        if ipts_number == 0:
+            ipts_number = os.path.basename(ipts_dir)
         self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tup_list)
-        # FIXME - Need to figure out how to deal with this
-        home_dir = '/SNS/VULCAN'
+
+        # Set to file tree directory
+        if ipts_number > 0:
+            home_dir = '/SNS/VULCAN'
+        else:
+            home_dir = os.path.expanduser('~')
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
@@ -278,7 +290,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
             log_widget = spview.SampleLogView(snap_widget)
-            log_widget.setLogNames(log_name_list)
+            log_widget.set_log_names(log_name_list)
             log_widget.set_current_log(i)
 
         # Plot first 6 sample logs

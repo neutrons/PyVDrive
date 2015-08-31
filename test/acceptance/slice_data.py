@@ -2,8 +2,7 @@ from lettuce import *
 from nose.tools import assert_equals, assert_true
 
 import sys
-import os
-import os.path
+
 
 # FIXME - This only works for Linux platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
@@ -22,7 +21,6 @@ class MyData:
         """
         return str(self.myObject)
 
-
     def get(self):
         """ Get
         """
@@ -34,7 +32,6 @@ class MyData:
         :return:
         """
         return self._ipts, self._runs[:]
-
 
     def set(self, inputobject):
         """ Set
@@ -69,91 +66,75 @@ def init_workflow(step):
     """ Set up including
     """
     wk_flow = vdapi.VDriveAPI()
-    wk_flow.set_data_root_directory('/SNS/VULCAN')
+    wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
     wk_flow.set_working_directory('~/Temp/VDriveTest/')
 
     my_data.set(wk_flow)
 
+    wk_flow_2 = my_data.get()
+    assert_true(wk_flow_2)
+
     return
 
 
-@step(u'I get a list of runs belonged to an IPTS number')
+@step(u'I get a list of runs from a local directory')
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
     wk_flow = my_data.get()
+    assert_true(wk_flow)
 
     # Set up IPTS
-    wk_flow.set_ipts(ipts_number)
+    ipts_dir = '/Users/wzz/Projects/SNSData/VULCAN/IPTS-10311-Local/'
+    status, errmsg = wk_flow.set_ipts(ipts_dir)
+    assert_true(status)
 
     # Get runs
-    status, run_tup_list = wk_flow.get_ipts_info(ipts_number)
+    status, run_tup_list = wk_flow.get_ipts_info()
     assert_equals(status, True)
-    assert_equals(len(run_tup_list), 1777)
+    assert_equals(len(run_tup_list), 4)
 
     my_data.set_ipts_runs(ipts_number, run_tup_list)
 
     return
 
 
-@step(u'I filter the runs by date')
+@step(u'I filter the runs by run numbers')
 def filter_runs(step):
     """ Filter runs by date
     """
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
-    assert_equals(len(run_tup_list), 1777)
+    assert_equals(len(run_tup_list), 4)
+    assert_equals(ipts_number, -1)
 
-    start_date = '02/09/2015'
-    end_date = '02/10/2015'
-    status, filter_run_tup_list = vdapi.filter_runs_by_date(run_tup_list, start_date, end_date)
+    start_run = 588478
+    end_run = 58850
+    status, filter_run_tup_list = vdapi.filter_runs_by_run(run_tup_list, start_run, end_run)
     assert_equals(status, True)
-    assert_equals(len(filter_run_tup_list), 69)
+    assert_equals(len(filter_run_tup_list), 2)
 
     my_data.set_ipts_runs(ipts_number, filter_run_tup_list)
 
     return
 
-@step(u'I input IPTS, run numbers')
+@step(u'I input run number')
 def set_ipts_runs(step):
     """
+    Add runs to
+    :param step:
+    :return:
     """
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
+    assert_equals(ipts_number, None)
 
     status, error_message = wk_flow.clear_runs()
     assert_equals(status, True)
 
     status, error_message = wk_flow.add_runs(run_tup_list, ipts_number)
     assert_equals(status, True)
-    assert_equals(69, wk_flow.get_number_runs())
-
-
-    """
-    # new project
-    wkflow.newProject(projname = "Test001", projtype = "reduction")
-    # set data path with default
-    wkflow.setDataPath(projname = 'Test001')
-    # IPTS and runs
-    ipts = 10311
-    runs= range(57070, 57078)
-
-    # FIXME : Should be put to 2 different test cases in future
-    if False:
-        # Manual setup
-        wkflow.setVanadiumFile('/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium/VRecord.txt')
-        criterialist = [('Frequency', 'float'), ('Guide', 'float'), ('Collimator', 'float')]
-        # set vanadium calibration (new project should add data and locate calibration file automatically)
-        wkflow.setVanadiumCalibrationMatchCriterion('Test001', criterialist)
-        # add experiment 
-        status, errmsg, datafilesets = wkflow.addExperimentRuns('Test001', 'reduction', ipts, runs, True)
-
-    else:
-        # Automatic setup
-        r = wkflow.addExperimentRuns(projname='Test001', operation='Add Experiment Runs', ipts=ipts, 
-                runnumberlist=runs, autofindcal=True)
-    # ENDIFELSE
-    """
+    assert_equals(2, wk_flow.get_number_runs())
 
     return
 
@@ -191,47 +172,27 @@ def load_session(step):
 
     return
 
-'''
-@step(u'Then I reduce the data')
-def reduceData(step):
-    """ Set up reduction parametera and reduce data
+@step(u'I input name of a sample log to get its data')
+def input_sample_log_name(step):
     """
-    wkflow = my_data.get()
+    Input a sample log's name and get it data
+    :param step:
+    :return:
+    """
+    # Get workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
-    wkflow.setInstrumentName('VULCAN')
-    wkflow.setCalibrationFile(projname ='Test001', 
-            calibfilename = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal')
+    # Get sample log names
+    sample_log_names = wk_flow.get_sample_log_names()
+    assert_true(test_sample_log_name in sample_log_names)
 
-    # set up reduction parameters
-    outputdir = os.getcwd()
-    paramdict = {
-            "Extension": "_event.nxs",
-            "PreserveEvents": True,
-            "Binning" : -0.001,
-            "OutputDirectory" : outputdir, 
-            "NormalizeByCurrent":  False,
-            "FilterBadPulses": False,
-            "CompressTOFTolerance": False,
-            "FrequencyLogNames": "skf1.speed",
-            "WaveLengthLogNames": "skf12.lambda"
-            }
-    wkflow.setReductionParameters('Test001', paramdict)
-
-    # reduce
-    reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
-
-    wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
-    wkflow.reduceData(projname='Test001', normByVan=False, tofmin=None, tofmax=None)
+    # Get log data
+    status, ret_obj = wk_flow.get_sample_log_values(test_sample_log_name)
+    assert_true(status)
+    vec_times, vec_value = ret_obj
+    assert_equals(len(vec_times), 1000)
+    assert_true(abs(vec_value[0] - 1234) < 1.0E-7)
+    assert_true(abs(vec_value[-1] - 4567) < 1.0E-7)
 
     return
-
-@step(u'Then I should see a matrix workspace generated')
-def retrieveReducedData(step):
-    wkflow = my_data.get()
-
-    reducedrunlist = wkflow.getReducedRuns(projectname = 'Test001')
-    numredws = len(reducedrunlist)
-    assert_equals(numredws, 1)
-
-    print "Retrieve reduced data"
-'''

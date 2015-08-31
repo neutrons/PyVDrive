@@ -8,16 +8,19 @@ class SampleLogManager(object):
     """
     def __init__(self):
         """
-
+        Initialization
         :return:
         """
         self._workspace = None
         self._workspace_name = ''
+        self._logNameList = None
+        self._logInfoList = None
 
+        return
 
     def get_sample_log_names(self):
         """
-
+        Get all sample logs' names
         :return:
         """
         if self._workspace is None:
@@ -27,28 +30,17 @@ class SampleLogManager(object):
 
     def get_sample_data(self, sample_log_name):
         """
-
+        Get sample log's data as 2 vectors for time (unit of second) and log value
+        :exception: RuntimeError for sample log name is not in list
+        :param sample_log_name:
+        :return: 2-tuple as (numpy.array, numpy.array) for time and log value
         """
-        # TODO
+        # Check
         if sample_log_name not in self._logNamesList:
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
-        # FIXME - Get sample log from the workspace
-        """ Refer to the following
-        run = ws.getRun()
-        stress = run.getProperty('loadframe.stress')
-
-        print dir(stress)
-
-        times = stress.times
-        print times[0]
-        print times[0].totalNanoseconds()*1.0E-9
-        value = stress.value
-        print value[0]
-        print type(value) # <type 'numpy.ndarray'>
-        """
-
-        return
+        # Get property
+        return mtd.get_sample_log_value(self._workspace, sample_log_name)
 
     def get_splitters_absolute_time(self):
 
@@ -64,7 +56,6 @@ class SampleLogManager(object):
         :param nxs_file_name:
         :return:
         """
-        # TODO - DOC
         # Output ws name
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
 
@@ -78,30 +69,14 @@ class SampleLogManager(object):
         self._workspace = ret_obj
         self._workspace_name = out_ws_name
 
+        # Set up log names list
         try:
             self._logNamesList = mtd.get_sample_log_names(self._workspace)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up log list
-        # FIXME - Put the next section into Mantid
-        """
-        import mantid
-        ws = mtd["VULCAN_71087_event"]
-        run = ws.run()
-
-        prop_info_list = list()
-        for p in run.getProperties():
-            p_name = p.name
-            if isinstance(p, mantid.kernel.FloatTimeSeriesProperty) is False:
-                continue
-            size = p.size()
-            prop_info_list.append( (size, p_name) )
-
-        prop_info_list.sort()
-        for tup in prop_info_list:
-        print '%-5d\t\t%s' % (tup[0], tup[1])
-        """
+        self._logInfoList = mtd.get_sample_log_info(self._workspace)
 
         return True, ''
    

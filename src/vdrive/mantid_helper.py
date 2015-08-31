@@ -1,21 +1,33 @@
 import sys
-import os
-import os.path
-
-"""
-# FIXME : This is for local development only!
-homedir = os.path.expanduser('~')
-mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
-sys.path.append(mantidpath)
-"""
+import numpy
 
 import mantid
 import mantid.simpleapi as mantidapi
 
 
+def get_sample_log_info(src_workspace):
+    """ Ger sample log information including size of log and name of log
+    :param src_workspace: workspace which the sample logs are from
+    :return: a list of 2-tuples as property's length and name
+    """
+    run = src_workspace.run()
+
+    prop_info_list = list()
+    for p in run.getProperties():
+        p_name = p.name
+        if isinstance(p, mantid.kernel.FloatTimeSeriesProperty) is False:
+            continue
+        size = p.size()
+        prop_info_list.append((size, p_name))
+
+    prop_info_list.sort()
+
+    return prop_info_list
+
+
 def get_sample_log_names(src_workspace):
     """
-
+    From workspace get sample log names as FloatTimeSeriesProperty
     :param src_workspace:
     :return:
     """
@@ -30,14 +42,36 @@ def get_sample_log_names(src_workspace):
     return name_list
 
 
-def load_nexus(data_file_name, output_ws_name, meta_data_only):
+def get_sample_log_value(src_workspace, sample_log_name):
     """
+    Get sample log value
+    :param src_workspace:
+    :param sample_log_name:
+    :return: 2-tuple.  vector of epoch time in unit of second. vector of log value
+    """
+    # Get property
+    run =src_workspace.getRun()
+    property = run.getPrperty(sample_log_name)
+    assert isinstance(property, mantid.kernel.FloatTimeSeriesProperty)
+
+    # Get vectors
+    vec_time_raw = property.times
+    vec_time = numpy.ndarray(shape=(1, len(vec_time_raw)), dtype='float')
+    for i in xrange(len(vec_time_raw)):
+        vec_time[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
+
+    vec_value = property.value
+
+    return vec_time, vec_value
+
+
+def load_nexus(data_file_name, output_ws_name, meta_data_only):
+    """ Load NeXus file
     :param data_file_name:
     :param output_ws_name:
     :param meta_data_only:
     :return: 2-tuple
     """
-    # TODO - Doc
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,
@@ -45,4 +79,4 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     except RuntimeError as e:
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 
-    return True,  out_ws
+    return True, out_ws

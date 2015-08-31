@@ -1,21 +1,6 @@
 ########################################################################
 #
-# General-purposed plotting window
-#
-# pushButton_selectIPTS
-# radioButton_useLoadFrame
-# radioButton_useGenericDAQ
-# radioButton_useLogFile
-# pushButton_readLogFile
-# pushButton_prevLog
-# pushButton_nextLog
-# pushButton_saveReturn
-# pushButton_cancel
-
-# comboBox_logNames
-# graphicsView_main
-# tableWidget_segments
-# treeView_iptsRun
+# Window for set up log slicing splitters
 #
 ########################################################################
 import sys
@@ -48,10 +33,92 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui = VdriveLogPicker.Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # Defining widget handling methods
+        self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
+                     self.do_select_ipts)
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit_no_save)
+        self.connect(self.ui.pushButton_saveReturn, QtCore.SIGNAL('clicked()'),
+                     self.do_quit_with_save)
+        self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_prev_log)
+        self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_next_log)
+        self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
+                     self.do_read_log_file)
+
+        self.connect(self.ui.radioButton_useGenericDAQ, QtCore.SIGNAL(''),
+                     self.do_set_log_options)
+        self.connect(self.ui.radioButton_useLoadFrame, QtCore.SIGNAL(''),
+                     self.do_set_log_options)
+
+        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL(''),
+                     self.do_set_log_options)
+
+        # Class variables
+        self._currentLogIndex = 0
+        self._logNameList = list()
+
         return
+
+    def do_load_next_log(self):
+        """ Load next log
+        :return:
+        """
+        self._currentLogIndex += 1
+        if self._currentLogIndex > len(self._logNameList):
+            self._currentLogIndex = 0
+        sample_log_name = self._logNameList[self._currentLogIndex]
+
+        self._load_sample_log(sample_log_name)
+
+        return
+
+    def do_load_prev_log(self):
+        """ Load previous log
+        :return:
+        """
+        self._currentLogIndex -= 1
+        if self._currentLogIndex < 0:
+            self._currentLogIndex = len(self._logNameList) - 1
+        sample_log_name = self._logNameList[self._currentLogIndex]
+
+        self._load_sample_log(sample_log_name)
+
+        return
+
+    def do_quit_no_save(self):
+        """
+        Cancelled
+        :return:
+        """
+        self.close()
+
+        return
+
+    def do_quit_with_save(self):
+        """ Save selected segment and quit
+        :return:
+        """
+        self.close()
+
+        return
+
+    def get_splitters(self):
+        """ Get splitters set up by user.  Called by parent algorithm
+        :return:
+        """
 
     def setup(self):
         """ Set up from parent main window
+        :return:
+        """
+        return
+
+    def _load_sample_log(self, sample_log_name):
+        """
+
+        :param sample_log_name:
         :return:
         """
 

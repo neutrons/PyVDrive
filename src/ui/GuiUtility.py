@@ -1,4 +1,5 @@
 import time
+import numpy
 from PyQt4 import QtGui, QtCore
 
 #include this try/except block to remap QString needed when using IPython
@@ -34,6 +35,19 @@ def add_runs_to_tree(treewidget, ipts, runlist):
         # itemmain.setChild(i, item) : this will add value under column 0
 
     return
+
+
+def convert_time_vector_to_relative(vec_times):
+    """ Convert vector of epoch times (absolute) to relative time
+    :param vec_times: 1-D numpy array of epoch time (absolute time)
+    :return: 1-E numpy array of relative time such that vec_time[0] = 0.
+    """
+    assert isinstance(vec_times, numpy.ndarray)
+
+    time0 = vec_times[0]
+    vec_rel_time = vec_times[:] - time0
+
+    return vec_rel_time
 
 
 def convert_to_qdate_epoch(epoch_time):
@@ -96,15 +110,65 @@ def parse_float(line_edit):
 
     return float_value
 
-
 def pop_dialog_error(parent, message):
     """ Pop up a one-button dialog for error message
+    :param message:
+    :return:
+    """
+    QtGui.QMessageBox.warning(parent, 'Error', message)
+
+    return
+
+
+def pop_dialog_information(parent, message):
+    """
+    Pop up a one-button dialog for regular information
+    :param parent:
     :param message:
     :return:
     """
     QtGui.QMessageBox.information(parent, 'Error!', message)
 
     return
+
+
+def skip_time(vec_times, vec_value, num_sec_skip, time_unit):
+    """
+    For a time series' times and value, pick up time and value pair by
+    skipping some time period.
+    :param vec_times:
+    :param vec_value:
+    :param num_sec_skip:
+    :param time_unit:
+    :return:
+    """
+    # Check input
+    assert len(vec_times) == len(vec_value)
+    assert isinstance(num_sec_skip, float) or isinstance(num_sec_skip, int)
+
+    # Unit
+    if time_unit == 'second':
+        factor = 1.
+    elif time_unit == 'nanosecond':
+        factor = 1.E9
+    else:
+        raise RuntimeError('Time unit %s is not supported.' % time_unit)
+
+    # Pick value
+    out_vec_times = list(vec_times[0])
+    out_vec_value = list(vec_value[0])
+    prev_time = vec_times[0]
+
+    size = len(vec_value)
+    for i in xrange(1, size):
+        if prev_time + num_sec_skip * factor - 1.E-6 <= vec_times[i]:
+            # on next time spot within tolerance
+            out_vec_times.append(vec_times[i])
+            out_vec_value.append(vec_value[i])
+            prev_time = vec_times[i]
+    # END-FOR
+
+    return numpy.array(out_vec_times), numpy.array(out_vec_value)
 
 
 def setTextToQTableCell(table, irow, icol, text):

@@ -26,16 +26,18 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
     def add_ipts_runs(self, ipts_number, run_number_list):
         """
         Add runs of on IPTS
-        :param ipts_number:
+        :param ipts_number: it might an ipts number or a directory
         :param run_numbers:
         :return:
         """
         # Check
-        assert(isinstance(ipts_number, int))
         assert(isinstance(run_number_list, list))
 
         # Create main leaf value
-        main_leaf_value = 'IPTS-%d' % ipts_number
+        if isinstance(ipts_number, int) is True:
+            main_leaf_value = 'IPTS-%d' % ipts_number
+        else:
+            main_leaf_value = '%s' % str(ipts_number)
         status, message = self.add_main_item(main_leaf_value, False)
         if status is False:
             print '[Log] %s' % message

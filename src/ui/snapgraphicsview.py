@@ -1,6 +1,7 @@
 from PyQt4 import QtGui
 from mplgraphicsview import MplGraphicsView 
 
+
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
     """
@@ -35,32 +36,35 @@ class SampleLogView(SnapGraphicsView):
         :param snapgraphicsview:
         :return:
         """
-        # Check
+         # Check
         if isinstance(snapgraphicsview, SnapGraphicsView) is False:
             raise NotImplementedError('Input error!')
 
-        self._graphicView = snapgraphicsview._graphicView
-        self._comboBox1 = snapgraphicsview._comboBox1
-        self._comboBox2 = snapgraphicsview._comboBox2
+        SnapGraphicsView.__init__(self, snapgraphicsview._graphicView,
+                                  snapgraphicsview._comboBox1,
+                                  snapgraphicsview._comboBox1)
+
+        #self._graphicView = snapgraphicsview._graphicView
+        #self._comboBox1 = snapgraphicsview._comboBox1
+        #self._comboBox2 = snapgraphicsview._comboBox2
 
         return
 
     def set_current_log_name(self, log_index):
         """
-
+        Set current log's name
         :param log_index:
         :return:
         """
-        # TODO DOC
         assert isinstance(self._comboBox2, QtGui.QComboBox)
 
         self._comboBox2.setCurrentIndex(log_index)
 
         return
 
-    def setLogNames(self, lognamelist):
+    def set_log_names(self, lognamelist):
         """
-
+        Set log names to combo box 1
         :param lognamelist:
         :return:
         """

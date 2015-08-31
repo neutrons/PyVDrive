@@ -99,7 +99,6 @@ class VDriveAPI(object):
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
-        # TODO - DOC
         try:
             if isinstance(ipts, int):
                 ipts_number = ipts
@@ -143,69 +142,12 @@ class VDriveAPI(object):
         """
         return self._myProject.get_number_data_files()
 
-    def getSampleLogNames(self, tag):
-        """
-        :param tag:
-        :return:
-        """
-        if self._tempWSDict.has_key(tag) is False:
-            return False, 'Tag %s cannot be found in temporary workspace dictionary'%(tag), None
-
-        logws = self._tempWSDict[tag]
-        plist = logws.getRun().getProperties()
-        print len(plist)
-        pnamelist = []
-        for p in plist:
-            try:
-                if p.size() > 1:
-                    pnamelist.append(p.name)
-            except AttributeError:
-                pass
-
-        return True, '', pnamelist
-
-    def getSampleLogVectorByIndex(self, tag, logindex):
-        """
-
-        :param tag:
-        :param logindex:
-        :return:
-        """
-        # Get log value
-        logname = str(self.ui.comboBox_2.currentText())
-        if len(logname) == 0:
-            # return due to the empty one is chozen
-            return
-
-        samplelog = self._dataWS.getRun().getProperty(logname)
-        vectimes = samplelog.times
-        vecvalue = samplelog.value
-
-        # check
-        if len(vectimes) == 0:
-            print "Empty log!"
-
-        # Convert absolute time to relative time in seconds
-        t0 = self._dataWS.getRun().getProperty("proton_charge").times[0]
-        t0ns = t0.totalNanoseconds()
-
-        # append 1 more log if original log only has 1 value
-        tf = self._dataWS.getRun().getProperty("proton_charge").times[-1]
-        vectimes.append(tf)
-        vecvalue = numpy.append(vecvalue, vecvalue[-1])
-
-        vecreltimes = []
-        for t in vectimes:
-            rt = float(t.totalNanoseconds() - t0ns) * 1.0E-9
-            vecreltimes.append(rt)
-
     def init_slicing_helper(self, nxs_file_name):
         """
-
+        Initialize the event slicing helper object
         :param nxs_file_name:
         :return:
         """
-        # TODO - DOC
         self._myLogHelper = logHelper.SampleLogManager()
         status, errmsg = self._myLogHelper.set_nexus_file(nxs_file_name)
 
@@ -213,7 +155,7 @@ class VDriveAPI(object):
 
     def get_sample_log_names(self):
         """
-
+        Get names of sample log with time series property
         :return:
         """
         if self._myLogHelper is None:
@@ -223,11 +165,11 @@ class VDriveAPI(object):
 
     def get_sample_log_values(self, log_name):
         """
-
+        Get time and value of a sample log in vector
+        Returned time is in unit of second as epoch time
         :param log_name:
-        :return:
+        :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
-        # TODO - DOC
         try:
             vec_times, vec_value = self._myLogHelper.get_sample_data(log_name)
         except RuntimeError as e:
@@ -236,12 +178,11 @@ class VDriveAPI(object):
         return True, (vec_times, vec_value)
 
     def load_session(self, in_file_name):
-        """
+        """ Load session from saved file
         Load session from a session file
-        :param int_file_name:
+        :param in_file_name:
         :return:
         """
-        # TODO - DOC
         save_dict = futil.load_from_xml(in_file_name)
 
         # Set from dictionary
@@ -258,12 +199,11 @@ class VDriveAPI(object):
         return True, in_file_name
 
     def set_data_root_directory(self, root_dir):
-        """
+        """ Set root data directory to
         :rtype : tuple
         :param root_dir:
         :return:
         """
-        # TODO - Doc
         # Check existence
         if os.path.exists(root_dir) is False:
             return False, 'Directory %s cannot be found.' % (root_dir)
@@ -278,7 +218,6 @@ class VDriveAPI(object):
         :param out_file_name:
         :return:
         """
-        # TODO - Issue 12
         # Create a dictionary for current set up
         save_dict = dict()
         save_dict['myInstrumentName'] = self._myInstrumentName
@@ -296,11 +235,10 @@ class VDriveAPI(object):
         return True, out_file_name
 
     def set_ipts(self, ipts_number):
-        """
-
+        """ Set IPTS to the workflow
+        :param ipts_number: intege for IPTS number
         :return:
         """
-        # TODO - Doc
         try:
             self._currentIPTS = int(ipts_number)
         except ValueError as e:
@@ -311,12 +249,14 @@ class VDriveAPI(object):
 
     def set_working_directory(self, work_dir):
         """
-
+        Set up working directory for output files
         :param work_dir:
         :return:
         """
-        # TODO - Doc
-        # TODO - Create directory if it does not exist
+        try:
+            os.mkdir(work_dir)
+        except IOError as e:
+            return False, 'Unable to create working directory due to %s.' % str(e)
 
         # Check writable
         if os.access(work_dir, os.W_OK) is False:
@@ -391,7 +331,5 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
                 result_list.append(tup[:])
             # END-IF
         # END-IF
-
-        print '[DB] Return!!!'
 
         return True, result_list
