@@ -165,11 +165,12 @@ def save_session(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     status, filename = wk_flow.save_session('test1234.xml')
+    work_dir = wk_flow.get_working_dir()
     assert_true(status)
-    assert_equals(filename, '/tmp/test1234.xml')
-
+    assert_equals(filename, os.path.join(work_dir, 'test1234.xml'))
 
     return
+
 
 @step(u'I create a new VDriveAPI project and load saved session file to it')
 def load_session(step):
@@ -177,14 +178,18 @@ def load_session(step):
     :param step:
     :return:
     """
+    # Current workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
     # Create a new workflow and load the file to the new workflow instance
     new_wk_flow = vdapi.VDriveAPI()
-    saved_file_name = '/tmp/test1234.xml'
+
+    saved_file_name = os.path.join(wk_flow.get_working_dir(), 'test1234.xml')
     new_wk_flow.load_session(saved_file_name)
 
     # Compare the new workflow and old one
-    wk_flow = my_data.get()
-    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
 
     assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
     assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())

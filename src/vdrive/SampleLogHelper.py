@@ -13,7 +13,7 @@ class SampleLogManager(object):
         """
         self._workspace = None
         self._workspace_name = ''
-        self._logNameList = None
+        self._logNamesList = None
         self._logInfoList = None
 
         return
@@ -26,7 +26,7 @@ class SampleLogManager(object):
         if self._workspace is None:
             return False, 'Log helper has no data.'
 
-        return True, self._logNamesList
+        return True, self._logNamesList[:]
 
     def get_sample_data(self, sample_log_name):
         """
@@ -72,6 +72,7 @@ class SampleLogManager(object):
         # Set up log names list
         try:
             self._logNamesList = mtd.get_sample_log_names(self._workspace)
+            assert isinstance(self._logNamesList, list)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 

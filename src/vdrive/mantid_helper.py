@@ -51,12 +51,12 @@ def get_sample_log_value(src_workspace, sample_log_name):
     """
     # Get property
     run =src_workspace.getRun()
-    property = run.getPrperty(sample_log_name)
+    property = run.getProperty(sample_log_name)
     assert isinstance(property, mantid.kernel.FloatTimeSeriesProperty)
 
     # Get vectors
     vec_time_raw = property.times
-    vec_time = numpy.ndarray(shape=(1, len(vec_time_raw)), dtype='float')
+    vec_time = numpy.ndarray(shape=(len(vec_time_raw), ), dtype='float')
     for i in xrange(len(vec_time_raw)):
         vec_time[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
 
@@ -75,7 +75,7 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,
-                                MetaDataOlny=meta_data_only)
+                                MetaDataOnly=meta_data_only)
     except RuntimeError as e:
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 

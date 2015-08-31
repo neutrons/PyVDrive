@@ -1,6 +1,6 @@
 from PyQt4 import QtGui
 from mplgraphicsview import MplGraphicsView 
-
+import GuiUtility
 
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
@@ -50,6 +50,28 @@ class SampleLogView(SnapGraphicsView):
 
         return
 
+    def plot_data(self, vec_times, vec_log_value, do_skip, num_sec_skipped):
+        """
+
+        :param vec_times:
+        :param vec_log_value:
+        :param do_skip:
+        :param num_sec_skipped:
+        :return:
+        """
+        if do_skip is True:
+            vec_plot_times, vec_plot_value = \
+                GuiUtility.skip_time(vec_times, vec_log_value, num_sec_skipped, 'second')
+        else:
+            vec_plot_times = vec_times
+            vec_plot_value = vec_log_value
+
+        assert isinstance(self._graphicView, MplGraphicsView)
+
+        self._graphicView.add_plot_1d(vec_plot_times, vec_plot_value)
+
+        return
+
     def set_current_log_name(self, log_index):
         """
         Set current log's name
@@ -72,15 +94,3 @@ class SampleLogView(SnapGraphicsView):
         self._comboBox1.addItems(lognamelist)
 
         return
-
-"""
-
-
-    def __init__(self, graphicview, lognamecombobox, timecombobox):
-
-        :return:
-
-        SnapGraphicsView.__init__(self, graphicview, lognamecombobox, timecombobox)
-
-
-"""

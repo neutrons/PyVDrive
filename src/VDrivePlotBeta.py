@@ -84,7 +84,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.evt_quit)
 
         # Group widgets
-        self._groupedSnapViewList = []
+        self._groupedSnapViewList = list()
         self._setup_snap_view_groups(self._numSnapViews)
 
         # Sub windows
@@ -285,14 +285,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             log_name_list = sorted(ret_value)
             print '[DB] List of log names: %s' % str(log_name_list)
 
-        # Set up all 6 widgets groups
-        for i in xrange(self._numSnapViews):
-            # create a log_widget from base snap view widgets and set up
-            snap_widget = self._groupedSnapViewList[i]
-            log_widget = spview.SampleLogView(snap_widget)
-            log_widget.set_log_names(log_name_list)
-            log_widget.set_current_log(i)
-
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
         if do_skip is True:
@@ -300,13 +292,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         else:
             num_sec_skipped = None
 
+        # Set up and plot all 6 widgets groups
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
-            # get log name and set to GUI
-            log_name = log_name_list[i]
-            self._groupedSnapViewList[i].set_current_log_name(i)
-            print 'Print %d-th log with name %s' % (i, log_name)
+            # create a log_widget from base snap view widgets and set up
+            snap_widget = self._groupedSnapViewList[i]
+            log_widget = spview.SampleLogView(snap_widget)
+
+            log_widget.set_log_names(log_name_list)
+            log_widget.set_current_log_name(i)
 
             # get log value
+            log_name = log_name_list[i]
             status, ret_obj = self._myWorkflow.get_sample_log_values(log_name)
             if status is False:
                 guiutil.pop_dialog_error(ret_obj)
@@ -314,7 +310,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             vec_times, vec_log_value = ret_obj
 
             # plot log value
-            self._groupedSnapViewList[i].plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
+            log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
+
         # END-FOR
 
         return

@@ -93,6 +93,16 @@ class VDriveAPI(object):
         """
         return self._myRootDataDir
 
+    def get_file_by_run(self, run_number):
+        """ Get data file path by run number
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int)
+        file_name, ipts_number = self._myProject.get_run_info(run_number)
+
+        return file_name
+
     def get_ipts_info(self, ipts):
         """
         Get runs and their information for a certain IPTS
@@ -109,6 +119,7 @@ class VDriveAPI(object):
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
+            print '\n[DB RuntimeError] %s\n' % str(e)
             return False, str(e)
 
         return True, run_tuple_list
@@ -161,7 +172,16 @@ class VDriveAPI(object):
         if self._myLogHelper is None:
             return False, 'Log helper has not been initialized.'
 
-        return self._myLogHelper.get_sample_log_names()
+        status, name_list = self._myLogHelper.get_sample_log_names()
+        if status is False:
+            return False, str(name_list)
+
+        dbstr = 'Total %d sample logs\n' % len(name_list)
+        for name in name_list:
+            dbstr += '%s\n' % name
+        print '\n[DB] %s\n' % dbstr
+
+        return True, name_list
 
     def get_sample_log_values(self, log_name):
         """
@@ -206,7 +226,7 @@ class VDriveAPI(object):
         """
         # Check existence
         if os.path.exists(root_dir) is False:
-            return False, 'Directory %s cannot be found.' % (root_dir)
+            return False, 'Directory %s cannot be found.' % root_dir
 
         self._myRootDataDir = root_dir
         self._myFacilityHelper.set_data_root_path(self._myRootDataDir)
@@ -246,15 +266,20 @@ class VDriveAPI(object):
 
         return True, ''
 
-
     def set_working_directory(self, work_dir):
         """
         Set up working directory for output files
         :param work_dir:
         :return:
         """
+        # Process input working directory
+        assert isinstance(work_dir, str)
+        if work_dir.startswith('~'):
+            work_dir = os.path.expanduser(work_dir)
+
         try:
-            os.mkdir(work_dir)
+            if os.path.exists(work_dir) is False:
+                os.mkdir(work_dir)
         except IOError as e:
             return False, 'Unable to create working directory due to %s.' % str(e)
 

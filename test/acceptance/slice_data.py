@@ -1,7 +1,8 @@
 from lettuce import *
-from nose.tools import assert_equals, assert_true
+from nose.tools import assert_equals, assert_true, assert_false
 
 import sys
+import os
 
 
 # FIXME - This only works for Linux platform
@@ -52,27 +53,22 @@ class MyData:
         """
         self._ipts = int(ipts_number)
         self._runs = run_tup_list[:]
-        assert(self._runs, list)
 
 
 my_data = MyData()
-
-# Global testing data
-ipts_number = 10311
 
 
 @step(u'I am using VDriveAPI')
 def init_workflow(step):
     """ Set up including
     """
+    assert_equals(1, 4)
     wk_flow = vdapi.VDriveAPI()
+    assert_equals(1, 2)
     wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
+    # Test to use ~/ in given directory
     wk_flow.set_working_directory('~/Temp/VDriveTest/')
-
     my_data.set(wk_flow)
-
-    wk_flow_2 = my_data.get()
-    assert_true(wk_flow_2)
 
     return
 
@@ -81,20 +77,26 @@ def init_workflow(step):
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
+    wk_flow = vdapi.VDriveAPI()
+    wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
+    # Test to use ~/ in given directory
+    wk_flow.set_working_directory('~/Temp/VDriveTest/')
+    my_data.set(wk_flow)
+
     wk_flow = my_data.get()
-    assert_true(wk_flow)
+    assert_true(wk_flow is not None)
 
     # Set up IPTS
-    ipts_dir = '/Users/wzz/Projects/SNSData/VULCAN/IPTS-10311-Local/'
+    ipts_dir = os.path.expanduser('~/Projects/SNSData/VULCAN/IPTS-10311-Local/')
     status, errmsg = wk_flow.set_ipts(ipts_dir)
-    assert_true(status)
+    assert_false(status)
 
     # Get runs
-    status, run_tup_list = wk_flow.get_ipts_info()
-    assert_equals(status, True)
+    status, run_tup_list = wk_flow.get_ipts_info(ipts_dir)
+    assert_true(status)
     assert_equals(len(run_tup_list), 4)
 
-    my_data.set_ipts_runs(ipts_number, run_tup_list)
+    my_data.set_ipts_runs(-1, run_tup_list)
 
     return
 
@@ -103,12 +105,11 @@ def setup_ipts(step):
 def filter_runs(step):
     """ Filter runs by date
     """
-    wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
     assert_equals(len(run_tup_list), 4)
     assert_equals(ipts_number, -1)
 
-    start_run = 588478
+    start_run = 58848
     end_run = 58850
     status, filter_run_tup_list = vdapi.filter_runs_by_run(run_tup_list, start_run, end_run)
     assert_equals(status, True)
@@ -127,7 +128,7 @@ def set_ipts_runs(step):
     """
     wk_flow = my_data.get()
     ipts_number, run_tup_list = my_data.get_ipts_runs()
-    assert_equals(ipts_number, None)
+    assert_equals(ipts_number, -1)
 
     status, error_message = wk_flow.clear_runs()
     assert_equals(status, True)
@@ -145,10 +146,11 @@ def save_session(step):
     wk_flow = my_data.get()
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
-    status, filename = wk_flow.save_session('test1234.xml')
+    status, filename = wk_flow.save_session('test2345.xml')
+    work_dir = wk_flow.get_working_dir()
     assert_true(status)
-    assert_equals(filename, '/tmp/test1234.xml')
-
+    assert_equals(work_dir, os.path.expanduser('~/Temp/VDriveTest/'))
+    assert_equals(filename, os.path.join(work_dir, 'test2345.xml'))
 
     return
 
@@ -160,7 +162,7 @@ def load_session(step):
     """
     # Create a new workflow and load the file to the new workflow instance
     new_wk_flow = vdapi.VDriveAPI()
-    saved_file_name = '/tmp/test1234.xml'
+    saved_file_name = os.path.join(new_wk_flow.get_working_dir, 'test2345.xml')
     new_wk_flow.load_session(saved_file_name)
 
     # Compare the new workflow and old one
@@ -183,16 +185,25 @@ def input_sample_log_name(step):
     wk_flow = my_data.get()
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
+    # Set up log file helper
+    test_run_number = 58848
+    test_sample_log_name = 'loadframe.stress'
+    file_name = wk_flow.get_file_by_run(test_run_number)
+    assert_equals(os.path.basename(file_name), 'VULCAN_58848_event.nxs')
+
+    wk_flow.init_slicing_helper(file_name)
+
     # Get sample log names
-    sample_log_names = wk_flow.get_sample_log_names()
+    status, sample_log_names = wk_flow.get_sample_log_names()
+    assert_true(status)
     assert_true(test_sample_log_name in sample_log_names)
 
     # Get log data
     status, ret_obj = wk_flow.get_sample_log_values(test_sample_log_name)
     assert_true(status)
     vec_times, vec_value = ret_obj
-    assert_equals(len(vec_times), 1000)
-    assert_true(abs(vec_value[0] - 1234) < 1.0E-7)
-    assert_true(abs(vec_value[-1] - 4567) < 1.0E-7)
+    assert_equals(len(vec_times), 205)
+    assert_true(abs(vec_value[0] - -8.980486000000001) < 1.0E-7)
+    assert_true(abs(vec_value[-1] - -9.243161000000001) < 1.0E-7)
 
     return

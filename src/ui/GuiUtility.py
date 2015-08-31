@@ -110,6 +110,7 @@ def parse_float(line_edit):
 
     return float_value
 
+
 def pop_dialog_error(parent, message):
     """ Pop up a one-button dialog for error message
     :param message:
@@ -155,8 +156,8 @@ def skip_time(vec_times, vec_value, num_sec_skip, time_unit):
         raise RuntimeError('Time unit %s is not supported.' % time_unit)
 
     # Pick value
-    out_vec_times = list(vec_times[0])
-    out_vec_value = list(vec_value[0])
+    out_vec_times = [vec_times[0]]
+    out_vec_value = [vec_value[0]]
     prev_time = vec_times[0]
 
     size = len(vec_value)
