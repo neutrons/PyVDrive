@@ -135,7 +135,7 @@ class VDriveAPI(object):
     def get_run_info(self, run_number):
         """ Get a run's information
         :param run_number:
-        :return:
+        :return: 2-tuple as (boolean, 2-tuple (file path, ipts)
         """
         assert isinstance(run_number, int)
 

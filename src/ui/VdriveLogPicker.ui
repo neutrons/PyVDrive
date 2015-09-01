@@ -30,7 +30,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTreeView" name="treeView_iptsRun">
+         <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -47,12 +47,17 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QGroupBox" name="groupBox_2">
+         <widget class="QGroupBox" name="groupBox_sampleEnvironment">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
           </property>
           <property name="title">
            <string>Sample Environments</string>
@@ -60,6 +65,11 @@
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
             <widget class="QRadioButton" name="radioButton_useLoadFrame">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
              <property name="text">
               <string>VULCAN loadframe</string>
              </property>
@@ -67,6 +77,11 @@
            </item>
            <item>
             <widget class="QRadioButton" name="radioButton_useGenericDAQ">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
              <property name="text">
               <string>Generic DAQ</string>
              </property>
@@ -100,15 +115,24 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>40</width>
+                 <width>30</width>
                  <height>0</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>40</width>
+                 <width>30</width>
                  <height>16777215</height>
                 </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <weight>75</weight>
+                 <italic>false</italic>
+                 <bold>true</bold>
+                 <kerning>true</kerning>
+                </font>
                </property>
                <property name="text">
                 <string>Run</string>
@@ -116,12 +140,63 @@
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEdit">
+              <widget class="QLineEdit" name="lineEdit_runNumber">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>60</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <italic>true</italic>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_loadRunSampleLog">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Load</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_11">
+             <item>
+              <widget class="QCheckBox" name="checkBox_include1EntryLog_2">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::RightToLeft</enum>
+               </property>
+               <property name="text">
+                <string>Include1-entry Log</string>
                </property>
               </widget>
              </item>
@@ -129,6 +204,11 @@
            </item>
            <item>
             <widget class="QRadioButton" name="radioButton_useLogFile">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
              <property name="text">
               <string>User Log files</string>
              </property>
@@ -142,7 +222,7 @@
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeType">
-                <enum>QSizePolicy::Minimum</enum>
+                <enum>QSizePolicy::Fixed</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
@@ -153,17 +233,41 @@
               </spacer>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEdit_2">
+              <widget class="QLineEdit" name="lineEdit_logFileName">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QPushButton" name="pushButton_readLogFile">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
                <property name="text">
                 <string>Read file</string>
                </property>
@@ -190,30 +294,80 @@
               </spacer>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox"/>
+              <widget class="QComboBox" name="comboBox">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+              </widget>
              </item>
-             <item>
-              <spacer name="horizontalSpacer_6">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Preferred</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_sampleLog">
+          <property name="title">
+           <string>Slicer Picker</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_6">
+           <item>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="pushButton_addPicker">
+               <property name="text">
+                <string>Add Picker</string>
                </property>
-               <property name="sizeType">
-                <enum>QSizePolicy::Fixed</enum>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="pushButton_setPicker">
+               <property name="text">
+                <string>Set Picker</string>
                </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QPushButton" name="pushButton_abortPicker">
+               <property name="text">
+                <string>Abort</string>
                </property>
-              </spacer>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QPushButton" name="pushButton_deletePicker">
+               <property name="text">
+                <string>Delete</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
            <item>
-            <spacer name="verticalSpacer">
+            <spacer name="verticalSpacer_3">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Minimum</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -223,28 +377,182 @@
              </property>
             </spacer>
            </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_pickerList">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_3">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="pushButton_selectPicker">
+               <property name="text">
+                <string>Select</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
           </layout>
+          <zorder>groupBox_sampleEnvironment</zorder>
+          <zorder>groupBox_sampleEnvironment</zorder>
+          <zorder>comboBox_pickerList</zorder>
+          <zorder>verticalSpacer_3</zorder>
+          <zorder>gridLayoutWidget</zorder>
+          <zorder>gridLayoutWidget_2</zorder>
          </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Sample log</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Preferred</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_prevLog">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>25</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>&lt;--|</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBox_logNames">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_nextLog">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>25</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>|--&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_7">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Preferred</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="MplGraphicsView" name="graphicsView_main"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Time Range</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_minX"/>
+          </item>
           <item>
            <spacer name="horizontalSpacer_5">
             <property name="orientation">
@@ -259,28 +567,20 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_prevLog">
+           <widget class="QLineEdit" name="lineEdit_maxX"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_4">
             <property name="text">
-             <string>&lt;--|</string>
+             <string>Log Range</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox_logNames">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
+           <widget class="QLineEdit" name="lineEdit_minY"/>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_nextLog">
-            <property name="text">
-             <string>|--&gt;</string>
-            </property>
-           </widget>
+           <widget class="QLineEdit" name="lineEdit_maxY"/>
           </item>
           <item>
            <spacer name="horizontalSpacer_4">
@@ -295,6 +595,13 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_resizeCanvas">
+            <property name="text">
+             <string>Resize</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
@@ -302,9 +609,15 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="label_segments">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
           <property name="text">
            <string>picked segments</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -322,8 +635,27 @@
          <layout class="QHBoxLayout" name="horizontalLayout_6">
           <item>
            <widget class="QPushButton" name="pushButton_saveReturn">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
             <property name="text">
              <string>Save and Return</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_cancel">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Cancel</string>
             </property>
            </widget>
           </item>
@@ -334,28 +666,7 @@
      </layout>
     </item>
     <item row="1" column="0">
-     <layout class="QHBoxLayout" name="horizontalLayout_7">
-      <item>
-       <spacer name="horizontalSpacer_7">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton_cancel">
-        <property name="text">
-         <string>Cancel</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <layout class="QHBoxLayout" name="horizontalLayout_7"/>
     </item>
    </layout>
   </widget>
@@ -374,7 +685,13 @@
     </property>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>About</string>
+    </property>
+   </widget>
    <addaction name="menuTest"/>
+   <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExit">
@@ -387,6 +704,11 @@
   </action>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>VdriveRunManagerTree</class>
+   <extends>QTreeView</extends>
+   <header>vdriverunmanagertree.h</header>
+  </customwidget>
   <customwidget>
    <class>MplGraphicsView</class>
    <extends>QGraphicsView</extends>

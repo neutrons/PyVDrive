@@ -1546,21 +1546,21 @@
       <item row="2" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
-         <widget class="QComboBox" name="comboBox_g11">
-          <item>
-           <property name="text">
-            <string>Relative Time</string>
-           </property>
-          </item>
+         <widget class="QComboBox" name="comboBox_g11"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g12">
           <item>
            <property name="text">
             <string>Absolute Time</string>
            </property>
           </item>
+          <item>
+           <property name="text">
+            <string>Relative Time</string>
+           </property>
+          </item>
          </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g12"/>
         </item>
        </layout>
       </item>

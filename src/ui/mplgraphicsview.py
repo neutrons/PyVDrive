@@ -143,7 +143,9 @@ class IndicatorManager(object):
         :param my_id:
         :return:
         """
-        if self._canvasLineKeyDict.has_key(my_id) is False:
+        assert isinstance(my_id, str)
+
+        if my_id not in self._canvasLineKeyDict:
             raise RuntimeError('Indicator ID %s cannot be found. Current keys are %s.' % (
                 my_id, str(sorted(self._canvasLineKeyDict.keys()))
             ))
@@ -176,6 +178,7 @@ class IndicatorManager(object):
         :param line_id:
         :return:
         """
+        # TODO Doc
         return self._lineManager[line_id][0], self._lineManager[line_id][1]
 
     def get_line_style(self, line_id=None):
@@ -423,7 +426,7 @@ class MplGraphicsView(QtGui.QWidget):
         Add a vertical indicator line
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
-        :return:
+        :return: indicator ID
         """
         # For indicator line's position
         if x is None:
@@ -559,10 +562,21 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def remove_indicator(self, indicator_key):
+        """ Remove indicator line
+        :param indicator_key:
+        :return:
+        """
+        #
+        plot_id = self._myIndicatorsManager.get_canvas_line_index(indicator_key)
+        self._myCanvas.remove_plot_1d(plot_id)
+
+        return
+
     def removePlot(self, ikey):
         """
         """
-        return self._myCanvas.removePlot(ikey)
+        return self._myCanvas.remove_plot_1d(ikey)
 
     def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
         """
@@ -574,11 +588,21 @@ class MplGraphicsView(QtGui.QWidget):
         """
         return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor)
 
+    def get_indicator_position(self, indicator_key):
+        """ Get position (x or y) of the indicator
+        :return:
+        """
+        # TODO - Consider a better and more consistent return
+        vec_x, vec_y = self._myIndicatorsManager.get_data(indicator_key)
+        if vec_x[0] == vec_x[1]:
+            return vec_x[0]
+
+        return vec_y[0]
+
     def getLineStyleList(self):
         """
         """
         return MplLineStyles
-
 
     def getLineMarkerList(self):
         """
@@ -982,17 +1006,29 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
-    def removePlot(self, ikey):
+    def remove_plot_1d(self, plot_key):
         """ Remove the line with its index as key
+        :param plot_key:
+        :return:
         """
         # self._lineDict[ikey].remove()
+        print 'Remove line... ',
+
+        # Get all lines in list
         lines = self.axes.lines
-        print str(type(lines)), lines
-        print "ikey = ", ikey, self._lineDict[ikey]
-        self.axes.lines.remove(self._lineDict[ikey])
-        #self.axes.remove(self._lineDict[ikey])
-        print self._lineDict[ikey]
-        self._lineDict[ikey] = None
+        assert isinstance(lines, list)
+
+        print 'Number of lines = %d, List: %s' % (len(lines), str(lines))
+        print 'Line to remove: key = %s, Line Dict has key = %s' % (str(plot_key), str(self._lineDict.has_key(plot_key)))
+
+        if plot_key in self._lineDict:
+            self.axes.lines.remove(self._lineDict[plot_key])
+            self._lineDict[plot_key] = None
+        else:
+            raise RuntimeError('Line with ID %s is not recorded.' % plot_key)
+
+        # Draw
+        self.draw()
 
         return
 

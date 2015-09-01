@@ -12,7 +12,8 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-        
+
+import GuiUtility
 import VdriveLogPicker
 
 
@@ -40,6 +41,8 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_quit_no_save)
         self.connect(self.ui.pushButton_saveReturn, QtCore.SIGNAL('clicked()'),
                      self.do_quit_with_save)
+        self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_run)
         self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_prev_log)
         self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
@@ -47,17 +50,63 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_log_file)
 
-        self.connect(self.ui.radioButton_useGenericDAQ, QtCore.SIGNAL(''),
+        self.connect(self.ui.radioButton_useGenericDAQ, QtCore.SIGNAL('toggled()'),
                      self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLoadFrame, QtCore.SIGNAL(''),
+        self.connect(self.ui.radioButton_useLoadFrame, QtCore.SIGNAL('toggled()'),
+                     self.do_set_log_options)
+        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled()'),
                      self.do_set_log_options)
 
-        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL(''),
-                     self.do_set_log_options)
+        # Add slicer picker
+        self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
+                     self.do_picker_add)
+        self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
+                     self.do_picker_abort)
+        self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
+                     self.do_picker_set)
+
+        self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_plot_sample_log)
+
+        # Initial setup
+        self.ui.radioButton_useGenericDAQ.setChecked(True)
+        self.ui.radioButton_useLoadFrame.setChecked(False)
+        self.ui.radioButton_useLogFile.setChecked(False)
 
         # Class variables
         self._currentLogIndex = 0
         self._logNameList = list()
+        self._currentPickerID = None
+
+        return
+
+    def do_load_run(self):
+        """
+
+        :return:
+        """
+        # Get run number
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
+        if run_number is None:
+            GuiUtility.pop_dialog_error('Unable to load run as value is not specified.')
+
+        # Get sample logs
+        try:
+            sample_log_names = self._myParent.load_sample_run(run_number)
+        except RuntimeError as err:
+            GuiUtility.pop_dialog_error('Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
+            return
+
+        # Set up
+        self.ui.comboBox_logNames.clear()
+        for log_name in sorted(sample_log_names):
+            self.ui.comboBox_logNames.addItem(QtCore.QString(log_name))
+        self._currentLogIndex = 0
+        self._logNameList = sample_log_names[:]
+
+        # Set
+        log_name = str(self.ui.comboBox_logNames.currentText())
+        self.plot_sample_log(log_name)
 
         return
 
@@ -65,12 +114,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load next log
         :return:
         """
-        self._currentLogIndex += 1
-        if self._currentLogIndex > len(self._logNameList):
-            self._currentLogIndex = 0
-        sample_log_name = self._logNameList[self._currentLogIndex]
+        # Next index
+        next_index = self._currentLogIndex + 1
+        if next_index > len(self._logNameList):
+            next_index = 0
+        sample_log_name = self._logNameList[next_index]
 
-        self._load_sample_log(sample_log_name)
+        # Plot
+        self.plot_sample_log(sample_log_name)
+
+        # Change status if plotting is successful
+        self._currentLogIndex = next_index
+        self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
 
         return
 
@@ -78,12 +133,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load previous log
         :return:
         """
-        self._currentLogIndex -= 1
-        if self._currentLogIndex < 0:
-            self._currentLogIndex = len(self._logNameList) - 1
-        sample_log_name = self._logNameList[self._currentLogIndex]
+        # Previous index
+        prev_index = self._currentLogIndex - 1
+        if prev_index < 0:
+            prev_index = len(self._logNameList) - 1
+        sample_log_name = self._logNameList[prev_index]
 
-        self._load_sample_log(sample_log_name)
+        # Plot
+        self.plot_sample_log(sample_log_name)
+
+        # Change combobox index
+        self._currentLogIndex = prev_index
+        self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
 
         return
 
@@ -96,6 +157,63 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def do_picker_abort(self):
+        """
+
+        :return:
+        """
+        # TODO DOC
+        self.ui.pushButton_addPicker.setEnabled(True)
+        self.ui.pushButton_setPicker.setDisabled(True)
+        self.ui.pushButton_abortPicker.setDisabled(True)
+        self.ui.pushButton_selectPicker.setEnabled(True)
+
+        # Delete the current picker
+        self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
+        self._currentPickerID = None
+
+        return
+
+    def do_picker_add(self):
+        """
+        Add picker
+        :return:
+        """
+        # Add a picker
+        indicator_id = self.ui.graphicsView_main.add_vertical_indicator(color='red')
+
+        # Guide user
+        self.ui.pushButton_setPicker.setEnabled(True)
+        self.ui.pushButton_abortPicker.setEnabled(True)
+        self.ui.pushButton_addPicker.setDisabled(True)
+        self.ui.pushButton_deletePicker.setDisabled(True)
+        self.ui.pushButton_selectPicker.setDisabled(True)
+
+        self._currentPickerID = indicator_id
+
+        return
+
+    def do_picker_set(self):
+        """
+
+        :return:
+        """
+        # Fix the current picker
+        current_time = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
+        print 'TODO Add picked up time %.5f' % current_time
+
+        # Reset current picker ID
+        self._currentPickerID = None
+
+        # Guide user
+        self.ui.pushButton_abortPicker.setDisabled(True)
+        self.ui.pushButton_addPicker.setEnabled(True)
+        self.ui.pushButton_deletePicker.setEnabled(True)
+        self.ui.pushButton_setPicker.setDisabled(True)
+        self.ui.pushButton_selectPicker.setEnabled(True)
+
+        return
+
     def do_quit_with_save(self):
         """ Save selected segment and quit
         :return:
@@ -104,24 +222,69 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def do_read_log_file(self):
+        """
+
+        :return:
+        """
+        # TODO
+
+    def do_select_ipts(self):
+        """
+        :return:
+        """
+        # TODO
+
+    def do_set_log_options(self):
+        """
+        :return:
+        """
+        # TODO
+        print 'Toggled'
+
+    def evt_plot_sample_log(self):
+        """
+        Plot sample log
+        :return:
+        """
+        log_name = str(self.ui.comboBox_logNames.currentText())
+        self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
+
+        self.plot_sample_log(log_name)
+
+        return
+
     def get_splitters(self):
         """ Get splitters set up by user.  Called by parent algorithm
         :return:
         """
+        # TODO
 
     def setup(self):
         """ Set up from parent main window
         :return:
         """
+        ipts_run_dict = self._myParent.get_ipts_runs()
+
+        # Set to tree
+        for ipts in ipts_run_dict.keys():
+            run_list = ipts_run_dict[ipts]
+            self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
+
         return
 
-    def _load_sample_log(self, sample_log_name):
+    def plot_sample_log(self, sample_log_name):
         """
 
         :param sample_log_name:
         :return:
         """
+        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name)
 
+        self.ui.graphicsView_main.clear_all_lines()
+        self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
+
+        return
 
 def testmain(argv):
     """ Main method for testing purpose

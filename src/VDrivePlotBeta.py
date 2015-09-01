@@ -268,10 +268,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             print 'Unable to get run from tree view: %s' % ret_obj
 
         # Dialog to get the file name
-        file_filter="NXS (*.nxs);;All files (*.*)"
+        file_filter = "NXS (*.nxs);;All files (*.*)"
         log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
                                                               data_path, file_filter))
 
+        """
         # Load file
         status, errmsg = self._myWorkflow.init_slicing_helper(nxs_file_name=log_file_name)
         if status is False:
@@ -286,6 +287,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         else:
             log_name_list = sorted(ret_value)
             print '[DB] List of log names: %s' % str(log_name_list)
+        """
+        log_name_list = self.load_sample_run(log_file_name)
 
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
@@ -305,11 +308,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
             # get log value
             log_name = log_name_list[i]
+            """
             status, ret_obj = self._myWorkflow.get_sample_log_values(log_name)
             if status is False:
                 guiutil.pop_dialog_error(ret_obj)
                 continue
             vec_times, vec_log_value = ret_obj
+            """
+            vec_times, vec_log_value = self.get_sample_log_value(log_name)
 
             # plot log value
             log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
@@ -358,12 +364,67 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # FIXME - Save the session automatically before leaving
         self.close()
 
+    def get_sample_log_value(self, log_name):
+        """
+        Get sample log vaue
+        :param log_name:
+        :return: 2-tuple as (numpy.1darray, numpy.1darray)
+        """
+        status, ret_obj = self._myWorkflow.get_sample_log_values(log_name)
+        if status is False:
+            raise RuntimeError(ret_obj)
+
+        vec_times, vec_log_value = ret_obj
+
+        return vec_times, vec_log_value
+
+    def get_ipts_runs(self):
+        """
+        Get added IPTS and run to caller
+        :return:
+        """
+        return self._myWorkflow.get_project_runs()
+
     def get_workflow(self):
         """
         Get workflow instance
         :return:
         """
         return self._myWorkflow
+
+    def load_sample_run(self, run):
+        """
+        Load sample run
+        :param run: string or integer as nxs file name or run number
+        :return: list of string for log names
+        """
+        # Check
+        assert isinstance(run, str) or isinstance(run, int)
+
+        # Get NeXus file name
+        if isinstance(run, int):
+            # in case of run number is given
+            status, run_tuple = self._myWorkflow.get_run_info(run)
+            if status is False:
+                raise RuntimeError(run_tuple)
+            nxs_file_name = run_tuple[0]
+        else:
+            nxs_file_name = run
+
+        # Load file
+        status, errmsg = self._myWorkflow.init_slicing_helper(nxs_file_name=nxs_file_name)
+        if status is False:
+            raise RuntimeError(errmsg)
+
+        # Get log names
+        status, ret_value = self._myWorkflow.get_sample_log_names()
+        if status is False:
+            errmsg = ret_value
+            raise RuntimeError(errmsg)
+
+        log_name_list = sorted(ret_value)
+
+        return log_name_list
 
     def menu_save_session(self):
         """
@@ -429,7 +490,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Pop out manual picker window
         :return:
         """
-        self._manualPikerWindow = LogPicker.Window_LogPicker(self)
+        # Start
+        if isinstance(self._manualPikerWindow, LogPicker.WindowLogPicker):
+            self._manualPikerWindow.show()
+        else:
+            self._manualPikerWindow = LogPicker.WindowLogPicker(self)
+
+        # Set up tree view for runs
+        self._manualPikerWindow.setup()
+
+        # Show
         self._manualPikerWindow.show()
 
         return
@@ -447,7 +517,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # TODO - If window is open but not saved, pop error message
         # TODO - If window is None or not open, then show() it
-
 
         # TODO - Set up / re-set up log value to the sub window
 
