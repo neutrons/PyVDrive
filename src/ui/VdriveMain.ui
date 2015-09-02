@@ -375,7 +375,7 @@
                      <item>
                       <widget class="QRadioButton" name="radioButton_15">
                        <property name="text">
-                        <string>By constant interval</string>
+                        <string>By constant time interval</string>
                        </property>
                       </widget>
                      </item>
@@ -507,7 +507,7 @@
                         <item>
                          <widget class="QGroupBox" name="groupBox_14">
                           <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
                           <property name="title">
                            <string>Select plot on the right</string>
