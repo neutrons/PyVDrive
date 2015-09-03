@@ -1467,9 +1467,9 @@
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
       <item row="0" column="1">
-       <widget class="QCheckBox" name="checkBox_2">
+       <widget class="QCheckBox" name="checkBox_plotInFloat2">
         <property name="text">
-         <string>CheckBox</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>
@@ -1608,30 +1608,30 @@
        <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
       </item>
       <item row="3" column="0">
-       <widget class="QCheckBox" name="checkBox_28">
+       <widget class="QCheckBox" name="checkBox_plotInFloat3">
         <property name="text">
-         <string>CheckBox</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QCheckBox" name="checkBox_29">
+       <widget class="QCheckBox" name="checkBox_plotInFloat4">
         <property name="text">
-         <string>CheckBox</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>
       <item row="6" column="0">
-       <widget class="QCheckBox" name="checkBox_30">
+       <widget class="QCheckBox" name="checkBox_plotInFloat5">
         <property name="text">
-         <string>CheckBox</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QCheckBox" name="checkBox_31">
+       <widget class="QCheckBox" name="checkBox_plotInFloat6">
         <property name="text">
-         <string>CheckBox</string>
+         <string>Plot in floating windows</string>
         </property>
        </widget>
       </item>
@@ -1652,7 +1652,7 @@
      <x>0</x>
      <y>0</y>
      <width>1473</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1780,6 +1780,11 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>MplGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview.h</header>
+  </customwidget>
+  <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdriverunmanagertree.h</header>
@@ -1788,11 +1793,6 @@
    <class>FileSystemTreeView</class>
    <extends>QTreeView</extends>
    <header>filesystemtreeview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>MplGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mplgraphicsview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

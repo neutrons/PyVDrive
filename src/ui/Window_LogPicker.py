@@ -17,6 +17,10 @@ import GuiUtility
 import VdriveLogPicker
 
 
+OUT_PICKER = 0
+IN_PICKER = 1
+IN_PICKER_MOVING = 2
+
 class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
@@ -68,6 +72,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
 
+        # Event handling for pickers
+        self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
+                                                        self.on_mouse_press_event)
+        self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
+                                                        self.on_mouseReleaseEvent)
+        self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
+                                                        self.on_mouse_motion)
+
+
         # Initial setup
         self.ui.radioButton_useGenericDAQ.setChecked(True)
         self.ui.radioButton_useLoadFrame.setChecked(False)
@@ -76,7 +89,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Class variables
         self._currentLogIndex = 0
         self._logNameList = list()
+
         self._currentPickerID = None
+        self._myPickerMode = OUT_PICKER
+        self._currMousePosX = 0.
+        self._currMousePosY = 0.
 
         return
 
@@ -159,10 +176,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_picker_abort(self):
         """
-
+        Abort the action to add a picker
         :return:
         """
-        # TODO DOC
+        # Guide user from enable/disable widgets
         self.ui.pushButton_addPicker.setEnabled(True)
         self.ui.pushButton_setPicker.setDisabled(True)
         self.ui.pushButton_abortPicker.setDisabled(True)
@@ -171,6 +188,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Delete the current picker
         self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
         self._currentPickerID = None
+
+        self._myPickerMode = OUT_PICKER
 
         return
 
@@ -189,21 +208,23 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.pushButton_deletePicker.setDisabled(True)
         self.ui.pushButton_selectPicker.setDisabled(True)
 
+        # Change status
         self._currentPickerID = indicator_id
+        self._myPickerMode = IN_PICKER
 
         return
 
     def do_picker_set(self):
         """
-
+        Add the (open) picker to list
         :return:
         """
         # Fix the current picker
         current_time = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
         print 'TODO Add picked up time %.5f' % current_time
 
-        # Reset current picker ID
-        self._currentPickerID = None
+        # Change the color
+        self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
 
         # Guide user
         self.ui.pushButton_abortPicker.setDisabled(True)
@@ -211,6 +232,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.pushButton_deletePicker.setEnabled(True)
         self.ui.pushButton_setPicker.setDisabled(True)
         self.ui.pushButton_selectPicker.setEnabled(True)
+
+        # Change status
+        self._myPickerMode = OUT_PICKER
+        self._currentPickerID = None
 
         return
 
@@ -259,6 +284,77 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # TODO
+
+
+    def on_mouse_press_event(self, event):
+        """ If in the picking up mode, as mouse's left button is pressed down,
+        the indicator/picker
+        is in the moving mode
+
+        event.button has 3 values:
+         1: left
+         2: middle
+         3: right
+        """
+        # Get event data
+        x = event.xdata
+        y = event.ydata
+        button = event.button
+        print "[DB] Button %d is (pressed) down at (%s, %s)." % (button, str(x), str(y))
+
+        # Select situation
+        if x is None or y is None:
+            # mouse is out of canvas, return
+            return
+
+        if button == 1:
+            # left button
+            if self._myPickerMode == IN_PICKER:
+                # allowed status to in picker-moving status
+                self._myPickerMode = IN_PICKER_MOVING
+
+        return
+
+    def on_mouse_release_mode(self, event):
+        """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
+        then the mode is over
+        """
+        button = event.button
+        if button == 1:
+            if self._myPickerMode == IN_PICKER_MOVING:
+                self._myPickerMode = IN_PICKER
+
+        return
+
+    def on_mouse_motion(self, event):
+        """ Event handling in case mouse is moving
+        """
+        new_x = event.xdata
+        new_y = event.ydata
+
+        # Outside of canvas, no response
+        if new_x is None or new_y is None:
+            return
+
+        if self._myPickerMode == IN_PICKER_MOVING:
+            # Respond to motion of mouse and move the indicator
+            dx = new_x - self._currMousePosX
+            dy = new_y - self._currMousePosY
+
+            x_min, x_max = self.ui.graphicsView_main.getXLimit()
+            mouse_resolution_x = (x_max - x_min) * 0.001
+            y_min, y_max = self.ui.graphicsView_main.getYLimit()
+            mouse_resolution_y = (y_max - y_min) * 0.001
+
+            if abs(dx) > mouse_resolution_x or abs(dy) > mouse_resolution_y:
+                # it is considered that the mouse is moved
+                self._currMousePosX = new_x
+                self._currMousePosY = new_y
+                self.ui.graphicsView_main.move_indicator(self._currIndicatorID, dx, dy)
+            # END-IF(dx, dy)
+        # END-IF (PickerMode)
+
+        return
 
     def setup(self):
         """ Set up from parent main window

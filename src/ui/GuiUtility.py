@@ -10,7 +10,7 @@ except AttributeError:
 
 
 def add_runs_to_tree(treewidget, ipts, runlist):
-    """
+    """ Add runs to a tree
     :param treewidget:
     :param ipts:
     :param runlist:

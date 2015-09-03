@@ -70,9 +70,25 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_pick_slicer)
 
         # Column 3
-        self.connect(self.ui.checkBox_plotInFloat1, QtCore.SIGNAL('stateChanged(int)'),
-                     self.pop_snap_view)
-        # TODO - Make the other 6 links to the same method
+        self._snapViewCheckBoxList = [self.ui.checkBox_plotInFloat1,
+                                      self.ui.checkBox_plotInFloat2,
+                                      self.ui.checkBox_plotInFloat3,
+                                      self.ui.checkBox_plotInFloat4,
+                                      self.ui.checkBox_plotInFloat5,
+                                      self.ui.checkBox_plotInFloat6]
+        for check_box in self._snapViewCheckBoxList:
+            self.connect(check_box, QtCore.SIGNAL('stateChanged(int)'),
+                         self.pop_snap_view)
+
+        self._combo_box_list = [self.ui.comboBox_g11, self.ui.comboBox_g21,
+                          self.ui.comboBox_g31, self.ui.comboBox_g41,
+                          self.ui.comboBox_g51, self.ui.comboBox_g61]
+        for combo_box in self._combo_box_list:
+            self.connect(combo_box, QtCore.SIGNAL('indexChanged(int)'),
+                         self.do_change_log_snap_view)
+
+        #self.connect(self.ui.checkBox_plotInFloat1, QtCore.SIGNAL('stateChanged(int)'),
+        #             self.pop_snap_view)
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
@@ -222,6 +238,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
 
+        return
+
+    def do_change_log_snap_view(self):
+        """
+        Event handling if user chooses to plot another log in snap view
+        :return:
+        """
+        for i in xrange(len(self._combo_box_list)):
+            curr_value = str(self._combo_box_list[i].currentText())
+            if curr_value != self._cacheSnapViewLogNames[i]:
+                do_plot_again()
+                break
         return
 
     def do_load_calibration(self):
