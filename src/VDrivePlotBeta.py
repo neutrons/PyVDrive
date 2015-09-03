@@ -552,7 +552,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             self._snapViewWindow = dlgSnap.DialogLogSnapView()
 
         # FIXME - It is a mock now!
-        self._snapViewWindow.setup(None, None)
+        self._snapViewWindow.setup(self._myWorkflow, run_number, sample_log_name, num_sec_skip)
 
         self._snapViewWindow.show()
 

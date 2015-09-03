@@ -76,9 +76,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
                                                         self.on_mouse_press_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
-                                                        self.on_mouseReleaseEvent)
+                                                        self.on_mouse_release_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
+
+        # TODO/FIXME - Implement these widgets
+        """
+        pushButton_resizeCanvas
+
+        """
 
 
         # Initial setup
@@ -315,7 +321,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def on_mouse_release_mode(self, event):
+    def on_mouse_release_event(self, event):
         """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
         then the mode is over
         """
@@ -350,7 +356,7 @@ class WindowLogPicker(QtGui.QMainWindow):
                 # it is considered that the mouse is moved
                 self._currMousePosX = new_x
                 self._currMousePosY = new_y
-                self.ui.graphicsView_main.move_indicator(self._currIndicatorID, dx, dy)
+                self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
             # END-IF(dx, dy)
         # END-IF (PickerMode)
 
