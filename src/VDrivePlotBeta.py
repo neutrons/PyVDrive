@@ -540,7 +540,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         #        previously checked box
         #        If no box is checked, close the window and return
         #        If there are 2 checked box, find out which one is the previously checked
-        ... ...
+        # FIXME/TODO - NOW
 
         # Check whether there is any open window
         if self._snapViewWindow is None:
