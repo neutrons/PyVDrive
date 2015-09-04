@@ -578,11 +578,6 @@ class MplGraphicsView(QtGui.QWidget):
         """
         return self._myCanvas.remove_plot_1d(ikey)
 
-    def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        """
-        """
-        return self._myCanvas.setXYLimit(xmin, xmax, ymin, ymax)
-
     def updateLine(self, ikey, vecx, vecy, linestyle=None, linecolor=None, marker=None, markercolor=None):
         """
         """
@@ -644,6 +639,7 @@ class MplGraphicsView(QtGui.QWidget):
         self._myLineMarkerColorIndex = 0
         return
 
+    # FIXME - Find out difference between setXYLimit() and setXYLimits()
     def setXYLimit(self, xmin, xmax, ymin, ymax):
         """ Set X-Y limit automatically
         """
@@ -653,6 +649,11 @@ class MplGraphicsView(QtGui.QWidget):
         self._myCanvas.draw()
 
         return
+
+    def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
+        """
+        """
+        return self._myCanvas.setXYLimit(xmin, xmax, ymin, ymax)
 
     def setAutoLineMarkerColorCombo(self):
         """

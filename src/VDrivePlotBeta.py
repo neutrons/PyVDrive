@@ -540,16 +540,24 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         #        previously checked box
         #        If no box is checked, close the window and return
         #        If there are 2 checked box, find out which one is the previously checked
+        ... ...
 
-        # TODO - Check whether there is any open window
+        # Check whether there is any open window
+        if self._snapViewWindow is None:
+            self._snapViewWindow = dlgSnap.DialogLogSnapView()
+        elif self._snapViewWindow.is_open() is False:
+            self._snapViewWindow.show()
+        else:
+            if self._snapViewWindow.is_saved() is False:
+                # If window is open but not saved, pop error message
+                guiutil.pop_dialog_error('Current window is not saved.')
+                return
 
-        # TODO - If window is open but not saved, pop error message
         # TODO - If window is None or not open, then show() it
 
         # TODO - Set up / re-set up log value to the sub window
 
-        if self._snapViewWindow is None:
-            self._snapViewWindow = dlgSnap.DialogLogSnapView()
+
 
         # FIXME - It is a mock now!
         self._snapViewWindow.setup(self._myWorkflow, run_number, sample_log_name, num_sec_skip)

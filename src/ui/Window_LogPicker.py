@@ -69,6 +69,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
                      self.do_picker_set)
 
+        # Canvas
+        self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
+                     self.do_resize_canvas)
+
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
 
@@ -79,13 +83,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                         self.on_mouse_release_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
-
-        # TODO/FIXME - Implement these widgets
-        """
-        pushButton_resizeCanvas
-
-        """
-
 
         # Initial setup
         self.ui.radioButton_useGenericDAQ.setChecked(True)
@@ -260,6 +257,36 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # TODO
 
+    def do_resize_canvas(self):
+        """ Resize canvas
+        :return:
+        """
+        # Current setup
+        curr_min_x, curr_max_x = self.ui.graphicsView_main.getXLimit()
+        curr_min_y, curr_max_y = self.ui.graphicsView_main.getYLimit()
+
+        # Future setup
+        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+        if new_min_x is None:
+            new_min_x = curr_min_x
+
+        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+        if new_max_x is None:
+            new_max_x = curr_max_x
+
+        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
+        if new_min_y is None:
+            new_min_y = curr_min_y
+
+        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
+        if new_max_y is None:
+            new_max_y = curr_max_x
+
+        # Resize
+        self.ui.graphicsView_main.setXYLimit(new_min_x, new_max_x, new_min_y, new_max_y)
+
+        return
+
     def do_select_ipts(self):
         """
         :return:
@@ -268,10 +295,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_set_log_options(self):
         """
+        Get the different options for set log
         :return:
         """
-        # TODO
-        print 'Toggled'
+
 
     def evt_plot_sample_log(self):
         """
