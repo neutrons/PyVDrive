@@ -392,13 +392,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # FIXME - Save the session automatically before leaving
         self.close()
 
-    def get_sample_log_value(self, log_name):
+    def get_sample_log_value(self, log_name, relative=False):
         """
         Get sample log vaue
         :param log_name:
         :return: 2-tuple as (numpy.1darray, numpy.1darray)
         """
-        status, ret_obj = self._myWorkflow.get_sample_log_values(log_name)
+        status, ret_obj = self._myWorkflow.get_sample_log_values(log_name, relative)
         if status is False:
             raise RuntimeError(ret_obj)
 
@@ -552,12 +552,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 # If window is open but not saved, pop error message
                 guiutil.pop_dialog_error('Current window is not saved.')
                 return
+        # END-IF-ELSE
 
         # TODO - If window is None or not open, then show() it
 
         # TODO - Set up / re-set up log value to the sub window
-
-
 
         # FIXME - It is a mock now!
         self._snapViewWindow.setup(self._myWorkflow, run_number, sample_log_name, num_sec_skip)

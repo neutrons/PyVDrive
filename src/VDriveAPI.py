@@ -183,15 +183,16 @@ class VDriveAPI(object):
 
         return True, name_list
 
-    def get_sample_log_values(self, log_name):
+    def get_sample_log_values(self, log_name, relative):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
         :param log_name:
+        :param relative: if True, then the sample log's vec_time will be relative to Run_start
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
         try:
-            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name)
+            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name, relative)
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 

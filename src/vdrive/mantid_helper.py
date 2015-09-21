@@ -42,7 +42,7 @@ def get_sample_log_names(src_workspace):
     return name_list
 
 
-def get_sample_log_value(src_workspace, sample_log_name):
+def get_sample_log_value(src_workspace, sample_log_name, relative):
     """
     Get sample log value
     :param src_workspace:
@@ -50,17 +50,22 @@ def get_sample_log_value(src_workspace, sample_log_name):
     :return: 2-tuple.  vector of epoch time in unit of second. vector of log value
     """
     # Get property
-    run =src_workspace.getRun()
-    property = run.getProperty(sample_log_name)
-    assert isinstance(property, mantid.kernel.FloatTimeSeriesProperty)
+    run = src_workspace.getRun()
+    this_property = run.getProperty(sample_log_name)
+    assert isinstance(this_property, mantid.kernel.FloatTimeSeriesProperty)
 
     # Get vectors
-    vec_time_raw = property.times
+    vec_time_raw = this_property.times
     vec_time = numpy.ndarray(shape=(len(vec_time_raw), ), dtype='float')
     for i in xrange(len(vec_time_raw)):
         vec_time[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
 
-    vec_value = property.value
+    vec_value = this_property.value
+
+    # Relative time?
+    if relative is True:
+        start_time = run.startTime().totalNanoseconds()*1.0E-9
+        vec_time -= start_time
 
     return vec_time, vec_value
 

@@ -98,7 +98,17 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currMousePosX = 0.
         self._currMousePosY = 0.
 
+        # Set up widgets
+        self._init_widgets_setup()
+
         return
+
+    def _init_widgets_setup(self):
+        """
+
+        :return:
+        """
+        self.ui.tableWidget_segments.setup()
 
     def do_load_run(self):
         """
@@ -223,7 +233,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # Fix the current picker
-        current_time = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
+        x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
+        current_time = x
         print 'TODO Add picked up time %.5f' % current_time
 
         # Change the color
@@ -239,6 +250,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Change status
         self._myPickerMode = OUT_PICKER
         self._currentPickerID = None
+
+        # Set to table
+        self.ui.tableWidget_segments.append_start_time(current_time)
 
         return
 
@@ -383,7 +397,11 @@ class WindowLogPicker(QtGui.QMainWindow):
                 # it is considered that the mouse is moved
                 self._currMousePosX = new_x
                 self._currMousePosY = new_y
-                self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
+                # self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
+
+                self.ui.graphicsView_main.set_indicator_position(self._currentPickerID, new_x, new_y)
+
+                print '[DB]', 'New X = ', new_x
             # END-IF(dx, dy)
         # END-IF (PickerMode)
 
@@ -408,7 +426,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param sample_log_name:
         :return:
         """
-        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name)
+        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name, relative=True)
 
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)

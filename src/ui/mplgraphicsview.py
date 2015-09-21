@@ -49,6 +49,11 @@ MplBasicColors = [
 
 class IndicatorManager(object):
     """ Manager for all indicator lines
+
+    Indicator's Type =
+    - 0: horizontal.  moving along Y-direction. [x_min, x_max], [y, y];
+    - 1: vertical. moving along X-direction. [x, x], [y_min, y_max];
+    - 2: 2-way. moving in any direction. [x_min, x_max], [y, y], [x, x], [y_min, y_max].
     """
     def __init__(self):
         """
@@ -97,7 +102,7 @@ class IndicatorManager(object):
 
     def add_horizontal_indicator(self, y, x_min, x_max, color):
         """
-        Add a horizontal indicator
+        Add a horizontal indicator moving vertically
         :param y:
         :param x_min:
         :param x_max:
@@ -120,7 +125,7 @@ class IndicatorManager(object):
 
     def add_vertical_indicator(self, x, y_min, y_max, color):
         """
-        Add a vertical indicator to data structure
+        Add a vertical indicator to data structure moving horizontally
         :return: indicator ID
         """
         # Get ID
@@ -225,6 +230,33 @@ class IndicatorManager(object):
         :return:
         """
         self._canvasLineKeyDict[my_id] = canvas_line_index
+
+        return
+
+    def set_position(self, my_id, pos_x, pos_y):
+        """ Set the indicator to a new position
+        :param line_id:
+        :param pos_x:
+        :param pos_y:
+        :return:
+        """
+        if self._indicatorTypeDict[my_id] == 0:
+            # horizontal
+            self._lineManager[my_id][1] = pos_y
+
+        elif self._indicatorTypeDict[my_id] == 1:
+            # vertical
+            self._lineManager[my_id][0] = pos_x
+
+        elif self._indicatorTypeDict[my_id] == 2:
+            # 2-way
+            self._lineManager[my_id][0] = pos_x
+            self._lineManager[my_id][1] = pos_y
+
+        else:
+            raise RuntimeError('Unsupported indicator of type %d' % self._indicatorTypeDict[my_id])
+
+        return
 
     def shift(self, my_id, dx, dy):
         """
@@ -573,6 +605,32 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def set_indicator_position(self, line_id, pos_x, pos_y):
+        """ Set the indicator to new position
+        :param line_id:
+        :param pos_x:
+        :param pos_y:
+        :return:
+        """
+        # Set value
+        self._myIndicatorsManager.set_position(line_id, pos_x, pos_y)
+
+        # apply to plot on canvas
+        if self._myIndicatorsManager.get_line_type(line_id) < 2:
+            # horizontal or vertical
+            canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(line_id)
+            vec_x, vec_y = self._myIndicatorsManager.get_data(line_id)
+            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=vec_x, vecy=vec_y)
+        else:
+            # 2-way
+            canvas_line_index_h, canvas_line_index_v = self._myIndicatorsManager.get_canvas_line_index(line_id)
+            h_vec_set, v_vec_set = self._myIndicatorsManager.get_2way_data(line_id)
+
+            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=h_vec_set[0], vecy=h_vec_set[1])
+            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=v_vec_set[0], vecy=v_vec_set[1])
+
+        return
+
     def removePlot(self, ikey):
         """
         """
@@ -608,14 +666,27 @@ class MplGraphicsView(QtGui.QWidget):
 
     def get_indicator_position(self, indicator_key):
         """ Get position (x or y) of the indicator
-        :return:
+        :return: a tuple.  (0) horizontal (x, x); (1) vertical (y, y); (2) 2-way (x, y)
         """
-        # TODO - Consider a better and more consistent return
-        vec_x, vec_y = self._myIndicatorsManager.get_data(indicator_key)
-        if vec_x[0] == vec_x[1]:
-            return vec_x[0]
+        # Get indicator's type
+        indicator_type = self._myIndicatorsManager.get_line_type(indicator_key)
+        if indicator_type < 2:
+            # horizontal or vertical indicator
+            x, y = self._myIndicatorsManager.get_data(indicator_key)
 
-        return vec_y[0]
+            if indicator_type == 0:
+                # horizontal
+                return y, y
+
+            elif indicator_type == 1:
+                # vertical
+                return x, x
+
+        else:
+            # 2-way
+            raise RuntimeError('Implement 2-way as soon as possible!')
+
+        return
 
     def getLineStyleList(self):
         """

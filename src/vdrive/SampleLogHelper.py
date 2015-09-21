@@ -28,7 +28,7 @@ class SampleLogManager(object):
 
         return True, self._logNamesList[:]
 
-    def get_sample_data(self, sample_log_name):
+    def get_sample_data(self, sample_log_name, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
         :exception: RuntimeError for sample log name is not in list
@@ -40,7 +40,7 @@ class SampleLogManager(object):
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
         # Get property
-        return mtd.get_sample_log_value(self._workspace, sample_log_name)
+        return mtd.get_sample_log_value(self._workspace, sample_log_name, relative)
 
     def get_splitters_absolute_time(self):
 
