@@ -181,9 +181,37 @@ class IndicatorManager(object):
         """
         Get line's vector x and vector y
         :param line_id:
-        :return:
+        :return: 2-tuple of numpy arrays
         """
         return self._lineManager[line_id][0], self._lineManager[line_id][1]
+
+    def get_indicator_key(self, x, y):
+        """ Get indicator's key with position
+        :return:
+        """
+        if x is None and y is None:
+            raise RuntimeError('It is not allowed to have both X and Y are none to get indicator key.')
+
+        ret_key = None
+
+        for line_key in self._lineManager.keys():
+
+            print self._lineManager[line_key]
+
+            if x is not None and y is not None:
+                # 2 way
+                raise NotImplementedError('ASAP')
+            elif x is not None and self._indicatorTypeDict[line_key] == 1:
+                # vertical indicator moving along X
+                if abs(self._lineManager[line_key][0][0] - x) < 1.0E-2:
+                    return line_key
+            elif y is not None and self._indicatorTypeDict[line_key] == 0:
+                # horizontal indicator moving along Y
+                if abs(self._lineManager[line_key][1][0] - y) < 1.0E-2:
+                    return line_key
+        # END-FOR
+
+        return ret_key
 
     def get_line_style(self, line_id=None):
         """
@@ -242,11 +270,13 @@ class IndicatorManager(object):
         """
         if self._indicatorTypeDict[my_id] == 0:
             # horizontal
-            self._lineManager[my_id][1] = pos_y
+            self._lineManager[my_id][1][0] = pos_y
+            self._lineManager[my_id][1][1] = pos_y
 
         elif self._indicatorTypeDict[my_id] == 1:
             # vertical
-            self._lineManager[my_id][0] = pos_x
+            self._lineManager[my_id][0][0] = pos_x
+            self._lineManager[my_id][0][1] = pos_x
 
         elif self._indicatorTypeDict[my_id] == 2:
             # 2-way
@@ -255,6 +285,8 @@ class IndicatorManager(object):
 
         else:
             raise RuntimeError('Unsupported indicator of type %d' % self._indicatorTypeDict[my_id])
+
+        self._lineManager[my_id][2] = 'black'
 
         return
 
@@ -664,6 +696,13 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def get_indicator_key(self, x, y):
+        """ Get the key of the indicator with given position
+        :param picker_pos:
+        :return:
+        """
+        return self._myIndicatorsManager.get_indicator_key(x, y)
+
     def get_indicator_position(self, indicator_key):
         """ Get position (x or y) of the indicator
         :return: a tuple.  (0) horizontal (x, x); (1) vertical (y, y); (2) 2-way (x, y)
@@ -676,11 +715,11 @@ class MplGraphicsView(QtGui.QWidget):
 
             if indicator_type == 0:
                 # horizontal
-                return y, y
+                return y[0], y[0]
 
             elif indicator_type == 1:
                 # vertical
-                return x, x
+                return x[0], x[0]
 
         else:
             # 2-way

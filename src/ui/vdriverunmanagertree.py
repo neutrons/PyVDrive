@@ -21,6 +21,8 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             if str(m_action.text()) != 'Info':
                 m_action.setEnabled(False)
 
+        self._mainWindow = None
+
         return
 
     def add_ipts_runs(self, ipts_number, run_number_list):
@@ -83,3 +85,24 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             return False, 'Unable to convert %s to run number as integer.' % value_str
 
         return True, run
+
+    def mouseDoubleClickEvent(self, e):
+        """ Override event handling method
+        """
+        status, current_run = self.get_current_run()
+        print '[DB] Select run ', current_run
+
+        if self._mainWindow is not None:
+            self._mainWindow.set_run(current_run)
+
+        return
+
+    def set_main_window(self, main_window):
+        """
+
+        :param main_window:
+        :return:
+        """
+        self._mainWindow = main_window
+
+        return

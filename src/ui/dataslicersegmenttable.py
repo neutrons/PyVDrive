@@ -2,8 +2,8 @@ import ndav_widgets.NTableWidget as NdavWidget
 
 
 Data_Slicer_Table_Setup = [('Start', 'float'),
-                           ('STop', 'float'),
-                           ('Status', 'checkbox')]
+                           ('Stop', 'float'),
+                           ('', 'checkbox')]
 
 
 class DataSlicerSegmentTable(NdavWidget.NTableWidget):
@@ -23,8 +23,55 @@ class DataSlicerSegmentTable(NdavWidget.NTableWidget):
         :return:
         """
         row_value_list = [time_stamp, '', False]
-        # row_type_list = ['float', 'float', 'bool']
-        self.append_row(row_value_list) #, row_type_list)
+        self.append_row(row_value_list)
+
+        return
+
+    def fill_stop_time(self):
+        """ Fill the stop time by next start time
+        :return:
+        """
+        num_rows = self.rowCount()
+        for ir in xrange(num_rows-1):
+            stop_time = self.get_cell_value(ir+1, 0)
+            self.set_value_cell(ir, 1, stop_time)
+
+        return
+
+    def get_start_times(self):
+        """ Return the sorted starting times
+        :return:
+        """
+        num_rows = self.rowCount()
+        start_time_list = list()
+
+        for ir in xrange(num_rows):
+            start_time = self.get_cell_value(ir, 0)
+            start_time_list.append(start_time)
+
+        start_time_list.sort()
+        print '[DB] Start Times: ', start_time_list
+
+        return start_time_list
+
+    def get_splitter_list(self):
+        """
+        Get all splitters that are selected
+        Note: splitters are relative time to run_start in unit of second
+        :return:
+        """
+        split_tup_list = list()
+
+        num_rows = self.rowCount()
+        for ir in xrange(num_rows):
+            selected = self.get_cell_value(ir, 2)
+            if selected is True:
+                start_time = self.get_cell_value(ir, 0)
+                stop_time = self.get_cell_value(ir, 1)
+                split_tup_list.append((start_time, stop_time))
+        # END-FOR
+
+        return split_tup_list
 
     def setup(self):
         """
@@ -32,3 +79,10 @@ class DataSlicerSegmentTable(NdavWidget.NTableWidget):
         :return:
         """
         self.init_setup(Data_Slicer_Table_Setup)
+
+        # Set up column width
+        self.setColumnWidth(0, 90)
+        self.setColumnWidth(1, 90)
+        self.setColumnWidth(2, 25)
+
+        return

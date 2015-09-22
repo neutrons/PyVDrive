@@ -20,6 +20,8 @@ import VdriveLogPicker
 OUT_PICKER = 0
 IN_PICKER = 1
 IN_PICKER_MOVING = 2
+IN_PICKER_SELECTION = 3
+
 
 class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
@@ -68,6 +70,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_picker_abort)
         self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
                      self.do_picker_set)
+        self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
+                     self.do_enter_select_picker_mode)
+        self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
+                     self.do_picker_process)
 
         # Canvas
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
@@ -110,6 +116,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         self.ui.tableWidget_segments.setup()
 
+        self.ui.treeView_iptsRun.set_main_window(self)
+
     def do_load_run(self):
         """
 
@@ -137,6 +145,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Set
         log_name = str(self.ui.comboBox_logNames.currentText())
         self.plot_sample_log(log_name)
+
+        return
+
+    def do_enter_select_picker_mode(self):
+        """ Enter picker selection mode
+        :return:
+        """
+        self._myPickerMode = IN_PICKER_SELECTION
 
         return
 
@@ -227,6 +243,17 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def do_picker_process(self):
+        """
+        Process pickers
+        :return:
+        """
+        self.ui.tableWidget_segments.sortByColumn(0)
+
+        self.ui.tableWidget_segments.fill_stop_time()
+
+        return
+
     def do_picker_set(self):
         """
         Add the (open) picker to list
@@ -260,7 +287,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Save selected segment and quit
         :return:
         """
+        # Get splitters
+        split_tup_list = self.get_splitters()
+
+        # Close
         self.close()
+
+        # Call parent method
+        if self._myParent is not None:
+            self._myParent.set_splitter_info(self._currRun, split_tup_list)
 
         return
 
@@ -330,8 +365,46 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Get splitters set up by user.  Called by parent algorithm
         :return:
         """
-        # TODO
+        return self.ui.tableWidget_segments.get_splitter_list()
 
+    def menu_select_nearest_picker(self):
+        """ Select nearest picker
+        :return:
+        """
+        print '[DB] Select picker near %f ....' % self._currMousePosX
+        # Get all the pickers' position
+        picker_pos_list = self.ui.tableWidget_segments.get_start_times()
+
+        # Find the nearest picker
+        picker_pos_list.append(self._currMousePosX)
+        picker_pos_list.sort()
+        index = picker_pos_list.index(self._currMousePosX)
+
+        prev_index = index - 1
+        next_index = index + 1
+
+        select_picker_pos = picker_pos_list[prev_index]
+
+        if next_index < len(picker_pos_list) and \
+            abs(picker_pos_list[next_index] - self._currMousePosX) < \
+                        abs(picker_pos_list[prev_index] - self._currMousePosX):
+            select_picker_pos = picker_pos_list[next_index]
+        print 'Selected picker is at %.5f' % select_picker_pos
+
+        # Add the information to graphics
+        self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
+        self._myPickerMode = IN_PICKER_MOVING
+
+        return
+
+    def menu_quit_picker_selection(self):
+        """ Quit picker-selecion mode
+        :return:
+        """
+        print 'Cancel picker selection'
+        self._myPickerMode = OUT_PICKER
+
+        return
 
     def on_mouse_press_event(self, event):
         """ If in the picking up mode, as mouse's left button is pressed down,
@@ -367,9 +440,29 @@ class WindowLogPicker(QtGui.QMainWindow):
         then the mode is over
         """
         button = event.button
+
+        self._currMousePosX = event.xdata
+        self._currMousePosY = event.ydata
+
         if button == 1:
             if self._myPickerMode == IN_PICKER_MOVING:
                 self._myPickerMode = IN_PICKER
+
+        elif button == 3:
+            if self._myPickerMode == IN_PICKER_SELECTION:
+                # Pop-out menu
+                self.ui.menu = QtGui.QMenu(self)
+
+                action1 = QtGui.QAction('Select', self)
+                action1.triggered.connect(self.menu_select_nearest_picker)
+                self.ui.menu.addAction(action1)
+
+                action2 = QtGui.QAction('Cancel', self)
+                action2.triggered.connect(self.menu_quit_picker_selection)
+                self.ui.menu.addAction(action2)
+
+                # add other required actions
+                self.ui.menu.popup(QtGui.QCursor.pos())
 
         return
 
@@ -407,6 +500,16 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def set_run(self, run_number):
+        """
+        Set run
+        :return:
+        """
+        run_number = int(run_number)
+        self.ui.lineEdit_runNumber.setText('%d' % run_number)
+
+        return
+
     def setup(self):
         """ Set up from parent main window
         :return:
@@ -432,6 +535,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
 
         return
+
 
 def testmain(argv):
     """ Main method for testing purpose
