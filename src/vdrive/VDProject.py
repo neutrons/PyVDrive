@@ -11,7 +11,7 @@ class VDProject:
         """ Init
         """
         self._name = project_name
-        self._dataFileDict = {}
+        self._dataFileDict = {} # key: run number, value: 2-tuple (file name, IPTS)
         self._baseDataFileNameList = []
         self._baseDataPath = None 
         
@@ -92,6 +92,17 @@ class VDProject:
         """
         # TODO -Doc
         return len(self._dataFileDict)
+
+    def get_run_info(self, run_number):
+        """
+        Get run's information
+        :param run_number:
+        :return:  2-tuple (file name, IPTS)
+        """
+        if self._dataFileDict.has_key(run_number) is False:
+            raise RuntimeError('Unable to find run %d in project manager.' % run_number)
+
+        return self._dataFileDict[run_number]
 
     def getReducedRuns(self):
         """ Get the the list of the reduced runs

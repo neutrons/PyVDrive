@@ -9,8 +9,8 @@
 import os
 
 import vdrive.VDProject as vp
-import vdrive.mantid_helper as mtd
 import vdrive.FacilityUtil as futil
+import vdrive.SampleLogHelper as logHelper
 
 
 class VDriveAPI(object):
@@ -35,7 +35,8 @@ class VDriveAPI(object):
         self._myProject = vp.VDProject('Temp')
         self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
 
-        #self._tempWSDict = {}
+        # Data slicing helper
+        self._myLogHelper = None
 
         return
 
@@ -65,32 +66,6 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def loadNexus(self, filename, logonly):
-        """
-
-        :param filename:
-        :param logonly:
-        :return:
-        """
-        out_ws_name = 'templogws'
-        status, errmsg, value = mtd.loadNexus(datafilename=filename,
-                                              outwsname=out_ws_name,
-                                              metadataonly=logonly)
-        if status is False:
-            return False, errmsg, None
-
-        tag = out_ws_name
-        logws = value
-        self._tempWSDict[tag] = logws
-
-        return True, '', tag
-
-    def get_data_dir(self):
-        """ Data dir
-        :return:
-        """
-        return self._myRootDataDir
-
     def get_instrument_name(self):
         """
         Instrument's name
@@ -118,13 +93,22 @@ class VDriveAPI(object):
         """
         return self._myRootDataDir
 
+    def get_file_by_run(self, run_number):
+        """ Get data file path by run number
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int)
+        file_name, ipts_number = self._myProject.get_run_info(run_number)
+
+        return file_name
+
     def get_ipts_info(self, ipts):
         """
         Get runs and their information for a certain IPTS
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
-        # TODO - DOC
         try:
             if isinstance(ipts, int):
                 ipts_number = ipts
@@ -135,6 +119,7 @@ class VDriveAPI(object):
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
+            print '\n[DB RuntimeError] %s\n' % str(e)
             return False, str(e)
 
         return True, run_tuple_list
@@ -147,6 +132,20 @@ class VDriveAPI(object):
         """
         return futil.get_ipts_number_from_dir(ipts_dir)
 
+    def get_run_info(self, run_number):
+        """ Get a run's information
+        :param run_number:
+        :return: 2-tuple as (boolean, 2-tuple (file path, ipts)
+        """
+        assert isinstance(run_number, int)
+
+        try:
+            run_info_tuple = self._myProject.get_run_info(run_number)
+        except RuntimeError as re:
+            return False, str(re)
+
+        return True, run_info_tuple
+
     def get_number_runs(self):
         """
         Get the number of runs added to project.
@@ -154,69 +153,57 @@ class VDriveAPI(object):
         """
         return self._myProject.get_number_data_files()
 
-    def getSampleLogNames(self, tag):
+    def init_slicing_helper(self, nxs_file_name):
         """
-        :param tag:
+        Initialize the event slicing helper object
+        :param nxs_file_name:
         :return:
         """
-        if self._tempWSDict.has_key(tag) is False:
-            return False, 'Tag %s cannot be found in temporary workspace dictionary'%(tag), None
+        self._myLogHelper = logHelper.SampleLogManager()
+        status, errmsg = self._myLogHelper.set_nexus_file(nxs_file_name)
 
-        logws = self._tempWSDict[tag]
-        plist = logws.getRun().getProperties()
-        print len(plist)
-        pnamelist = []
-        for p in plist:
-            try:
-                if p.size() > 1:
-                    pnamelist.append(p.name)
-            except AttributeError:
-                pass
+        return status, errmsg
 
-        return True, '', pnamelist
-
-    def getSampleLogVectorByIndex(self, tag, logindex):
+    def get_sample_log_names(self):
         """
-
-        :param tag:
-        :param logindex:
+        Get names of sample log with time series property
         :return:
         """
-        # Get log value
-        logname = str(self.ui.comboBox_2.currentText())
-        if len(logname) == 0:
-            # return due to the empty one is chozen
-            return
+        if self._myLogHelper is None:
+            return False, 'Log helper has not been initialized.'
 
-        samplelog = self._dataWS.getRun().getProperty(logname)
-        vectimes = samplelog.times
-        vecvalue = samplelog.value
+        status, name_list = self._myLogHelper.get_sample_log_names()
+        if status is False:
+            return False, str(name_list)
 
-        # check
-        if len(vectimes) == 0:
-            print "Empty log!"
+        dbstr = 'Total %d sample logs\n' % len(name_list)
+        for name in name_list:
+            dbstr += '%s\n' % name
+        print '\n[DB] %s\n' % dbstr
 
-        # Convert absolute time to relative time in seconds
-        t0 = self._dataWS.getRun().getProperty("proton_charge").times[0]
-        t0ns = t0.totalNanoseconds()
+        return True, name_list
 
-        # append 1 more log if original log only has 1 value
-        tf = self._dataWS.getRun().getProperty("proton_charge").times[-1]
-        vectimes.append(tf)
-        vecvalue = numpy.append(vecvalue, vecvalue[-1])
+    def get_sample_log_values(self, log_name, relative):
+        """
+        Get time and value of a sample log in vector
+        Returned time is in unit of second as epoch time
+        :param log_name:
+        :param relative: if True, then the sample log's vec_time will be relative to Run_start
+        :return: 2-tuple as status (boolean) and 2-tuple of vectors.
+        """
+        try:
+            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name, relative)
+        except RuntimeError as e:
+            return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 
-        vecreltimes = []
-        for t in vectimes:
-            rt = float(t.totalNanoseconds() - t0ns) * 1.0E-9
-            vecreltimes.append(rt)
+        return True, (vec_times, vec_value)
 
     def load_session(self, in_file_name):
-        """
+        """ Load session from saved file
         Load session from a session file
-        :param int_file_name:
+        :param in_file_name:
         :return:
         """
-        # TODO - DOC
         save_dict = futil.load_from_xml(in_file_name)
 
         # Set from dictionary
@@ -233,15 +220,14 @@ class VDriveAPI(object):
         return True, in_file_name
 
     def set_data_root_directory(self, root_dir):
-        """
+        """ Set root data directory to
         :rtype : tuple
         :param root_dir:
         :return:
         """
-        # TODO - Doc
         # Check existence
         if os.path.exists(root_dir) is False:
-            return False, 'Directory %s cannot be found.' % (root_dir)
+            return False, 'Directory %s cannot be found.' % root_dir
 
         self._myRootDataDir = root_dir
         self._myFacilityHelper.set_data_root_path(self._myRootDataDir)
@@ -253,7 +239,6 @@ class VDriveAPI(object):
         :param out_file_name:
         :return:
         """
-        # TODO - Issue 12
         # Create a dictionary for current set up
         save_dict = dict()
         save_dict['myInstrumentName'] = self._myInstrumentName
@@ -271,11 +256,10 @@ class VDriveAPI(object):
         return True, out_file_name
 
     def set_ipts(self, ipts_number):
-        """
-
+        """ Set IPTS to the workflow
+        :param ipts_number: intege for IPTS number
         :return:
         """
-        # TODO - Doc
         try:
             self._currentIPTS = int(ipts_number)
         except ValueError as e:
@@ -283,15 +267,22 @@ class VDriveAPI(object):
 
         return True, ''
 
-
     def set_working_directory(self, work_dir):
         """
-
+        Set up working directory for output files
         :param work_dir:
         :return:
         """
-        # TODO - Doc
-        # TODO - Create directory if it does not exist
+        # Process input working directory
+        assert isinstance(work_dir, str)
+        if work_dir.startswith('~'):
+            work_dir = os.path.expanduser(work_dir)
+
+        try:
+            if os.path.exists(work_dir) is False:
+                os.mkdir(work_dir)
+        except IOError as e:
+            return False, 'Unable to create working directory due to %s.' % str(e)
 
         # Check writable
         if os.access(work_dir, os.W_OK) is False:
@@ -366,7 +357,5 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
                 result_list.append(tup[:])
             # END-IF
         # END-IF
-
-        print '[DB] Return!!!'
 
         return True, result_list
