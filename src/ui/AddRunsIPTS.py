@@ -14,7 +14,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import DialogAddRunsIPTS as dlgrun
+import gui.ui_DialogAddRunsIPTS as dlgrun
 
 
 class AddRunsByIPTSDialog(QtGui.QDialog):

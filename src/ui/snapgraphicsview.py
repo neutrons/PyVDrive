@@ -1,5 +1,5 @@
 from PyQt4 import QtGui
-from mplgraphicsview import MplGraphicsView 
+from gui.mplgraphicsview import MplGraphicsView 
 import GuiUtility
 
 class SnapGraphicsView(object):

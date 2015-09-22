@@ -15,16 +15,16 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 """ import GUI components generated from Qt Designer .ui file """
-import ui.VdriveMain as mainUi
+import ui.gui.VdriveMain as mainUi
 import ui.GuiUtility as guiutil
 import ui.snapgraphicsview as spview
 
 """ import PyVDrive library """
 import VDriveAPI as vdrive
 
-import ui.Dialog_AddRuns as dlgrun
+import ui.AddRunsIPTS as dlgrun
 import ui.Window_LogPicker as LogPicker
-import ui.DialogLogSnapView as dlgSnap
+import ui.LogSnapView as dlgSnap
 
 
 class VDrivePlotBeta(QtGui.QMainWindow):
