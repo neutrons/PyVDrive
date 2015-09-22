@@ -10,3 +10,6 @@ all: $(PYFILES)
 
 %.py: %.ui
 	pyuic4 $< --output $@
+
+clean: 
+	rm *pyc */*.pyc
