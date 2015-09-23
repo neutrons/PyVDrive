@@ -11,12 +11,46 @@ class SampleLogManager(object):
         Initialization
         :return:
         """
+        self._currentLogFile = ''
+
         self._workspace = None
         self._workspace_name = ''
         self._logNamesList = None
         self._logInfoList = None
 
+        # key = log file name (base name), sample log name
+        self._splitterWSDict = dict()
+
         return
+
+    def create_splitters_by_time(self, start_time, stop_time, delta_time, unit='second', relative=True):
+        """
+        Create splitters by time
+        :param start_time:
+        :param stop_time:
+        :param delta_time:
+        :param unit:
+        :param relative:
+        :return:
+        """
+        # Check
+        assert isinstance(start_time, float)
+        assert isinstance(stop_time, float)
+        assert isinstance(delta_time, float) or (delta_time is None)
+        assert isinstance(unit, str)
+        assert isinstance(relative, bool)
+        assert self._workspace
+
+        # Generate event filters
+        status, ret_obj = mtd.generate_event_filters(self._workspace, start_time, stop_time, delta_time, unit, relative)
+        if status is False:
+            return status, ret_obj
+
+        # Store
+        splitters, information = ret_obj
+        self._splitterWSDict[(self._currentLogFile, 'Time')] = (splitters, information)
+
+        return True, ''
 
     def get_sample_log_names(self):
         """
@@ -56,9 +90,17 @@ class SampleLogManager(object):
         :param nxs_file_name:
         :return:
         """
+        #
+        base_name = os.path.basename(nxs_file_name)
+        if base_name == self._currentLogFile:
+            return True, 'Try to reload sample logs of file %s' % base_name
+        else:
+            self._currentLogFile = base_name
+
         # Output ws name
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
 
+        # Load sample logs
         status, ret_obj = mtd.load_nexus(data_file_name=nxs_file_name,
                                          output_ws_name=out_ws_name,
                                          meta_data_only=True)
@@ -80,7 +122,3 @@ class SampleLogManager(object):
         self._logInfoList = mtd.get_sample_log_info(self._workspace)
 
         return True, ''
-   
-    def set_splitters(self):
-
-        return

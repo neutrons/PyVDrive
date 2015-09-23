@@ -25,11 +25,25 @@
         <string>Time Range</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="lineEdit_maxTime"/>
+        </item>
+        <item row="1" column="0">
          <widget class="QLineEdit" name="lineEdit_minTime"/>
         </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Start</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit_maxTime"/>
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Stop</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -58,14 +72,8 @@
        <property name="title">
         <string>Log Value Range</string>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
-        <item>
-         <widget class="QLineEdit" name="lineEdit_minLogValue"/>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_maxLogTime"/>
-        </item>
-        <item>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="1" column="3">
          <widget class="QComboBox" name="comboBox_direction">
           <property name="minimumSize">
            <size>
@@ -90,6 +98,43 @@
           </item>
          </widget>
         </item>
+        <item row="1" column="2">
+         <widget class="QLineEdit" name="lineEdit_maxLogTime"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLineEdit" name="lineEdit_minLogValue"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="lineEdit_logValueInterval"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Minimum</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Step</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Maximum</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Value Changing</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -105,80 +150,6 @@
         </size>
        </property>
       </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="lineEdit_logValueInterval"/>
-     </item>
-     <item row="1" column="0">
-      <widget class="QRadioButton" name="radioButton_useValue">
-       <property name="text">
-        <string>Log Value Interval</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Seconds</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="4">
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeType">
-        <enum>QSizePolicy::Expanding</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="0" column="0">
-      <widget class="QRadioButton" name="radioButton_useTimeInterval">
-       <property name="text">
-        <string>Time Interval</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEdit_timeInterval">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QComboBox" name="comboBox_timeType">
-       <property name="minimumSize">
-        <size>
-         <width>140</width>
-         <height>0</height>
-        </size>
-       </property>
-       <item>
-        <property name="text">
-         <string>Absolute Time</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Relative Time</string>
-        </property>
-       </item>
-      </widget>
      </item>
     </layout>
    </item>

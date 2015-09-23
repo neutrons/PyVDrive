@@ -100,21 +100,20 @@ class DialogLogSnapView(QtGui.QDialog):
         # FIXME - Return true all the time
         return True
 
-    def setup(self, workflow_controller, run_number, sample_log_name, num_sec_skip):
+    def setup(self, workflow_controller, sample_log_name, num_sec_skip):
         """ Set up from parent main window
         :return:
         """
-        # multiple usage of run_number
-        if isinstance(run_number, int):
-            pass
-        else:
-            data_file_name = run_number
-            run_number = workflow_controller.parse
+        # Get workflow controller
+        self._myWorkflowController = workflow_controller
 
         # Get log value
-        self._myWorkflowController = workflow_controller
-        vec_x, vec_y = self._myWorkflowController.get_log_value(run_number, sample_log_name,
-                                                                num_sec_skip)
+        status, ret_value = self._myWorkflowController.get_sample_log_values(sample_log_name, relative=True)
+        if status is True:
+            vec_x, vec_y = ret_value
+        else:
+            gutil.pop_dialog_error(ret_value)
+            return
 
         # Plot
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)

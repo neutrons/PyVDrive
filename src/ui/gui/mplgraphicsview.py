@@ -548,6 +548,12 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def canvas(self):
+        """ Get the canvas
+        :return:
+        """
+        return self._myCanvas
+
     def clear_all_lines(self):
         """
         """

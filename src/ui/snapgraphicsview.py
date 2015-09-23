@@ -2,10 +2,11 @@ from PyQt4 import QtGui
 from gui.mplgraphicsview import MplGraphicsView 
 import GuiUtility
 
+
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
     """
-    def __init__(self, graphicview, combox1, combox2):
+    def __init__(self, graphicview, combox1, combox2, radio_button):
         """
         :param graphicview:
         :param combox1:
@@ -23,11 +24,33 @@ class SnapGraphicsView(object):
         self._graphicView = graphicview
         self._comboBox1 = combox1
         self._comboBox2 = combox2
+        self._radioButton = radio_button
 
         return
 
+    def canvas(self):
+        """
+        """
+        return self._graphicView
 
-class SampleLogView(SnapGraphicsView):
+    def combo_box1_value(self):
+        """
+        """
+        return self._comboBox1.currentText()
+
+    def combo_box2_value(self):
+        """
+        """
+        return self._comboBox2.currentText()
+
+    def is_selected(self):
+        """
+        """
+        assert isinstance(self._radioButton, QtGui.QRadioButton)
+        return self._radioButton.isChecked()
+
+
+class SampleLogView(object):
     """
     Snap graphics view for sample environment logs
     """
@@ -36,17 +59,11 @@ class SampleLogView(SnapGraphicsView):
         :param snapgraphicsview:
         :return:
         """
-         # Check
-        if isinstance(snapgraphicsview, SnapGraphicsView) is False:
+        # Check
+        if isinstance(snapgraphicsview, SnapGraphicsView) is True:
+            self._snapGraphicsView = snapgraphicsview
+        else:
             raise NotImplementedError('Input error!')
-
-        SnapGraphicsView.__init__(self, snapgraphicsview._graphicView,
-                                  snapgraphicsview._comboBox1,
-                                  snapgraphicsview._comboBox1)
-
-        #self._graphicView = snapgraphicsview._graphicView
-        #self._comboBox1 = snapgraphicsview._comboBox1
-        #self._comboBox2 = snapgraphicsview._comboBox2
 
         return
 
@@ -54,8 +71,7 @@ class SampleLogView(SnapGraphicsView):
         """ Get current log name
         :return:
         """
-        assert isinstance(self._comboBox1, QtGui.QComboBox)
-        return str(self._comboBox1.currentText())
+        return str(self._snapGraphicsView.combo_box1_value())
 
     def plot_data(self, vec_times, vec_log_value, do_skip, num_sec_skipped):
         """
@@ -73,9 +89,7 @@ class SampleLogView(SnapGraphicsView):
             vec_plot_times = vec_times
             vec_plot_value = vec_log_value
 
-        assert isinstance(self._graphicView, MplGraphicsView)
-
-        self._graphicView.add_plot_1d(vec_plot_times, vec_plot_value)
+        self._snapGraphicsView.canvas().add_plot_1d(vec_plot_times, vec_plot_value)
 
         return
 
@@ -85,19 +99,17 @@ class SampleLogView(SnapGraphicsView):
         :param log_index:
         :return:
         """
-        assert isinstance(self._comboBox2, QtGui.QComboBox)
-
-        self._comboBox2.setCurrentIndex(log_index)
+        self._snapGraphicsView.set_combo1_index(log_index)
 
         return
 
-    def set_log_names(self, lognamelist):
+    def reset_log_names(self, lognamelist):
         """
         Set log names to combo box 1
         :param lognamelist:
         :return:
         """
-        self._comboBox1.clear()
-        self._comboBox1.addItems(lognamelist)
+        assert isinstance(lognamelist, list)
+        self._snapGraphicsView.reset_combo1_items(lognamelist)
 
         return
