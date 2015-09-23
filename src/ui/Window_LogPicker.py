@@ -14,7 +14,7 @@ except AttributeError:
         return s
 
 import GuiUtility
-import VdriveLogPicker
+import gui.VdriveLogPicker as VdriveLogPicker
 
 
 OUT_PICKER = 0
