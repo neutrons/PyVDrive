@@ -30,6 +30,7 @@ class VDriveAPI(object):
         self._myWorkDir = '/tmp/'
 
         self._currentIPTS = -1
+        self._myLastDataDirectory = '/tmp'
 
         # Project
         self._myProject = vp.VDProject('Temp')
@@ -79,6 +80,13 @@ class VDriveAPI(object):
         :return:
         """
         return self._myProject.get_ipts_runs()
+
+    def get_recent_data_directory(self):
+        """
+        Get the last accessed data directory
+        :return:
+        """
+        return self._myLastDataDirectory
 
     def get_working_dir(self):
         """

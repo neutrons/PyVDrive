@@ -50,6 +50,13 @@ class SampleLogView(SnapGraphicsView):
 
         return
 
+    def get_log_name(self):
+        """ Get current log name
+        :return:
+        """
+        assert isinstance(self._comboBox1, QtGui.QComboBox)
+        return str(self._comboBox1.currentText())
+
     def plot_data(self, vec_times, vec_log_value, do_skip, num_sec_skipped):
         """
 

@@ -93,13 +93,27 @@ class DialogLogSnapView(QtGui.QDialog):
     def do_save_quit(self):
         return
 
+    def is_saved(self):
+        """ Return whether the information is saved or not
+        :return:
+        """
+        # FIXME - Return true all the time
+        return True
+
     def setup(self, workflow_controller, run_number, sample_log_name, num_sec_skip):
         """ Set up from parent main window
         :return:
         """
+        # multiple usage of run_number
+        if isinstance(run_number, int):
+            pass
+        else:
+            data_file_name = run_number
+            run_number = workflow_controller.parse
+
         # Get log value
         self._myWorkflowController = workflow_controller
-        vec_x, vec_y = self._myWorkflowController.get_log_value(run_number,sample_log_name,
+        vec_x, vec_y = self._myWorkflowController.get_log_value(run_number, sample_log_name,
                                                                 num_sec_skip)
 
         # Plot

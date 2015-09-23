@@ -113,6 +113,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Some class variable for recording status
         self._savedSessionFileName = None
+        self._lastSampleLogFileName = ''
 
         return
 
@@ -277,7 +278,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :return:
         """
         # Get the default file path
+        # FIXME - Find out whether data root directory is stored in project file
         data_path = self._myWorkflow.get_data_root_directory()
+        data_path = self._myWorkflow.get_recent_data_directory()
 
         status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
         if status is True:
@@ -350,12 +353,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # END-FOR
 
+        # Record sample log file
+        self._lastSampleLogFileName = log_file_name
+
         return
 
     def do_pick_slicer(self):
         """ Pick up (time) slicing information and show it by indicating lines in snap view
         :return:
         """
+        raise NotImplementedError('ASAP')
+
         # TODO - Get slicing information
 
         # TODO - Create splitters by Mantid
@@ -537,29 +545,56 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :return:
         """
         # TODO - Find the change of these 6 check box.  If any new box is checked, then un-check the
+
         #        previously checked box
         #        If no box is checked, close the window and return
         #        If there are 2 checked box, find out which one is the previously checked
         # FIXME/TODO - NOW
 
+        num_boxes = len(self._snapViewCheckBoxList)
+        i_selected_view = -1
+        for i_view in xrange(6):
+            box = self._snapViewCheckBoxList[i_view]
+            assert isinstance(box, QtGui.QCheckBox)
+            if box.isChecked() is True:
+                if i_selected_view < 0:
+                    i_selected_view = i_view
+                else:
+                    error_message = 'Both box %d and %d are selected. Unable to proceed.' % (i_selected_view, i_view)
+                    guiutil.pop_dialog_error(error_message)
+                    return
+            # END-IF
+        # END-FOR
+        if i_selected_view < 0:
+            # none selected
+            return
+
         # Check whether there is any open window
+        consider_save = False
         if self._snapViewWindow is None:
+            # Create a new window
             self._snapViewWindow = dlgSnap.DialogLogSnapView()
-        elif self._snapViewWindow.is_open() is False:
-            self._snapViewWindow.show()
         else:
-            if self._snapViewWindow.is_saved() is False:
+            consider_save = True
+
+        # Refresh?
+        if consider_save is True:
+            if self._snapViewWindow.is_saved() is True:
+                self._snapViewWindow.reset()
+            else:
                 # If window is open but not saved, pop error message
                 guiutil.pop_dialog_error('Current window is not saved.')
                 return
-        # END-IF-ELSE
+            # END-IF-ELSE
+        # END-IF
 
-        # TODO - If window is None or not open, then show() it
-
-        # TODO - Set up / re-set up log value to the sub window
-
+        # Get the final data
+        sample_log_view = spview.SampleLogView(self._groupedSnapViewList[i_selected_view])
+        sample_log_name = sample_log_view.get_log_name()
+        num_sec_skip = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
         # FIXME - It is a mock now!
-        self._snapViewWindow.setup(self._myWorkflow, run_number, sample_log_name, num_sec_skip)
+        # self._snapViewWindow.setup(self._myWorkflow, run_number, sample_log_name, num_sec_skip)
+        self._snapViewWindow.setup(self._myWorkflow, self._lastSampleLogFileName, sample_log_name, num_sec_skip)
 
         self._snapViewWindow.show()
 
