@@ -394,8 +394,8 @@ class MplGraphicsView(QtGui.QWidget):
                     marker=None, line_style=None, line_width=1):
         """ Add a new plot
         """
-        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
-                                              line_width)
+        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label,
+                                              marker, line_style, line_width)
 
         return line_key
 

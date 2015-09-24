@@ -88,11 +88,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.graphicsView_snapView5.canvas().mpl_connect('button_release_event', self.evt_snap5_mouse_press)
         self.ui.graphicsView_snapView6.canvas().mpl_connect('button_release_event', self.evt_snap6_mouse_press)
 
-        self._combo_box_list = [self.ui.comboBox_g11, self.ui.comboBox_g21,
-                                self.ui.comboBox_g31, self.ui.comboBox_g41,
-                                self.ui.comboBox_g51, self.ui.comboBox_g61]
-        for combo_box in self._combo_box_list:
-            self.connect(combo_box, QtCore.SIGNAL('indexChanged(int)'),
+        self._group_left_box_list = [self.ui.comboBox_g11, self.ui.comboBox_g21,
+                                     self.ui.comboBox_g31, self.ui.comboBox_g41,
+                                     self.ui.comboBox_g51, self.ui.comboBox_g61]
+        for combo_box in self._group_left_box_list:
+            self.connect(combo_box, QtCore.SIGNAL('currentIndexChanged(int)'),
                          self.do_change_log_snap_view)
 
         # Event handling for menu
@@ -114,9 +114,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # controls to the sub windows
         self._openSubWindows = []
         self._manualPikerWindow = None
-
-        self._currentSnapViewIndex = -1
         self._snapViewWindow = None
+
+        # Snap view related variables and data structures
+        self._currentSnapViewIndex = -1
+        self._group_left_box_values = [-1] * self._numSnapViews
 
         # variables for event data slicing
         self._activeSlicer = ''
@@ -260,11 +262,19 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Event handling if user chooses to plot another log in snap view
         :return:
         """
-        for i in xrange(len(self._combo_box_list)):
-            curr_value = str(self._combo_box_list[i].currentText())
-            if curr_value != self._cacheSnapViewLogNames[i]:
-                do_plot_again()
+        num_skip_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
+
+        for i in xrange(len(self._group_left_box_list)):
+            curr_index = int(self._group_left_box_list[i].currentIndex())
+            if curr_index < 0:
+                # skip if it is not set!
+                continue
+            if curr_index != self._group_left_box_values[i]:
+                self._group_left_box_values[i] = curr_index
+                print '[DB] Left box No. %d log index is changed to %d' % (i, curr_index)
+                spview.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
                 break
+
         return
 
     def do_generate_slicer_by_time(self):
@@ -325,9 +335,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                     # local data file
                     log_path = os.path.dirname(run_file_name)
             else:
-                guiutil.pop_dialog_error('Unable to get run from tree view: %s' % ret_obj)
+                guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
         else:
-            guiutil.pop_dialog_error('Unable to get run from tree view: %s' % ret_obj)
+            guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
         # END-IF
 
         # Dialog to get the file name
@@ -336,7 +346,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                                                               log_path, file_filter))
 
         # Load log
-        log_name_list = self.load_sample_run(log_file_name)
+        log_name_list = self.load_sample_run(log_file_name, smart=True)
 
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
@@ -349,17 +359,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
-            log_widget = spview.SampleLogView(snap_widget)
+            log_widget = spview.SampleLogView(snap_widget, self)
 
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
 
             # get log value
-            log_name = log_name_list[i]
-            vec_times, vec_log_value = self.get_sample_log_value(log_name)
+            # log_name = log_name_list[i]
+            # vec_times, vec_log_value = self.get_sample_log_value(log_name)
 
             # plot log value
-            log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
+            # log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
 
         # END-FOR
 
@@ -369,25 +379,31 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_pick_log(self):
-        """
+        """ Pick up the splitters made from sample log values
         :return:
         """
-        for i_radio in self._numSnapViews:
-            if self._
+        found = False
+        for i_radio in xrange(self._numSnapViews):
+            if self._groupedSnapViewList[i_radio].is_selected() is True:
+                log_name = self._groupedSnapViewList[i_radio].get_log_name()
+                self._myWorkflow.set_slicer(splitter_src='SampleLog', sample_log_name=log_name)
+                found = True
+                break
 
+        if found is False:
+            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
 
+        self._apply_slicer_snap_view()
+
+        return
 
     def do_pick_manual(self):
         """ Pick up (time) slicing information and show it by indicating lines in snap view
         :return:
         """
-        raise NotImplementedError('ASAP')
+        self._myWorkflow.set_slicer('Manual')
 
-        # TODO - Get slicing information
-
-        # TODO - Create splitters by Mantid
-
-        # TODO - Apply splitters to all snap view
+        self._apply_slicer_snap_view()
 
         return
 
@@ -512,10 +528,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         return self._myWorkflow
 
-    def load_sample_run(self, run):
+    def load_sample_run(self, run, smart):
         """
         Load sample run
         :param run: string or integer as nxs file name or run number
+        :param smart: flag to give the log name in a smart way
         :return: list of string for log names
         """
         # Check
@@ -537,12 +554,12 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             raise RuntimeError(errmsg)
 
         # Get log names
-        status, ret_value = self._myWorkflow.get_sample_log_names()
+        status, ret_value = self._myWorkflow.get_sample_log_names(smart)
         if status is False:
             errmsg = ret_value
             raise RuntimeError(errmsg)
-
-        log_name_list = sorted(ret_value)
+        else:
+            log_name_list = ret_value
 
         return log_name_list
 
@@ -653,7 +670,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # END-IF
 
         # Get the final data
-        sample_log_view = spview.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex])
+        sample_log_view = spview.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
         num_skipped_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
         self._snapViewWindow.setup(self._myWorkflow, sample_log_name, num_skipped_second)
@@ -661,6 +678,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._snapViewWindow.show()
 
         return
+
+    def _apply_slicer_snap_view(self):
+        """
+        Apply Slicers to all 6 view
+        :return:
+        """
+        vec_time, vec_y = self._myWorkflow.get_event_slicer_active(relative_time=True)
+
+        for snap_view_suite in self._groupedSnapViewList:
+            snap_view_suite.update_event_slicer(vec_time)
 
 
 if __name__=="__main__":

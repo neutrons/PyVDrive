@@ -59,25 +59,13 @@ class DialogLogSnapView(QtGui.QDialog):
         max_time = gutil.parse_float(self.ui.lineEdit_maxTime)
         self._move_time_boundary(self._horizontalIndicatorList[1], max_time)
 
-        # Type of filter
-        if self.ui.radioButton_useTimeInterval.isChecked() is True:
-            self.ui.lineEdit_minLogValue.setDisabled(True)
-            self.ui.lineEdit_maxLogValue.setDisabled(True)
-        elif self.ui.radioButton_useValue.isChecked() is True:
-            self.ui.lineEdit_minLogValue.setEnabled(True)
-            self.ui.lineEdit_maxLogValue.setEnabled(True)
-        else:
-            raise RuntimeError('Impossible situation for radio buttons!')
-
         # Value
-        if self.ui.radioButton_useValue.isChecked():
-            min_log_value = gutil.parse_float(self.ui.lineEdit_minLogValue)
-            max_log_value = gutil.parse_float(self.ui.lineEdit_maxLogTime)
-            v_id_0 = self.ui.graphicsView_main.add_horizontal_indicator(min_log_value, 'blue')
-            v_id_1 = self.ui.graphicsView_main.add_horizontal_indicator(max_log_value, 'blue')
-            self._verticalIndicatorList[0] = v_id_0
-            self._verticalIndicatorList[1] = v_id_1
-
+        min_log_value = gutil.parse_float(self.ui.lineEdit_minLogValue)
+        max_log_value = gutil.parse_float(self.ui.lineEdit_maxLogTime)
+        v_id_0 = self.ui.graphicsView_main.add_horizontal_indicator(min_log_value, 'blue')
+        v_id_1 = self.ui.graphicsView_main.add_horizontal_indicator(max_log_value, 'blue')
+        self._verticalIndicatorList[0] = v_id_0
+        self._verticalIndicatorList[1] = v_id_1
 
         return
 
@@ -134,10 +122,6 @@ class DialogLogSnapView(QtGui.QDialog):
         max_y = max(vec_y)
         self.ui.lineEdit_minLogValue.setText('%.5f' % min_y)
         self.ui.lineEdit_maxLogTime.setText('%.5f' % max_y)
-
-        # Set widgets
-        self.ui.radioButton_useTimeInterval.setChecked(True)
-        self.ui.radioButton_useValue.setChecked(False)
 
         return
 

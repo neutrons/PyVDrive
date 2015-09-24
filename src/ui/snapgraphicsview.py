@@ -36,12 +36,12 @@ class SnapGraphicsView(object):
     def combo_box1_value(self):
         """
         """
-        return self._comboBox1.currentText()
+        return str(self._comboBox1.currentText())
 
     def combo_box2_value(self):
         """
         """
-        return self._comboBox2.currentText()
+        return str(self._comboBox2.currentText())
 
     def is_selected(self):
         """
@@ -49,12 +49,68 @@ class SnapGraphicsView(object):
         assert isinstance(self._radioButton, QtGui.QRadioButton)
         return self._radioButton.isChecked()
 
+    def plot_data(self, vec_times, vec_log_value):
+        """
+
+        :param vec_times:
+        :param vec_log_value:
+        :param do_skip:
+        :param num_sec_skipped:
+        :return:
+        """
+        # Clear
+        self._graphicView.clear_all_lines()
+
+        # X and Y's limits
+        min_x = vec_times[0]
+        max_x = vec_times[-1]
+        if len(vec_times) == 1:
+            dx = 1.0
+        else:
+            dx = max_x - min_x
+
+        min_y = min(vec_log_value)
+        max_y = max(vec_log_value)
+        if len(vec_log_value) <= 2 and abs(max_y - min_y) < 1.E-10:
+            dy = 1.
+        else:
+            dy = max_y - min_y
+
+        self._graphicView.setXYLimits(min_x - 0.1*dx, max_x + 0.1*dx,
+                                      min_y - 0.1*dy, max_y + 0.1*dy)
+
+        # Plot
+        self._graphicView.add_plot_1d(vec_times, vec_log_value, marker='.', color='blue')
+
+        return
+
+    def set_combo_index(self, combo_index, item_index):
+        """
+        """
+        combo_box = getattr(self, '_comboBox%d' % combo_index)
+        assert isinstance(combo_box, QtGui.QComboBox)
+
+        combo_box.setCurrentIndex(item_index)
+
+        return
+
+    def reset_combo_items(self, combo_index, item_list):
+        """
+        """
+        combo_box = getattr(self, '_comboBox%d' % combo_index)
+        assert isinstance(combo_box, QtGui.QComboBox)
+
+        combo_box.clear()
+        combo_box.addItems(item_list)
+
+        return
+
 
 class SampleLogView(object):
     """
     Snap graphics view for sample environment logs
     """
-    def __init__(self, snapgraphicsview):
+    def __init__(self, snapgraphicsview, parent):
         """
         :param snapgraphicsview:
         :return:
@@ -65,31 +121,44 @@ class SampleLogView(object):
         else:
             raise NotImplementedError('Input error!')
 
+        self._myParent = parent
+
         return
 
     def get_log_name(self):
         """ Get current log name
         :return:
         """
-        return str(self._snapGraphicsView.combo_box1_value())
+        log_name = str(self._snapGraphicsView.combo_box1_value())
 
-    def plot_data(self, vec_times, vec_log_value, do_skip, num_sec_skipped):
+        log_name = log_name.split(' (')[0]
+
+        return log_name
+
+    def plot_sample_log(self, num_sec_skipped):
         """
-
-        :param vec_times:
-        :param vec_log_value:
-        :param do_skip:
-        :param num_sec_skipped:
+        :param num_skip_second:
         :return:
+        """
+        # Get log name from
+        log_name = self.get_log_name()
+        print '[DB] Re-plot log value %s' % log_name
+
+        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name)
+        # FIXME / TODO - make relative time
+        vec_times -= vec_times[0]
+
+        do_skip = False
+        num_sec_skipped = None
+
         """
         if do_skip is True:
             vec_plot_times, vec_plot_value = \
                 GuiUtility.skip_time(vec_times, vec_log_value, num_sec_skipped, 'second')
         else:
-            vec_plot_times = vec_times
-            vec_plot_value = vec_log_value
+        """
 
-        self._snapGraphicsView.canvas().add_plot_1d(vec_plot_times, vec_plot_value)
+        self._snapGraphicsView.plot_data(vec_times, vec_log_value)
 
         return
 
@@ -99,7 +168,7 @@ class SampleLogView(object):
         :param log_index:
         :return:
         """
-        self._snapGraphicsView.set_combo1_index(log_index)
+        self._snapGraphicsView.set_combo_index(1, log_index)
 
         return
 
@@ -110,6 +179,6 @@ class SampleLogView(object):
         :return:
         """
         assert isinstance(lognamelist, list)
-        self._snapGraphicsView.reset_combo1_items(lognamelist)
+        self._snapGraphicsView.reset_combo_items(1, lognamelist)
 
         return
