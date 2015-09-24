@@ -11,22 +11,78 @@ class SampleLogManager(object):
         Initialization
         :return:
         """
+        self._currentLogFile = ''
+
         self._workspace = None
         self._workspace_name = ''
         self._logNamesList = None
         self._logInfoList = None
 
+        # key = log file name (base name), sample log name
+        self._splitterWSDict = dict()
+
         return
 
-    def get_sample_log_names(self):
+    def create_splitters_by_time(self, start_time, stop_time, delta_time, unit='second', relative=True):
         """
-        Get all sample logs' names
+        Create splitters by time
+        :param start_time:
+        :param stop_time:
+        :param delta_time:
+        :param unit:
+        :param relative:
         :return:
         """
+        # Check
+        assert isinstance(start_time, float)
+        assert isinstance(stop_time, float)
+        assert isinstance(delta_time, float) or (delta_time is None)
+        assert isinstance(unit, str)
+        assert isinstance(relative, bool)
+        assert self._workspace
+
+        # Generate event filters
+        status, ret_obj = mtd.generate_event_filters(self._workspace, start_time, stop_time, delta_time, unit, relative)
+        if status is False:
+            return status, ret_obj
+
+        # Store
+        splitters, information = ret_obj
+        self._splitterWSDict[(self._currentLogFile, 'Time')] = (splitters, information)
+
+        return True, ''
+
+    def get_sample_log_names(self, with_info=False):
+        """
+        Get all sample logs' names
+        :param with_info: output name with more information i.e., size of sample log
+        :return:
+        """
+        # Check
         if self._workspace is None:
             return False, 'Log helper has no data.'
 
-        return True, self._logNamesList[:]
+        # Easy return
+        if with_info is False:
+            return True, self._logNamesList[:]
+
+        # Do something fun
+        self._logNamesList.sort()
+
+        ret_list = list()
+        single_value_list = list()
+
+        for log_name in self._logNamesList:
+            log_size = self._workspace.run().getProperty(log_name).size()
+            if log_size > 1:
+                ret_list.append('%s (%d)' % (log_name, log_size))
+            else:
+                single_value_list.append('%s (1)' % log_name)
+        # END-FOR
+
+        ret_list.extend(single_value_list)
+
+        return True, ret_list
 
     def get_sample_data(self, sample_log_name, relative):
         """
@@ -56,9 +112,17 @@ class SampleLogManager(object):
         :param nxs_file_name:
         :return:
         """
+        #
+        base_name = os.path.basename(nxs_file_name)
+        if base_name == self._currentLogFile:
+            return True, 'Try to reload sample logs of file %s' % base_name
+        else:
+            self._currentLogFile = base_name
+
         # Output ws name
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
 
+        # Load sample logs
         status, ret_obj = mtd.load_nexus(data_file_name=nxs_file_name,
                                          output_ws_name=out_ws_name,
                                          meta_data_only=True)
@@ -80,7 +144,31 @@ class SampleLogManager(object):
         self._logInfoList = mtd.get_sample_log_info(self._workspace)
 
         return True, ''
-   
-    def set_splitters(self):
+
+    def set_current_slicer_sample_log(self, sample_log_name):
+        """
+        TODOD
+        :param sample_log_name:
+        :return:
+        """
+        self._currentSplitterWS = self._splitterWSDict[(self._currentLogFile, sample_log_name)]
+
+        return
+
+    def set_current_slicer_time(self):
+        """
+        TODO
+        :return:
+        """
+        self._currentSplitterWS = self._splitterWSDict['Time']
+
+        return
+
+    def set_current_slicer_manaul(self):
+        """
+        TODO
+        :return:
+        """
+        self._currentSplitterWS = self._splitterWSDict['Manual']
 
         return

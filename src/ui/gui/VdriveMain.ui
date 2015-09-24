@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1473</width>
-    <height>973</height>
+    <width>1505</width>
+    <height>1014</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -294,6 +294,30 @@
               <string>CHOP</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_17">
+              <item row="1" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_23">
+                <item>
+                 <spacer name="horizontalSpacer_9">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_chopData">
+                  <property name="text">
+                   <string>Do Chop</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="0" column="0">
                <layout class="QVBoxLayout" name="verticalLayout_31">
                 <item>
@@ -463,38 +487,56 @@
                    </attribute>
                    <layout class="QGridLayout" name="gridLayout_4">
                     <item row="0" column="0">
-                     <layout class="QVBoxLayout" name="verticalLayout_30">
-                      <item>
+                     <layout class="QGridLayout" name="gridLayout_3">
+                      <item row="0" column="0">
                        <layout class="QHBoxLayout" name="horizontalLayout_25">
                         <item>
                          <widget class="QPushButton" name="pushButton_readSampleLogFile">
+                          <property name="font">
+                           <font>
+                            <weight>75</weight>
+                            <bold>true</bold>
+                           </font>
+                          </property>
                           <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tip: Select the run that you want to plot from the left-most data-tree. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
                           <property name="text">
-                           <string>read sample log file...</string>
+                           <string>Read Sample Log</string>
                           </property>
                          </widget>
                         </item>
-                       </layout>
-                      </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_24">
                         <item>
                          <widget class="QCheckBox" name="checkBox_logSkipSec">
+                          <property name="font">
+                           <font>
+                            <pointsize>9</pointsize>
+                           </font>
+                          </property>
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolution for plotting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
                           <property name="text">
-                           <string>Skip every</string>
+                           <string>skip every</string>
                           </property>
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLineEdit" name="lineEdit_numSecLogSkip"/>
+                         <widget class="QLineEdit" name="lineEdit_numSecLogSkip">
+                          <property name="font">
+                           <font>
+                            <pointsize>9</pointsize>
+                           </font>
+                          </property>
+                         </widget>
                         </item>
                         <item>
                          <widget class="QLabel" name="label_18">
+                          <property name="font">
+                           <font>
+                            <pointsize>9</pointsize>
+                           </font>
+                          </property>
                           <property name="text">
                            <string>sec</string>
                           </property>
@@ -502,147 +544,251 @@
                         </item>
                        </layout>
                       </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_26">
-                        <item>
-                         <widget class="QGroupBox" name="groupBox_14">
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="title">
-                           <string>Select plot on the right</string>
-                          </property>
-                          <layout class="QFormLayout" name="formLayout_2">
-                           <item row="0" column="0">
-                            <widget class="QRadioButton" name="radioButton_24">
-                             <property name="text">
-                              <string>plot 1</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="1">
-                            <widget class="QRadioButton" name="radioButton_28">
-                             <property name="text">
-                              <string>plot 2</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="1" column="0">
-                            <widget class="QRadioButton" name="radioButton_26">
-                             <property name="text">
-                              <string>plot 3</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="1" column="1">
-                            <widget class="QRadioButton" name="radioButton_29">
-                             <property name="text">
-                              <string>plot 4</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="2" column="0">
-                            <widget class="QRadioButton" name="radioButton_27">
-                             <property name="text">
-                              <string>plot 5</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="2" column="1">
-                            <widget class="QRadioButton" name="radioButton_30">
-                             <property name="text">
-                              <string>plot 6</string>
-                             </property>
-                            </widget>
-                           </item>
-                          </layout>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item>
-                       <widget class="QGroupBox" name="groupBox_3">
-                        <property name="title">
-                         <string>Selected sample from plot</string>
+                      <item row="2" column="0">
+                       <widget class="QGroupBox" name="groupBox_14">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
                         </property>
-                        <layout class="QVBoxLayout" name="verticalLayout_29">
-                         <item>
-                          <layout class="QHBoxLayout" name="horizontalLayout_28">
-                           <item>
-                            <widget class="QLabel" name="label_16">
-                             <property name="toolTip">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample value interval&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                             <property name="text">
-                              <string>Interval</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item>
-                            <widget class="QLineEdit" name="lineEdit_12"/>
-                           </item>
-                          </layout>
+                        <property name="toolTip">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                        <property name="title">
+                         <string>Slice by log value</string>
+                        </property>
+                        <layout class="QGridLayout" name="gridLayout_6">
+                         <item row="1" column="1">
+                          <widget class="QRadioButton" name="radioButton_plot4">
+                           <property name="text">
+                            <string>Plot 4</string>
+                           </property>
+                          </widget>
                          </item>
-                         <item>
-                          <layout class="QHBoxLayout" name="horizontalLayout_29">
-                           <item>
-                            <widget class="QCheckBox" name="checkBox_26">
-                             <property name="toolTip">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;minimum time for each segment from sample interval;&lt;/p&gt;&lt;p&gt;if the segment has time shorter than this setup, the statistic of the data is bad and thus to discard. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                             <property name="text">
-                              <string>Min time</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item>
-                            <widget class="QLineEdit" name="lineEdit_13"/>
-                           </item>
-                           <item>
-                            <widget class="QLabel" name="label_17">
-                             <property name="text">
-                              <string>Sec</string>
-                             </property>
-                            </widget>
-                           </item>
-                          </layout>
+                         <item row="2" column="0">
+                          <widget class="QRadioButton" name="radioButton_plot5">
+                           <property name="text">
+                            <string>Plot 5</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="2" column="1">
+                          <widget class="QRadioButton" name="radioButton_plot6">
+                           <property name="text">
+                            <string>Plot 6</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="0">
+                          <widget class="QRadioButton" name="radioButton_plot1">
+                           <property name="text">
+                            <string>Plot 1</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <widget class="QRadioButton" name="radioButton_plot2">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                           <property name="text">
+                            <string>Plot 2</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="1" column="0">
+                          <widget class="QRadioButton" name="radioButton_plot3">
+                           <property name="text">
+                            <string>Plot 3</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="2">
+                          <widget class="QPushButton" name="pushButton_applyLog">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                           <property name="minimumSize">
+                            <size>
+                             <width>80</width>
+                             <height>0</height>
+                            </size>
+                           </property>
+                           <property name="text">
+                            <string>Apply</string>
+                           </property>
+                          </widget>
                          </item>
                         </layout>
                        </widget>
                       </item>
-                      <item>
-                       <layout class="QHBoxLayout" name="horizontalLayout_30">
-                        <item>
-                         <widget class="QPushButton" name="pushButton_manualPicker">
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="text">
-                           <string>Manual Picker</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QPushButton" name="pushButton_pickSlicer">
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="text">
-                           <string>Pick</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QPushButton" name="pushButton_saveSlicer">
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save:&lt;/p&gt;&lt;p&gt;1. update to table in tab 'Load';&lt;/p&gt;&lt;p&gt;2. save to a file specified by user;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="text">
-                           <string>Save</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
+                      <item row="5" column="0">
+                       <widget class="QPushButton" name="pushButton_saveSlicer">
+                        <property name="font">
+                         <font>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="toolTip">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save:&lt;/p&gt;&lt;p&gt;1. update to table in tab 'Load';&lt;/p&gt;&lt;p&gt;2. save to a file specified by user;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                        <property name="text">
+                         <string>Save</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QGroupBox" name="groupBox_3">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="title">
+                         <string>Slice by time (second) relative to run start</string>
+                        </property>
+                        <layout class="QGridLayout" name="gridLayout_12">
+                         <item row="1" column="1">
+                          <widget class="QLineEdit" name="lineEdit_timeInterval">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="1" column="0">
+                          <widget class="QLabel" name="label_16">
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample value interval&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>Time Interval</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="2" column="0">
+                          <widget class="QLabel" name="label_7">
+                           <property name="text">
+                            <string>Stop</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="0">
+                          <widget class="QLabel" name="label_21">
+                           <property name="text">
+                            <string>Start</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="2" column="1">
+                          <widget class="QLineEdit" name="lineEdit_stopTime">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <widget class="QLineEdit" name="lineEdit_sliceStartTime">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="2">
+                          <widget class="QPushButton" name="pushButton_applyTimeInterval">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                           <property name="minimumSize">
+                            <size>
+                             <width>80</width>
+                             <height>0</height>
+                            </size>
+                           </property>
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create event data slicers. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. de-select plot1 through plot6;&lt;/p&gt;&lt;p&gt;2. if the number of slicers is not huge, then picture the slicers on snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>Apply</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QGroupBox" name="groupBox_8">
+                        <property name="title">
+                         <string>Slice by picking manually</string>
+                        </property>
+                        <layout class="QGridLayout" name="gridLayout_18">
+                         <item row="0" column="0">
+                          <widget class="QPushButton" name="pushButton_manualPicker">
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>Lauch Manual Picker</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="2">
+                          <widget class="QPushButton" name="pushButton_applyManual">
+                           <property name="sizePolicy">
+                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                             <horstretch>0</horstretch>
+                             <verstretch>0</verstretch>
+                            </sizepolicy>
+                           </property>
+                           <property name="minimumSize">
+                            <size>
+                             <width>80</width>
+                             <height>0</height>
+                            </size>
+                           </property>
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment of all 6 snap views.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. Identify the active picker (time, simple log value, or manual);&lt;/p&gt;&lt;p&gt;2. If the active one is time, then do nothing;&lt;/p&gt;&lt;p&gt;3. Apply the slicer boundaries to each snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>Apply</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <spacer name="horizontalSpacer_11">
+                           <property name="orientation">
+                            <enum>Qt::Horizontal</enum>
+                           </property>
+                           <property name="sizeHint" stdset="0">
+                            <size>
+                             <width>40</width>
+                             <height>20</height>
+                            </size>
+                           </property>
+                          </spacer>
+                         </item>
+                        </layout>
+                       </widget>
                       </item>
                      </layout>
                     </item>
@@ -652,29 +798,18 @@
                 </item>
                </layout>
               </item>
-              <item row="1" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_23">
-                <item>
-                 <spacer name="horizontalSpacer_9">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>40</width>
-                    <height>20</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_chopData">
-                  <property name="text">
-                   <string>Do Chop</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
+              <item row="2" column="0">
+               <spacer name="verticalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
              </layout>
             </widget>
@@ -690,8 +825,32 @@
                   <property name="title">
                    <string>Binning Option</string>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_14">
-                   <item>
+                  <layout class="QGridLayout" name="gridLayout_19">
+                   <item row="4" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_9">
+                     <item>
+                      <widget class="QCheckBox" name="checkBox_14">
+                       <property name="text">
+                        <string>Fullprof Data</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <spacer name="horizontalSpacer_4">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="0" column="0">
                     <layout class="QVBoxLayout" name="verticalLayout_13">
                      <item>
                       <widget class="QRadioButton" name="radioButton_3">
@@ -712,53 +871,7 @@
                      </item>
                     </layout>
                    </item>
-                   <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_12">
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_10">
-                       <item>
-                        <widget class="QLabel" name="label_9">
-                         <property name="text">
-                          <string>Bin width</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="lineEdit_15"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_12">
-                       <item>
-                        <widget class="QLabel" name="label_10">
-                         <property name="text">
-                          <string>Min tof</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="lineEdit_16"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_11">
-                       <item>
-                        <widget class="QLabel" name="label_11">
-                         <property name="text">
-                          <string>Max tof</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="lineEdit_17"/>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
+                   <item row="2" column="0">
                     <layout class="QVBoxLayout" name="verticalLayout_9">
                      <item>
                       <widget class="QGroupBox" name="groupBox_7">
@@ -766,37 +879,50 @@
                         <string>special</string>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_8">
-                        <item row="5" column="1">
-                         <layout class="QHBoxLayout" name="horizontalLayout_4">
-                          <item>
-                           <widget class="QLabel" name="label_12">
-                            <property name="text">
-                             <string>pixel size</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QLineEdit" name="lineEdit">
-                            <property name="toolTip">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of pixels to sum in vertical or horizonal direction on detectors&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
                         <item row="0" column="1">
                          <widget class="QCheckBox" name="checkBox_13">
                           <property name="toolTip">
                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin over pixel: sum spectrum among certain pixels. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                           </property>
                           <property name="text">
-                           <string>bin over pixel</string>
+                           <string>Bin over pixel</string>
                           </property>
                          </widget>
                         </item>
                         <item row="1" column="1">
-                         <layout class="QHBoxLayout" name="horizontalLayout_6">
-                          <item>
+                         <layout class="QGridLayout" name="gridLayout_23">
+                          <item row="0" column="1">
+                           <widget class="QRadioButton" name="radioButton_18">
+                            <property name="text">
+                             <string>Vertical</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="1" column="1">
+                           <widget class="QRadioButton" name="radioButton_17">
+                            <property name="text">
+                             <string>Horizontal</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="1" column="3">
+                           <widget class="QLineEdit" name="lineEdit">
+                            <property name="toolTip">
+                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of pixels to sum in vertical or horizonal direction on detectors&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="0" column="3">
+                           <widget class="QLabel" name="label_12">
+                            <property name="text">
+                             <string>Pixel size</string>
+                            </property>
+                            <property name="alignment">
+                             <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="0" column="0">
                            <spacer name="horizontalSpacer">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
@@ -812,24 +938,10 @@
                             </property>
                            </spacer>
                           </item>
-                          <item>
-                           <widget class="QRadioButton" name="radioButton_17">
-                            <property name="text">
-                             <string>Horizontal</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
-                        <item row="3" column="1">
-                         <layout class="QHBoxLayout" name="horizontalLayout_7">
-                          <item>
+                          <item row="0" column="2">
                            <spacer name="horizontalSpacer_2">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeType">
-                             <enum>QSizePolicy::Fixed</enum>
                             </property>
                             <property name="sizeHint" stdset="0">
                              <size>
@@ -839,13 +951,6 @@
                             </property>
                            </spacer>
                           </item>
-                          <item>
-                           <widget class="QRadioButton" name="radioButton_18">
-                            <property name="text">
-                             <string>Vertical</string>
-                            </property>
-                           </widget>
-                          </item>
                          </layout>
                         </item>
                        </layout>
@@ -853,36 +958,36 @@
                      </item>
                     </layout>
                    </item>
-                   <item>
+                   <item row="3" column="0">
                     <layout class="QVBoxLayout" name="verticalLayout_15">
                      <item>
                       <widget class="QGroupBox" name="groupBox_15">
                        <property name="title">
                         <string>Corrections</string>
                        </property>
-                       <layout class="QVBoxLayout" name="verticalLayout_16">
-                        <item>
+                       <layout class="QGridLayout" name="gridLayout_21">
+                        <item row="0" column="0">
                          <widget class="QCheckBox" name="checkBox_21">
                           <property name="text">
                            <string>Substract backgroud</string>
                           </property>
                          </widget>
                         </item>
-                        <item>
+                        <item row="1" column="0">
                          <widget class="QCheckBox" name="checkBox_22">
                           <property name="text">
-                           <string>Normalized int to V</string>
+                           <string>Normalized intensity to vanadium</string>
                           </property>
                          </widget>
                         </item>
-                        <item>
+                        <item row="2" column="0">
                          <widget class="QCheckBox" name="checkBox_23">
                           <property name="text">
                            <string>Substract special pattern</string>
                           </property>
                          </widget>
                         </item>
-                        <item>
+                        <item row="3" column="0">
                          <layout class="QHBoxLayout" name="horizontalLayout_8">
                           <item>
                            <spacer name="horizontalSpacer_3">
@@ -917,42 +1022,69 @@
                      </item>
                     </layout>
                    </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_9">
+                   <item row="1" column="0">
+                    <layout class="QVBoxLayout" name="verticalLayout_12">
                      <item>
-                      <widget class="QCheckBox" name="checkBox_14">
-                       <property name="text">
-                        <string>Fullprof Data</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_4">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_13">
-                     <item>
-                      <widget class="QPushButton" name="pushButton_14">
-                       <property name="text">
-                        <string>Do BIN</string>
-                       </property>
-                      </widget>
+                      <layout class="QGridLayout" name="gridLayout_22">
+                       <item row="2" column="0">
+                        <widget class="QLabel" name="label_11">
+                         <property name="text">
+                          <string>Max tof</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="0">
+                        <widget class="QLabel" name="label_9">
+                         <property name="text">
+                          <string>Bin width</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_10">
+                         <property name="text">
+                          <string>Min tof</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="1">
+                        <widget class="QLineEdit" name="lineEdit_17"/>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QLineEdit" name="lineEdit_16"/>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QLineEdit" name="lineEdit_15"/>
+                       </item>
+                      </layout>
                      </item>
                     </layout>
                    </item>
                   </layout>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="verticalSpacer_3">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>40</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <layout class="QGridLayout" name="gridLayout_20">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pushButton_14">
+                  <property name="text">
+                   <string>Do BIN</string>
+                  </property>
                  </widget>
                 </item>
                </layout>
@@ -1460,20 +1592,32 @@
        </layout>
       </item>
       <item>
-       <widget class="QPlainTextEdit" name="plainTextEdit_LogInfo"/>
+       <widget class="QPlainTextEdit" name="plainTextEdit_LogInfo">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="checkBox_plotInFloat2">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
+      <item row="3" column="1">
        <widget class="MplGraphicsView" name="graphicsView_snapView4">
         <property name="minimumSize">
          <size>
@@ -1499,17 +1643,10 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_plotInFloat1">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
+      <item row="5" column="1">
        <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
       </item>
-      <item row="5" column="0">
+      <item row="4" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <widget class="QComboBox" name="comboBox_g31">
@@ -1533,7 +1670,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="3" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView3">
         <property name="minimumSize">
          <size>
@@ -1574,7 +1711,7 @@
         </item>
        </layout>
       </item>
-      <item row="5" column="1">
+      <item row="4" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_32">
         <item>
          <widget class="QComboBox" name="comboBox_g41"/>
@@ -1584,7 +1721,7 @@
         </item>
        </layout>
       </item>
-      <item row="8" column="0">
+      <item row="6" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_33">
         <item>
          <widget class="QComboBox" name="comboBox_g51"/>
@@ -1594,7 +1731,7 @@
         </item>
        </layout>
       </item>
-      <item row="8" column="1">
+      <item row="6" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_34">
         <item>
          <widget class="QComboBox" name="comboBox_g61"/>
@@ -1604,36 +1741,8 @@
         </item>
        </layout>
       </item>
-      <item row="7" column="0">
+      <item row="5" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
-      </item>
-      <item row="3" column="0">
-       <widget class="QCheckBox" name="checkBox_plotInFloat3">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QCheckBox" name="checkBox_plotInFloat4">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QCheckBox" name="checkBox_plotInFloat5">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="1">
-       <widget class="QCheckBox" name="checkBox_plotInFloat6">
-        <property name="text">
-         <string>Plot in floating windows</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </item>
@@ -1651,8 +1760,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1473</width>
-     <height>22</height>
+     <width>1505</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1780,14 +1889,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>MplGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mplgraphicsview.h</header>
-  </customwidget>
-  <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdriverunmanagertree.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MplGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview.h</header>
   </customwidget>
   <customwidget>
    <class>FileSystemTreeView</class>

@@ -30,6 +30,7 @@ class VDriveAPI(object):
         self._myWorkDir = '/tmp/'
 
         self._currentIPTS = -1
+        self._myLastDataDirectory = '/tmp'
 
         # Project
         self._myProject = vp.VDProject('Temp')
@@ -80,6 +81,13 @@ class VDriveAPI(object):
         """
         return self._myProject.get_ipts_runs()
 
+    def get_recent_data_directory(self):
+        """
+        Get the last accessed data directory
+        :return:
+        """
+        return self._myLastDataDirectory
+
     def get_working_dir(self):
         """
         Working directory
@@ -92,6 +100,27 @@ class VDriveAPI(object):
         :return: data root directory, such as /SNS/VULCAN
         """
         return self._myRootDataDir
+
+    def get_event_slicer(self, active, slicer_id=None, relative_time=True):
+        """
+
+        :param active: if True, then use the current one, if False, look into ID
+        :param slicer_id: log name, manual, time (decreasing priority)
+        :param relative_time: if True, time is in relative to run_start
+        :return: vector of floats as time in unit of second
+        """
+        if active is True:
+            vec_time = self._myLogHelper.current_slicer_time()
+        elif slicer_id in self._myLogHelper.get_sample_log_names():
+            vec_time = self._myLogHelper.get_slicer_by_log(slicer_id)
+        elif slicer_id.lower() == 'manual':
+            vec_time = self._myLogHelper.get_slicer_manual()
+        elif slicer_id.lower() == 'time':
+            vec_time = self._myLogHelper.get_slicer_by_time()
+        else:
+            raise RuntimeError('Slicer ID %s is not supported.' % slicer_id)
+
+        return vec_time
 
     def get_file_by_run(self, run_number):
         """ Get data file path by run number
@@ -164,22 +193,27 @@ class VDriveAPI(object):
 
         return status, errmsg
 
-    def get_sample_log_names(self):
+    def get_sample_log_names(self, smart=False):
         """
         Get names of sample log with time series property
+        :param smart: a smart way to show sample log name with more information
         :return:
         """
         if self._myLogHelper is None:
             return False, 'Log helper has not been initialized.'
 
-        status, name_list = self._myLogHelper.get_sample_log_names()
+        status, ret_obj = self._myLogHelper.get_sample_log_names(with_info=smart)
         if status is False:
-            return False, str(name_list)
+            return False, str(ret_obj)
+        else:
+            name_list = ret_obj
 
+        """ Debug ...
         dbstr = 'Total %d sample logs\n' % len(name_list)
         for name in name_list:
             dbstr += '%s\n' % name
         print '\n[DB] %s\n' % dbstr
+        """
 
         return True, name_list
 
@@ -191,6 +225,7 @@ class VDriveAPI(object):
         :param relative: if True, then the sample log's vec_time will be relative to Run_start
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
+        assert isinstance(log_name, str)
         try:
             vec_times, vec_value = self._myLogHelper.get_sample_data(log_name, relative)
         except RuntimeError as e:
@@ -266,6 +301,27 @@ class VDriveAPI(object):
             return False, 'Unable to set IPTS number due to %s.' % str(e)
 
         return True, ''
+
+    def set_slicer(self, splitter_src, sample_log_name=None):
+        """ Set slicer from
+        'SampleLog', 'Time', 'Manual'
+        :param splitter_src:
+        :param sample_log_name:
+        :return:
+        """
+        splitter_src = splitter_src.lower()
+
+        if splitter_src == 'samplelog':
+            assert isinstance(sample_log_name, str)
+            self._myLogHelper.set_current_slicer_sample_log(sample_log_name)
+        elif splitter_src == 'time':
+            self._myLogHelper.set_current_slicer_time()
+        elif splitter_src == 'manual':
+            self._myLogHelper.set_current_slicer_manaul()
+        else:
+            raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
+
+        return
 
     def set_working_directory(self, work_dir):
         """
