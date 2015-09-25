@@ -150,44 +150,69 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="tab">
                 <attribute name="title">
                  <string>Sequential</string>
                 </attribute>
-                <layout class="QGridLayout" name="gridLayout_5">
-                 <item row="0" column="0" colspan="2">
+                <layout class="QVBoxLayout" name="verticalLayout_16">
+                 <item>
                   <widget class="QLabel" name="label">
                    <property name="text">
-                    <string>Select first and last runs ( can be reversed)</string>
+                    <string>Select first and last runs</string>
                    </property>
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="1">
-                  <widget class="QLineEdit" name="lineEdit_runLast"/>
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_24">
+                   <item row="2" column="0">
+                    <widget class="QLabel" name="label_17">
+                     <property name="text">
+                      <string>Last Run</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QLineEdit" name="lineEdit_runFiirst"/>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QLabel" name="label_5">
+                     <property name="text">
+                      <string>First Run</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="2">
+                    <widget class="QPushButton" name="pushButton_setRunLast">
+                     <property name="text">
+                      <string>Set</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QLineEdit" name="lineEdit_runLast"/>
+                   </item>
+                   <item row="1" column="2">
+                    <widget class="QPushButton" name="pushButton_setRunFirst">
+                     <property name="text">
+                      <string>Set</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="2">
+                    <widget class="QPushButton" name="pushButton_selectAllRuns">
+                     <property name="text">
+                      <string>Select All</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
-                 <item row="3" column="0">
-                  <widget class="QPushButton" name="pushButton_4">
-                   <property name="text">
-                    <string>Last Run</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QPushButton" name="pushButton_runFirst">
-                   <property name="text">
-                    <string>First Run</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="lineEdit_runFiirst"/>
-                 </item>
-                 <item row="4" column="0">
+                 <item>
                   <spacer name="verticalSpacer_2">
                    <property name="orientation">
                     <enum>Qt::Vertical</enum>
@@ -200,62 +225,110 @@
                    </property>
                   </spacer>
                  </item>
-                 <item row="1" column="0">
-                  <widget class="QPushButton" name="pushButton_2">
-                   <property name="text">
-                    <string>Select All</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
                <widget class="QWidget" name="tab_2">
                 <attribute name="title">
                  <string>Individual</string>
                 </attribute>
-                <layout class="QFormLayout" name="formLayout">
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <item row="1" column="0" colspan="2">
-                  <widget class="QTableView" name="tableView_selectedRuns">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>200</height>
-                    </size>
-                   </property>
-                   <property name="sortingEnabled">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
+                <layout class="QVBoxLayout" name="verticalLayout_14">
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_4">
+                   <item>
+                    <widget class="QLabel" name="label_2">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in or add from left folder tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string>Select individual runs </string>
+                     </property>
+                     <property name="textFormat">
+                      <enum>Qt::AutoText</enum>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer_10">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QCheckBox" name="checkBox_selectRuns">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select or deselect all runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
-                 <item row="2" column="0">
-                  <widget class="QPushButton" name="pushButton_6">
-                   <property name="text">
-                    <string> Sort runs</string>
-                   </property>
-                  </widget>
+                 <item>
+                  <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
                  </item>
-                 <item row="2" column="1">
-                  <widget class="QCheckBox" name="checkBox">
-                   <property name="text">
-                    <string>Decending</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0" colspan="2">
-                  <widget class="QLabel" name="label_2">
-                   <property name="text">
-                    <string>Select individual runs (type in or add from left folder tree)</string>
-                   </property>
-                   <property name="textFormat">
-                    <enum>Qt::AutoText</enum>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_25">
+                   <item row="0" column="0">
+                    <widget class="QPushButton" name="pushButton_sortSelectedRuns">
+                     <property name="text">
+                      <string>Sort Runs</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QCheckBox" name="checkBox">
+                     <property name="text">
+                      <string>Decending</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QLineEdit" name="lineEdit_runsToAdd">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QPushButton" name="pushButton_addRuns">
+                     <property name="text">
+                      <string>Add Runs</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="0">
+                    <widget class="QPushButton" name="pushButton_deleteRuns">
+                     <property name="text">
+                      <string>Delete Runs</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QLineEdit" name="lineEdit_runsToDelete">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
                </widget>
@@ -448,7 +521,7 @@
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>1</number>
+                   <number>0</number>
                   </property>
                   <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
@@ -1902,6 +1975,11 @@
    <class>FileSystemTreeView</class>
    <extends>QTreeView</extends>
    <header>filesystemtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VdriveRunTableWidget</class>
+   <extends>QTableWidget</extends>
+   <header>vdrivetablewidgets.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

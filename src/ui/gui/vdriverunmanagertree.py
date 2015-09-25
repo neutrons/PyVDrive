@@ -15,10 +15,15 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
 
         self.init_setup(['IPTS-Run'])
 
+        # Add actions
+        action_add = QtGui.QAction('Add To Reduce', self)
+        action_add.triggered.connect(self.do_add_runs)
+        self.addAction(action_add)
+
         # Disable all the actions
         m_actions = self.actions()
         for m_action in m_actions:
-            if str(m_action.text()) != 'Info':
+            if str(m_action.text()) != 'Info' or str(m_action.text()) != 'Add To Reduce':
                 m_action.setEnabled(False)
 
         self._mainWindow = None

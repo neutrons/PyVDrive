@@ -66,6 +66,21 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_read_sample_log_file)
 
         # Column 2
+        # select and set runs from run-info-tree
+        self.connect(self.ui.pushButton_selectAllRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_select_all_runs)
+        self.connect(self.ui.pushButton_setRunFirst, QtCore.SIGNAL('clicked()'),
+                     self.do_set_first_run)
+        self.connect(self.ui.pushButton_setRunLast, QtCore.SIGNAL('clicked()'),
+                     self.do_set_last_run)
+
+        self.connect(self.ui.checkBox_selectRuns, QtCore.SIGNAL('stateChanged(int)'),
+                     self.do_update_selected_runs)
+        self.connect(self.ui.pushButton_addRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_add_runs_to_reduce)
+        self.connect(self.ui.pushButton_deleteRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_remove_runs_from_reduction)
+
         self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_chop_run_state_change)
         self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
