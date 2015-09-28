@@ -240,7 +240,6 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         return
 
-
     def clear_tree(self):
         """
         Clear the items in the tree
@@ -252,7 +251,6 @@ class CustomizedTreeView(QtGui.QTreeView):
         self.model().setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
 
         return
-
 
     def _add_child_item(self, parent_item, child_item_value, append):
         """
@@ -292,4 +290,34 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         return
 
+    def get_selected_items(self):
+        """
+        Get selected items
+        :return: list of QModelItems
+        """
+        qindex_list = self.selectedIndexes()
 
+        item_list = list()
+        error_message = ''
+
+        for qindex in qindex_list:
+            # check
+            if isinstance(qindex, QtCore.QModelIndex) is True:
+                # get item and check
+                qitem = self.model().itemFromIndex(qindex)
+                if isinstance(qitem, QtGui.QStandardItem) is True:
+                    assert isinstance(qitem, QtGui.QStandardItem)
+                    item_list.append(qitem)
+                else:
+                    error_message += 'Found index %s is not a QModelIndex instance, ' \
+                                 'but of type %s.' % (str(qindex), str(type(qindex)))
+            else:
+                error_message += 'Item of index %s not a QStandardItem instance, ' \
+                                 'but of type %s.' % (str(qindex), str(type(qitem)))
+            # END-IF-ELSE
+        # END-FOR
+
+        if len(error_message) > 0:
+            print '[Error] %s' % error_message
+
+        return item_list

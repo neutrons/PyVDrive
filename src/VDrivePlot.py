@@ -69,17 +69,15 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # select and set runs from run-info-tree
         self.connect(self.ui.pushButton_selectAllRuns, QtCore.SIGNAL('clicked()'),
                      self.do_select_all_runs)
-        self.connect(self.ui.pushButton_setRunFirst, QtCore.SIGNAL('clicked()'),
-                     self.do_set_first_run)
-        self.connect(self.ui.pushButton_setRunLast, QtCore.SIGNAL('clicked()'),
-                     self.do_set_last_run)
+        self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
+                     self.do_add_runs_to_reduce)
 
         self.connect(self.ui.checkBox_selectRuns, QtCore.SIGNAL('stateChanged(int)'),
                      self.do_update_selected_runs)
-        self.connect(self.ui.pushButton_addRuns, QtCore.SIGNAL('clicked()'),
-                     self.do_add_runs_to_reduce)
         self.connect(self.ui.pushButton_deleteRuns, QtCore.SIGNAL('clicked()'),
                      self.do_remove_runs_from_reduction)
+        self.connect(self.ui.pushButton_sortSelectedRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_sort_selected_runs)
 
         self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_chop_run_state_change)
@@ -146,6 +144,63 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def do_update_selected_runs(self):
+        """
+        # TODO/FIXME
+        :return:
+        """
+        curr_state = self.ui.checkBox_selectRuns.isChecked()
+
+        self.ui.tableWidget_selectedRuns.select_all_rows(curr_state)
+
+        return
+
+    def do_remove_runs_from_reduction(self):
+        """
+        TODO/FIXME
+        :return:
+        """
+        # get run to delete
+        try:
+            remove_run = guiutil.parse_integer(self.ui.lineEdit_runsToDelete)
+        except ValueError as ve:
+            guiutil.pop_dialog_error(str(ve))
+            return
+
+        # determine the rows for the runs to delete
+        if remove_run is not None:
+            row_number_list = self.ui.tableWidget_selectedRuns.get_rows_by_run([remove_run])
+            # check
+            if row_number_list[0] < 0:
+                guiutil.pop_dialog_error(self, 'Run number %d is not in the selected runs.' % remove_run)
+                return
+            else:
+                self.ui.lineEdit_runsToDelete.setText('')
+        else:
+            row_number_list = self.ui.tableWidget_selectedRuns.get_selected_rows()
+            if len(row_number_list) == 0:
+                guiutil.pop_dialog_error(self, 'There is no run selected to delete.')
+                return
+
+        # delete
+        self.ui.tableWidget_selectedRuns.remove_rows(row_number_list)
+
+        return
+
+    def do_sort_selected_runs(self):
+        """
+        TODO/FIXME
+        :return:
+        """
+        sort_order = self.ui.checkBox_runsOrderDescend.isChecked()
+
+        if sort_order is False:
+            self.ui.tableWidget_selectedRuns.sortByColumn(0, 0)
+        else:
+            self.ui.tableWidget_selectedRuns.sortByColumn(0, 1)
+
+        return
+
     def _init_widgets(self):
         """ Initialize widgets including
         (1) project runs view
@@ -162,6 +217,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.treeView_iptsRun.setColumnWidth(1, 60)
         self.ui.treeView_iptsRun.setDragEnabled(True)
         '''
+
+        # Selecting runs
+        self.ui.tableWidget_selectedRuns.setup()
+        self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
         self.ui.checkBox_chopRun.setCheckState(QtCore.Qt.Unchecked)
@@ -269,6 +328,24 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return
+
+    def do_add_runs_to_reduce(self):
+        """
+        TODO/FIXME
+        :return:
+        """
+        start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
+        end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+
+        status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
+        if status is True:
+            run_list = ret_obj
+            self.ui.tableWidget_selectedRuns.append_runs(run_list)
+        else:
+            error_message = ret_obj
+            guiutil.pop_dialog_error(error_message)
 
         return
 
@@ -426,6 +503,23 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """ Save the slicer (splitters) for future splitting
         :return:
         """
+        guiutil.pop_dialog_error('ASAP')
+
+    def do_select_all_runs(self):
+        # TODO/FIXME
+        """
+
+        :return:
+        """
+        status, ret_obj = self._myWorkflow.get_runs()
+        if status is True:
+            run_list = ret_obj
+            self.ui.tableWidget_selectedRuns.append_runs(run_list)
+        else:
+            error_message = ret_obj
+            guiutil.pop_dialog_error(error_message)
+
+        return
 
     def evt_chop_run_state_change(self):
         """
@@ -694,6 +788,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def set_selected_runs(self, run_list):
+        """ Set selected runs from a list
+        :param run_list:
+        :return:
+        """
+        assert isinstance(run_list, list)
+        assert len(run_list) > 0
+
+        self.ui.tableWidget_selectedRuns.append_runs(run_list)
+
+        return
+
     def _apply_slicer_snap_view(self):
         """
         Apply Slicers to all 6 view
@@ -703,6 +809,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         for snap_view_suite in self._groupedSnapViewList:
             snap_view_suite.update_event_slicer(vec_time)
+
+        return
 
 
 if __name__=="__main__":

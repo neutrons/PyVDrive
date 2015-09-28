@@ -88,9 +88,9 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         return
 
 
-
 Run_Selection_Table_Setup = [('Run Number', 'float'),
                              ('', 'checkbox')]
+
 
 class VdriveRunTableWidget(NT.NTableWidget):
     """
@@ -99,6 +99,38 @@ class VdriveRunTableWidget(NT.NTableWidget):
         """
         """
         NT.NTableWidget.__init__(self, parent)
+
+    def append_runs(self, run_list):
+        """
+        Append a number of (experiment) runs to table
+        :param run_list:
+        :return:
+        """
+        for run in run_list:
+            self.append_row([run, False])
+
+        return
+
+    def get_rows_by_run(self, run_list):
+        """
+
+        :return:
+        """
+        assert isinstance(run_list, list)
+
+        row_number_list = list()
+        num_rows = self.rowCount()
+        for run_number in run_list:
+            match_row_number = -1
+            for i_row in xrange(num_rows):
+                temp_row_number = self.get_cell_value(i_row, 0)
+                if run_number == temp_row_number:
+                    match_row_number = i_row
+                    break
+            row_number_list.append(match_row_number)
+        # END-FOR
+
+        return row_number_list
 
     def setup(self):
         """

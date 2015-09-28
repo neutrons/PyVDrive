@@ -80,7 +80,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         # Disable all the actions
         m_actions = self.actions()
         for m_action in m_actions:
-            if str(m_action.text()) != 'Info' or str(m_action.text()) != 'Add To Reduce':
+            if str(m_action.text()) != 'Info' and str(m_action.text()) != 'Add To Reduce':
                 m_action.setEnabled(False)
 
         self._mainWindow = None
@@ -120,14 +120,46 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
 
         return
 
+    def do_add_runs(self):
+        """
+        Add selected runs
+        :return:
+        """
+        item_list = self.get_selected_items()
+        run_list = list()
+
+        for item in item_list:
+            run_str = str(item.text())
+            try:
+                run = int(run_str)
+                run_list.append(run)
+            except ValueError as exception:
+                print '[Error] Unable to convert run item with text %s to integer' % run_str
+                #raise exception
+        # END-FOR
+
+        # sort
+        run_list.sort()
+        print '[DB] Runs selected: ', run_list
+
+        # set values
+        # FIXME - Better to use signals???
+        if self._mainWindow is not None:
+            self._mainWindow.set_selected_runs(run_list)
+
+        return run_list
+
     def get_current_run(self):
         """ Get current run selected by mouse
-        :return:
+        note: if multiple items are selected,
+          (1) currentIndex() returns the first selected item
+          (2) selectedIndexes() returns all the selected items
+        :return: status, run number in integer
         """
         # Get current index and item
         current_index = self.currentIndex()
         if isinstance(current_index, QtCore.QModelIndex) is False:
-            return False, 'Current index is not QModeIndex instance, but %s.' % str(type(current_index))
+            return False, 'Current index is not QModelIndex instance, but %s.' % str(type(current_index))
 
         assert(isinstance(current_index, QtCore.QModelIndex))
 

@@ -72,6 +72,7 @@ def convert_to_qdate_epoch(epoch_time):
 def parse_integer(line_edit):
     """
     Parse a line edit to an integer value
+    :exception: ValueError
     :param line_edit:
     :return: integer or None
     """

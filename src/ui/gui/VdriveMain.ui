@@ -150,7 +150,7 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="tab">
                 <attribute name="title">
@@ -177,7 +177,7 @@
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QLineEdit" name="lineEdit_runFiirst"/>
+                    <widget class="QLineEdit" name="lineEdit_runFirst"/>
                    </item>
                    <item row="1" column="0">
                     <widget class="QLabel" name="label_5">
@@ -186,27 +186,20 @@
                      </property>
                     </widget>
                    </item>
-                   <item row="2" column="2">
-                    <widget class="QPushButton" name="pushButton_setRunLast">
-                     <property name="text">
-                      <string>Set</string>
-                     </property>
-                    </widget>
-                   </item>
                    <item row="2" column="1">
                     <widget class="QLineEdit" name="lineEdit_runLast"/>
                    </item>
                    <item row="1" column="2">
-                    <widget class="QPushButton" name="pushButton_setRunFirst">
+                    <widget class="QPushButton" name="pushButton_addRunsToReduce">
                      <property name="text">
-                      <string>Set</string>
+                      <string>Add</string>
                      </property>
                     </widget>
                    </item>
                    <item row="3" column="2">
                     <widget class="QPushButton" name="pushButton_selectAllRuns">
                      <property name="text">
-                      <string>Select All</string>
+                      <string>Add All</string>
                      </property>
                     </widget>
                    </item>
@@ -287,44 +280,27 @@
                      </property>
                     </widget>
                    </item>
-                   <item row="0" column="1">
-                    <widget class="QCheckBox" name="checkBox">
-                     <property name="text">
-                      <string>Decending</string>
-                     </property>
-                    </widget>
-                   </item>
                    <item row="1" column="1">
-                    <widget class="QLineEdit" name="lineEdit_runsToAdd">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="1" column="0">
-                    <widget class="QPushButton" name="pushButton_addRuns">
-                     <property name="text">
-                      <string>Add Runs</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="0">
-                    <widget class="QPushButton" name="pushButton_deleteRuns">
-                     <property name="text">
-                      <string>Delete Runs</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="1">
                     <widget class="QLineEdit" name="lineEdit_runsToDelete">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                        <horstretch>0</horstretch>
                        <verstretch>0</verstretch>
                       </sizepolicy>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QCheckBox" name="checkBox_runsOrderDescend">
+                     <property name="text">
+                      <string>Decending</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QPushButton" name="pushButton_deleteRuns">
+                     <property name="text">
+                      <string>Delete Runs</string>
                      </property>
                     </widget>
                    </item>
