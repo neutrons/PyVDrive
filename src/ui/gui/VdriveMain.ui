@@ -150,7 +150,7 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>1</number>
+                <number>0</number>
                </property>
                <widget class="QWidget" name="tab">
                 <attribute name="title">
@@ -1964,7 +1964,7 @@
   <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
-   <header>vdriverunmanagertree.h</header>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
    <class>MplGraphicsView</class>
@@ -1974,7 +1974,7 @@
   <customwidget>
    <class>FileSystemTreeView</class>
    <extends>QTreeView</extends>
-   <header>filesystemtreeview.h</header>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
    <class>VdriveRunTableWidget</class>

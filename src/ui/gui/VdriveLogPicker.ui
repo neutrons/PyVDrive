@@ -756,7 +756,7 @@
   <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
-   <header>vdriverunmanagertree.h</header>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
    <class>MplGraphicsView</class>
@@ -766,7 +766,7 @@
   <customwidget>
    <class>DataSlicerSegmentTable</class>
    <extends>QTableWidget</extends>
-   <header>dataslicersegmenttable.h</header>
+   <header>vdrivetablewidgets.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
