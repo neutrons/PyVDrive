@@ -67,11 +67,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Column 2
         # select and set runs from run-info-tree
-        self.connect(self.ui.pushButton_selectAllRuns, QtCore.SIGNAL('clicked()'),
-                     self.do_select_all_runs)
         self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_to_reduce)
-
         self.connect(self.ui.checkBox_selectRuns, QtCore.SIGNAL('stateChanged(int)'),
                      self.do_update_selected_runs)
         self.connect(self.ui.pushButton_deleteRuns, QtCore.SIGNAL('clicked()'),
@@ -92,6 +89,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_pick_manual)
         self.connect(self.ui.pushButton_applyLog, QtCore.SIGNAL('clicked()'),
                      self.do_pick_log)
+
+        # Tab-2
+        self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
+                     self.do_bin_data)
 
         # Column 4
         self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
@@ -143,6 +144,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._calibCriteriaFile = ''
 
         return
+
+    def do_bin_data(self):
+        """ Bin a set of data
+        :return:
+        """
+        # TODO/FIXME - NOW!
+        selection_list = [self.ui.radioButton_binStandard,
+                          self.ui.radioButton_binCustomized]
+
+
+
 
     def do_update_selected_runs(self):
         """
@@ -336,16 +348,29 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         TODO/FIXME
         :return:
         """
-        start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
-        end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+        if self.ui.radioButton_runsAddAll.isChecked():
+            # Case as select all
+            status, ret_obj = self._myWorkflow.get_runs()
+            if status is True:
+                run_list = ret_obj
+                self.ui.tableWidget_selectedRuns.append_runs(run_list)
+            else:
+                error_message = ret_obj
+                guiutil.pop_dialog_error(error_message)
 
-        status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
-        if status is True:
-            run_list = ret_obj
-            self.ui.tableWidget_selectedRuns.append_runs(run_list)
+        elif self.ui.radioButton_runsAddPartial.isChecked():
+            # Case as select a subset
+            start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
+            end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+            status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
+            if status is True:
+                run_list = ret_obj
+                self.ui.tableWidget_selectedRuns.append_runs(run_list)
+            else:
+                error_message = ret_obj
+                guiutil.pop_dialog_error(error_message)
         else:
-            error_message = ret_obj
-            guiutil.pop_dialog_error(error_message)
+            raise RuntimeError('None radio button for select runs is selected.  Logically wrong!')
 
         return
 
@@ -504,22 +529,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :return:
         """
         guiutil.pop_dialog_error('ASAP')
-
-    def do_select_all_runs(self):
-        # TODO/FIXME
-        """
-
-        :return:
-        """
-        status, ret_obj = self._myWorkflow.get_runs()
-        if status is True:
-            run_list = ret_obj
-            self.ui.tableWidget_selectedRuns.append_runs(run_list)
-        else:
-            error_message = ret_obj
-            guiutil.pop_dialog_error(error_message)
-
-        return
 
     def evt_chop_run_state_change(self):
         """
