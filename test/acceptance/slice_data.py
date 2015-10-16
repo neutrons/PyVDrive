@@ -139,41 +139,6 @@ def set_ipts_runs(step):
 
     return
 
-@step(u'I save current session to a file')
-def save_session(step):
-    """ Save sessions
-    """
-    wk_flow = my_data.get()
-    assert(isinstance(wk_flow, vdapi.VDriveAPI))
-
-    status, filename = wk_flow.save_session('test2345.xml')
-    work_dir = wk_flow.get_working_dir()
-    assert_true(status)
-    assert_equals(work_dir, os.path.expanduser('~/Temp/VDriveTest/'))
-    assert_equals(filename, os.path.join(work_dir, 'test2345.xml'))
-
-    return
-
-@step(u'I create a new VDriveAPI project and load saved session file to it')
-def load_session(step):
-    """ Load session to a new workflow instance
-    :param step:
-    :return:
-    """
-    # Create a new workflow and load the file to the new workflow instance
-    new_wk_flow = vdapi.VDriveAPI()
-    saved_file_name = os.path.join(new_wk_flow.get_working_dir, 'test2345.xml')
-    new_wk_flow.load_session(saved_file_name)
-
-    # Compare the new workflow and old one
-    wk_flow = my_data.get()
-    assert(isinstance(wk_flow, vdapi.VDriveAPI))
-
-    assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
-    assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())
-
-    return
-
 @step(u'I input name of a sample log to get its data')
 def input_sample_log_name(step):
     """
