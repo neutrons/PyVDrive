@@ -67,20 +67,6 @@ class NTableWidget(QtGui.QTableWidget):
 
         return True, ret_msg
 
-    def get_selected_rows(self):
-        """
-
-        :return:
-        """
-        rows_list = list()
-        index_status = self._myColumnTypeList.index('checkbox')
-        for i_row in xrange(self.rowCount()):
-            is_checked = self.get_row_value(i_row)[index_status]
-            if is_checked:
-                rows_list.append(i_row)
-
-        return rows_list
-
     def get_cell_value(self, row_index, col_index):
         """
 
@@ -142,6 +128,20 @@ class NTableWidget(QtGui.QTableWidget):
 
         return ret_list
 
+    def get_selected_rows(self):
+        """
+
+        :return: a list of row numbers
+        """
+        rows_list = list()
+        index_status = self._myColumnTypeList.index('checkbox')
+        for i_row in xrange(self.rowCount()):
+            is_checked = self.get_row_value(i_row)[index_status]
+            if is_checked:
+                rows_list.append(i_row)
+
+        return rows_list
+
     def init_setup(self, column_tup_list):
         """ Initial setup
         :param column_tup_list: list of 2-tuple as string (column name) and string (data type)
@@ -177,6 +177,24 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
+    def remove_rows(self, row_number_list):
+        """ Remove row number
+        :param row_number_list:
+        :return: string as error message
+        """
+        assert isinstance(row_number_list, list)
+        row_number_list.sort(reverse=True)
+
+        error_message = ''
+        for row_number in row_number_list:
+            if row_number >= self.rowCount():
+                error_message += 'Row %d is out of range.\n' % row_number
+            else:
+                self.removeRow(row_number)
+        # END-FOR
+
+        return error_message
+
     def set_check_box(self, row, col, state):
         """ function to add a new select checkbox to a cell in a table row
         won't add a new checkbox if one already exists
@@ -199,6 +217,18 @@ class NTableWidget(QtGui.QTableWidget):
             # centers it within the table column :-)
             self.setCellWidget(row, col, checkbox)
         # END-IF-ELSE
+
+        return
+
+    def select_all_rows(self, state):
+        """
+        :param state: select or de-select all rows
+        :return:
+        """
+        column_index_state = self._myColumnTypeList.index('checkbox')
+        for i_row in xrange(self.rowCount()):
+            print '[DB] Set value to cell ', i_row, column_index_state
+            self.update_cell_value(i_row, column_index_state, state)
 
         return
 
@@ -243,10 +273,10 @@ class NTableWidget(QtGui.QTableWidget):
                 cell_item.setText(_fromUtf8(str(value)))
         elif cell_item is None and cell_widget is not None:
             # TableCellWidget
-            if isinstance(cell_item, QtGui.QCheckBox) is True:
-                cell_item.setChecked(value)
+            if isinstance(cell_widget, QtGui.QCheckBox) is True:
+                cell_widget.setChecked(value)
             else:
-                raise TypeError('Cell of type %s is not supported.' % str(type(cell_item)))
+                raise TypeError('Cell of type %s is not supported.' % str(type(cell_widget)))
         else:
             raise TypeError('Table cell (%d, %d) is in an unsupported situation!' % (row, col))
 

@@ -1,5 +1,62 @@
+#
+# An extension on QTreeView for file system
+#
+import os
+
 from PyQt4 import QtGui, QtCore
 import ndav_widgets.CustomizedTreeView as treeView
+
+
+class FileSystemTreeView(QtGui.QTreeView):
+    """
+
+    """
+    def __init__(self, parent):
+        """
+
+        :param parent:
+        :return:
+        """
+        QtGui.QTreeView.__init__(self, parent)
+
+        # Selection mode
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+
+        # Model
+        cur_dir = os.path.expanduser('~')
+        file_model = QtGui.QFileSystemModel()
+        file_model.setRootPath(QtCore.QString(cur_dir))
+
+        self.setModel(file_model)
+
+        return
+
+    def set_root_path(self, root_path):
+        """
+
+        :param root_path: root path (i.e., no parent)
+        :return:
+        """
+        # Root path: from model to TreeView
+        self.model().setRootPath(root_path)
+        idx = self.model().index(root_path)
+        self.setRootIndex(idx)
+
+        self.set_current_path(root_path)
+
+        return
+
+    def set_current_path(self, current_path):
+        """
+
+        :param current_path:
+        :return:
+        """
+        # Set default path (i.e., current view)
+        idx = self.model().index(current_path)
+        self.setCurrentIndex(idx)
+
+        return
 
 
 class VdriveRunManagerTree(treeView.CustomizedTreeView):
@@ -15,10 +72,15 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
 
         self.init_setup(['IPTS-Run'])
 
+        # Add actions
+        action_add = QtGui.QAction('Add To Reduce', self)
+        action_add.triggered.connect(self.do_add_runs)
+        self.addAction(action_add)
+
         # Disable all the actions
         m_actions = self.actions()
         for m_action in m_actions:
-            if str(m_action.text()) != 'Info':
+            if str(m_action.text()) != 'Info' and str(m_action.text()) != 'Add To Reduce':
                 m_action.setEnabled(False)
 
         self._mainWindow = None
@@ -58,14 +120,46 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
 
         return
 
+    def do_add_runs(self):
+        """
+        Add selected runs
+        :return:
+        """
+        item_list = self.get_selected_items()
+        run_list = list()
+
+        for item in item_list:
+            run_str = str(item.text())
+            try:
+                run = int(run_str)
+                run_list.append(run)
+            except ValueError as exception:
+                print '[Error] Unable to convert run item with text %s to integer' % run_str
+                #raise exception
+        # END-FOR
+
+        # sort
+        run_list.sort()
+        print '[DB] Runs selected: ', run_list
+
+        # set values
+        # FIXME - Better to use signals???
+        if self._mainWindow is not None:
+            self._mainWindow.set_selected_runs(run_list)
+
+        return run_list
+
     def get_current_run(self):
         """ Get current run selected by mouse
-        :return:
+        note: if multiple items are selected,
+          (1) currentIndex() returns the first selected item
+          (2) selectedIndexes() returns all the selected items
+        :return: status, run number in integer
         """
         # Get current index and item
         current_index = self.currentIndex()
         if isinstance(current_index, QtCore.QModelIndex) is False:
-            return False, 'Current index is not QModeIndex instance, but %s.' % str(type(current_index))
+            return False, 'Current index is not QModelIndex instance, but %s.' % str(type(current_index))
 
         assert(isinstance(current_index, QtCore.QModelIndex))
 
@@ -106,3 +200,4 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         self._mainWindow = main_window
 
         return
+

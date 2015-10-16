@@ -182,6 +182,34 @@ class VDriveAPI(object):
         """
         return self._myProject.get_number_data_files()
 
+    def get_runs(self, start_run=None, end_run=None):
+        """
+
+        :param start_run:
+        :param end_run:
+        :return:
+        """
+        run_list = self._myProject.get_runs()
+
+        # Determine index of start run and end run
+        try:
+            if start_run is None:
+                i_start_run = 0
+            else:
+                i_start_run = run_list.index(start_run)
+
+            if end_run is None:
+                i_end_run = len(run_list) - 1
+            else:
+                i_end_run = run_list.index(end_run)
+        except IndexError as ie:
+            return False, 'Either start run %d or end run %d is not added to project.' % (start_run, end_run)
+
+        ret_list = run_list[i_start_run:i_end_run+1]
+
+        return True, ret_list
+
+
     def init_slicing_helper(self, nxs_file_name):
         """
         Initialize the event slicing helper object
