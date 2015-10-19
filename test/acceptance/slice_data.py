@@ -5,7 +5,7 @@ import sys
 import os
 
 
-# FIXME - This only works for Linux platform
+# FIXME - This only works for Linux/MacOS X platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
 import PyVDrive.VDriveAPI as vdapi
 
@@ -55,20 +55,33 @@ class MyData:
         self._runs = run_tup_list[:]
 
 
-my_data = MyData()
+def getPyDriveDataDir(cwd):
+    """
+    """
+    locate_it = False
 
+    dir_in_process = cwd
+    while locate_it is False:
+        parent_dir, last_dir = os.path.split(dir_in_process)
+        if last_dir.lower() == 'pyvdrive':
+            locate_it = True
+            data_dir = os.path.join(dir_in_process, 'test/data')
+        elif parent_dir == '':
+            raise RuntimeError('Unable to locate PyVDrive testing directory from %s.' % cwd)
+        else:
+            dir_in_process = parent_dir
+    # END-WHILE()
+
+    return data_dir
+
+my_data = MyData()
 
 @step(u'I am using VDriveAPI')
 def init_workflow(step):
     """ Set up including
+    Note: I really don't think this step does anything real.  It is skipped
     """
-    assert_equals(1, 4)
-    wk_flow = vdapi.VDriveAPI()
-    assert_equals(1, 2)
-    wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
-    # Test to use ~/ in given directory
-    wk_flow.set_working_directory('~/Temp/VDriveTest/')
-    my_data.set(wk_flow)
+    print 'All Skipped'
 
     return
 
@@ -77,7 +90,15 @@ def init_workflow(step):
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
+    # Set up workflow
     wk_flow = vdapi.VDriveAPI()
+
+    # data source
+    cwd = os.getcwd()
+    data_dir = getPyDriveDataDir(cwd)
+
+    raise NotImplementedError('[DB] Current working directory: %s. ' % cwd)
+
     wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
     # Test to use ~/ in given directory
     wk_flow.set_working_directory('~/Temp/VDriveTest/')
@@ -172,3 +193,4 @@ def input_sample_log_name(step):
     assert_true(abs(vec_value[-1] - -9.243161000000001) < 1.0E-7)
 
     return
+
