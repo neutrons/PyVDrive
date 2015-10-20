@@ -96,7 +96,6 @@ def setup_ipts(step):
     # data source
     cwd = os.getcwd()
     data_dir = getPyDriveDataDir(cwd)
-    raise NotImplementedError('[DB stop] Current working directory: %s. ' % cwd)
     wk_flow.set_data_root_directory(data_dir)
 
     # work dir
@@ -110,12 +109,12 @@ def setup_ipts(step):
     wk_flow = my_data.get()
     assert_true(wk_flow is not None)
 
-    # Set up IPTS
-    ipts = 10311
-    status, errmsg = wk_flow.set_ipts(ipts)
+    # Set up IPTS and expect 'false' result
+    ipts_dir = os.path.join(data_dir, 'IPTS-10311')
+    status, errmsg = wk_flow.set_ipts(ipts_dir)
     assert_false(status)
 
-    # Get runs
+    # Get runs from directory
     status, run_tup_list = wk_flow.get_ipts_info(ipts_dir)
     assert_true(status)
     assert_equals(len(run_tup_list), 4)
@@ -188,7 +187,7 @@ def input_sample_log_name(step):
     assert_true(test_sample_log_name in sample_log_names)
 
     # Get log data
-    status, ret_obj = wk_flow.get_sample_log_values(test_sample_log_name)
+    status, ret_obj = wk_flow.get_sample_log_values(test_sample_log_name, relative=True)
     assert_true(status)
     vec_times, vec_value = ret_obj
     assert_equals(len(vec_times), 205)

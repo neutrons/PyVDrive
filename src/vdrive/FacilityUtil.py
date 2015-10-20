@@ -72,7 +72,9 @@ class FacilityUtilityHelper(object):
         :param ipts_number: integer as IPTS number
         :return: list of 3-tuples
         """
-        ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % (ipts_number))
+        ipts_home_dir = os.path.join(self._dataRootPath, 'IPTS-%d/data' % ipts_number)
+        print '[DB] IPTS dir is %s' % ipts_home_dir
+
         run_tup_list = self.get_run_info_dir(ipts_home_dir)
 
         assert(isinstance(run_tup_list, list))
@@ -85,7 +87,7 @@ class FacilityUtilityHelper(object):
         Get information of runs in a directory.
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
-        :param ipts_number:
+        :param ipts_home_dir:
         :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
         """
         # Get home directory for IPTS

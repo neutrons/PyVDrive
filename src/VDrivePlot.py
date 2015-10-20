@@ -15,16 +15,18 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 """ import GUI components generated from Qt Designer .ui file """
-import ui.gui.VdriveMain as mainUi
-import ui.GuiUtility as guiutil
-import ui.snapgraphicsview as spview
+sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
+import PyVDrive
+import PyVDrive.ui.gui.VdriveMain as mainUi
+import PyVDrive.ui.GuiUtility as guiutil
+import PyVDrive.ui.snapgraphicsview as spview
 
 """ import PyVDrive library """
-import VDriveAPI as vdrive
+import PyVDrive.VDriveAPI as vdrive
 
-import ui.AddRunsIPTS as dlgrun
-import ui.Window_LogPicker as LogPicker
-import ui.LogSnapView as dlgSnap
+import PyVDrive.ui.AddRunsIPTS as dlgrun
+import PyVDrive.ui.Window_LogPicker as LogPicker
+import PyVDrive.ui.LogSnapView as dlgSnap
 
 # Define enumerate
 ACTIVE_SLICER_TIME = 0
@@ -827,5 +829,5 @@ if __name__=="__main__":
     myapp = VDrivePlotBeta()
     myapp.show()
 
-    exit_code=app.exec_()
-    sys.exit(exit_code)
+    #exit_code=app.exec_()
+    #sys.exit(exit_code)
