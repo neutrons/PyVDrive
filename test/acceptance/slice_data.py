@@ -96,20 +96,23 @@ def setup_ipts(step):
     # data source
     cwd = os.getcwd()
     data_dir = getPyDriveDataDir(cwd)
+    raise NotImplementedError('[DB stop] Current working directory: %s. ' % cwd)
+    wk_flow.set_data_root_directory(data_dir)
 
-    raise NotImplementedError('[DB] Current working directory: %s. ' % cwd)
+    # work dir
+    wk_dir = os.path.expanduser('~/Temp/VDriveTest/')
+    wk_flow.set_working_directory(wk_dir)
 
-    wk_flow.set_data_root_directory('/Users/wzz/Projects/SNSData/VULCAN/')
-    # Test to use ~/ in given directory
-    wk_flow.set_working_directory('~/Temp/VDriveTest/')
+    # Add workflow to my_data
     my_data.set(wk_flow)
 
+    # Check whether my_data set up the workflow correct
     wk_flow = my_data.get()
     assert_true(wk_flow is not None)
 
     # Set up IPTS
-    ipts_dir = os.path.expanduser('~/Projects/SNSData/VULCAN/IPTS-10311-Local/')
-    status, errmsg = wk_flow.set_ipts(ipts_dir)
+    ipts = 10311
+    status, errmsg = wk_flow.set_ipts(ipts)
     assert_false(status)
 
     # Get runs
@@ -193,4 +196,66 @@ def input_sample_log_name(step):
     assert_true(abs(vec_value[-1] - -9.243161000000001) < 1.0E-7)
 
     return
+
+@step(u'Then I set up rules to slice this run by this sample log and generate data slicer')
+def generate_data_slicer(step):
+    """
+    Set up rules and create data slicer/event splitters by sample log value
+    :param step:
+    :return:
+    """
+    test_log_name = 'whatever'
+    test_run_number = 12345
+
+    # Get workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    # Set up rule
+    status, error_message = wk_flow.gen_data_slicer_sample_log(run_number=test_run_number,
+                                                               sample_log_name=test_log_name,
+                                                               start=1.0,
+                                                               end=70.1,
+                                                               min_log_value=11.0,
+                                                               max_log_value=21.2,
+                                                               log_value_interval=3.5)
+    assert_true(status)
+
+    return
+
+@step(u'Then I slice data and check result')
+def slice_data(step):
+    """ Slice data by current splitters
+    :param step:
+    :return:
+    """
+    test_log_name = 'whatever'
+    test_run_number = 12345
+
+    # Get workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    status, error_message = wk_flow.slice_data(run_number=test_run_number,
+                                               sample_log_name=test_log_name)
+    assert_true(status)
+
+    # Check number of output workspace
+    vec_split_ws = wk_flow.get_split_ws_names(run_number=test_run_number,
+                                              sample_log_name=test_log_name)
+    num_split_ws = len(vec_split_ws)
+    assert_equals(num_split_ws, 10)
+
+    # Use simple math to do the check
+    num_raw_events = wk_flow.get_number_events(run_number=test_run_number)
+    num_split_ws_events = 0
+    for split_ws_name in vec_split_ws:
+        partial_num_events = wk_flow.get_number_events(split_ws_name)
+        num_split_ws_events += partial_num_events
+    assert_equals(num_raw_events, num_split_ws_events)
+
+    return
+
+
+
 
