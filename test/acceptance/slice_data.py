@@ -203,8 +203,8 @@ def generate_data_slicer(step):
     :param step:
     :return:
     """
-    test_log_name = 'whatever'
-    test_run_number = 12345
+    test_run_number = 58848
+    test_log_name = 'loadframe.stress'
 
     # Get workflow
     wk_flow = my_data.get()
@@ -213,11 +213,11 @@ def generate_data_slicer(step):
     # Set up rule
     status, error_message = wk_flow.gen_data_slicer_sample_log(run_number=test_run_number,
                                                                sample_log_name=test_log_name,
-                                                               start=1.0,
-                                                               end=70.1,
+                                                               start_time=1.0,
+                                                               end_time=70.1,
                                                                min_log_value=11.0,
                                                                max_log_value=21.2,
-                                                               log_value_interval=3.5)
+                                                               log_value_step=3.5)
     assert_true(status)
 
     return
@@ -228,8 +228,8 @@ def slice_data(step):
     :param step:
     :return:
     """
-    test_log_name = 'whatever'
-    test_run_number = 12345
+    test_run_number = 58848
+    test_log_name = 'loadframe.force'
 
     # Get workflow
     wk_flow = my_data.get()
@@ -255,6 +255,12 @@ def slice_data(step):
 
     return
 
-
-
+"""
+setup_ipts(1)
+filter_runs(2)
+set_ipts_runs(3)
+input_sample_log_name(4)
+generate_data_slicer(5)
+slice_data(6)
+"""
 

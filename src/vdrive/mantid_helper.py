@@ -35,6 +35,19 @@ def generate_events_filter(ws_name, log_name, min_time, max_time, relative_time,
     elif value_change_direction not in ['Both', 'Increase', 'Decrease']:
         return False, 'Value change direction %s is not supported.' % value_change_direction
 
+    if isinstance(min_time, int) is True:
+        min_time = float(min_time)
+    if isinstance(min_time, float) is True:
+        min_time = '%.15E' % min_time
+    if isinstance(max_time, int):
+        max_time = float(max_time)
+    if isinstance(max_time, float):
+        max_time = '%.15E' % max_time
+
+
+    print '[DB]', 'InputWorkspace =', ws_name, 'LogName =', log_name, 'StartTime =', min_time,
+    print 'StopTime =', max_time, 'LogValueInterval =', log_value_interval
+    print
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
                                    LogName=log_name,

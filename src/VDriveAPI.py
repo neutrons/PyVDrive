@@ -7,6 +7,7 @@
 #
 #####
 import os
+import datetime
 
 import vdrive.VDProject as vp
 import vdrive.FacilityUtil as futil
@@ -39,6 +40,7 @@ class VDriveAPI(object):
 
         # Data slicing helper
         self._myLogHelper = None
+        self._splitterDict = dict()
 
         return
 
@@ -92,14 +94,18 @@ class VDriveAPI(object):
         else:
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
-        this_ws_name = get_standard_ws_name(file_name)
+        this_ws_name = get_standard_ws_name(file_name, True)
         mtdHelper.load_nexus(file_name, this_ws_name, True)
 
+        slicer_name, info_name = get_splitters_names(this_ws_name)
+
+        print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
+        print 'log_name = ', sample_log_name
         mtdHelper.generate_events_filter(ws_name=this_ws_name, log_name=sample_log_name,
                                          min_time=start_time, max_time=end_time, relative_time=True,
                                          min_log_value=min_log_value, max_log_value=max_log_value,
-                                         log_value_interval=log_value_step,
-                                         slitter_ws_name=slicer_name, info_ws_name=info_name)
+                                         log_value_interval=log_value_step, value_change_direction='Both',
+                                         splitter_ws_name=slicer_name, info_ws_name=info_name)
 
         self._splitterDict[(run_number, sample_log_name)] = (slicer_name, info_name)
 
@@ -481,6 +487,23 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
         # END-IF
 
         return True, result_list
+
+
+def get_splitters_names(base_name):
+    """ Get splitter workspaces's name including
+    (1) SplittersWS and (2) InformationWS
+    using current epoch time
+    :param base_name:
+    :return:
+    """
+    now = datetime.datetime.now()
+    special_key = '%02d06%d' % (now.second, now.microsecond)
+
+    splitter_ws = '%s_%s_Splitters' % (base_name, special_key)
+    info_ws = '%s_%s_Info' % (base_name, special_key)
+
+    return splitter_ws, info_ws
+
 
 def get_standard_ws_name(file_name, meta_only):
     """
