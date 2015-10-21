@@ -138,7 +138,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Set up
         self.ui.comboBox_logNames.clear()
         for log_name in sorted(sample_log_names):
-            self.ui.comboBox_logNames.addItem(QtCore.QString(log_name))
+            # self.ui.comboBox_logNames.addItem(QtCore.QString(log_name))
+            self.ui.comboBox_logNames.addItem(str(log_name))
         self._currentLogIndex = 0
         self._logNameList = sample_log_names[:]
 
