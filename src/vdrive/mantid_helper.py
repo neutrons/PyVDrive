@@ -5,6 +5,45 @@ import mantid
 import mantid.simpleapi as mantidapi
 
 
+def generate_events_filter(ws_name, log_name, min_time, max_time, relative_time,
+                           min_log_value, max_log_value, log_value_interval,
+                           value_change_direction,
+                           splitter_ws_name, info_ws_name):
+    """
+    Generate event filter by log value
+    :param ws_name:
+    :param log_name:
+    :param min_time:
+    :param max_time:
+    :param relative_time:
+    :param min_log_value:
+    :param max_log_value:
+    :param log_value_interval:
+    :param splitter_ws_name:
+    :param info_ws_name:
+    :return:
+    """
+    if relative_time is False:
+        raise RuntimeError('It has not been implemented to use absolute start/stop time.')
+
+    if log_value_interval is None:
+        # one and only one interval from min_log_value to max_log_value
+        raise RuntimeError('I need to think of how to deal with this case.')
+
+    if value_change_direction is None:
+        value_change_direction = 'Both'
+    elif value_change_direction not in ['Both', 'Increase', 'Decrease']:
+        return False, 'Value change direction %s is not supported.' % value_change_direction
+
+    mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
+                                   OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
+                                   LogName=log_name,
+                                   StartTime=min_time, StopTime=max_time,
+                                   MinimumLogValue=min_log_value,
+                                   MaximumLogValue=max_log_value,
+                                   LogValueInterval=log_value_interval,
+                                   FilterLogValueByChangingDirection=value_change_direction)
+
 def get_sample_log_info(src_workspace):
     """ Ger sample log information including size of log and name of log
     :param src_workspace: workspace which the sample logs are from

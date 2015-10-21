@@ -11,6 +11,7 @@ import os
 import vdrive.VDProject as vp
 import vdrive.FacilityUtil as futil
 import vdrive.SampleLogHelper as logHelper
+import vdrive.mantid_helper as mtdHelper
 
 
 class VDriveAPI(object):
@@ -66,6 +67,43 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, ''
+
+    def gen_data_slicer_sample_log(self, run_number, sample_log_name,
+                                   start_time, end_time, min_log_value, max_log_value,
+                                   log_value_step):
+        """
+        Generate data slicer/splitters by log values
+        :param run_number:
+        :param sample_log_name:
+        :param start_time:
+        :param end_time:
+        :param min_log_value:
+        :param max_log_value:
+        :param log_value_step:
+        :return:
+        """
+        if isinstance(run_number, int):
+            # run number is a Run Number, locate file
+            file_name, ipts_number = self._myProject.get_run_info(run_number)
+        elif isinstance(run_number, str):
+            # run number is a file name
+            base_file_name = run_number
+            file_name = self._myProject.get_file_path(base_file_name)
+        else:
+            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+
+        this_ws_name = get_standard_ws_name(file_name)
+        mtdHelper.load_nexus(file_name, this_ws_name, True)
+
+        mtdHelper.generate_events_filter(ws_name=this_ws_name, log_name=sample_log_name,
+                                         min_time=start_time, max_time=end_time, relative_time=True,
+                                         min_log_value=min_log_value, max_log_value=max_log_value,
+                                         log_value_interval=log_value_step,
+                                         slitter_ws_name=slicer_name, info_ws_name=info_name)
+
+        self._splitterDict[(run_number, sample_log_name)] = (slicer_name, info_name)
+
+        return
 
     def get_instrument_name(self):
         """
@@ -443,3 +481,16 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
         # END-IF
 
         return True, result_list
+
+def get_standard_ws_name(file_name, meta_only):
+    """
+    Get the standard name for a loaded workspace
+    :param file_name:
+    :return:
+    """
+    ws_name = os.path.basename(file_name).split('.')[0]
+
+    if meta_only is True:
+        ws_name += '_Meta'
+
+    return ws_name
