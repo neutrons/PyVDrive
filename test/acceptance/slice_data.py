@@ -211,14 +211,13 @@ def generate_data_slicer(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     # Set up rule
-    status, error_message = wk_flow.gen_data_slicer_sample_log(run_number=test_run_number,
-                                                               sample_log_name=test_log_name,
-                                                               start_time=1.0,
-                                                               end_time=70.1,
-                                                               min_log_value=11.0,
-                                                               max_log_value=21.2,
-                                                               log_value_step=3.5)
-    assert_true(status)
+    wk_flow.gen_data_slicer_sample_log(run_number=test_run_number,
+                                       sample_log_name=test_log_name,
+                                       start_time=1.0,
+                                       end_time=200.1,
+                                       min_log_value=-10.0,
+                                       max_log_value=-8.0,
+                                       log_value_step=1.0)
 
     return
 

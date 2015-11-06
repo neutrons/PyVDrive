@@ -23,6 +23,59 @@ class SampleLogManager(object):
 
         return
 
+    def generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
+                                      min_log_value, max_log_value, log_value_interval,
+                                      value_change_direction):
+        """
+        Generate event filter by log value
+        :param ws_name:
+        :param log_name:
+        :param min_time:
+        :param max_time:
+        :param relative_time:
+        :param min_log_value:
+        :param max_log_value:
+        :param log_value_interval:
+        :return:
+        """
+        if relative_time is False:
+            raise RuntimeError('It has not been implemented to use absolute start/stop time.')
+
+        if log_value_interval is None:
+            # one and only one interval from min_log_value to max_log_value
+            raise RuntimeError('I need to think of how to deal with this case.')
+
+        if value_change_direction is None:
+            value_change_direction = 'Both'
+        elif value_change_direction not in ['Both', 'Increase', 'Decrease']:
+            return False, 'Value change direction %s is not supported.' % value_change_direction
+
+        if isinstance(min_time, int) is True:
+            min_time = float(min_time)
+        if isinstance(min_time, float) is True:
+            min_time = '%.15E' % min_time
+        if isinstance(max_time, int):
+            max_time = float(max_time)
+        if isinstance(max_time, float):
+            max_time = '%.15E' % max_time
+
+        print '[DB]', 'InputWorkspace =', self._workspace_name, 'LogName =', log_name, 'StartTime =', min_time,
+        print 'StopTime =', max_time, 'LogValueInterval =', log_value_interval
+        print
+
+        # create output workspace as a standard
+        splitter_ws_name = '%s_splitter_%s' % (self._workspace_name, log_name)
+        info_ws_name = '%s_info_%s' % (self._workspace_name, log_name)
+
+        mtd.generate_event_filters_by_log(self._workspace_name, splitter_ws_name, info_ws_name,
+                                          min_time, max_time, log_name, min_log_value, max_log_value,
+                                          log_value_interval, value_change_direction)
+
+        # Store
+        self._splitterWSDict[log_name] = (splitter_ws_name, info_ws_name)
+
+        return
+
     def create_splitters_by_time(self, start_time, stop_time, delta_time, unit='second', relative=True):
         """
         Create splitters by time

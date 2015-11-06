@@ -101,13 +101,11 @@ class VDriveAPI(object):
 
         print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
         print 'log_name = ', sample_log_name
-        mtdHelper.generate_events_filter(ws_name=this_ws_name, log_name=sample_log_name,
-                                         min_time=start_time, max_time=end_time, relative_time=True,
-                                         min_log_value=min_log_value, max_log_value=max_log_value,
-                                         log_value_interval=log_value_step, value_change_direction='Both',
-                                         splitter_ws_name=slicer_name, info_ws_name=info_name)
 
-        self._splitterDict[(run_number, sample_log_name)] = (slicer_name, info_name)
+        self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
+                                                        min_time=start_time, max_time=end_time, relative_time=True,
+                                                        min_log_value=min_log_value, max_log_value=max_log_value,
+                                                        log_value_interval=log_value_step, value_change_direction='Both')
 
         return
 
@@ -147,7 +145,7 @@ class VDriveAPI(object):
 
     def get_event_slicer(self, active, slicer_id=None, relative_time=True):
         """
-
+        TODO/FIXME What am I supposed to do???
         :param active: if True, then use the current one, if False, look into ID
         :param slicer_id: log name, manual, time (decreasing priority)
         :param relative_time: if True, time is in relative to run_start
@@ -252,7 +250,6 @@ class VDriveAPI(object):
         ret_list = run_list[i_start_run:i_end_run+1]
 
         return True, ret_list
-
 
     def init_slicing_helper(self, nxs_file_name):
         """
