@@ -145,7 +145,23 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         self._calibCriteriaFile = ''
 
+        # Load settings
+        self.load_settings()
+
         return
+
+    # TODO/FIXME - Replace homemade by QSettings
+    def save_settings(self):
+        settings = QtCore.QSettings()
+        settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
+
+
+    def load_settings(self):
+        settings = QtCore.QSettings()
+        value1 = settings.value('test01', '').toString()
+        #print '[DB] Value 1 without previous setting', str(value1)
+        print value1
+        self.ui.lineEdit_userLogFileName.setText(value1)
 
     def do_bin_data(self):
         """ Bin a set of data
@@ -155,8 +171,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         selection_list = [self.ui.radioButton_binStandard,
                           self.ui.radioButton_binCustomized]
 
-
-
+        return
 
     def do_update_selected_runs(self):
         """
@@ -233,7 +248,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         '''
 
         # Selecting runs
-        self.ui.tableWidget_selectedRuns.setup()
+        # NEXT/TODO/FIXME self.ui.tableWidget_selectedRuns.setup()
         self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
@@ -617,6 +632,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Quit application without saving
         :return:
         """
+        self.save_settings()
+
         # FIXME - Save the session automatically before leaving
         self.close()
 
@@ -800,7 +817,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def set_selected_runs(self, run_list):
-        """ Set selected runs from a list
+        """ Set selected runs from a list..
         :param run_list:
         :return:
         """
