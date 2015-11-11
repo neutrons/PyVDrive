@@ -34,8 +34,9 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
 
     return
 
-# status, ret_obj = mtd.generate_event_filters(self._workspace, start_time, stop_time, delta_time, unit, relative)
-def generate_event_filters_by_time(ws_name, start_time, stop_time, delta_time, time_unit, relative_time):
+
+def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
+                                   start_time, stop_time, delta_time, time_unit):
     """
     TODO/FIXME Doc!
     :param ws_name:
@@ -46,7 +47,38 @@ def generate_event_filters_by_time(ws_name, start_time, stop_time, delta_time, t
     :param relative_time:
     :return:
     """
-    mantidapi.Generate()
+    # define optional inputs
+    my_arg_dict = dict()
+    my_arg_dict['InputWorkspace'] = ws_name
+    my_arg_dict['OutputWorkspace'] = splitter_ws_name
+    my_arg_dict['InformationWorkspace'] = info_ws_name
+    if start_time is not None:
+        my_arg_dict['StartTime'] = '%.15E' % start_time
+    if stop_time is not None:
+        my_arg_dict['StopTime'] = '%.15E' % stop_time
+    if delta_time is not None:
+        my_arg_dict['TimeInterval'] = delta_time
+    if time_unit != 'Seconds' and time_unit is not None:
+        my_arg_dict['UnitOfTime'] = time_unit
+
+    print my_arg_dict
+    print
+
+    try:
+        mantidapi.GenerateEventsFilter(**my_arg_dict)
+        """
+        mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
+                                       OutputWorkspace=splitter_ws_name,
+                                       InformationWorkspace=info_ws_name,
+                                       StartTime=start_time,
+                                       StopTime=stop_time,
+                                       TimeInterval=delta_time)
+        """
+    except RuntimeError as e:
+        return False, str(e)
+
+    return True, (splitter_ws_name, info_ws_name)
+
 
 def get_sample_log_info(src_workspace):
     """ Ger sample log information including size of log and name of log

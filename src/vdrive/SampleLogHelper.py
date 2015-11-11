@@ -131,10 +131,6 @@ class SampleLogManager(object):
         if isinstance(max_time, float):
             max_time = '%.15E' % max_time
 
-        print '[DB]', 'InputWorkspace =', self._currWorkspaceName, 'LogName =', log_name, 'StartTime =', min_time,
-        print 'StopTime =', max_time, 'LogValueInterval =', log_value_interval
-        print
-
         # create output workspace as a standard
         splitter_ws_name = '%s_splitter_%s' % (self._currWorkspaceName, log_name)
         info_ws_name = '%s_info_%s' % (self._currWorkspaceName, log_name)
@@ -148,34 +144,40 @@ class SampleLogManager(object):
 
         return
 
-    def create_splitters_by_time(self, start_time, stop_time, delta_time, unit='second', relative=True):
+    def generate_events_filter_by_time(self, min_time, max_time, time_interval):
         """
         Create splitters by time
-        :param start_time:
-        :param stop_time:
-        :param delta_time:
-        :param unit:
-        :param relative:
-        :return:
+        :param min_time:
+        :param max_time:
+        :param time_interval:
+        :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
         """
         # Check
-        assert isinstance(start_time, float)
-        assert isinstance(stop_time, float)
-        assert isinstance(delta_time, float) or (delta_time is None)
-        assert isinstance(unit, str)
-        assert isinstance(relative, bool)
+        assert isinstance(min_time, float) or isinstance(min_time, None)
+        assert isinstance(max_time, float) or isinstance(max_time, None)
+        assert isinstance(time_interval, float) or (time_interval is None)
         assert self._currWorkspace
+        if min_time is None and max_time is None and time_interval is None:
+            raise RuntimeError('Generate events filter by time must specify at least one of'
+                               'min_time, max_time and time_interval')
 
         # Generate event filters
-        status, ret_obj = mtd.generate_event_filters(self._currWorkspace, start_time, stop_time, delta_time, unit, relative)
+        splitter_ws_name = '%s_splitter_TIME_' % self._currWorkspaceName
+        info_ws_name = '%s_info__TIME_' % self._currWorkspaceName
+
+        status, ret_obj = mtd.generate_event_filters_by_time(self._currWorkspaceName, splitter_ws_name, info_ws_name,
+                                                             min_time, max_time,
+                                                             time_interval, 'Seconds')
+
+        # Get result
         if status is False:
-            return status, ret_obj
+            err_msg = ret_obj
+            return status, err_msg
 
         # Store
-        splitters, information = ret_obj
-        self._currSplittersDict[(self._currNexusFilename, 'Time')] = (splitters, information)
+        self._currSplittersDict[(self._currNexusFilename, '_TIME_')] = (splitter_ws_name, info_ws_name)
 
-        return True, ''
+        return True, ret_obj
 
     def get_sample_log_names(self, with_info=False):
         """

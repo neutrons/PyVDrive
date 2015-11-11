@@ -235,7 +235,7 @@ def slice_data(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     status, ret_obj = wk_flow.slice_data(run_number=test_run_number,
-                                               sample_log_name=test_log_name)
+                                         sample_log_name=test_log_name)
     assert_true(status)
     if status is False:
         return
@@ -256,6 +256,48 @@ def slice_data(step):
 
     return
 
+
+@step(u'Then I set up rules to slice this run by time')
+def generate_data_slicer_by_time(step):
+    """
+    Set up rules and create data slicer/event splitters by sample log value
+    :param step:
+    :return:
+    """
+    test_run_number = 58848
+
+    # Get workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    # Set up rule
+    status, ret_obj = wk_flow.gen_data_slicer_by_time(run_number=test_run_number,
+                                                      start_time=1.0,
+                                                      end_time=200.1,
+                                                      time_step=10.)
+
+    return
+
+
+@step(u'I have data sliced by time-splitters and check result')
+def slice_data_by_time(step):
+    """ Slice data by current splitters
+    :param step:
+    :return:
+    """
+    test_run_number = 58848
+    test_log_name = 'loadframe.stress'
+
+    # Get workflow
+    wk_flow = my_data.get()
+    assert(isinstance(wk_flow, vdapi.VDriveAPI))
+
+    status, ret_obj = wk_flow.slice_data(run_number=test_run_number,
+                                         by_time=True)
+
+    return
+
+
 if False:
     setup_ipts(1)
     filter_runs(2)
@@ -263,4 +305,6 @@ if False:
     input_sample_log_name(4)
     generate_data_slicer(5)
     slice_data(6)
+    generate_data_slicer_by_time(7)
+    slice_data_by_time(8)
 

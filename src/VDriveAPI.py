@@ -70,6 +70,36 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
+        """
+        Generate data slicer by time
+        :param run_number: run number (integer) or base file name (str)
+        :param start_time:
+        :param end_time:
+        :param time_step:
+        :return:
+        """
+        # Get full-path file name according to run number
+        if isinstance(run_number, int):
+            # run number is a Run Number, locate file
+            file_name, ipts_number = self._myProject.get_run_info(run_number)
+        elif isinstance(run_number, str):
+            # run number is a file name
+            base_file_name = run_number
+            file_name = self._myProject.get_file_path(base_file_name)
+            run_number = None
+        else:
+            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+
+        # Checkout log processing session
+        self._myLogHelper.checkout_session(nxs_file_name=file_name, run_number=run_number)
+
+        status, ret_obj = self._myLogHelper.generate_events_filter_by_time(min_time=start_time,
+                                                                           max_time=end_time,
+                                                                           time_interval=time_step)
+
+        return status, ret_obj
+
     def gen_data_slicer_sample_log(self, run_number, sample_log_name,
                                    start_time, end_time, min_log_value, max_log_value,
                                    log_value_step):
