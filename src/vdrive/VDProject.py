@@ -1,6 +1,7 @@
 import os
 import os.path
 
+import mantid_helper
 import SNSPowderReductionLite as prl
 
 
@@ -11,10 +12,31 @@ class VDProject:
         """ Init
         """
         self._name = project_name
-        self._dataFileDict = {}  # key: run number, value: 2-tuple (file name, IPTS)
-        self._baseDataFileNameList = []
-        self._baseDataPath = None 
+        self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+        self._baseDataFileNameList = list()
+        self._baseDataPath = None
+
+        # Data structure to manage split run: key run number or file name
+        self._splitWorkspaceDict = dict()
         
+        return
+
+    def _clear_split_run(self, run_number):
+        """
+        Clear splitted workspace of a run
+        :param run_number:
+        :return:
+        """
+        # Check
+        if run_number not in self._splitWorkspaceDict:
+            return False, 'Run number %d has not split workspaces.' % run_number
+
+        # Delete workspaces
+        num_ws = len(self._splitWorkspaceDict[run_number])
+        for i_split_ws in xrange(num_ws):
+            split_ws = self._splitWorkspaceDict[run_number][num_ws-i_split_ws-1]
+            mantid_helper.delete_workspace(split_ws)
+
         return
 
     def add_run(self, run_number, file_name, ipts_number):
@@ -185,7 +207,32 @@ class VDProject:
             raise NotImplementedError("Unable to set base data path with unsupported format %s." % (str(type(datadir))))
 
         return
-        
+
+    def slice_data(self, run_number, splitter_ws_name, info_ws_name, out_base_name):
+        """
+        Split data by event filter
+        :param run_number:
+        :param splitter_ws_name:
+        :param info_ws_name:
+        :param out_base_name:
+        :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
+        """
+        # Load data to event workspace
+        ret_obj = self.get_run_info(run_number)
+        nxs_file_name = ret_obj[0]
+        event_ws_name = mantid_helper.event_data_ws_name(run_number)
+        mantid_helper.load_nexus(data_file_name=nxs_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
+        # Split
+        splitted_ws_base_name = mantid_helper.splitted_ws_base_name(run_number, out_base_name)
+        status, ret_obj = mantid_helper.split_event_data(event_ws_name, splitter_ws_name, info_ws_name,
+                                                         splitted_ws_base_name, tof_correction=False)
+
+        if status is True:
+            self._clear_split_run(run_number)
+            self._splitWorkspaceDict[run_number] = ret_obj[1]
+
+        return status, ret_obj[0]
 
     def _generateFileName(self, runnumber, iptsstr):
         """ Generate a NeXus file name with full path with essential information

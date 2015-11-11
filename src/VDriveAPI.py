@@ -39,7 +39,7 @@ class VDriveAPI(object):
         self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
 
         # Data slicing helper
-        self._myLogHelper = None
+        self._myLogHelper = logHelper.SampleLogManager()
         self._splitterDict = dict()
 
         return
@@ -84,6 +84,8 @@ class VDriveAPI(object):
         :param log_value_step:
         :return:
         """
+        # Get file name according to run number
+        # print '[DBDB] run number = %s of type %s' % (str(run_number), str(type(run_number)))
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
             file_name, ipts_number = self._myProject.get_run_info(run_number)
@@ -94,13 +96,14 @@ class VDriveAPI(object):
         else:
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
-        this_ws_name = get_standard_ws_name(file_name, True)
-        mtdHelper.load_nexus(file_name, this_ws_name, True)
+        # Start a session
+        self._myLogHelper.checkout_session(nxs_file_name=file_name, run_number=run_number)
 
-        slicer_name, info_name = get_splitters_names(this_ws_name)
-
-        print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
-        print 'log_name = ', sample_log_name
+        # this_ws_name = get_standard_ws_name(file_name, True)
+        # mtdHelper.load_nexus(file_name, this_ws_name, True)
+        # slicer_name, info_name = get_splitters_names(this_ws_name)
+        # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
+        # print 'log_name = ', sample_log_name
 
         self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
                                                         min_time=start_time, max_time=end_time, relative_time=True,
@@ -251,17 +254,6 @@ class VDriveAPI(object):
 
         return True, ret_list
 
-    def init_slicing_helper(self, nxs_file_name):
-        """
-        Initialize the event slicing helper object
-        :param nxs_file_name:
-        :return:
-        """
-        self._myLogHelper = logHelper.SampleLogManager()
-        status, errmsg = self._myLogHelper.set_nexus_file(nxs_file_name)
-
-        return status, errmsg
-
     def get_sample_log_names(self, smart=False):
         """
         Get names of sample log with time series property
@@ -359,6 +351,36 @@ class VDriveAPI(object):
 
         return True, out_file_name
 
+    def slice_data(self, run_number, sample_log_name=None, by_time=False):
+        """ TODO - DOC
+        :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
+        """
+        # Check
+        if sample_log_name is not None and by_time is True:
+            return False, 'It is not allowed to specify both sample log name and time!'
+        elif sample_log_name is None and by_time is False:
+            return False, 'it is not allowed to specify neither sample log nor time!'
+
+        if by_time is True:
+            sample_log_name = '__TIME__'
+            slicer = self._myLogHelper.get_slicer_by_time(run_number)
+        else:
+            assert isinstance(sample_log_name, str)
+            print '[DB] Run number = ', run_number, '\n'
+            status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, sample_log_name)
+            if status is False:
+                print '[DB]', ret_obj, '\n'
+                return False, ret_obj
+            else:
+                slicer = ret_obj
+            # slicer is a tuple for names of splitter workspace and information workspace
+            # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
+
+        status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
+                                                     sample_log_name.replace('.', '-'))
+
+        return status, ret_obj
+
     def set_ipts(self, ipts_number):
         """ Set IPTS to the workflow
         :param ipts_number: intege for IPTS number
@@ -370,6 +392,20 @@ class VDriveAPI(object):
             return False, 'Unable to set IPTS number due to %s.' % str(e)
 
         return True, ''
+
+    def set_slicer_helper(self, nxs_file_name, run_number=None):
+        """
+        Initialize the event slicing helper object
+        :param nxs_file_name:
+        :param run_number:
+        :return:
+        """
+        if run_number is not None:
+            assert isinstance(run_number, int)
+
+        status, errmsg = self._myLogHelper.checkout_session(nxs_file_name, run_number)
+
+        return status, errmsg
 
     def set_slicer(self, splitter_src, sample_log_name=None):
         """ Set slicer from

@@ -686,7 +686,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             nxs_file_name = run
 
         # Load file
-        status, errmsg = self._myWorkflow.init_slicing_helper(nxs_file_name=nxs_file_name)
+        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name)
         if status is False:
             raise RuntimeError(errmsg)
 
