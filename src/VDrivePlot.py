@@ -84,7 +84,12 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.pop_manual_picker)
 
         # Column 3
-        # tab-1
+        # Tab-1
+        # sub-tab-1
+        self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
+                     self.do_slice_data_by_time)
+
+        # sub-tab-2
         self.connect(self.ui.pushButton_applyTimeInterval, QtCore.SIGNAL('clicked()'),
                      self.do_generate_slicer_by_time)
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
@@ -214,6 +219,65 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # delete
         self.ui.tableWidget_selectedRuns.remove_rows(row_number_list)
+
+        return
+
+    def do_slice_data_by_time(self):
+        """ Event handler to slice/chop data by time
+        :return:
+        """
+        # Check selected run numbers
+        selected_run_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        print '[DB] Slice data by time: runs to chop = %s' % str(selected_run_list)
+
+        do_connect_runs = self.ui.checkBox_chopContinueRun.isChecked()
+
+        # Check radio button to generate relative-time slicer
+        if self.ui.radioButton_chopContantDeltaT.isChecked() is True:
+            # chop data by standard runs
+            start_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStartTime)
+            time_interval = guiutil.parse_float(self.ui.lineEdit_chopTimeSegInterval)
+            stop_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStopTime)
+
+            if do_connect_runs is True:
+                # special handling to chop data by connecting runs
+                self._myWorkflow.chop_data_connect_runs(selected_run_list, start_time, stop_time, time_interval)
+
+            else:
+                # regular chopping with run by run
+                err_msg = ''
+                for run_number in selected_run_list:
+                    status, ret_obj = self._myWorkflow.gen_data_slicer_by_time(
+                        run_number=run_number, start_time=start_time,
+                        end_time=stop_time, time_step=time_interval)
+                    if status is False:
+                        err_msg += ret_obj + '\n'
+                        continue
+
+                    status, ret_obj = self._myWorkflow.slice_data(
+                        run_number=run_number, by_time=True)
+                    if status is False:
+                        err_msg += ret_obj + '\n'
+                # END-FOR
+                if err_msg != '':
+                    guiutil.pop_dialog_error(err_msg)
+
+        elif self.ui.radioButton_chopByTimeSegments.isChecked() is False:
+            # chop with user-defined time segment
+            raise RuntimeError('IMPLEMENT IMPORTING TIME SEGMENT FILE ASAP')
+
+        else:
+            # Impossible status
+            guiutil.pop_dialog_error('User must choose one radio button.')
+            return
+
+        # Pop a summary dialog and optionally shift next tab
+        # TODO/FIXME Implement pop up dialog for summary
+
+        # shift
+        do_change_tab = self.ui.checkBox_chopBinLater.isChecked()
+        if do_change_tab is True:
+            self.ui.tabWidget_reduceData.setCurrentIndex(1)
 
         return
 

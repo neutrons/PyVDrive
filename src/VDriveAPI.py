@@ -29,7 +29,10 @@ class VDriveAPI(object):
         # Define class variables with defaults
         self._myInstrumentName = 'VULCAN'
         self._myRootDataDir = '/SNS/VULCAN'
-        self._myWorkDir = '/tmp/'
+
+        self._myWorkDir = os.getcwd()
+        if os.access(self._myWorkDir, os.W_OK) is False:
+            self._myWorkDir = '/tmp/'
 
         self._currentIPTS = -1
         self._myLastDataDirectory = '/tmp'

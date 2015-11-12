@@ -87,8 +87,32 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return
 
+TimeSegment_TableSetup = [('Start', 'float'),
+                          ('Stop', 'float'),
+                          ('Destination', 'int')]
 
-Run_Selection_Table_Setup = [('Run Number', 'float'),
+
+class TimeSegmentsTable(NT.NTableWidget):
+    """
+    Table for show time segments for data splitting
+    """
+    def __init__(self, parent):
+        """
+        """
+        NT.NTableWidget.__init__(self, parent)
+
+    def setup(self):
+        """
+        Init setup
+        :return:
+        """
+        self.init_setup(TimeSegment_TableSetup)
+
+        return
+
+
+
+Run_Selection_Table_Setup = [('Run Number', 'int'),
                              ('', 'checkbox')]
 
 
@@ -111,6 +135,20 @@ class VdriveRunTableWidget(NT.NTableWidget):
             self.append_row([run, False])
 
         return
+
+    def get_selected_runs(self):
+        """ Get list of selected runs
+        :return:
+        """
+        row_num_list = self.get_selected_rows()
+        col_index_run = Run_Selection_Table_Setup.index(('Run Number', 'int'))
+
+        run_number_list = list()
+        for i_row in sorted(row_num_list):
+            run_number = self.get_cell_value(i_row, col_index_run)
+            run_number_list.append(run_number)
+
+        return run_number_list
 
     def get_rows_by_run(self, run_list):
         """
