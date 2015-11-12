@@ -180,10 +180,10 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     return True, out_ws
 
 
-def split_event_data(event_data_ws_name, splitter_ws_name, info_ws_name, splitted_ws_base_name, tof_correction=False):
+def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, splitted_ws_base_name, tof_correction=False):
     """
     Split workspaces
-    :param event_ws_name:
+    :param raw_event_ws_name:
     :param splitter_ws_name:
     :param info_ws_name:
     :param tof_correction:
@@ -194,7 +194,8 @@ def split_event_data(event_data_ws_name, splitter_ws_name, info_ws_name, splitte
     else:
         correction = 'None'
 
-    ret_list = mantidapi.FilterEvents(InputWorkspace=event_data_ws_name,
+    print '[DB] Information workspace = %s of type %s\n' % (str(info_ws_name), str(type(info_ws_name)))
+    ret_list = mantidapi.FilterEvents(InputWorkspace=raw_event_ws_name,
                                       SplitterWorkspace=splitter_ws_name,
                                       InformationWorkspace=info_ws_name,
                                       OutputWorkspaceBaseName=splitted_ws_base_name,

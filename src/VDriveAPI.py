@@ -392,9 +392,18 @@ class VDriveAPI(object):
             return False, 'it is not allowed to specify neither sample log nor time!'
 
         if by_time is True:
-            sample_log_name = '__TIME__'
-            slicer = self._myLogHelper.get_slicer_by_time(run_number)
+            # Slice data by time
+            status, ret_obj = self._myLogHelper.get_slicer_by_time(run_number)
+            if status is False:
+                err_msg = ret_obj
+                print '[DB]', err_msg, '\n'
+                return False, err_msg
+            else:
+                slicer = ret_obj
+                sample_log_name = '_TIME_'
+                print '[DB] Slicer = ', str(slicer), '\n'
         else:
+            # Slice data by log value
             assert isinstance(sample_log_name, str)
             print '[DB] Run number = ', run_number, '\n'
             status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, sample_log_name)

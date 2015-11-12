@@ -175,7 +175,7 @@ class SampleLogManager(object):
             return status, err_msg
 
         # Store
-        self._currSplittersDict[(self._currNexusFilename, '_TIME_')] = (splitter_ws_name, info_ws_name)
+        self._currSplittersDict['_TIME_'] = (splitter_ws_name, info_ws_name)
 
         return True, ret_obj
 
@@ -277,16 +277,53 @@ class SampleLogManager(object):
 
         return True, splitter_dict[log_name]
 
-    def get_splitters_absolute_time(self):
+    def get_slicer_by_time(self, run_number, nxs_name=None):
+        """ Get slicer by log value
+        :param run_number:
+        :param log_name:
+        :param nxs_name:
+        :return:
+        """
+        # Check for using run number or nxs file name
+        use_current = False
 
-        return
+        if run_number is not None and nxs_name is not None:
+            # specified both
+            raise RuntimeError('It is not allowed to use both run_number and nxs_name')
 
+        elif nxs_name is not None:
+            # use NeXus file name
+            if nxs_name == os.path.basename(self._currNexusFilename):
+                use_current = True
+            elif nxs_name not in self._prevSessionDict:
+                return False, 'NeXus file name %s has not been processed.' % nxs_name
 
-    def get_splitters_relative_time(self):
+        elif run_number is not None:
+            # use run number
+            if run_number in self._prevSessionDict:
+                nxs_name = self._runNxsNameMap[run_number]
+            elif run_number == self._currRunNumber:
+                use_current = True
+                nxs_name = os.path.basename(self._currNexusFilename)
+            else:
+                return False, 'Run %d has not been processed. Current run = %s.' % (run_number,
+                                                                                    str(self._currRunNumber))
 
-        return
+        else:
+            # specified neither
+            raise RuntimeError('It is not allowed not to use neither run_number nor nxs_name')
 
+        # Check for time
+        if use_current is True:
+            split_dict = self._currSplittersDict
+        else:
+            split_dict = self._prevSessionDict[nxs_name][2]
+        if '_TIME_' not in split_dict:
+            return False, 'There is no splitters by time for %s. Candidates are %s.\n' % (
+                nxs_name, str(split_dict.keys())
+            )
 
+        return True, split_dict['_TIME_']
 
     def set_current_slicer_sample_log(self, sample_log_name):
         """
