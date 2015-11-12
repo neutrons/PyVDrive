@@ -158,7 +158,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def load_settings(self):
         settings = QtCore.QSettings()
-        value1 = settings.value('test01', '').toString()
+        value1 = str(settings.value('test01', ''))
         #print '[DB] Value 1 without previous setting', str(value1)
         print value1
         self.ui.lineEdit_userLogFileName.setText(value1)
