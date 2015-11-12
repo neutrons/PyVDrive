@@ -15,16 +15,18 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 """ import GUI components generated from Qt Designer .ui file """
-import ui.gui.VdriveMain as mainUi
-import ui.GuiUtility as guiutil
-import ui.snapgraphicsview as spview
+sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
+import PyVDrive
+import PyVDrive.ui.gui.VdriveMain as mainUi
+import PyVDrive.ui.GuiUtility as guiutil
+import PyVDrive.ui.snapgraphicsview as spview
 
 """ import PyVDrive library """
-import VDriveAPI as vdrive
+import PyVDrive.VDriveAPI as vdrive
 
-import ui.AddRunsIPTS as dlgrun
-import ui.Window_LogPicker as LogPicker
-import ui.LogSnapView as dlgSnap
+import PyVDrive.ui.AddRunsIPTS as dlgrun
+import PyVDrive.ui.Window_LogPicker as LogPicker
+import PyVDrive.ui.LogSnapView as dlgSnap
 
 # Define enumerate
 ACTIVE_SLICER_TIME = 0
@@ -143,7 +145,23 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         self._calibCriteriaFile = ''
 
+        # Load settings
+        self.load_settings()
+
         return
+
+    # TODO/FIXME - Replace homemade by QSettings
+    def save_settings(self):
+        settings = QtCore.QSettings()
+        settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
+
+
+    def load_settings(self):
+        settings = QtCore.QSettings()
+        value1 = str(settings.value('test01', ''))
+        #print '[DB] Value 1 without previous setting', str(value1)
+        print value1
+        self.ui.lineEdit_userLogFileName.setText(value1)
 
     def do_bin_data(self):
         """ Bin a set of data
@@ -153,8 +171,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         selection_list = [self.ui.radioButton_binStandard,
                           self.ui.radioButton_binCustomized]
 
-
-
+        return
 
     def do_update_selected_runs(self):
         """
@@ -231,7 +248,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         '''
 
         # Selecting runs
-        self.ui.tableWidget_selectedRuns.setup()
+        # NEXT/TODO/FIXME self.ui.tableWidget_selectedRuns.setup()
         self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
@@ -615,6 +632,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Quit application without saving
         :return:
         """
+        self.save_settings()
+
         # FIXME - Save the session automatically before leaving
         self.close()
 
@@ -667,7 +686,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             nxs_file_name = run
 
         # Load file
-        status, errmsg = self._myWorkflow.init_slicing_helper(nxs_file_name=nxs_file_name)
+        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name)
         if status is False:
             raise RuntimeError(errmsg)
 
@@ -798,7 +817,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def set_selected_runs(self, run_list):
-        """ Set selected runs from a list
+        """ Set selected runs from a list..
         :param run_list:
         :return:
         """
@@ -827,5 +846,5 @@ if __name__=="__main__":
     myapp = VDrivePlotBeta()
     myapp.show()
 
-    exit_code=app.exec_()
-    sys.exit(exit_code)
+    #exit_code=app.exec_()
+    #sys.exit(exit_code)

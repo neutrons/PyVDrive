@@ -25,7 +25,8 @@ class FileSystemTreeView(QtGui.QTreeView):
         # Model
         cur_dir = os.path.expanduser('~')
         file_model = QtGui.QFileSystemModel()
-        file_model.setRootPath(QtCore.QString(cur_dir))
+        #file_model.setRootPath(QtCore.QString(cur_dir))
+        file_model.setRootPath(str(cur_dir))
 
         self.setModel(file_model)
 

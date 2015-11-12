@@ -145,7 +145,8 @@ class CustomizedTreeView(QtGui.QTreeView):
         assert(isinstance(append, bool))
 
         # Create QStandardItem and add to data manager
-        new_item = QtGui.QStandardItem(QtCore.QString(item_value))
+        # new_item = QtGui.QStandardItem(QtCore.QString(item_value))
+        new_item = QtGui.QStandardItem(str(item_value))
         self._leafDict[item_value] = []
 
         # Get current number of row
@@ -198,7 +199,8 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         leaf_found = False
         num_rows = my_model.rowCount()
-        found_item = my_model.findItems(QtCore.QString(main_item_value))
+        # found_item = my_model.findItems(QtCore.QString(main_item_value))
+        my_model.findItems(str(main_item_value))
 
         for i_row in xrange(num_rows):
             # Get item per line:
@@ -235,7 +237,8 @@ class CustomizedTreeView(QtGui.QTreeView):
         assert(isinstance(current_item, QtGui.QStandardItem))
 
         print 'Add Child Value ', child_value
-        child_item = QtGui.QStandardItem(QtCore.QString(child_value))
+        # child_item = QtGui.QStandardItem(QtCore.QString(child_value))
+        child_item = QtGui.QStandardItem(str(child_value))
         current_item.insertRow(0, [child_item])
 
         return
@@ -274,7 +277,8 @@ class CustomizedTreeView(QtGui.QTreeView):
                                'Unable to add duplicate item!' % (child_item_value, parent_value))
 
         # New item
-        child_item = QtGui.QStandardItem(QtCore.QString(child_item_value))
+        # child_item = QtGui.QStandardItem(QtCore.QString(child_item_value))
+        child_item = QtGui.QStandardItem(str(child_item_value))
         self._leafDict[parent_value].append(child_item_value)
         if append is False:
             self._leafDict[parent_value].sort()
