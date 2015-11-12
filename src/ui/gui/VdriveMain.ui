@@ -217,14 +217,14 @@
                  <item>
                   <widget class="QRadioButton" name="radioButton_runsAddAll">
                    <property name="text">
-                    <string>Add Selected Runs</string>
+                    <string>Add All Runs</string>
                    </property>
                   </widget>
                  </item>
                  <item>
                   <widget class="QRadioButton" name="radioButton_runsAddPartial">
                    <property name="text">
-                    <string>Add All Runs</string>
+                    <string>Add a Subset of Runs Between ... </string>
                    </property>
                   </widget>
                  </item>
@@ -1896,15 +1896,15 @@
     </item>
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
-      <item row="3" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView4">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
+      <item row="6" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_33">
+        <item>
+         <widget class="QComboBox" name="comboBox_g51"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g52"/>
+        </item>
+       </layout>
       </item>
       <item row="1" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView1">
@@ -2000,16 +2000,6 @@
         </item>
        </layout>
       </item>
-      <item row="6" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_33">
-        <item>
-         <widget class="QComboBox" name="comboBox_g51"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g52"/>
-        </item>
-       </layout>
-      </item>
       <item row="6" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_34">
         <item>
@@ -2022,6 +2012,16 @@
       </item>
       <item row="5" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="MplGraphicsView" name="graphicsView_snapView4">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>

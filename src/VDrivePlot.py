@@ -150,7 +150,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    # TODO/FIXME - Replace homemade by QSettings
+    # TODO/FIXME - Replace homemade by QSettings: Issue XXX
     def save_settings(self):
         settings = QtCore.QSettings()
         settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
@@ -158,10 +158,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def load_settings(self):
         settings = QtCore.QSettings()
-        value1 = str(settings.value('test01', ''))
-        #print '[DB] Value 1 without previous setting', str(value1)
-        print value1
-        self.ui.lineEdit_userLogFileName.setText(value1)
+        value1 = settings.value('test01', '')
+        assert isinstance(value1, QtCore.QVariant)
+        value1str = value1.toString()
+        print '[DB] Value 1 without previous setting', str(value1str), 'of type', str(type(value1str))
+        self.ui.lineEdit_userLogFileName.setText(value1str)
 
     def do_bin_data(self):
         """ Bin a set of data
@@ -248,7 +249,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         '''
 
         # Selecting runs
-        # NEXT/TODO/FIXME self.ui.tableWidget_selectedRuns.setup()
+        # NEXT/TODO/FIXME
+        self.ui.tableWidget_selectedRuns.setup()
         self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
@@ -362,11 +364,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_add_runs_to_reduce(self):
         """
-        TODO/FIXME
+        TODO/FIXME DOC
         :return:
         """
+        print '[DBGUI] do_add_runs_to_reduce() is started.'
+
         if self.ui.radioButton_runsAddAll.isChecked():
             # Case as select all
+            print '[DBGUI] Case 1'
             status, ret_obj = self._myWorkflow.get_runs()
             if status is True:
                 run_list = ret_obj
@@ -377,6 +382,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
             # Case as select a subset
+            print '[DBGUI] Case 2'
             start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
             end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
             status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
