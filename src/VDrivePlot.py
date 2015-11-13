@@ -863,7 +863,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         consider_save = False
         if self._snapViewWindow is None:
             # Create a new window
-            self._snapViewWindow = dlgSnap.DialogLogSnapView()
+            self._snapViewWindow = dlgSnap.DialogLogSnapView(self)
         else:
             consider_save = True
 

@@ -79,6 +79,29 @@ class DialogLogSnapView(QtGui.QDialog):
         return
 
     def do_save_quit(self):
+        """
+        Save and quit with applying to parent
+        :return:
+        """
+        # TODO/FIXME/NOW
+        # start_time = gutil.parse_float('')
+        """
+        lineEdit_minTime
+        lineEdit_maxTime
+        lineEdit_minLogValue
+        lineEdit_logValueInterval
+        lineEdit_maxLogTime
+        comboBox_direction
+        """
+
+        self._myParent.get_controller().gen_data_slicer_sample_log(run_number=self._myRunNumber,
+                                       sample_log_name=self._myLogName,
+                                       start_time=1.0,
+                                       end_time=200.1,
+                                       min_log_value=-10.0,
+                                       max_log_value=-8.0,
+                                       log_value_step=1.0)
+
         return
 
     def is_saved(self):
@@ -131,7 +154,8 @@ class DialogLogSnapView(QtGui.QDialog):
         :param time_value:
         :return:
         """
-        self.ui.graphicsView_main.set_indicator_horizontal(line_id, time_value)
+        # self.ui.graphicsView_main.set_indicator_horizontal(line_id, time_value)
+        self.ui.graphicsView_main.set_indicator_position(line_id, time_value, None)
 
         return
 
