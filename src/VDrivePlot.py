@@ -86,6 +86,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Column 3
         # Tab-1
         # sub-tab-1
+        self.connect(self.ui.pushButton_loadTimeSegmentsFile, QtCore.SIGNAL('clicked()'),
+                     self.do_load_time_seg_file)
         self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
                      self.do_slice_data_by_time)
 
@@ -315,6 +317,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Selecting runs
         # NEXT/TODO/FIXME
         self.ui.tableWidget_selectedRuns.setup()
+        self.ui.tableWidget_timeSegment.setup()
+
         self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
@@ -514,6 +518,34 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def do_load_time_seg_file(self):
+        """
+        Load time segment file
+        :return:
+        """
+        # FIXME/TODO/NOW: fill the pseudo code
+        # Get file name
+        file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
+        log_path = self._myWorkflow.get_working_dir()
+        seg_file_name = str(QtGui.QFileDialog.getOpenFileName(
+            self, 'Open NeXus File', log_path, file_filter))
+        print '[DB] Importing time segment file: %s' % seg_file_name
+
+        # Import file
+        status, ret_obj = self._myWorkflow.parse_time_segment_file(seg_file_name)
+        if status is False:
+            err_msg = ret_obj
+            guiutil.pop_dialog_error(self, err_msg)
+            return
+        else:
+            time_seg_list = ret_obj
+
+        # Set to table
+        self.ui.tableWidget_timeSegment.clear()
+        self.ui.tableWidget_timeSegment.set_segments(time_seg_list)
+
+        return
+
     def do_read_sample_log_file(self):
         """ Load nexus file for plotting sample log.
         The file should be selected from runs in the tree
@@ -643,7 +675,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :return:
         """
         self.evt_snap_mouse_press(event, 1)
-
 
     def evt_snap3_mouse_press(self, event):
         """
@@ -855,25 +886,21 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Check index
         if self._currentSnapViewIndex < 0 \
                 or self._currentSnapViewIndex >= len(self._groupedSnapViewList):
-            error_message = 'Current snap view index (%d) is either not defined or out of boundary' \
-                            % self._currentSnapViewIndex
+            error_message = 'Current snap view index (%d) is either not defined ' \
+                            'or out of boundary' % self._currentSnapViewIndex
             guiutil.pop_dialog_error(error_message)
 
         # Create a Snap view window if needed
-        consider_save = False
         if self._snapViewWindow is None:
             # Create a new window
+            print '[DB Trace] Creating a new SnapViewDialog.'
             self._snapViewWindow = dlgSnap.DialogLogSnapView(self)
-        else:
-            consider_save = True
 
         # Refresh?
-        if consider_save is True:
-            if self._snapViewWindow.is_saved() is False:
-                # If window is open but not saved, pop error message
-                guiutil.pop_dialog_error('Current window is not saved.')
+        if self._snapViewWindow.allow_new_session() is False:
+            # If window is open but not saved, pop error message
+                guiutil.pop_dialog_error(self, 'Current window is not saved.')
                 return
-            # END-IF-ELSE
         # END-IF
 
         # Get the final data

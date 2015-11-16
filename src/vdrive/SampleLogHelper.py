@@ -391,3 +391,21 @@ class SampleLogManager(object):
         self._currSplittersDict = splitter_dict
 
         return True, ''
+
+def parse_time_segments(file_name):
+    """
+
+    :param file_name:
+    :return:
+    """
+    # TODO/NOW/FIXME : find out how to parse cvs file
+
+
+def save_time_segments(file_name, segment_list):
+    """
+
+    :param file_name:
+    :param segment_list:
+    :return:
+    """
+    # TODO/NOW/FIXME

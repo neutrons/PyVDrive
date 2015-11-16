@@ -101,6 +101,28 @@ class TimeSegmentsTable(NT.NTableWidget):
         """
         NT.NTableWidget.__init__(self, parent)
 
+        self._currRowNumber = 0
+
+    def set_segments(self, segments_list):
+        """
+
+        :param segments_list:
+        :return:
+        """
+        # TODO/FIXME/NOW: Follow
+
+        # Check input type
+
+        #
+        for segment in segments_list:
+            assert len(segment) == 3
+
+            self._currRowNumber += 1
+            self.append_row(segment)
+        # END-FOR
+
+        return
+
     def setup(self):
         """
         Init setup

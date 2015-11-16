@@ -348,6 +348,17 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
+    def parse_time_segment_file(self, file_name):
+        """
+
+        :param file_name:
+        :return:
+        """
+        # TODO/FIXME/NOW
+        segment_list = logHelper.parse_time_segments(file_name)
+
+        return segment_list
+
     def set_data_root_directory(self, root_dir):
         """ Set root data directory to
         :rtype : tuple

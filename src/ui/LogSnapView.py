@@ -42,7 +42,13 @@ class DialogLogSnapView(QtGui.QDialog):
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit_no_save)
 
-        # Class variable
+        # Class state variables
+        self._slicerIsSaved = False
+        self._currSessionDiscardable = True
+
+        self._logName = None
+
+        # Controller variables
         self._myWorkflowController = None
         self._horizontalIndicatorList = None
         self._verticalIndicatorList = [None, None]
@@ -50,7 +56,7 @@ class DialogLogSnapView(QtGui.QDialog):
         return
 
     def do_apply_change(self):
-        """ Apply new set up for the
+        """ Apply new set up for the slicer range
         :return:
         """
         # Time
@@ -74,6 +80,7 @@ class DialogLogSnapView(QtGui.QDialog):
 
         :return:
         """
+        self._currSessionDiscardable = True
         self.close()
 
         return
@@ -83,6 +90,9 @@ class DialogLogSnapView(QtGui.QDialog):
         Save and quit with applying to parent
         :return:
         """
+        self._slicerIsSaved = True
+        self._currSessionDiscardable = True
+
         # TODO/FIXME/NOW
         # start_time = gutil.parse_float('')
         """
@@ -94,13 +104,14 @@ class DialogLogSnapView(QtGui.QDialog):
         comboBox_direction
         """
 
-        self._myParent.get_controller().gen_data_slicer_sample_log(run_number=self._myRunNumber,
-                                       sample_log_name=self._myLogName,
-                                       start_time=1.0,
-                                       end_time=200.1,
-                                       min_log_value=-10.0,
-                                       max_log_value=-8.0,
-                                       log_value_step=1.0)
+        self._myParent.get_controller().gen_data_slicer_sample_log(
+            run_number=self._myRunNumber,
+            sample_log_name=self._myLogName,
+            start_time=1.0,
+            end_time=200.1,
+            min_log_value=-10.0,
+            max_log_value=-8.0,
+            log_value_step=1.0)
 
         return
 
@@ -108,8 +119,14 @@ class DialogLogSnapView(QtGui.QDialog):
         """ Return whether the information is saved or not
         :return:
         """
-        # FIXME - Return true all the time
-        return True
+        return self._slicerIsSaved
+
+    def allow_new_session(self):
+        """
+        Return the flag if it is fine to start to plot a new log
+        :return:
+        """
+        return self._currSessionDiscardable
 
     def setup(self, workflow_controller, sample_log_name, num_sec_skip):
         """ Set up from parent main window
@@ -117,16 +134,30 @@ class DialogLogSnapView(QtGui.QDialog):
         """
         # Get workflow controller
         self._myWorkflowController = workflow_controller
+        if self._logName != sample_log_name:
+            new_graph = True
+        else:
+            new_graph = False
+
+        # Return and do nothing if just want to show a hidden window
+        if new_graph is False:
+            return
+
+        # Reset some state variables for new
+        self._slicerIsSaved = False
+        self._currSessionDiscardable = False
 
         # Get log value
-        status, ret_value = self._myWorkflowController.get_sample_log_values(sample_log_name, relative=True)
+        status, ret_value = self._myWorkflowController.get_sample_log_values(
+            sample_log_name, relative=True)
         if status is True:
             vec_x, vec_y = ret_value
         else:
-            gutil.pop_dialog_error(ret_value)
+            gutil.pop_dialog_error(self, ret_value)
             return
 
         # Plot
+        self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
 
         # Set up boundary for time
