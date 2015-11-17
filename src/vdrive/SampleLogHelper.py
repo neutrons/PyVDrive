@@ -444,9 +444,10 @@ class SampleLogManager(object):
 
 def parse_time_segments(file_name):
     """
-
+    Parse the standard time segments file serving for event slicers
     :param file_name:
-    :return:
+    :return: 2-tuple as (boolean, object): (True, (reference run, start time, segment list))
+            (False, error message)
     """
     # Check
     assert isinstance(file_name, str)
@@ -498,7 +499,8 @@ def parse_time_segments(file_name):
                     print '[Error] Unable to convert run start time %s to float' % run_start_str
         else:
             # remove all tab
-            terms = line.split('\t')
+            line = line.replace('\t', '')
+            terms = line.split()
             if len(terms) < 2:
                 print '[Error] Line "%s" is of wrong format.' % line
                 continue

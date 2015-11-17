@@ -2,6 +2,36 @@
 
 A data reduction and analysis software for (SNS) VULCAN based on PyQt.
 
+
+
+Format of Files
+---------------
+
+Time segment file
+=================
+
+The format of the time segment file for data slicing is compose of two parts.
+
+The first part is the comment lines started with *#*.  
+Two parameters have been defined.  
+They are *Reference Run Number* and *Run Start Time*. 
+
+The second part is for time segment. 
+Each row must contain start and stop time for a time segment.
+The third item is optional to be the target workspace's ID. 
+Two adjacent item must be separated by tab.
+
+Example:
+ # Ignored information
+ # Reference Run Number = 12345
+ # Run Start Time = 9999999.99999999
+ # Ignore information
+ t0	t1	1
+ t2	t3	2
+
+
+
+
 New Requests
 ------------
 

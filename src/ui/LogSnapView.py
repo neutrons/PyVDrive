@@ -90,28 +90,27 @@ class DialogLogSnapView(QtGui.QDialog):
         Save and quit with applying to parent
         :return:
         """
-        self._slicerIsSaved = True
-        self._currSessionDiscardable = True
+        # Get parameter values from GUI
+        start_time = gutil.parse_float(self.ui.lineEdit_minTime)
+        stop_time = gutil.parse_float(self.ui.lineEdit_maxTime)
+        min_log_value = gutil.parse_float(self.ui.lineEdit_minLogValue)
+        max_log_value = gutil.parse_float(self.ui.lineEdit_maxLogValue)
+        delta_value = gutil.parse_float(self.ui.lineEdit_logValueInterval)
 
-        # TODO/FIXME/NOW
-        # start_time = gutil.parse_float('')
-        """
-        lineEdit_minTime
-        lineEdit_maxTime
-        lineEdit_minLogValue
-        lineEdit_logValueInterval
-        lineEdit_maxLogTime
-        comboBox_direction
-        """
+        # FIXME - Treat 'comboBox_direction'
 
         self._myParent.get_controller().gen_data_slicer_sample_log(
             run_number=self._myRunNumber,
             sample_log_name=self._myLogName,
-            start_time=1.0,
-            end_time=200.1,
-            min_log_value=-10.0,
-            max_log_value=-8.0,
-            log_value_step=1.0)
+            start_time=start_time,
+            end_time=stop_time,
+            min_log_value=min_log_value,
+            max_log_value=max_log_value,
+            log_value_step=delta_value)
+
+        # Update the state variables
+        self._slicerIsSaved = True
+        self._currSessionDiscardable = True
 
         return
 

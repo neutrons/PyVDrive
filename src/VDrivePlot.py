@@ -523,7 +523,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Load time segment file
         :return:
         """
-        # FIXME/TODO/NOW: fill the pseudo code
         # Get file name
         file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
         log_path = self._myWorkflow.get_working_dir()
@@ -532,13 +531,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         print '[DB] Importing time segment file: %s' % seg_file_name
 
         # Import file
-        status, ret_obj = self._myWorkflow.parse_time_segment_file(seg_file_name)
+        status, ret_obj = vdrive.parse_time_segment_file(seg_file_name)
         if status is False:
             err_msg = ret_obj
             guiutil.pop_dialog_error(self, err_msg)
             return
         else:
-            time_seg_list = ret_obj
+            ref_run, run_start, time_seg_list = ret_obj
 
         # Set to table
         self.ui.tableWidget_timeSegment.clear()

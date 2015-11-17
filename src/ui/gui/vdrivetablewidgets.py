@@ -109,16 +109,10 @@ class TimeSegmentsTable(NT.NTableWidget):
         :param segments_list:
         :return:
         """
-        # TODO/FIXME/NOW: Follow
-
-        # Check input type
-
-        #
         for segment in segments_list:
-            assert len(segment) == 3
-
+            seg_list = [segment.start, segment.end, str(segment.target)]
+            self.append_row(seg_list)
             self._currRowNumber += 1
-            self.append_row(segment)
         # END-FOR
 
         return
@@ -131,7 +125,6 @@ class TimeSegmentsTable(NT.NTableWidget):
         self.init_setup(TimeSegment_TableSetup)
 
         return
-
 
 
 Run_Selection_Table_Setup = [('Run Number', 'int'),
