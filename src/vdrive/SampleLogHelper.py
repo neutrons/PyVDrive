@@ -3,6 +3,56 @@ import os
 import mantid_helper as mtd
 
 
+FifteenYearsInSecond = 15*356*24*3600
+
+
+class TimeSegment(object):
+    """ Time segment for splitters
+    """
+    def __init__(self, start_time, stop_time, target_id):
+        """
+
+        :param start_time:
+        :param stop_time:
+        :param target_id:
+        :return:
+        """
+        assert isinstance(start_time, float)
+        assert isinstance(stop_time, float)
+        assert isinstance(target_id, int) or isinstance(target_id, str)
+
+        if start_time >= stop_time:
+            raise RuntimeError('Unable to create a TimeSegment object '
+                               'because start time %f is equal to larger than '
+                               'stop time %f' % (start_time, stop_time))
+
+        self.start = start_time
+        self.stop = stop_time
+
+        if self.start > FifteenYearsInSecond:
+            self._isRelative = False
+        else:
+            self._isRelative = True
+
+        self.target = target_id
+
+        return
+
+    def get_time_segment(self):
+        """
+
+        :return:
+        """
+        return self.start, self.start
+
+    def get_target_id(self):
+        """
+
+        :return:
+        """
+        return self.target
+
+
 class SampleLogManager(object):
     """ Sample log manager for
 
@@ -398,14 +448,126 @@ def parse_time_segments(file_name):
     :param file_name:
     :return:
     """
-    # TODO/NOW/FIXME : find out how to parse cvs file
+    # Check
+    assert isinstance(file_name, str)
+
+    # Read file
+    try:
+        in_file = open(file_name, 'r')
+        raw_lines = in_file.readlines()
+        in_file.close()
+    except IOError as e:
+        return False, 'Failed to read time segment file %s due to %s.' % (
+            file_name, str(e)
+        )
+
+    ref_run = None
+    run_start = None
+    segment_list = list()
+
+    i_target = 1
+
+    for raw_line in raw_lines:
+        line = raw_line.strip()
+
+        # Skip empty line
+        if len(line) == 0:
+            continue
+
+        # Comment line
+        if line.startswith('#') is True:
+            # remove all spaces
+            line = line.replace(' ', '')
+            terms = line.split('=')
+            if len(terms) == 1:
+                continue
+            if terms[0].lower().startswith('referencerunnumber'):
+                # reference run number
+                ref_run_str = terms[1]
+                if ref_run_str.isdigit():
+                    ref_run = int(ref_run_str)
+                else:
+                    ref_run = ref_run_str
+                print '[BAF] Found reference run %s' % str(ref_run)
+            elif terms[0].lower().startswith('runstarttime'):
+                # run start time
+                run_start_str = terms[1]
+                try:
+                    run_start = float(run_start_str)
+                except ValueError:
+                    print '[Error] Unable to convert run start time %s to float' % run_start_str
+        else:
+            # remove all tab
+            terms = line.split('\t')
+            if len(terms) < 2:
+                print '[Error] Line "%s" is of wrong format.' % line
+                continue
+
+            try:
+                start_time = float(terms[0])
+                stop_time = float(terms[1])
+                if len(terms) < 3:
+                    target_id = i_target
+                    i_target += 1
+                else:
+                    target_id = terms[2]
+                new_segment = TimeSegment(start_time, stop_time, target_id)
+                segment_list.append(new_segment)
+            except ValueError as e:
+                print '[Error] Line "%s" has wrong type of vlaue for start/stop.' % line
+                continue
+        # END-IF (#)
+
+        return True, (ref_run, run_start, segment_list)
 
 
-def save_time_segments(file_name, segment_list):
+def save_time_segments(file_name, segment_list, ref_run=None, run_start=None):
     """
-
+    Format:
+    # Reference Run Number =
+    # Run Start Time =
+    # Start Stop TargetIndex
+    Note that all units of time stamp or difference of time are seconds
     :param file_name:
     :param segment_list:
+    :param ref_run:
+    :param run_start:
     :return:
     """
-    # TODO/NOW/FIXME
+    # Check
+    assert isinstance(file_name, str)
+
+    # Write to buffer
+    wbuf = ''
+
+    # comment lines
+    wbuf += '# Reference Run Number = '
+    if ref_run is not None:
+        assert isinstance(ref_run, int) or isinstance(ref_run, str)
+        wbuf += '%s\n' % str(ref_run)
+    else:
+        wbuf += '\n'
+
+    wbuf += '# Run Start Time = '
+    if run_start is not None:
+        assert isinstance(run_start, float)
+        wbuf += '%.9f'
+    wbuf += '\n'
+
+    wbuf += '# Start Time \tStop Time \tTarget\n'
+
+    # splitters
+    assert isinstance(segment_list, list)
+    for segment in segment_list:
+        wbuf += '%.9f \t%.9f \t%d\n' % (segment.start, segment.stop, segment.target)
+
+    # Write
+    try:
+        ofile = open(file_name, 'w')
+        ofile.write(wbuf)
+        ofile.close()
+    except IOError as e:
+        return False, 'Failed to write time segments to file %s due to %s' % (
+            file_name, str(e))
+
+    return True, None
