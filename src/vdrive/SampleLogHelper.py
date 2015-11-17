@@ -71,11 +71,10 @@ class SampleLogManager(object):
         self._currWorkspace = None
         self._currWorkspaceName = ''
         self._currLogNamesList = list()
-        # key = log file name (base name), sample log name
-        self._currSplittersDict = dict()
-        # self._logInfoList = None
+        self._currSplittersDict = dict()  # key = sample log name
 
-        # Stored session
+        # Stored session:
+        # key = log file name (base name), value = tuple as file name with full path, workspace name, splitter dict
         self._prevSessionDict = dict()
         # Keys map
         self._runNxsNameMap = dict()
@@ -280,7 +279,7 @@ class SampleLogManager(object):
         :param run_number:
         :param log_name:
         :param nxs_name:
-        :return:
+        :return: 2-tuple as (boolean, object)
         """
         # Check
         use_current = False
@@ -375,16 +374,6 @@ class SampleLogManager(object):
 
         return True, split_dict['_TIME_']
 
-    def set_current_slicer_sample_log(self, sample_log_name):
-        """
-        TODOD
-        :param sample_log_name:
-        :return:
-        """
-        self._currentSplitterWS = self._currSplittersDict[(self._currNexusFilename, sample_log_name)]
-
-        return
-
     def set_current_slicer_time(self):
         """
         TODO
@@ -441,6 +430,30 @@ class SampleLogManager(object):
         self._currSplittersDict = splitter_dict
 
         return True, ''
+
+    def save_splitter_ws(self, run_number, log_name, out_file_name):
+        """
+        """
+        status, ret_obj = self.get_slicer_by_log(run_number, log_name)
+
+        # TODO/FIXME/NOW
+        sws.rowCount()
+        """
+        sws.getNumberSplitters()
+
+        Out[6]: mantid.dataobjects._dataobjects.SplittersWorkspace
+
+        sws.cell(0, 0)
+        Out[7]: 792050526182000000
+
+        sws.cell(0, 1)
+        Out[8]: 792050526671000000
+
+        sws.cell(0, 2)
+        Out[9]: 3
+        """
+
+
 
 def parse_time_segments(file_name):
     """

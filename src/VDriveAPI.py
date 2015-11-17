@@ -138,6 +138,7 @@ class VDriveAPI(object):
         # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
         # print 'log_name = ', sample_log_name
 
+        # FIXME - Need to pass value change direction
         self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
                                                         min_time=start_time, max_time=end_time, relative_time=True,
                                                         min_log_value=min_log_value, max_log_value=max_log_value,
@@ -384,6 +385,16 @@ class VDriveAPI(object):
 
         return True, out_file_name
 
+    def save_splitter_workspace(self, run_number, sample_log_name, file_name=None):
+        """
+
+        :param run_number:
+        :param sample_log_name:
+        :param file_name:
+        :return:
+        """
+        # FIXME/TODO/NOW
+        logHelper.save_splitters()
 
     def save_time_segment(self, time_segment_list, ref_run_number, file_name):
         """
@@ -414,16 +425,19 @@ class VDriveAPI(object):
 
         segment_list.sort(ascending=True)
 
-        # Check
+        # Check validity
         num_seg = len(segment_list)
         if num_seg >= 2:
             prev_stop = segment_list[0].stop
             for index in xrange(1, num_seg):
                 if prev_stop >= segment_list[index].start:
                     return False, 'Overlapping time segments!'
+        # END-IF
 
-        ... ... ... ...
+        # Write to file
+        logHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
 
+        return
 
     def slice_data(self, run_number, sample_log_name=None, by_time=False):
         """ TODO - DOC

@@ -23,6 +23,8 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
 
     :return:
     """
+    # TODO/FIXME Doc
+    print '[TRACE] Generate Filter By Log'
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
                                    LogName=log_name,

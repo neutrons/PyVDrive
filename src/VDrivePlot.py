@@ -92,12 +92,12 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.do_slice_data_by_time)
 
         # sub-tab-2
-        self.connect(self.ui.pushButton_applyTimeInterval, QtCore.SIGNAL('clicked()'),
-                     self.do_generate_slicer_by_time)
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
-                     self.do_pick_manual)
+                     self.do_apply_manual_slicer)
         self.connect(self.ui.pushButton_applyLog, QtCore.SIGNAL('clicked()'),
-                     self.do_pick_log)
+                     self.do_apply_log_slicer)
+        self.connect(self.ui.pushButton_saveSlicer, QtCore.SIGNAL('clicked()'),
+                     self.do_save_log_slicer)
 
         # Tab-2
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
@@ -144,6 +144,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._group_left_box_values = [-1] * self._numSnapViews
 
         # variables for event data slicing
+        self._currLogRunNumber = None  # current run number for slicing with log
+        self._currSlicerLogName = None  # current sample for slicer, __manual__ is for manual mode
         self._activeSlicer = ''
 
         # Some class variable for recording status
@@ -166,10 +168,43 @@ class VDrivePlotBeta(QtGui.QMainWindow):
     def load_settings(self):
         settings = QtCore.QSettings()
         value1 = settings.value('test01', '')
-        assert isinstance(value1, QtCore.QVariant)
+        if isinstance(value1, QtCore.QVariant) is False:
+            print '[Error] to load QSettings.  Value1 is of type %s' % str(type(value1))
+            return
         value1str = value1.toString()
         print '[DB] Value 1 without previous setting', str(value1str), 'of type', str(type(value1str))
         self.ui.lineEdit_userLogFileName.setText(value1str)
+
+    def do_apply_log_slicer(self):
+        """ Pick up the splitters made from sample log values
+        :return:
+        """
+        found = False
+        for i_radio in xrange(self._numSnapViews):
+            if self._groupedSnapViewList[i_radio].is_selected() is True:
+                self._currSlicerLogName = spview.SampleLogView(
+                    self._groupedSnapViewList[i_radio], self).get_log_name()
+                found = True
+                print '[DB] VDrivePlot: snap view for radio button %d is selected.' % i_radio
+                break
+
+        if found is False:
+            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
+
+
+        # self._apply_slicer_snap_view() : disabled because there is no need to do this
+
+        return
+
+    def do_apply_manual_slicer(self):
+        """ Pick up (time) slicing information and show it by indicating lines in snap view
+        :return:
+        """
+        self._myWorkflow.set_slicer('Manual')
+
+        self._apply_slicer_snap_view()
+
+        return
 
     def do_bin_data(self):
         """ Bin a set of data
@@ -280,6 +315,26 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         do_change_tab = self.ui.checkBox_chopBinLater.isChecked()
         if do_change_tab is True:
             self.ui.tabWidget_reduceData.setCurrentIndex(1)
+
+        return
+
+    def do_save_log_slicer(self):
+        """ Save slicer to file in 'log value' sub-tab of CHOP tab
+        :return:
+        """
+        print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName
+        # Save slicer for run  57325  sample log  Voltage
+
+        if self._currSlicerLogName is None:
+            guiutil.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
+            return
+        else:
+            # Save splitters workspace
+            if self._currSlicerLogName == '__manual__':
+                raise NotImplementedError('ASAP')
+            else:
+                # TODO/FIXME/NOW - use the correct method
+                self._myWorkflow.save_time_segment()
 
         return
 
@@ -485,20 +540,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    def do_generate_slicer_by_time(self):
-        """
-
-        :return:
-        """
-        # TODO - Gather information for tmin, tmax, delta_t
-
-        # TODO - Call the workflow to generate slicer
-
-        # Set active
-        self._activeSlicer = ACTIVE_SLICER_TIME
-
-        return
-
     def do_load_calibration(self):
         """
         :return:
@@ -571,6 +612,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                     log_path = os.path.dirname(run_file_name)
             else:
                 guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+            self._currLogRunNumber = run_number
         else:
             guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
         # END-IF
@@ -613,35 +655,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    def do_pick_log(self):
-        """ Pick up the splitters made from sample log values
-        :return:
-        """
-        found = False
-        for i_radio in xrange(self._numSnapViews):
-            if self._groupedSnapViewList[i_radio].is_selected() is True:
-                log_name = self._groupedSnapViewList[i_radio].get_log_name()
-                self._myWorkflow.set_slicer(splitter_src='SampleLog', sample_log_name=log_name)
-                found = True
-                break
-
-        if found is False:
-            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
-
-        self._apply_slicer_snap_view()
-
-        return
-
-    def do_pick_manual(self):
-        """ Pick up (time) slicing information and show it by indicating lines in snap view
-        :return:
-        """
-        self._myWorkflow.set_slicer('Manual')
-
-        self._apply_slicer_snap_view()
-
-        return
-
     def do_save_slicer(self):
         """ Save the slicer (splitters) for future splitting
         :return:
@@ -667,36 +680,42 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         :return:
         """
+        self.ui.radioButton_plot1.setChecked(True)
         self.evt_snap_mouse_press(event, 0)
 
     def evt_snap2_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot2.setChecked(True)
         self.evt_snap_mouse_press(event, 1)
 
     def evt_snap3_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot3.setChecked(True)
         self.evt_snap_mouse_press(event, 2)
 
     def evt_snap4_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot4.setChecked(True)
         self.evt_snap_mouse_press(event, 3)
 
     def evt_snap5_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot5.setChecked(True)
         self.evt_snap_mouse_press(event, 4)
 
     def evt_snap6_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot6.setChecked(True)
         self.evt_snap_mouse_press(event, 5)
 
     def evt_snap_mouse_press(self, event, snap_view_index):
@@ -906,7 +925,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         sample_log_view = spview.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
         num_skipped_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
-        self._snapViewWindow.setup(self._myWorkflow, sample_log_name, num_skipped_second)
+        self._snapViewWindow.setup(self._myWorkflow, self._currLogRunNumber, sample_log_name, num_skipped_second)
 
         self._snapViewWindow.show()
 
@@ -924,18 +943,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    """
     def _apply_slicer_snap_view(self):
-        """
         Apply Slicers to all 6 view
         :return:
-        """
         vec_time, vec_y = self._myWorkflow.get_event_slicer_active(relative_time=True)
 
         for snap_view_suite in self._groupedSnapViewList:
             snap_view_suite.update_event_slicer(vec_time)
 
         return
-
+    """
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

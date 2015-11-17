@@ -47,6 +47,7 @@ class DialogLogSnapView(QtGui.QDialog):
         self._currSessionDiscardable = True
 
         self._logName = None
+        self._myRunNumber = None
 
         # Controller variables
         self._myWorkflowController = None
@@ -54,6 +55,13 @@ class DialogLogSnapView(QtGui.QDialog):
         self._verticalIndicatorList = [None, None]
 
         return
+
+    def allow_new_session(self):
+        """
+        Return the flag if it is fine to start to plot a new log
+        :return:
+        """
+        return self._currSessionDiscardable
 
     def do_apply_change(self):
         """ Apply new set up for the slicer range
@@ -67,13 +75,20 @@ class DialogLogSnapView(QtGui.QDialog):
 
         # Value
         min_log_value = gutil.parse_float(self.ui.lineEdit_minLogValue)
-        max_log_value = gutil.parse_float(self.ui.lineEdit_maxLogTime)
+        max_log_value = gutil.parse_float(self.ui.lineEdit_maxLogValue)
         v_id_0 = self.ui.graphicsView_main.add_horizontal_indicator(min_log_value, 'blue')
         v_id_1 = self.ui.graphicsView_main.add_horizontal_indicator(max_log_value, 'blue')
         self._verticalIndicatorList[0] = v_id_0
         self._verticalIndicatorList[1] = v_id_1
 
         return
+
+    def do_get_log_name(self):
+        """
+
+        :return:
+        """
+        return self._logName
 
     def do_quit_no_save(self):
         """
@@ -99,9 +114,10 @@ class DialogLogSnapView(QtGui.QDialog):
 
         # FIXME - Treat 'comboBox_direction'
 
-        self._myParent.get_controller().gen_data_slicer_sample_log(
+        print '[DB-BAR] Log name = ', self._logName
+        self._myParent.get_workflow().gen_data_slicer_sample_log(
             run_number=self._myRunNumber,
-            sample_log_name=self._myLogName,
+            sample_log_name=self._logName,
             start_time=start_time,
             end_time=stop_time,
             min_log_value=min_log_value,
@@ -112,7 +128,17 @@ class DialogLogSnapView(QtGui.QDialog):
         self._slicerIsSaved = True
         self._currSessionDiscardable = True
 
+        # Quit
+        self.close()
+
         return
+
+    def get_log_name(self):
+        """
+
+        :return:
+        """
+        return self._logName
 
     def is_saved(self):
         """ Return whether the information is saved or not
@@ -120,21 +146,22 @@ class DialogLogSnapView(QtGui.QDialog):
         """
         return self._slicerIsSaved
 
-    def allow_new_session(self):
-        """
-        Return the flag if it is fine to start to plot a new log
-        :return:
-        """
-        return self._currSessionDiscardable
-
-    def setup(self, workflow_controller, sample_log_name, num_sec_skip):
+    def setup(self, workflow_controller, run_number, sample_log_name, num_sec_skip):
         """ Set up from parent main window
         :return:
         """
+        print '[DB-TRACE] Run number for log slicing ', run_number, 'of type ', type(run_number)
+        print 'for log ', sample_log_name
+
         # Get workflow controller
         self._myWorkflowController = workflow_controller
-        if self._logName != sample_log_name:
+        if run_number != self._myRunNumber:
             new_graph = True
+            self._myRunNumber = run_number
+            self._logName = sample_log_name
+        elif self._logName != sample_log_name:
+            new_graph = True
+            self._logName = sample_log_name
         else:
             new_graph = False
 
@@ -159,6 +186,14 @@ class DialogLogSnapView(QtGui.QDialog):
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
 
+        # reset limit
+        y_min = min(vec_y)
+        y_max = max(vec_y)
+        dy = y_max - y_min
+        y_min -= dy*0.1
+        y_max += dy*0.1
+        self.ui.graphicsView_main.setXYLimit(ymin=y_min, ymax=y_max)
+
         # Set up boundary for time
         min_x = vec_x[0]
         max_x = vec_x[-1]
@@ -174,7 +209,7 @@ class DialogLogSnapView(QtGui.QDialog):
         min_y = min(vec_y)
         max_y = max(vec_y)
         self.ui.lineEdit_minLogValue.setText('%.5f' % min_y)
-        self.ui.lineEdit_maxLogTime.setText('%.5f' % max_y)
+        self.ui.lineEdit_maxLogValue.setText('%.5f' % max_y)
 
         return
 

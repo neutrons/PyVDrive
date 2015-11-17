@@ -51,7 +51,7 @@ class SnapGraphicsView(object):
 
     def plot_data(self, vec_times, vec_log_value):
         """
-
+        Plot data
         :param vec_times:
         :param vec_log_value:
         :param do_skip:
@@ -76,8 +76,10 @@ class SnapGraphicsView(object):
         else:
             dy = max_y - min_y
 
-        self._graphicView.setXYLimits(min_x - 0.1*dx, max_x + 0.1*dx,
-                                      min_y - 0.1*dy, max_y + 0.1*dy)
+        self._graphicView.setXYLimit(min_x - 0.1*dx, max_x + 0.1*dx,
+                                     min_y - 0.1*dy, max_y + 0.1*dy)
+
+        print '[DB-TRACE] Reset Limit???'
 
         # Plot
         self._graphicView.add_plot_1d(vec_times, vec_log_value, marker='.', color='blue')
@@ -130,6 +132,7 @@ class SampleLogView(object):
         :return:
         """
         log_name = str(self._snapGraphicsView.combo_box1_value())
+        print '[DB] Trace Snap graphics view: log name = ', log_name
 
         log_name = log_name.split(' (')[0]
 

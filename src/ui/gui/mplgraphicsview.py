@@ -779,7 +779,7 @@ class MplGraphicsView(QtGui.QWidget):
         return
 
     # FIXME - Find out difference between setXYLimit() and setXYLimits()
-    def setXYLimit(self, xmin, xmax, ymin, ymax):
+    def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
         """ Set X-Y limit automatically
         """
         self._myCanvas.axes.set_xlim([xmin, xmax])
@@ -789,10 +789,10 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    """ Permanently removed
     def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        """
-        """
         return self._myCanvas.setXYLimit(xmin, xmax, ymin, ymax)
+    """
 
     def setAutoLineMarkerColorCombo(self):
         """
@@ -884,7 +884,7 @@ class Qt4MplCanvas(FigureCanvas):
 
         # process inputs and defaults
         if color is None:
-            color = (0,1,0,1)
+            color = (0, 1, 0, 1)
         if marker is None:
             marker = 'o'
         if line_style is None:

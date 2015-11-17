@@ -99,7 +99,7 @@
          </widget>
         </item>
         <item row="1" column="2">
-         <widget class="QLineEdit" name="lineEdit_maxLogTime"/>
+         <widget class="QLineEdit" name="lineEdit_maxLogValue"/>
         </item>
         <item row="1" column="0">
          <widget class="QLineEdit" name="lineEdit_minLogValue"/>
