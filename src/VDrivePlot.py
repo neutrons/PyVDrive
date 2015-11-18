@@ -897,7 +897,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if isinstance(self._manualPikerWindow, LogPicker.WindowLogPicker):
             self._manualPikerWindow.show()
         else:
-            self._manualPikerWindow = LogPicker.WindowLogPicker(self)
+            # Get selected run number from sidebar tree view
+            status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
+            if status is True:
+                run_number = ret_obj
+                try:
+                    run_number = int(run_number)
+                except ValueError:
+                    run_number = None
+            else:
+                run_number = None
+            self._manualPikerWindow = LogPicker.WindowLogPicker(self, run_number)
 
         # Set up tree view for runs
         self._manualPikerWindow.setup()

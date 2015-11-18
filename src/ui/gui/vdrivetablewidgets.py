@@ -73,6 +73,16 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return split_tup_list
 
+    def select_time_segments(self, row_list=None, value=True):
+        """
+
+        :param row_list:
+        :param value:
+        :return:
+        """
+        # TODO/FIXME/NOW
+
+
     def setup(self):
         """
         Init setup
@@ -86,6 +96,16 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         self.setColumnWidth(2, 25)
 
         return
+
+    def sort_by_start_time(self):
+        """ Sort table by start time
+        """
+        # TODO/FIXME/NOW - Pseudo code
+        # 1. Get the values of the first column to a new list
+        # 2. Sort list
+        # 3. Update the sorted list to table
+        # 4. Re-fill the stop time
+
 
 TimeSegment_TableSetup = [('Start', 'float'),
                           ('Stop', 'float'),

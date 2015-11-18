@@ -27,7 +27,7 @@ class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, init_run=None):
         """ Init
         """
         # call base
@@ -75,6 +75,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
 
+        # Slicer table
+        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_select_time_segments)
+        self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_deselect_time_segments)
+
+        # Further operation
+        self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
+                     self.do_highlite_selected)
+        self.connect(self.ui.pushButton_processSegments, QtCore.SIGNAL('clicked()'),
+                     self.do_slice_segments)
+
         # Canvas
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
                      self.do_resize_canvas)
@@ -94,6 +106,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useGenericDAQ.setChecked(True)
         self.ui.radioButton_useLoadFrame.setChecked(False)
         self.ui.radioButton_useLogFile.setChecked(False)
+        if init_run is not None:
+            assert isinstance(init_run, int)
+            self.ui.lineEdit_runNumber.setText('%d' % init_run)
 
         # Class variables
         self._currentLogIndex = 0
@@ -118,6 +133,35 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         self.ui.treeView_iptsRun.set_main_window(self)
 
+    def do_select_time_segments(self):
+        """
+
+        :return:
+        """
+        # TODO/FIXME/NOW: select all time segments in table
+
+    def do_deselect_time_segments(self):
+        """
+
+        :return:
+        """
+        # TODO/FIXME/NOW: deselect all time segments in table
+
+    def do_highlite_selected(self):
+        """
+
+        :return:
+        """
+        # TODO/FIXME/NOW: high light (by different color) the selected time segments
+
+    def do_slice_segments(self):
+        """
+
+        :return:
+        """
+        # TODO/FIXME/NOW: generate 2nd level event filters
+        # Run GenerateEventFilters
+
     def do_load_run(self):
         """
 
@@ -130,7 +174,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Get sample logs
         try:
-            sample_log_names = self._myParent.load_sample_run(run_number)
+            sample_log_names = self._myParent.load_sample_run(run_number, True)
         except RuntimeError as err:
             GuiUtility.pop_dialog_error('Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
@@ -145,6 +189,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Set
         log_name = str(self.ui.comboBox_logNames.currentText())
+        log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
 
         return
@@ -246,12 +291,12 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_picker_process(self):
         """
-        Process pickers
+        Process pickers by sorting and fill the stop time
         :return:
         """
-        self.ui.tableWidget_segments.sortByColumn(0)
-
-        self.ui.tableWidget_segments.fill_stop_time()
+        self.ui.tableWidget_segments.select_time_segments(value=False)
+        self.ui.tableWidget_segments.sort_by_start()
+        self.ui.tableWidget_segments.sort_by_start_time()
 
         return
 
@@ -356,6 +401,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         log_name = str(self.ui.comboBox_logNames.currentText())
+        log_name = log_name.replace(' ', '').split('(')[0]
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
 
         self.plot_sample_log(log_name)
