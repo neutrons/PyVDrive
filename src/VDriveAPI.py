@@ -387,14 +387,16 @@ class VDriveAPI(object):
 
     def save_splitter_workspace(self, run_number, sample_log_name, file_name=None):
         """
-
+        Save SplittersWorkspace to standard text file
         :param run_number:
         :param sample_log_name:
         :param file_name:
         :return:
         """
-        # FIXME/TODO/NOW
-        logHelper.save_splitters()
+        status, err_msg = self._myLogHelper.save_splitter_ws(run_number, sample_log_name)
+
+        return status, err_msg
+
 
     def save_time_segment(self, time_segment_list, ref_run_number, file_name):
         """

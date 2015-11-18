@@ -432,26 +432,47 @@ class SampleLogManager(object):
         return True, ''
 
     def save_splitter_ws(self, run_number, log_name, out_file_name):
+        """ Save splitters workspace to segment file
         """
-        """
+        # Get slicer
         status, ret_obj = self.get_slicer_by_log(run_number, log_name)
+        if status is False:
+            err_msg = ret_obj
+            return False, 'Unable to locate slicer for run %s by log %s.' % (
+                str(run_number), log_name
+            )
 
-        # TODO/FIXME/NOW
-        sws.rowCount()
-        """
-        sws.getNumberSplitters()
+        # Title
+        wbuf = ''
+        wbuf += '# '
 
-        Out[6]: mantid.dataobjects._dataobjects.SplittersWorkspace
+        # Get splitters workspace
 
-        sws.cell(0, 0)
-        Out[7]: 792050526182000000
+        splitter_ws = ret_obj
+        log_ws = self.get_log_workspace(run_number)
+        run_start = log_ws.run().getProperty('run_start')
+        num_rows = splitter_ws.rowCount()
+        wbuf += '# Reference Run Number = %s\n' % run_number
+        wbuf += '# Run Start Time = %.9f\n' % run_start
+        wbuf += '# Start Time \tStop Time \tTarget\n'
 
-        sws.cell(0, 1)
-        Out[8]: 792050526671000000
+        for i_row in xrange(num_rows):
+            start_time = splitter_ws.cell(i_row, 0) * 1.0E-9 - run_start
+            stop_time = splitter_ws.cell(i_row, 1) * 1.0E-9 - run_start
+            target = splitter_ws.cell(i_row, 2)
+            wbuf += '%.9f \t%.9f \t%d\n' % (start_time, stop_time, target)
+        # END-FOR (i)
 
-        sws.cell(0, 2)
-        Out[9]: 3
-        """
+        # Write
+        try:
+            ofile = open(out_file_name, 'w')
+            ofile.write(wbuf)
+            ofile.close()
+        except IOError as e:
+            return False, 'Failed to write time segments to file %s due to %s' % (
+                out_file_name, str(e))
+
+        return True, None
 
 
 

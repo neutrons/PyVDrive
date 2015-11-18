@@ -325,6 +325,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName
         # Save slicer for run  57325  sample log  Voltage
 
+        out_file_name = str(
+                QtGui.QFileDialog.getSaveFileName(self, 'Data Slice File',
+                                                  self._myWorkflow.get_working_dir()))
+
         if self._currSlicerLogName is None:
             guiutil.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
             return
@@ -333,8 +337,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             if self._currSlicerLogName == '__manual__':
                 raise NotImplementedError('ASAP')
             else:
-                # TODO/FIXME/NOW - use the correct method
-                self._myWorkflow.save_time_segment()
+                # save splitters from log
+                self._myWorkflow.save_splitter_workspace(self._currLogRunNumber,
+                                                         self._currSlicerLogName,
+                                                         out_file_name)
 
         return
 
