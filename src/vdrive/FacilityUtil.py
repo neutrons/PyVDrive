@@ -302,11 +302,19 @@ def getIptsRunFromFileName(nxsfilename):
         # not a full path
         ipts = None
     else:
-        # Format is /SNS/VULCAN/IPTS-????/0/NeXus/VULCAN_run... 
-        ipts = int(nxsfilename.split('IPTS-')[1].split('/')[0])
+        # Format is /SNS/VULCAN/IPTS-????/0/NeXus/VULCAN_run...
+        try:
+            ipts = int(nxsfilename.split('IPTS-')[1].split('/')[0])
+        except IndexError:
+            ipts = None
 
     # Get run number
-    runnumber = int(basename.split('_')[1])
+    try:
+        runnumber = int(basename.split('_')[1])
+    except IndexError:
+        runnumber = None
+    except ValueError:
+        runnumber = None
 
     return ipts, runnumber
 

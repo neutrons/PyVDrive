@@ -177,6 +177,17 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
+    def remove_all_rows(self):
+        """
+        Remove all rows
+        :return:
+        """
+        num_rows = self.rowCount()
+        for i_row in xrange(1, num_rows+1):
+            self.removeRow(num_rows - i_row)
+
+        return
+
     def remove_rows(self, row_number_list):
         """ Remove row number
         :param row_number_list:

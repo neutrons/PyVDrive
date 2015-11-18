@@ -299,13 +299,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 if err_msg != '':
                     guiutil.pop_dialog_error(err_msg)
 
-        elif self.ui.radioButton_chopByTimeSegments.isChecked() is False:
+        elif self.ui.radioButton_chopByTimeSegments.isChecked() is True:
             # chop with user-defined time segment
             raise RuntimeError('IMPLEMENT IMPORTING TIME SEGMENT FILE ASAP')
 
         else:
             # Impossible status
-            guiutil.pop_dialog_error('User must choose one radio button.')
+            guiutil.pop_dialog_error(self, 'User must choose one radio button.')
             return
 
         # Pop a summary dialog and optionally shift next tab
@@ -322,12 +322,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """ Save slicer to file in 'log value' sub-tab of CHOP tab
         :return:
         """
-        print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName
-        # Save slicer for run  57325  sample log  Voltage
-
         out_file_name = str(
                 QtGui.QFileDialog.getSaveFileName(self, 'Data Slice File',
                                                   self._myWorkflow.get_working_dir()))
+
+        print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName,
+        print 'to file', out_file_name
+        # Save slicer for run  57325  sample log  Voltage
 
         if self._currSlicerLogName is None:
             guiutil.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
@@ -338,9 +339,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 raise NotImplementedError('ASAP')
             else:
                 # save splitters from log
-                self._myWorkflow.save_splitter_workspace(self._currLogRunNumber,
-                                                         self._currSlicerLogName,
-                                                         out_file_name)
+                status, err_msg = self._myWorkflow.save_splitter_workspace(
+                    self._currLogRunNumber, self._currSlicerLogName, out_file_name)
+                if status is False:
+                    guiutil.pop_dialog_error(self, err_msg)
 
         return
 
@@ -574,8 +576,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
         log_path = self._myWorkflow.get_working_dir()
         seg_file_name = str(QtGui.QFileDialog.getOpenFileName(
-            self, 'Open NeXus File', log_path, file_filter))
-        print '[DB] Importing time segment file: %s' % seg_file_name
+            self, 'Open Time Segment File', log_path, file_filter))
+        print '[DB-BAR] Importing time segment file: %s' % seg_file_name
 
         # Import file
         status, ret_obj = vdrive.parse_time_segment_file(seg_file_name)
@@ -587,7 +589,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             ref_run, run_start, time_seg_list = ret_obj
 
         # Set to table
-        self.ui.tableWidget_timeSegment.clear()
+        self.ui.tableWidget_timeSegment.remove_all_rows()
         self.ui.tableWidget_timeSegment.set_segments(time_seg_list)
 
         return
@@ -807,11 +809,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             if status is False:
                 raise RuntimeError(run_tuple)
             nxs_file_name = run_tuple[0]
+            run_number = int(run)
         else:
             nxs_file_name = run
+            run_number = None
 
         # Load file
-        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name)
+        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name, run_number=run_number)
         if status is False:
             raise RuntimeError(errmsg)
 

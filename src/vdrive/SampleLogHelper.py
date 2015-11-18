@@ -87,10 +87,12 @@ class SampleLogManager(object):
         :param nxs_file_name:
         :return:
         """
+        print '[DB-BAF] Checkout session of file %s / run %s.' % (str(nxs_file_name),
+                                                                  str(run_number))
         # Check and store
         if os.path.basename(nxs_file_name) == os.path.basename(self._currNexusFilename):
             # same: no op
-            print '[INFO] Same NeXus file. No operation.'
+            print '[INFO] Same NeXus file %s. No operation.' % str(self._currNexusFilename)
             return True, ''
         else:
             # different: store current
@@ -109,6 +111,7 @@ class SampleLogManager(object):
             assert isinstance(run_number, int)
             self._runNxsNameMap[run_number] = nxs_base_name
             self._currRunNumber = run_number
+            print '[DB-BAR] Sample Log Helper\'s currRunNumber is set to %s' % str(self._currRunNumber)
         else:
             print '[DB] Input run number is None for NeXus file %s' % nxs_base_name
 
@@ -116,7 +119,11 @@ class SampleLogManager(object):
         if base_name == self._currNexusFilename:
             return True, 'Try to reload sample logs of file %s' % base_name
         else:
+            # Start a new session
             self._currNexusFilename = base_name
+            self._currRunNumber = run_number
+            print '[DB-BAR] Start a new session: %s and %s' % (self._currNexusFilename,
+                                                               str(self._currRunNumber))
 
         # Output ws name
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
@@ -228,6 +235,22 @@ class SampleLogManager(object):
 
         return True, ret_obj
 
+    def get_log_workspace(self, run_number, nxs_file_name=None):
+        """
+
+        :param run_number:
+        :param nxs_file_name:
+        :return:
+        """
+        # FIXME/TODO/NOW : Make it more robust with run_number is None
+        if run_number is None:
+            raise NotImplementedError('ASAP')
+
+        if run_number == self._currRunNumber:
+            return self._currWorkspace
+
+        raise NotImplementedError('ASAP if it is in stored session.')
+
     def get_sample_log_names(self, with_info=False):
         """
         Get all sample logs' names
@@ -282,6 +305,10 @@ class SampleLogManager(object):
         :return: 2-tuple as (boolean, object)
         """
         # Check
+        assert isinstance(run_number, int)
+        assert isinstance(nxs_name, str) or nxs_name is None
+        assert isinstance(log_name, str)
+
         use_current = False
 
         if run_number is not None and nxs_name is not None:
@@ -319,7 +346,7 @@ class SampleLogManager(object):
         else:
             # Stored
             tup = self._prevSessionDict[nxs_name]
-            splitter_dict = tup[2]
+            splitter_dict = tup[3]
 
         if log_name not in splitter_dict:
             return False, 'There is no processed slicer by log %s for NeXus file %s' % (log_name, nxs_name)
@@ -329,7 +356,6 @@ class SampleLogManager(object):
     def get_slicer_by_time(self, run_number, nxs_name=None):
         """ Get slicer by log value
         :param run_number:
-        :param log_name:
         :param nxs_name:
         :return:
         """
@@ -366,7 +392,7 @@ class SampleLogManager(object):
         if use_current is True:
             split_dict = self._currSplittersDict
         else:
-            split_dict = self._prevSessionDict[nxs_name][2]
+            split_dict = self._prevSessionDict[nxs_name][3]
         if '_TIME_' not in split_dict:
             return False, 'There is no splitters by time for %s. Candidates are %s.\n' % (
                 nxs_name, str(split_dict.keys())
@@ -397,11 +423,12 @@ class SampleLogManager(object):
         :return:
         """
         nxs_name = self._currNexusFilename
+        run_number = self._currRunNumber
         ws_name = self._currWorkspaceName
         splitter_dict = self._currSplittersDict.copy()
 
         dict_key = os.path.basename(nxs_name)
-        self._prevSessionDict[dict_key] = [nxs_name, ws_name, splitter_dict]
+        self._prevSessionDict[dict_key] = [nxs_name, run_number, ws_name, splitter_dict]
 
         return
 
@@ -417,7 +444,7 @@ class SampleLogManager(object):
             return False, 'File %s does not exist in stored sessions. ' % nxs_base_name
 
         # Get parameters for recovering
-        nxs_name, ws_name, splitter_dict = self._prevSessionDict[nxs_base_name]
+        nxs_name, run_number, ws_name, splitter_dict = self._prevSessionDict[nxs_base_name]
 
         # Check workspace existence
         if mtd.has_workspace(ws_name) is False:
@@ -425,6 +452,7 @@ class SampleLogManager(object):
 
         # Retrieve
         self._currNexusFilename = nxs_name
+        self._currRunNumber = run_number
         self._currWorkspaceName = ws_name
         self._currWorkspace = mtd.get_workspace(ws_name)
         self._currSplittersDict = splitter_dict
@@ -438,27 +466,35 @@ class SampleLogManager(object):
         status, ret_obj = self.get_slicer_by_log(run_number, log_name)
         if status is False:
             err_msg = ret_obj
-            return False, 'Unable to locate slicer for run %s by log %s.' % (
-                str(run_number), log_name
-            )
+            return False, 'Unable to locate slicer for run %s by log %s due to %s.' % (
+                str(run_number), log_name, err_msg)
 
         # Title
         wbuf = ''
-        wbuf += '# '
 
         # Get splitters workspace
 
-        splitter_ws = ret_obj
+        splitter_ws_name = ret_obj[0]
+        splitter_ws = mtd.retrieve_workspace(splitter_ws_name)
+        if splitter_ws is None:
+            raise NotImplementedError('It is not likely not to locate the splitters workspace.')
         log_ws = self.get_log_workspace(run_number)
-        run_start = log_ws.run().getProperty('run_start')
+        try:
+            run_start = log_ws.run().getProperty('proton_charge').times[0]
+            run_start_ns = run_start.totalNanoseconds()
+        except RuntimeError:
+            run_start = '1990-01-01T00:00:00.0000000000'
+            run_start_ns = 0
+        print '[DB-BAR] run start = ', run_start_ns
         num_rows = splitter_ws.rowCount()
         wbuf += '# Reference Run Number = %s\n' % run_number
-        wbuf += '# Run Start Time = %.9f\n' % run_start
+        wbuf += '# Run Start Time = %.9f\n' % (run_start_ns * 1.E-9)
+        wbuf += '# Verbose run start = %s\n' % str(run_start)
         wbuf += '# Start Time \tStop Time \tTarget\n'
 
         for i_row in xrange(num_rows):
-            start_time = splitter_ws.cell(i_row, 0) * 1.0E-9 - run_start
-            stop_time = splitter_ws.cell(i_row, 1) * 1.0E-9 - run_start
+            start_time = (splitter_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
+            stop_time = (splitter_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
             target = splitter_ws.cell(i_row, 2)
             wbuf += '%.9f \t%.9f \t%d\n' % (start_time, stop_time, target)
         # END-FOR (i)
@@ -473,7 +509,6 @@ class SampleLogManager(object):
                 out_file_name, str(e))
 
         return True, None
-
 
 
 def parse_time_segments(file_name):
@@ -513,6 +548,7 @@ def parse_time_segments(file_name):
         if line.startswith('#') is True:
             # remove all spaces
             line = line.replace(' ', '')
+            print '[BAF] Line: ', line
             terms = line.split('=')
             if len(terms) == 1:
                 continue
@@ -553,8 +589,13 @@ def parse_time_segments(file_name):
                 print '[Error] Line "%s" has wrong type of vlaue for start/stop.' % line
                 continue
         # END-IF (#)
+    # END-FOR
 
-        return True, (ref_run, run_start, segment_list)
+    print '[DB] Parse segment file with reference run %s started at %s. Total %d segments' % (
+            str(ref_run), str(run_start), len(segment_list)
+    )
+
+    return True, (ref_run, run_start, segment_list)
 
 
 def save_time_segments(file_name, segment_list, ref_run=None, run_start=None):

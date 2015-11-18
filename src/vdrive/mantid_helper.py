@@ -2,6 +2,7 @@ import sys
 import numpy
 
 import mantid
+import mantid.api
 import mantid.simpleapi as mantidapi
 
 
@@ -153,6 +154,21 @@ def event_data_ws_name(run_number):
     :return:
     """
     return 'VULCAN_%d_Raw' % run_number
+
+
+def retrieve_workspace(ws_name):
+    """
+
+    :param ws_name:
+    :return:
+    """
+    assert isinstance(ws_name, str)
+
+    if mantid.AnalysisDataService.doesExist(ws_name) is False:
+        return None
+
+    return mantidapi.AnalysisDataService.retrieve(ws_name)
+
 
 
 def splitted_ws_base_name(run_number, out_base_name):

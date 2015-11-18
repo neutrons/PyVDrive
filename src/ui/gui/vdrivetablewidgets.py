@@ -110,7 +110,7 @@ class TimeSegmentsTable(NT.NTableWidget):
         :return:
         """
         for segment in segments_list:
-            seg_list = [segment.start, segment.end, str(segment.target)]
+            seg_list = [segment.start, segment.stop, str(segment.target)]
             self.append_row(seg_list)
             self._currRowNumber += 1
         # END-FOR

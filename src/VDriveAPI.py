@@ -385,7 +385,7 @@ class VDriveAPI(object):
 
         return True, out_file_name
 
-    def save_splitter_workspace(self, run_number, sample_log_name, file_name=None):
+    def save_splitter_workspace(self, run_number, sample_log_name, file_name):
         """
         Save SplittersWorkspace to standard text file
         :param run_number:
@@ -393,7 +393,7 @@ class VDriveAPI(object):
         :param file_name:
         :return:
         """
-        status, err_msg = self._myLogHelper.save_splitter_ws(run_number, sample_log_name)
+        status, err_msg = self._myLogHelper.save_splitter_ws(run_number, sample_log_name, file_name)
 
         return status, err_msg
 
@@ -492,7 +492,7 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def set_slicer_helper(self, nxs_file_name, run_number=None):
+    def set_slicer_helper(self, nxs_file_name, run_number):
         """
         Initialize the event slicing helper object
         :param nxs_file_name:
@@ -501,6 +501,8 @@ class VDriveAPI(object):
         """
         if run_number is not None:
             assert isinstance(run_number, int)
+        else:
+            run_number = futil.getIptsRunFromFileName(nxs_file_name)[1]
 
         status, errmsg = self._myLogHelper.checkout_session(nxs_file_name, run_number)
 

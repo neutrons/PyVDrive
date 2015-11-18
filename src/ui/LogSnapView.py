@@ -114,7 +114,8 @@ class DialogLogSnapView(QtGui.QDialog):
 
         # FIXME - Treat 'comboBox_direction'
 
-        print '[DB-BAR] Log name = ', self._logName
+        if start_time < 0.:
+            start_time = 0.
         self._myParent.get_workflow().gen_data_slicer_sample_log(
             run_number=self._myRunNumber,
             sample_log_name=self._logName,
