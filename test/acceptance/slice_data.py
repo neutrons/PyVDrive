@@ -297,6 +297,9 @@ def slice_data_by_time(step):
 
     return
 
+@step()
+def NOW:
+
 
 if False:
     setup_ipts(1)

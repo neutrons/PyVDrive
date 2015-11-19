@@ -598,6 +598,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def getXLimit(self):
         """ Get limit of Y-axis
+        :return: 2-tuple as xmin, xmax
         """
         return self._myCanvas.getXLimit()
 

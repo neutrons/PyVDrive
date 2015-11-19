@@ -427,7 +427,7 @@
            <string>Expanding Slicers</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="3" column="1">
+           <item row="4" column="1">
             <widget class="QPushButton" name="pushButton_processSegments">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do further slicing between selected segments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -437,7 +437,7 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QPushButton" name="pushButton_highlight">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Highlight selected sections&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -447,27 +447,32 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
+           <item row="1" column="0">
             <widget class="QRadioButton" name="radioButton_timeStep">
              <property name="text">
               <string>Time Step</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item row="2" column="0">
             <widget class="QRadioButton" name="radioButton_logValueStep">
+             <property name="font">
+              <font>
+               <pointsize>9</pointsize>
+              </font>
+             </property>
              <property name="text">
               <string>Log Value Step</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="2" column="1">
             <widget class="QLineEdit" name="lineEdit_logValueStep"/>
            </item>
-           <item row="0" column="1">
+           <item row="1" column="1">
             <widget class="QLineEdit" name="lineEdit_timeStep"/>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="QComboBox" name="comboBox_2">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Log value changing direction&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

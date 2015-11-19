@@ -4,7 +4,7 @@
 #
 ########################################################################
 import sys
-
+import numpy
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -119,6 +119,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currMousePosX = 0.
         self._currMousePosY = 0.
 
+        # Picker management
+        self._myPickerIDList = list()
+
         # Set up widgets
         self._init_widgets_setup()
 
@@ -198,6 +201,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Enter picker selection mode
         :return:
         """
+        if self._myPickerMode == IN_PICKER_MOVING:
+            GuiUtility.pop_dialog_error(self, 'Canvas is in log-picker moving mode.  '
+                                              'It is not allowed to enter picker-selection mode.')
+            return
+
         self._myPickerMode = IN_PICKER_SELECTION
 
         return
@@ -262,6 +270,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Delete the current picker
         self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
+        self._myPickerIDList.pop(self._currentPickerID)
         self._currentPickerID = None
 
         self._myPickerMode = OUT_PICKER
@@ -286,6 +295,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Change status
         self._currentPickerID = indicator_id
         self._myPickerMode = IN_PICKER
+        self._myPickerIDList.append(indicator_id)
 
         return
 
@@ -341,6 +351,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Call parent method
         if self._myParent is not None:
+            # FIXME/TODO/NOW - no method named set_splitter_info
             self._myParent.set_splitter_info(self._currRun, split_tup_list)
 
         return
@@ -413,6 +424,83 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         return self.ui.tableWidget_segments.get_splitter_list()
+
+    def highlite_picker(self, picker_id, flag, color='red'):
+        """
+        Highlight (by changing color) of the picker selected
+        :param picker_id:
+        :return:
+        """
+        if flag is False:
+            if picker_id is None:
+                for pid in self._myPickerIDList:
+                    self.ui.graphicsView_main.update_indicator(pid, 'black')
+            else:
+                self.ui.graphicsView_main.update_indicator(picker_id, 'black')
+        else:
+            print 'Picker list: ', self._myPickerIDList, ' for ', picker_id
+            for pid in self._myPickerIDList:
+                if pid == picker_id:
+                    self.ui.graphicsView_main.update_indicator(pid, color)
+                else:
+                    self.ui.graphicsView_main.update_indicator(pid, 'black')
+            # END-FOR
+        # END-IF-ELSE
+
+        return
+
+    def locate_picker(self, x_pos, ratio=0.2):
+        """ Locate a picker with the new x
+        :param x_pos:
+        :param ratio:
+        :return: 2-tuple (Boolean, Object)
+        """
+        # Check
+        if len(self._myPickerIDList) == 0:
+            return False, 'No picker to select!'
+
+        assert isinstance(ratio, float)
+        assert (ratio > 0.01) and (ratio <= 0.5)
+
+        print '[DB-DEV] Indicators: ', self._myPickerIDList
+
+        x_lim = self.ui.graphicsView_main.getXLimit()
+
+        # Get the vector of x positions of indicator and
+        vec_pos = [x_lim[0]]
+        for ind_id in self._myPickerIDList:
+            picker_x, picker_y = self.ui.graphicsView_main.get_indicator_position(ind_id)
+            vec_pos.append(picker_x)
+            print '[DB-DEV] ID ', ind_id, ' at ', picker_x, picker_y
+        # END-FOR
+        vec_pos.append(x_lim[1])
+        print '[DB-DEV] Positions: ', vec_pos
+        sorted_vec_pos = sorted(vec_pos)
+
+        # Search
+        post_index = numpy.searchsorted(sorted_vec_pos, x_pos)
+        if post_index == 0:
+            return False, 'Position %f is out of canvas left boundary %f. It is weird!' % (x_pos, vec_pos[0])
+        elif post_index >= len(vec_pos):
+            return False, 'Position %f is out of canvas right boundary %f. It is weird!' % (x_pos, vec_pos[-1])
+
+        pre_index = post_index - 1
+        dx = sorted_vec_pos[post_index] - sorted_vec_pos[pre_index]
+        return_index = -1
+        if sorted_vec_pos[pre_index] <= x_pos <= sorted_vec_pos[pre_index] + dx * ratio:
+            return_index = pre_index
+        elif sorted_vec_pos[post_index] - dx * ratio <= x_pos <= sorted_vec_pos[post_index]:
+            return_index = post_index
+        if return_index >= 0:
+            nearest_picker_x = sorted_vec_pos[return_index]
+            raw_index = vec_pos.index(nearest_picker_x)
+        else:
+            raw_index = return_index
+
+        # correct for index=0 is boundary
+        raw_index -= 1
+
+        return raw_index
 
     def menu_select_nearest_picker(self):
         """ Select nearest picker
@@ -523,16 +611,17 @@ class WindowLogPicker(QtGui.QMainWindow):
         if new_x is None or new_y is None:
             return
 
+        # Calculate the relative displacement
+        dx = new_x - self._currMousePosX
+        dy = new_y - self._currMousePosY
+
+        x_min, x_max = self.ui.graphicsView_main.getXLimit()
+        mouse_resolution_x = (x_max - x_min) * 0.001
+        y_min, y_max = self.ui.graphicsView_main.getYLimit()
+        mouse_resolution_y = (y_max - y_min) * 0.001
+
         if self._myPickerMode == IN_PICKER_MOVING:
             # Respond to motion of mouse and move the indicator
-            dx = new_x - self._currMousePosX
-            dy = new_y - self._currMousePosY
-
-            x_min, x_max = self.ui.graphicsView_main.getXLimit()
-            mouse_resolution_x = (x_max - x_min) * 0.001
-            y_min, y_max = self.ui.graphicsView_main.getYLimit()
-            mouse_resolution_y = (y_max - y_min) * 0.001
-
             if abs(dx) > mouse_resolution_x or abs(dy) > mouse_resolution_y:
                 # it is considered that the mouse is moved
                 self._currMousePosX = new_x
@@ -543,6 +632,26 @@ class WindowLogPicker(QtGui.QMainWindow):
 
                 print '[DB]', 'New X = ', new_x
             # END-IF(dx, dy)
+
+        elif self._myPickerMode == IN_PICKER_SELECTION:
+            # Highlight (change color) a picker and set the picker/indicator in active mode
+            if abs(dx) > mouse_resolution_x:
+                # Consider the picker by time only
+                picker_list_index = self.locate_picker(x_pos=new_x, ratio=0.2)
+                if picker_list_index == -2:
+                    print 'Middle of nowhere'
+                elif picker_list_index == -1:
+                    print 'Left boundary'
+                elif picker_list_index == len(self._myPickerIDList):
+                    print 'Right boundary'
+                else:
+                    print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
+                self.highlite_picker(picker_id=None, flag=False)
+                if 0 <= picker_list_index < len(self._myPickerIDList):
+                    picker_id = self._myPickerIDList[picker_list_index]
+                    self.highlite_picker(picker_id, True)
+            # END-IF
+
         # END-IF (PickerMode)
 
         return
