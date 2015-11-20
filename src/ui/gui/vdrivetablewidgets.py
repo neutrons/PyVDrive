@@ -27,14 +27,43 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return
 
+    def get_selected_time_segments(self, flag):
+        """
+        Select time segments
+        :param flag: If flag is true, then return the selected rows; otherwise, the
+                     not-selected rows
+        :return: 2-tuple as a list of time segments and a list of row numbers for them
+        """
+        # Get column index
+        i_col_status = Data_Slicer_Table_Setup.index(('', 'checkbox'))
+        i_col_start = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        i_col_stop = Data_Slicer_Table_Setup.index(('Stop', 'float'))
+
+        # Collect time segment
+        time_segment_list = list()
+        row_number_list = list()
+        num_rows = self.rowCount()
+        for i_row in xrange(num_rows):
+            if self.get_cell_value(i_row, i_col_status) == flag:
+                start_time = self.get_cell_value(i_row, i_col_start)
+                stop_time = self.get_cell_value(i_row, i_col_stop)
+                # FIXME : The last row's stop is not calculated by method fill_stop_time()
+                time_segment_list.append((start_time, stop_time))
+                row_number_list.append(i_row)
+        # END-FOR
+
+        return time_segment_list, row_number_list
+
     def fill_stop_time(self):
-        """ Fill the stop time by next start time
-        :return:
+        """ Fill the stop time by next line's start time
+        :return: None
         """
         num_rows = self.rowCount()
+        col_index_start = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        col_index_stop = Data_Slicer_Table_Setup.index(('Stop', 'float'))
         for ir in xrange(num_rows-1):
-            stop_time = self.get_cell_value(ir+1, 0)
-            self.set_value_cell(ir, 1, stop_time)
+            stop_time = self.get_cell_value(ir+1, col_index_start)
+            self.set_value_cell(ir, col_index_stop, stop_time)
 
         return
 
@@ -73,15 +102,20 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return split_tup_list
 
-    def select_time_segments(self, row_list=None, value=True):
+    def select_row(self, row_index, flag):
         """
-
-        :param row_list:
-        :param value:
-        :return:
+        Set a row to be selected
+        :param row_index:
+        :param flag: boolean to select or deselect the
+        :return: None
         """
-        # TODO/FIXME/NOW
+        assert (row_index >= 0) and (row_index < self.rowCount())
+        assert isinstance(flag, bool)
 
+        col_index = Data_Slicer_Table_Setup.index(('', 'checkbox'))
+        self.update_cell_value(row_index, col_index, flag)
+
+        return
 
     def setup(self):
         """
@@ -98,13 +132,25 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         return
 
     def sort_by_start_time(self):
-        """ Sort table by start time
+        """ Sort table by start time and ignore the other columns
         """
-        # TODO/FIXME/NOW - Pseudo code
-        # 1. Get the values of the first column to a new list
-        # 2. Sort list
-        # 3. Update the sorted list to table
-        # 4. Re-fill the stop time
+        # Get the values of the first column to a new list
+        num_rows = self.rowCount()
+        start_time_list = list()
+        i_start_col = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        for i_row in xrange(num_rows):
+            start_time = self.get_cell_value(i_row, i_start_col)
+            start_time_list.append(start_time)
+        # END-FOR(i_row)
+
+        # Sort list
+        start_time_list.sort()
+
+        # Update the sorted list to table
+        for i_row in xrange(num_rows):
+            self.update_cell_value(i_row, i_start_col, start_time_list[i_row])
+
+        return
 
 
 TimeSegment_TableSetup = [('Start', 'float'),

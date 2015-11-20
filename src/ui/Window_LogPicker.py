@@ -138,32 +138,89 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_select_time_segments(self):
         """
-
+        mark all time segments in table to be selected in the table
         :return:
         """
-        # TODO/FIXME/NOW: select all time segments in table
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, True)
+
+        return
 
     def do_deselect_time_segments(self):
         """
-
+        Mark all time segments in the table to be deselected
         :return:
         """
-        # TODO/FIXME/NOW: deselect all time segments in table
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, False)
+
+        return
 
     def do_highlite_selected(self):
         """
 
         :return:
         """
-        # TODO/FIXME/NOW: high light (by different color) the selected time segments
+        # Collect selected time segments
+        source_time_segments, row_number_list = \
+            self.ui.tableWidget_segments.get_selected_time_segments(True)
+
+        # Name of current sample log
+        log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+
+        for i in xrange(len(source_time_segments)):
+            time_segment = source_time_segments[i]
+            vec_x, vec_y = self._myParent.get_workflow.get_sample_log(self._currRunNumber,
+                                                                      log_name,
+                                                                      time_segment[0],
+                                                                      time_segment[1])
+            self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red')
+        # END-FOR
+
+        return
 
     def do_slice_segments(self):
         """
-
+        Split a certain number of time segment into smaller segments either
+        by time or by log value
         :return:
         """
-        # TODO/FIXME/NOW: generate 2nd level event filters
+        # Name of the sample log
+        log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+
+        # Collect selected time segments
+        source_time_segments, row_number_list = \
+            self.ui.tableWidget_segments.get_selected_time_segments(True)
+
+        # Split option
+        if self.ui.radioButton_logValueStep.isChecked():
+            # By log value
+            by_time = False
+            step_value = GuiUtility.parse_float(self.ui.lineEdit_logValueStep)
+        else:
+            # By time
+            by_time = True
+            step_value = GuiUtility.parse_float(self.ui.lineEdit_timeStep)
+
+        # FIXME - Not implemented in API yet
         # Run GenerateEventFilters
+        num_segments = len(source_time_segments)
+        index_list = range(num_segments)
+        index_list.sort(reverse=True)
+        for i in index_list:
+            time_segment = source_time_segments[i]
+            sub_segments = self._myParent.get_workflow().generate_splitters(self._myRunNumber,
+                                                                            log_name,
+                                                                            step_value,
+                                                                            time_segment[0],
+                                                                            time_segment[1],
+                                                                            by_time)
+            self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
+        # END-FOR (i)
+
+        return
 
     def do_load_run(self):
         """
@@ -304,9 +361,16 @@ class WindowLogPicker(QtGui.QMainWindow):
         Process pickers by sorting and fill the stop time
         :return:
         """
-        self.ui.tableWidget_segments.select_time_segments(value=False)
-        self.ui.tableWidget_segments.sort_by_start()
+        # Deselect all rows
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, False)
+
+        # Sort by start time
         self.ui.tableWidget_segments.sort_by_start_time()
+
+        # Fill the stop by time by next star time
+        self.ui.tableWidget_segments.fill_stop_time()
 
         return
 
@@ -361,7 +425,16 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         :return:
         """
-        # TODO
+        # Pop dialog for log file
+        working_dir = self._myParent.get_workflow().get_working_dir()
+        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
+                                                              working_dir))
+
+        # Parse log file
+        # TODO/FIXME - Need a sample file from Ke
+        self._myParent.get_workflow().parse_vulcan_log_file(log_file_name)
+
+        return
 
     def do_resize_canvas(self):
         """ Resize canvas
