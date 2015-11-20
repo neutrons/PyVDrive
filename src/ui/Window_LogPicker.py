@@ -125,6 +125,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Set up widgets
         self._init_widgets_setup()
 
+        # Experiment-related variables
+        self._currRunNumber = None
+        self._currLogName = None
+
         return
 
     def _init_widgets_setup(self):
@@ -160,7 +164,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_highlite_selected(self):
         """
-
+        Highlight the selected region of the log value
         :return:
         """
         # Collect selected time segments
@@ -224,13 +228,14 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_load_run(self):
         """
-
+        Load a run and plot
         :return:
         """
         # Get run number
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
         if run_number is None:
             GuiUtility.pop_dialog_error('Unable to load run as value is not specified.')
+            return
 
         # Get sample logs
         try:
@@ -251,6 +256,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
+
+        # Update class variables
+        self._currRunNumber = run_number
+        self._currLogName = log_name
 
         return
 
@@ -284,6 +293,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currentLogIndex = next_index
         self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
 
+        # Update
+        self._currLogName = sample_log_name
+
         return
 
     def do_load_prev_log(self):
@@ -302,6 +314,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Change combobox index
         self._currentLogIndex = prev_index
         self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
+
+        # Update
+        self._currLogName = sample_log_name
 
         return
 
