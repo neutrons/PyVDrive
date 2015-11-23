@@ -83,15 +83,19 @@ class VDriveAPI(object):
         # FIXME/TODO/NOW
         self._myLogHelper.generate_events_filter_manual(run_number, time_segment_list,relative_time)
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
         Generate data slicer by time
         :param run_number: run number (integer) or base file name (str)
         :param start_time:
         :param end_time:
         :param time_step:
+        :param out_ws_name:
         :return:
         """
+        # TODO/NOW : pass out_ws_name to lower level
+        # TODO/NOW : level
+
         # Get full-path file name according to run number
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
@@ -115,7 +119,7 @@ class VDriveAPI(object):
 
     def gen_data_slicer_sample_log(self, run_number, sample_log_name,
                                    start_time, end_time, min_log_value, max_log_value,
-                                   log_value_step):
+                                   log_value_step, tag=None):
         """
         Generate data slicer/splitters by log values
         :param run_number:
@@ -127,6 +131,8 @@ class VDriveAPI(object):
         :param log_value_step:
         :return:
         """
+        # TODO/FIXME : Make tag as workspace name to pass to the lower level
+
         # Get file name according to run number
         # print '[DBDB] run number = %s of type %s' % (str(run_number), str(type(run_number)))
         if isinstance(run_number, int):

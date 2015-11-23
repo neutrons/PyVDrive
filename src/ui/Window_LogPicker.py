@@ -238,12 +238,20 @@ class WindowLogPicker(QtGui.QMainWindow):
         index_list.sort(reverse=True)
         for i in index_list:
             time_segment = source_time_segments[i]
-            sub_segments = self._myParent.get_workflow().generate_splitters(self._myRunNumber,
-                                                                            log_name,
-                                                                            step_value,
-                                                                            time_segment[0],
-                                                                            time_segment[1],
-                                                                            by_time)
+            # FIXME/TODO/NOW - Find out XXX for out workspace name and do further analysis
+            # FIXME/TODO/NOW - myRunNumber is not set up.
+            if by_time is True:
+                self._myParent.get_workflow().gen_data_slicer_by_time(
+                    self._myRunNumber, start_time=time_segment[0], end_time=time_segment[1],
+                    time_step=step_value, tag=XXX)
+            else:
+                self._myParent.get_workflow.gen_data_slicer_sample_log(
+                    self._myRunNumber, log_name, time_segment[0], time_segment[1],
+                    log_value_step=step_value, tag=XXX)
+
+            # TODO/NOW/ Implement this!
+            sub_segments = self._myParent.get_workflow().get_slicer_time_segments(tag=XXX, time=relative)
+            # TODO/NOW/ Implement this!
             self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
         # END-FOR (i)
 
