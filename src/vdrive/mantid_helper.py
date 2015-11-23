@@ -1,5 +1,21 @@
 import sys
+import os
 import numpy
+
+# Import mantid directory
+user_root = os.path.expanduser('~')
+for p in sys.path:
+    if os.path.isdir(p):
+        dir_p = p
+    else:
+        dir_p = os.path.dirname(p)
+    print p, dir_p
+    if dir_p.startswith(user_root) and dir_p.count('site-package') > 0:
+        mantid_path = os.path.join(dir_p, 'Mantid')
+        print 'mantid path = ', mantid_path
+        if os.path.exists(mantid_path) is True:
+            sys.path.append(mantid_path)
+            break
 
 import mantid
 import mantid.api
