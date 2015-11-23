@@ -73,6 +73,16 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
+        """
+        :param run_number:
+        :param relative_time:
+        :param time_segment_list:
+        :return:
+        """
+        # FIXME/TODO/NOW
+        self._myLogHelper.generate_events_filter_manual(run_number, time_segment_list,relative_time)
+
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
         Generate data slicer by time
@@ -312,7 +322,7 @@ class VDriveAPI(object):
 
         return True, name_list
 
-    def get_sample_log_values(self, log_name, relative):
+    def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
@@ -322,7 +332,13 @@ class VDriveAPI(object):
         """
         assert isinstance(log_name, str)
         try:
-            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name, relative)
+            print '[DB-Trace-Bug API] run number = ', run_number, 'log name = ', log_name,
+            print 'start time = ', start_time, stop_time
+            vec_times, vec_value = self._myLogHelper.get_sample_data(run_number=run_number,
+                                                                     sample_log_name=log_name,
+                                                                     start_time=start_time,
+                                                                     stop_time=stop_time,
+                                                                     relative=relative)
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 

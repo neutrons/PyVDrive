@@ -120,7 +120,7 @@ def get_sample_log_names(src_workspace):
     return name_list
 
 
-def get_sample_log_value(src_workspace, sample_log_name, relative):
+def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative):
     """
     Get sample log value
     :param src_workspace:
@@ -134,18 +134,38 @@ def get_sample_log_value(src_workspace, sample_log_name, relative):
 
     # Get vectors
     vec_time_raw = this_property.times
-    vec_time = numpy.ndarray(shape=(len(vec_time_raw), ), dtype='float')
+    vec_times = numpy.ndarray(shape=(len(vec_time_raw), ), dtype='float')
     for i in xrange(len(vec_time_raw)):
-        vec_time[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
+        vec_times[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
 
     vec_value = this_property.value
 
     # Relative time?
     if relative is True:
-        start_time = run.startTime().totalNanoseconds()*1.0E-9
-        vec_time -= start_time
+        run_start_time = run.startTime().totalNanoseconds()*1.0E-9
+        vec_times -= run_start_time
 
-    return vec_time, vec_value
+    # Get partial data
+    get_partial = False
+    start_index = 0
+    stop_index = len(vec_times)
+    if start_time is not None:
+        assert isinstance(start_time, float)
+        start_index = numpy.searchsorted(vec_times, start_time)
+        get_partial = True
+    if stop_time is not None:
+        stop_index = numpy.searchsorted(vec_times, stop_time)
+        get_partial = True
+    if get_partial:
+        vec_times = vec_times[start_index:stop_index]
+        vec_value = vec_value[start_index:stop_index]
+
+    if len(vec_times) == 0:
+        print 'Start = ', start_time, 'Stop = ', stop_time
+        raise XXX
+        raise NotImplementedError('DB Stop')
+
+    return vec_times, vec_value
 
 
 def event_data_ws_name(run_number):

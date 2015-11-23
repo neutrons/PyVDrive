@@ -770,7 +770,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :param log_name:
         :return: 2-tuple as (numpy.1darray, numpy.1darray)
         """
-        status, ret_obj = self._myWorkflow.get_sample_log_values(log_name, relative)
+        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)
 

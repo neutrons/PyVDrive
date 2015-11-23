@@ -283,19 +283,33 @@ class SampleLogManager(object):
 
         return True, ret_list
 
-    def get_sample_data(self, sample_log_name, relative):
+    def get_sample_data(self, run_number, sample_log_name, start_time, stop_time, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
+        # run_number, log_name, start_time, stop_time, relative
         :exception: RuntimeError for sample log name is not in list
         :param sample_log_name:
         :return: 2-tuple as (numpy.array, numpy.array) for time and log value
         """
+        print '[DB-Trace-Bug Helper] run number = ', run_number, 'sample log name = ', sample_log_name,
+        print 'start time  = ', start_time
         # Check
+        if run_number is not None and run_number != self._currRunNumber:
+            # FIXME - Deal with this situation
+            raise RuntimeError('It has not been considered to retrieve previous run from Mantid.')
         if sample_log_name not in self._currLogNamesList:
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
+        print '[DB-Trace-Bug] current workspace = ', str(self._currWorkspace), 'log name = ', sample_log_name
+
         # Get property
-        return mtd.get_sample_log_value(self._currWorkspace, sample_log_name, relative)
+        print '[DB-Trace-Bug Helper 2] run number = ', run_number, 'sample log name = ', sample_log_name,
+        print 'start time  = ', start_time
+        return mtd.get_sample_log_value(src_workspace=self._currWorkspace,
+                                        sample_log_name=sample_log_name,
+                                        start_time=start_time,
+                                        stop_time=stop_time,
+                                        relative=relative)
 
     def get_slicer_by_log(self, run_number, log_name, nxs_name=None):
         """ Get slicer by log value

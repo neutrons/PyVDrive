@@ -129,6 +129,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currRunNumber = None
         self._currLogName = None
 
+        # Highlighted lines list
+        self._myHighLightedLineList = list()
+
         return
 
     def _init_widgets_setup(self):
@@ -167,6 +170,19 @@ class WindowLogPicker(QtGui.QMainWindow):
         Highlight the selected region of the log value
         :return:
         """
+        # Clear the highlight lines
+        if str(self.ui.pushButton_highlight.text()) == 'Clear':
+            # Delete all lines
+            for highlite_id in self._myHighLightedLineList:
+                self.ui.graphicsView_main.remove_line(highlite_id)
+
+            # Reset button text
+            self.ui.pushButton_highlight.setText('Highlight')
+            self._myHighLightedLineList = list()
+
+            return
+
+        # Add highlighted lines
         # Collect selected time segments
         source_time_segments, row_number_list = \
             self.ui.tableWidget_segments.get_selected_time_segments(True)
@@ -176,12 +192,19 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         for i in xrange(len(source_time_segments)):
             time_segment = source_time_segments[i]
-            vec_x, vec_y = self._myParent.get_workflow.get_sample_log(self._currRunNumber,
-                                                                      log_name,
-                                                                      time_segment[0],
-                                                                      time_segment[1])
-            self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, color='red')
+            print '[DB-DEV-BRA] Current run number = ', self._currRunNumber, 'highlight ', time_segment
+            status, ret_obj = self._myParent.get_workflow().get_sample_log_values(
+                self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
+            if status is False:
+                GuiUtility.pop_dialog_error(self, ret_obj)
+            else:
+                vec_times, vec_value = ret_obj
+                highlite_id = self.ui.graphicsView_main.add_plot_1d(vec_times, vec_value, color='red', marker='.')
+                self._myHighLightedLineList.append(highlite_id)
         # END-FOR
+
+        # Reset
+        self.ui.pushButton_highlight.setText('Clear')
 
         return
 
@@ -423,15 +446,16 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # Get splitters
-        split_tup_list = self.get_splitters()
-
-        # Close
-        self.close()
+        split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
 
         # Call parent method
         if self._myParent is not None:
-            # FIXME/TODO/NOW - no method named set_splitter_info
-            self._myParent.set_splitter_info(self._currRun, split_tup_list)
+            self._myParent.get_workflow().gen_data_slice_manual(
+                run_number=self._currRunNumber, relative_time=True,
+                time_segments_list=split_tup_list)
+
+        # Close
+        self.close()
 
         return
 
@@ -506,12 +530,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.plot_sample_log(log_name)
 
         return
-
-    def get_splitters(self):
-        """ Get splitters set up by user.  Called by parent algorithm
-        :return:
-        """
-        return self.ui.tableWidget_segments.get_splitter_list()
 
     def highlite_picker(self, picker_id, flag, color='red'):
         """

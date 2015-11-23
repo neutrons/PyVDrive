@@ -644,6 +644,13 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def remove_line(self, line_id):
+        """ Remove a line
+        :param line_id:
+        :return:
+        """
+        self._myCanvas.remove_plot_1d(line_id)
+
     def set_indicator_position(self, line_id, pos_x, pos_y):
         """ Set the indicator to new position
         :param line_id:
@@ -1153,14 +1160,16 @@ class Qt4MplCanvas(FigureCanvas):
         :return:
         """
         # self._lineDict[ikey].remove()
-        print 'Remove line... ',
+        debug_info = 'Remove line... '
 
         # Get all lines in list
         lines = self.axes.lines
         assert isinstance(lines, list)
 
-        print 'Number of lines = %d, List: %s' % (len(lines), str(lines))
-        print 'Line to remove: key = %s, Line Dict has key = %s' % (str(plot_key), str(self._lineDict.has_key(plot_key)))
+        debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
+        debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (
+            str(plot_key), plot_key in self._lineDict)
+        print debug_info
 
         if plot_key in self._lineDict:
             self.axes.lines.remove(self._lineDict[plot_key])

@@ -176,7 +176,7 @@ class DialogLogSnapView(QtGui.QDialog):
 
         # Get log value
         status, ret_value = self._myWorkflowController.get_sample_log_values(
-            sample_log_name, relative=True)
+            run_number=None, log_name=sample_log_name, relative=True)
         if status is True:
             vec_x, vec_y = ret_value
         else:
