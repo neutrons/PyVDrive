@@ -61,6 +61,15 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def clean_memory(self, run_number, slicer_tag=None):
+        """ Clear memory by deleting workspaces
+        :param run_number: run number for the slicer
+        :param slicer_tag:
+        :return:
+        """
+        if slicer_tag is not None:
+            self._myLogHelper.clean_workspace(run_number, slicer_tag)
+
     def clear_runs(self):
         """
         Clear all runs in the VProject. 
@@ -90,12 +99,9 @@ class VDriveAPI(object):
         :param start_time:
         :param end_time:
         :param time_step:
-        :param out_ws_name:
+        :param tag: name of the output workspace
         :return:
         """
-        # TODO/NOW : pass out_ws_name to lower level
-        # TODO/NOW : level
-
         # Get full-path file name according to run number
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
@@ -113,7 +119,8 @@ class VDriveAPI(object):
 
         status, ret_obj = self._myLogHelper.generate_events_filter_by_time(min_time=start_time,
                                                                            max_time=end_time,
-                                                                           time_interval=time_step)
+                                                                           time_interval=time_step,
+                                                                           tag=tag)
 
         return status, ret_obj
 

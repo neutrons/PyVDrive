@@ -237,20 +237,22 @@ class WindowLogPicker(QtGui.QMainWindow):
         index_list = range(num_segments)
         index_list.sort(reverse=True)
         for i in index_list:
+            slicer_tag = 'TempSlicerRun%dSeg%d' % (self._currRunNumber, i)
             time_segment = source_time_segments[i]
-            # FIXME/TODO/NOW - Find out XXX for out workspace name and do further analysis
-            # FIXME/TODO/NOW - myRunNumber is not set up.
             if by_time is True:
                 self._myParent.get_workflow().gen_data_slicer_by_time(
-                    self._myRunNumber, start_time=time_segment[0], end_time=time_segment[1],
-                    time_step=step_value, tag=XXX)
+                    self._currRunNumber, start_time=time_segment[0], end_time=time_segment[1],
+                    time_step=step_value, tag=slicer_tag)
             else:
                 self._myParent.get_workflow.gen_data_slicer_sample_log(
-                    self._myRunNumber, log_name, time_segment[0], time_segment[1],
-                    log_value_step=step_value, tag=XXX)
+                    self._currRunNumber, log_name, time_segment[0], time_segment[1],
+                    log_value_step=step_value, tag=slicer_tag)
 
-            # TODO/NOW/ Implement this!
-            sub_segments = self._myParent.get_workflow().get_slicer_time_segments(tag=XXX, time=relative)
+            # Get time segments, i.e., slicer
+            sub_segments = self._myParent.get_workflow().get_event_slicer(
+                active=False, slicer_id=slicer_tag, relative_time=True)
+
+            self._myParent.get_workflow.clean_memory(slicer_tag=slicer_tag)
             # TODO/NOW/ Implement this!
             self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
         # END-FOR (i)

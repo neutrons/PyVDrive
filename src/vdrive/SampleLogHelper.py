@@ -71,7 +71,7 @@ class SampleLogManager(object):
         self._currWorkspace = None
         self._currWorkspaceName = ''
         self._currLogNamesList = list()
-        self._currSplittersDict = dict()  # key = sample log name
+        self._currSplittersDict = dict()  # key = sample log name, value = (split ws name, info ws name)
 
         # Stored session:
         # key = log file name (base name), value = tuple as file name with full path, workspace name, splitter dict
@@ -151,9 +151,59 @@ class SampleLogManager(object):
 
         return True, ''
 
+    def _find_workspaces_by_run(self, run_number, slicer_tag):
+        """
+
+        :param run_number:
+        :param slicer_tag:
+        :return:
+        """
+        slice_ws = None
+        info_ws = None
+
+        # Access
+        if self._currRunNumber == run_number:
+            # current run
+            if slicer_tag in self._currSplittersDict:
+                split_ws, info_ws = self._currSplittersDict[slicer_tag]
+            else:
+                return False, 'Unable to find slicer tag %s of run %s' % (slicer_tag, str(run_number))
+
+        elif run_number not in self._runNxsNameMap:
+            # unable to find the run store
+            return False, 'Unable to find run %s' % str(run_number)
+
+        else:
+            # saved session
+            file_name = self._runNxsNameMap[run_number]
+            if slicer_tag not in self._prevSessionDict[file_name]:
+                return False, 'Unable to find slicer %s in run %s / %s' % (slicer_tag,
+                                                                           str(run_number),
+                                                                           file_name)
+            slice_ws, info_ws = self._prevSessionDict[file_name][slicer_tag]
+
+        return True, (slice_ws, info_ws)
+
+    def clean_workspace(self, run_number, slicer_tag):
+        """
+        Clean workspace
+        :param run_number:
+        :param slicer_tag:
+        :return:
+        """
+        status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
+        if status is False:
+            return False, ret_obj
+
+        slice_ws, info_ws = ret_obj
+        mtd.delete_workspace(slice_ws)
+        mtd.delete_workspace(info_ws)
+
+        return True, ''
+
     def generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
                                       min_log_value, max_log_value, log_value_interval,
-                                      value_change_direction):
+                                      value_change_direction, tag):
         """
         Generate event filter by log value
         :param ws_name:
@@ -164,6 +214,7 @@ class SampleLogManager(object):
         :param min_log_value:
         :param max_log_value:
         :param log_value_interval:
+        :param tag:
         :return:
         """
         if relative_time is False:
@@ -196,11 +247,13 @@ class SampleLogManager(object):
                                           log_value_interval, value_change_direction)
 
         # Store
-        self._currSplittersDict[log_name] = (splitter_ws_name, info_ws_name)
+        if tag is None:
+            tag = log_name
+        self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
 
         return
 
-    def generate_events_filter_by_time(self, min_time, max_time, time_interval):
+    def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag):
         """
         Create splitters by time
         :param min_time:
@@ -231,7 +284,9 @@ class SampleLogManager(object):
             return status, err_msg
 
         # Store
-        self._currSplittersDict['_TIME_'] = (splitter_ws_name, info_ws_name)
+        if tag is None:
+            tag = '_TIME_'
+        self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
 
         return True, ret_obj
 
