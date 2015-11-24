@@ -253,7 +253,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                 active=False, slicer_id=slicer_tag, relative_time=True)
 
             self._myParent.get_workflow.clean_memory(slicer_tag=slicer_tag)
-            # TODO/NOW/ Implement this!
             self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
         # END-FOR (i)
 

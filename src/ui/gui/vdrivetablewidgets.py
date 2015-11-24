@@ -87,7 +87,7 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         """
         Get all splitters that are selected
         Note: splitters are relative time to run_start in unit of second
-        :return:
+        :return: a list of 2-tuple as start time and stop time relative to run start
         """
         split_tup_list = list()
 
@@ -101,6 +101,37 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         # END-FOR
 
         return split_tup_list
+
+    def replace_line(self, row_number, time_segments):
+        """
+        Replace a row by a few of new rows
+        :param row_number: the number of the row to be replace
+        :param time_segments: items for the new rows.
+        :return: 2-tuple as (bool, str)
+        """
+        # Check
+        assert isinstance(row_number, int)
+        assert isinstance(time_segments, list)
+
+        num_rows = self.rowCount()
+        if row_number < 0 or row_number >= num_rows:
+            return False, 'Input row number %d is out of range [0, %d).' % (row_number, num_rows)
+
+        i_start_time = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        i_stop_time = Data_Slicer_Table_Setup.index(('Stop', 'float'))
+
+        # Replace original row
+        self.update_cell_value(row_number, i_start_time, time_segments[0].start)
+        self.update_cell_value(row_number, i_stop_time, time_segments[0].stop)
+
+        # Insert the rest
+        for index in xrange(1, len(time_segments)):
+            self.insertRow(row_number+1)
+        for index in xrange(1, len(time_segments)):
+            self.update_cell_value(row_number+index, i_start_time, time_segments[index].start)
+            self.update_cell_value(row_number+index, i_stop_time, time_segments[index].stop)
+
+        return True, ''
 
     def select_row(self, row_index, flag):
         """

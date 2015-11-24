@@ -89,7 +89,6 @@ class VDriveAPI(object):
         :param time_segment_list:
         :return:
         """
-        # FIXME/TODO/NOW
         self._myLogHelper.generate_events_filter_manual(run_number, time_segment_list,relative_time)
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
@@ -138,8 +137,6 @@ class VDriveAPI(object):
         :param log_value_step:
         :return:
         """
-        # TODO/FIXME : Make tag as workspace name to pass to the lower level
-
         # Get file name according to run number
         # print '[DBDB] run number = %s of type %s' % (str(run_number), str(type(run_number)))
         if isinstance(run_number, int):
@@ -163,9 +160,13 @@ class VDriveAPI(object):
 
         # FIXME - Need to pass value change direction
         self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
-                                                        min_time=start_time, max_time=end_time, relative_time=True,
-                                                        min_log_value=min_log_value, max_log_value=max_log_value,
-                                                        log_value_interval=log_value_step, value_change_direction='Both')
+                                                        min_time=start_time, max_time=end_time,
+                                                        relative_time=True,
+                                                        min_log_value=min_log_value,
+                                                        max_log_value=max_log_value,
+                                                        log_value_interval=log_value_step,
+                                                        value_change_direction='Both',
+                                                        tag=tag)
 
         return
 

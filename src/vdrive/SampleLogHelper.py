@@ -290,6 +290,36 @@ class SampleLogManager(object):
 
         return True, ret_obj
 
+    def generate_events_filter_manual(self, run_number, split_list, tag):
+        """ Generate a split workspace with arbitrary input time
+        :param run_number:
+        :param split_list:
+        :return:
+        """
+        # Check
+        if self._currRunNumber != run_number:
+            return False, 'It is not supported to use stored run number for generate_events_filter_manual.'
+        # Determine tag
+        if tag is None:
+            tag = get_standard_manual_tag(run_number)
+
+        # Check split list
+        assert isinstance(split_list, list)
+
+        # Generate split workspace
+        status, ret_obj = mtd.generate_event_filters_arbitrary(split_list, tag)
+        if status is False:
+            err_msg = ret_obj
+            return False, err_msg
+
+        # Store
+        split_ws_name, info_ws_name = ret_obj
+        self._currSplittersDict['_MANUAL_'] = (split_ws_name, info_ws_name)
+
+        return True, ret_obj
+
+
+
     def get_log_workspace(self, run_number, nxs_file_name=None):
         """
 
