@@ -204,26 +204,34 @@ class VDriveAPI(object):
         """
         return self._myRootDataDir
 
-    def get_event_slicer(self, active, slicer_id=None, relative_time=True):
+    def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
         TODO/FIXME What am I supposed to do???
-        :param active: if True, then use the current one, if False, look into ID
+        :param run_number: run number for locate slicer
         :param slicer_id: log name, manual, time (decreasing priority)
+        :param slicer_type: string as type of slicer
         :param relative_time: if True, time is in relative to run_start
         :return: vector of floats as time in unit of second
         """
-        if active is True:
-            vec_time = self._myLogHelper.current_slicer_time()
-        elif slicer_id in self._myLogHelper.get_sample_log_names():
-            vec_time = self._myLogHelper.get_slicer_by_log(slicer_id)
-        elif slicer_id.lower() == 'manual':
-            vec_time = self._myLogHelper.get_slicer_manual()
-        elif slicer_id.lower() == 'time':
-            vec_time = self._myLogHelper.get_slicer_by_time()
-        else:
-            raise RuntimeError('Slicer ID %s is not supported.' % slicer_id)
+        # Check
+        assert isinstance(run_number, int)
+        assert isinstance(slicer_type, str)
+        assert isinstance(slicer_id, str)
 
-        return vec_time
+        if slicer_type.lower() == 'time':
+            status, ret_obj = self._myLogHelper.get_slicer_by_time()
+        elif slicer_type.lower() == 'log':
+            status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, slicer_id)
+        else:
+            status, ret_obj = self._myLogHelper.get_slicer_by_id(run_number, slicer_id)
+
+        if status is False:
+            err_msg = ret_obj
+            return False, err_msg
+        else:
+            time_segment_list = ret_obj
+
+        return True, time_segment_list
 
     def get_file_by_run(self, run_number):
         """ Get data file path by run number

@@ -249,11 +249,19 @@ class WindowLogPicker(QtGui.QMainWindow):
                     log_value_step=step_value, tag=slicer_tag)
 
             # Get time segments, i.e., slicer
-            sub_segments = self._myParent.get_workflow().get_event_slicer(
-                active=False, slicer_id=slicer_tag, relative_time=True)
+            status, ret_obj = self._myParent.get_workflow().get_event_slicer(
+                run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
+                relative_time=True)
+            print '[DB-TEST] return is ', status, ret_obj
 
-            self._myParent.get_workflow.clean_memory(slicer_tag=slicer_tag)
-            self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
+            self._myParent.get_workflow().clean_memory(slicer_tag=slicer_tag)
+
+            if status is False:
+                err_msg = ret_obj
+                GuiUtility.pop_dialog_error(self, err_msg)
+            else:
+                sub_segments = ret_obj
+                self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
         # END-FOR (i)
 
         return

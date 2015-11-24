@@ -156,7 +156,7 @@ class SampleLogManager(object):
 
         :param run_number:
         :param slicer_tag:
-        :return:
+        :return: 2-tuple as (boolean, ....)
         """
         slice_ws = None
         info_ws = None
@@ -271,8 +271,12 @@ class SampleLogManager(object):
                                'min_time, max_time and time_interval')
 
         # Generate event filters
-        splitter_ws_name = '%s_splitter_TIME_' % self._currWorkspaceName
-        info_ws_name = '%s_info__TIME_' % self._currWorkspaceName
+        if tag is None:
+            splitter_ws_name = '%s_splitter_TIME_' % self._currWorkspaceName
+            info_ws_name = '%s_info__TIME_' % self._currWorkspaceName
+        else:
+            splitter_ws_name = tag
+            info_ws_name = tag + '_info'
 
         status, ret_obj = mtd.generate_event_filters_by_time(self._currWorkspaceName, splitter_ws_name, info_ws_name,
                                                              min_time, max_time,
@@ -286,6 +290,7 @@ class SampleLogManager(object):
         # Store
         if tag is None:
             tag = '_TIME_'
+        # FIXME/NOW how splitter_ws_name is None!
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
 
         return True, ret_obj
@@ -395,6 +400,27 @@ class SampleLogManager(object):
                                         start_time=start_time,
                                         stop_time=stop_time,
                                         relative=relative)
+
+    def get_slicer_by_id(self, run_number, slicer_tag):
+        """ Get slicer by slicer ID
+        :param run_number:
+        :param slicer_tag:
+        :return: 2-tuple
+        """
+        # Get workspaces
+        print '[DB Get Slicer] Run number = ', run_number, ', Tag = ', slicer_tag
+        status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
+        if status is False:
+            err_msg = ret_obj
+            return False, err_msg
+
+        # Get time segments from file
+        split_ws_name = ret_obj[0]
+        print '[DB-TEST get_slicer] workspace names for ', slicer_tag, 'are ', ret_obj
+        # FIXME/TODO/NOW : Need to find a way to get run_start in nanosecond
+        segment_list = mtd.get_time_segments_from_splitters(split_ws_name, time_shift=0, unit='Seconds')
+
+        return True, segment_list
 
     def get_slicer_by_log(self, run_number, log_name, nxs_name=None):
         """ Get slicer by log value

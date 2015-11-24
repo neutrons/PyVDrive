@@ -184,6 +184,34 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
+def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
+    """
+
+    :param split_ws_name:
+    :param time_shift:
+    :return:
+    """
+    split_ws =retrieve_workspace(split_ws_name)
+    if split_ws is None:
+        raise RuntimeError('Workspace %s does not exist.' % split_ws_name)
+
+    segment_list = list()
+
+    num_rows = split_ws.rowCount()
+    for i_row in xrange(num_rows):
+        start_time = split_ws.cell(i_row, 0)
+        stop_time = split_ws.cell(i_row, 1)
+        target = split_ws.cell(i_row, 2)
+        print 'Row %d' % i_row, start_time, ', ', stop_time, ', ', target
+        if unit == 'Seconds':
+            factor = 1.E-9
+        else:
+            factor = 1
+        segment_list.append(((start_time-time_shift)*factor, (stop_time-time_shift)*factor, target))
+
+    return segment_list
+
+
 def event_data_ws_name(run_number):
     """ workspace name for raw event data
     :param run_number:
@@ -198,7 +226,9 @@ def retrieve_workspace(ws_name):
     :param ws_name:
     :return:
     """
-    assert isinstance(ws_name, str)
+    if isinstance(ws_name, str) is False:
+        raise RuntimeError('Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
+                                                                                        str(type(ws_name))))
 
     if mantid.AnalysisDataService.doesExist(ws_name) is False:
         return None
