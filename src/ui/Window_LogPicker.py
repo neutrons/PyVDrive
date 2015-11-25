@@ -192,7 +192,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         for i in xrange(len(source_time_segments)):
             time_segment = source_time_segments[i]
-            print '[DB-DEV-BRA] Current run number = ', self._currRunNumber, 'highlight ', time_segment
             status, ret_obj = self._myParent.get_workflow().get_sample_log_values(
                 self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
             if status is False:
@@ -252,7 +251,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             status, ret_obj = self._myParent.get_workflow().get_event_slicer(
                 run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
                 relative_time=True)
-            print '[DB-TEST] return is ', status, ret_obj
 
             self._myParent.get_workflow().clean_memory(slicer_tag=slicer_tag)
 
@@ -437,7 +435,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Fix the current picker
         x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
         current_time = x
-        print 'TODO Add picked up time %.5f' % current_time
 
         # Change the color
         self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
@@ -561,7 +558,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             else:
                 self.ui.graphicsView_main.update_indicator(picker_id, 'black')
         else:
-            print 'Picker list: ', self._myPickerIDList, ' for ', picker_id
             for pid in self._myPickerIDList:
                 if pid == picker_id:
                     self.ui.graphicsView_main.update_indicator(pid, color)
@@ -585,8 +581,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         assert isinstance(ratio, float)
         assert (ratio > 0.01) and (ratio <= 0.5)
 
-        print '[DB-DEV] Indicators: ', self._myPickerIDList
-
         x_lim = self.ui.graphicsView_main.getXLimit()
 
         # Get the vector of x positions of indicator and
@@ -594,10 +588,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         for ind_id in self._myPickerIDList:
             picker_x, picker_y = self.ui.graphicsView_main.get_indicator_position(ind_id)
             vec_pos.append(picker_x)
-            print '[DB-DEV] ID ', ind_id, ' at ', picker_x, picker_y
         # END-FOR
         vec_pos.append(x_lim[1])
-        print '[DB-DEV] Positions: ', vec_pos
         sorted_vec_pos = sorted(vec_pos)
 
         # Search
@@ -629,7 +621,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Select nearest picker
         :return:
         """
-        print '[DB] Select picker near %f ....' % self._currMousePosX
         # Get all the pickers' position
         picker_pos_list = self.ui.tableWidget_segments.get_start_times()
 
@@ -647,7 +638,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             abs(picker_pos_list[next_index] - self._currMousePosX) < \
                         abs(picker_pos_list[prev_index] - self._currMousePosX):
             select_picker_pos = picker_pos_list[next_index]
-        print 'Selected picker is at %.5f' % select_picker_pos
 
         # Add the information to graphics
         self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
@@ -752,8 +742,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                 # self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
 
                 self.ui.graphicsView_main.set_indicator_position(self._currentPickerID, new_x, new_y)
-
-                print '[DB]', 'New X = ', new_x
             # END-IF(dx, dy)
 
         elif self._myPickerMode == IN_PICKER_SELECTION:
@@ -761,14 +749,20 @@ class WindowLogPicker(QtGui.QMainWindow):
             if abs(dx) > mouse_resolution_x:
                 # Consider the picker by time only
                 picker_list_index = self.locate_picker(x_pos=new_x, ratio=0.2)
+                """
                 if picker_list_index == -2:
-                    print 'Middle of nowhere'
+                    pass
+                    # print 'Middle of nowhere'
                 elif picker_list_index == -1:
-                    print 'Left boundary'
+                    pass
+                    # print 'Left boundary'
                 elif picker_list_index == len(self._myPickerIDList):
-                    print 'Right boundary'
+                    pass
+                    # print 'Right boundary'
                 else:
-                    print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
+                    pass
+                    # print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
+                """
                 self.highlite_picker(picker_id=None, flag=False)
                 if 0 <= picker_list_index < len(self._myPickerIDList):
                     picker_id = self._myPickerIDList[picker_list_index]

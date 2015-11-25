@@ -141,7 +141,6 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
 
         # sort
         run_list.sort()
-        print '[DB] Runs selected: ', run_list
 
         # set values
         # FIXME - Better to use signals???
@@ -185,7 +184,6 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         """ Override event handling method
         """
         status, current_run = self.get_current_run()
-        print '[DB] Select run ', current_run
 
         if self._mainWindow is not None:
             self._mainWindow.set_run(current_run)

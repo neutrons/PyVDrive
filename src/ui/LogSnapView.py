@@ -151,9 +151,6 @@ class DialogLogSnapView(QtGui.QDialog):
         """ Set up from parent main window
         :return:
         """
-        print '[DB-TRACE] Run number for log slicing ', run_number, 'of type ', type(run_number)
-        print 'for log ', sample_log_name
-
         # Get workflow controller
         self._myWorkflowController = workflow_controller
         if run_number != self._myRunNumber:

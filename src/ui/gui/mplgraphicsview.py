@@ -196,7 +196,7 @@ class IndicatorManager(object):
 
         for line_key in self._lineManager.keys():
 
-            print self._lineManager[line_key]
+            print '[MplGraph DB] Exam indicator key %s' % str(self._lineManager[line_key])
 
             if x is not None and y is not None:
                 # 2 way
@@ -298,7 +298,7 @@ class IndicatorManager(object):
         :param dy:
         :return:
         """
-        print self._lineManager[my_id][0]
+        # print self._lineManager[my_id][0]
 
         if self._indicatorTypeDict[my_id] == 0:
             # horizontal
@@ -771,7 +771,7 @@ class MplGraphicsView(QtGui.QWidget):
         # process marker if it has information
         if marker.count(' (') > 0:
             marker = marker.split(' (')[0]
-        print "[DB] Print line %d: marker = %s, color = %s" % (self._myLineMarkerColorIndex, marker, color)
+        # print "[DB] Print line %d: marker = %s, color = %s" % (self._myLineMarkerColorIndex, marker, color)
 
         # update the index
         self._myLineMarkerColorIndex += 1
@@ -900,7 +900,6 @@ class Qt4MplCanvas(FigureCanvas):
 
         # color must be RGBA (4-tuple)
         if plot_error is False:
-            print "[DB] line_style = ", line_style, "line_width = ", line_width, "marker = ", marker, "color = ", color
             r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, linestyle=line_style,
                                label=label, linewidth=line_width)
             # return: list of matplotlib.lines.Line2D object
@@ -1006,7 +1005,7 @@ class Qt4MplCanvas(FigureCanvas):
         # set y ticks as an option:
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
-            print "--------> [FixMe]: Set up the Y-axis ticks is erroreous"
+            print "--------> [FixMe]: The way to set up the Y-axis ticks is wrong!"
             #self.axes.set_yticklabels(yticklabels)
 
         # explicitly set aspect ratio of the image

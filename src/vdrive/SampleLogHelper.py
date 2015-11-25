@@ -87,8 +87,6 @@ class SampleLogManager(object):
         :param nxs_file_name:
         :return:
         """
-        print '[DB-BAF] Checkout session of file %s / run %s.' % (str(nxs_file_name),
-                                                                  str(run_number))
         # Check and store
         if os.path.basename(nxs_file_name) == os.path.basename(self._currNexusFilename):
             # same: no op
@@ -111,9 +109,6 @@ class SampleLogManager(object):
             assert isinstance(run_number, int)
             self._runNxsNameMap[run_number] = nxs_base_name
             self._currRunNumber = run_number
-            print '[DB-BAR] Sample Log Helper\'s currRunNumber is set to %s' % str(self._currRunNumber)
-        else:
-            print '[DB] Input run number is None for NeXus file %s' % nxs_base_name
 
         base_name = os.path.basename(nxs_file_name)
         if base_name == self._currNexusFilename:
@@ -122,8 +117,6 @@ class SampleLogManager(object):
             # Start a new session
             self._currNexusFilename = base_name
             self._currRunNumber = run_number
-            print '[DB-BAR] Start a new session: %s and %s' % (self._currNexusFilename,
-                                                               str(self._currRunNumber))
 
         # Output ws name
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
@@ -381,16 +374,12 @@ class SampleLogManager(object):
         :param sample_log_name:
         :return: 2-tuple as (numpy.array, numpy.array) for time and log value
         """
-        print '[DB-Trace-Bug Helper] run number = ', run_number, 'sample log name = ', sample_log_name,
-        print 'start time  = ', start_time
         # Check
         if run_number is not None and run_number != self._currRunNumber:
             # FIXME - Deal with this situation
             raise RuntimeError('It has not been considered to retrieve previous run from Mantid.')
         if sample_log_name not in self._currLogNamesList:
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
-
-        print '[DB-Trace-Bug] current workspace = ', str(self._currWorkspace), 'log name = ', sample_log_name
 
         # Get property
         print '[DB-Trace-Bug Helper 2] run number = ', run_number, 'sample log name = ', sample_log_name,
@@ -461,8 +450,6 @@ class SampleLogManager(object):
         else:
             # specified neither
             raise RuntimeError('It is not allowed not to use neither run_number nor nxs_name')
-
-        # print '[DBX] Use current = ', use_current, 'Current run = ', self._currRunNumber, '\n'
 
         # Get splitter
         if use_current is True:
@@ -610,7 +597,6 @@ class SampleLogManager(object):
         except RuntimeError:
             run_start = '1990-01-01T00:00:00.0000000000'
             run_start_ns = 0
-        print '[DB-BAR] run start = ', run_start_ns
         num_rows = splitter_ws.rowCount()
         wbuf += '# Reference Run Number = %s\n' % run_number
         wbuf += '# Run Start Time = %.9f\n' % (run_start_ns * 1.E-9)
@@ -673,7 +659,6 @@ def parse_time_segments(file_name):
         if line.startswith('#') is True:
             # remove all spaces
             line = line.replace(' ', '')
-            print '[BAF] Line: ', line
             terms = line.split('=')
             if len(terms) == 1:
                 continue
@@ -684,20 +669,19 @@ def parse_time_segments(file_name):
                     ref_run = int(ref_run_str)
                 else:
                     ref_run = ref_run_str
-                print '[BAF] Found reference run %s' % str(ref_run)
             elif terms[0].lower().startswith('runstarttime'):
                 # run start time
                 run_start_str = terms[1]
                 try:
                     run_start = float(run_start_str)
                 except ValueError:
-                    print '[Error] Unable to convert run start time %s to float' % run_start_str
+                    print '[Warning] Unable to convert run start time %s to float' % run_start_str
         else:
             # remove all tab
             line = line.replace('\t', '')
             terms = line.split()
             if len(terms) < 2:
-                print '[Error] Line "%s" is of wrong format.' % line
+                print '[Warning] Line "%s" is of wrong format.' % line
                 continue
 
             try:
@@ -711,14 +695,10 @@ def parse_time_segments(file_name):
                 new_segment = TimeSegment(start_time, stop_time, target_id)
                 segment_list.append(new_segment)
             except ValueError as e:
-                print '[Error] Line "%s" has wrong type of vlaue for start/stop.' % line
+                print '[Warning] Line "%s" has wrong type of vlaue for start/stop.' % line
                 continue
         # END-IF (#)
     # END-FOR
-
-    print '[DB] Parse segment file with reference run %s started at %s. Total %d segments' % (
-            str(ref_run), str(run_start), len(segment_list)
-    )
 
     return True, (ref_run, run_start, segment_list)
 

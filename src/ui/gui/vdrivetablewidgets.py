@@ -242,7 +242,6 @@ class VdriveRunTableWidget(NT.NTableWidget):
         :param run_list:
         :return:
         """
-        print '[DB] Appending %d runs' % len(run_list)
         for run in run_list:
             self.append_row([run, False])
 

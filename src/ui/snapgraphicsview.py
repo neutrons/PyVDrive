@@ -79,8 +79,6 @@ class SnapGraphicsView(object):
         self._graphicView.setXYLimit(min_x - 0.1*dx, max_x + 0.1*dx,
                                      min_y - 0.1*dy, max_y + 0.1*dy)
 
-        print '[DB-TRACE] Reset Limit???'
-
         # Plot
         self._graphicView.add_plot_1d(vec_times, vec_log_value, marker='.', color='blue')
 
@@ -132,7 +130,6 @@ class SampleLogView(object):
         :return:
         """
         log_name = str(self._snapGraphicsView.combo_box1_value())
-        print '[DB] Trace Snap graphics view: log name = ', log_name
 
         log_name = log_name.split(' (')[0]
 
@@ -145,7 +142,6 @@ class SampleLogView(object):
         """
         # Get log name from
         log_name = self.get_log_name()
-        print '[DB] Re-plot log value %s' % log_name
 
         vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name)
         # FIXME / TODO - make relative time

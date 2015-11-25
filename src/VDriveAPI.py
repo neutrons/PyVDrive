@@ -138,7 +138,6 @@ class VDriveAPI(object):
         :return:
         """
         # Get file name according to run number
-        # print '[DBDB] run number = %s of type %s' % (str(run_number), str(type(run_number)))
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
             file_name, ipts_number = self._myProject.get_run_info(run_number)
@@ -259,7 +258,6 @@ class VDriveAPI(object):
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
-            print '\n[DB RuntimeError] %s\n' % str(e)
             return False, str(e)
 
         return True, run_tuple_list
@@ -335,13 +333,6 @@ class VDriveAPI(object):
         else:
             name_list = ret_obj
 
-        """ Debug ...
-        dbstr = 'Total %d sample logs\n' % len(name_list)
-        for name in name_list:
-            dbstr += '%s\n' % name
-        print '\n[DB] %s\n' % dbstr
-        """
-
         return True, name_list
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
@@ -354,8 +345,6 @@ class VDriveAPI(object):
         """
         assert isinstance(log_name, str)
         try:
-            print '[DB-Trace-Bug API] run number = ', run_number, 'log name = ', log_name,
-            print 'start time = ', start_time, stop_time
             vec_times, vec_value = self._myLogHelper.get_sample_data(run_number=run_number,
                                                                      sample_log_name=log_name,
                                                                      start_time=start_time,
@@ -417,7 +406,7 @@ class VDriveAPI(object):
         # Out file name
         if os.path.isabs(out_file_name) is False:
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
-            print '[DB] Session file is saved to working directory as %s.' % out_file_name
+            print '[INFO] Session file is saved to working directory as %s.' % out_file_name
 
         futil.save_to_xml(save_dict, out_file_name)
 
@@ -494,7 +483,6 @@ class VDriveAPI(object):
             status, ret_obj = self._myLogHelper.get_slicer_by_time(run_number)
             if status is False:
                 err_msg = ret_obj
-                print '[DB]', err_msg, '\n'
                 return False, err_msg
             else:
                 slicer = ret_obj
@@ -638,16 +626,14 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
             if include_end_date is True:
                 # Add one day for next date
                 epoch_end += 24*3600
-            print '[DB] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                                  (epoch_end-epoch_start)/3600.)
+            print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
+                                                                   (epoch_end-epoch_start)/3600.)
         except ValueError as e:
             return False, str(e)
 
         # Sort by time
         assert isinstance(run_tuple_list, list)
         run_tuple_list.sort(key=lambda x: x[1])
-        print '[DB] Runs range from (epoch time) %f to %f' % (run_tuple_list[0][1],
-                                                              run_tuple_list[-1][1])
 
         # FIXME - Using binary search will be great!
         result_list = []
