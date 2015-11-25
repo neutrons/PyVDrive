@@ -251,8 +251,9 @@ class WindowLogPicker(QtGui.QMainWindow):
             status, ret_obj = self._myParent.get_workflow().get_event_slicer(
                 run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
                 relative_time=True)
+            print '[DB-BAR] Returned object: ', ret_obj
 
-            self._myParent.get_workflow().clean_memory(slicer_tag=slicer_tag)
+            self._myParent.get_workflow().clean_memory(self._currRunNumber, slicer_tag)
 
             if status is False:
                 err_msg = ret_obj

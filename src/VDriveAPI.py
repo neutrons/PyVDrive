@@ -222,7 +222,7 @@ class VDriveAPI(object):
         elif slicer_type.lower() == 'log':
             status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, slicer_id)
         else:
-            status, ret_obj = self._myLogHelper.get_slicer_by_id(run_number, slicer_id)
+            status, ret_obj = self._myLogHelper.get_slicer_by_id(run_number, slicer_id, relative_time)
 
         if status is False:
             err_msg = ret_obj

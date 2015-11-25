@@ -3,9 +3,12 @@
 ################################################################################
 import os
 import time
+import pickle
+
 
 SUPPORTEDINSTRUMENT = ['vulcan']
 SUPPORTEDINSTRUMENT_SHORT = ['vul']
+
 
 class FacilityUtilityHelper(object):
     """ Helper class to find data and etc in a facility and instrument
@@ -37,13 +40,13 @@ class FacilityUtilityHelper(object):
 
         return
 
-    def getFilesInfo(self, filenamelist):
+    def getFilesInfo(self, file_name_list):
         """ Get files' information
-        :param filenamelist: list of string of file names
+        :param file_name_list: list of string of file names
         :return: a list of 2-tuple (time as creation time, string as file name)
         """
         timelist = []
-        for filename in filenames:
+        for filename in file_name_list:
             # modification time: return is float
             mod_time = os.path.getmtime(filename)
             create_time = os.path.getctime(filename)
@@ -325,12 +328,11 @@ def load_from_xml(xml_file_name):
     :param xml_file_name:
     :return:
     """
-    import pprint, pickle
-
+    #import pprint
     pkl_file = open(xml_file_name, 'rb')
 
     save_dict = pickle.load(pkl_file)
-    pprint.pprint(save_dict)
+    # pprint.pprint(save_dict)
 
     pkl_file.close()
 

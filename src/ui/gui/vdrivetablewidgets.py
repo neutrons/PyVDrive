@@ -119,17 +119,24 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         i_start_time = Data_Slicer_Table_Setup.index(('Start', 'float'))
         i_stop_time = Data_Slicer_Table_Setup.index(('Stop', 'float'))
+        # FIXME/NOW - get i_select properly
+        i_select = 2
 
         # Replace original row
-        self.update_cell_value(row_number, i_start_time, time_segments[0].start)
-        self.update_cell_value(row_number, i_stop_time, time_segments[0].stop)
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_start_time, time_segments[0][0])
+        self.update_cell_value(row_number, i_start_time, time_segments[0][0])
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_stop_time, time_segments[0][1])
+        self.update_cell_value(row_number, i_stop_time, time_segments[0][1])
 
         # Insert the rest
         for index in xrange(1, len(time_segments)):
+            print '[DB-HUGE] Insert a row @ %d. Total number of rows = %d' % (row_number+1, self.rowCount())
             self.insertRow(row_number+1)
         for index in xrange(1, len(time_segments)):
-            self.update_cell_value(row_number+index, i_start_time, time_segments[index].start)
-            self.update_cell_value(row_number+index, i_stop_time, time_segments[index].stop)
+            print '[DB-HUGE] Set cell value for row %d: ' % (row_number+index) , time_segments[index][0], time_segments[index][1]
+            self.set_value_cell(row_number+index, i_start_time, time_segments[index][0])
+            self.set_value_cell(row_number+index, i_stop_time, time_segments[index][1])
+            self.set_value_cell(row_number+index, i_select, False)
 
         return True, ''
 

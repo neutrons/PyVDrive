@@ -99,6 +99,34 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     return True, (splitter_ws_name, info_ws_name)
 
 
+def get_run_start(workspace, unit):
+    """ Get run start time
+    :param workspace:
+    :param unit: nanosecond(s), second(s)
+    :return:
+    """
+    try:
+        pcharge_log = workspace.run().getProperty('proton_charge')
+    except AttributeError as e:
+        raise RuntimeError('Unable to get run start due to %s.' % str(e))
+    except RuntimeError as e:
+        raise RuntimeError('Unable to get run start due to %s.' % str(e))
+
+    # Get first value in proton charge's time as run start
+    run_start_ns = pcharge_log.times[0].totalNanoseconds()
+
+    # Convert unit if
+    run_start = run_start_ns
+    if unit.lower().startswith('nanosecond'):
+        pass
+    elif unit.lower().startswith('second'):
+        run_start *= 1.E-9
+    else:
+        raise RuntimeError('Unit %s is not supported by get_run_start().' % unit)
+
+    return run_start
+
+
 def get_sample_log_info(src_workspace):
     """ Ger sample log information including size of log and name of log
     :param src_workspace: workspace which the sample logs are from
@@ -186,28 +214,35 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
     """
-
+    TODO/NOW - Doc!
     :param split_ws_name:
-    :param time_shift:
+    :param time_shift: always in the same unit as
     :return:
     """
-    split_ws =retrieve_workspace(split_ws_name)
+    split_ws = retrieve_workspace(split_ws_name)
     if split_ws is None:
         raise RuntimeError('Workspace %s does not exist.' % split_ws_name)
 
     segment_list = list()
+    if unit == 'Seconds':
+        factor = 1.E-9
+    else:
+        factor = 1
 
     num_rows = split_ws.rowCount()
     for i_row in xrange(num_rows):
+        # Get original data
         start_time = split_ws.cell(i_row, 0)
         stop_time = split_ws.cell(i_row, 1)
         target = split_ws.cell(i_row, 2)
-        print 'Row %d' % i_row, start_time, ', ', stop_time, ', ', target
-        if unit == 'Seconds':
-            factor = 1.E-9
-        else:
-            factor = 1
-        segment_list.append(((start_time-time_shift)*factor, (stop_time-time_shift)*factor, target))
+        print '[DB-BAT] Row %d' % i_row, start_time, ', ', stop_time, ', ', target
+
+        # calibrated by time shift
+        start_time = start_time * factor - time_shift
+        stop_time = stop_time * factor - time_shift
+
+        segment_list.append((start_time, stop_time, target))
+    # END-FOR(i_row)
 
     return segment_list
 

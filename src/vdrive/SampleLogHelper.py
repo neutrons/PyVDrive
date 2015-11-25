@@ -21,20 +21,22 @@ class TimeSegment(object):
         assert isinstance(stop_time, float)
         assert isinstance(target_id, int) or isinstance(target_id, str)
 
+        self._data = [0., 0., 0]
+
         if start_time >= stop_time:
             raise RuntimeError('Unable to create a TimeSegment object '
                                'because start time %f is equal to larger than '
                                'stop time %f' % (start_time, stop_time))
 
-        self.start = start_time
-        self.stop = stop_time
+        self._data[0] = start_time
+        self._data[1] = stop_time
 
-        if self.start > FifteenYearsInSecond:
+        if self._data[0] > FifteenYearsInSecond:
             self._isRelative = False
         else:
             self._isRelative = True
 
-        self.target = target_id
+        self._data[2] = target_id
 
         return
 
@@ -43,14 +45,22 @@ class TimeSegment(object):
 
         :return:
         """
-        return self.start, self.start
+        return self._data[0], self._data[1]
 
     def get_target_id(self):
         """
 
         :return:
         """
-        return self.target
+        return self._data[2]
+
+    @property
+    def start(self):
+        """
+        start time
+        :return:
+        """
+        return self._data[0]
 
 
 class SampleLogManager(object):
@@ -78,6 +88,8 @@ class SampleLogManager(object):
         self._prevSessionDict = dict()
         # Keys map
         self._runNxsNameMap = dict()
+        # Some useful value
+        self._runStartTimeDict = dict()
 
         return
 
@@ -139,8 +151,11 @@ class SampleLogManager(object):
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
+        # Set up run start time
+        self._runStartTimeDict[nxs_base_name] = mtd.get_run_start(self._currWorkspace, unit='nanoseconds')
+
         # Set up log list
-        self._logInfoList = mtd.get_sample_log_info(self._currWorkspace)
+        # self._logInfoList = mtd.get_sample_log_info(self._currWorkspace)
 
         return True, ''
 
@@ -151,9 +166,6 @@ class SampleLogManager(object):
         :param slicer_tag:
         :return: 2-tuple as (boolean, ....)
         """
-        slice_ws = None
-        info_ws = None
-
         # Access
         if self._currRunNumber == run_number:
             # current run
@@ -173,9 +185,9 @@ class SampleLogManager(object):
                 return False, 'Unable to find slicer %s in run %s / %s' % (slicer_tag,
                                                                            str(run_number),
                                                                            file_name)
-            slice_ws, info_ws = self._prevSessionDict[file_name][slicer_tag]
+            split_ws, info_ws = self._prevSessionDict[file_name][slicer_tag]
 
-        return True, (slice_ws, info_ws)
+        return True, (split_ws, info_ws)
 
     def clean_workspace(self, run_number, slicer_tag):
         """
@@ -285,6 +297,7 @@ class SampleLogManager(object):
             tag = '_TIME_'
         # FIXME/NOW how splitter_ws_name is None!
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
+        print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._currSplittersDict[tag]))
 
         return True, ret_obj
 
@@ -390,7 +403,7 @@ class SampleLogManager(object):
                                         stop_time=stop_time,
                                         relative=relative)
 
-    def get_slicer_by_id(self, run_number, slicer_tag):
+    def get_slicer_by_id(self, run_number, slicer_tag, relative_time=True):
         """ Get slicer by slicer ID
         :param run_number:
         :param slicer_tag:
@@ -406,8 +419,16 @@ class SampleLogManager(object):
         # Get time segments from file
         split_ws_name = ret_obj[0]
         print '[DB-TEST get_slicer] workspace names for ', slicer_tag, 'are ', ret_obj
+        print '[DB-TEST weird] ', self._currSplittersDict
         # FIXME/TODO/NOW : Need to find a way to get run_start in nanosecond
-        segment_list = mtd.get_time_segments_from_splitters(split_ws_name, time_shift=0, unit='Seconds')
+        if relative_time is True:
+            nxs_base_name = self._runNxsNameMap[run_number]
+            run_start_sec = self._runStartTimeDict[nxs_base_name] * 1.E-9
+        else:
+            run_start_sec = 0
+        print '[DB-BAR] run start tie in second = ', run_start_sec
+
+        segment_list = mtd.get_time_segments_from_splitters(split_ws_name, time_shift=run_start_sec, unit='Seconds')
 
         return True, segment_list
 
