@@ -557,7 +557,7 @@ class Window_GPPlot(QMainWindow):
             ymax = max(vecy)
             dy = ymax-ymin
 
-            self.ui.graphicsView_mainPlot.setXYLimits(xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
+            self.ui.graphicsView_mainPlot.setXYLimit(xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
         # ENDIF
 
         return

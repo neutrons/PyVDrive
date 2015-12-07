@@ -29,7 +29,10 @@ class VDriveAPI(object):
         # Define class variables with defaults
         self._myInstrumentName = 'VULCAN'
         self._myRootDataDir = '/SNS/VULCAN'
-        self._myWorkDir = '/tmp/'
+
+        self._myWorkDir = os.getcwd()
+        if os.access(self._myWorkDir, os.W_OK) is False:
+            self._myWorkDir = '/tmp/'
 
         self._currentIPTS = -1
         self._myLastDataDirectory = '/tmp'
@@ -58,6 +61,15 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def clean_memory(self, run_number, slicer_tag=None):
+        """ Clear memory by deleting workspaces
+        :param run_number: run number for the slicer
+        :param slicer_tag:
+        :return:
+        """
+        if slicer_tag is not None:
+            self._myLogHelper.clean_workspace(run_number, slicer_tag)
+
     def clear_runs(self):
         """
         Clear all runs in the VProject. 
@@ -70,13 +82,23 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
+    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
+        """
+        :param run_number:
+        :param relative_time:
+        :param time_segment_list:
+        :return:
+        """
+        self._myLogHelper.generate_events_filter_manual(run_number, time_segment_list,relative_time)
+
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
         Generate data slicer by time
         :param run_number: run number (integer) or base file name (str)
         :param start_time:
         :param end_time:
         :param time_step:
+        :param tag: name of the output workspace
         :return:
         """
         # Get full-path file name according to run number
@@ -96,13 +118,14 @@ class VDriveAPI(object):
 
         status, ret_obj = self._myLogHelper.generate_events_filter_by_time(min_time=start_time,
                                                                            max_time=end_time,
-                                                                           time_interval=time_step)
+                                                                           time_interval=time_step,
+                                                                           tag=tag)
 
         return status, ret_obj
 
     def gen_data_slicer_sample_log(self, run_number, sample_log_name,
                                    start_time, end_time, min_log_value, max_log_value,
-                                   log_value_step):
+                                   log_value_step, tag=None):
         """
         Generate data slicer/splitters by log values
         :param run_number:
@@ -115,7 +138,6 @@ class VDriveAPI(object):
         :return:
         """
         # Get file name according to run number
-        # print '[DBDB] run number = %s of type %s' % (str(run_number), str(type(run_number)))
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
             file_name, ipts_number = self._myProject.get_run_info(run_number)
@@ -135,10 +157,15 @@ class VDriveAPI(object):
         # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
         # print 'log_name = ', sample_log_name
 
+        # FIXME - Need to pass value change direction
         self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
-                                                        min_time=start_time, max_time=end_time, relative_time=True,
-                                                        min_log_value=min_log_value, max_log_value=max_log_value,
-                                                        log_value_interval=log_value_step, value_change_direction='Both')
+                                                        min_time=start_time, max_time=end_time,
+                                                        relative_time=True,
+                                                        min_log_value=min_log_value,
+                                                        max_log_value=max_log_value,
+                                                        log_value_interval=log_value_step,
+                                                        value_change_direction='Both',
+                                                        tag=tag)
 
         return
 
@@ -176,26 +203,34 @@ class VDriveAPI(object):
         """
         return self._myRootDataDir
 
-    def get_event_slicer(self, active, slicer_id=None, relative_time=True):
+    def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
         TODO/FIXME What am I supposed to do???
-        :param active: if True, then use the current one, if False, look into ID
+        :param run_number: run number for locate slicer
         :param slicer_id: log name, manual, time (decreasing priority)
+        :param slicer_type: string as type of slicer
         :param relative_time: if True, time is in relative to run_start
         :return: vector of floats as time in unit of second
         """
-        if active is True:
-            vec_time = self._myLogHelper.current_slicer_time()
-        elif slicer_id in self._myLogHelper.get_sample_log_names():
-            vec_time = self._myLogHelper.get_slicer_by_log(slicer_id)
-        elif slicer_id.lower() == 'manual':
-            vec_time = self._myLogHelper.get_slicer_manual()
-        elif slicer_id.lower() == 'time':
-            vec_time = self._myLogHelper.get_slicer_by_time()
-        else:
-            raise RuntimeError('Slicer ID %s is not supported.' % slicer_id)
+        # Check
+        assert isinstance(run_number, int)
+        assert isinstance(slicer_type, str)
+        assert isinstance(slicer_id, str)
 
-        return vec_time
+        if slicer_type.lower() == 'time':
+            status, ret_obj = self._myLogHelper.get_slicer_by_time()
+        elif slicer_type.lower() == 'log':
+            status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, slicer_id)
+        else:
+            status, ret_obj = self._myLogHelper.get_slicer_by_id(run_number, slicer_id, relative_time)
+
+        if status is False:
+            err_msg = ret_obj
+            return False, err_msg
+        else:
+            time_segment_list = ret_obj
+
+        return True, time_segment_list
 
     def get_file_by_run(self, run_number):
         """ Get data file path by run number
@@ -223,7 +258,6 @@ class VDriveAPI(object):
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
-            print '\n[DB RuntimeError] %s\n' % str(e)
             return False, str(e)
 
         return True, run_tuple_list
@@ -299,16 +333,9 @@ class VDriveAPI(object):
         else:
             name_list = ret_obj
 
-        """ Debug ...
-        dbstr = 'Total %d sample logs\n' % len(name_list)
-        for name in name_list:
-            dbstr += '%s\n' % name
-        print '\n[DB] %s\n' % dbstr
-        """
-
         return True, name_list
 
-    def get_sample_log_values(self, log_name, relative):
+    def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
@@ -318,7 +345,11 @@ class VDriveAPI(object):
         """
         assert isinstance(log_name, str)
         try:
-            vec_times, vec_value = self._myLogHelper.get_sample_data(log_name, relative)
+            vec_times, vec_value = self._myLogHelper.get_sample_data(run_number=run_number,
+                                                                     sample_log_name=log_name,
+                                                                     start_time=start_time,
+                                                                     stop_time=stop_time,
+                                                                     relative=relative)
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 
@@ -375,11 +406,67 @@ class VDriveAPI(object):
         # Out file name
         if os.path.isabs(out_file_name) is False:
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
-            print '[DB] Session file is saved to working directory as %s.' % out_file_name
+            print '[INFO] Session file is saved to working directory as %s.' % out_file_name
 
         futil.save_to_xml(save_dict, out_file_name)
 
         return True, out_file_name
+
+    def save_splitter_workspace(self, run_number, sample_log_name, file_name):
+        """
+        Save SplittersWorkspace to standard text file
+        :param run_number:
+        :param sample_log_name:
+        :param file_name:
+        :return:
+        """
+        status, err_msg = self._myLogHelper.save_splitter_ws(run_number, sample_log_name, file_name)
+
+        return status, err_msg
+
+
+    def save_time_segment(self, time_segment_list, ref_run_number, file_name):
+        """
+        :param time_segment_list:
+        :param ref_run_number:
+        :param file_name:
+        :return:
+        """
+        # Check
+        assert isinstance(time_segment_list, list)
+        assert isinstance(ref_run_number, int) or ref_run_number is None
+        assert isinstance(file_name, str)
+
+        # Form Segments
+        run_start = self._myLogHelper.get_run_start(ref_run_number, unit='second')
+
+        segment_list = list()
+        i_target = 1
+        for time_seg in time_segment_list:
+            if len(time_seg < 3):
+                tmp_target = '%d' % i_target
+                i_target += 1
+            else:
+                tmp_target = '%s' % str(time_seg[2])
+            tmp_seg = logHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
+            segment_list.append(tmp_seg)
+        # END-IF
+
+        segment_list.sort(ascending=True)
+
+        # Check validity
+        num_seg = len(segment_list)
+        if num_seg >= 2:
+            prev_stop = segment_list[0].stop
+            for index in xrange(1, num_seg):
+                if prev_stop >= segment_list[index].start:
+                    return False, 'Overlapping time segments!'
+        # END-IF
+
+        # Write to file
+        logHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
+
+        return
 
     def slice_data(self, run_number, sample_log_name=None, by_time=False):
         """ TODO - DOC
@@ -396,7 +483,6 @@ class VDriveAPI(object):
             status, ret_obj = self._myLogHelper.get_slicer_by_time(run_number)
             if status is False:
                 err_msg = ret_obj
-                print '[DB]', err_msg, '\n'
                 return False, err_msg
             else:
                 slicer = ret_obj
@@ -432,7 +518,7 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def set_slicer_helper(self, nxs_file_name, run_number=None):
+    def set_slicer_helper(self, nxs_file_name, run_number):
         """
         Initialize the event slicing helper object
         :param nxs_file_name:
@@ -441,6 +527,8 @@ class VDriveAPI(object):
         """
         if run_number is not None:
             assert isinstance(run_number, int)
+        else:
+            run_number = futil.getIptsRunFromFileName(nxs_file_name)[1]
 
         status, errmsg = self._myLogHelper.checkout_session(nxs_file_name, run_number)
 
@@ -538,16 +626,14 @@ def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=F
             if include_end_date is True:
                 # Add one day for next date
                 epoch_end += 24*3600
-            print '[DB] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                                  (epoch_end-epoch_start)/3600.)
+            print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
+                                                                   (epoch_end-epoch_start)/3600.)
         except ValueError as e:
             return False, str(e)
 
         # Sort by time
         assert isinstance(run_tuple_list, list)
         run_tuple_list.sort(key=lambda x: x[1])
-        print '[DB] Runs range from (epoch time) %f to %f' % (run_tuple_list[0][1],
-                                                              run_tuple_list[-1][1])
 
         # FIXME - Using binary search will be great!
         result_list = []
@@ -589,3 +675,16 @@ def get_standard_ws_name(file_name, meta_only):
         ws_name += '_Meta'
 
     return ws_name
+
+
+def parse_time_segment_file(file_name):
+    """
+
+    :param file_name:
+    :return:
+    """
+    status, ret_obj = logHelper.parse_time_segments(file_name)
+
+    return status, ret_obj
+
+

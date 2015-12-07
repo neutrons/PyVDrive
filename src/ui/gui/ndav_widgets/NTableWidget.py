@@ -177,6 +177,17 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
+    def remove_all_rows(self):
+        """
+        Remove all rows
+        :return:
+        """
+        num_rows = self.rowCount()
+        for i_row in xrange(1, num_rows+1):
+            self.removeRow(num_rows - i_row)
+
+        return
+
     def remove_rows(self, row_number_list):
         """ Remove row number
         :param row_number_list:
@@ -227,7 +238,7 @@ class NTableWidget(QtGui.QTableWidget):
         """
         column_index_state = self._myColumnTypeList.index('checkbox')
         for i_row in xrange(self.rowCount()):
-            print '[DB] Set value to cell ', i_row, column_index_state
+            #  '[DB] Set value to cell ', i_row, column_index_state
             self.update_cell_value(i_row, column_index_state, state)
 
         return

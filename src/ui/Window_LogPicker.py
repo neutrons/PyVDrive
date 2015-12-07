@@ -4,7 +4,7 @@
 #
 ########################################################################
 import sys
-
+import numpy
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -27,7 +27,7 @@ class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, init_run=None):
         """ Init
         """
         # call base
@@ -75,6 +75,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
 
+        # Slicer table
+        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_select_time_segments)
+        self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_deselect_time_segments)
+
+        # Further operation
+        self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
+                     self.do_highlite_selected)
+        self.connect(self.ui.pushButton_processSegments, QtCore.SIGNAL('clicked()'),
+                     self.do_slice_segments)
+
         # Canvas
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
                      self.do_resize_canvas)
@@ -94,6 +106,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useGenericDAQ.setChecked(True)
         self.ui.radioButton_useLoadFrame.setChecked(False)
         self.ui.radioButton_useLogFile.setChecked(False)
+        if init_run is not None:
+            assert isinstance(init_run, int)
+            self.ui.lineEdit_runNumber.setText('%d' % init_run)
 
         # Class variables
         self._currentLogIndex = 0
@@ -104,8 +119,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currMousePosX = 0.
         self._currMousePosY = 0.
 
+        # Picker management
+        self._myPickerIDList = list()
+
         # Set up widgets
         self._init_widgets_setup()
+
+        # Experiment-related variables
+        self._currRunNumber = None
+        self._currLogName = None
+
+        # Highlighted lines list
+        self._myHighLightedLineList = list()
 
         return
 
@@ -118,19 +143,142 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         self.ui.treeView_iptsRun.set_main_window(self)
 
+    def do_select_time_segments(self):
+        """
+        mark all time segments in table to be selected in the table
+        :return:
+        """
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, True)
+
+        return
+
+    def do_deselect_time_segments(self):
+        """
+        Mark all time segments in the table to be deselected
+        :return:
+        """
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, False)
+
+        return
+
+    def do_highlite_selected(self):
+        """
+        Highlight the selected region of the log value
+        :return:
+        """
+        # Clear the highlight lines
+        if str(self.ui.pushButton_highlight.text()) == 'Clear':
+            # Delete all lines
+            for highlite_id in self._myHighLightedLineList:
+                self.ui.graphicsView_main.remove_line(highlite_id)
+
+            # Reset button text
+            self.ui.pushButton_highlight.setText('Highlight')
+            self._myHighLightedLineList = list()
+
+            return
+
+        # Add highlighted lines
+        # Collect selected time segments
+        source_time_segments, row_number_list = \
+            self.ui.tableWidget_segments.get_selected_time_segments(True)
+
+        # Name of current sample log
+        log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+
+        for i in xrange(len(source_time_segments)):
+            time_segment = source_time_segments[i]
+            status, ret_obj = self._myParent.get_workflow().get_sample_log_values(
+                self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
+            if status is False:
+                GuiUtility.pop_dialog_error(self, ret_obj)
+            else:
+                vec_times, vec_value = ret_obj
+                highlite_id = self.ui.graphicsView_main.add_plot_1d(vec_times, vec_value, color='red', marker='.')
+                self._myHighLightedLineList.append(highlite_id)
+        # END-FOR
+
+        # Reset
+        self.ui.pushButton_highlight.setText('Clear')
+
+        return
+
+    def do_slice_segments(self):
+        """
+        Split a certain number of time segment into smaller segments either
+        by time or by log value
+        :return:
+        """
+        # Name of the sample log
+        log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+
+        # Collect selected time segments
+        source_time_segments, row_number_list = \
+            self.ui.tableWidget_segments.get_selected_time_segments(True)
+
+        # Split option
+        if self.ui.radioButton_logValueStep.isChecked():
+            # By log value
+            by_time = False
+            step_value = GuiUtility.parse_float(self.ui.lineEdit_logValueStep)
+        else:
+            # By time
+            by_time = True
+            step_value = GuiUtility.parse_float(self.ui.lineEdit_timeStep)
+
+        # FIXME - Not implemented in API yet
+        # Run GenerateEventFilters
+        num_segments = len(source_time_segments)
+        index_list = range(num_segments)
+        index_list.sort(reverse=True)
+        for i in index_list:
+            slicer_tag = 'TempSlicerRun%dSeg%d' % (self._currRunNumber, i)
+            time_segment = source_time_segments[i]
+            if by_time is True:
+                self._myParent.get_workflow().gen_data_slicer_by_time(
+                    self._currRunNumber, start_time=time_segment[0], end_time=time_segment[1],
+                    time_step=step_value, tag=slicer_tag)
+            else:
+                self._myParent.get_workflow.gen_data_slicer_sample_log(
+                    self._currRunNumber, log_name, time_segment[0], time_segment[1],
+                    log_value_step=step_value, tag=slicer_tag)
+
+            # Get time segments, i.e., slicer
+            status, ret_obj = self._myParent.get_workflow().get_event_slicer(
+                run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
+                relative_time=True)
+            print '[DB-BAR] Returned object: ', ret_obj
+
+            self._myParent.get_workflow().clean_memory(self._currRunNumber, slicer_tag)
+
+            if status is False:
+                err_msg = ret_obj
+                GuiUtility.pop_dialog_error(self, err_msg)
+            else:
+                sub_segments = ret_obj
+                self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
+        # END-FOR (i)
+
+        return
+
     def do_load_run(self):
         """
-
+        Load a run and plot
         :return:
         """
         # Get run number
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
         if run_number is None:
             GuiUtility.pop_dialog_error('Unable to load run as value is not specified.')
+            return
 
         # Get sample logs
         try:
-            sample_log_names = self._myParent.load_sample_run(run_number)
+            sample_log_names = self._myParent.load_sample_run(run_number, True)
         except RuntimeError as err:
             GuiUtility.pop_dialog_error('Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
@@ -145,7 +293,12 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Set
         log_name = str(self.ui.comboBox_logNames.currentText())
+        log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
+
+        # Update class variables
+        self._currRunNumber = run_number
+        self._currLogName = log_name
 
         return
 
@@ -153,6 +306,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Enter picker selection mode
         :return:
         """
+        if self._myPickerMode == IN_PICKER_MOVING:
+            GuiUtility.pop_dialog_error(self, 'Canvas is in log-picker moving mode.  '
+                                              'It is not allowed to enter picker-selection mode.')
+            return
+
         self._myPickerMode = IN_PICKER_SELECTION
 
         return
@@ -174,6 +332,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currentLogIndex = next_index
         self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
 
+        # Update
+        self._currLogName = sample_log_name
+
         return
 
     def do_load_prev_log(self):
@@ -192,6 +353,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Change combobox index
         self._currentLogIndex = prev_index
         self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
+
+        # Update
+        self._currLogName = sample_log_name
 
         return
 
@@ -217,6 +381,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Delete the current picker
         self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
+        self._myPickerIDList.pop(self._currentPickerID)
         self._currentPickerID = None
 
         self._myPickerMode = OUT_PICKER
@@ -241,16 +406,24 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Change status
         self._currentPickerID = indicator_id
         self._myPickerMode = IN_PICKER
+        self._myPickerIDList.append(indicator_id)
 
         return
 
     def do_picker_process(self):
         """
-        Process pickers
+        Process pickers by sorting and fill the stop time
         :return:
         """
-        self.ui.tableWidget_segments.sortByColumn(0)
+        # Deselect all rows
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, False)
 
+        # Sort by start time
+        self.ui.tableWidget_segments.sort_by_start_time()
+
+        # Fill the stop by time by next star time
         self.ui.tableWidget_segments.fill_stop_time()
 
         return
@@ -263,7 +436,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Fix the current picker
         x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
         current_time = x
-        print 'TODO Add picked up time %.5f' % current_time
 
         # Change the color
         self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
@@ -289,14 +461,16 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # Get splitters
-        split_tup_list = self.get_splitters()
-
-        # Close
-        self.close()
+        split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
 
         # Call parent method
         if self._myParent is not None:
-            self._myParent.set_splitter_info(self._currRun, split_tup_list)
+            self._myParent.get_workflow().gen_data_slice_manual(
+                run_number=self._currRunNumber, relative_time=True,
+                time_segments_list=split_tup_list)
+
+        # Close
+        self.close()
 
         return
 
@@ -305,7 +479,16 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         :return:
         """
-        # TODO
+        # Pop dialog for log file
+        working_dir = self._myParent.get_workflow().get_working_dir()
+        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
+                                                              working_dir))
+
+        # Parse log file
+        # TODO/FIXME - Need a sample file from Ke
+        self._myParent.get_workflow().parse_vulcan_log_file(log_file_name)
+
+        return
 
     def do_resize_canvas(self):
         """ Resize canvas
@@ -356,23 +539,89 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         log_name = str(self.ui.comboBox_logNames.currentText())
+        log_name = log_name.replace(' ', '').split('(')[0]
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
 
         self.plot_sample_log(log_name)
 
         return
 
-    def get_splitters(self):
-        """ Get splitters set up by user.  Called by parent algorithm
+    def highlite_picker(self, picker_id, flag, color='red'):
+        """
+        Highlight (by changing color) of the picker selected
+        :param picker_id:
         :return:
         """
-        return self.ui.tableWidget_segments.get_splitter_list()
+        if flag is False:
+            if picker_id is None:
+                for pid in self._myPickerIDList:
+                    self.ui.graphicsView_main.update_indicator(pid, 'black')
+            else:
+                self.ui.graphicsView_main.update_indicator(picker_id, 'black')
+        else:
+            for pid in self._myPickerIDList:
+                if pid == picker_id:
+                    self.ui.graphicsView_main.update_indicator(pid, color)
+                else:
+                    self.ui.graphicsView_main.update_indicator(pid, 'black')
+            # END-FOR
+        # END-IF-ELSE
+
+        return
+
+    def locate_picker(self, x_pos, ratio=0.2):
+        """ Locate a picker with the new x
+        :param x_pos:
+        :param ratio:
+        :return: 2-tuple (Boolean, Object)
+        """
+        # Check
+        if len(self._myPickerIDList) == 0:
+            return False, 'No picker to select!'
+
+        assert isinstance(ratio, float)
+        assert (ratio > 0.01) and (ratio <= 0.5)
+
+        x_lim = self.ui.graphicsView_main.getXLimit()
+
+        # Get the vector of x positions of indicator and
+        vec_pos = [x_lim[0]]
+        for ind_id in self._myPickerIDList:
+            picker_x, picker_y = self.ui.graphicsView_main.get_indicator_position(ind_id)
+            vec_pos.append(picker_x)
+        # END-FOR
+        vec_pos.append(x_lim[1])
+        sorted_vec_pos = sorted(vec_pos)
+
+        # Search
+        post_index = numpy.searchsorted(sorted_vec_pos, x_pos)
+        if post_index == 0:
+            return False, 'Position %f is out of canvas left boundary %f. It is weird!' % (x_pos, vec_pos[0])
+        elif post_index >= len(vec_pos):
+            return False, 'Position %f is out of canvas right boundary %f. It is weird!' % (x_pos, vec_pos[-1])
+
+        pre_index = post_index - 1
+        dx = sorted_vec_pos[post_index] - sorted_vec_pos[pre_index]
+        return_index = -1
+        if sorted_vec_pos[pre_index] <= x_pos <= sorted_vec_pos[pre_index] + dx * ratio:
+            return_index = pre_index
+        elif sorted_vec_pos[post_index] - dx * ratio <= x_pos <= sorted_vec_pos[post_index]:
+            return_index = post_index
+        if return_index >= 0:
+            nearest_picker_x = sorted_vec_pos[return_index]
+            raw_index = vec_pos.index(nearest_picker_x)
+        else:
+            raw_index = return_index
+
+        # correct for index=0 is boundary
+        raw_index -= 1
+
+        return raw_index
 
     def menu_select_nearest_picker(self):
         """ Select nearest picker
         :return:
         """
-        print '[DB] Select picker near %f ....' % self._currMousePosX
         # Get all the pickers' position
         picker_pos_list = self.ui.tableWidget_segments.get_start_times()
 
@@ -390,7 +639,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             abs(picker_pos_list[next_index] - self._currMousePosX) < \
                         abs(picker_pos_list[prev_index] - self._currMousePosX):
             select_picker_pos = picker_pos_list[next_index]
-        print 'Selected picker is at %.5f' % select_picker_pos
 
         # Add the information to graphics
         self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
@@ -477,16 +725,17 @@ class WindowLogPicker(QtGui.QMainWindow):
         if new_x is None or new_y is None:
             return
 
+        # Calculate the relative displacement
+        dx = new_x - self._currMousePosX
+        dy = new_y - self._currMousePosY
+
+        x_min, x_max = self.ui.graphicsView_main.getXLimit()
+        mouse_resolution_x = (x_max - x_min) * 0.001
+        y_min, y_max = self.ui.graphicsView_main.getYLimit()
+        mouse_resolution_y = (y_max - y_min) * 0.001
+
         if self._myPickerMode == IN_PICKER_MOVING:
             # Respond to motion of mouse and move the indicator
-            dx = new_x - self._currMousePosX
-            dy = new_y - self._currMousePosY
-
-            x_min, x_max = self.ui.graphicsView_main.getXLimit()
-            mouse_resolution_x = (x_max - x_min) * 0.001
-            y_min, y_max = self.ui.graphicsView_main.getYLimit()
-            mouse_resolution_y = (y_max - y_min) * 0.001
-
             if abs(dx) > mouse_resolution_x or abs(dy) > mouse_resolution_y:
                 # it is considered that the mouse is moved
                 self._currMousePosX = new_x
@@ -494,9 +743,33 @@ class WindowLogPicker(QtGui.QMainWindow):
                 # self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
 
                 self.ui.graphicsView_main.set_indicator_position(self._currentPickerID, new_x, new_y)
-
-                print '[DB]', 'New X = ', new_x
             # END-IF(dx, dy)
+
+        elif self._myPickerMode == IN_PICKER_SELECTION:
+            # Highlight (change color) a picker and set the picker/indicator in active mode
+            if abs(dx) > mouse_resolution_x:
+                # Consider the picker by time only
+                picker_list_index = self.locate_picker(x_pos=new_x, ratio=0.2)
+                """
+                if picker_list_index == -2:
+                    pass
+                    # print 'Middle of nowhere'
+                elif picker_list_index == -1:
+                    pass
+                    # print 'Left boundary'
+                elif picker_list_index == len(self._myPickerIDList):
+                    pass
+                    # print 'Right boundary'
+                else:
+                    pass
+                    # print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
+                """
+                self.highlite_picker(picker_id=None, flag=False)
+                if 0 <= picker_list_index < len(self._myPickerIDList):
+                    picker_id = self._myPickerIDList[picker_list_index]
+                    self.highlite_picker(picker_id, True)
+            # END-IF
+
         # END-IF (PickerMode)
 
         return

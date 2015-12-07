@@ -51,7 +51,7 @@ class SnapGraphicsView(object):
 
     def plot_data(self, vec_times, vec_log_value):
         """
-
+        Plot data
         :param vec_times:
         :param vec_log_value:
         :param do_skip:
@@ -76,8 +76,8 @@ class SnapGraphicsView(object):
         else:
             dy = max_y - min_y
 
-        self._graphicView.setXYLimits(min_x - 0.1*dx, max_x + 0.1*dx,
-                                      min_y - 0.1*dy, max_y + 0.1*dy)
+        self._graphicView.setXYLimit(min_x - 0.1*dx, max_x + 0.1*dx,
+                                     min_y - 0.1*dy, max_y + 0.1*dy)
 
         # Plot
         self._graphicView.add_plot_1d(vec_times, vec_log_value, marker='.', color='blue')
@@ -142,7 +142,6 @@ class SampleLogView(object):
         """
         # Get log name from
         log_name = self.get_log_name()
-        print '[DB] Re-plot log value %s' % log_name
 
         vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name)
         # FIXME / TODO - make relative time

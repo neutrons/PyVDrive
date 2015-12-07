@@ -1,6 +1,7 @@
+#!/usr/bin/python
 #pylint: disable=invalid-name
 """
-    Script used to start the DGS reduction GUI from MantidPlot
+    Script used to start the VDrive reduction GUI from MantidPlot
 """
 import sys
 import os
