@@ -62,12 +62,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_by_ipts)
-        self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration)
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_sample_log_file)
 
         # Column 2
+        # about vanadium calibration
+        self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
+                     self.do_load_calibration)
+        self.connect(self.ui.pushButton_showCalDetails, QtCore.SIGNAL('clicked()'),
+                     self.do_show_calibration_map)
+
         # select and set runs from run-info-tree
         self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_to_reduce)
@@ -210,7 +214,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """ Bin a set of data
         :return:
         """
-        # TODO/FIXME - NOW!
+        # TODO/FIXME/NOW/#7
         selection_list = [self.ui.radioButton_binStandard,
                           self.ui.radioButton_binCustomized]
 
@@ -495,9 +499,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_add_runs_to_reduce(self):
         """
-        TODO/FIXME DOC
+
         :return:
         """
+        # TODO/FIXME/#7: CASE 2 does not work
+        # merge the common behavior of case 1 and case 2!
         print '[DBGUI] do_add_runs_to_reduce() is started.'
 
         if self.ui.radioButton_runsAddAll.isChecked():
@@ -513,7 +519,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
             # Case as select a subset
-            print '[DBGUI] Case 2'
+            print '[DBGUI] Case 2: merge the common behavior and it does not work!'
             start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
             end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
             status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
@@ -550,8 +556,20 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_load_calibration(self):
         """
+        Purpose:
+            Select and check vanadium calibration file for the current runs
+        Requirements:
+            Some runs are light-loaded to project
+        Guarantee:
+            ???
+
+        Nomenclature:
+        1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.
         :return:
         """
+        # TODO/NEXT/NOW
+        raise NotImplementedError('ASAP')
+
         # Get calibration file
         if os.path.exists(self._calibCriteriaFile) is False:
             self._calibCriteriaFile = str(
@@ -668,6 +686,22 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :return:
         """
         guiutil.pop_dialog_error('ASAP')
+
+    def do_show_calibration_map(self):
+        """
+        Purpose:
+            Show detailed calibration file mapping information.
+        Example:
+            -rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda
+            -rw-rwxr-- 1 13489 49133 3240 Jun 16 16:43 Vulcan-70487-s.prm
+        Requirements:
+            ???
+        Guarantees:
+            ???
+        :return:
+        """
+        # TODO/NOW/FIXME
+        raise NotImplementedError('ASAP')
 
     def evt_chop_run_state_change(self):
         """

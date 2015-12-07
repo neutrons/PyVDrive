@@ -80,7 +80,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton">
+             <widget class="QPushButton" name="pushButton_showCalDetails">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -454,7 +454,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="tab_12">
              <attribute name="title">
@@ -1016,7 +1016,7 @@
                      </property>
                      <layout class="QGridLayout" name="gridLayout_8">
                       <item row="0" column="1">
-                       <widget class="QCheckBox" name="checkBox_13">
+                       <widget class="QCheckBox" name="checkBox_overPixel">
                         <property name="toolTip">
                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin over pixel: sum spectrum among certain pixels. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                         </property>
@@ -1041,7 +1041,7 @@
                          </widget>
                         </item>
                         <item row="0" column="1">
-                         <widget class="QRadioButton" name="radioButton_18">
+                         <widget class="QRadioButton" name="radioButton_binVerticalPixels">
                           <property name="text">
                            <string>Vertical</string>
                           </property>
@@ -1080,7 +1080,7 @@
                          </spacer>
                         </item>
                         <item row="1" column="1">
-                         <widget class="QRadioButton" name="radioButton_17">
+                         <widget class="QRadioButton" name="radioButton_binHorizontalPixels">
                           <property name="text">
                            <string>Horizontal</string>
                           </property>
@@ -1098,21 +1098,21 @@
                      </property>
                      <layout class="QGridLayout" name="gridLayout_21">
                       <item row="0" column="0">
-                       <widget class="QCheckBox" name="checkBox_21">
+                       <widget class="QCheckBox" name="checkBox_reduceSubtractBackground">
                         <property name="text">
                          <string>Substract backgroud</string>
                         </property>
                        </widget>
                       </item>
                       <item row="1" column="0">
-                       <widget class="QCheckBox" name="checkBox_22">
+                       <widget class="QCheckBox" name="checkBox_reduceNormalizedByVanadium">
                         <property name="text">
                          <string>Normalized intensity to vanadium</string>
                         </property>
                        </widget>
                       </item>
                       <item row="2" column="0">
-                       <widget class="QCheckBox" name="checkBox_23">
+                       <widget class="QCheckBox" name="checkBox_reduceSubstractSpecialPattern">
                         <property name="text">
                          <string>Substract special pattern</string>
                         </property>
@@ -1144,7 +1144,7 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLineEdit" name="lineEdit_18">
+                         <widget class="QLineEdit" name="lineEdit_runSpecialPattern">
                           <property name="sizePolicy">
                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                             <horstretch>0</horstretch>
