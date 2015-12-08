@@ -58,7 +58,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Define state variables
         self._dataLoaded = False  # state flag that data is loaded
-        self._currDataFile = None  # name of the data file that is loaded for current session
+        self._currDataFile = None  # name of the data file that is currently loaded
         self._myController = None  # Reference to controller class
 
         return
@@ -95,6 +95,22 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         :return: None
         """
+        # Check requirements
+        blabla
+
+        # Find out the highlighted (i.e., current) peak from canvas
+        try:
+            pos_x, pos_y = self.ui.graphicsView_main.get_highlight_peak()
+        except RuntimeError as re:
+            GuiUtility.pop_dialog_error(str(re))
+            return
+        if pos_x is None or pos_y is None:
+            GuiUtility.pop_dialog_error('Unable to find highlighted peak in canvas.')
+            return
+
+        # Add the peak to both the placeholder and table
+        blabla
+
         return
 
     def do_add_all_peaks(self):
@@ -109,9 +125,41 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Check requirements
+        assert self._currDataFile is not None
         assert self._myController is not None
+        blabla
+
+        # Get all peaks from canvas, i.e., all peak indicators in canvas
+        peak_pos_list = self.ui.graphicsView_main.get_peaks_pos()
+
+        # Set the peaks' position to placeholder and table
+        blabla
 
         return
+
+    def do_clear_peaks_fm_canvas(self):
+        """
+        Purpose:
+          Clear all indicated peaks on canvas
+        :return:
+        """
+        raise NotImplementedError('Add button to GUI')
+
+    def do_delete_peak_fm_canvas(self):
+        """
+        Purpose:
+            Remove the selected/current/highlighted peak from canvas
+        :return:
+        """
+        raise NotImplementedError('Add button to GUI')
+
+    def do_delete_peaks_fm_table(self):
+        """
+        Purpose:
+            Delete the added peak from table and place holder
+        :return:
+        """
+        raise NotImplemented('Add button to GUI')
 
     def do_load_calibration_file(self):
         """
@@ -162,7 +210,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_save_peaks(self):
         """
         Purpose:
+            Save peaks selected by user
         Requires:
+            At least one peak is selected
         Guarantees:
         :return:
         """
