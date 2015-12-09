@@ -359,7 +359,7 @@ class VDriveAPI(object):
         """ Load session from saved file
         Load session from a session file
         :param in_file_name:
-        :return:
+        :return: 2-tuple: (boolean, object)
         """
         save_dict = futil.load_from_xml(in_file_name)
 
@@ -375,6 +375,29 @@ class VDriveAPI(object):
         self._myProject.load_session_from_dict(save_dict['myProject'])
 
         return True, in_file_name
+
+    def reduce_data_set(self):
+        """ Reduce a set of data
+        Purpose:
+            Reduce a set of event data
+        Requirements:
+            Project is well set up
+        Guarantees:
+            Event data will be reduced to diffraction pattern.
+        :return: 2-tuple (boolean, object)
+        """
+        try:
+            self._myProject.reduce_data()
+
+
+            status = True
+            ret_obj = None
+        except RuntimeError as re:
+            status = False
+            ret_obj = str(re)
+
+        return status, ret_obj
+
 
     def set_data_root_directory(self, root_dir):
         """ Set root data directory to

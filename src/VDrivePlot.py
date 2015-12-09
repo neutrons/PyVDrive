@@ -211,12 +211,71 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_bin_data(self):
-        """ Bin a set of data
+        """ Brief: Bin a set of data
+        Purpose:
+            Reduce the event data to focused diffraction pattern.
+            The process includes align, focus, rebin and calibration with vanadium.
+        Requirements:
+            At least 1 run is selected for reduce;
+            calibration file for focusing is specified;
+            ... ...
+        Guarantees:
+            Selected runs are reduced from event data to focused diffraction pattern
+            good for Rietveld refinement.
+            If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # TODO/FIXME/NOW/#7
-        selection_list = [self.ui.radioButton_binStandard,
-                          self.ui.radioButton_binCustomized]
+        # Retrieve the runs to reduce
+        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        if len(run_number_list) == 0:
+            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+
+        # Process data slicers
+        if self.ui.checkBox_chopRun.isChecked():
+            raise NotImplementedError('Binning data with option to chop will be solved later!')
+
+        # Collect information for reduction
+        # binning parameter
+        if self.ui.radioButton_binStandard.isChecked():
+            # default
+            bin_par = None
+        elif self.ui.radioButton_binCustomized.isChecked():
+            # customized
+            # TODO/NOW - bin_par
+            # lineEdit_binWidth
+            # lineEdit_binMinTOF
+            # lineEdit_binMaxTOF
+            pass
+        else:
+            # violate requirements
+            guiutil.pop_dialog_error(self, '')
+            return
+
+        # bin over pixel
+        if self.ui.checkBox_overPixel.isChecked():
+            # binning pixel
+            raise NotImplementedError('Will be implemented in #32.')
+            # TODO/NOW
+            # radioButton_binVerticalPixels
+            # lineEdit_pixelSizeVertical
+            # radioButton_binHorizontalPixels
+            # lineEdit_pixelSizeHorizontal
+
+        # FIXME/TODO/NOW
+        do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
+        do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
+        # checkBox_reduceSubstractSpecialPattern
+        # checkBox_outFullprof
+        # checkBox_outGSAS
+
+        # Reduce data
+        status, ret_obj = self._myWorkflow.reduce_data_set()
+        if status is False:
+            error_msg = ret_obj
+            guiutil.pop_dialog_error(self, error_msg)
+
+        # Show message to notify user that the reduction is complete
+        guiutil.pop_dialog_information(self, 'Reduction is complete.')
 
         return
 
