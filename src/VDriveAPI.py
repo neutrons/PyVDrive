@@ -541,6 +541,29 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def set_reduction_parameters(self, parameter_dict):
+        """ Set parameters used for reducing powder event data
+        Purpose:
+            Set up the reduction parameters
+        Requirements:
+            Parameters' value are given via dictionary
+        Guarantees:
+            ... ...
+        :return:
+        """
+        assert isinstance(parameter_dict, dict)
+
+        try:
+            self._myProject.set_reduction_parameters()
+            status = True
+            error_msg = ''
+        except RuntimeError as re:
+            status = False
+            error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
+
+        return status, error_msg
+
+
     def set_slicer_helper(self, nxs_file_name, run_number):
         """
         Initialize the event slicing helper object

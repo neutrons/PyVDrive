@@ -240,12 +240,11 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             # default
             bin_par = None
         elif self.ui.radioButton_binCustomized.isChecked():
-            # customized
-            # TODO/NOW - bin_par
-            # lineEdit_binWidth
-            # lineEdit_binMinTOF
-            # lineEdit_binMaxTOF
-            pass
+            # customized bin parameters
+            bin_width = guiutil.parse_float(self.ui.lineEdit_binWidth)
+            min_tof = guiutil.parse_float(self.ui.lineEdit_binMinTOF)
+            max_tof = guiutil.parse_float(self.ui.lineEdit_binMaxTOF)
+            bin_par = (min_tof, bin_width, max_tof)
         else:
             # violate requirements
             guiutil.pop_dialog_error(self, '')
@@ -254,19 +253,25 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # bin over pixel
         if self.ui.checkBox_overPixel.isChecked():
             # binning pixel
+            bin_pixel_direction = ''
+            if self.ui.radioButton_binVerticalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeVertical)
+                bin_pixel_direction = 'vertical'
+            elif self.ui.radioButton_binHorizontalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
+                bin_pixel_direction = 'horizontal'
+            else:
+                guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+                return
             raise NotImplementedError('Will be implemented in #32.')
-            # TODO/NOW
-            # radioButton_binVerticalPixels
-            # lineEdit_pixelSizeVertical
-            # radioButton_binHorizontalPixels
-            # lineEdit_pixelSizeHorizontal
+        # END-IF-ELSE
 
-        # FIXME/TODO/NOW
+        # Other parameters
         do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
         do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
-        # checkBox_reduceSubstractSpecialPattern
-        # checkBox_outFullprof
-        # checkBox_outGSAS
+        do_substract_special_pattern = self.ui.checkBox_reduceSubstractSpecialPattern.isChecked()
+        do_write_fullprof = self.ui.checkBox_outFullprof.isChecked()
+        do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
 
         # Reduce data
         status, ret_obj = self._myWorkflow.reduce_data_set()
@@ -643,7 +648,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Requirements:
             Some runs are light-loaded to project
         Guarantee:
-            ???
+            Load calibration...
 
         Nomenclature:
         1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.

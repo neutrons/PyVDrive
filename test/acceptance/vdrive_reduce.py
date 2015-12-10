@@ -196,16 +196,30 @@ def load_session(step):
 
     return
 
-'''
+@step(u'Then I add add a run number to the VDrive project for reduction')
+def add_run_to_reduce(step):
+    """ Add a run to reduce
+    :param step:
+    :return:
+    """
+    workflow  = my_data.get()
+
+    workflow.set_runs_to_reduce(run_numbers='57072')
+
+    return
+
 @step(u'Then I reduce the data')
-def reduceData(step):
+def reduce_data(step):
     """ Set up reduction parametera and reduce data
     """
-    wkflow = my_data.get()
+    workflow = my_data.get()
 
-    wkflow.setInstrumentName('VULCAN')
-    wkflow.setCalibrationFile(projname ='Test001', 
-            calibfilename = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal')
+    # Set reduction parameters
+    workflow.setInstrumentName('VULCAN')
+
+    focus_calib_file = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal'
+    workflow.setCalibrationFile(projname ='Test001',
+                                calibfilename = focus_calib_file)
 
     # set up reduction parameters
     outputdir = os.getcwd()
@@ -220,7 +234,7 @@ def reduceData(step):
             "FrequencyLogNames": "skf1.speed",
             "WaveLengthLogNames": "skf12.lambda"
             }
-    wkflow.setReductionParameters('Test001', paramdict)
+    wkflow.set_reduction_parameters('Test001', paramdict)
 
     # reduce
     reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
@@ -230,7 +244,7 @@ def reduceData(step):
 
     return
 
-@step(u'Then I should see a matrix workspace generated')
+@step(u'Then I check a matrix workspace generated from that run')
 def retrieveReducedData(step):
     wkflow = my_data.get()
 
@@ -239,4 +253,3 @@ def retrieveReducedData(step):
     assert_equals(numredws, 1)
 
     print "Retrieve reduced data"
-'''
