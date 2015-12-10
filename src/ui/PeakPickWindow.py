@@ -57,6 +57,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Define state variables
+        self._isInitialized = False
+
         self._dataLoaded = False  # state flag that data is loaded
         self._currDataFile = None  # name of the data file that is currently loaded
         self._myController = None  # Reference to controller class
@@ -75,11 +77,22 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def initialize(self, controller):
         """
         Purpose:
+            Set up controller instance
         Requires:
+            It is not initialised before
         Guarantees:
+            All function call to do with controller will work
         :param controller:
         :return:
         """
+        # Check requirements
+        assert self._isInitialized is False
+        assert isinstance(controller, vapi.VDriveAPI)
+
+        # Set up
+        self._myController = controller
+
+        return
 
     def do_add_current_peak(self):
         """
@@ -96,7 +109,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return: None
         """
         # Check requirements
-        blabla
+        assert (self._isInitialized is True, 'Instance is not initialized.')
+        assert (self._dataLoaded is True, 'No data is loaded.')
 
         # Find out the highlighted (i.e., current) peak from canvas
         try:
@@ -109,7 +123,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
             return
 
         # Add the peak to both the placeholder and table
-        blabla
+        try:
+            diff_peak = self._myController.fit_peak(self._currDataFile, pos_x)
+        except RuntimeError as e:
+            GuiUtility.pop_dialog_error(self, 'Unable to add peak at x = %f due to %s' % (pos_x, str(e)))
+            return
 
         return
 
@@ -157,9 +175,44 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         Purpose:
             Delete the added peak from table and place holder
+        Requirements:
+            At least one peak is selected in the table
+        Guarantees:
+            The selected peak is removed from both placeholder and table
         :return:
         """
         raise NotImplemented('Add button to GUI')
+
+    def do_find_peaks(self):
+        """
+        Purpose:
+            Find all peaks in the spectrum
+        Requirements:
+            Data is loaded
+            Peak profile is determined (such as Gaussian or etc)
+        Guarantees:
+            Find peaks
+        :return:
+        """
+        # Check requirements
+        assert self._myController
+        blabla
+
+        # Gather information for calling
+        try:
+            peak_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
+        except RuntimeError as re:
+            GuiUtility.pop_dialog_error(self, str(re))
+            return
+
+        # Set the peaks to canvas
+        peak_pos_list = retrieve_peak_positions(peak_list)
+        self.ui.graphicsView_main.add_peak_indicators(peak_pos_list)
+
+        # Set the peaks' parameters to table
+        self.ui.tableWidget.append_peaks(peak_list)
+
+        return
 
     def do_load_calibration_file(self):
         """
@@ -196,15 +249,31 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Check requirements
         assert self._myController is not None
 
+        # Load data via parent
+        try:
+            vecx, vecy = self._myController.load_diffraction_file(diff_file, 'gsas')
+        except RuntimeError as re:
+            GuiUtility.pop_dialog_error(self, str(re))
+            return
+
+        # Plot data
+        self.ui.graphicsView_main.clear()
+        self.ui.graphicsView_main.plot_line(vecx, vecy)
+
         return
 
     def do_quit(self):
         """
         Purpose:
+            Close the dialog window without saving
         Requires:
+            None
         Guarantees:
+            Nothing.  All current information will be lost
         :return:
         """
+        self.close()
+
         return
 
     def do_save_peaks(self):
@@ -214,9 +283,45 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Requires:
             At least one peak is selected
         Guarantees:
+            Save the peak positions and other parameters to controller
         :return:
         """
+        # Check requirements
+        assert (self._myController is not None)
+
+        selected_peaks = self.ui.tableWidget.get_peak(flag=True)
+        if len(selected_peaks) == 0:
+            GuiUtility.pop_dialog_error(self, 'No peak is selected.  Unable to execute saving peaks.')
+            return
+
+        # Set the selected peaks to controller
+        self._myController.append_peaks(selected_peaks)
+
         return
+
+
+def retrieve_peak_positions(peak_list):
+    """
+    Purpose:
+        Retrieve peak positions from peaks in given list
+    Requirements:
+        Input is a list of DiffractionPeak object
+    Guarantees:
+        Retrieve the peaks' positions out
+    :param peak_list:
+    :return: a list of
+    """
+    assert isinstance(peak_list, list)
+
+    peak_pos_list = list()
+    for peak in peak_list:
+        assert isinstance(peak, df.DiffractionPeak)
+        peak_pos = peak.centre
+        peak_pos_list.append(peak_pos)
+    # END-FOR(peak)
+
+    return peak_pos_list
+
 
 def main(argv):
     """ Main method for testing purpose
