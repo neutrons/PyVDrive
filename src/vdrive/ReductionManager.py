@@ -43,16 +43,78 @@ class AlignFocusParameters:
         return
 
 
-class SNSPowderReductionLite:
-    """ Class SNSPowderReductionLite 
-    is a light version of SNSPowderReduction. 
-    
-    It is able to reduce the data file in the format of data file, 
+class DataReductionTracker(object):
+    """ Record tracker of data reduction for an individual run.
+    """
+    def __init__(self, run_number, file_path, vanadium_calibration):
+        """
+        # TODO/NOW
+        :return:
+        """
+        return
+
+    @property
+    def run_number(self):
+        """ Read only
+
+        :return:
+        """
+        return
+
+    @property
+    def file_path(self):
+        """ Read only
+        :return:
+        """
+        return
+
+    @property
+    def vanadium_calibration_file(self):
+        """
+
+        :return:
+        """
+
+    @vanadium_calibration_file.setter
+    def vanadium_calibration_file(self, value):
+        """
+
+        :param value:
+        :return:
+        """
+        return
+
+
+class ReductionManager(object):
+    """ Class ReductionManager takes the control of reducing SNS/VULCAN's event data
+    to diffraction pattern for Rietveld analysis.
+
+    Its main data structure contains
+    1. a dictionary of reduction controller
+    2. a dictionary of loaded vanadium p
+
+    ??? It is able to reduce the data file in the format of data file,
     run number and etc. 
 
-    It supports event chopping. 
+    ??? It supports event chopping.
     """
-    def __init__(self, nxsfilename, isvanadium=False):
+    def __init__(self, instrument):
+        """
+        Purpose:
+
+        Requirements:
+            1. instrument is a valid instrument's name
+        Guarantees:
+        :param instrument:
+        :return:
+        """
+        # Check
+        # TODO/NOW/COMPLETE IT
+
+        return
+
+
+    def __init_old__(self, nxsfilename, isvanadium=False):
         """ Init
         """
         # Set up parameters
@@ -131,8 +193,36 @@ class SNSPowderReductionLite:
         """
         return self._tempSmoothedVanadiumWS
 
+    def reduce_marked_runs(self, vanadium_calibrate):
+        """ Reduce marked runs
+        Purpose:
 
-    def reducePDData(self, params, vrun=None, bkgdrun=None, chopdata=False, tofmin=None, tofmax=None):
+        Requirements:
+
+        Guarantees:
+
+
+        :return:
+        """
+        # TODO/NOW/Implement this!
+        # Check input
+
+        # Get list of runs that are marked to refine
+
+        # Check whether all runs to reduce have vanadium calibration set up
+        # and create a list of required vanadium calibration files
+
+        # Load vanadium calibration file if required
+        if vanadium_calibrate:
+            pass
+
+        # Reduce runs
+        for run_number in self._runsToReduce:
+            self.reduce_run(run_number)
+
+        return
+
+    def reduce(self, params, vrun=None, bkgdrun=None, chopdata=False, tofmin=None, tofmax=None):
         """ Reduce powder diffraction data
         This is the core functional methods of this class
 

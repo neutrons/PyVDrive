@@ -2,7 +2,8 @@ import os
 import os.path
 
 import mantid_helper
-import SNSPowderReductionLite as prl
+import ReductionManager as prl
+import archivemanager
 
 
 class VDProject:
@@ -55,19 +56,15 @@ class VDProject:
         self._dataFileDict[run_number] = (file_name, ipts_number)
 
         return
-        
-    def addData(self, datafilename):
-        """ Add a new data file to project
-        """
-        raise NotImplementedError('To be removed!')
-        self._dataFileDict.append(datafilename)
-        self._baseDataFileNameList.append(os.path.basename(datafilename))
-
-        return
 
     def clear_runs(self):
         """
-        Clear memory, i.e., loaded workspace
+        Purpose:
+            Clear memory, i.e., loaded workspace
+        Requirements:
+
+        Guarantees:
+
         :return:
         """
         assert(isinstance(self._dataFileDict, dict))
@@ -82,6 +79,27 @@ class VDProject:
         self._baseDataFileNameList.remove(os.path.basename(datafilename))
 
         return
+
+    def get_filepath(self, run_number):
+        """ Get file path
+        Purpose:
+
+        Requirements:
+
+        Guarantees:
+
+        :param run_number:
+        :return:
+        """
+        # TODO/NOW/Doc
+        assert isinstance(run_number, int)
+
+        if run_number in self._dataFileDict:
+            filepath = self._dataFileDict[run_number][0]
+        else:
+            raise RuntimeError('Run %d does not exist in this project.' % run_number)
+
+        return filepath
 
     def getBaseDataPath(self):
         """ Get the base data path of the project
@@ -142,6 +160,22 @@ class VDProject:
         """
         return self._myRunPdrDict.keys()
 
+    def has_run(self, run_number):
+        """
+        Purpose:
+            Find out whether a run number is here
+        Requirements:
+            run number is an integer
+        Guarantee:
+
+        :return: boolean as has or not
+        """
+        assert isinstance(run_number, int)
+
+        do_have = run_number in self._dataFileDict
+
+        return do_have
+
     def hasData(self, datafilename):
         """ Check whether project has such data file 
         """
@@ -166,6 +200,36 @@ class VDProject:
         self._baseDataPath = save_dict['baseDataPath']
         self._dataFileDict = save_dict['dataFileDict']
         self._baseDataFileNameList = save_dict['baseDataFileNameList']
+
+        return
+
+    def mark_runs_to_reduce(self, run_number_list):
+        """ Mark runs to reduce
+        Purpose:
+
+        Requirements:
+            1. run number does exist in this project;
+            2. data file of this run is accessible
+            3. input run number list must be a list of integer
+        Guarantees
+        :param run_number_list:
+        :return: None
+        """
+        # Check requirements
+        assert isinstance(run_number_list, list)
+
+        # Mark each runs
+        for run_number in sorted(run_number_list):
+            assert isinstance(run_number, int),\
+                'run_number must be of type integer but not %s' % str(type(run_number))
+            if self.has_run(run_number) is False:
+                # no run
+                raise RuntimeError('Run %d cannot be found.' % run_number)
+            elif archivemanager.check_read_access(self.get_filepath(run_number)) is False:
+                raise RuntimeError('Run %d with file path %s cannot be found.' % (run_number, self.get_filepath(run_number)))
+            else:
+                self._mark_run_to_reduce(run_number)
+        # END-FOR
 
         return
 
@@ -567,7 +631,7 @@ class DeprecatedReductionProject(VDProject):
         vanPdrDict = {}
         for vrun in vanrunlist:
             vrunfilename = vanfilenamedict[vrun]
-            vpdr = prl.SNSPowderReductionLite(vrunfilename, isvanadium=True)
+            vpdr = prl.ReductionManager(vrunfilename, isvanadium=True)
             vanws = vpdr.reduceVanadiumData(params={})
             if vanws is None:
                 raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
@@ -580,7 +644,7 @@ class DeprecatedReductionProject(VDProject):
             fullpathfname = rundict[basenamerun][0]
             vanrun = rundict[basenamerun][1]
             
-            runpdr = prl.SNSPowderReductionLite(fullpathfname, isvanadium=False)
+            runpdr = prl.ReductionManager(fullpathfname, isvanadium=False)
 
             # optinally chop
             doChopData = False

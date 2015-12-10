@@ -10,7 +10,6 @@ class AnalysisProject:
 
         return
 
-
     def getData(self, basedatafilename):
         """ Get data X, Y and E
         """

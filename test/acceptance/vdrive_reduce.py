@@ -68,11 +68,7 @@ ipts_number = 10311
 def init_workflow(step):
     """ Set up including
     """
-    wk_flow = vdapi.VDriveAPI()
-    wk_flow.set_data_root_directory('/SNS/VULCAN')
-    wk_flow.set_working_directory('~/Temp/VDriveTest/')
-
-    my_data.set(wk_flow)
+    # We don't need this!
 
     return
 
@@ -81,6 +77,14 @@ def init_workflow(step):
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
+    # Initialize work flow
+    wk_flow = vdapi.VDriveAPI('VULCAN')
+    wk_flow.set_data_root_directory('/SNS/VULCAN')
+    wk_flow.set_working_directory('~/Temp/VDriveTest/')
+
+    # Set to my_data
+    my_data.set(wk_flow)
+
     wk_flow = my_data.get()
 
     # Set up IPTS
@@ -183,18 +187,17 @@ def load_session(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     # Create a new workflow and load the file to the new workflow instance
-    new_wk_flow = vdapi.VDriveAPI()
+    new_wk_flow = vdapi.VDriveAPI('vulcan')
 
     saved_file_name = os.path.join(wk_flow.get_working_dir(), 'test1234.xml')
     new_wk_flow.load_session(saved_file_name)
 
     # Compare the new workflow and old one
-
-
     assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
     assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())
 
     return
+
 
 @step(u'Then I add add a run number to the VDrive project for reduction')
 def add_run_to_reduce(step):
@@ -202,9 +205,9 @@ def add_run_to_reduce(step):
     :param step:
     :return:
     """
-    workflow  = my_data.get()
+    workflow = my_data.get()
 
-    workflow.set_runs_to_reduce(run_numbers='57072')
+    workflow.set_runs_to_reduce(run_numbers=[57072])
 
     return
 
@@ -215,11 +218,9 @@ def reduce_data(step):
     workflow = my_data.get()
 
     # Set reduction parameters
-    workflow.setInstrumentName('VULCAN')
-
     focus_calib_file = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal'
-    workflow.setCalibrationFile(projname ='Test001',
-                                calibfilename = focus_calib_file)
+
+    workflow.set_focus_calibration_file(focus_calib_file)
 
     # set up reduction parameters
     outputdir = os.getcwd()
@@ -234,13 +235,13 @@ def reduce_data(step):
             "FrequencyLogNames": "skf1.speed",
             "WaveLengthLogNames": "skf12.lambda"
             }
-    wkflow.set_reduction_parameters('Test001', paramdict)
+    workflow.set_reduction_parameters('Test001', paramdict)
 
     # reduce
     reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
 
     wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
-    wkflow.reduceData(projname='Test001', normByVan=False, tofmin=None, tofmax=None)
+    wkflow.reduce_marked_runs(normByVan=False, tofmin=None, tofmax=None)
 
     return
 

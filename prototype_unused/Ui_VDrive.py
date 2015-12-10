@@ -16,7 +16,7 @@ from os.path import expanduser
 
 import vdrive
 import vdrive.VDProject as vdproj
-import vdrive.FacilityUtil as futil 
+import vdrive.archivemanager as futil
 import vdrive.vulcan_util
 
 VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768, 
@@ -592,7 +592,7 @@ class VDriveAPI:
         vdriveproj = self._rProjectDict[projectname]
 
         # Search runs under IPTS according
-        myfacility = futil.FacilityUtilityHelper(self._myInstrument)
+        myfacility = futil.FacilityManager(self._myInstrument)
         myfacility.set_data_root_path(self._dataRootPath)
 
         doexist = myfacility.setIPTS(ipts)
