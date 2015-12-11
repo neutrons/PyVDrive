@@ -2,7 +2,7 @@ import os
 import os.path
 
 import mantid_helper
-import ReductionManager as prl
+import reductionmanager as prl
 import archivemanager
 
 

@@ -22,16 +22,24 @@ DEBUGDIR = os.path.join(homedir, 'Temp')
 
 class AlignFocusParameters:
     """ Class to contain align and focus parameters
+    Many of them server as default values
     """
     def __init__(self):
-        """ Init 
+        """ Initialization
         """
+        raise NotImplementedError('It has not been designed well how to use this class!')
+        # binning parameters
+        self._binStep = -0.001
+        self._tofMin = None
+        self._tofMax = None
+
+        # events related
+
         refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
         calibrationfilename = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
         characterfilename = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
 
         self._focusFileName     = calibrationfilename
-        self._binning           = -0.001
         self._preserveEvents    = True
         self._LRef              = 0   # default = 0
         self._DIFCref           = 0
@@ -48,9 +56,25 @@ class DataReductionTracker(object):
     """
     def __init__(self, run_number, file_path, vanadium_calibration):
         """
-        # TODO/NOW
+        Purpose:
+            Initialize an object of DataReductionTracer
+        Requirements:
+            1. run number is integer
+            2. file path is string
+            3. vanadium calibration is a string for calibration file. it could be none
         :return:
         """
+        # check requirements
+        assert isinstance(run_number, int)
+        assert isinstance(file_path, str)
+        assert vanadium_calibration is None or isinstance(vanadium_calibration, str)
+
+        # set up
+        self._runNumber = run_number
+        self._filePath = file_path
+        # TODO - it is not clear whether it is better to use vanadium file name or vanadium run number
+        self._vanadiumCalibrationRunNumber = vanadium_calibration
+
         return
 
     @property
@@ -59,29 +83,38 @@ class DataReductionTracker(object):
 
         :return:
         """
-        return
+        return self._runNumber
 
     @property
     def file_path(self):
         """ Read only
         :return:
         """
-        return
+        return self._filePath
 
     @property
-    def vanadium_calibration_file(self):
+    def vanadium_calibration(self):
         """
-
+        Return vanadium calibration run number
         :return:
         """
+        return self._vanadiumCalibrationRunNumber
 
-    @vanadium_calibration_file.setter
-    def vanadium_calibration_file(self, value):
+    @vanadium_calibration.setter
+    def vanadium_calibration(self, value):
         """
-
+        Set vanadium calibration run number
+        Purpose:
+        Requirements:
+            value is integer
+        Guarantees:
+            vanadium run number is set
         :param value:
         :return:
         """
+        assert isinstance(value, int), 'Input value should be integer for run number'
+        self._vanadiumCalibrationRunNumber = value
+
         return
 
 
@@ -98,6 +131,8 @@ class ReductionManager(object):
 
     ??? It supports event chopping.
     """
+    SUPPORTED_INSTRUMENT = ['VULCAN']
+
     def __init__(self, instrument):
         """
         Purpose:
@@ -108,10 +143,134 @@ class ReductionManager(object):
         :param instrument:
         :return:
         """
-        # Check
-        # TODO/NOW/COMPLETE IT
+        # Check requirements
+        assert isinstance(instrument, str), 'Input instrument must be of type str'
+        instrument = instrument.upper()
+        assert instrument in ReductionManager.SUPPORTED_INSTRUMENT, \
+            'Instrument %s is not in the supported instruments (%s).' % (instrument,
+                                                                         ReductionManager.SUPPORTED_INSTRUMENT)
+
+        # Set up including default
+        self._myInstrument = instrument
+        self._myTimeFocusFile = None
+        self._reductionTrackDict = dict()
 
         return
+
+    def set_focus_calibration_file(self, file_name):
+        """
+        Set time focus calibration file
+        :return:
+        """
+        self._myTimeFocusFile = file_name
+
+    def reduce_run(self, run_number):
+        """
+        Requirements:
+            Run number is in list to reduce
+        :param run_number:
+        :return:
+        """
+        # Check
+        assert isinstance(run_number)
+        assert run_number in self._reductionTrackDict
+
+        # Get data or load
+        do_load = False
+        try:
+            event_ws_name = self._reductionProject.get_event_workspace_name(run_number)
+        except KeyError:
+            event_ws_name = self._reductionProject.load_event_data(run_number)
+
+        #
+        if self._reductionPameter.normalizeByCurrent:
+            self.noramlize_by_current(event_ws_name)
+
+        #
+        self.align_and_focus(event_ws_name)
+
+        #
+
+        return
+
+
+    def align_and_focus(self, eventwksp, temp_ws_name):
+        """ Align and focus raw event workspaces
+        Purpose:
+            Run Mantid.AlignAndFocus() by current parameters
+        Requirements:
+            Input event_wksp is not None
+            Output workspace name is string
+            All requirements for align and focus in Mantid is satisifed
+        Guarantees:
+            Event workspace is reduced
+
+        Current examle
+            Instrument  = "VULCAN",
+            RunNumber   = runnumber,
+            Extension   = "_event.nxs",
+            PreserveEvents  = True,
+            CalibrationFile = calibrationfilename,
+            CharacterizationRunsFile = characterfilename,
+            Binning = "-0.001",
+            SaveAS  = "",
+            OutputDirectory = outputdir,
+            NormalizeByCurrent = False,
+            FilterBadPulses=0,
+            CompressTOFTolerance = 0.,
+            FrequencyLogNames="skf1.speed",
+            WaveLengthLogNames="skf12.lambda")
+
+        Arguments:
+         - eventwksp
+
+        Return: focussed event workspace
+        """
+        # Check requirement
+        assert eventwksp.id() == EVENT_WORKSPACE_ID, \
+            'Input must be an EventWorkspace for align and focus. Current input is %s' % eventwksp.id()
+        elif isinstance(params, AlignFocusParameters) is False:
+            raise NotImplementedError("Input parameter must be of class AlignFocusParameters")
+
+        outwsname =
+        outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp,
+                                              OutputWorkspace = outwsname,   # in-place align and focus
+                                              CalFileName     = params._focusFileName,
+                                              Params          = params._binning,
+                                              PreserveEvents  = params._preserveEvents,
+                                              UnwrapRef       = params._LRef,    # default = 0
+                                              LowResRef       = params._DIFCref, # default = 0
+                                              RemovePromptPulseWidth  = params._removePromptPulseWidth, # default = 0.0
+                                              CompressTolerance       = params._compressTolerance,
+                                              LowResSpectrumOffset    = params._lowResTOFoffset,        # default = -1
+                                              CropWavelengthMin       = params._wavelengthMin,          # defalut = 0.0
+                                              ) #, **(focuspos))
+
+        #if DEBUGOUTPUT is True:
+        #    for iws in xrange(temp.getNumberHistograms()):
+        #        spec = temp.getSpectrum(iws)
+        #        self.log().debug("[DBx131] ws %d: spectrum ID = %d. " % (iws, spec.getSpectrumNo()))
+        #
+        #    if preserveEvents is True and isinstance(temp, mantid.api._api.IEventWorkspace) is True:
+        #        self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
+        #            of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
+        ## ENDIFELSE
+
+        # Normalize by current
+        # FIXME - Should be an optional operation by input argument
+        outws = self._normalizeByCurrent(outws)
+
+        if tofmin is not None and tofmax is not None:
+            params = "%.5f, %.5f, %.5f"%(tofmin, params._binning, tofmax)
+            print "[DB] Params to rebin = %s." %(params)
+            outws = mantidapi.Rebin(InputWorkspace=outws, Params=params,
+                    PreserveEvents=True, OutputWorkspace=outwsname)
+
+        return outws
+
+
+
+
 
 
     def __init_old__(self, nxsfilename, isvanadium=False):
@@ -151,6 +310,13 @@ class ReductionManager(object):
         self._tofMax = None
 
         return
+
+    def set_focus_calibration_file(self):
+        """ Set time focusing calibration file
+        :return:
+        """
+
+
         
     def getProcessedVanadium(self):
         """ Get processed vanadium data 
@@ -495,73 +661,6 @@ class ReductionManager(object):
 
         return reducedlist
 
-
-    def _doAlignFocus(self, eventwksp, params, tofmin=None, tofmax=None):
-        """ Align and focus raw event workspaces
-
-        Current examle
-            Instrument  = "VULCAN",
-            RunNumber   = runnumber,
-            Extension   = "_event.nxs",
-            PreserveEvents  = True,
-            CalibrationFile = calibrationfilename,
-            CharacterizationRunsFile = characterfilename,
-            Binning = "-0.001",
-            SaveAS  = "",
-            OutputDirectory = outputdir, 
-            NormalizeByCurrent = False,
-            FilterBadPulses=0,
-            CompressTOFTolerance = 0.,
-            FrequencyLogNames="skf1.speed",
-            WaveLengthLogNames="skf12.lambda")
-
-        Arguments:
-         - eventwksp
-
-        Return: focussed event workspace
-        """
-        # FIXME/TODO ASAP - How to set up parameter???
-        # Validate input
-        if eventwksp.id() != EVENT_WORKSPACE_ID:
-            raise NotImplementedError("Input must be an EventWorkspace for align and focus")
-        elif isinstance(params, AlignFocusParameters) is False:
-            raise NotImplementedError("Input parameter must be of class AlignFocusParameters")
-
-        outwsname = eventwksp.name()+"_Foc_TOF"
-        outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp, 
-                                              OutputWorkspace = outwsname,   # in-place align and focus
-                                              CalFileName     = params._focusFileName, 
-                                              Params          = params._binning, 
-                                              PreserveEvents  = params._preserveEvents,
-                                              UnwrapRef       = params._LRef,    # default = 0
-                                              LowResRef       = params._DIFCref, # default = 0
-                                              RemovePromptPulseWidth  = params._removePromptPulseWidth, # default = 0.0
-                                              CompressTolerance       = params._compressTolerance,
-                                              LowResSpectrumOffset    = params._lowResTOFoffset,        # default = -1
-                                              CropWavelengthMin       = params._wavelengthMin,          # defalut = 0.0
-                                              ) #, **(focuspos))
-
-        #if DEBUGOUTPUT is True:
-        #    for iws in xrange(temp.getNumberHistograms()):
-        #        spec = temp.getSpectrum(iws)
-        #        self.log().debug("[DBx131] ws %d: spectrum ID = %d. " % (iws, spec.getSpectrumNo()))
-        #        
-        #    if preserveEvents is True and isinstance(temp, mantid.api._api.IEventWorkspace) is True:
-        #        self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
-        #            of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
-        ## ENDIFELSE
-
-        # Normalize by current
-        # FIXME - Should be an optional operation by input argument
-        outws = self._normalizeByCurrent(outws)
-
-        if tofmin is not None and tofmax is not None:
-            params = "%.5f, %.5f, %.5f"%(tofmin, params._binning, tofmax)
-            print "[DB] Params to rebin = %s." %(params)
-            outws = mantidapi.Rebin(InputWorkspace=outws, Params=params,
-                    PreserveEvents=True, OutputWorkspace=outwsname)
-
-        return outws
 
 
     def _filterBadPulese(self, wksp, lowercutoff):
