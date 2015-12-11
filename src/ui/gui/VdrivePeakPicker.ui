@@ -69,6 +69,9 @@
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
                <widget class="QPushButton" name="pushButton_loadCalibFile">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Vanadium calibration file for the loaded run&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;(need to confirm that the calibration file is 'vanadium' calibration file)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="text">
                  <string>Calibration files</string>
                 </property>
@@ -425,7 +428,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QTableWidget" name="tableWidget_4">
+             <widget class="PeakParameterTable" name="tableWidget_peakParameter">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Peak width is the fitting range for 2 peaks.&lt;/p&gt;&lt;p&gt;It will be picked up by xmin and xmax of the graph&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -447,7 +450,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QGraphicsView" name="graphicsView_main"/>
+         <widget class="DiffractionPlotView" name="graphicsView_main"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_15">
@@ -459,10 +462,37 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox"/>
+           <widget class="QComboBox" name="comboBox_bankNumbers">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;List the available of bank numbers of the loaded&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QComboBox" name="comboBox_2"/>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_findPeaks">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Find all peaks in the diffraction pattern&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Find Peaks</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -570,6 +600,16 @@
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdrivetreewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DiffractionPlotView</class>
+   <extends>QGraphicsView</extends>
+   <header>diffractionplotview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PeakParameterTable</class>
+   <extends>QTableWidget</extends>
+   <header>peakparametertable.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
