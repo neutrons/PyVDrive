@@ -20,7 +20,7 @@ DEBUGMODE = True
 DEBUGDIR = os.path.join(homedir, 'Temp')
 
 
-class AlignFocusParameters:
+class PowderReductionParameters:
     """ Class to contain align and focus parameters
     Many of them server as default values
     """
@@ -49,6 +49,16 @@ class AlignFocusParameters:
         self._wavelengthMin     = 0.0
 
         return
+
+    @property
+    def binStep(self):
+        """
+
+        :return:
+        """
+        return
+
+    BlaBlaBlaBla
 
 
 class DataReductionTracker(object):
@@ -157,44 +167,7 @@ class ReductionManager(object):
 
         return
 
-    def set_focus_calibration_file(self, file_name):
-        """
-        Set time focus calibration file
-        :return:
-        """
-        self._myTimeFocusFile = file_name
-
-    def reduce_run(self, run_number):
-        """
-        Requirements:
-            Run number is in list to reduce
-        :param run_number:
-        :return:
-        """
-        # Check
-        assert isinstance(run_number)
-        assert run_number in self._reductionTrackDict
-
-        # Get data or load
-        do_load = False
-        try:
-            event_ws_name = self._reductionProject.get_event_workspace_name(run_number)
-        except KeyError:
-            event_ws_name = self._reductionProject.load_event_data(run_number)
-
-        #
-        if self._reductionPameter.normalizeByCurrent:
-            self.noramlize_by_current(event_ws_name)
-
-        #
-        self.align_and_focus(event_ws_name)
-
-        #
-
-        return
-
-
-    def align_and_focus(self, eventwksp, temp_ws_name):
+    def align_and_focus(self, event_wksp, temp_ws_name):
         """ Align and focus raw event workspaces
         Purpose:
             Run Mantid.AlignAndFocus() by current parameters
@@ -205,7 +178,99 @@ class ReductionManager(object):
         Guarantees:
             Event workspace is reduced
 
-        Current examle
+        Arguments:
+         - eventwksp
+
+        Return: focussed event workspace
+        """
+        # Check requirement
+        assert event_wksp.id() == EVENT_WORKSPACE_ID, \
+            'Input must be an EventWorkspace for align and focus. Current input is %s' % event_wksp.id()
+        assert isinstance(params, PowderReductionParameters), \
+            'Input parameter must be of class AlignFocusParameters'
+
+        assert isinstance(self._groupWSName, str)
+        assert mantid.api.AnalysisDataService.has(self._groupWSName)
+        assert isinstance(self._offsetWSName, str)
+        assert AnalysisDataService.has(self._offsetWSName)
+
+        # Execute algorithm AlignAndFocusPowder()
+        # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
+        user_geometry_dict = dict()
+        outws = mantidapi.AlignAndFocusPowder(InputWorkspace=event_wksp,
+                                              OutputWorkspace=temp_ws_name,   # in-place align and focus
+                                              GroupingWrokspace=self._groupWSName,
+                                              OffsetsWorkspace=self._offsetWSName,
+                                              MaskWorkspace=None, # FIXME - NO SURE THIS WILL WORK!
+                                              Params=params.binning,
+                                              PreserveEvents=params.preserveEvents,
+                                              RemovePromptPulseWidth=0, # Fixed to 0
+                                              CompressTolerance=params.compressTolerance, # 0.01 as default
+                                              Dspacing=True,            # fix the option
+                                              UnwrapRef=0,              # do not use = 0
+                                              LowResRef=0,              # do not use  = 0
+                                              CropWavelengthMin=0,      # no in use = 0
+                                              LowResSpectrumOffset=1,   # powgen's option. not used by vulcan
+                                              **user_geometry_dict)
+
+        return
+
+    def get_processed_vanadium(self, vanadium_run_number):
+        """ Get processed vanadium data (workspace name)
+        Purpose:
+
+        Requirements:
+
+        Guarantees
+
+        :param vanadium_run_number:
+        :return:
+        """
+        # TODO/NOW/ ... ...
+        return self._processedVanadiumWSDict[vanadium_run_number]
+
+    def get_reduced_workspace(self, run_number, unit='TOF', listindex=0):
+        """ Get the reduced matrix workspace
+        Purpose:
+
+        Requirements:
+            1. Specified run is correctly reduced;
+        Guarantees:
+            2. Return reduced workspace's name
+        Arguments:
+         - unit :: target unit; If None, then no need to convert unit
+
+        Return :: Workspace (success) or 2-tuple (False and error message)
+        """
+        # TODO/NOW/FIXME - Complete it
+
+        # Check requirements
+        ChangeNextSection
+        try:
+            retws = self._anyRunWSList[listindex]
+        except IndexError:
+            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
+        print "[DB] Type of reduced workspace: ", type(retws)
+        print "[DB] Name of reduced workspace: ", str(retws)
+
+        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
+            # no request of target unit or target unit is same as current unit
+            return retws
+
+        # convert unit if necessary
+        retws = mantidapi.ConvertUnits(InputWorkspace=retws,
+                                       OutputWorkspace=retws.name(),
+                                       Target=unit,
+                                       EMode='Elastic')
+
+        return reduced_ws_name
+
+    def reduce_one_run(self, run_number):
+        """
+        Requirements:
+            Run number is in list to reduce
+
+        Example:
             Instrument  = "VULCAN",
             RunNumber   = runnumber,
             Extension   = "_event.nxs",
@@ -220,143 +285,76 @@ class ReductionManager(object):
             CompressTOFTolerance = 0.,
             FrequencyLogNames="skf1.speed",
             WaveLengthLogNames="skf12.lambda")
-
-        Arguments:
-         - eventwksp
-
-        Return: focussed event workspace
+        :param run_number:
+        :return:
         """
-        # Check requirement
-        assert eventwksp.id() == EVENT_WORKSPACE_ID, \
-            'Input must be an EventWorkspace for align and focus. Current input is %s' % eventwksp.id()
-        assert isinstance(params, AlignFocusParameters), \
-            'Input parameter must be of class AlignFocusParameters'
+        # TODO/DOC/COMPLETE IT
 
-        outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp,
-                                              OutputWorkspace = outwsname,   # in-place align and focus
-                                              CalFileName     = params._focusFileName,
-                                              Params          = params._binning,
-                                              PreserveEvents  = params._preserveEvents,
-                                              UnwrapRef       = params._LRef,    # default = 0
-                                              LowResRef       = params._DIFCref, # default = 0
-                                              RemovePromptPulseWidth  = params._removePromptPulseWidth, # default = 0.0
-                                              CompressTolerance       = params._compressTolerance,
-                                              LowResSpectrumOffset    = params._lowResTOFoffset,        # default = -1
-                                              CropWavelengthMin       = params._wavelengthMin,          # defalut = 0.0
-                                              ) #, **(focuspos))
+        # Check
+        assert isinstance(run_number)
+        assert run_number in self._reductionTrackDict
 
-        #if DEBUGOUTPUT is True:
-        #    for iws in xrange(temp.getNumberHistograms()):
-        #        spec = temp.getSpectrum(iws)
-        #        self.log().debug("[DBx131] ws %d: spectrum ID = %d. " % (iws, spec.getSpectrumNo()))
-        #
-        #    if preserveEvents is True and isinstance(temp, mantid.api._api.IEventWorkspace) is True:
-        #        self.log().information("After being aligned and focussed workspace %s; Number of events = %d \
-        #            of chunk %d " % (str(temp),temp.getNumberEvents(), ichunk))
-        ## ENDIFELSE
+        # Get data or load
+        do_load = False
+        try:
+            event_ws_name = self._reductionProject.get_event_workspace_name(run_number)
+        except KeyError:
+            event_ws_name = self._reductionProject.load_event_data(run_number)
 
-        # Normalize by current
-        # FIXME - Should be an optional operation by input argument
-        outws = self._normalizeByCurrent(outws)
-
-        if tofmin is not None and tofmax is not None:
-            params = "%.5f, %.5f, %.5f"%(tofmin, params._binning, tofmax)
-            print "[DB] Params to rebin = %s." %(params)
-            outws = mantidapi.Rebin(InputWorkspace=outws, Params=params,
-                    PreserveEvents=True, OutputWorkspace=outwsname)
-
-        return outws
-
-
-
-
-    def __init_old__(self, nxsfilename, isvanadium=False):
-        """ Init
-        """
-        # Set up parameters
-        self._myRawNeXusFileName = nxsfilename
-
-        # Status variables
-        self._statusVanadium = False
-
-        # min, step, max
-        self._binParam = [None, -0.01, None]
-        
-        # Is vanadium
-        self._isVanadiumRun = bool(isvanadium)
-
-        self._anyRunWSList = []
-
-        # Define class variables
-        if self._isVanadiumRun is True:
-            self._vanRunWS = None
-            self._vanPeakFWHM = 7
-            self._vanPeakTol = 0.05 
-            self._vanSmoothing = "20,2"
+        # Option for chopping
+        # Chop data if specified
+        if chopdata is True:
+            wksplist = self._chopData(wksp)
         else:
-            # FIXME - Need to get a way to set up these parameters!
-            self._vanRunWS = None
-            self._vanPeakFWHM = 7
-            self._vanPeakTol = 0.05 
-            self._vanSmoothing = "20,2"
+            wksplist = [wksp]
 
-        self._tempSmoothedVanadiumWS = None
+        # Filter bad pulses as an option
+        if self._reductionParameter.filterBadPulese is True:
+            self._filterBadPulese(run_number)
 
-        # general align and focussing
-        self._tofMin = None
-        self._tofMax = None
+        # Align and focus
+        self.align_and_focus(run_number)
+
+        # Normalize by current as an option
+        if self._reductionParameter.normalizeByCurrent:
+            self.noramlize_by_current(run_number)
+
+        # Normalize/calibrate by vanadium
+        if self._reductionParameter.calibrateByVanadium is True:
+            self.normalizeByVanadium(run_number)
 
         return
 
-    def set_focus_calibration_file(self):
-        """ Set time focusing calibration file
+    def get_smoothed_vanadium(self, van_run_number):
+        """
+        Purpose:
+            Get the smooth vanadium run (workspace) which has not been accepted.
+        Requirements:
+
+        Guarantees:
+
+        :param van_run_number:
         :return:
         """
-
-
-        
-    def getProcessedVanadium(self):
-        """ Get processed vanadium data 
-        """
-        return self._processedVanadiumWS
-
-
-    def getReducedWorkspace(self, unit, listindex=0):
-        """ Get the reduced matrix workspace
-        Arguments: 
-         - unit :: target unit; If None, then no need to convert unit
-         
-        Return :: Workspace (success) or 2-tuple (False and error message)
-        """
-        # FIXME - Need more consideration 
-        try:
-            retws = self._anyRunWSList[listindex]
-        except IndexError:
-            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
-        print "[DB] Type of reduced workspace: ", type(retws)
-        print "[DB] Name of reduced workspace: ", str(retws)
-       
-        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
-            # no request of target unit or target unit is same as current unit
-            return retws
-
-        # convert unit
-        retws = mantidapi.ConvertUnits(InputWorkspace=retws, 
-                                       OutputWorkspace=retws.name(), 
-                                       Target=unit, 
-                                       EMode='Elastic')
-        
-        # set back to class list
-        self._anyRunWSList[listindex] = retws
-        
-        return retws
-
-    def getTempSmoothedVanadium(self):
-        """
-        """
+        # TODO/NOW Implement it!
+        raise NotImplementedError('ASAP')
         return self._tempSmoothedVanadiumWS
 
-    def reduce_marked_runs(self, vanadium_calibrate):
+    def set_focus_calibration_file(self, focus_calibration_file):
+        """ Set time focusing calibration file
+        Purpose:
+        Requirements:
+        Guarantees:
+        :return:
+        """
+        # TODO/NOW/Complete it
+        blabla
+
+        self._focusCalibrationFile = focus_calibration_file
+
+        return
+
+    def reduce_runs(self, vanadium_calibrate):
         """ Reduce marked runs
         Purpose:
 
@@ -368,11 +366,17 @@ class ReductionManager(object):
         """
         # TODO/NOW/Implement this!
         # Check input
+        blabla
 
         # Get list of runs that are marked to refine
+        blabla
 
         # Check whether all runs to reduce have vanadium calibration set up
         # and create a list of required vanadium calibration files
+
+        # Load calibration file if it is not loaded
+        if self._myGroupWSName is None or self._myOffsetWSName is None:
+            self.load_focus_calibration()
 
         # Load vanadium calibration file if required
         if vanadium_calibrate:
@@ -380,47 +384,7 @@ class ReductionManager(object):
 
         # Reduce runs
         for run_number in self._runsToReduce:
-            self.reduce_run(run_number)
-
-        return
-
-    def reduce(self, params, vrun=None, bkgdrun=None, chopdata=False, tofmin=None, tofmax=None):
-        """ Reduce powder diffraction data
-        This is the core functional methods of this class
-
-        Arguments:
-         - params   :: AlignFocusParameters object
-         - vrun     :: an SNSPowderReductionLite instance for reduced vanadium run
-         - bkgdrun  :: an SNSPowderReductionLite instance for reduced background run
-         - dochopdata :: a boolean as the flag to chop data 
-        """
-        # Load file 
-        wksp = self._loadData()
-
-        # Chop data if specified
-        if chopdata is True:
-            wksplist = self._chopData(wksp)
-        else:
-            wksplist = [wksp]
-        
-        # Clear previous result if there is any without removing previos objects
-        self._anyRunWSList = []
-
-        # Align and focus
-        for wksp in wksplist:   
-            # Focus
-            print "[DB] Do Align and Focus: TOF range: ", tofmin, tofmax
-            focusedwksp = self._doAlignFocus(wksp, params, tofmin, tofmax)
-            # Normalize by vanadium
-            if vrun is not None:
-                focusedwksp = focusedwksp._normByVanadium(wksp)
-            # Check unit
-            # FIXME Test Only Now!
-            numspec = focusedwksp.getNumberHistograms()
-            print "[DB] Range of X = %f, %f." % (focusedwksp.readX(0)[0], focusedwksp.readX(0)[-1])
-
-            self._anyRunWSList.append(focusedwksp)
-        # ENDFOR
+            self.reduce_one_run(run_number)
 
         return 
 
@@ -458,7 +422,7 @@ class ReductionManager(object):
 
         # Align and focus
         if params is None:
-            params = AlignFocusParameters()
+            params = PowderReductionParameters()
         wksp = self._doAlignFocus(wksp, params)
 
         # Strip vanadium peaks in d-spacd
@@ -714,5 +678,45 @@ class ReductionManager(object):
     def _processVanadium(self):
         """ Process reduced vanadium runs
         """ 
+
+        return
+
+
+
+    def __init_old__(self, nxsfilename, isvanadium=False):
+        """ Init
+        """
+        # Set up parameters
+        self._myRawNeXusFileName = nxsfilename
+
+        # Status variables
+        self._statusVanadium = False
+
+        # min, step, max
+        self._binParam = [None, -0.01, None]
+
+        # Is vanadium
+        self._isVanadiumRun = bool(isvanadium)
+
+        self._anyRunWSList = []
+
+        # Define class variables
+        if self._isVanadiumRun is True:
+            self._vanRunWS = None
+            self._vanPeakFWHM = 7
+            self._vanPeakTol = 0.05
+            self._vanSmoothing = "20,2"
+        else:
+            # FIXME - Need to get a way to set up these parameters!
+            self._vanRunWS = None
+            self._vanPeakFWHM = 7
+            self._vanPeakTol = 0.05
+            self._vanSmoothing = "20,2"
+
+        self._tempSmoothedVanadiumWS = None
+
+        # general align and focussing
+        self._tofMin = None
+        self._tofMax = None
 
         return

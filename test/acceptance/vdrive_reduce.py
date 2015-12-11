@@ -241,7 +241,7 @@ def reduce_data(step):
     reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
 
     wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
-    wkflow.reduce_marked_runs(normByVan=False, tofmin=None, tofmax=None)
+    wkflow.reduce_runs(normByVan=False, tofmin=None, tofmax=None)
 
     return
 

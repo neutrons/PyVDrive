@@ -358,7 +358,7 @@ class VDriveAPI:
         """ Get data sets from processed vanadium runs
         """
         project = self._rProjectDict[projname]
-        vandatadict, history = project.getProcessedVanadium(datafilename)
+        vandatadict, history = project.get_processed_vanadium(datafilename)
         print "[DB Ui_VDrive] History = ", history
 
         return vandatadict
@@ -384,7 +384,7 @@ class VDriveAPI:
         """
         """
         project = self._rProjectDict[projname]
-        smoothdatadict = project.getTempSmoothedVanadium(datafilename)
+        smoothdatadict = project.get_smoothed_vanadium(datafilename)
 
         return smoothdatadict
 

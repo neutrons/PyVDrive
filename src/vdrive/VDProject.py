@@ -442,7 +442,7 @@ class DeprecatedReductionProject(VDProject):
         returndict = None
         if self._myRunPdrDict.has_key(runbasename):
             runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.getProcessedVanadium()
+            ws = runpdr.get_processed_vanadium()
             
             if ws is not None:
                 ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
@@ -473,7 +473,7 @@ class DeprecatedReductionProject(VDProject):
 
         if self._myRunPdrDict.has_key(runbasename): 
             runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.getReducedWorkspace(unit) 
+            ws = runpdr.get_reduced_workspace(unit)
             
             print "[DB] Get workspace for %s with unit %s" % (runbasename, unit)
             if ws is not None:
@@ -506,7 +506,7 @@ class DeprecatedReductionProject(VDProject):
         returndict = None
         if self._myRunPdrDict.has_key(runbasename):
             runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.getTempSmoothedVanadium()
+            ws = runpdr.get_smoothed_vanadium()
             
             if ws is not None:
                 ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
@@ -661,7 +661,7 @@ class DeprecatedReductionProject(VDProject):
             # ENDIF (vrun)
 
             # reduce data
-            runpdr.reducePDData(params=prl.AlignFocusParameters(),
+            runpdr.reducePDData(params=prl.PowderReductionParameters(),
                                 vrun=vrun,
                                 chopdata=doChopData, 
                                 tofmin=self._tofMin, tofmax=self._tofMax)

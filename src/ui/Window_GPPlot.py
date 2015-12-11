@@ -372,11 +372,11 @@ class Window_GPPlot(QMainWindow):
             raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
 
         # get pre-smooth data
-        vandatadict = self._myParent.getWorkflowObj().getProcessedVanadium(self._myProjectName, self._currRun)
+        vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
         vanvecx, vanvecy = vandatadict[self._currSpectrum]
 
         # get smoothed but temporary data
-        smoothdatadict = self._myParent.getWorkflowObj().getTempSmoothedVanadium(self._myProjectName, self._currRun)
+        smoothdatadict = self._myParent.getWorkflowObj().get_smoothed_vanadium(self._myProjectName, self._currRun)
         smoothvecx, smoothvecy = smoothdatadict[self._currSpectrum]
 
         # plot
@@ -397,7 +397,7 @@ class Window_GPPlot(QMainWindow):
             raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
 
         reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, self._currRun)
-        vandatadict = self._myParent.getWorkflowObj().getProcessedVanadium(self._myProjectName, self._currRun)
+        vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
         print "[DB] Type of reduced data  dict: ", str(type(reduceddatadict)), " keys: ", str(reduceddatadict.keys())
         print "[DB] Type of vanadium data dict: ", str(type(vandatadict))    , " keys: ", str(vandatadict.keys())
         print "[DB] Current spectrum = %d" % (self._currSpectrum)
