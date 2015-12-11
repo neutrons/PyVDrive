@@ -229,10 +229,9 @@ class ReductionManager(object):
         # Check requirement
         assert eventwksp.id() == EVENT_WORKSPACE_ID, \
             'Input must be an EventWorkspace for align and focus. Current input is %s' % eventwksp.id()
-        elif isinstance(params, AlignFocusParameters) is False:
-            raise NotImplementedError("Input parameter must be of class AlignFocusParameters")
+        assert isinstance(params, AlignFocusParameters), \
+            'Input parameter must be of class AlignFocusParameters'
 
-        outwsname =
         outws = mantidapi.AlignAndFocusPowder(InputWorkspace  = eventwksp,
                                               OutputWorkspace = outwsname,   # in-place align and focus
                                               CalFileName     = params._focusFileName,
@@ -267,8 +266,6 @@ class ReductionManager(object):
                     PreserveEvents=True, OutputWorkspace=outwsname)
 
         return outws
-
-
 
 
 
@@ -367,7 +364,6 @@ class ReductionManager(object):
 
         Guarantees:
 
-
         :return:
         """
         # TODO/NOW/Implement this!
@@ -427,7 +423,6 @@ class ReductionManager(object):
         # ENDFOR
 
         return 
-
 
     def reduceVanadiumData(self, params):
         """ Reduce vanadium data and strip vanadium peaks
