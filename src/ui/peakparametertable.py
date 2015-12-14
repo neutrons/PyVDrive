@@ -3,7 +3,7 @@ __author__ = 'wzz'
 import gui.ndav_widgets.NTableWidget as NT
 
 
-class PeakParameterTable(gui.ndav_widgets.NTableWidget):
+class PeakParameterTable(NT.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters
     """
@@ -106,7 +106,7 @@ class PeakParameterTable(gui.ndav_widgets.NTableWidget):
         Init setup
         :return:
         """
-        self.init_setup(PeakParameterTable)
+        self.init_setup(PeakParameterTable.PeakTableSetup)
 
         # Set up column width
         self.setColumnWidth(0, 20)

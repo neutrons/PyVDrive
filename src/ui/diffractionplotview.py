@@ -131,6 +131,18 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
 
         return
 
+    def plot_diffraction_pattern(self, vec_x, vec_y):
+        """
+        TODO/NOW/ Doc
+        :return:
+        """
+        # Record the data for future usage... ...
+
+        # Plot
+        pattern_key = self.add_plot_1d(vec_x, vec_y)
+
+        return
+
     def remove_peak_indicator(self, peak_indicator_index):
         """ Remove a peak indicator
         Purpose:

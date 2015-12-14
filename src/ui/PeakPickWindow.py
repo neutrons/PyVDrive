@@ -53,6 +53,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
                      self.do_save_peaks)
 
+        # Define canvas event hanlders
+        # Event handling for pickers
+        self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
+                                                        self.on_mouse_press_event)
+        self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
+                                                        self.on_mouse_release_event)
+        self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
+                                                        self.on_mouse_motion)
+
         # Set up widgets
         self._init_widgets_setup()
 
@@ -71,6 +80,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         self.ui.treeView_iptsRun.set_main_window(self)
+
+        self.ui.tableWidget_peakParameter.setup()
 
         return
 
@@ -109,8 +120,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return: None
         """
         # Check requirements
-        assert (self._isInitialized is True, 'Instance is not initialized.')
-        assert (self._dataLoaded is True, 'No data is loaded.')
+        assert self._isInitialized is True, 'Instance is not initialized.'
+        assert self._dataLoaded is True, 'No data is loaded.'
 
         # Find out the highlighted (i.e., current) peak from canvas
         try:
@@ -249,16 +260,41 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Check requirements
         assert self._myController is not None
 
+        # Get diffraction file
+        load_chop_data = False
+        load_run_data = False
+        if len(str(self.ui.lineEdit_chopDataToLoad.text())) > 0:
+            load_chop_data = True
+        if len(str(self.ui.lineEdit_runToLoad.text())) > 0:
+            load_run_data = True
+        if load_chop_data and load_run_data:
+            # Specify too many.  Unable to handle
+            GuiUtility.pop_dialog_error('Both run and chopped are specified. Unable to handle.')
+            return
+        elif load_chop_data:
+            # Load chopped data
+            chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
+        elif load_run_data:
+            # Load data via run
+            run_data_name = str(self.ui.lineEdit_runToLoad.text())
+        else:
+            diff_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File'))
+
         # Load data via parent
         try:
-            vecx, vecy = self._myController.load_diffraction_file(diff_file, 'gsas')
+            data_key = self._myController.load_diffraction_file(diff_file_name, 'gsas')
         except RuntimeError as re:
             GuiUtility.pop_dialog_error(self, str(re))
             return
 
         # Plot data
-        self.ui.graphicsView_main.clear()
-        self.ui.graphicsView_main.plot_line(vecx, vecy)
+        # FIXME/NOW : make this section more well-defined
+        vecx, vecy = self._myController.get_diffraction_pattern(data_key, bank=1)
+        self.ui.graphicsView_main.clear_all_lines()
+        self.ui.graphicsView_main.plot_diffraction_pattern(vecx, vecy)
+
+        self.ui.comboBox_bankNumbers.clear()
+        self.ui.comboBox_bankNumbers.addItems(['1', '2'])
 
         return
 
@@ -299,6 +335,80 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def set_controller(self, controller):
+        """
+        """
+        # TODO/NOW/Doc
+        self._myController = controller
+
+    def on_mouse_press_event(self, event):
+        """ If in the picking up mode, as mouse's left button is pressed down,
+        the indicator/picker
+        is in the moving mode
+
+        event.button has 3 values:
+         1: left
+         2: middle
+         3: right
+        """
+        # Get event data
+        x = event.xdata
+        y = event.ydata
+        button = event.button
+        print "[DB] Button %d is (pressed) down at (%s, %s)." % (button, str(x), str(y))
+
+        # Select situation
+        if x is None or y is None:
+            # mouse is out of canvas, return
+            return
+
+        # FIXME/TODO/NOW - Define the response event from mouse
+
+        return
+
+    def on_mouse_release_event(self, event):
+        """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
+        then the mode is over
+        """
+        button = event.button
+
+        if button == 1:
+            # left button click
+            pass
+
+        elif button == 3:
+            # right button click
+            # Launch dynamic pop-out menu
+            self.ui.menu = QtGui.QMenu(self)
+
+            action1 = QtGui.QAction('Add Peak', self)
+            action1.triggered.connect(self.menu_select_nearest_picker)
+            self.ui.menu.addAction(action1)
+
+            # add other required actions
+            self.ui.menu.popup(QtGui.QCursor.pos())
+
+        return
+
+    def on_mouse_motion(self, event):
+        """ Event handling in case mouse is moving
+        """
+        new_x = event.xdata
+        new_y = event.ydata
+
+        # Outside of canvas, no response
+        if new_x is None or new_y is None:
+            return
+
+        # TODO/NOW/FIXME
+
+        return
+
+    def action1(self):
+        """
+        """
+        print 'Add Peak!'
+
 
 def retrieve_peak_positions(peak_list):
     """
@@ -327,17 +437,62 @@ def main(argv):
     """ Main method for testing purpose
     """
     parent = None
+    controller = MockController()
 
     app = QtGui.QApplication(argv)
 
     # my plot window app
     myapp = PeakPickerWindow(parent)
+    myapp.set_controller(controller)
     myapp.show()
 
     exit_code=app.exec_()
     sys.exit(exit_code)
 
     return
+
+
+class MockController(object):
+    """
+
+    """
+    def __init__(self):
+        """
+
+        :return:
+        """
+        self._currWS = None
+
+        return
+
+    def get_diffraction_pattern(self, data_key, bank):
+        """
+
+        :param data_key:
+        :param bank:
+        :return:
+        """
+        ws_index = bank-1
+        vec_x = self._currWS.readX(ws_index)
+        vec_y = self._currWS.readY(ws_index)
+
+        return vec_x, vec_y
+
+    def load_diffraction_file(self, file_name, file_type):
+        """
+
+        :param file_type:
+        :return:
+        """
+        import mantid.simpleapi
+
+        if file_type.lower() == 'gsas':
+            self._currWS = mantid.simpleapi.LoadGSS(Filename=file_name, OutputWorkspace='Temp')
+            self._currWS = mantid.simpleapi.ConvertToPointData(InputWorkspace='Temp', OutputWorkspace='Temp')
+        else:
+            raise NotImplementedError('File type %s is not supported.' % file_type)
+
+        return file_name
 
 if __name__ == "__main__":
     main(sys.argv)
