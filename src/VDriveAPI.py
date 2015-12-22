@@ -264,10 +264,10 @@ class VDriveAPI(object):
         try:
             if isinstance(ipts, int):
                 ipts_number = ipts
-                run_tuple_list = self._myArchiveManager.get_run_info(ipts_number)
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts_number)
             elif isinstance(ipts, str):
                 ipts_dir = ipts
-                run_tuple_list = self._myArchiveManager.get_run_info_dir(ipts_dir)
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:

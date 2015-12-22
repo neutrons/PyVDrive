@@ -592,17 +592,14 @@ class VDriveAPI:
         vdriveproj = self._rProjectDict[projectname]
 
         # Search runs under IPTS according
-        myfacility = futil.FacilityManager(self._myInstrument)
+        myfacility = futil.DataArchiveManager(self._myInstrument)
         myfacility.set_data_root_path(self._dataRootPath)
-
-        doexist = myfacility.setIPTS(ipts)
-        if doexist is False:
-            raise RuntimeError("IPTS %d does not exist." % (ipts))
+        myfacility.set_ipts_number(ipts)
 
         # Search runs 
-        self._iptsRunInfoDict[ipts] = myfacility.searchRuns(deltaDays)
+        self._iptsRunInfoDict[ipts] = myfacility.search_experiment_runs_by_time(deltaDays)
 
-        return (True, '')
+        return True, ''
 
 
     # def setDefaultDataPath(self, basedatapath):

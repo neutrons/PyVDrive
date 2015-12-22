@@ -7,8 +7,8 @@ import pickle
 
 import vdrivehelper
 
-SUPPORTED_INSTRUMENT = ['VULCAN']
-SUPPORTED_INSTRUMENT_SHORT = ['VUL']
+SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
+SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
 
 
 class DataArchiveManager(object):
@@ -16,6 +16,12 @@ class DataArchiveManager(object):
     """
     def __init__(self, instrument):
         """ Initialize including set instrument
+        Purpose:
+            Initialize the instance and set up defaults
+        Requirements:
+            Input name of instrument must be a supported one
+        Guarantees:
+            A data archive manager is initialized
 
         Exception: NotImplementedError, TypeError
         """
@@ -29,119 +35,161 @@ class DataArchiveManager(object):
         assert instrument in SUPPORTED_INSTRUMENT or instrument in SUPPORTED_INSTRUMENT_SHORT, \
             'Instrument %s is not supported.' % instrument
 
-        self._instrumentName = instrument
+        # Instrument name is for archive purpose
+        if instrument in SUPPORTED_INSTRUMENT:
+            self._dataArchiveInstrumentName = SUPPORTED_INSTRUMENT[instrument]
+        else:
+            self._dataArchiveInstrumentName = SUPPORTED_INSTRUMENT_SHORT[instrument]
 
         # Set default data archive
-        self._archiveRootDirectory = '/SNS/%s' % self._instrumentName
+        self._archiveRootDirectory = '/SNS/%s' % self._dataArchiveInstrumentName
 
         # Other class variables
+        # ipts number of type integer
         self._iptsNo = None
+        # ipts data directory such as /SNS/VULCAN/IPTS-1234/data
+        self._iptsDataDir = None
+        # ipts root data directory such as /SNS/VULCAN/IPTS-1234/
+        self._iptsRootDir = None
+
+        # Debug mode
+        self.__DEBUG__ = False
 
         return
 
     @property
     def root_directory(self):
         """ Root archive directory
+        Purpose:
+            Get root data archive directory.  For example, /SNS/VULCAN/
+        Requirements:
+            It is accessible
+        Guarantees:
+            The root archive directory will be returned
         :return:
         """
-        # TODO/NOW/DOC
+        # Check requirements:
+        assert os.path.exists(self._archiveRootDirectory), 'Root archive directory %s is not accessible.' % self._archiveRootDirectory
+
         return self._archiveRootDirectory
 
     @root_directory.setter
     def root_directory(self, value):
         """ Set archive's root directory
         Purpose:
-
+            Set up the root archiving directory
         Requirements:
-
-
+            Value must be a file path and accessible
+        Guarantees:
+            Give file path is set to root
         :param value:
         :return:
         """
-        # TODO/NOW/DOC
         # check requirements
-        assert True
+        assert isinstance(value, str), \
+            'Input value for root directory must be of string type. Given is %s' % str(type(value))
+        assert os.path.exists(value), 'Input root path %s does not exist.' % value
 
         # set
         self._archiveRootDirectory = value
 
-    def get_data_root_dir(self):
-        """
-        Get default data root directory
-        :return:
-        """
+        return
 
-    def getFilesInfo(self, file_name_list):
+    def get_files_time_information(self, file_name_list):
         """ Get files' information
+        Purpose:
+            Get the time information of a list of files
+        Requirements:
+            Given files do exist
+        Guarantees:
+            Creation time of given files are returned
         :param file_name_list: list of string of file names
         :return: a list of 2-tuple (time as creation time, string as file name)
         """
-        timelist = []
+        # Check requirements
+        assert isinstance(file_name_list, list), 'Input must be a list'
+
+        time_file_list = list()
+
         for filename in file_name_list:
+            # Check whether file exists
+            assert os.path.exists(filename), 'Given file %s does not exist for file time information.' % filename
+
             # modification time: return is float
-            mod_time = os.path.getmtime(filename)
+            # mod_time = os.path.getmtime(filename)
+            # create_time = time.ctime(create_time) # as string
+            # create_time = time.strptime(create_time)
+            # After experiments, this is the most suitable way
             create_time = os.path.getctime(filename)
-            timelist.append((create_time, filename))
+            time_file_list.append((create_time, filename))
+        # END-FOR (file_name)
 
-            #... print mod_time, create_time, mod_time-create_time
-            create_time = time.ctime(create_time) # as string
+        # Sort list by time
+        time_file_list = sorted(time_file_list)
 
-            create_time = time.strptime(create_time)
-            #... print create_time, type(create_time)
+        if self.__DEBUG__ is True:
+            delta_t = 3600*24
+            for i in xrange(len(time_file_list)-1):
+                d_epoch = time_file_list[i+1][0] - time_file_list[i][0]
+                if d_epoch > delta_t:
+                    print "Delta Day = %.2f" % (d_epoch/delta_t)
 
-        # Sort time
-        timelist = sorted(timelist)
+        return time_file_list
 
-        deltaT = 3600*24
-        for i in xrange(len(timelist)-1):
-            d_epoch = timelist[i+1][0] - timelist[i][0]
-            if d_epoch > deltaT:
-                print "Delta Day = %.2f" % (d_epoch/deltaT)
-
-        return timelist
-
-    def get_run_info(self, ipts_number):
-        """
-        Get runs' information of an IPTS
-        :param ipts_number: integer as IPTS number
+    def get_experiment_run_info(self):
+        """ Get runs' information of an IPTS
+        Purpose:
+            Get data path information for all runs of an IPTS number
+        Requirements
+            A valid IPTS-number is set before
+        Guarantees:
+            Experimental run information including run number, creation time and full file path will be returned
         :return: list of 3-tuples
         """
-        ipts_home_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d/data' % ipts_number)
-        print '[DB] IPTS dir is %s' % ipts_home_dir
-
-        run_tup_list = self.get_run_info_dir(ipts_home_dir)
+        # Get run
+        run_tup_list = self.get_experiment_run_info_from_directory(self._iptsRootDir)
 
         assert(isinstance(run_tup_list, list))
-        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), ipts_home_dir)
+        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsRootDir)
 
         return run_tup_list
 
-    def get_run_info_dir(self, ipts_home_dir):
-        """
-        Get information of runs in a directory.
+    @staticmethod
+    def get_experiment_run_info_from_directory(directory):
+        """ Get information of standard SNS event NeXus files in a given directory.
+        Purpose:
+            Get full path of all SNS event NeXus files from a directory
+        Requirements:
+            Given directory does exist
+        Guarantees:
+            Experimental run information including run number, creation time and full file path will be returned
+        Note:
+            Data archiving might put wrong time stamps on the event NeXus files.  For example,
+            the creation time sometime is later than modified time.  In this case,
+            return the earliest time between creation time and modified time.
+
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
-        :param ipts_home_dir:
+        :param directory:
         :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
         """
         # Get home directory for IPTS
-        if os.path.exists(ipts_home_dir) is False:
-            raise RuntimeError('IPTS directory %s cannot be found.' % ipts_home_dir)
+        assert os.path.exists(directory), 'IPTS directory %s cannot be found.' % directory
 
         # List all files
-        all_file_list = os.listdir(ipts_home_dir)
+        all_file_list = os.listdir(directory)
         run_tup_list = []
         for file_name in all_file_list:
             # skip non-event Nexus file
             if file_name.endswith('_event.nxs') is False:
                 continue
             else:
-                full_path_name = os.path.join(ipts_home_dir, file_name)
+                full_path_name = os.path.join(directory, file_name)
 
             # get file information
+            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
             ipts_number, run_number = vdrivehelper.getIptsRunFromFileName(file_name)
             create_time = os.path.getctime(full_path_name)
-            # NOTE: This is a fix to bad /SNS/ file system
             modify_time = os.path.getmtime(full_path_name)
             if modify_time < create_time:
                 create_time = modify_time
@@ -152,91 +200,125 @@ class DataArchiveManager(object):
 
         return run_tup_list
 
-    def searchRuns(self, deltaDays):
-        """ Search files under IPTS imbed
+    def search_experiment_runs_by_time(self, delta_days):
+        """ Search files under IPTS and return with the runs created within a certain
+        days from its previous run.
+        For example, if run i is delta_days+1 days earlier than run i+1, then only
+        all the runs before run i will be grouped in a sub list
 
-        Exceptions: NotImplementedError, 
+        Purpose:
 
-        Return: a list of list of 2-tuple.  
-                Each element list contains runs that are in same experiment.  
-                Element of sub list is 2-tuple as epoch time and file name with full path
+        Requirements:
+            delta_days must be an integer
+        Guarantees:
+
+        :exception: RuntimeError, AssertionError
+
+        :param delta_days: number of days to search from the first run
+
+        :return: a LIST of LISTs of 2-tuple.
+                 Each element list contains runs that are in same experiment.
+                 Element of sub list is 2-tuple as epoch time and file name with full path
         """
-        # Check status
+        # Check requirements
         if self._iptsNo is None:
-            raise NotImplementedError('IPTS number has not been set up.')
+            raise RuntimeError('IPTS number has not been set up.')
+        assert isinstance(delta_days, int), 'Input delta of days must be an integer.'
 
-        # List all the files
-        datafiledir = os.path.join(self._iptsDir, 'data')
-        filenamelist = []
-
-        for filename in os.listdir(datafiledir): 
-            if filename.endswith("_event.nxs") is True: 
+        # Get the list of event NeXus files under the IPTS's data directory
+        # TODO/FIXME/NOW: This following section of codes are used at least twice in this class. It should be
+        #                 converted to a method
+        event_file_list = list()
+        for filename in os.listdir(self._iptsDataDir):
+            if filename.endswith("_event.nxs") is True:
+                # not sure whether the returned file names are of relative path or absolute path
                 filename = os.path.basename(filename)
-                filename = os.path.join(datafiledir, filename)
-                filenamelist.append(filename)
-        # ENDFOR
+                filename = os.path.join(self._iptsDataDir, filename)
+                event_file_list.append(filename)
+        # END-FOR
 
-        # Get detailed creation time information: element is 2-tuple (epochtime, filename)
-        timefilelist = []
-        print "[DB] Number of files = ", len(filenamelist)
-        for filename in filenamelist:
+        # Get detailed creation time information: element is 2-tuple (epoch time, filename) and sort by time
+        time_file_list = []
+        for filename in event_file_list:
             create_time = os.path.getctime(filename)
-            print "Creation time = ", create_time, filename
-            timefilelist.append((create_time, filename))
-        # ENDFOR
-        timefilelist = sorted(timefilelist)
+            # print "Creation time = ", create_time, filename
+            time_file_list.append((create_time, filename))
+        # END-FOR
+        time_file_list = sorted(time_file_list)
 
-        # Find delta T more than 2 days
         # TODO : Need an elegant algorithm/method to set up the output list
-        deltaT = deltaDays*24*3600.
-        print "[DB] Delta T = %f" % (deltaT)
+        # convert delta days to seconds
+        delta_seconds = delta_days * 24 * 3600.
+        print "[DB] Delta T = %f" % delta_seconds
 
-        periodlist = []
-        sublist = [timefilelist[1]]
-        timeprev = timefilelist[0][0]
+        # the list of list as return
+        period_list = list()
+        # the sub list inside period_list.  The first run always serves as the start
+        sub_list = [time_file_list[0]]
+        # time 0
+        prev_time = time_file_list[0][0]
        
-        for i in xrange(1, len(timefilelist)):
-            timenow = timefilelist[i][0]
-            timediff = timenow-timeprev
-            if  timediff < deltaT:
-                # append current one to the list
-                sublist.append(timefilelist[i])
+        for i in xrange(1, len(time_file_list)):
+            # Get the difference in time between previous time and current time
+            curr_time = time_file_list[i][0]
+            assert isinstance(curr_time, float)
+
+            diff_time = curr_time - prev_time
+            if diff_time < delta_seconds:
+                # append current run to current sub list
+                sub_list.append(time_file_list[i])
             else:
                 # start a new element in the period list as time are too sparse
-                periodlist.append(sublist[:])
-                # append first one 
-                sublist = [timefilelist[i]]
-                timeprev = timefilelist[i][0]
-                print "[DB] Appending file %d  b/c time diff = %f" % (i, timediff)
-            # ENDIF
+                period_list.append(sub_list[:])
+                # reset sub list by starting with the first one run after big gap
+                sub_list = [time_file_list[i]]
+                prev_time = time_file_list[i][0]
+            # END-IF
+        # END-FOR
 
-        # ENDFOR
-        periodlist.append(sublist)
+        # Don't forget the last sub list
+        period_list.append(sub_list)
 
-        # DEBUG OUTPUT
-        gindex = 0
-        for sublist in periodlist:
-            print "Group ", gindex, " Start @ ", sublist[0][0], " Size = ", len(sublist)
-            gindex += 1
+        if self.__DEBUG__:
+            # DEBUG OUTPUT
+            gindex = 0
+            for sublist in period_list:
+                print "Group ", gindex, " Start @ ", sublist[0][0], " Size = ", len(sublist)
+                gindex += 1
 
-        return periodlist
+        return period_list
 
-    def setIPTS(self, ipts):
-        """ Set ITPS 
+    def set_ipts_number(self, ipts):
+        """ Set ITPS
+        Purpose:
+            By given an IPTS number, set up the IPTS number of this and also its data directory and
+            IPTS root directory
+        Requirements:
+            IPTS is an integer and valid
+        Guarantees:
+            IPTS root directory and data directory will be set up.
         """
-        self._iptsNo = ipts
-        self._iptsDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d'%(ipts))
+        assert isinstance(ipts, int), 'Given IPTS number must be an integer'
 
-        return os.path.exists(self._iptsDir)
+        # Set
+        self._iptsNo = ipts
+        self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % (ipts))
+        self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
+
+        # Check
+        assert os.path.exists(self._iptsRootDir), 'IPTS root directory %s does not exist.' % self._iptsRootDir
+        assert os.path.exists(self._iptsDataDir), 'IPTS data directory %s does not exist.' % self._iptsDataDir
+
+        return
 
     def set_data_root_path(self, root_dir):
-        """ Set up root path such as /SNS/ 
-
-        Exception: 
+        """ Set up root path such as /SNS/
+        :exception: RuntimeError if given root directory is not
+        :param root_dir: root archive directory
         """
         # Determine 2 cases
-        if root_dir.count(self._instrumentName.upper()) is False:
-            self._archiveRootDirectory = os.path.join(root_dir, self._instrumentName.upper())
+        if root_dir.count(self._dataArchiveInstrumentName.upper()) is False:
+            self._archiveRootDirectory = os.path.join(root_dir, self._dataArchiveInstrumentName.upper())
         else:
             self._archiveRootDirectory = root_dir
 
@@ -313,19 +395,19 @@ def save_to_xml(save_dict, xml_file_name):
     return
 
 
-
 def testmain():
     """
     """
     mhelper = DataArchiveManager('vulcan')
     mhelper.set_data_root_path('/SNS/')
-    exists = mhelper.setIPTS(12240)
-    if exists is False:
-        print "IPTS 12240 does not exist."
+    try:
+        mhelper.set_ipts_number(12240)
+    except AssertionError as e:
+        print "IPTS 12240 does not exist due to %s." % str(e)
         sys.exit(1)
 
-    filenames = mhelper.searchRuns()
-    timelist = mhelper.getFilesInfo(filenames)
+    filenames = mhelper.search_experiment_runs_by_time()
+    timelist = mhelper.get_files_time_information(filenames)
     mhelper.rollBack(timelist[0][0])
 
     timeformat = "%Y-%m-%d %H:%M:%S"
@@ -356,12 +438,13 @@ def utilmain(argv):
     """
     mhelper = DataArchiveManager('vulcan')
     mhelper.set_data_root_path('/SNS/')
-    exists = mhelper.setIPTS(10076)
-    if exists is False:
-        print "IPTS 12240 does not exist."
+    try:
+        mhelper.set_ipts_number(10076)
+    except AssertionError as e:
+        print "IPTS 12240 does not exist due to %s" % str(e)
         sys.exit(1)
 
-    timefilenamelistlist = mhelper.searchRuns(100000)
+    timefilenamelistlist = mhelper.search_experiment_runs_by_time(100000)
 
     # suppose only 1 item in list
     timefilenamelist = sorted(timefilenamelistlist[0])
