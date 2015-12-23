@@ -27,7 +27,6 @@ class PowderReductionParameters:
     def __init__(self):
         """ Initialization
         """
-        raise NotImplementedError('It has not been designed well how to use this class!')
         # binning parameters
         self._binStep = -0.001
         self._tofMin = None
@@ -48,18 +47,104 @@ class PowderReductionParameters:
         self._lowResTOFoffset   = -1
         self._wavelengthMin     = 0.0
 
+        raise NotImplementedError('It has not been designed well how to use this class!')
+
         return
 
     @property
     def binStep(self):
         """
-
+        Purpose:
+            Get the binning step
+        Guarantees:
         :return:
         """
+        return self._binStep
+
+    @binStep.setter
+    def binStep(self, value):
+        """
+        Purpose: Set up bin size (or say bin step)
+        Requirements: input value must be a float
+        :param value:
+        :return:
+        """
+        assert isinstance(value, float)
+        self._binStep = value
+
         return
 
-    BlaBlaBlaBla
+    @property
+    def min_tof(self):
+        """ Return mininum TOF
+        :return:
+        """
+        return self._tofMin
 
+    @min_tof.setter
+    def min_tof(self, value):
+        """
+        Purpose: set up the minimum TOF value
+        Requirements: input value must be either None for automatic min value or a postive float number,
+        which is smaller than maxTOF if is set up
+        :return:
+        """
+        # check requirements
+        assert (value is None) or isinstance(value, float)
+
+        # set up for None issue
+        if value is None:
+            # auto mode
+            self._tofMin = None
+        else:
+            # explicit set up
+            assert value > 0
+
+            if self._tofMax is None:
+                self._tofMin = value
+            else:
+                assert value < self._tofMax
+                self._tofMin = value
+            # END-IF-ELSE
+        # END-IF
+
+        return
+
+    @property
+    def max_tof(self):
+        """ Return maximum TOF
+        :return:
+        """
+        return self._tofMax
+
+    @max_tof.setter
+    def max_tof(self, value):
+        """
+        Purpose: set up the maximum TOF value
+        Requirements: input value must be either None for automatic min value or a postive float number,
+        which is smaller than maxTOF if is set up
+        :return:
+        """
+        # check requirements
+        assert (value is None) or isinstance(value, float)
+
+        # set up for None issue
+        if value is None:
+            # auto mode
+            self._tofMax = None
+        else:
+            # explicit set up
+            assert value > 0
+
+            if self._tofMin is None:
+                self._tofMax = value
+            else:
+                assert value > self._tofMin
+                self._tofMax = value
+            # END-IF-ELSE
+        # END-IF
+
+        return
 
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
@@ -336,9 +421,44 @@ class ReductionManager(object):
         :param van_run_number:
         :return:
         """
-        # TODO/NOW Implement it!
-        raise NotImplementedError('ASAP')
-        return self._tempSmoothedVanadiumWS
+        # Check requirements
+        assert isinstance(van_run_number, int)
+        assert self.does_van_ws_exist(van_run_number)
+
+        # Call method to smooth vnadium
+        smooth_parameter = self._redctionParameter.vanadium_smooth_parameter
+        temp_van_ws_name = self._workspaceManager.get_vanadium_workspace_name('smooth')
+        mantid.SmoothVanadium(van_run_number, temp_van_ws_name, smooth_parameter)
+
+        return temp_van_ws_name
+
+    @property
+    def time_focus_calibration_file(self):
+        """ Get the full path of time focusing calibration file
+        Requirements:
+            the calibration file should have been set up
+        Guarantees:
+            calibration file with pull path
+        :return:
+        """
+        assert self._focusCalibrationFile is not None
+        return self._focusCalibrationFile
+
+    @time_focus_calibration_file.setter
+    def time_focus_calibration_file(self, value):
+        """
+        Purpose: set up the calibration file for time focusing
+        Requirements: value must be a string and file exists
+        Guarantees: calibration file is set up.
+        :param value:
+        :return:
+        """
+        assert isinstance(value, str)
+        assert os.path.exists(value), 'Input file path %s does not exist.' % value
+
+        self._focusCalibrationFile = value
+
+        return
 
     def set_focus_calibration_file(self, focus_calibration_file):
         """ Set time focusing calibration file
@@ -486,6 +606,7 @@ class ReductionManager(object):
 
     def setParameters(self, paramdict):
         """ Set parameters for reduction
+        Purpose:
         """
         if binparam is not None:
             if len(binparam) == 3:
