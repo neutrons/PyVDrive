@@ -156,10 +156,11 @@ class DataArchiveManager(object):
                                                 'current IPTS number %d.' % (ipts_number, self._iptsNo)
 
         # Get run
-        run_tup_list = self.get_experiment_run_info_from_directory(self._iptsRootDir)
+        run_tup_list = self.get_experiment_run_info_from_directory(self._iptsDataDir)
 
         assert(isinstance(run_tup_list, list))
-        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsRootDir)
+        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsDataDir)
+        print
 
         return run_tup_list
 
@@ -311,7 +312,7 @@ class DataArchiveManager(object):
 
         # Set
         self._iptsNo = ipts
-        self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % (ipts))
+        self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts)
         self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
 
         # Check

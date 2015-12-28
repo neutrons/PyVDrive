@@ -20,10 +20,11 @@ DEBUGMODE = True
 DEBUGDIR = os.path.join(homedir, 'Temp')
 
 
-class PowderReductionParameters:
+class PowderReductionParameters(object):
     """ Class to contain align and focus parameters
     Many of them server as default values
     """
+    # FIXME/TODO/NOW Improve & refine!
     def __init__(self):
         """ Initialization
         """
@@ -46,8 +47,6 @@ class PowderReductionParameters:
         self._removePromptPulseWidth = 0.0
         self._lowResTOFoffset   = -1
         self._wavelengthMin     = 0.0
-
-        raise NotImplementedError('It has not been designed well how to use this class!')
 
         return
 
@@ -144,6 +143,8 @@ class PowderReductionParameters:
             # END-IF-ELSE
         # END-IF
 
+        return
+
     def set_from_dictionary(self, param_dict):
         """
         TODO/NOW/DOC + Fill-in
@@ -151,21 +152,20 @@ class PowderReductionParameters:
         :return:
         """
         # Check requirements
+        print 'Fill me'
 
-        #
-
-        if binparam is not None:
-            if len(binparam) == 3:
-                self._binParam = binparam
+        # Set
+        for param_name in param_dict:
+            if param_name in dir(self):
+                setattr(self, param_name, param_dict[param_name])
+            elif param_name in self.__dict__:
+                setattr(self, param_name, param_dict[param_name])
             else:
-                raise NotImplementedError("Input bin parameters must be a list of 3 elements")
-        # ENDIF(binparam)
-
-
-        raise NotImplementedError("Need to figure out which parameters required.")
-
+                pass
+                # print '[DB] Parameter %s is not an attribute' % param_name
 
         return
+
 
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
@@ -180,7 +180,7 @@ class DataReductionTracker(object):
             3. vanadium calibration is a string for calibration file. it could be none
         :return:
         """
-        # check requirements
+        # Check requirements
         assert isinstance(run_number, int)
         assert isinstance(file_path, str)
         assert vanadium_calibration is None or isinstance(vanadium_calibration, str)
@@ -265,6 +265,9 @@ class ReductionManager(object):
         assert instrument in ReductionManager.SUPPORTED_INSTRUMENT, \
             'Instrument %s is not in the supported instruments (%s).' % (instrument,
                                                                          ReductionManager.SUPPORTED_INSTRUMENT)
+
+        # Reduction parameters
+        self._reductionParameters = PowderReductionParameters()
 
         # Set up including default
         self._myInstrument = instrument
@@ -397,7 +400,7 @@ class ReductionManager(object):
         :param run_number:
         :return:
         """
-        # TODO/DOC/COMPLETE IT
+        # TODO/DOC/COMPLETE IT 1st
 
         # Check
         assert isinstance(run_number)
@@ -418,18 +421,18 @@ class ReductionManager(object):
             wksplist = [wksp]
 
         # Filter bad pulses as an option
-        if self._reductionParameter.filterBadPulese is True:
+        if self._reductionParameters.filterBadPulese is True:
             self._filterBadPulese(run_number)
 
         # Align and focus
         self.align_and_focus(run_number)
 
         # Normalize by current as an option
-        if self._reductionParameter.normalizeByCurrent:
+        if self._reductionParameters.normalizeByCurrent:
             self.noramlize_by_current(run_number)
 
         # Normalize/calibrate by vanadium
-        if self._reductionParameter.calibrateByVanadium is True:
+        if self._reductionParameters.calibrateByVanadium is True:
             self.normalizeByVanadium(run_number)
 
         return
@@ -642,7 +645,7 @@ class ReductionManager(object):
         # TODO/NOW/Doc and etc
         # Check requirements
 
-        assert self._reductionParamters is not None
+        assert self._reductionParameters is not None
 
         self._reductionParameters.set_from_dictionary(param_dict)
 

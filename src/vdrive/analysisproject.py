@@ -1,7 +1,7 @@
 __author__ = 'wzz'
 
 
-class AnalysisProject:
+class AnalysisProject(object):
     """ VDrive Analysis Project
     """
     def __init__(self):

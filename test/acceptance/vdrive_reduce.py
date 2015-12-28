@@ -226,23 +226,24 @@ def reduce_data(step):
     # set up reduction parameters
     outputdir = os.getcwd()
     paramdict = {
-            "Extension": "_event.nxs",
-            "PreserveEvents": True,
-            "Binning" : -0.001,
-            "OutputDirectory" : outputdir, 
-            "NormalizeByCurrent":  False,
-            "FilterBadPulses": False,
-            "CompressTOFTolerance": False,
-            "FrequencyLogNames": "skf1.speed",
-            "WaveLengthLogNames": "skf12.lambda"
-            }
+        "Extension": "_event.nxs",
+        "PreserveEvents": True,
+        "Binning" : -0.001,
+        "OutputDirectory" : outputdir,
+        "NormalizeByCurrent":  False,
+        "FilterBadPulses": False,
+        "CompressTOFTolerance": False,
+        "FrequencyLogNames": "skf1.speed",
+        "WaveLengthLogNames": "skf12.lambda",
+    }
+
     workflow.set_reduction_parameters(paramdict)
 
     # reduce
-    reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
+    reduction_list = [(57075, True)]
+    workflow.set_reduction_flag(file_flag_list=reduction_list, clear_flags=True)
 
-    wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
-    wkflow.reduce_runs(normByVan=False, tofmin=None, tofmax=None)
+    workflow.reduce_data_set(norm_by_vanadium=False)
 
     return
 

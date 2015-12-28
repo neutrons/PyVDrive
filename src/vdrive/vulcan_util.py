@@ -85,7 +85,7 @@ def getLogsList(vandbfile):
     return (titlelist, examples)
     
 
-class AutoVanadiumCalibrationLocator:
+class AutoVanadiumCalibrationLocator(object):
     """ Class to locate calibration file automatically
     """
     def __init__(self, ipts, base_path='/SNS/VULCAN/', vrecordfile=None, autorecordfile=None):

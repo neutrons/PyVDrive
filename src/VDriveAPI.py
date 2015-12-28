@@ -263,7 +263,6 @@ class VDriveAPI(object):
         """
         try:
             if isinstance(ipts, int):
-                ipts_number = ipts
                 run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts)
             elif isinstance(ipts, str):
                 ipts_dir = ipts
@@ -390,16 +389,31 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self):
+    def reduce_data_set(self, norm_by_vanadium=False):
         """ Reduce a set of data
         Purpose:
             Reduce a set of event data
         Requirements:
             Project is well set up
+            - At least more than 1 run is set to reduce
+            -
         Guarantees:
             Event data will be reduced to diffraction pattern.
         :return: 2-tuple (boolean, object)
         """
+        # Check requirements
+        print 'Fill-in'
+
+        # Reduce vanadium run for calibration
+        if norm_by_vanadium is True:
+            try:
+                self._myProject.reduce_vanadium_runs()
+            except RuntimeError as run_err:
+                err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
+                return False, err_msg
+        # END-IF (nom_by_vanadium)
+
+        # Reduce runs
         try:
             self._myProject.reduce_data()
 
@@ -423,6 +437,40 @@ class VDriveAPI(object):
             return False, 'Directory %s cannot be found.' % root_dir
 
         self._myArchiveManager.set_data_root_path(root_dir)
+
+        return True, ''
+
+    def set_reduction_flag(self, file_flag_list, clear_flags):
+        """ Turn on the flag to reduce for files in the list
+        TODO/FIXME/NOW Doc and Fill-in
+
+        :param file_flag_list: list of tuples as "base" file name and boolean flag
+        :param clear_flags: clear reduction previously-set reduction flags
+        :return:
+        """
+        # Check requirements
+        print 'Fill me'
+
+        # Clear
+        if clear_flags is True:
+            self._myProject.clear_flag()
+
+        # Set flags
+        num_flags_set = 0
+        err_msg = ''
+        for run_number, reduction_flag in file_flag_list:
+            good, temp_msg = self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
+            if good:
+                num_flags_set += 1
+            else:
+                err_msg += temp_msg + '\n'
+        # END-FOR
+
+        # Return with error
+        if err_msg != '':
+            return False, '%d of %d runs cannot be set to reduce due to %s. ' % (
+                len(file_flag_list)-num_flags_set, len(file_flag_list), err_msg
+            )
 
         return True, ''
 
@@ -562,13 +610,20 @@ class VDriveAPI(object):
 
     def set_ipts(self, ipts_number):
         """ Set IPTS to the workflow
-        :param ipts_number: intege for IPTS number
+        Purpose
+
+        Requirement:
+
+        Guarantees:
+
+        :param ipts_number: integer for IPTS number
         :return:
         """
-        try:
-            self._currentIPTS = int(ipts_number)
-        except ValueError as e:
-            return False, 'Unable to set IPTS number due to %s.' % str(e)
+        # Requirements
+        assert isinstance(ipts_number, int)
+        assert ipts_number > 0
+
+        self._myArchiveManager.set_ipts_number(ipts_number)
 
         return True, ''
 
