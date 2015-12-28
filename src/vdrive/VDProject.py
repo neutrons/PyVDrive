@@ -19,6 +19,10 @@ class VDProject:
 
         # Data structure to manage split run: key run number or file name
         self._splitWorkspaceDict = dict()
+
+        # Reduction manager
+        # FIXME - Need to make the setup of instrument more flexible.
+        self._reductionManager = prl.ReductionManager(instrument='VULCAN')
         
         return
 
@@ -259,6 +263,31 @@ class VDProject:
         futil.save_xml(save_dict, out_file_name)
 
         return None
+
+    def set_focus_calibration_file(self, focus_cal_file):
+        """
+        TODO/DOC/NOW
+        :param focus_cal_file:
+        :return:
+        """
+        self._reductionManager.set_focus_calibration_file(focus_cal_file)
+
+        return
+
+    def set_reduction_parameters(self, parameter_dict):
+        """
+        TODO/DOC/NOW
+        Requirements:
+        - reduction mamager is available
+        :param parameter_dict:
+        :return:
+        """
+        # Check requirements
+        print 'Fill me'
+
+        self._reductionManager.set_parameters(parameter_dict)
+
+        return
 
     def setBaseDataPath(self, datadir):
         """ Set base data path such as /SNS/VULCAN/

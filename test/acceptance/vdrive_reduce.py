@@ -236,7 +236,7 @@ def reduce_data(step):
             "FrequencyLogNames": "skf1.speed",
             "WaveLengthLogNames": "skf12.lambda"
             }
-    workflow.set_reduction_parameters('Test001', paramdict)
+    workflow.set_reduction_parameters(paramdict)
 
     # reduce
     reductionlist = [ ('VULCAN_57075_event.nxs', True) ]

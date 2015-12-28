@@ -585,7 +585,7 @@ class VDriveAPI(object):
         assert isinstance(parameter_dict, dict)
 
         try:
-            self._myProject.set_reduction_parameters()
+            self._myProject.set_reduction_parameters(parameter_dict)
             status = True
             error_msg = ''
         except RuntimeError as re:

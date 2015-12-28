@@ -755,7 +755,7 @@ class VDriveAPI:
         """
         self._checkProjectExistence(projname, "set characterization file")
         
-        self._rProjectDict[projname].setParameters(reductionparamdict)
+        self._rProjectDict[projname].set_parameters(reductionparamdict)
         
         return
         

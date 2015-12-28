@@ -144,6 +144,27 @@ class PowderReductionParameters:
             # END-IF-ELSE
         # END-IF
 
+    def set_from_dictionary(self, param_dict):
+        """
+        TODO/NOW/DOC + Fill-in
+        :param param_dict:
+        :return:
+        """
+        # Check requirements
+
+        #
+
+        if binparam is not None:
+            if len(binparam) == 3:
+                self._binParam = binparam
+            else:
+                raise NotImplementedError("Input bin parameters must be a list of 3 elements")
+        # ENDIF(binparam)
+
+
+        raise NotImplementedError("Need to figure out which parameters required.")
+
+
         return
 
 class DataReductionTracker(object):
@@ -249,6 +270,9 @@ class ReductionManager(object):
         self._myInstrument = instrument
         self._myTimeFocusFile = None
         self._reductionTrackDict = dict()
+
+        # time focusing calibration file
+        self._focusCalibrationFile = None
 
         return
 
@@ -468,8 +492,10 @@ class ReductionManager(object):
         :return:
         """
         # TODO/NOW/Complete it
-        blabla
+        # Check requirements
+        print 'Fill me'
 
+        # Set value
         self._focusCalibrationFile = focus_calibration_file
 
         return
@@ -603,23 +629,24 @@ class ReductionManager(object):
 
         return
 
-
-    def setParameters(self, paramdict):
+    def set_parameters(self, param_dict):
         """ Set parameters for reduction
         Purpose:
+
+        Requirements:
+
+        Guarantees:
+        :param param_dict:
+        :return:
         """
-        if binparam is not None:
-            if len(binparam) == 3:
-                self._binParam = binparam
-            else:
-                raise NotImplementedError("Input bin parameters must be a list of 3 elements")
-        # ENDIF(binparam)
+        # TODO/NOW/Doc and etc
+        # Check requirements
 
+        assert self._reductionParamters is not None
 
+        self._reductionParameters.set_from_dictionary(param_dict)
 
-
-        raise NotImplementedError("Need to figure out which parameters required.")
-
+        return
 
     def setTimeFilter(self, tmin, tmax, tstep):
         """ Set event filtering
