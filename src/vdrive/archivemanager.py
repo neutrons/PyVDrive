@@ -136,7 +136,7 @@ class DataArchiveManager(object):
 
         return time_file_list
 
-    def get_experiment_run_info(self):
+    def get_experiment_run_info(self, ipts_number=None):
         """ Get runs' information of an IPTS
         Purpose:
             Get data path information for all runs of an IPTS number
@@ -144,8 +144,17 @@ class DataArchiveManager(object):
             A valid IPTS-number is set before
         Guarantees:
             Experimental run information including run number, creation time and full file path will be returned
+        :param ipts_number: IPTS number to match the current IPTS number
         :return: list of 3-tuples
         """
+        # Check requirements
+        assert self._iptsNo is not None, 'No valid IPTS number has been assigned to ArchiveManager.'
+        assert isinstance(ipts_number, int) or ipts_number is None
+        if ipts_number is not None:
+            # check whether given IPTS number matches the previously set up one.
+            assert ipts_number == self._iptsNo, 'Input IPTS number %d does not match the ' \
+                                                'current IPTS number %d.' % (ipts_number, self._iptsNo)
+
         # Get run
         run_tup_list = self.get_experiment_run_info_from_directory(self._iptsRootDir)
 

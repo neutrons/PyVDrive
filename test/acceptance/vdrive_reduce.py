@@ -88,6 +88,7 @@ def setup_ipts(step):
     wk_flow = my_data.get()
 
     # Set up IPTS
+    assert ipts_number is not None
     wk_flow.set_ipts(ipts_number)
 
     # Get runs
