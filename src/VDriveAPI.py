@@ -417,9 +417,12 @@ class VDriveAPI(object):
         # END-IF (nom_by_vanadium)
 
         # Reduce runs
+        status, ret_obj = self._myProject.reduce_runs()
+        # FIXME/TODO/SOON/NOW Remove the previous line!
         try:
             status, ret_obj = self._myProject.reduce_runs()
         except AssertionError as re:
+            print '[ERROR] Assertion error from reduce_runs.'
             status = False
             ret_obj = str(re)
 
@@ -452,17 +455,17 @@ class VDriveAPI(object):
 
         # Clear
         if clear_flags is True:
-            self._myProject.clear_flag()
+            self._myProject.clear_reduction_flags()
 
         # Set flags
         num_flags_set = 0
         err_msg = ''
         for run_number, reduction_flag in file_flag_list:
-            good, temp_msg = self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
-            if good:
+            try:
+                self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
                 num_flags_set += 1
-            else:
-                err_msg += temp_msg + '\n'
+            except AssertionError as e:
+                err_msg += 'Unable to set flag to run %d due to %s\n' % (run_number, str(e))
         # END-FOR
 
         # Return with error

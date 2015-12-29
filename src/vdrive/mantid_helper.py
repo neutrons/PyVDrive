@@ -271,7 +271,6 @@ def retrieve_workspace(ws_name):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
-
 def splitted_ws_base_name(run_number, out_base_name):
     """
     Workspace name for splitted event data
@@ -343,3 +342,17 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, splitted
     ret_obj = (split_ws_name_list, ret_list[3:])
 
     return True, ret_obj
+
+
+def workspace_does_exist(workspace_name):
+    """ TODO/NOW/DOC
+    :param workspace_name:
+    :return:
+    """
+    # Check
+    assert isinstance(workspace_name, str), 'Workspace name must be string but not %s.' % str(type(workspace_name))
+
+    #
+    does_exist = mantid.AnalysisDataService.doesExist(workspace_name)
+
+    return does_exist

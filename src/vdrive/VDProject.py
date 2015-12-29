@@ -71,6 +71,15 @@ class VDProject(object):
 
         return
 
+    def clear_reduction_flags(self):
+        """ Set to all runs' reduction flags to be False
+        :return:
+        """
+        # TODO/NOW:  doc
+        for run_number in self._sampleRunReductionFlagDict.keys():
+            self._sampleRunReductionFlagDict[run_number] = False
+
+
     def clear_runs(self):
         """
         Purpose:
@@ -146,6 +155,19 @@ class VDProject(object):
         """
         # TODO -Doc
         return len(self._dataFileDict)
+
+    def get_number_reduction_runs(self):
+        """
+
+        :return:
+        """
+        # TODO - DOC
+        num_to_reduce = 0
+        for run_number in self._sampleRunReductionFlagDict.keys():
+            if self._sampleRunReductionFlagDict[run_number]:
+                num_to_reduce += 1
+
+        return num_to_reduce
 
     def get_run_info(self, run_number):
         """
@@ -276,7 +298,7 @@ class VDProject(object):
         # Get binning parameters and decide whether to reduce or not
         for van_run_number in van_run_number_set:
             if self._vanadiumRunsManager.has(van_run_number) is False:
-                handler = self._reductionManager.reduce_one_run(van_run_number)
+                handler = self._reductionManager.reduce_sample_run(van_run_number)
                 self._vanadiumRunsManager.set_reduced_vanadium(handler)
             # END-IF
         # END-FOR
@@ -288,6 +310,11 @@ class VDProject(object):
         Purpose:
         Requirements:
         Guarantees:
+
+        Note:
+        1. There is no need to call LoadCalFile explicitly, because AlignAndFocus() will
+           check whether the calibration file has been loaded by standard offset and group
+           workspace name.
 
         Migrated from reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
         Focus and process the selected data sets to powder diffraction data
@@ -306,14 +333,24 @@ class VDProject(object):
 
 
         """
-        # Load time focusing calibration
-        status, err_msg = self._reductionManager.load_time_focus_calibration()
-        assert status, 'Unable to load time focus calibration due to %s.' % err_msg
+        # Load time focusing calibration: there is no need to load time focus calibration
+        try:
+            self._reductionManager.load_time_focus_calibration()
+        except AssertionError, err:
+            raise RuntimeError('Unable to load time focus calibration due to %s.' % str(err))
 
         # Reduce all runs
         for run_number in self._sampleRunReductionFlagDict.keys():
             if self._sampleRunReductionFlagDict[run_number] is True:
-                self._reductionManager.reduce_one_run(run_number)
+                # Initialize trackers
+                data_file_name = self._dataFileDict[run_number][0]
+                self._reductionManager.init_tracker(run_number, data_file_name)
+
+                # Reduce
+                self._reductionManager.reduce_sample_run(run_number)
+        # END-FOR
+
+        return True, ''
 
         print 'Refactor!'
         self._lastReductionSuccess = False
@@ -453,22 +490,17 @@ class VDProject(object):
         :return:
         """
         # Check requirements
-        print 'Fill-in'
+        assert isinstance(run_number, int)
+        assert isinstance(flag, bool)
+        assert run_number in self._dataFileDict, 'Run %d is not scanned. Current scanned runs are %s.' % (
+            run_number, str(self._dataFileDict.keys()))
 
-        assert run_number in self._dataFileDict
+        # Check with full name
+        file_name = self._dataFileDict[run_number][0]
+        assert os.path.exists(file_name), 'Unable to find data file %s.' % file_name
 
-        # check with full name
-        exist = filename in self._dataFileDict
-        if exist:
-            self._reductionFlagDict[filename] = flag
-            return True
-
-        # check as base name
-        for fpname in self._dataFileDict:
-            basename = os.path.basename(fpname)
-            if basename == filename:
-                self._reductionFlagDict[fpname] = flag
-                return True
+        # Set value
+        self._sampleRunReductionFlagDict[run_number] = flag
 
         return False
 

@@ -240,18 +240,28 @@ def reduce_data(step):
     workflow.set_reduction_parameters(paramdict)
 
     # reduce
-    reduction_list = [(57075, True)]
+    reduction_list = [(58802, True)]
     workflow.set_reduction_flag(file_flag_list=reduction_list, clear_flags=True)
 
-    workflow.reduce_data_set(norm_by_vanadium=False)
+    status, ret_obj = workflow.reduce_data_set(norm_by_vanadium=False)
+    print\
+        '[Message] ', str(ret_obj)
+    print
+    assert_true(status, str(ret_obj))
 
     return
 
 @step(u'Then I check a matrix workspace generated from that run')
 def retrieveReducedData(step):
-    wkflow = my_data.get()
+    """
 
-    reducedrunlist = wkflow.getReducedRuns(projectname = 'Test001')
+    :param step:
+    :return:
+    """
+    # Get workflow
+    work_flow = my_data.get()
+
+    reducedrunlist = work_flow.getReducedRuns(projectname = 'Test001')
     numredws = len(reducedrunlist)
     assert_equals(numredws, 1)
 

@@ -11,6 +11,7 @@ homedir = os.path.expanduser('~')
 mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
 sys.path.append(mantidpath)
 
+import mantid_helper
 import mantid
 import mantid.simpleapi as mantidapi
 
@@ -72,6 +73,13 @@ class PowderReductionParameters(object):
         self._binStep = value
 
         return
+
+    @property
+    def focus_calibration_file(self):
+        """ TODO/DOC
+        :return:
+        """
+        return self._focusFileName
 
     @property
     def min_tof(self):
@@ -191,7 +199,31 @@ class DataReductionTracker(object):
         # TODO - it is not clear whether it is better to use vanadium file name or vanadium run number
         self._vanadiumCalibrationRunNumber = vanadium_calibration
 
+        # Workspaces' names
+        # event workspaces
+        self._eventWorkspace = None
+        self._operationsOnEventWS = list()
+
         return
+
+    @property
+    def event_workspace_name(self):
+        """
+        TODO/NOW/DOC
+        :return:
+        """
+        return self._eventWorkspace
+
+    @event_workspace_name.setter
+    def event_workspace_name(self, value):
+        """
+        TODO/NOW/DOC
+        :param value:
+        :return:
+        """
+        print 'Check requirements'
+
+        self._eventWorkspace = value
 
     @property
     def run_number(self):
@@ -271,7 +303,6 @@ class ReductionManager(object):
 
         # Set up including default
         self._myInstrument = instrument
-        self._myTimeFocusFile = None
         self._reductionTrackDict = dict()
 
         # time focusing calibration file
@@ -309,7 +340,7 @@ class ReductionManager(object):
         assert isinstance(self._groupWSName, str)
         assert mantid.api.AnalysisDataService.has(self._groupWSName)
         assert isinstance(self._offsetWSName, str)
-        assert AnalysisDataService.has(self._offsetWSName)
+        assert matnid.AnalysisDataService.has(self._offsetWSName)
 
         # Execute algorithm AlignAndFocusPowder()
         # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
@@ -382,7 +413,7 @@ class ReductionManager(object):
 
         return reduced_ws_name
 
-    def reduce_one_run(self, run_number):
+    def reduce_sample_run(self, run_number):
         """ Reduce one run
         Requirements:
             Run number is in list to reduce
@@ -403,18 +434,36 @@ class ReductionManager(object):
             FrequencyLogNames="skf1.speed",
             WaveLengthLogNames="skf12.lambda")
         :param run_number:
+        :param full_file_path:
         :return:
         """
         # TODO/DOC/COMPLETE IT 1st
 
         # Check
-        assert isinstance(run_number)
-        assert run_number in self._reductionTrackDict
+        assert isinstance(run_number, int), 'Run number %s to reduce sample run must be integer' % str(run_number)
+        assert run_number in self._reductionTrackDict, 'Run %d is not managed by reduction tracker. ' \
+                                                       'Current tracked runs are %s.' % \
+                                                       (run_number, str(self._reductionTrackDict.keys()))
+        tracker = self._reductionTrackDict[run_number]
+        assert isinstance(tracker, DataReductionTracker)
 
         # Get data or load
+        event_ws_name = tracker.event_workspace_name
+
+        if event_ws_name is None:
+            # never been loaded: get a name a load
+            event_ws_name = self.get_event_workspace_name(run_number)
+            data_file_name = tracker.file_path
+            mantid_helper.load_nexus(data_file_name=data_file_name, output_ws_name=event_ws_name,
+                                     meta_data_only=False)
+        else:
+            # already loaded or even processed
+            pass
+
+
         do_load = False
         try:
-            event_ws_name = self._reductionProject.get_event_workspace_name(run_number)
+            event_ws_name = self.get_event_workspace_name(run_number)
         except KeyError:
             event_ws_name = self._reductionProject.load_event_data(run_number)
 
@@ -521,47 +570,52 @@ class ReductionManager(object):
 
         return
 
+    def init_tracker(self, run_number, full_data_path):
+        """ Initialize tracker
+        :param run_number:
+        :param full_data_path: full path to the data file to reduce
+        :return:
+        """
+        # Check requirements
+        assert isinstance(run_number, int), 'Run number %s must be integer but not %s' % (str(run_number),
+                                                                                          str(type(run_number)))
+
+        # Initialize a new tracker
+        if run_number not in self._reductionTrackDict:
+            new_tracker = DataReductionTracker(run_number, file_path=full_data_path,
+                                               vanadium_calibration=None)
+            self._reductionTrackDict[run_number] = new_tracker
+
+        # Check
+        assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker), 'It is not DataReductionTracker.'
+
+        return
+
     def load_time_focus_calibration(self):
         """ Load time focusing calibration file if it has not been loaded
         :return:
         """
         # Check requirement
-        assert self._myTimeFocusFile is not None
+        assert self._reductionParameters.focus_calibration_file is not None, 'Time focus file has not been setup.'
 
         # Load calibration file if it is not loaded
         if self._myOffsetWorkspaceName is None:
+            mantidapi.LoadCalFile(InstrumentName=self._myInstrument,
+                                  CalFilename=self._reductionParameters.focus_calibration_file,
+                                  WorkspaceName=self._myInstrument,
+                                  MakeGroupingWorkspace=True,
+                                  MakeOffsetsWorkspace=True,
+                                  MakeMaskWorkspace=True)
 
-    def reduce_runs(self, vanadium_calibrate):
-        """ Reduce marked runs
-        Purpose:
+            self._myOffsetWorkspaceName = '%s_offsets' % self._myInstrument
+            self._myGroupWorkspaceName = '%s_group' % self._myInstrument
+            self._myMaskWorkspaceName = '%s_mask' % self._myMaskWorkspaceName
 
-        Requirements:
+        # Check
+        assert mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName), \
+            'Workspace %s cannot be found in AnalysisDataService.' % self._myOffsetWorkspaceName
 
-        Guarantees:
-
-        :return:
-        """
-        # TODO/NOW/Implement this!
-        # Check input
-        blabla
-
-        # Get list of runs that are marked to refine
-        blabla
-
-        # Check whether all runs to reduce have vanadium calibration set up
-        # and create a list of required vanadium calibration files
-
-
-
-        # Load vanadium calibration file if required
-        if vanadium_calibrate:
-            pass
-
-        # Reduce runs
-        for run_number in self._runsToReduce:
-            self.reduce_one_run(run_number)
-
-        return 
+        return
 
     def reduceVanadiumData(self, params):
         """ Reduce vanadium data and strip vanadium peaks
