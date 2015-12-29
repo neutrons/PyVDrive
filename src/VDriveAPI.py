@@ -399,10 +399,13 @@ class VDriveAPI(object):
             -
         Guarantees:
             Event data will be reduced to diffraction pattern.
+
+        :param norm_by_vanadium: flag to normalize the final reduction data by vanadium
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
-        print 'Fill-in'
+        num_runs_flagged = self._myProject.get_number_reduction_runs()
+        assert num_runs_flagged > 0, 'At least one run should be flagged for reduction.'
 
         # Reduce vanadium run for calibration
         if norm_by_vanadium is True:
@@ -415,12 +418,8 @@ class VDriveAPI(object):
 
         # Reduce runs
         try:
-            self._myProject.reduce_data()
-
-
-            status = True
-            ret_obj = None
-        except RuntimeError as re:
+            status, ret_obj = self._myProject.reduce_runs()
+        except AssertionError as re:
             status = False
             ret_obj = str(re)
 

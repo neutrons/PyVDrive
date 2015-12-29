@@ -277,6 +277,11 @@ class ReductionManager(object):
         # time focusing calibration file
         self._focusCalibrationFile = None
 
+        # Cached workspaces
+        self._myOffsetWorkspaceName = None
+        self._myGroupWorkspaceName = None
+        self._myMaskWorkspaceName = None
+
         return
 
     def align_and_focus(self, event_wksp, temp_ws_name):
@@ -378,7 +383,7 @@ class ReductionManager(object):
         return reduced_ws_name
 
     def reduce_one_run(self, run_number):
-        """
+        """ Reduce one run
         Requirements:
             Run number is in list to reduce
 
@@ -503,6 +508,29 @@ class ReductionManager(object):
 
         return
 
+    def clear_time_focus_calibration(self):
+        """ Clear the loaded time focusing calibration
+        :return:
+        """
+        if self._myGroupWorkspaceName is not None:
+            mantidapi.DeleteWorkspace(Workspace=self._myGroupWorkspaceName)
+        if self._myOffsetWorkspaceName is not None:
+            mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+        if self._myMaskWorkspaceName is not None:
+            mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+
+        return
+
+    def load_time_focus_calibration(self):
+        """ Load time focusing calibration file if it has not been loaded
+        :return:
+        """
+        # Check requirement
+        assert self._myTimeFocusFile is not None
+
+        # Load calibration file if it is not loaded
+        if self._myOffsetWorkspaceName is None:
+
     def reduce_runs(self, vanadium_calibrate):
         """ Reduce marked runs
         Purpose:
@@ -523,9 +551,7 @@ class ReductionManager(object):
         # Check whether all runs to reduce have vanadium calibration set up
         # and create a list of required vanadium calibration files
 
-        # Load calibration file if it is not loaded
-        if self._myGroupWSName is None or self._myOffsetWSName is None:
-            self.load_focus_calibration()
+
 
         # Load vanadium calibration file if required
         if vanadium_calibrate:

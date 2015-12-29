@@ -13,9 +13,19 @@ class VDProject(object):
         """ Init
         """
         self._name = project_name
-        self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+        # dictionary for the information of run number, file name and IPTS
+        # key: run number, value: 2-tuple (file name, IPTS)
+        self._dataFileDict = dict()
+        # List of data file's base name
         self._baseDataFileNameList = list()
+        # Data path.  With baseDataFileName, a full path to a data set can be constructed
         self._baseDataPath = None
+        # dictionary for sample run number to be flagged to reduce.
+        # Key: run number. Value: boolean flag for reduction
+        self._sampleRunReductionFlagDict = dict()
+        # dictionary for sample run mapping to vanadium run
+        # Key: sample run number of type integer; Value: vanadium run number in type of integer
+        self._sampleRunVanadiumDict = dict()
 
         # Data structure to manage split run: key run number or file name
         self._splitWorkspaceDict = dict()
@@ -244,16 +254,41 @@ class VDProject(object):
         return self._name
 
     def reduce_vanadium_runs(self):
-        """
-        TODO/FIXME/NOW 1st : doc/fill in ...
+        """ Reduce vanadium runs
+        Purpose:
+            Get or reduce vanadium runs according to the runs that are flagged for reduction
+        Requirements:
+            There are some vanadium runs that can be found
+        Guarantees:
+            The corresponding vanadium runs are reduced with the proper binning parameters
         :return:
         """
+        # Check requirements
+        van_run_number_set = set()
+        for sample_run_number in self._sampleRunReductionFlagDict:
+            if self._sampleRunReductionFlagDict[sample_run_number] is True:
+                assert sample_run_number in self._sampleRunVanadiumDict
+                van_run_number = self._sampleRunVanadiumDict[sample_run_number]
+                van_run_number_set.add(van_run_number)
+        # END-FOR
+        assert len(van_run_number_set) > 0, 'There must be at least more than 1 vanadium runs for the sample runs.'
+
+        # Get binning parameters and decide whether to reduce or not
+        for van_run_number in van_run_number_set:
+            if self._vanadiumRunsManager.has(van_run_number) is False:
+                handler = self._reductionManager.reduce_one_run(van_run_number)
+                self._vanadiumRunsManager.set_reduced_vanadium(handler)
+            # END-IF
+        # END-FOR
 
         return
 
     def reduce_runs(self):
-        """
-        TODO/FIXME/NOW 1st: doc/fill in/modify
+        """ Reduce a set of runs without being normalized by vanadium. Mostly align and focus
+        Purpose:
+        Requirements:
+        Guarantees:
+
         Migrated from reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
         Focus and process the selected data sets to powder diffraction data
         for GSAS/Fullprof/ format
@@ -271,6 +306,15 @@ class VDProject(object):
 
 
         """
+        # Load time focusing calibration
+        status, err_msg = self._reductionManager.load_time_focus_calibration()
+        assert status, 'Unable to load time focus calibration due to %s.' % err_msg
+
+        # Reduce all runs
+        for run_number in self._sampleRunReductionFlagDict.keys():
+            if self._sampleRunReductionFlagDict[run_number] is True:
+                self._reductionManager.reduce_one_run(run_number)
+
         print 'Refactor!'
         self._lastReductionSuccess = False
 
