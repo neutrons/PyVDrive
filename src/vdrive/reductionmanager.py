@@ -2,6 +2,27 @@
 #
 # Modified SNS Powder Reduction
 #
+# Example:
+# AlignAndFocusPowder(InputWorkspace='VULCAN_80239_0', OutputWorkspace='VULCAN_80239_0',
+#        CalFileName='/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal',
+#        GroupingWorkspace='VULCAN_group',
+#        CalibrationWorkspace='VULCAN_cal',
+#        MaskWorkspace='VULCAN_mask',
+#        Params='-0.001',
+#        CompressTolerance=0,
+#        CropWavelengthMax=0,
+#        PrimaryFlightPath=43.753999999999998,
+#        SpectrumIDs='1,2',
+#        L2='2.00944,2.00944',
+#        Polar='90.122,90.122',
+#        Azimuthal='0,0', ReductionProperties='__snspowderreduction')
+# RenameWorkspace(InputWorkspace='VULCAN_80239_0', OutputWorkspace='VULCAN_80239')
+# CompressEvents(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Tolerance=0)
+# PDDetermineCharacterizations(InputWorkspace='VULCAN_80239', Characterizations='characterizations', ReductionProperties='__snspowderreduction', FrequencyLogNames='skf1.speed', WaveLengthLogNames='skf12.lambda')
+# CompressEvents(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Tolerance=0)
+# GeneratePythonScript(InputWorkspace='VULCAN_80239', Filename='/home/wzz/Projects/MantidTests/Instruments_Specific/Vulcan/Reduction/temp/VULCAN_80239.py')
+# ConvertUnits(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Target='dSpacing')
+#
 ################################################################################
 import sys
 import os
@@ -423,9 +444,13 @@ class ReductionManager(object):
     """ Class ReductionManager takes the control of reducing SNS/VULCAN's event data
     to diffraction pattern for Rietveld analysis.
 
+    * Business model and technical model
+      - Run number as integers or data file name are used to communicate with client;
+      - Workspace names are used for internal communications.
+
     Its main data structure contains
     1. a dictionary of reduction controller
-    2. a dictionary of loaded vanadium p
+    2. a dictionary of loaded vanadium
 
     ??? It is able to reduce the data file in the format of data file,
     run number and etc. 
@@ -468,7 +493,83 @@ class ReductionManager(object):
 
         return
 
-    def align_and_focus(self, event_ws_name):
+    def get_event_workspace_name(self, run_number):
+        """
+        Get or generate the name of a run
+        TODO/NOW/DOC
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int)
+
+        event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
+
+        return event_ws_name
+
+    def get_processed_vanadium(self, vanadium_run_number):
+        """ Get processed vanadium data (workspace name)
+        Purpose:
+
+        Requirements:
+
+        Guarantees
+
+        :param vanadium_run_number:
+        :return:
+        """
+        # TODO/NOW/ ... ...
+        return self._processedVanadiumWSDict[vanadium_run_number]
+
+    def get_reduced_runs(self):
+        """
+        Get the runs that have been reduced. It is just for information
+        :return:
+        """
+        return_list = list()
+        for run_number in self._reductionTrackDict.keys():
+            tracker = self._reductionTrackDict[run_number]
+            if tracker.is_reduced is True:
+                return_list.append(run_number)
+
+        return return_list
+
+    def get_reduced_workspace(self, run_number, unit='TOF', listindex=0):
+        """ Get the reduced matrix workspace
+        Requirements:
+            1. Specified run is correctly reduced;
+        Guarantees:
+            2. Return reduced workspace's name
+        Arguments:
+         - unit :: target unit; If None, then no need to convert unit
+        :param run_number:
+        :param unit:
+        :param listindex:
+        :return: Workspace (success) or 2-tuple (False and error message)
+        """
+        # TODO/NOW/FIXME - Complete it
+
+        # Check requirements
+        ChangeNextSection
+        try:
+            retws = self._anyRunWSList[listindex]
+        except IndexError:
+            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
+        print "[DB] Type of reduced workspace: ", type(retws)
+        print "[DB] Name of reduced workspace: ", str(retws)
+
+        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
+            # no request of target unit or target unit is same as current unit
+            return retws
+
+        # convert unit if necessary
+        retws = mantidapi.ConvertUnits(InputWorkspace=retws,
+                                       OutputWorkspace=retws.name(),
+                                       Target=unit,
+                                       EMode='Elastic')
+
+        return reduced_ws_name
+
+    def mtd_align_and_focus(self, event_ws_name):
         """ Align and focus raw event workspaces: the original workspace will be replaced
         Purpose:
             Run Mantid.AlignAndFocus() by current parameters
@@ -506,6 +607,7 @@ class ReductionManager(object):
             user_geometry_dict['DMin'] = 0.5
             user_geometry_dict['DMax'] = 5.5
 
+        # FIXME - Need to find out what it is in __snspowderreduction
         mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
                                       OutputWorkspace=event_ws_name+'_temp',   # in-place align and focus
                                       GroupingWorkspace=self._myGroupWorkspaceName,
@@ -520,7 +622,14 @@ class ReductionManager(object):
                                       UnwrapRef=0,              # do not use = 0
                                       LowResRef=0,              # do not use  = 0
                                       CropWavelengthMin=0,      # no in use = 0
+                                      CropWavelengthMax=0,
                                       LowResSpectrumOffset=-1,  # powgen's option. not used by vulcan
+                                      PrimaryFlightPath=43.753999999999998,
+                                      SpectrumIDs='1,2',
+                                      L2='2.00944,2.00944',
+                                      Polar='90.122,90.122',
+                                      Azimuthal='0,0',
+                                      ReductionProperties='__snspowderreduction',
                                       **user_geometry_dict)
 
         # Check
@@ -529,84 +638,38 @@ class ReductionManager(object):
 
         return True
 
-    def get_event_workspace_name(self, run_number):
+    @staticmethod
+    def mtd_filter_bad_pulses(ws_name, lowercutoff=95.):
         """
-        Get or generate the name of a run
-        TODO/NOW/DOC
-        :param run_number:
+        Filter bad pulse
+        TODO/DOC/NOW
+        :param ws_name:
+        :param lowercutoff: float as (self._filterBadPulses)
         :return:
         """
-        assert isinstance(run_number, int)
-
-        event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
-
-        return event_ws_name
-
-
-    def get_processed_vanadium(self, vanadium_run_number):
-        """ Get processed vanadium data (workspace name)
-        Purpose:
-
-        Requirements:
-
-        Guarantees
-
-        :param vanadium_run_number:
-        :return:
-        """
-        # TODO/NOW/ ... ...
-        return self._processedVanadiumWSDict[vanadium_run_number]
-
-    def get_reduced_runs(self):
-        """
-        Get the runs that have been reduced. It is just for information
-        :return:
-        """
-        return_list = list()
-        for run_number in self._reductionTrackDict.keys():
-            tracker = self._reductionTrackDict[run_number]
-            if tracker.is_reduced is True:
-                return_list.append(run_number)
-
-        return return_list
-
-    def get_reduced_workspace(self, run_number, unit='TOF', listindex=0):
-        """ Get the reduced matrix workspace
-        Purpose:
-
-        Requirements:
-            1. Specified run is correctly reduced;
-        Guarantees:
-            2. Return reduced workspace's name
-        Arguments:
-         - unit :: target unit; If None, then no need to convert unit
-
-        Return :: Workspace (success) or 2-tuple (False and error message)
-        """
-        # TODO/NOW/FIXME - Complete it
-
         # Check requirements
-        ChangeNextSection
-        try:
-            retws = self._anyRunWSList[listindex]
-        except IndexError:
-            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
-        print "[DB] Type of reduced workspace: ", type(retws)
-        print "[DB] Name of reduced workspace: ", str(retws)
+        print 'Fill me!'
 
-        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
-            # no request of target unit or target unit is same as current unit
-            return retws
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        assert isinstance(event_ws, mantid.api.IEventWorkspace), \
+            'Input workspace %s is not event workspace but of type %s.' % (ws_name, event_ws.__class__.__name__)
 
-        # convert unit if necessary
-        retws = mantidapi.ConvertUnits(InputWorkspace=retws,
-                                       OutputWorkspace=retws.name(),
-                                       Target=unit,
-                                       EMode='Elastic')
+        # Get statistic
+        num_events_before = event_ws.getNumberEvents()
 
-        return reduced_ws_name
+        mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
+                                  LowerCutoff=lowercutoff)
 
-    def noramlize_by_current(self, event_ws_name):
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        num_events_after = event_ws.getNumberEvents()
+
+        print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
+              'of workspace %s.' % (num_events_before,num_events_after, lowercutoff, ws_name)
+
+        return
+
+    @staticmethod
+    def mtd_normalize_by_current(event_ws_name):
         """
         Normalize by current
         TODO/NOW - Doc, Check requiremetns
@@ -668,15 +731,15 @@ class ReductionManager(object):
         # Filter bad pulses as an option
         # FIXME - Need to apply reduction-history here in the case that the workspace has been processed
         if self._reductionParameters.filter_bad_pulse is True:
-            self._filterBadPulese(event_ws_name)
+            self.mtd_filter_bad_pulses(event_ws_name)
 
         # Align and focus
-        status = self.align_and_focus(event_ws_name)
+        status = self.mtd_align_and_focus(event_ws_name)
         assert status
 
         # Normalize by current as an option
         if self._reductionParameters.normalize_by_current:
-            self.noramlize_by_current(event_ws_name)
+            self.mtd_normalize_by_current(event_ws_name)
 
         # Normalize/calibrate by vanadium
         if self._reductionParameters.calibrate_by_vanadium is True:
@@ -812,14 +875,13 @@ class ReductionManager(object):
 
         return
 
-    def reduceVanadiumData(self, params):
+    def reduce_vanadium_run(self, run_number):
         """ Reduce vanadium data and strip vanadium peaks
 
-        Argumements:
-         - params :: AlignFocusParameters object
-
-        Return :: reduced workspace or None if failed to reduce
+        :param run_number:
+        :return: reduced workspace or None if failed to reduce
         """
+        # FIXME/TODO/NOW : heavy-modification!
         # Check status 
         if self._isVanadiumRun is False:
             raise NotImplementedError("This object is not set as a Vanadium run.")
@@ -961,13 +1023,6 @@ class ReductionManager(object):
 
         return
 
-
-    def setNoFilter(self):
-        """ Non-filtering mode
-        """
-        self._filterMode = 'NONE'
-
-
     def stripVanadiumPeaks(self):
         """ 
         """
@@ -1014,104 +1069,6 @@ class ReductionManager(object):
         self._processedVanadiumWS = wksp
 
         return
-
-    #---------------------------------------------------------------------------
-    # Private Methods
-    #---------------------------------------------------------------------------
-    def _chopData(self, rawdataws):
-        """
-        """
-        raise NotImplementedError("ASAP")
-        # check validity
-        if isinstance(rawdataws, mtd.EventWorkspace) is False:
-            print "Input workspace is not event workspace"
-            return False
-
-        # check filtering
-        if self._filterMode == 'TIME':
-            datawslist = self.filterByTime(rawdataws)
-        elif self._filterMode == 'LOG':
-            datawslist = self.filterByLogValue(rawdataws)
-        else:
-            datawslist = [rawdataws]
-
-        # process vanadium
-        processedvanadiumws = self.reduceVanadium()
-
-        # reduce data (no more event filtering)
-        reducedlist = []
-        for dataws in datawslist:
-            redws = self.reducePowerData(dataws, processedvanadiumws, keeporiginal=False)
-            reducedlist.append(redws)
-
-        return reducedlist
-
-    def _filterBadPulese(self, ws_name, lowercutoff=95.):
-        """
-        Filter bad pulse
-        TODO/DOC/NOW
-        :param ws_name:
-        :param lowercutoff: float as (self._filterBadPulses)
-        :return:
-        """
-        # Check requirements
-        print 'Fill me!'
-
-        event_ws = mantid_helper.retrieve_workspace(ws_name)
-        assert isinstance(event_ws, mantid.api.IEventWorkspace), \
-            'Input workspace %s is not event workspace but of type %s.' % (ws_name, event_ws.__class__.__name__)
-
-        # Get statistic
-        num_events_before = event_ws.getNumberEvents()
-
-        mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
-                                  LowerCutoff=lowercutoff)
-
-        event_ws = mantid_helper.retrieve_workspace(ws_name)
-        num_events_after = event_ws.getNumberEvents()
-
-        print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
-              'of workspace %s.' % (num_events_before,num_events_after, lowercutoff, ws_name)
-
-        return
-
-    
-    def _loadData(self):
-        """ Load data
-        """  
-        # FIXME - ignored 'filterWall' here
-        outwsname = os.path.basename(self._myRawNeXusFileName).split('.')[0]
-        rawinpws = mantidapi.Load(self._myRawNeXusFileName, OutputWorkspace=outwsname)
-        
-        # debug output 
-        if rawinpws.id() == EVENT_WORKSPACE_ID:
-            # Event workspace
-            print "[DB] There are %d events after data is loaded in workspace %s." % (
-                rawinpws.getNumberEvents(), str(rawinpws))
-        # ENDIF(rawinpws.id)
-
-        return rawinpws
-
-
-    def _normalizeByCurrent(self, wksp):
-        """  Normalize the workspace by proton charge, i.e., current
-        """ 
-        outwsname = str(wksp)
-        outws = mantidapi.NormaliseByCurrent(InputWorkspace=wksp,
-                                             OutputWorkspace=outwsname)
-
-        outws.getRun()['gsas_monitor'] = 1
-
-        return outws
-
-
-    def _processVanadium(self):
-        """ Process reduced vanadium runs
-        """ 
-
-        return
-
-
 
     def __init_old__(self, nxsfilename, isvanadium=False):
         """ Init

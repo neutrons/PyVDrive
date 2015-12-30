@@ -252,9 +252,8 @@ def reduce_data(step):
     return
 
 @step(u'Then I check a matrix workspace generated from that run')
-def retrieveReducedData(step):
-    """
-
+def retrieve_reduced_data(step=9):
+    """ Test retrieve reduced data
     :param step:
     :return:
     """
@@ -264,12 +263,23 @@ def retrieveReducedData(step):
     reduced_run_list = work_flow.get_reduced_runs()
     num_reduced_runs = len(reduced_run_list)
     assert_equals(num_reduced_runs, 1)
+    status, reduced_data = work_flow.get_reduced_data(reduced_run_list[0], 'd')
+    assert_true(status)
+    assert_equals(len(reduce_data), 3)
+    assert_equals(len(reduce_data[0]), 1000)
 
-    print "Retrieve reduced data"
+@step(u'Reduce 2 runs and check results')
+def reduce_2_runs(step=10):
+    """ Test to reduce multiple runs
+    :param step:
+    :return:
+    """
+    # Get workflow
+    work_flow = my_data.get()
 
 if __name__ == "__main__":
 
-    if True: 
+    if False:
         init_workflow(1)
         setup_ipts(2)
         filter_runs(3)
@@ -278,5 +288,5 @@ if __name__ == "__main__":
         load_session(6)
         add_run_to_reduce(7)
         reduce_data(8)
-        retrieveReducedData(9)
+        retrieve_reduced_data(9)
 

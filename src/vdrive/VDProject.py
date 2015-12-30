@@ -452,7 +452,7 @@ class VDProject(object):
         for vrun in vanrunlist:
             vrunfilename = vanfilenamedict[vrun]
             vpdr = prl.ReductionManager(vrunfilename, isvanadium=True)
-            vanws = vpdr.reduceVanadiumData(params={})
+            vanws = vpdr.reduce_vanadium_run(params={})
             if vanws is None:
                 raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
             vanPdrDict[vrun] = vpdr
