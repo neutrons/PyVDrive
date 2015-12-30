@@ -203,6 +203,12 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
+    def get_reduced_runs(self):
+        """ Get the runs (run numbers) that have been reduced successfully
+        :return:
+        """
+        return self._myProject.get_reduced_runs()
+
     def get_working_dir(self):
         """
         Working directory

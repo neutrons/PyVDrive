@@ -261,8 +261,22 @@ def retrieveReducedData(step):
     # Get workflow
     work_flow = my_data.get()
 
-    reducedrunlist = work_flow.getReducedRuns(projectname = 'Test001')
-    numredws = len(reducedrunlist)
-    assert_equals(numredws, 1)
+    reduced_run_list = work_flow.get_reduced_runs()
+    num_reduced_runs = len(reduced_run_list)
+    assert_equals(num_reduced_runs, 1)
 
     print "Retrieve reduced data"
+
+if __name__ == "__main__":
+
+    if True: 
+        init_workflow(1)
+        setup_ipts(2)
+        filter_runs(3)
+        set_ipts_runs(4)
+        save_session(5)
+        load_session(6)
+        add_run_to_reduce(7)
+        reduce_data(8)
+        retrieveReducedData(9)
+

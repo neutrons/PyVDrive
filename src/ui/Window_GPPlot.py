@@ -99,7 +99,7 @@ class Window_GPPlot(QMainWindow):
     def doNormByCurrent(self):
         """ Normalize by current/proton charge
         """
-        execstatus, errmsg = self.getWorkflow().normalizeByCurrent(self._currProjectName, self._currRun)
+        execstatus, errmsg = self.getWorkflow().normalize_by_current(self._currProjectName, self._currRun)
         if execstatus is False:
             self.getLog().logError(errmsg)
 
@@ -138,7 +138,7 @@ class Window_GPPlot(QMainWindow):
         for runno in sorted(runlist):
             # put y values to list for constructing 2D array
             # TODO : Remove vecx, vecy = self._myControl.getVectorToPlot(expno, scanno)
-            reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, runno)
+            reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, runno)
             specid = sorted(reduceddatadict.keys())[ikey]
             vecx, vecy = reduceddatadict[specid]
 
@@ -207,7 +207,7 @@ class Window_GPPlot(QMainWindow):
 
         print "Run %s is selected." % (run)
         # get current run and plot
-        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, run)
+        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, run)
 
         # set up the spectrum combobox
         self._respondToComboBoxSpectraListChange = False
@@ -248,7 +248,7 @@ class Window_GPPlot(QMainWindow):
         # FIXME - Refactor!
         print "Run %s is selected." % (run)
         # get current run and plot
-        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, run)
+        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, run)
 
         print "Check point 1"
 
@@ -312,7 +312,7 @@ class Window_GPPlot(QMainWindow):
             print "Plot spectrum %d" % (iws)
 
         # Get current run and plot
-        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, runstr)
+        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, runstr)
 
         # Plot spectra
         firsttouch = True
@@ -342,7 +342,7 @@ class Window_GPPlot(QMainWindow):
         if self._currSpectrum == 'All':
             print "Unable to show vanadium peaks with all spectra on canvas.  Pick up 1"
 
-        reduceddatalist = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, self._currRun, unit='dSpacing') 
+        reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun, unit='dSpacing')
         
         vecx, vecy = reduceddatalist[self._currSpectrum] 
         label = "%s-%d"%(self._currRun, self._currSpectrum)
@@ -396,7 +396,7 @@ class Window_GPPlot(QMainWindow):
         if status is False:
             raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
 
-        reduceddatadict = self._myParent.getWorkflowObj().getReducedData(self._myProjectName, self._currRun)
+        reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun)
         vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
         print "[DB] Type of reduced data  dict: ", str(type(reduceddatadict)), " keys: ", str(reduceddatadict.keys())
         print "[DB] Type of vanadium data dict: ", str(type(vandatadict))    , " keys: ", str(vandatadict.keys())

@@ -40,14 +40,18 @@ class PowderReductionParameters(object):
         calibrationfilename = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
         characterfilename = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
 
-        self._focusFileName     = calibrationfilename
-        self._preserveEvents    = True
+        self._focusFileName = calibrationfilename
+        self._preserveEvents = True
         self._LRef              = 0   # default = 0
         self._DIFCref           = 0
         self._compressTolerance = 0.01
         self._removePromptPulseWidth = 0.0
         self._lowResTOFoffset   = -1
         self._wavelengthMin     = 0.0
+
+        self._filterBadPulse = False
+        self._normalizeByCurrent = True
+        self._calibrateByVanadium = False
 
         return
 
@@ -73,6 +77,32 @@ class PowderReductionParameters(object):
         self._binStep = value
 
         return
+
+    @property
+    def calibrate_by_vanadium(self):
+        """
+
+        :return:
+        """
+        return self._calibrateByVanadium
+
+    @property
+    def compress_tolerance(self):
+        """
+        TODOD/DOC
+        :return:
+        """
+        return self._compressTolerance
+
+    # FIXME/TODO - implement setter
+
+    @property
+    def filter_bad_pulse(self):
+        """
+
+        :return:
+        """
+        return self._filterBadPulse
 
     @property
     def focus_calibration_file(self):
@@ -166,6 +196,42 @@ class PowderReductionParameters(object):
 
         return
 
+    @property
+    def normalize_by_current(self):
+        """
+
+        :return:
+        """
+        return self._normalizeByCurrent
+
+    @property
+    def preserve_events(self):
+        """
+
+        :return:
+        """
+        return self._preserveEvents
+
+    # FIXME/TODO/NOW: add setter
+
+    def form_binning_parameter(self):
+        """
+        form the binning parameter for Mantid's input
+        :return: string, either as 'min_tof, bin_step, max_tof' or 'bin_step'
+        """
+        # Check
+        assert isinstance(self._binStep, float)
+
+        if self._tofMin is None or self._tofMax is None:
+            bin_par = '%.7f' % self._binStep
+        else:
+            bin_par = '%.7f, %.7f, %.7f' % (self._tofMin, self._binStep, self._tofMax)
+
+        print '[DB-BAT] binning parameter is [%s]' % bin_par
+
+        return bin_par
+
+
     def set_from_dictionary(self, param_dict):
         """
         TODO/NOW/DOC + Fill-in
@@ -246,6 +312,7 @@ class ReductionHistory(object):
         """
         return self._correctedByVanadium
 
+
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
     """
@@ -278,6 +345,9 @@ class DataReductionTracker(object):
         self._eventWorkspace = None
         self._operationsOnEventWS = list()
 
+        # status flag
+        self._isReduced = False
+
         return
 
     @property
@@ -298,6 +368,15 @@ class DataReductionTracker(object):
         print 'Check requirements'
 
         self._eventWorkspace = value
+
+    # TODO/FIXME: DOC and Requirements check
+    @property
+    def is_reduced(self):
+        return self._isReduced
+
+    @is_reduced.setter
+    def is_reduced(self, value):
+        self._isReduced = value
 
     @property
     def run_number(self):
@@ -389,8 +468,8 @@ class ReductionManager(object):
 
         return
 
-    def align_and_focus(self, event_wksp, temp_ws_name):
-        """ Align and focus raw event workspaces
+    def align_and_focus(self, event_ws_name):
+        """ Align and focus raw event workspaces: the original workspace will be replaced
         Purpose:
             Run Mantid.AlignAndFocus() by current parameters
         Requirements:
@@ -406,7 +485,10 @@ class ReductionManager(object):
         Return: focussed event workspace
         """
         # Check requirement
-        assert event_wksp.id() == EVENT_WORKSPACE_ID, \
+        assert isinstance(event_ws_name, str)
+        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
+
+        assert event_ws.id() == EVENT_WORKSPACE_ID, \
             'Input must be an EventWorkspace for align and focus. Current input is %s' % event_wksp.id()
         assert isinstance(self._reductionParameters, PowderReductionParameters), \
             'Input parameter must be of an instance of PowderReductionParameters'
@@ -419,23 +501,47 @@ class ReductionManager(object):
         # Execute algorithm AlignAndFocusPowder()
         # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
         user_geometry_dict = dict()
-        outws = mantidapi.AlignAndFocusPowder(InputWorkspace=event_wksp,
-                                              OutputWorkspace=temp_ws_name,   # in-place align and focus
-                                              GroupingWrokspace=self._myGroupWorkspaceName,
-                                              OffsetsWorkspace=self._myOffsetWorkspaceName,
-                                              MaskWorkspace=None, # FIXME - NO SURE THIS WILL WORK!
-                                              Params=params.binning,
-                                              PreserveEvents=params.preserveEvents,
-                                              RemovePromptPulseWidth=0, # Fixed to 0
-                                              CompressTolerance=params.compressTolerance, # 0.01 as default
-                                              Dspacing=True,            # fix the option
-                                              UnwrapRef=0,              # do not use = 0
-                                              LowResRef=0,              # do not use  = 0
-                                              CropWavelengthMin=0,      # no in use = 0
-                                              LowResSpectrumOffset=1,   # powgen's option. not used by vulcan
-                                              **user_geometry_dict)
+        if self._reductionParameters.min_tof is None or self._reductionParameters.max_tof is None:
+            # if TOF range is not set up, use default min and max
+            user_geometry_dict['DMin'] = 0.5
+            user_geometry_dict['DMax'] = 5.5
 
-        return
+        mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
+                                      OutputWorkspace=event_ws_name+'_temp',   # in-place align and focus
+                                      GroupingWorkspace=self._myGroupWorkspaceName,
+                                      OffsetsWorkspace=self._myOffsetWorkspaceName,
+                                      MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
+                                      Params=self._reductionParameters.form_binning_parameter(),
+                                      PreserveEvents=self._reductionParameters.preserve_events,
+                                      RemovePromptPulseWidth=0,  # Fixed to 0
+                                      CompressTolerance=self._reductionParameters.compress_tolerance,
+                                      # 0.01 as default
+                                      Dspacing=True,            # fix the option
+                                      UnwrapRef=0,              # do not use = 0
+                                      LowResRef=0,              # do not use  = 0
+                                      CropWavelengthMin=0,      # no in use = 0
+                                      LowResSpectrumOffset=-1,  # powgen's option. not used by vulcan
+                                      **user_geometry_dict)
+
+        # Check
+        out_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert out_ws is not None
+
+        return True
+
+    def get_event_workspace_name(self, run_number):
+        """
+        Get or generate the name of a run
+        TODO/NOW/DOC
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int)
+
+        event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
+
+        return event_ws_name
+
 
     def get_processed_vanadium(self, vanadium_run_number):
         """ Get processed vanadium data (workspace name)
@@ -450,6 +556,19 @@ class ReductionManager(object):
         """
         # TODO/NOW/ ... ...
         return self._processedVanadiumWSDict[vanadium_run_number]
+
+    def get_reduced_runs(self):
+        """
+        Get the runs that have been reduced. It is just for information
+        :return:
+        """
+        return_list = list()
+        for run_number in self._reductionTrackDict.keys():
+            tracker = self._reductionTrackDict[run_number]
+            if tracker.is_reduced is True:
+                return_list.append(run_number)
+
+        return return_list
 
     def get_reduced_workspace(self, run_number, unit='TOF', listindex=0):
         """ Get the reduced matrix workspace
@@ -486,6 +605,18 @@ class ReductionManager(object):
                                        EMode='Elastic')
 
         return reduced_ws_name
+
+    def noramlize_by_current(self, event_ws_name):
+        """
+        Normalize by current
+        TODO/NOW - Doc, Check requiremetns
+        :param event_ws_name:
+        :return:
+        """
+        mantidapi.NormaliseByCurrent(InputWorkspace=event_ws_name,
+                                     OutputWorkspace=event_ws_name)
+
+        return
 
     def reduce_sample_run(self, run_number):
         """ Reduce one run
@@ -534,34 +665,24 @@ class ReductionManager(object):
             # already loaded or even processed
             pass
 
-
-        do_load = False
-        try:
-            event_ws_name = self.get_event_workspace_name(run_number)
-        except KeyError:
-            event_ws_name = self._reductionProject.load_event_data(run_number)
-
-        # Option for chopping
-        # Chop data if specified
-        if chopdata is True:
-            wksplist = self._chopData(wksp)
-        else:
-            wksplist = [wksp]
-
         # Filter bad pulses as an option
-        if self._reductionParameters.filterBadPulese is True:
-            self._filterBadPulese(run_number)
+        # FIXME - Need to apply reduction-history here in the case that the workspace has been processed
+        if self._reductionParameters.filter_bad_pulse is True:
+            self._filterBadPulese(event_ws_name)
 
         # Align and focus
-        self.align_and_focus(run_number)
+        status = self.align_and_focus(event_ws_name)
+        assert status
 
         # Normalize by current as an option
-        if self._reductionParameters.normalizeByCurrent:
-            self.noramlize_by_current(run_number)
+        if self._reductionParameters.normalize_by_current:
+            self.noramlize_by_current(event_ws_name)
 
         # Normalize/calibrate by vanadium
-        if self._reductionParameters.calibrateByVanadium is True:
-            self.normalizeByVanadium(run_number)
+        if self._reductionParameters.calibrate_by_vanadium is True:
+            self.normalizeByVanadium(event_ws_name)
+
+        tracker.is_reduced = True
 
         return
 
@@ -925,30 +1046,34 @@ class ReductionManager(object):
 
         return reducedlist
 
-
-
-    def _filterBadPulese(self, wksp, lowercutoff):
-        """ Filter bad pulse
-        Arguments: 
-         - lowercutoff :: float as (self._filterBadPulses)
+    def _filterBadPulese(self, ws_name, lowercutoff=95.):
         """
-        # Validate
-        isEventWS = isinstance(wksp, mantid.api._api.IEventWorkspace)
-        if isEventWS is True:
-            # Event workspace: record original number of events
-            numeventsbefore =  wksp.getNumberEvents()
-        else:
-            raise RuntimeError("Input workspace %s is not event workspace but of type %s." % (
-                wksp.name(), wksp.__class__.__name__))
-        # ENDIFELSE
+        Filter bad pulse
+        TODO/DOC/NOW
+        :param ws_name:
+        :param lowercutoff: float as (self._filterBadPulses)
+        :return:
+        """
+        # Check requirements
+        print 'Fill me!'
 
-        wksp = mantidapi.FilterBadPulses(InputWorkspace=wksp, OutputWorkspace=wksp, 
-                LowerCutoff=lowercutoff)
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        assert isinstance(event_ws, mantid.api.IEventWorkspace), \
+            'Input workspace %s is not event workspace but of type %s.' % (ws_name, event_ws.__class__.__name__)
 
-        print "[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) of workspace %s." % (
-                numeventsbefore, wksp.getNumberEvents(), lowercutoff, str(wksp))
+        # Get statistic
+        num_events_before = event_ws.getNumberEvents()
 
-        return wksp
+        mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
+                                  LowerCutoff=lowercutoff)
+
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        num_events_after = event_ws.getNumberEvents()
+
+        print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
+              'of workspace %s.' % (num_events_before,num_events_after, lowercutoff, ws_name)
+
+        return
 
     
     def _loadData(self):

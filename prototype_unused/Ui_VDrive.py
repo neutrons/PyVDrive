@@ -285,7 +285,7 @@ class VDriveAPI:
             raise NotImplementedError('Project %s does not have run %s.'%(projname, datafilename))
 
         # Get data
-        reduceddatadict = project.getReducedData(datafilename, unit)
+        reduceddatadict = project.get_reduced_runs(datafilename, unit)
         if reduceddatadict is None:
             raise NotImplementedError('Run %s is not reduced in project %s.'%(datafilename, projname))
         else:
