@@ -213,15 +213,22 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
 
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
-    """
-    TODO/NOW - Doc!
+    """ Get time segments from splitters workspace
+    Purpose:
+        Get the time segments from a splitters workspace
+    Requirements:
+        - a valid splitters workspace
+        - time shift is float
+        - unit is either nanosecond or second
     :param split_ws_name:
     :param time_shift: always in the same unit as
-    :return:
+    :param unit:
+    :return: a list of 3 tuples as float (start time), float (stop time) and integer (target)
     """
+    # Check input
     split_ws = retrieve_workspace(split_ws_name)
-    if split_ws is None:
-        raise RuntimeError('Workspace %s does not exist.' % split_ws_name)
+    assert split_ws, 'Workspace %s does not exist.' % split_ws_name
+
 
     segment_list = list()
     if unit == 'Seconds':
@@ -256,14 +263,18 @@ def event_data_ws_name(run_number):
 
 
 def retrieve_workspace(ws_name):
-    """
-
+    """ Retrieve workspace from AnalysisDataService
+    Purpose:
+        Get workspace from Mantid's analysis data service
+    Requirements:
+        workspace name is a string
+    Guarantee:
+        return the reference to the workspace or None if it does not exist
     :param ws_name:
     :return:
     """
-    if isinstance(ws_name, str) is False:
-        raise RuntimeError('Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
-                                                                                        str(type(ws_name))))
+    assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
+                                                                                                  str(type(ws_name)))
 
     if mantid.AnalysisDataService.doesExist(ws_name) is False:
         return None
@@ -271,14 +282,20 @@ def retrieve_workspace(ws_name):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
-def splitted_ws_base_name(run_number, out_base_name):
+def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VULCAN'):
     """
     Workspace name for splitted event data
     :param run_number:
     :param out_base_name:
+    :param instrument_name: name of the instrument
     :return:
     """
-    return 'VULCAN_%d_%s' % (run_number, out_base_name)
+    assert isinstance(run_number, int), 'Run number must be an integer but not of type %s.' % str(type(run_number))
+    assert isinstance(out_base_name, str), 'Output base workpsace name must be a string but not %s.' % \
+                                           str(type(out_base_name))
+    assert isinstance(instrument_name, str), 'Instrument name must be a string but not %s.' % str(type(instrument_name))
+
+    return '%s_%d_%s' % (instrument_name, run_number, out_base_name)
 
 
 def load_nexus(data_file_name, output_ws_name, meta_data_only):

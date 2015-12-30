@@ -547,7 +547,7 @@ class VDProject(object):
         mantid_helper.load_nexus(data_file_name=nxs_file_name, output_ws_name=event_ws_name, meta_data_only=False)
 
         # Split
-        splitted_ws_base_name = mantid_helper.splitted_ws_base_name(run_number, out_base_name)
+        splitted_ws_base_name = mantid_helper.get_split_workpsace_base_name(run_number, out_base_name)
         status, ret_obj = mantid_helper.split_event_data(event_ws_name, splitter_ws_name, info_ws_name,
                                                          splitted_ws_base_name, tof_correction=False)
 

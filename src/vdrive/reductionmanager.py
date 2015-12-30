@@ -52,7 +52,7 @@ class PowderReductionParameters(object):
         return
 
     @property
-    def binStep(self):
+    def bin_step(self):
         """
         Purpose:
             Get the binning step
@@ -61,8 +61,8 @@ class PowderReductionParameters(object):
         """
         return self._binStep
 
-    @binStep.setter
-    def binStep(self, value):
+    @bin_step.setter
+    def bin_step(self, value):
         """
         Purpose: Set up bin size (or say bin step)
         Requirements: input value must be a float
@@ -76,10 +76,23 @@ class PowderReductionParameters(object):
 
     @property
     def focus_calibration_file(self):
-        """ TODO/DOC
+        """ Get time focusing calibration file.
         :return:
         """
         return self._focusFileName
+
+    @focus_calibration_file.setter
+    def focus_calibration_file(self, value):
+        """ Set time focusing calibration file
+        Requirements:
+        - value must be an existing calibration file
+        :param value:
+        :return:
+        """
+        assert isinstance(value, str)
+        assert os.path.exists(value)
+
+        self._focusFileName = value
 
     @property
     def min_tof(self):
@@ -175,9 +188,70 @@ class PowderReductionParameters(object):
         return
 
 
+class ReductionHistory(object):
+    """
+    Class to describe the reduction history on one data set
+
+    The default history is 'being loaded'
+    """
+    def __init__(self, workspace_name):
+        """
+        The key to a reduction history is its workspace name
+        :param workspace_name:
+        :return:
+        """
+        assert isinstance(workspace_name, str), 'Workspace name must be a string.'
+        assert mantid_helper.workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+
+        self._workspaceName = workspace_name
+
+        self._isFocused = False
+        self._badPulseRemoved = False
+        self._correctedByVanadium = False
+
+        return
+
+    @property
+    def is_raw(self):
+        """
+        Show the status whether the workspace has never been processed
+        :return:
+        """
+        if self._isFocused is True or self._badPulseRemoved is True:
+            return False
+        return True
+
+    @property
+    def is_focused(self):
+        """
+        Whether
+        :return:
+        """
+        return self._isFocused
+
+    def exec_focused(self):
+        """
+
+        :return:
+        """
+        assert self._isFocused is False, 'A focused workspace cannot be focused again.'
+
+        self._isFocused = True
+
+    @property
+    def is_corrected_by_vanadium(self):
+        """
+
+        :return:
+        """
+        return self._correctedByVanadium
+
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
     """
+
+    OperationList = ['loaded', 'focused', 'bad_pulse_filtered', '']
+
     def __init__(self, run_number, file_path, vanadium_calibration):
         """
         Purpose:
@@ -334,21 +408,21 @@ class ReductionManager(object):
         # Check requirement
         assert event_wksp.id() == EVENT_WORKSPACE_ID, \
             'Input must be an EventWorkspace for align and focus. Current input is %s' % event_wksp.id()
-        assert isinstance(params, PowderReductionParameters), \
-            'Input parameter must be of class AlignFocusParameters'
+        assert isinstance(self._reductionParameters, PowderReductionParameters), \
+            'Input parameter must be of an instance of PowderReductionParameters'
 
-        assert isinstance(self._groupWSName, str)
-        assert mantid.api.AnalysisDataService.has(self._groupWSName)
-        assert isinstance(self._offsetWSName, str)
-        assert matnid.AnalysisDataService.has(self._offsetWSName)
+        assert isinstance(self._myGroupWorkspaceName, str)
+        assert mantid_helper.workspace_does_exist(self._myGroupWorkspaceName)
+        assert isinstance(self._myOffsetWorkspaceName, str)
+        assert mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName)
 
         # Execute algorithm AlignAndFocusPowder()
         # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
         user_geometry_dict = dict()
         outws = mantidapi.AlignAndFocusPowder(InputWorkspace=event_wksp,
                                               OutputWorkspace=temp_ws_name,   # in-place align and focus
-                                              GroupingWrokspace=self._groupWSName,
-                                              OffsetsWorkspace=self._offsetWSName,
+                                              GroupingWrokspace=self._myGroupWorkspaceName,
+                                              OffsetsWorkspace=self._myOffsetWorkspaceName,
                                               MaskWorkspace=None, # FIXME - NO SURE THIS WILL WORK!
                                               Params=params.binning,
                                               PreserveEvents=params.preserveEvents,
