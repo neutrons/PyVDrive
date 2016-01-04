@@ -281,6 +281,11 @@ class ReductionHistory(object):
 
     The default history is 'being loaded'
     """
+    FilterBadPulse = 1
+    AlignAndFocus = 2
+    NormaliseByCurrent = 3
+    CalibratedByVanadium = 4
+
     def __init__(self, workspace_name):
         """
         The key to a reduction history is its workspace name
@@ -294,6 +299,7 @@ class ReductionHistory(object):
 
         self._isFocused = False
         self._badPulseRemoved = False
+        self._normalisedByCurrent = False
         self._correctedByVanadium = False
 
         return
@@ -333,13 +339,34 @@ class ReductionHistory(object):
         """
         return self._correctedByVanadium
 
+    def set(self, history):
+        """
+        Set history
+        Requirements: history must be an integer for enum of history
+        :param history:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(history, int)
+
+        # Set
+        if history == ReductionHistory.AlignAndFocus:
+            self._isFocused = True
+        elif history == ReductionHistory.FilterBadPulse:
+            self._badPulseRemoved = True
+        elif history == ReductionHistory.NormaliseByCurrent:
+            self._normalisedByCurrent = True
+        elif history == ReductionHistory.CalibratedByVanadium:
+            self._correctedByVanadium = True
+        else:
+            raise RuntimeError('History with value %d is not defined.' % history)
+
+        return
+
 
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
     """
-
-    OperationList = ['loaded', 'focused', 'bad_pulse_filtered', '']
-
     def __init__(self, run_number, file_path, vanadium_calibration):
         """
         Purpose:
@@ -367,6 +394,7 @@ class DataReductionTracker(object):
         self._operationsOnEventWS = list()
 
         # status flag
+        self._myHistory = ReductionHistory()
         self._isReduced = False
 
         return
@@ -390,19 +418,28 @@ class DataReductionTracker(object):
 
         self._eventWorkspace = value
 
-    # TODO/FIXME: DOC and Requirements check
     @property
     def is_reduced(self):
+        """ Check whether the event data that has been reduced
+        :return:
+        """
         return self._isReduced
 
     @is_reduced.setter
     def is_reduced(self, value):
+        """
+        Purpose: set the status that the event data has been reduced
+        Requirements: value is boolean
+        Guarantees:
+        :param value:
+        :return:
+        """
+        assert isinstance(value, bool), 'Input for is_reduced must be a boolean but not %s.' % str(type(value))
         self._isReduced = value
 
     @property
     def run_number(self):
-        """ Read only
-
+        """ Read only to return the run number that this tracker
         :return:
         """
         return self._runNumber
@@ -436,6 +473,27 @@ class DataReductionTracker(object):
         """
         assert isinstance(value, int), 'Input value should be integer for run number'
         self._vanadiumCalibrationRunNumber = value
+
+        return
+
+    def add_history(self, reduction_history):
+        """
+        Add reduction history
+        Purpose:
+        Requirements: the reduction history must be a valid
+        Guarantees:
+        :param reduction_history: a reduction history defined in ReductionHistory
+        :return:
+        """
+        # Check requirements
+        assert isinstance(reduction_history, int), 'Reduction history must be an integer but not %s.' % \
+                                                   str(type(reduction_history))
+
+        # Set
+        if reduction_history == ReductionHistory.AlignAndFocus:
+            self._isReduced = True
+
+        self._myHistory.set(reduction_history)
 
         return
 
@@ -639,16 +697,64 @@ class ReductionManager(object):
         return True
 
     @staticmethod
-    def mtd_filter_bad_pulses(ws_name, lowercutoff=95.):
-        """
-        Filter bad pulse
-        TODO/DOC/NOW
-        :param ws_name:
-        :param lowercutoff: float as (self._filterBadPulses)
+    def mtd_compress_events(event_ws_name, tolerance=0.01):
+        """ Call Mantid's CompressEvents algorithm
+        :param event_ws_name:
+        :param tolerance: default as 0.01 as 10ns
         :return:
         """
         # Check requirements
-        print 'Fill me!'
+        assert isinstance(event_ws_name, str), 'Input event workspace name is not a string,' \
+                                               'but is a %s.' % str(type(event_ws_name))
+        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert mantid_helper.is_event_workspace(event_ws)
+
+        mantidapi.CompressEvents(InputWorkspace=event_ws_name,
+                                 OutputWorkspace=event_ws_name,
+                                 Tolerance=tolerance)
+
+        out_event_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert out_event_ws
+
+        return
+
+    @staticmethod
+    def mtd_convert_units(ws_name, target_unit):
+        """
+        Convert the unit of a workspace
+        :param event_ws_name:
+        :param target_unit:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
+        workspace = mantid_helper.retrieve_workspace(ws_name)
+        assert workspace
+        assert isinstance(target_unit, str), 'Input target unit should be a string but is %s.' % str(type(target_unit))
+
+        # Do absorption and multiple scattering correction in TOF with sample parameters set
+        mantidapi.ConvertUnits(InputWorkspace=ws_name,
+                               OutputWorkspace=ws_name,
+                               Target=target_unit)
+
+        # Check output
+        out_ws = mantid_helper.retrieve_workspace(ws_name)
+        assert out_ws
+
+        return
+
+    @staticmethod
+    def mtd_filter_bad_pulses(ws_name, lower_cutoff=95.):
+        """ Filter bad pulse
+        Requirements: input workspace name is a string for a valid workspace
+        :param ws_name:
+        :param lower_cutoff: float as (self._filterBadPulses)
+        :return:
+        """
+        # Check requirements
+        assert isinstance(ws_name, str), 'Input workspace name should be string,' \
+                                         'but is of type %s.' % str(type(ws_name))
+        assert isinstance(lower_cutoff, float)
 
         event_ws = mantid_helper.retrieve_workspace(ws_name)
         assert isinstance(event_ws, mantid.api.IEventWorkspace), \
@@ -658,13 +764,13 @@ class ReductionManager(object):
         num_events_before = event_ws.getNumberEvents()
 
         mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
-                                  LowerCutoff=lowercutoff)
+                                  LowerCutoff=lower_cutoff)
 
         event_ws = mantid_helper.retrieve_workspace(ws_name)
         num_events_after = event_ws.getNumberEvents()
 
         print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
-              'of workspace %s.' % (num_events_before,num_events_after, lowercutoff, ws_name)
+              'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name)
 
         return
 
@@ -682,31 +788,17 @@ class ReductionManager(object):
         return
 
     def reduce_sample_run(self, run_number):
-        """ Reduce one run
+        """ Reduce one sample run, which is not a vanadium run
+        Purpose:
+            Reduce a sample run
         Requirements:
             Run number is in list to reduce
-
-        Example:
-            Instrument  = "VULCAN",
-            RunNumber   = runnumber,
-            Extension   = "_event.nxs",
-            PreserveEvents  = True,
-            CalibrationFile = calibrationfilename,
-            CharacterizationRunsFile = characterfilename,
-            Binning = "-0.001",
-            SaveAS  = "",
-            OutputDirectory = outputdir,
-            NormalizeByCurrent = False,
-            FilterBadPulses=0,
-            CompressTOFTolerance = 0.,
-            FrequencyLogNames="skf1.speed",
-            WaveLengthLogNames="skf12.lambda")
+        Guarantees:
+            A sample run is reduced to a Rietveld diffraction pattern
         :param run_number:
         :param full_file_path:
-        :return:
+        :return: 2-tuple as boolean (status, error message)
         """
-        # TODO/DOC/COMPLETE IT 1st
-
         # Check
         assert isinstance(run_number, int), 'Run number %s to reduce sample run must be integer' % str(run_number)
         assert run_number in self._reductionTrackDict, 'Run %d is not managed by reduction tracker. ' \
@@ -714,6 +806,8 @@ class ReductionManager(object):
                                                        (run_number, str(self._reductionTrackDict.keys()))
         tracker = self._reductionTrackDict[run_number]
         assert isinstance(tracker, DataReductionTracker)
+        if tracker.is_reduced is True:
+            return False, 'Run %d has been reduced.' % run_number
 
         # Get data or load
         event_ws_name = tracker.event_workspace_name
@@ -732,18 +826,22 @@ class ReductionManager(object):
         # FIXME - Need to apply reduction-history here in the case that the workspace has been processed
         if self._reductionParameters.filter_bad_pulse is True:
             self.mtd_filter_bad_pulses(event_ws_name)
+            tracker.add_history(ReductionHistory.FilterBadPulse)
 
         # Align and focus
         status = self.mtd_align_and_focus(event_ws_name)
         assert status
+        tracker.add_history(ReductionHistory.AlignAndFocus)
 
         # Normalize by current as an option
         if self._reductionParameters.normalize_by_current:
             self.mtd_normalize_by_current(event_ws_name)
+            tracker.add_history(ReductionHistory.NormaliseByCurrent)
 
         # Normalize/calibrate by vanadium
         if self._reductionParameters.calibrate_by_vanadium is True:
             self.normalizeByVanadium(event_ws_name)
+            tracker.add_history(ReductionHistory.CalibratedByVanadium)
 
         tracker.is_reduced = True
 
@@ -878,28 +976,32 @@ class ReductionManager(object):
     def reduce_vanadium_run(self, run_number):
         """ Reduce vanadium data and strip vanadium peaks
 
+        Requirements:
+            Input run number is a valid integer run number
         :param run_number:
         :return: reduced workspace or None if failed to reduce
         """
-        # FIXME/TODO/NOW : heavy-modification!
-        # Check status 
-        if self._isVanadiumRun is False:
-            raise NotImplementedError("This object is not set as a Vanadium run.")
+        # FIXME/TODO/NOW : heavy-modification! On going!
 
-        # Load data from file
-        wksp = self._loadData()
+        # Check requirements
+        assert isinstance(run_number, int), 'Input vanadium run number must be integer but not %s.' % \
+                                            str(type(run_number))
+        assert run_number in self._reductionTrackDict, 'Reduction tracker does not have run %d.' % run_number
 
-        # Compress event 
-        # FIXME - Understand Tolerance/COMPRESS_TOL_TOF 
-        COMPRESS_TOL_TOF = 0.01
-        wksp = mantidapi.CompressEvents(InputWorkspace=wksp,
-                                     OutputWorkspace=wksp.name(),
-                                     Tolerance=COMPRESS_TOL_TOF) # 10ns
+        # Get tracker
+        tracker = self._reductionTrackDict[run_number]
+        assert isinstance(tracker, DataReductionTracker)
 
-        # Do absorption and multiple scattering correction in TOF with sample parameters set
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(), 
-                                   Target="TOF")
+        # Load data
+        mantid_helper.load_nexus(data_file_name=van_file_name, meta_data_only=False, output_ws_name=van_ws_name)
+        assert mantid_helper.is_van_run(van_ws_name)
+
+        # Filter bad pulse
+        self.mtd_filter_bad_pulses(van_ws_name)
+        self.mtd_align_and_focus(van_ws_name)
+        self.mtd_compress_events(van_ws_name)
+        self.mtd_convert_units(van_ws_name, 'TOF')
+
         mantidapi.SetSampleMaterial(InputWorkspace=wksp, 
                                  ChemicalFormula="V", 
                                  SampleNumberDensity=0.0721)

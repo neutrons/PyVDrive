@@ -79,7 +79,10 @@ def setup_ipts(step):
     """
     # Initialize work flow
     wk_flow = vdapi.VDriveAPI('VULCAN')
-    wk_flow.set_data_root_directory('/SNS/VULCAN')
+    archive_root = '/SNS/VULCAN'
+    if os.path.exists(archive_root) is False:
+        archive_root = None
+    wk_flow.set_data_root_directory(archive_root)
     wk_flow.set_working_directory('~/Temp/VDriveTest/')
 
     # Set to my_data
