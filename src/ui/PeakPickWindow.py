@@ -71,6 +71,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._dataLoaded = False  # state flag that data is loaded
         self._currDataFile = None  # name of the data file that is currently loaded
         self._myController = None  # Reference to controller class
+        self._dataDirectory = None
 
         return
 
@@ -278,7 +279,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # Load data via run
             run_data_name = str(self.ui.lineEdit_runToLoad.text())
         else:
-            diff_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File'))
+            diff_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
 
         # Load data via parent
         try:
@@ -341,6 +342,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # TODO/NOW/Doc
         self._myController = controller
 
+    def menu_select_peak(self):
+        """
+        TODO/NOW: Implement and Doc
+        :return:
+        """
+        print 'bla bla ...', 'Select peak around x = %f' % self._currMousePosX
+
+    def menu_delete_peak(self):
+        """
+        TODO/NOW: Implement and Doc
+        :return:
+        """
+        print 'bla bla ...', 'Delete peak around x = %f' % self._currMousePosX
+
     def on_mouse_press_event(self, event):
         """ If in the picking up mode, as mouse's left button is pressed down,
         the indicator/picker
@@ -362,6 +377,25 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # mouse is out of canvas, return
             return
 
+        # FIXME/NOW Make these 2 to init
+        self._currMousePosX = x
+        self._currMousePosY = y
+
+        if button == 3:
+            # right button:  pop out menu
+            self.ui.menu = QtGui.QMenu(self)
+
+            action_select = QtGui.QAction('Select Peak', self)
+            action_select.triggered.connect(self.menu_select_peak)
+
+            action_delete = QtGui.QAction('Delete Peak', self)
+            action_delete.triggered.connect(self.menu_delete_peak)
+
+            self.ui.menu.addAction(action_select)
+            self.ui.menu.addAction(action_delete)
+
+            self.ui.menu.popup(QtGui.QCursor.pos())
+
         # FIXME/TODO/NOW - Define the response event from mouse
 
         return
@@ -378,15 +412,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         elif button == 3:
             # right button click
-            # Launch dynamic pop-out menu
-            self.ui.menu = QtGui.QMenu(self)
-
-            action1 = QtGui.QAction('Add Peak', self)
-            action1.triggered.connect(self.menu_select_nearest_picker)
-            self.ui.menu.addAction(action1)
-
-            # add other required actions
-            self.ui.menu.popup(QtGui.QCursor.pos())
+            pass
 
         return
 
@@ -404,10 +430,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def action1(self):
+    def set_data_dir(self, data_dir):
         """
+        Set default data directory
+        :param data_dir:
+        :return:
         """
-        print 'Add Peak!'
+        # TODO/NOW: Doc, Assertion, ...
+
+        self._dataDirectory = data_dir
+
+        return
 
 
 def retrieve_peak_positions(peak_list):
@@ -443,6 +476,7 @@ def main(argv):
 
     # my plot window app
     myapp = PeakPickerWindow(parent)
+    myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
     myapp.set_controller(controller)
     myapp.show()
 
