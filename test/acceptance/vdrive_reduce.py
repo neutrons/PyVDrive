@@ -266,10 +266,13 @@ def retrieve_reduced_data(step=9):
     reduced_run_list = work_flow.get_reduced_runs()
     num_reduced_runs = len(reduced_run_list)
     assert_equals(num_reduced_runs, 1)
-    status, reduced_data = work_flow.get_reduced_data(reduced_run_list[0], 'd')
+    status, reduced_data = work_flow.get_reduced_data(reduced_run_list[0], 'dspace')
     assert_true(status)
-    assert_equals(len(reduce_data), 3)
-    assert_equals(len(reduce_data[0]), 1000)
+    assert_true(isinstance(reduced_data, dict))
+    assert_equals(len(reduced_data.keys()), 2)
+    assert_equals(len(reduced_data), 2)
+    assert_equals(len(reduced_data[0]), 3)
+
 
 @step(u'Reduce 2 runs and check results')
 def reduce_2_runs(step=10):

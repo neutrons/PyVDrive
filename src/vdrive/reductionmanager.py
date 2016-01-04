@@ -286,16 +286,17 @@ class ReductionHistory(object):
     NormaliseByCurrent = 3
     CalibratedByVanadium = 4
 
-    def __init__(self, workspace_name):
+    def __init__(self, workspace_name=None):
         """
         The key to a reduction history is its workspace name
         :param workspace_name:
         :return:
         """
-        assert isinstance(workspace_name, str), 'Workspace name must be a string.'
-        assert mantid_helper.workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
-
-        self._workspaceName = workspace_name
+        if workspace_name is not None:
+            assert isinstance(workspace_name, str), 'Workspace name must be a string.'
+            assert mantid_helper.workspace_does_exist(workspace_name), 'Workspace %s ' \
+                                                                       'does not exist.' % workspace_name
+            self._workspaceName = workspace_name
 
         self._isFocused = False
         self._badPulseRemoved = False
@@ -414,7 +415,7 @@ class DataReductionTracker(object):
         :param value:
         :return:
         """
-        print 'Check requirements'
+        print 'Check requirements ... ...'
 
         self._eventWorkspace = value
 
@@ -591,7 +592,7 @@ class ReductionManager(object):
 
         return return_list
 
-    def get_reduced_workspace(self, run_number, unit='TOF', listindex=0):
+    def get_reduced_workspace(self, run_number, unit='TOF'):
         """ Get the reduced matrix workspace
         Requirements:
             1. Specified run is correctly reduced;
@@ -604,26 +605,15 @@ class ReductionManager(object):
         :param listindex:
         :return: Workspace (success) or 2-tuple (False and error message)
         """
-        # TODO/NOW/FIXME - Complete it
+        # TODO/NOW/FIXME - Complete it & Doc!
 
-        # Check requirements
-        ChangeNextSection
-        try:
-            retws = self._anyRunWSList[listindex]
-        except IndexError:
-            return (False, "Index %d exceeds the range of _anyRunWSList with size %d. "% (listindex, len(self._anyRunWSList)))
-        print "[DB] Type of reduced workspace: ", type(retws)
-        print "[DB] Name of reduced workspace: ", str(retws)
+        tracker = self._reductionTrackDict[run_number]
+        assert isinstance(tracker, DataReductionTracker)
 
-        if unit is None or retws.getAxis(0).getUnit().unitID() == unit :
-            # no request of target unit or target unit is same as current unit
-            return retws
+        reduced_ws_name = tracker.event_workspace_name
 
-        # convert unit if necessary
-        retws = mantidapi.ConvertUnits(InputWorkspace=retws,
-                                       OutputWorkspace=retws.name(),
-                                       Target=unit,
-                                       EMode='Elastic')
+        # Convert unit
+        self.mtd_convert_units(reduced_ws_name, unit)
 
         return reduced_ws_name
 
@@ -667,7 +657,7 @@ class ReductionManager(object):
 
         # FIXME - Need to find out what it is in __snspowderreduction
         mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
-                                      OutputWorkspace=event_ws_name+'_temp',   # in-place align and focus
+                                      OutputWorkspace=event_ws_name,   # in-place align and focus
                                       GroupingWorkspace=self._myGroupWorkspaceName,
                                       OffsetsWorkspace=self._myOffsetWorkspaceName,
                                       MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
@@ -730,13 +720,20 @@ class ReductionManager(object):
         assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
         workspace = mantid_helper.retrieve_workspace(ws_name)
         assert workspace
-        assert isinstance(target_unit, str), 'Input target unit should be a string but is %s.' % str(type(target_unit))
+        assert isinstance(target_unit, str), 'Input target unit should be a string,' \
+                                             'but is %s.' % str(type(target_unit))
+
+        # Correct target unit
+        if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:
+            target_unit = 'dSpacing'
+        elif target_unit.lower() == 'tof':
+            target_unit = 'TOF'
 
         # Do absorption and multiple scattering correction in TOF with sample parameters set
         mantidapi.ConvertUnits(InputWorkspace=ws_name,
                                OutputWorkspace=ws_name,
-                               Target=target_unit)
-
+                               Target=target_unit,
+                               EMode='Elastic')
         # Check output
         out_ws = mantid_helper.retrieve_workspace(ws_name)
         assert out_ws
@@ -815,6 +812,7 @@ class ReductionManager(object):
         if event_ws_name is None:
             # never been loaded: get a name a load
             event_ws_name = self.get_event_workspace_name(run_number)
+            tracker.event_workspace_name = event_ws_name
             data_file_name = tracker.file_path
             mantid_helper.load_nexus(data_file_name=data_file_name, output_ws_name=event_ws_name,
                                      meta_data_only=False)
@@ -923,6 +921,44 @@ class ReductionManager(object):
             mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
         if self._myMaskWorkspaceName is not None:
             mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+
+        return
+
+    def convert_to_vulcan_bin(self, run_number):
+        """
+        Convert to VULCAN binning
+        Purpose:
+        Requirements:
+        Guarantees:
+        :param run_number:
+        :return:
+        """
+        # TODO/NOW: docs: 1st!
+        # Check requirements
+        assert isinstance(run_number, int), 'bla bla ...'
+        assert run_number in self._reductionTrackDict, 'bla bla ...'
+
+        # Tracker
+        tracker = self._reductionTrackDict[run_number]
+        assert isinstance(tracker, DataReductionTracker), 'bla bla ...'
+
+        # Get workspace name
+        assert tracker.is_reduced, 'bla bla ...'
+
+        # Convert unit and save for VULCAN GSS
+        reduced_ws_name = tracker.event_workspace_name
+        self.mtd_convert_units(reduced_ws_name, 'TOF')
+        self.mtd_save_vulcan_gss(reduced_ws_name, binning_ref_file, out_file_name, ipts, gss_parm_file_name)
+
+        """
+        vulcanws = ConvertUnits(InputWorkspace="VULCAN_%d"%(runnumber),
+                OutputWorkspace="VULCAN_%d_SNSReduc"%(runnumber),
+                Target="TOF", EMode="Elastic", AlignBins=False)
+
+        SaveVulcanGSS(InputWorkspace=vulcanws, BinFilename=refLogTofFilename,
+        OutputWorkspace="Proto2Bank", GSSFilename=outfilename,
+        IPTS = ipts, GSSParmFilename="Vulcan.prm")
+        """
 
         return
 

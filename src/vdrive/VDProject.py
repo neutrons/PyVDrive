@@ -177,40 +177,28 @@ class VDProject(object):
         return self._reductionManager.get_reduced_runs()
 
     def get_reduced_data(self, run_number, unit):
-        """ Get reduced data including all spectra
+        """ Get reduced data of a run
+        Purpose: Get reduced data including all spectra
+        Requirements:
+        Guarantees:
+        :param run_number:
+        :param unit:
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        """
+        # TODO/NOW: Doc!
+        """
 
         Arguments:
          - unit :: target unit for the output X vector.  If unit is None, then no request
 
-        Return :: dictionary: key = spectrum number, value = 2-tuple (vecx, vecy)
+        Return ::
         """
-        runbasename = os.path.basename(run)
+        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)
 
-        if self._myRunPdrDict.has_key(runbasename):
-            runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.get_reduced_workspace(unit)
+        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
+        assert isinstance(data_set_dict, dict), 'bla bla...'
 
-            print "[DB] Get workspace for %s with unit %s" % (runbasename, unit)
-            if ws is not None:
-                print "[DB] Get Workspace with type %s." % (str(type(ws)))
-                print "[DB] Get workspace %s."%(ws.name())
-            else:
-                print "[DB] No workspace is obtained from PDR."
-
-            newws = mantidapi.ConvertToPointData(InputWorkspace=ws)
-
-            returndict = {}
-            for iws in xrange(ws.getNumberHistograms()):
-                vecx = newws.readX(iws)[:]
-                vecy = newws.readY(iws)[:]
-                returndict[iws] = (vecx, vecy)
-            # ENDFOR
-
-        else:
-            # Not reduced
-            returndict = None
-
-        return returndict
+        return data_set_dict
 
     def get_run_info(self, run_number):
         """

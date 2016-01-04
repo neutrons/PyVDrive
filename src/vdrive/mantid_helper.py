@@ -212,6 +212,51 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
+def get_data_from_workspace(workspace_name, point_data):
+    """
+    
+    :param workspace_name:
+    :param point_data:
+    :return:
+    """
+    # TODO/DOC
+    
+    # Requirements
+    # ....
+    
+    # Convert to point data
+    if point_data is True:
+        mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
+                                     OutputWorkspace=workspace_name)
+    # Set up variables
+    data_set_dict = dict()
+    workspace = retrieve_workspace(workspace_name)
+    
+    # Get data
+    num_spec = workspace.getNumberHistograms()
+    
+    for i_ws in xrange(num_spec):
+        vec_x = workspace.readX(i_ws)
+        size_x = len(vec_x)
+        vec_y = workspace.readY(i_ws)
+        size_y = len(vec_y)
+        vec_e = workspace.readE(i_ws)
+    
+        data_x = numpy.ndarray((size_x,), 'float')
+        data_y = numpy.ndarray((size_y,), 'float')
+        data_e = numpy.ndarray((size_y,), 'float')
+    
+        data_x[:] = vec_x[:]
+        data_y[:] = vec_y[:]
+        data_e[:] = vec_e[:]
+    
+        data_set_dict[i_ws] = (data_x, data_y, data_e)
+    
+    # END-FOR
+    
+    return data_set_dict
+
+
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
     """ Get time segments from splitters workspace
     Purpose:

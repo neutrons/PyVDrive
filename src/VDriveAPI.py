@@ -209,6 +209,27 @@ class VDriveAPI(object):
         """
         return self._myProject.get_reduced_runs()
 
+    def get_reduced_data(self, run_number, target_unit):
+        """ Get reduced data
+        Purpose:
+        Requirements:
+        Guarantees: returned with 3 numpy arrays, x, y and e
+        :param run_number:
+        :param target_unit:
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        """
+        # TODO/NOW - Doc
+        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(target_unit, str), 'blabla'
+
+        try:
+            data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            assert isinstance(data_set, dict), 'bla bla bla... ...'
+        except RuntimeError as e:
+            return False, str(e)
+
+        return True, data_set
+
     def get_working_dir(self):
         """
         Working directory
