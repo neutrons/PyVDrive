@@ -342,12 +342,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # TODO/NOW/Doc
         self._myController = controller
 
-    def menu_select_peak(self):
-        """
-        TODO/NOW: Implement and Doc
+    def menu_add_peak(self):
+        """ Add a peak to table
+        Purpose: Add a peak under cursor in a simple way
+        Requirements:
+        Guarantees:
         :return:
         """
-        print 'bla bla ...', 'Select peak around x = %f' % self._currMousePosX
+        # Get information
+        bank_number = int(self.ui.comboBox.currentText())
+        peak_name = 'new'
+        peak_pos = self._currMousePosX
+        peak_width = 0.03
+
+        # Add peak to table
+        self.ui.tableWidget.add_peak(bank_number, peak_name, peak_pos, peak_width)
+
+        #print 'bla bla ...', 'Select peak around x = %f' % self._currMousePosX
+        return
 
     def menu_delete_peak(self):
         """
@@ -386,7 +398,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.menu = QtGui.QMenu(self)
 
             action_select = QtGui.QAction('Select Peak', self)
-            action_select.triggered.connect(self.menu_select_peak)
+            action_select.triggered.connect(self.menu_add_peak)
 
             action_delete = QtGui.QAction('Delete Peak', self)
             action_delete.triggered.connect(self.menu_delete_peak)

@@ -127,25 +127,123 @@ class GSASPeakFileManager(object):
         for bank in self._bankNumberList:
             wbuf += '$ bank, name, number of peak, position, width\n'
             for i_pos in xrange(len(peak_pos_name_dict[bank])):
+                # get all necessary value
+                peak_pos = peak_pos_name_dict[bank][i_pos][0]
                 peak_name = peak_pos_name_dict[bank][i_pos][1]
-                wbuf += '%d\t%s\t%'
+                width = self._peakDict[(bank, peak_name)][1]
+                overlapped_list = self._peakDict[(bank, peak_name)][2]
+                num_peaks = 1
+                if isinstance(overlapped_list, list):
+                    num_peaks += len(overlapped_list)
 
+                # write bank name and peak name
+                wbuf += '%d\t%s\t%d\t' % (bank, peak_name, num_peaks)
+                # write peak name
+                peak_pos_str = format_significant_4(peak_pos)
+                wbuf += '%s\t' % peak_pos_str
 
-        pass
+                # write peak width and possible overlapped peaks' positions
+                if isinstance(overlapped_list, list):
+                    for temp_pos in overlapped_list:
+                        temp_pos_str = format_significant_4(temp_pos)
+                        wbuf += '%s\t' % temp_pos_str
+
+                wbuf += '%.3f\n' % width
+            # END-FOR
+        # END-FOR
+
+        try:
+            out_file = open(peak_file, 'w')
+            out_file.write(wbuf)
+            out_file.close()
+        except IOError, err:
+            raise IOError('Unable to write to file %s due to %s.' % (peak_file, str(err)))
+
+        return
 
     def import_peaks(self, peak_file):
-        """
-        TODO/NOW: doc and implement
+        """ Import peaks from a GSAS single peak file
+        Purpose: Read a standard GSAS peak file and
+        Requirement: given peak file can be readable
+        Guarantees: all peaks are loaded
         :param peak_file:
         :return:
         """
-        pass
+        # Check requirements
+        assert isinstance(peak_file, str)
 
+        # Get the file
+        in_file = open(peak_file, 'r')
+        raw_lines = in_file.readlines()
+        in_file.close()
+
+        for raw_line in raw_lines:
+            line = raw_line.strip()
+
+            # skip empty line and comment line
+            if len(line) == 0:
+                continue
+            elif line.startswith('$'):
+                continue
+
+            terms = line.split()
+            try:
+                bank_number = int(terms[0])
+                assert bank_number >= 0
+                peak_name = terms[1]
+                num_peaks = int(terms[2])
+                assert num_peaks >= 1
+                peak_pos = float(terms[3])
+                if num_peaks == 1:
+                    overlapped_peak_list = None
+                else:
+                    overlapped_peak_list = list()
+                    for i_peak in xrange(num_peaks-1):
+                        over_peak_pos = float(terms[4+i_peak])
+                        overlapped_peak_list.append(over_peak_pos)
+                # END-IF
+                peak_width = float(terms[3+num_peaks])
+
+                # add peak
+                assert (bank_number, peak_name) not in self._peakDict
+                self._peakDict[(bank_number, peak_name)] = (peak_pos, peak_width, overlapped_peak_list)
+            except IndexError:
+                raise IndexError('Number of items in line "%s" is not right!' % line)
+            except TypeError as err:
+                raise TypeError('Line "%s" is not in a supported format.' % line)
+
+        return
 
     def get_number_peaks(self):
-        """
-        TODO/NOW: doc and implement
+        """ Get the number of peaks in this class
         :param peak_file:
         :return:
         """
-        pass
+        return len(self._peakDict)
+
+
+def format_significant_4(float_number):
+    """
+    Format a float number with 4 significant digit if it is between 0.01 and 10.
+    :param float_number:
+    :return:
+    """
+    assert isinstance(float_number, float)
+
+    formatted = ''
+    if 0.01 <= float_number < 0.1:
+        formatted = '%.5f' % float_number
+    elif 0.1 <= float_number < 1.0:
+        formatted = '%.4f' % float_number
+    elif 1.0 <= float_number < 10.:
+        formatted = '%.3f' % float_number
+    else:
+        raise AssertionError('Float number %f is not within range.' % float_number)
+
+    return formatted
+
+
+if __name__ == '__main__':
+    print format_significant_4(0.012345)
+    print format_significant_4(0.12345)
+    print format_significant_4(1.2345)
