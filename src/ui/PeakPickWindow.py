@@ -35,8 +35,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         # Define event handling methods
-        self.connect(self.ui.pushButton_addCurrentPeak, QtCore.SIGNAL('clicked()'),
-                     self.do_add_current_peak)
+        self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_claim_overlapped_peaks)
 
         self.connect(self.ui.pushButton_addAllPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_add_all_peaks)
@@ -73,6 +73,16 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._myController = None  # Reference to controller class
         self._dataDirectory = None
 
+        # Peak selection mode
+        self._peakSelectionMode = ''
+        self._indicatorIDList = None
+        self._indicatorPositionList = None
+        self._inEditMode = False
+
+        # Mouse position
+        self._currMousePosX = 0
+        self._currMousePosY = 0
+
         return
 
     def _init_widgets_setup(self):
@@ -106,10 +116,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def do_add_current_peak(self):
+    def do_claim_overlapped_peaks(self):
         """
         Purpose:
-            add current selected peak to table
+            Claim several peaks to be overlapped according to observation
         Requires:
             Window has been set with parent controller
             data has been loaded;
@@ -349,16 +359,49 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees:
         :return:
         """
-        # Get information
-        bank_number = int(self.ui.comboBox.currentText())
+        # TODO/NOW  Assertion doc
+
+        # Get common information
+        bank_number = int(self.ui.comboBox_bankNumbers.currentText())
         peak_name = 'new'
-        peak_pos = self._currMousePosX
-        peak_width = 0.03
+
+        # 2 situation
+        if self._indicatorPositionList is None:
+            # simple peak adding mode
+            peak_pos = self._currMousePosX
+            peak_width = 0.03
+        else:
+            # read from GUI
+            peak_pos = self._indicatorPositionList[0]
+            peak_width = abs(self._indicatorPositionList[0] - self._indicatorPositionList[1])
 
         # Add peak to table
-        self.ui.tableWidget.add_peak(bank_number, peak_name, peak_pos, peak_width)
+        self.ui.tableWidget_peakParameter.add_peak(bank_number, peak_name, peak_pos, peak_width)
 
-        #print 'bla bla ...', 'Select peak around x = %f' % self._currMousePosX
+        # Quit selection mode
+        self.menu_cancel_selection()
+
+        return
+
+    def menu_cancel_selection(self):
+        """ Abort the operation to select peak
+        Purpose:
+        Guarantees: all 3 indicator line will be deleted; peak selection mode will be reset
+        :return:
+        """
+        # TODO/NOW - Doc and assertion
+        # Check requirements
+
+        # Delete all 3 indicators line
+        for indicator_id in self._indicatorIDList:
+            self.ui.graphicsView_main.remove_indicator(indicator_id)
+
+        # Reset all the variables
+        self._indicatorIDList = None
+        self._indicatorPositionList = None
+        self._peakSelectionMode = ''
+        self._inEditMode = False
+
         return
 
     def menu_delete_peak(self):
@@ -367,6 +410,37 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         print 'bla bla ...', 'Delete peak around x = %f' % self._currMousePosX
+
+    def menu_select_peak(self):
+        """ Select a peak including specifying its width and position
+        Purpose:
+        Requirements:
+        Guarantees:
+            1. Add 3 vertical indicators at the same Y
+            2. The graph mode is in peak selecting
+        :return:
+        """
+        x = self._currMousePosX
+        id_centre = self.ui.graphicsView_main.add_vertical_indicator(x, color='red')
+        id_left = self.ui.graphicsView_main.add_vertical_indicator(x, color='red')
+        id_right = self.ui.graphicsView_main.add_vertical_indicator(x, color='red')
+
+        self._peakSelectionMode = 'MoveCentre'
+        self._indicatorIDList = [id_centre, id_left, id_right]
+        self._indicatorPositionList = [x, x, x]
+
+    def menu_switch_mode(self):
+        """ Switch peak selection mode
+        :return:
+        """
+        if self._peakSelectionMode == 'MoveCentre':
+            self._peakSelectionMode = 'ChangeWidth'
+        elif self._peakSelectionMode == 'ChangeWidth':
+            self._peakSelectionMode = 'MoveCentre'
+        else:
+            raise RuntimeError('Peak selection mode %s is not switchable.' % self._peakSelectionMode)
+
+        return
 
     def on_mouse_press_event(self, event):
         """ If in the picking up mode, as mouse's left button is pressed down,
@@ -393,38 +467,71 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currMousePosX = x
         self._currMousePosY = y
 
-        if button == 3:
-            # right button:  pop out menu
-            self.ui.menu = QtGui.QMenu(self)
+        if button == 1:
+            # left button
+            if self._peakSelectionMode == 'MoveCentre' or self._peakSelectionMode == 'ChangeWidth':
+                self._inEditMode = True
 
-            action_select = QtGui.QAction('Select Peak', self)
-            action_select.triggered.connect(self.menu_add_peak)
-
-            action_delete = QtGui.QAction('Delete Peak', self)
-            action_delete.triggered.connect(self.menu_delete_peak)
-
-            self.ui.menu.addAction(action_select)
-            self.ui.menu.addAction(action_delete)
-
-            self.ui.menu.popup(QtGui.QCursor.pos())
+        elif button == 3:
+            # right button
+            pass
 
         # FIXME/TODO/NOW - Define the response event from mouse
 
         return
 
     def on_mouse_release_event(self, event):
-        """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
+        """ If the left button is released and previously in IN_PICKER_MOVING mode,
         then the mode is over
         """
         button = event.button
 
         if button == 1:
             # left button click
-            pass
+            if self._inEditMode:
+                # quit edit mode
+                self._inEditMode = False
 
         elif button == 3:
-            # right button click
-            pass
+            # right button click: pop out menu
+            self.ui.menu = QtGui.QMenu(self)
+
+            action_add = QtGui.QAction('Add Peak', self)
+            action_add.triggered.connect(self.menu_add_peak)
+            self.ui.menu.addAction(action_add)
+
+            if self._peakSelectionMode == 'MoveCentre':
+                # in peak centre moving mode
+                action_switch = QtGui.QAction('Change Peak Width', self)
+                action_switch.triggered.connect(self.menu_switch_mode)
+                self.ui.menu.addAction(action_switch)
+
+                action_cancel = QtGui.QAction('Cancel', self)
+                action_cancel.triggered.connect(self.menu_cancel_selection)
+                self.ui.menu.addAction(action_cancel)
+
+            elif self._peakSelectionMode == 'ChangeWidth':
+                # in peak width determining  mode
+                action_switch = QtGui.QAction('Move Peak Centre', self)
+                action_switch.triggered.connect(self.menu_switch_mode)
+                self.ui.menu.addAction(action_switch)
+
+                action_cancel = QtGui.QAction('Cancel', self)
+                action_cancel.triggered.connect(self.menu_cancel_selection)
+                self.ui.menu.addAction(action_cancel)
+
+            else:
+                # others
+                action_select = QtGui.QAction('Select Peak', self)
+                action_select.triggered.connect(self.menu_select_peak)
+                self.ui.menu.addAction(action_select)
+
+                action_delete = QtGui.QAction('Delete Peak', self)
+                action_delete.triggered.connect(self.menu_delete_peak)
+                self.ui.menu.addAction(action_delete)
+
+            # pop up menu at cursor
+            self.ui.menu.popup(QtGui.QCursor.pos())
 
         return
 
@@ -438,7 +545,83 @@ class PeakPickerWindow(QtGui.QMainWindow):
         if new_x is None or new_y is None:
             return
 
-        # TODO/NOW/FIXME
+        # Determine resolution
+        min_x, max_x = self.ui.graphicsView_main.getXLimit()
+        resolution = (max_x - min_x) * 0.001
+
+        # Ignore moving with small step
+        dx = new_x - self._currMousePosX
+        if abs(dx) < resolution:
+            return
+
+        not_update = False
+        if self._inEditMode and self._peakSelectionMode == 'MoveCentre':
+            self.move_peak_position(new_x)
+        elif self._inEditMode and self._peakSelectionMode == 'ChangeWidth':
+            self.move_peak_boundary(new_x)
+            not_update = True
+        elif self._inEditMode:
+            err_msg = 'It is not right such that InEditMode is %s and SelectionMode is %s.' % (
+                str(self._inEditMode), self._peakSelectionMode)
+            raise RuntimeError(err_msg)
+
+        # Update
+        if not_update is False:
+            self._currMousePosX = new_x
+            self._currMousePosY = new_y
+
+        return
+
+    def move_peak_boundary(self, pos_x):
+        """ Move the boundary of the peak
+        :param pos_x:
+        :return:
+        """
+        # TODO/NOW - Doc and assertion
+
+        # Find out how to expand
+        if pos_x < self._currMousePosX:
+            left_bound = pos_x
+            right_bound = 2*self._currMousePosX - pos_x
+        else:
+            right_bound = pos_x
+            left_bound = 2*self._currMousePosX - pos_x
+
+        # Left
+        left_id = self._indicatorIDList[1]
+        dx = left_bound - self._indicatorPositionList[1]
+        self.ui.graphicsView_main.move_indicator(left_id, dx, 0)
+
+        right_id = self._indicatorIDList[2]
+        dx = right_bound -  self._indicatorPositionList[2]
+        self.ui.graphicsView_main.move_indicator(right_id, dx, 0)
+
+        self._indicatorPositionList[1] = left_bound
+        self._indicatorPositionList[2] = right_bound
+
+        return
+
+    def move_peak_position(self, pos_x):
+        """
+        Purpose: move peak's position including its indicators
+        :param pos_x:
+        :return:
+        """
+        # TODO/NOW - doc and assertion
+        # Check
+
+        # Find dx
+        dx = pos_x - self._currMousePosX
+
+        # Update indicator positions
+        for i in xrange(3):
+            self._indicatorPositionList[i] += dx
+
+        # Move indicators
+        for i in xrange(3):
+            indicator_id = self._indicatorIDList[i]
+            self.ui.graphicsView_main.move_indicator(indicator_id, dx, 0)
+        # END-FOR
 
         return
 
@@ -533,7 +716,21 @@ class MockController(object):
         import mantid.simpleapi
 
         if file_type.lower() == 'gsas':
-            self._currWS = mantid.simpleapi.LoadGSS(Filename=file_name, OutputWorkspace='Temp')
+            # load
+            temp_ws = mantid.simpleapi.LoadGSS(Filename=file_name, OutputWorkspace='Temp')
+            # set instrument geometry
+            if temp_ws.getNumberHistograms() == 2:
+                mantid.simpleapi.EditInstrumentGeometry(Workspace='Temp',
+                                                        PrimaryFlightPath=43.753999999999998,
+                                                        SpectrumIDs='1,2',
+                                                        L2='2.00944,2.00944',
+                                                        Polar='90,270')
+            else:
+                raise RuntimeError('It is not implemented for cases more than 2 spectra.')
+            # convert unit
+            mantid.simpleapi.ConvertUnits(InputWorkspace='Temp', OutputWorkspace='Temp',
+                                          Target='dSpacing')
+
             self._currWS = mantid.simpleapi.ConvertToPointData(InputWorkspace='Temp', OutputWorkspace='Temp')
         else:
             raise NotImplementedError('File type %s is not supported.' % file_type)

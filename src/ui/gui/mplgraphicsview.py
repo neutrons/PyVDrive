@@ -488,6 +488,7 @@ class MplGraphicsView(QtGui.QWidget):
     def add_vertical_indicator(self, x=None, color=None):
         """
         Add a vertical indicator line
+        Guarantees: an indicator is plot and its ID is returned
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
         :return: indicator ID

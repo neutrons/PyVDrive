@@ -113,15 +113,17 @@ class GSASPeakFileManager(object):
         peak_pos_name_dict = dict()
         for bank in self._bankNumberList:
             peak_pos_name_dict[bank] = list()
+            print 'Add bank %d' % bank
 
         # For each bank, create a list sortable by peak positions
         for bank, name in self._peakDict.keys():
             peak_pos = self._peakDict[(bank, name)][0]
+            print 'Bank = ', bank, 'of type', type(bank)
             peak_pos_name_dict[bank].append((peak_pos, name))
 
         # For each bank, sort the peaks by position
         for bank in peak_pos_name_dict.keys():
-            peak_pos_name_dict[bank].sort(reversed=True)
+            peak_pos_name_dict[bank].sort(reverse=True)
 
         # Write
         for bank in self._bankNumberList:
@@ -205,8 +207,7 @@ class GSASPeakFileManager(object):
                 peak_width = float(terms[3+num_peaks])
 
                 # add peak
-                assert (bank_number, peak_name) not in self._peakDict
-                self._peakDict[(bank_number, peak_name)] = (peak_pos, peak_width, overlapped_peak_list)
+                self.add_peak(bank_number, peak_name, peak_pos, peak_width, overlapped_peak_list)
             except IndexError:
                 raise IndexError('Number of items in line "%s" is not right!' % line)
             except TypeError as err:
@@ -247,3 +248,8 @@ if __name__ == '__main__':
     print format_significant_4(0.012345)
     print format_significant_4(0.12345)
     print format_significant_4(1.2345)
+
+    peak_manager = GSASPeakFileManager()
+    peak_manager.import_peaks('/home/wzz/Projects/PyVDrive/tests/peak_processing/peak.txt')
+
+    peak_manager.export_peaks('/home/wzz/Projects/PyVDrive/tests/peak_processing/dumb_peak.txt')

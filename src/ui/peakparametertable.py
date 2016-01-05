@@ -7,10 +7,10 @@ class PeakParameterTable(NT.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters
     """
-    PeakTableSetup = [('Index', 'int'),
+    PeakTableSetup = [('Bank', 'int'),
+                      ('Name', 'string'),
                       ('Centre', 'float'),
-                      ('Min D', 'float'),
-                      ('Max D', 'float'),
+                      ('Width', 'float'),
                       ('Select', 'checkbox')]
 
     def __init__(self, parent):
@@ -28,7 +28,7 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
-    def append_peak(self, centre, xmin, xmax):
+    def add_peak(self, bank, name, centre, width):
         """ Append a peak to the table
         Purpose:
             Append a new peak to the table
@@ -37,19 +37,20 @@ class PeakParameterTable(NT.NTableWidget):
         Guarantees:
             A row is append
         :param centre:
-        :param xmin: left boundary of peak range
-        :param xmax: right boundary of peak range
+        :param bank: bank number
+        :param width: peak width
         :return:
         """
         # Check requirements
         assert isinstance(centre, float)
-        assert isinstance(xmin, float)
-        assert isinstance(xmax, float)
-        assert xmin < centre < xmax
+        assert isinstance(bank, int)
+        assert isinstance(width, float)
+        assert isinstance(name, str)
+        assert width > 0
 
         # Get new index
-        new_index = self.rowCount()
-        self.append_row([new_index, centre, xmin, xmax, False])
+        # new_index = self.rowCount()
+        self.append_row([bank, name, centre, width, False])
 
         return
 
