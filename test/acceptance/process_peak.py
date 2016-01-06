@@ -20,8 +20,8 @@ def init_test(step):
     """ Intialize the test including
     """
     import PyVDrive.vdrive.mantid_helper
-    print 'Test case: IPTS 13587  Run 70269 for silicon'
-    print 'Test case: IPTS 13587  Run 66623 for unknow FCC material'
+    print 'Test case: IPTS 13587  Run 70269 for silicon. FCC a=b=c=5.43, F d 3 m'
+    print 'Test case: IPTS 13587  Run 66623 for unknown FCC material'
 
     print
 
@@ -32,6 +32,7 @@ def init_test(step):
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
+    # TODO/NOW/1st - Implement this!
 
     return
 

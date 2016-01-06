@@ -3,6 +3,7 @@ import os
 import numpy
 
 # Import mantid directory
+"""
 user_root = os.path.expanduser('~')
 for p in sys.path:
     if os.path.isdir(p):
@@ -16,10 +17,63 @@ for p in sys.path:
         if os.path.exists(mantid_path) is True:
             sys.path.append(mantid_path)
             break
+"""
 
 import mantid
 import mantid.api
+import mantid.geometry
 import mantid.simpleapi as mantidapi
+
+
+def calculate_reflections():
+    """
+
+    :return:
+    """
+    # TODO/NOW 1st - Doc, assertion and clean!
+    from mantid.geometry import CrystalStructure, ReflectionGenerator, ReflectionConditionFilter
+
+    def get_generator(lattice_parameters, space_group):
+        """
+        """
+        crystal_structure = CrystalStructure(' '.join([str(x) for x in lattice_parameters]), space_group, '')
+        generator = ReflectionGenerator(crystal_structure, ReflectionConditionFilter.Centering)
+        return generator
+
+    def get_unique_reflections(lattice_parameters, space_group, d_min, d_max):
+        """
+        """
+        generator = get_generator(lattice_parameters, space_group)
+
+        hkls = generator.getUniqueHKLs(d_min, d_max)
+
+        dvalues = generator.getDValues(hkls)
+
+        return zip(hkls, dvalues)
+
+    def get_all_reflections(lattice_parameters, space_group, d_min, d_max):
+        """
+        """
+        generator = get_generator(lattice_parameters, space_group)
+
+        hkls = generator.getHKLs(d_min, d_max)
+
+        dvalues = generator.getDValues(hkls)
+
+        return zip(hkls, dvalues)
+
+
+    cell_parameters = [5, 4, 3]
+
+    print get_unique_reflections(cell_parameters, 'P m m m', 0.5, 5.0)  # primitive
+
+    print get_unique_reflections(cell_parameters, 'I m m m', 0.5, 5.0)  # body center
+
+    print get_unique_reflections(cell_parameters, 'F m m m', 0.5, 5.0)  # face center
+
+    print get_all_reflections(cell_parameters, 'F m m m', 0.5, 5.0)
+
+    return
 
 
 def delete_workspace(workspace):
@@ -40,7 +94,7 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
 
     :return:
     """
-    # TODO/FIXME Doc
+    # TODO/FIXME Doc 1st
     print '[TRACE] Generate Filter By Log'
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
@@ -418,3 +472,7 @@ def workspace_does_exist(workspace_name):
     does_exist = mantid.AnalysisDataService.doesExist(workspace_name)
 
     return does_exist
+
+
+if __name__ == "__main__":
+    calculate_reflections()

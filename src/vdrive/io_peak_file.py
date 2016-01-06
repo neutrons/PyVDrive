@@ -231,7 +231,6 @@ def format_significant_4(float_number):
     """
     assert isinstance(float_number, float)
 
-    formatted = ''
     if 0.01 <= float_number < 0.1:
         formatted = '%.5f' % float_number
     elif 0.1 <= float_number < 1.0:
