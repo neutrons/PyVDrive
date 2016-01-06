@@ -196,7 +196,7 @@ class IndicatorManager(object):
 
         for line_key in self._lineManager.keys():
 
-            print self._lineManager[line_key]
+            print '[MplGraph DB] Exam indicator key %s' % str(self._lineManager[line_key])
 
             if x is not None and y is not None:
                 # 2 way
@@ -299,7 +299,7 @@ class IndicatorManager(object):
         :param dy:
         :return:
         """
-        print self._lineManager[my_id][0]
+        # print self._lineManager[my_id][0]
 
         if self._indicatorTypeDict[my_id] == 0:
             # horizontal
@@ -603,6 +603,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def getXLimit(self):
         """ Get limit of Y-axis
+        :return: 2-tuple as xmin, xmax
         """
         return self._myCanvas.getXLimit()
 
@@ -647,6 +648,13 @@ class MplGraphicsView(QtGui.QWidget):
         self._myCanvas.remove_plot_1d(plot_id)
 
         return
+
+    def remove_line(self, line_id):
+        """ Remove a line
+        :param line_id:
+        :return:
+        """
+        self._myCanvas.remove_plot_1d(line_id)
 
     def set_indicator_position(self, line_id, pos_x, pos_y):
         """ Set the indicator to new position
@@ -768,7 +776,7 @@ class MplGraphicsView(QtGui.QWidget):
         # process marker if it has information
         if marker.count(' (') > 0:
             marker = marker.split(' (')[0]
-        print "[DB] Print line %d: marker = %s, color = %s" % (self._myLineMarkerColorIndex, marker, color)
+        # print "[DB] Print line %d: marker = %s, color = %s" % (self._myLineMarkerColorIndex, marker, color)
 
         # update the index
         self._myLineMarkerColorIndex += 1
@@ -784,7 +792,7 @@ class MplGraphicsView(QtGui.QWidget):
         return
 
     # FIXME - Find out difference between setXYLimit() and setXYLimits()
-    def setXYLimit(self, xmin, xmax, ymin, ymax):
+    def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
         """ Set X-Y limit automatically
         """
         self._myCanvas.axes.set_xlim([xmin, xmax])
@@ -794,10 +802,10 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    """ Permanently removed
     def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        """
-        """
         return self._myCanvas.setXYLimit(xmin, xmax, ymin, ymax)
+    """
 
     def setAutoLineMarkerColorCombo(self):
         """
@@ -889,7 +897,7 @@ class Qt4MplCanvas(FigureCanvas):
 
         # process inputs and defaults
         if color is None:
-            color = (0,1,0,1)
+            color = (0, 1, 0, 1)
         if marker is None:
             marker = 'o'
         if line_style is None:
@@ -897,7 +905,6 @@ class Qt4MplCanvas(FigureCanvas):
 
         # color must be RGBA (4-tuple)
         if plot_error is False:
-            print "[DB] line_style = ", line_style, "line_width = ", line_width, "marker = ", marker, "color = ", color
             r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, linestyle=line_style,
                                label=label, linewidth=line_width)
             # return: list of matplotlib.lines.Line2D object
@@ -1003,7 +1010,7 @@ class Qt4MplCanvas(FigureCanvas):
         # set y ticks as an option:
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
-            print "--------> [FixMe]: Set up the Y-axis ticks is erroreous"
+            print "--------> [FixMe]: The way to set up the Y-axis ticks is wrong!"
             #self.axes.set_yticklabels(yticklabels)
 
         # explicitly set aspect ratio of the image
@@ -1157,14 +1164,16 @@ class Qt4MplCanvas(FigureCanvas):
         :return:
         """
         # self._lineDict[ikey].remove()
-        print 'Remove line... ',
+        debug_info = 'Remove line... '
 
         # Get all lines in list
         lines = self.axes.lines
         assert isinstance(lines, list)
 
-        print 'Number of lines = %d, List: %s' % (len(lines), str(lines))
-        print 'Line to remove: key = %s, Line Dict has key = %s' % (str(plot_key), str(self._lineDict.has_key(plot_key)))
+        debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
+        debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (
+            str(plot_key), plot_key in self._lineDict)
+        print debug_info
 
         if plot_key in self._lineDict:
             self.axes.lines.remove(self._lineDict[plot_key])

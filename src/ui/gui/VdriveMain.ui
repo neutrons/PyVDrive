@@ -80,7 +80,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton">
+             <widget class="QPushButton" name="pushButton_showCalDetails">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -93,19 +93,6 @@
           </item>
           <item>
            <widget class="QLineEdit" name="lineEdit_calibBriefView"/>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_chopRun">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Chopped Run</string>
-            </property>
-           </widget>
           </item>
           <item>
            <widget class="QGroupBox" name="groupBox">
@@ -181,6 +168,19 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBox_chopRun">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Chopped Run</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QGroupBox" name="groupBox_6">
             <property name="title">
              <string>Select your data</string>
@@ -207,7 +207,7 @@
                 </size>
                </property>
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="tab">
                 <attribute name="title">
@@ -217,14 +217,14 @@
                  <item>
                   <widget class="QRadioButton" name="radioButton_runsAddAll">
                    <property name="text">
-                    <string>Add Selected Runs</string>
+                    <string>Add All Runs</string>
                    </property>
                   </widget>
                  </item>
                  <item>
                   <widget class="QRadioButton" name="radioButton_runsAddPartial">
                    <property name="text">
-                    <string>Add All Runs</string>
+                    <string>Add a Subset of Runs Between ... </string>
                    </property>
                   </widget>
                  </item>
@@ -454,30 +454,13 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="tab_12">
              <attribute name="title">
               <string>CHOP</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_17">
-              <item row="1" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayout_23">
-                <item>
-                 <widget class="QPushButton" name="pushButton_chopData">
-                  <property name="font">
-                   <font>
-                    <weight>75</weight>
-                    <bold>true</bold>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>Chop Data</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item row="0" column="0">
                <layout class="QVBoxLayout" name="verticalLayout_31">
                 <item>
@@ -488,53 +471,6 @@
                   <layout class="QVBoxLayout" name="verticalLayout_27">
                    <item>
                     <layout class="QVBoxLayout" name="verticalLayout_25">
-                     <item>
-                      <layout class="QGridLayout" name="gridLayout_16">
-                       <item row="0" column="0">
-                        <widget class="QCheckBox" name="checkBox_chopNumSecSkip">
-                         <property name="text">
-                          <string>Skip first</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QLineEdit" name="lineEdit_chopNumSecSkip">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QLabel" name="label_3">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="text">
-                          <string>Seconds</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <spacer name="horizontalSpacer_14">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>40</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
-                      </layout>
-                     </item>
                      <item>
                       <widget class="QCheckBox" name="checkBox_chopNeutronOnly">
                        <property name="toolTip">
@@ -574,61 +510,6 @@
                      </item>
                     </layout>
                    </item>
-                   <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_26">
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_chopContantDeltaT">
-                       <property name="text">
-                        <string>By constant time interval</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_22">
-                       <item>
-                        <spacer name="horizontalSpacer_8">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="sizeType">
-                          <enum>QSizePolicy::Preferred</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>40</width>
-                           <height>20</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="lineEdit_10">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="label_8">
-                         <property name="text">
-                          <string>Sec</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <widget class="QRadioButton" name="radioButton_chopByTimeSegments">
-                       <property name="text">
-                        <string>By picked segments</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -638,34 +519,195 @@
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>0</number>
+                   <number>1</number>
                   </property>
                   <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
-                    <string>Load</string>
+                    <string>Time Segments</string>
                    </attribute>
                    <layout class="QVBoxLayout" name="verticalLayout_28">
                     <item>
-                     <widget class="QPushButton" name="pushButton_11">
+                     <widget class="QRadioButton" name="radioButton_chopContantDeltaT">
                       <property name="text">
-                       <string>Load time segments</string>
+                       <string>By constant time interval</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLabel" name="label_19">
+                     <layout class="QGridLayout" name="gridLayout_16">
+                      <item row="0" column="3">
+                       <widget class="QLabel" name="label_3">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="text">
+                         <string>Seconds</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLabel" name="label">
+                        <property name="text">
+                         <string>Skip First</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="3">
+                       <widget class="QLabel" name="label_8">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="text">
+                         <string>Seconds</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QLabel" name="label_9">
+                        <property name="text">
+                         <string>Interval</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QLineEdit" name="lineEdit_chopTimeSegStartTime">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QLineEdit" name="lineEdit_chopTimeSegInterval"/>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QLabel" name="label_10">
+                        <property name="text">
+                         <string>Ignore Last</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QLineEdit" name="lineEdit_chopTimeSegStopTime"/>
+                      </item>
+                      <item row="2" column="3">
+                       <widget class="QLabel" name="label_11">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="text">
+                         <string>Seconds</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <spacer name="horizontalSpacer_8">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Preferred</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <widget class="QRadioButton" name="radioButton_chopByTimeSegments">
+                      <property name="text">
+                       <string>By picked segments</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QGridLayout" name="gridLayout_20">
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="pushButton_loadTimeSegmentsFile">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="text">
+                         <string>Load time segments</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <spacer name="horizontalSpacer_9">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Preferred</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="label_timeSegments">
                       <property name="text">
                        <string>Time Segments</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QTableView" name="tableView_timeSegment">
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Should be editable to add segments by user from UI&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <widget class="TimeSegmentsTable" name="tableWidget_timeSegment"/>
+                    </item>
+                    <item>
+                     <spacer name="verticalSpacer_4">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
                       </property>
-                      <property name="sortingEnabled">
-                       <bool>false</bool>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Preferred</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_chopData">
+                      <property name="font">
+                       <font>
+                        <weight>75</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <property name="text">
+                       <string>Chop Data</string>
                       </property>
                      </widget>
                     </item>
@@ -673,11 +715,37 @@
                   </widget>
                   <widget class="QWidget" name="tab_7">
                    <attribute name="title">
-                    <string>Pick</string>
+                    <string>Log Value</string>
                    </attribute>
                    <layout class="QGridLayout" name="gridLayout_4">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_3">
+                      <item row="4" column="0">
+                       <spacer name="verticalSpacer_8">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Preferred</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item row="5" column="0">
+                       <widget class="QLabel" name="label_activeSlicer">
+                        <property name="text">
+                         <string/>
+                        </property>
+                        <property name="alignment">
+                         <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+                        </property>
+                       </widget>
+                      </item>
                       <item row="0" column="0">
                        <layout class="QHBoxLayout" name="horizontalLayout_25">
                         <item>
@@ -737,7 +805,7 @@
                       <item row="2" column="0">
                        <widget class="QGroupBox" name="groupBox_14">
                         <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
@@ -819,7 +887,7 @@
                         </layout>
                        </widget>
                       </item>
-                      <item row="5" column="0">
+                      <item row="6" column="0">
                        <widget class="QPushButton" name="pushButton_saveSlicer">
                         <property name="font">
                          <font>
@@ -836,97 +904,6 @@
                        </widget>
                       </item>
                       <item row="3" column="0">
-                       <widget class="QGroupBox" name="groupBox_3">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="title">
-                         <string>Slice by time (second) relative to run start</string>
-                        </property>
-                        <layout class="QGridLayout" name="gridLayout_12">
-                         <item row="1" column="1">
-                          <widget class="QLineEdit" name="lineEdit_timeInterval">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QLabel" name="label_16">
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sample value interval&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Time Interval</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="0">
-                          <widget class="QLabel" name="label_7">
-                           <property name="text">
-                            <string>Stop</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="0">
-                          <widget class="QLabel" name="label_21">
-                           <property name="text">
-                            <string>Start</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="1">
-                          <widget class="QLineEdit" name="lineEdit_stopTime">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QLineEdit" name="lineEdit_sliceStartTime">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="2">
-                          <widget class="QPushButton" name="pushButton_applyTimeInterval">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="minimumSize">
-                            <size>
-                             <width>80</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create event data slicers. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. de-select plot1 through plot6;&lt;/p&gt;&lt;p&gt;2. if the number of slicers is not huge, then picture the slicers on snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Apply</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                      <item row="4" column="0">
                        <widget class="QGroupBox" name="groupBox_8">
                         <property name="title">
                          <string>Slice by picking manually</string>
@@ -980,6 +957,35 @@
                         </layout>
                        </widget>
                       </item>
+                      <item row="9" column="0">
+                       <widget class="QPushButton" name="pushButton_chopDataSingleSet">
+                        <property name="font">
+                         <font>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="toolTip">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop one event data file according to the slicing strategy specified in tab 'Log Value'&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                        <property name="text">
+                         <string>Chop Single Data Set</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="8" column="0">
+                       <spacer name="verticalSpacer_7">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
                      </layout>
                     </item>
                    </layout>
@@ -987,19 +993,6 @@
                  </widget>
                 </item>
                </layout>
-              </item>
-              <item row="2" column="0">
-               <spacer name="verticalSpacer_4">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
               </item>
              </layout>
             </widget>
@@ -1023,7 +1016,7 @@
                      </property>
                      <layout class="QGridLayout" name="gridLayout_8">
                       <item row="0" column="1">
-                       <widget class="QCheckBox" name="checkBox_13">
+                       <widget class="QCheckBox" name="checkBox_overPixel">
                         <property name="toolTip">
                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;bin over pixel: sum spectrum among certain pixels. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                         </property>
@@ -1048,7 +1041,7 @@
                          </widget>
                         </item>
                         <item row="0" column="1">
-                         <widget class="QRadioButton" name="radioButton_18">
+                         <widget class="QRadioButton" name="radioButton_binVerticalPixels">
                           <property name="text">
                            <string>Vertical</string>
                           </property>
@@ -1087,7 +1080,7 @@
                          </spacer>
                         </item>
                         <item row="1" column="1">
-                         <widget class="QRadioButton" name="radioButton_17">
+                         <widget class="QRadioButton" name="radioButton_binHorizontalPixels">
                           <property name="text">
                            <string>Horizontal</string>
                           </property>
@@ -1105,21 +1098,21 @@
                      </property>
                      <layout class="QGridLayout" name="gridLayout_21">
                       <item row="0" column="0">
-                       <widget class="QCheckBox" name="checkBox_21">
+                       <widget class="QCheckBox" name="checkBox_reduceSubtractBackground">
                         <property name="text">
                          <string>Substract backgroud</string>
                         </property>
                        </widget>
                       </item>
                       <item row="1" column="0">
-                       <widget class="QCheckBox" name="checkBox_22">
+                       <widget class="QCheckBox" name="checkBox_reduceNormalizedByVanadium">
                         <property name="text">
                          <string>Normalized intensity to vanadium</string>
                         </property>
                        </widget>
                       </item>
                       <item row="2" column="0">
-                       <widget class="QCheckBox" name="checkBox_23">
+                       <widget class="QCheckBox" name="checkBox_reduceSubstractSpecialPattern">
                         <property name="text">
                          <string>Substract special pattern</string>
                         </property>
@@ -1151,7 +1144,7 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLineEdit" name="lineEdit_18">
+                         <widget class="QLineEdit" name="lineEdit_runSpecialPattern">
                           <property name="sizePolicy">
                            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                             <horstretch>0</horstretch>
@@ -1896,15 +1889,15 @@
     </item>
     <item row="0" column="1">
      <layout class="QGridLayout" name="gridLayout_7">
-      <item row="3" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView4">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
+      <item row="6" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_33">
+        <item>
+         <widget class="QComboBox" name="comboBox_g51"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_g52"/>
+        </item>
+       </layout>
       </item>
       <item row="1" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView1">
@@ -2000,16 +1993,6 @@
         </item>
        </layout>
       </item>
-      <item row="6" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_33">
-        <item>
-         <widget class="QComboBox" name="comboBox_g51"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g52"/>
-        </item>
-       </layout>
-      </item>
       <item row="6" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_34">
         <item>
@@ -2022,6 +2005,16 @@
       </item>
       <item row="5" column="0">
        <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="MplGraphicsView" name="graphicsView_snapView4">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -2047,8 +2040,8 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNewProject"/>
     <addaction name="actionOpen_Project"/>
+    <addaction name="actionNewProject"/>
     <addaction name="actionSave_Project"/>
     <addaction name="actionSave_Project_As"/>
     <addaction name="separator"/>
@@ -2168,14 +2161,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>VdriveRunManagerTree</class>
-   <extends>QTreeView</extends>
-   <header>vdrivetreewidgets.h</header>
-  </customwidget>
-  <customwidget>
    <class>MplGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>mplgraphicsview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VdriveRunManagerTree</class>
+   <extends>QTreeView</extends>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
    <class>FileSystemTreeView</class>
@@ -2184,6 +2177,11 @@
   </customwidget>
   <customwidget>
    <class>VdriveRunTableWidget</class>
+   <extends>QTableWidget</extends>
+   <header>vdrivetablewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>TimeSegmentsTable</class>
    <extends>QTableWidget</extends>
    <header>vdrivetablewidgets.h</header>
   </customwidget>

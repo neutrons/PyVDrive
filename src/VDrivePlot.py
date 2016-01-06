@@ -62,12 +62,16 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Define event handling
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_by_ipts)
-        self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration)
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_sample_log_file)
 
         # Column 2
+        # about vanadium calibration
+        self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
+                     self.do_load_calibration)
+        self.connect(self.ui.pushButton_showCalDetails, QtCore.SIGNAL('clicked()'),
+                     self.do_show_calibration_map)
+
         # select and set runs from run-info-tree
         self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_to_reduce)
@@ -84,13 +88,20 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                      self.pop_manual_picker)
 
         # Column 3
-        # tab-1
-        self.connect(self.ui.pushButton_applyTimeInterval, QtCore.SIGNAL('clicked()'),
-                     self.do_generate_slicer_by_time)
+        # Tab-1
+        # sub-tab-1
+        self.connect(self.ui.pushButton_loadTimeSegmentsFile, QtCore.SIGNAL('clicked()'),
+                     self.do_load_time_seg_file)
+        self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
+                     self.do_slice_data_by_time)
+
+        # sub-tab-2
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
-                     self.do_pick_manual)
+                     self.do_apply_manual_slicer)
         self.connect(self.ui.pushButton_applyLog, QtCore.SIGNAL('clicked()'),
-                     self.do_pick_log)
+                     self.do_apply_log_slicer)
+        self.connect(self.ui.pushButton_saveSlicer, QtCore.SIGNAL('clicked()'),
+                     self.do_save_log_slicer)
 
         # Tab-2
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
@@ -137,6 +148,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self._group_left_box_values = [-1] * self._numSnapViews
 
         # variables for event data slicing
+        self._currLogRunNumber = None  # current run number for slicing with log
+        self._currSlicerLogName = None  # current sample for slicer, __manual__ is for manual mode
         self._activeSlicer = ''
 
         # Some class variable for recording status
@@ -150,7 +163,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    # TODO/FIXME - Replace homemade by QSettings
+    # TODO/FIXME - Replace homemade by QSettings: Issue XXX
     def save_settings(self):
         settings = QtCore.QSettings()
         settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
@@ -158,18 +171,116 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def load_settings(self):
         settings = QtCore.QSettings()
-        value1 = str(settings.value('test01', ''))
-        #print '[DB] Value 1 without previous setting', str(value1)
-        print value1
-        self.ui.lineEdit_userLogFileName.setText(value1)
+        value1 = settings.value('test01', '')
+        if isinstance(value1, QtCore.QVariant) is False:
+            print '[Error] to load QSettings.  Value1 is of type %s' % str(type(value1))
+            return
+        value1str = value1.toString()
+        print '[DB] Value 1 without previous setting', str(value1str), 'of type', str(type(value1str))
+        self.ui.lineEdit_userLogFileName.setText(value1str)
 
-    def do_bin_data(self):
-        """ Bin a set of data
+    def do_apply_log_slicer(self):
+        """ Pick up the splitters made from sample log values
         :return:
         """
-        # TODO/FIXME - NOW!
-        selection_list = [self.ui.radioButton_binStandard,
-                          self.ui.radioButton_binCustomized]
+        found = False
+        for i_radio in xrange(self._numSnapViews):
+            if self._groupedSnapViewList[i_radio].is_selected() is True:
+                self._currSlicerLogName = spview.SampleLogView(
+                    self._groupedSnapViewList[i_radio], self).get_log_name()
+                found = True
+                print '[DB] VDrivePlot: snap view for radio button %d is selected.' % i_radio
+                break
+
+        if found is False:
+            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
+
+
+        # self._apply_slicer_snap_view() : disabled because there is no need to do this
+
+        return
+
+    def do_apply_manual_slicer(self):
+        """ Pick up (time) slicing information and show it by indicating lines in snap view
+        :return:
+        """
+        self._myWorkflow.set_slicer('Manual')
+
+        self._apply_slicer_snap_view()
+
+        return
+
+    def do_bin_data(self):
+        """ Brief: Bin a set of data
+        Purpose:
+            Reduce the event data to focused diffraction pattern.
+            The process includes align, focus, rebin and calibration with vanadium.
+        Requirements:
+            At least 1 run is selected for reduce;
+            calibration file for focusing is specified;
+            ... ...
+        Guarantees:
+            Selected runs are reduced from event data to focused diffraction pattern
+            good for Rietveld refinement.
+            If the data slicing is selected, then reduce the sliced data.
+        :return:
+        """
+        # Retrieve the runs to reduce
+        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        if len(run_number_list) == 0:
+            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+
+        # Process data slicers
+        if self.ui.checkBox_chopRun.isChecked():
+            raise NotImplementedError('Binning data with option to chop will be solved later!')
+
+        # Collect information for reduction
+        # binning parameter
+        if self.ui.radioButton_binStandard.isChecked():
+            # default
+            bin_par = None
+        elif self.ui.radioButton_binCustomized.isChecked():
+            # customized bin parameters
+            bin_width = guiutil.parse_float(self.ui.lineEdit_binWidth)
+            min_tof = guiutil.parse_float(self.ui.lineEdit_binMinTOF)
+            max_tof = guiutil.parse_float(self.ui.lineEdit_binMaxTOF)
+            bin_par = (min_tof, bin_width, max_tof)
+        else:
+            # violate requirements
+            guiutil.pop_dialog_error(self, '')
+            return
+
+        # bin over pixel
+        if self.ui.checkBox_overPixel.isChecked():
+            # binning pixel
+            bin_pixel_direction = ''
+            if self.ui.radioButton_binVerticalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeVertical)
+                bin_pixel_direction = 'vertical'
+            elif self.ui.radioButton_binHorizontalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
+                bin_pixel_direction = 'horizontal'
+            else:
+                guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+                return
+            raise NotImplementedError('Will be implemented in #32.')
+        # END-IF-ELSE
+
+        # Other parameters
+        do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
+        do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
+        do_substract_special_pattern = self.ui.checkBox_reduceSubstractSpecialPattern.isChecked()
+        do_write_fullprof = self.ui.checkBox_outFullprof.isChecked()
+        do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
+
+        # Reduce data
+        status, ret_obj = self._myWorkflow.reduce_data_set()
+        if status is False:
+            error_msg = ret_obj
+            guiutil.pop_dialog_error(self, error_msg)
+
+        # Show message to notify user that the reduction is complete
+        guiutil.pop_dialog_information(self, 'Reduction is complete.')
 
         return
 
@@ -216,6 +327,93 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    def do_slice_data_by_time(self):
+        """ Event handler to slice/chop data by time
+        :return:
+        """
+        # Check selected run numbers
+        selected_run_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        print '[DB] Slice data by time: runs to chop = %s' % str(selected_run_list)
+
+        do_connect_runs = self.ui.checkBox_chopContinueRun.isChecked()
+
+        # Check radio button to generate relative-time slicer
+        if self.ui.radioButton_chopContantDeltaT.isChecked() is True:
+            # chop data by standard runs
+            start_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStartTime)
+            time_interval = guiutil.parse_float(self.ui.lineEdit_chopTimeSegInterval)
+            stop_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStopTime)
+
+            if do_connect_runs is True:
+                # special handling to chop data by connecting runs
+                self._myWorkflow.chop_data_connect_runs(selected_run_list, start_time, stop_time, time_interval)
+
+            else:
+                # regular chopping with run by run
+                err_msg = ''
+                for run_number in selected_run_list:
+                    status, ret_obj = self._myWorkflow.gen_data_slicer_by_time(
+                        run_number=run_number, start_time=start_time,
+                        end_time=stop_time, time_step=time_interval)
+                    if status is False:
+                        err_msg += ret_obj + '\n'
+                        continue
+
+                    status, ret_obj = self._myWorkflow.slice_data(
+                        run_number=run_number, by_time=True)
+                    if status is False:
+                        err_msg += ret_obj + '\n'
+                # END-FOR
+                if err_msg != '':
+                    guiutil.pop_dialog_error(err_msg)
+
+        elif self.ui.radioButton_chopByTimeSegments.isChecked() is True:
+            # chop with user-defined time segment
+            raise RuntimeError('IMPLEMENT IMPORTING TIME SEGMENT FILE ASAP')
+
+        else:
+            # Impossible status
+            guiutil.pop_dialog_error(self, 'User must choose one radio button.')
+            return
+
+        # Pop a summary dialog and optionally shift next tab
+        # TODO/FIXME Implement pop up dialog for summary
+
+        # shift
+        do_change_tab = self.ui.checkBox_chopBinLater.isChecked()
+        if do_change_tab is True:
+            self.ui.tabWidget_reduceData.setCurrentIndex(1)
+
+        return
+
+    def do_save_log_slicer(self):
+        """ Save slicer to file in 'log value' sub-tab of CHOP tab
+        :return:
+        """
+        out_file_name = str(
+                QtGui.QFileDialog.getSaveFileName(self, 'Data Slice File',
+                                                  self._myWorkflow.get_working_dir()))
+
+        print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName,
+        print 'to file', out_file_name
+        # Save slicer for run  57325  sample log  Voltage
+
+        if self._currSlicerLogName is None:
+            guiutil.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
+            return
+        else:
+            # Save splitters workspace
+            if self._currSlicerLogName == '__manual__':
+                raise NotImplementedError('ASAP')
+            else:
+                # save splitters from log
+                status, err_msg = self._myWorkflow.save_splitter_workspace(
+                    self._currLogRunNumber, self._currSlicerLogName, out_file_name)
+                if status is False:
+                    guiutil.pop_dialog_error(self, err_msg)
+
+        return
+
     def do_sort_selected_runs(self):
         """
         TODO/FIXME
@@ -248,7 +446,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         '''
 
         # Selecting runs
-        # NEXT/TODO/FIXME self.ui.tableWidget_selectedRuns.setup()
+        # NEXT/TODO/FIXME
+        self.ui.tableWidget_selectedRuns.setup()
+        self.ui.tableWidget_timeSegment.setup()
+
         self.ui.treeView_iptsRun.set_main_window(self)
 
         # Chopping
@@ -321,6 +522,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
+        # FIXME - THIS SHOULD BE REFACTORED INTO VdriveAPI
+        raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
         status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
                                                      include_end_date=True)
         if status is True:
@@ -362,32 +565,61 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_add_runs_to_reduce(self):
         """
-        TODO/FIXME
+        Purpose:
+            Add selected runs to reduce.  Selected runs can be all runs of current IPTS
+            or from a given range of run numbers
+        Requirements:
+            At least one radio button is selected.
+        Guarantees:
+            Selected runs are added to table widget 'tableWidget_selectedRuns'
         :return:
         """
+        # Find out the list of runs to add
         if self.ui.radioButton_runsAddAll.isChecked():
-            # Case as select all
+            # case to add all runs
             status, ret_obj = self._myWorkflow.get_runs()
             if status is True:
                 run_list = ret_obj
-                self.ui.tableWidget_selectedRuns.append_runs(run_list)
             else:
+                # Error!
                 error_message = ret_obj
-                guiutil.pop_dialog_error(error_message)
+                guiutil.pop_dialog_error(self, error_message)
+                return
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
-            # Case as select a subset
+            # case to add a subset of runs
             start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
             end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+
+            # switch start run and end run if user specifies in wrong order
+            if start_run > end_run:
+                temp = start_run
+                start_run = end_run
+                end_run = temp
+                self.ui.lineEdit_runFirst.setText(str(start_run))
+                self.ui.lineEdit_runLast.setText(str(end_run))
+
+            # get subset of runs
             status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
             if status is True:
                 run_list = ret_obj
                 self.ui.tableWidget_selectedRuns.append_runs(run_list)
             else:
+                # Error and return
                 error_message = ret_obj
                 guiutil.pop_dialog_error(error_message)
+                return
+
+            if len(run_list) == 0:
+                error_message = 'No available run can be found between %d and %d ' \
+                                'for this project.' % (start_run, end_run)
+                guiutil.pop_dialog_error(self, error_message)
         else:
-            raise RuntimeError('None radio button for select runs is selected.  Logically wrong!')
+            guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+            return
+
+        # Add all runs to table
+        self.ui.tableWidget_selectedRuns.append_runs(run_list)
 
         return
 
@@ -411,24 +643,22 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    def do_generate_slicer_by_time(self):
-        """
-
-        :return:
-        """
-        # TODO - Gather information for tmin, tmax, delta_t
-
-        # TODO - Call the workflow to generate slicer
-
-        # Set active
-        self._activeSlicer = ACTIVE_SLICER_TIME
-
-        return
-
     def do_load_calibration(self):
         """
+        Purpose:
+            Select and check vanadium calibration file for the current runs
+        Requirements:
+            Some runs are light-loaded to project
+        Guarantee:
+            Load calibration...
+
+        Nomenclature:
+        1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.
         :return:
         """
+        # TODO/NEXT/NOW
+        raise NotImplementedError('ASAP')
+
         # Get calibration file
         if os.path.exists(self._calibCriteriaFile) is False:
             self._calibCriteriaFile = str(
@@ -441,6 +671,33 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         import ui.Dialog_SetupVanCalibrationRules as vanSetup
         setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
         setupdialog.exec_()
+
+        return
+
+    def do_load_time_seg_file(self):
+        """
+        Load time segment file
+        :return:
+        """
+        # Get file name
+        file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
+        log_path = self._myWorkflow.get_working_dir()
+        seg_file_name = str(QtGui.QFileDialog.getOpenFileName(
+            self, 'Open Time Segment File', log_path, file_filter))
+        print '[DB-BAR] Importing time segment file: %s' % seg_file_name
+
+        # Import file
+        status, ret_obj = vdrive.parse_time_segment_file(seg_file_name)
+        if status is False:
+            err_msg = ret_obj
+            guiutil.pop_dialog_error(self, err_msg)
+            return
+        else:
+            ref_run, run_start, time_seg_list = ret_obj
+
+        # Set to table
+        self.ui.tableWidget_timeSegment.remove_all_rows()
+        self.ui.tableWidget_timeSegment.set_segments(time_seg_list)
 
         return
 
@@ -470,6 +727,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                     log_path = os.path.dirname(run_file_name)
             else:
                 guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+            self._currLogRunNumber = run_number
         else:
             guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
         # END-IF
@@ -512,40 +770,27 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
-    def do_pick_log(self):
-        """ Pick up the splitters made from sample log values
-        :return:
-        """
-        found = False
-        for i_radio in xrange(self._numSnapViews):
-            if self._groupedSnapViewList[i_radio].is_selected() is True:
-                log_name = self._groupedSnapViewList[i_radio].get_log_name()
-                self._myWorkflow.set_slicer(splitter_src='SampleLog', sample_log_name=log_name)
-                found = True
-                break
-
-        if found is False:
-            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
-
-        self._apply_slicer_snap_view()
-
-        return
-
-    def do_pick_manual(self):
-        """ Pick up (time) slicing information and show it by indicating lines in snap view
-        :return:
-        """
-        self._myWorkflow.set_slicer('Manual')
-
-        self._apply_slicer_snap_view()
-
-        return
-
     def do_save_slicer(self):
         """ Save the slicer (splitters) for future splitting
         :return:
         """
         guiutil.pop_dialog_error('ASAP')
+
+    def do_show_calibration_map(self):
+        """
+        Purpose:
+            Show detailed calibration file mapping information.
+        Example:
+            -rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda
+            -rw-rwxr-- 1 13489 49133 3240 Jun 16 16:43 Vulcan-70487-s.prm
+        Requirements:
+            ???
+        Guarantees:
+            ???
+        :return:
+        """
+        # TODO/NOW/FIXME
+        raise NotImplementedError('ASAP')
 
     def evt_chop_run_state_change(self):
         """
@@ -566,37 +811,42 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         :return:
         """
+        self.ui.radioButton_plot1.setChecked(True)
         self.evt_snap_mouse_press(event, 0)
 
     def evt_snap2_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot2.setChecked(True)
         self.evt_snap_mouse_press(event, 1)
-
 
     def evt_snap3_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot3.setChecked(True)
         self.evt_snap_mouse_press(event, 2)
 
     def evt_snap4_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot4.setChecked(True)
         self.evt_snap_mouse_press(event, 3)
 
     def evt_snap5_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot5.setChecked(True)
         self.evt_snap_mouse_press(event, 4)
 
     def evt_snap6_mouse_press(self, event):
         """
         :return:
         """
+        self.ui.radioButton_plot6.setChecked(True)
         self.evt_snap_mouse_press(event, 5)
 
     def evt_snap_mouse_press(self, event, snap_view_index):
@@ -643,7 +893,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         :param log_name:
         :return: 2-tuple as (numpy.1darray, numpy.1darray)
         """
-        status, ret_obj = self._myWorkflow.get_sample_log_values(log_name, relative)
+        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)
 
@@ -682,11 +932,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             if status is False:
                 raise RuntimeError(run_tuple)
             nxs_file_name = run_tuple[0]
+            run_number = int(run)
         else:
             nxs_file_name = run
+            run_number = None
 
         # Load file
-        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name)
+        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name, run_number=run_number)
         if status is False:
             raise RuntimeError(errmsg)
 
@@ -768,7 +1020,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if isinstance(self._manualPikerWindow, LogPicker.WindowLogPicker):
             self._manualPikerWindow.show()
         else:
-            self._manualPikerWindow = LogPicker.WindowLogPicker(self)
+            # Get selected run number from sidebar tree view
+            status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
+            if status is True:
+                run_number = ret_obj
+                try:
+                    run_number = int(run_number)
+                except ValueError:
+                    run_number = None
+            else:
+                run_number = None
+            self._manualPikerWindow = LogPicker.WindowLogPicker(self, run_number)
 
         # Set up tree view for runs
         self._manualPikerWindow.setup()
@@ -785,32 +1047,28 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Check index
         if self._currentSnapViewIndex < 0 \
                 or self._currentSnapViewIndex >= len(self._groupedSnapViewList):
-            error_message = 'Current snap view index (%d) is either not defined or out of boundary' \
-                            % self._currentSnapViewIndex
+            error_message = 'Current snap view index (%d) is either not defined ' \
+                            'or out of boundary' % self._currentSnapViewIndex
             guiutil.pop_dialog_error(error_message)
 
         # Create a Snap view window if needed
-        consider_save = False
         if self._snapViewWindow is None:
             # Create a new window
-            self._snapViewWindow = dlgSnap.DialogLogSnapView()
-        else:
-            consider_save = True
+            print '[DB Trace] Creating a new SnapViewDialog.'
+            self._snapViewWindow = dlgSnap.DialogLogSnapView(self)
 
         # Refresh?
-        if consider_save is True:
-            if self._snapViewWindow.is_saved() is False:
-                # If window is open but not saved, pop error message
-                guiutil.pop_dialog_error('Current window is not saved.')
+        if self._snapViewWindow.allow_new_session() is False:
+            # If window is open but not saved, pop error message
+                guiutil.pop_dialog_error(self, 'Current window is not saved.')
                 return
-            # END-IF-ELSE
         # END-IF
 
         # Get the final data
         sample_log_view = spview.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
         num_skipped_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
-        self._snapViewWindow.setup(self._myWorkflow, sample_log_name, num_skipped_second)
+        self._snapViewWindow.setup(self._myWorkflow, self._currLogRunNumber, sample_log_name, num_skipped_second)
 
         self._snapViewWindow.show()
 
@@ -828,18 +1086,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         return
 
+    """
     def _apply_slicer_snap_view(self):
-        """
         Apply Slicers to all 6 view
         :return:
-        """
         vec_time, vec_y = self._myWorkflow.get_event_slicer_active(relative_time=True)
 
         for snap_view_suite in self._groupedSnapViewList:
             snap_view_suite.update_event_slicer(vec_time)
 
         return
-
+    """
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)

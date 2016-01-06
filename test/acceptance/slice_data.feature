@@ -14,6 +14,10 @@ Feature: Wenduo Zhou
 		Then I slice data and check result
 		Then I set up rules to slice this run by time
 	    Then I have data sliced by time-splitters and check result
+	    # TODO/FIXME/NOW: finish these 3 new steps
+  		Then I save the slicer to a text file
+  		Then I load the text file to a slicer
+  		Then I have data sliced by the loaded splitters
 
 #	    Then I set up a list of time segments to generate data slicer
 #	    Then I apply the data slicer to a run and check the result

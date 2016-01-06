@@ -27,14 +27,43 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return
 
+    def get_selected_time_segments(self, flag):
+        """
+        Select time segments
+        :param flag: If flag is true, then return the selected rows; otherwise, the
+                     not-selected rows
+        :return: 2-tuple as a list of time segments and a list of row numbers for them
+        """
+        # Get column index
+        i_col_status = Data_Slicer_Table_Setup.index(('', 'checkbox'))
+        i_col_start = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        i_col_stop = Data_Slicer_Table_Setup.index(('Stop', 'float'))
+
+        # Collect time segment
+        time_segment_list = list()
+        row_number_list = list()
+        num_rows = self.rowCount()
+        for i_row in xrange(num_rows):
+            if self.get_cell_value(i_row, i_col_status) == flag:
+                start_time = self.get_cell_value(i_row, i_col_start)
+                stop_time = self.get_cell_value(i_row, i_col_stop)
+                # FIXME : The last row's stop is not calculated by method fill_stop_time()
+                time_segment_list.append((start_time, stop_time))
+                row_number_list.append(i_row)
+        # END-FOR
+
+        return time_segment_list, row_number_list
+
     def fill_stop_time(self):
-        """ Fill the stop time by next start time
-        :return:
+        """ Fill the stop time by next line's start time
+        :return: None
         """
         num_rows = self.rowCount()
+        col_index_start = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        col_index_stop = Data_Slicer_Table_Setup.index(('Stop', 'float'))
         for ir in xrange(num_rows-1):
-            stop_time = self.get_cell_value(ir+1, 0)
-            self.set_value_cell(ir, 1, stop_time)
+            stop_time = self.get_cell_value(ir+1, col_index_start)
+            self.set_value_cell(ir, col_index_stop, stop_time)
 
         return
 
@@ -58,7 +87,7 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         """
         Get all splitters that are selected
         Note: splitters are relative time to run_start in unit of second
-        :return:
+        :return: a list of 2-tuple as start time and stop time relative to run start
         """
         split_tup_list = list()
 
@@ -72,6 +101,59 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         # END-FOR
 
         return split_tup_list
+
+    def replace_line(self, row_number, time_segments):
+        """
+        Replace a row by a few of new rows
+        :param row_number: the number of the row to be replace
+        :param time_segments: items for the new rows.
+        :return: 2-tuple as (bool, str)
+        """
+        # Check
+        assert isinstance(row_number, int)
+        assert isinstance(time_segments, list)
+
+        num_rows = self.rowCount()
+        if row_number < 0 or row_number >= num_rows:
+            return False, 'Input row number %d is out of range [0, %d).' % (row_number, num_rows)
+
+        i_start_time = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        i_stop_time = Data_Slicer_Table_Setup.index(('Stop', 'float'))
+        # FIXME/NOW - get i_select properly
+        i_select = 2
+
+        # Replace original row
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_start_time, time_segments[0][0])
+        self.update_cell_value(row_number, i_start_time, time_segments[0][0])
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_stop_time, time_segments[0][1])
+        self.update_cell_value(row_number, i_stop_time, time_segments[0][1])
+
+        # Insert the rest
+        for index in xrange(1, len(time_segments)):
+            print '[DB-HUGE] Insert a row @ %d. Total number of rows = %d' % (row_number+1, self.rowCount())
+            self.insertRow(row_number+1)
+        for index in xrange(1, len(time_segments)):
+            print '[DB-HUGE] Set cell value for row %d: ' % (row_number+index) , time_segments[index][0], time_segments[index][1]
+            self.set_value_cell(row_number+index, i_start_time, time_segments[index][0])
+            self.set_value_cell(row_number+index, i_stop_time, time_segments[index][1])
+            self.set_value_cell(row_number+index, i_select, False)
+
+        return True, ''
+
+    def select_row(self, row_index, flag):
+        """
+        Set a row to be selected
+        :param row_index:
+        :param flag: boolean to select or deselect the
+        :return: None
+        """
+        assert (row_index >= 0) and (row_index < self.rowCount())
+        assert isinstance(flag, bool)
+
+        col_index = Data_Slicer_Table_Setup.index(('', 'checkbox'))
+        self.update_cell_value(row_index, col_index, flag)
+
+        return
 
     def setup(self):
         """
@@ -87,8 +169,69 @@ class DataSlicerSegmentTable(NT.NTableWidget):
 
         return
 
+    def sort_by_start_time(self):
+        """ Sort table by start time and ignore the other columns
+        """
+        # Get the values of the first column to a new list
+        num_rows = self.rowCount()
+        start_time_list = list()
+        i_start_col = Data_Slicer_Table_Setup.index(('Start', 'float'))
+        for i_row in xrange(num_rows):
+            start_time = self.get_cell_value(i_row, i_start_col)
+            start_time_list.append(start_time)
+        # END-FOR(i_row)
 
-Run_Selection_Table_Setup = [('Run Number', 'float'),
+        # Sort list
+        start_time_list.sort()
+
+        # Update the sorted list to table
+        for i_row in xrange(num_rows):
+            self.update_cell_value(i_row, i_start_col, start_time_list[i_row])
+
+        return
+
+
+TimeSegment_TableSetup = [('Start', 'float'),
+                          ('Stop', 'float'),
+                          ('Destination', 'int')]
+
+
+class TimeSegmentsTable(NT.NTableWidget):
+    """
+    Table for show time segments for data splitting
+    """
+    def __init__(self, parent):
+        """
+        """
+        NT.NTableWidget.__init__(self, parent)
+
+        self._currRowNumber = 0
+
+    def set_segments(self, segments_list):
+        """
+
+        :param segments_list:
+        :return:
+        """
+        for segment in segments_list:
+            seg_list = [segment.start, segment.stop, str(segment.target)]
+            self.append_row(seg_list)
+            self._currRowNumber += 1
+        # END-FOR
+
+        return
+
+    def setup(self):
+        """
+        Init setup
+        :return:
+        """
+        self.init_setup(TimeSegment_TableSetup)
+
+        return
+
+
+Run_Selection_Table_Setup = [('Run Number', 'int'),
                              ('', 'checkbox')]
 
 
@@ -110,6 +253,20 @@ class VdriveRunTableWidget(NT.NTableWidget):
             self.append_row([run, False])
 
         return
+
+    def get_selected_runs(self):
+        """ Get list of selected runs
+        :return:
+        """
+        row_num_list = self.get_selected_rows()
+        col_index_run = Run_Selection_Table_Setup.index(('Run Number', 'int'))
+
+        run_number_list = list()
+        for i_row in sorted(row_num_list):
+            run_number = self.get_cell_value(i_row, col_index_run)
+            run_number_list.append(run_number)
+
+        return run_number_list
 
     def get_rows_by_run(self, run_list):
         """
