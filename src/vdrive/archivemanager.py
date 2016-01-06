@@ -361,9 +361,13 @@ class DataArchiveManager(object):
 ################################################################################
 
 
-
-
-
+def check_read_access(file_name):
+    """ Check whether it is possible to access a file
+    :param file_name:
+    :return:
+    """
+    assert isinstance(file_name, str)
+    return os.path.exists(file_name)
 
 
 def load_from_xml(xml_file_name):

@@ -20,9 +20,6 @@ class VDProject(object):
         self._baseDataFileNameList = list()
         # Data path.  With baseDataFileName, a full path to a data set can be constructed
         self._baseDataPath = None
-        # dictionary for sample run number to be flagged to reduce.
-        # Key: run number. Value: boolean flag for reduction
-        self._sampleRunReductionFlagDict = dict()
         # dictionary for sample run mapping to vanadium run
         # Key: sample run number of type integer; Value: vanadium run number in type of integer
         self._sampleRunVanadiumDict = dict()
@@ -33,6 +30,9 @@ class VDProject(object):
         # Reduction manager
         # FIXME - Need to make the setup of instrument more flexible.
         self._reductionManager = prl.ReductionManager(instrument='VULCAN')
+        # dictionary for sample run number to be flagged to reduce.
+        # Key: run number. Value: boolean flag for reduction
+        self._sampleRunReductionFlagDict = dict()
         
         return
 
@@ -164,6 +164,9 @@ class VDProject(object):
         """
         # TODO - DOC
         num_to_reduce = 0
+        print '[DB-BAT] ', self._sampleRunReductionFlagDict
+        print
+
         for run_number in self._sampleRunReductionFlagDict.keys():
             if self._sampleRunReductionFlagDict[run_number]:
                 num_to_reduce += 1
@@ -293,9 +296,12 @@ class VDProject(object):
                 # no run
                 raise RuntimeError('Run %d cannot be found.' % run_number)
             elif archivemanager.check_read_access(self.get_filepath(run_number)) is False:
-                raise RuntimeError('Run %d with file path %s cannot be found.' % (run_number, self.get_filepath(run_number)))
+                # file does not exist
+                raise RuntimeError('Run %d with file path %s cannot be found.' % (run_number,
+                                                                                  self.get_filepath(run_number)))
             else:
-                self._mark_run_to_reduce(run_number)
+                # mark runs to reduce
+                self._sampleRunReductionFlagDict[run_number] = True
         # END-FOR
 
         return

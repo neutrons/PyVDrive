@@ -549,6 +549,7 @@ class ReductionManager(object):
         self._myOffsetWorkspaceName = None
         self._myGroupWorkspaceName = None
         self._myMaskWorkspaceName = None
+        self._myCalibrationWorkspaceName = None
 
         return
 
@@ -660,6 +661,7 @@ class ReductionManager(object):
                                       OutputWorkspace=event_ws_name,   # in-place align and focus
                                       GroupingWorkspace=self._myGroupWorkspaceName,
                                       OffsetsWorkspace=self._myOffsetWorkspaceName,
+                                      CalibrationWorkspace=self._myCalibrationWorkspaceName,
                                       MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
                                       Params=self._reductionParameters.form_binning_parameter(),
                                       PreserveEvents=self._reductionParameters.preserve_events,
@@ -1034,7 +1036,8 @@ class ReductionManager(object):
 
             self._myOffsetWorkspaceName = '%s_offsets' % self._myInstrument
             self._myGroupWorkspaceName = '%s_group' % self._myInstrument
-            self._myMaskWorkspaceName = '%s_mask' % self._myMaskWorkspaceName
+            self._myMaskWorkspaceName = '%s_mask' % self._myInstrument
+            self._myCalibrationWorkspaceName = '%s_cal' % self._myInstrument
 
         # Check
         assert mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName), \

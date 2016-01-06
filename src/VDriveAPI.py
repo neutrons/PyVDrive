@@ -477,6 +477,7 @@ class VDriveAPI(object):
         :param clear_flags: clear reduction previously-set reduction flags
         :return:
         """
+        # FIXME - This has the same functionality as method set_runs_to_reduce()
         # Check requirements
         print 'Fill me'
 
@@ -790,69 +791,69 @@ class VDriveAPI(object):
 
 
 def filter_runs_by_run(run_tuple_list, start_run, end_run):
-        """
-        Filter runs by range of run numbers
-        :param run_tuple_list:
-        :param start_run:
-        :param end_run:
-        :return:
-        """
-        # Check
-        assert(isinstance(run_tuple_list, list))
-        assert(isinstance(start_run, int))
-        assert(isinstance(end_run, int))
-        assert(start_run <= end_run)
-
-        # Sort by runs
-        run_tuple_list.sort(key=lambda x: x[0])
-
-        # FIXME - Use binary search for determine the range of run numbers in the tuple-list
-        result_list = []
-        for tup in run_tuple_list:
-            assert(isinstance(tup[0], int))
-            if start_run <= tup[0] <= end_run:
-                result_list.append(tup)
-
-        return True, result_list
+    """
+    Filter runs by range of run numbers
+    :param run_tuple_list:
+    :param start_run:
+    :param end_run:
+    :return:
+    """
+    # Check
+    assert(isinstance(run_tuple_list, list))
+    assert(isinstance(start_run, int))
+    assert(isinstance(end_run, int))
+    assert(start_run <= end_run)
+    
+    # Sort by runs
+    run_tuple_list.sort(key=lambda x: x[0])
+    
+    # FIXME - Use binary search for determine the range of run numbers in the tuple-list
+    result_list = []
+    for tup in run_tuple_list:
+        assert(isinstance(tup[0], int))
+        if start_run <= tup[0] <= end_run:
+            result_list.append(tup)
+    
+    return True, result_list
 
 
 def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=False):
-        """
-        Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
-        will be included.
-        :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
-        :param start_date:
-        :param end_date:
-        :param include_end_date: Flag whether the end-date will be included in the return
-        :return:
-        """
-        # Get starting date and end date's epoch time
-        try:
-            assert(isinstance(start_date, str))
-            epoch_start = vdrivehelper.convert_to_epoch(start_date)
-            epoch_end = vdrivehelper.convert_to_epoch(end_date)
-            if include_end_date is True:
-                # Add one day for next date
-                epoch_end += 24*3600
-            print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                                   (epoch_end-epoch_start)/3600.)
-        except ValueError as e:
-            return False, str(e)
-
-        # Sort by time
-        assert isinstance(run_tuple_list, list)
-        run_tuple_list.sort(key=lambda x: x[1])
-
-        # FIXME - Using binary search will be great!
-        result_list = []
-        for tup in run_tuple_list:
-            file_epoch = tup[1]
-            if epoch_start <= file_epoch < epoch_end:
-                result_list.append(tup[:])
-            # END-IF
+    """
+    Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
+    will be included.
+    :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
+    :param start_date:
+    :param end_date:
+    :param include_end_date: Flag whether the end-date will be included in the return
+    :return:
+    """
+    # Get starting date and end date's epoch time
+    try:
+        assert(isinstance(start_date, str))
+        epoch_start = vdrivehelper.convert_to_epoch(start_date)
+        epoch_end = vdrivehelper.convert_to_epoch(end_date)
+        if include_end_date is True:
+            # Add one day for next date
+            epoch_end += 24*3600
+        print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
+                                                               (epoch_end-epoch_start)/3600.)
+    except ValueError as e:
+        return False, str(e)
+    
+    # Sort by time
+    assert isinstance(run_tuple_list, list)
+    run_tuple_list.sort(key=lambda x: x[1])
+    
+    # FIXME - Using binary search will be great!
+    result_list = []
+    for tup in run_tuple_list:
+        file_epoch = tup[1]
+        if epoch_start <= file_epoch < epoch_end:
+            result_list.append(tup[:])
         # END-IF
+    # END-IF
 
-        return True, result_list
+    return True, result_list
 
 
 def get_splitters_names(base_name):
