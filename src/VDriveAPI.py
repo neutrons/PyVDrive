@@ -95,6 +95,21 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def export_gsas_file(self, run_number, gsas_file_name):
+        """
+        Purpose: export a reduced run to GSAS data file
+        Requirements:
+
+        Guarantees:
+
+        :param run_number:
+        :param gsas_file_name:
+        :return:
+        """
+        # TODO/NOW - 1st Doc, assertion and implement
+
+        raise
+
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """
         :param run_number:
