@@ -212,16 +212,68 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
-def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
+def get_data_from_workspace(workspace_name, point_data):
     """
-    TODO/NOW - Doc!
-    :param split_ws_name:
-    :param time_shift: always in the same unit as
+    
+    :param workspace_name:
+    :param point_data:
     :return:
     """
+    # TODO/DOC
+    
+    # Requirements
+    # ....
+    
+    # Convert to point data
+    if point_data is True:
+        mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
+                                     OutputWorkspace=workspace_name)
+    # Set up variables
+    data_set_dict = dict()
+    workspace = retrieve_workspace(workspace_name)
+    
+    # Get data
+    num_spec = workspace.getNumberHistograms()
+    
+    for i_ws in xrange(num_spec):
+        vec_x = workspace.readX(i_ws)
+        size_x = len(vec_x)
+        vec_y = workspace.readY(i_ws)
+        size_y = len(vec_y)
+        vec_e = workspace.readE(i_ws)
+    
+        data_x = numpy.ndarray((size_x,), 'float')
+        data_y = numpy.ndarray((size_y,), 'float')
+        data_e = numpy.ndarray((size_y,), 'float')
+    
+        data_x[:] = vec_x[:]
+        data_y[:] = vec_y[:]
+        data_e[:] = vec_e[:]
+    
+        data_set_dict[i_ws] = (data_x, data_y, data_e)
+    
+    # END-FOR
+    
+    return data_set_dict
+
+
+def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
+    """ Get time segments from splitters workspace
+    Purpose:
+        Get the time segments from a splitters workspace
+    Requirements:
+        - a valid splitters workspace
+        - time shift is float
+        - unit is either nanosecond or second
+    :param split_ws_name:
+    :param time_shift: always in the same unit as
+    :param unit:
+    :return: a list of 3 tuples as float (start time), float (stop time) and integer (target)
+    """
+    # Check input
     split_ws = retrieve_workspace(split_ws_name)
-    if split_ws is None:
-        raise RuntimeError('Workspace %s does not exist.' % split_ws_name)
+    assert split_ws, 'Workspace %s does not exist.' % split_ws_name
+
 
     segment_list = list()
     if unit == 'Seconds':
@@ -256,14 +308,18 @@ def event_data_ws_name(run_number):
 
 
 def retrieve_workspace(ws_name):
-    """
-
+    """ Retrieve workspace from AnalysisDataService
+    Purpose:
+        Get workspace from Mantid's analysis data service
+    Requirements:
+        workspace name is a string
+    Guarantee:
+        return the reference to the workspace or None if it does not exist
     :param ws_name:
     :return:
     """
-    if isinstance(ws_name, str) is False:
-        raise RuntimeError('Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
-                                                                                        str(type(ws_name))))
+    assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
+                                                                                                  str(type(ws_name)))
 
     if mantid.AnalysisDataService.doesExist(ws_name) is False:
         return None
@@ -271,15 +327,20 @@ def retrieve_workspace(ws_name):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
-
-def splitted_ws_base_name(run_number, out_base_name):
+def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VULCAN'):
     """
     Workspace name for splitted event data
     :param run_number:
     :param out_base_name:
+    :param instrument_name: name of the instrument
     :return:
     """
-    return 'VULCAN_%d_%s' % (run_number, out_base_name)
+    assert isinstance(run_number, int), 'Run number must be an integer but not of type %s.' % str(type(run_number))
+    assert isinstance(out_base_name, str), 'Output base workpsace name must be a string but not %s.' % \
+                                           str(type(out_base_name))
+    assert isinstance(instrument_name, str), 'Instrument name must be a string but not %s.' % str(type(instrument_name))
+
+    return '%s_%d_%s' % (instrument_name, run_number, out_base_name)
 
 
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
@@ -343,3 +404,17 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, splitted
     ret_obj = (split_ws_name_list, ret_list[3:])
 
     return True, ret_obj
+
+
+def workspace_does_exist(workspace_name):
+    """ TODO/NOW/DOC
+    :param workspace_name:
+    :return:
+    """
+    # Check
+    assert isinstance(workspace_name, str), 'Workspace name must be string but not %s.' % str(type(workspace_name))
+
+    #
+    does_exist = mantid.AnalysisDataService.doesExist(workspace_name)
+
+    return does_exist

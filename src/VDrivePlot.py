@@ -211,12 +211,76 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_bin_data(self):
-        """ Bin a set of data
+        """ Brief: Bin a set of data
+        Purpose:
+            Reduce the event data to focused diffraction pattern.
+            The process includes align, focus, rebin and calibration with vanadium.
+        Requirements:
+            At least 1 run is selected for reduce;
+            calibration file for focusing is specified;
+            ... ...
+        Guarantees:
+            Selected runs are reduced from event data to focused diffraction pattern
+            good for Rietveld refinement.
+            If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # TODO/FIXME/NOW/#7
-        selection_list = [self.ui.radioButton_binStandard,
-                          self.ui.radioButton_binCustomized]
+        # Retrieve the runs to reduce
+        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        if len(run_number_list) == 0:
+            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+
+        # Process data slicers
+        if self.ui.checkBox_chopRun.isChecked():
+            raise NotImplementedError('Binning data with option to chop will be solved later!')
+
+        # Collect information for reduction
+        # binning parameter
+        if self.ui.radioButton_binStandard.isChecked():
+            # default
+            bin_par = None
+        elif self.ui.radioButton_binCustomized.isChecked():
+            # customized bin parameters
+            bin_width = guiutil.parse_float(self.ui.lineEdit_binWidth)
+            min_tof = guiutil.parse_float(self.ui.lineEdit_binMinTOF)
+            max_tof = guiutil.parse_float(self.ui.lineEdit_binMaxTOF)
+            bin_par = (min_tof, bin_width, max_tof)
+        else:
+            # violate requirements
+            guiutil.pop_dialog_error(self, '')
+            return
+
+        # bin over pixel
+        if self.ui.checkBox_overPixel.isChecked():
+            # binning pixel
+            bin_pixel_direction = ''
+            if self.ui.radioButton_binVerticalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeVertical)
+                bin_pixel_direction = 'vertical'
+            elif self.ui.radioButton_binHorizontalPixels.isChecked():
+                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
+                bin_pixel_direction = 'horizontal'
+            else:
+                guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+                return
+            raise NotImplementedError('Will be implemented in #32.')
+        # END-IF-ELSE
+
+        # Other parameters
+        do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
+        do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
+        do_substract_special_pattern = self.ui.checkBox_reduceSubstractSpecialPattern.isChecked()
+        do_write_fullprof = self.ui.checkBox_outFullprof.isChecked()
+        do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
+
+        # Reduce data
+        status, ret_obj = self._myWorkflow.reduce_data_set()
+        if status is False:
+            error_msg = ret_obj
+            guiutil.pop_dialog_error(self, error_msg)
+
+        # Show message to notify user that the reduction is complete
+        guiutil.pop_dialog_information(self, 'Reduction is complete.')
 
         return
 
@@ -458,6 +522,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
+        # FIXME - THIS SHOULD BE REFACTORED INTO VdriveAPI
+        raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
         status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
                                                      include_end_date=True)
         if status is True:
@@ -499,38 +565,61 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_add_runs_to_reduce(self):
         """
-
+        Purpose:
+            Add selected runs to reduce.  Selected runs can be all runs of current IPTS
+            or from a given range of run numbers
+        Requirements:
+            At least one radio button is selected.
+        Guarantees:
+            Selected runs are added to table widget 'tableWidget_selectedRuns'
         :return:
         """
-        # TODO/FIXME/#7: CASE 2 does not work
-        # merge the common behavior of case 1 and case 2!
-        print '[DBGUI] do_add_runs_to_reduce() is started.'
-
+        # Find out the list of runs to add
         if self.ui.radioButton_runsAddAll.isChecked():
-            # Case as select all
-            print '[DBGUI] Case 1'
+            # case to add all runs
             status, ret_obj = self._myWorkflow.get_runs()
             if status is True:
                 run_list = ret_obj
-                self.ui.tableWidget_selectedRuns.append_runs(run_list)
             else:
+                # Error!
                 error_message = ret_obj
-                guiutil.pop_dialog_error(error_message)
+                guiutil.pop_dialog_error(self, error_message)
+                return
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
-            # Case as select a subset
-            print '[DBGUI] Case 2: merge the common behavior and it does not work!'
+            # case to add a subset of runs
             start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
             end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+
+            # switch start run and end run if user specifies in wrong order
+            if start_run > end_run:
+                temp = start_run
+                start_run = end_run
+                end_run = temp
+                self.ui.lineEdit_runFirst.setText(str(start_run))
+                self.ui.lineEdit_runLast.setText(str(end_run))
+
+            # get subset of runs
             status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
             if status is True:
                 run_list = ret_obj
                 self.ui.tableWidget_selectedRuns.append_runs(run_list)
             else:
+                # Error and return
                 error_message = ret_obj
                 guiutil.pop_dialog_error(error_message)
+                return
+
+            if len(run_list) == 0:
+                error_message = 'No available run can be found between %d and %d ' \
+                                'for this project.' % (start_run, end_run)
+                guiutil.pop_dialog_error(self, error_message)
         else:
-            raise RuntimeError('None radio button for select runs is selected.  Logically wrong!')
+            guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+            return
+
+        # Add all runs to table
+        self.ui.tableWidget_selectedRuns.append_runs(run_list)
 
         return
 
@@ -561,7 +650,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Requirements:
             Some runs are light-loaded to project
         Guarantee:
-            ???
+            Load calibration...
 
         Nomenclature:
         1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.

@@ -10,9 +10,11 @@ import os
 import datetime
 
 import vdrive.VDProject as vp
-import vdrive.FacilityUtil as futil
+import vdrive.archivemanager as futil
 import vdrive.SampleLogHelper as logHelper
-import vdrive.mantid_helper as mtdHelper
+import vdrive.vdrivehelper as vdrivehelper
+
+SUPPORTED_INSTRUMENT = ['VULCAN']
 
 
 class VDriveAPI(object):
@@ -21,29 +23,40 @@ class VDriveAPI(object):
     It is a pure python layer that does not consider GUI.
     VDrivePlot is a GUI applicaton built upon this class
     """
-    def __init__(self):
+    def __init__(self, instrument_name):
         """
         Initialization
+        Purpose:
+            Initialize an instance of VDriveAPI
+        Requirements:
+            Instrument name is supported
+        Guarantees:
+          Set
+            1. Instrument name
+          Initialize and set up
+            1. myProject
+            2. myArchiveManager
+            3. mySlicingManager
+          Set defaults to
+            1. working directory
+        :param instrument_name:
         :return:
         """
-        # Define class variables with defaults
-        self._myInstrumentName = 'VULCAN'
-        self._myRootDataDir = '/SNS/VULCAN'
+        # Set up instrument
+        assert isinstance(instrument_name, str), 'instrument_name must be string.'
+        instrument_name = instrument_name.upper()
+        assert instrument_name in SUPPORTED_INSTRUMENT, 'instrument %s is not supported.' % instrument_name
+        self._myInstrument = instrument_name
 
+        # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
+        self._myProject = vp.VDProject('New Project')
+        self._myArchiveManager = futil.DataArchiveManager(self._myInstrument)
+        self._mySlicingManager = logHelper.SampleLogManager()
+
+        # default working directory to current directory. if it is not writable, then use /tmp/
         self._myWorkDir = os.getcwd()
         if os.access(self._myWorkDir, os.W_OK) is False:
             self._myWorkDir = '/tmp/'
-
-        self._currentIPTS = -1
-        self._myLastDataDirectory = '/tmp'
-
-        # Project
-        self._myProject = vp.VDProject('Temp')
-        self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
-
-        # Data slicing helper
-        self._myLogHelper = logHelper.SampleLogManager()
-        self._splitterDict = dict()
 
         return
 
@@ -68,7 +81,7 @@ class VDriveAPI(object):
         :return:
         """
         if slicer_tag is not None:
-            self._myLogHelper.clean_workspace(run_number, slicer_tag)
+            self._mySlicingManager.clean_workspace(run_number, slicer_tag)
 
     def clear_runs(self):
         """
@@ -89,7 +102,7 @@ class VDriveAPI(object):
         :param time_segment_list:
         :return:
         """
-        self._myLogHelper.generate_events_filter_manual(run_number, time_segment_list,relative_time)
+        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list,relative_time)
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
@@ -114,9 +127,9 @@ class VDriveAPI(object):
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
         # Checkout log processing session
-        self._myLogHelper.checkout_session(nxs_file_name=file_name, run_number=run_number)
+        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
 
-        status, ret_obj = self._myLogHelper.generate_events_filter_by_time(min_time=start_time,
+        status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
                                                                            max_time=end_time,
                                                                            time_interval=time_step,
                                                                            tag=tag)
@@ -149,7 +162,7 @@ class VDriveAPI(object):
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
         # Start a session
-        self._myLogHelper.checkout_session(nxs_file_name=file_name, run_number=run_number)
+        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
 
         # this_ws_name = get_standard_ws_name(file_name, True)
         # mtdHelper.load_nexus(file_name, this_ws_name, True)
@@ -158,7 +171,7 @@ class VDriveAPI(object):
         # print 'log_name = ', sample_log_name
 
         # FIXME - Need to pass value change direction
-        self._myLogHelper.generate_events_filter_by_log(log_name=sample_log_name,
+        self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
                                                         min_time=start_time, max_time=end_time,
                                                         relative_time=True,
                                                         min_log_value=min_log_value,
@@ -174,7 +187,7 @@ class VDriveAPI(object):
         Instrument's name
         :return:
         """
-        return self._myInstrumentName
+        return self._myInstrument
 
     def get_project_runs(self):
         """
@@ -190,6 +203,33 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
+    def get_reduced_runs(self):
+        """ Get the runs (run numbers) that have been reduced successfully
+        :return:
+        """
+        return self._myProject.get_reduced_runs()
+
+    def get_reduced_data(self, run_number, target_unit):
+        """ Get reduced data
+        Purpose:
+        Requirements:
+        Guarantees: returned with 3 numpy arrays, x, y and e
+        :param run_number:
+        :param target_unit:
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        """
+        # TODO/NOW - Doc
+        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(target_unit, str), 'blabla'
+
+        try:
+            data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            assert isinstance(data_set, dict), 'bla bla bla... ...'
+        except RuntimeError as e:
+            return False, str(e)
+
+        return True, data_set
+
     def get_working_dir(self):
         """
         Working directory
@@ -201,7 +241,7 @@ class VDriveAPI(object):
         """ Get root data directory such as /SNS/VULCAN
         :return: data root directory, such as /SNS/VULCAN
         """
-        return self._myRootDataDir
+        return self._myArchiveManager.root_directory
 
     def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
@@ -218,11 +258,11 @@ class VDriveAPI(object):
         assert isinstance(slicer_id, str)
 
         if slicer_type.lower() == 'time':
-            status, ret_obj = self._myLogHelper.get_slicer_by_time()
+            status, ret_obj = self._mySlicingManager.get_slicer_by_time()
         elif slicer_type.lower() == 'log':
-            status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, slicer_id)
+            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, slicer_id)
         else:
-            status, ret_obj = self._myLogHelper.get_slicer_by_id(run_number, slicer_id, relative_time)
+            status, ret_obj = self._mySlicingManager.get_slicer_by_id(run_number, slicer_id, relative_time)
 
         if status is False:
             err_msg = ret_obj
@@ -250,11 +290,10 @@ class VDriveAPI(object):
         """
         try:
             if isinstance(ipts, int):
-                ipts_number = ipts
-                run_tuple_list = self._myFacilityHelper.get_run_info(ipts_number)
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts)
             elif isinstance(ipts, str):
                 ipts_dir = ipts
-                run_tuple_list = self._myFacilityHelper.get_run_info_dir(ipts_dir)
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
         except RuntimeError as e:
@@ -324,10 +363,10 @@ class VDriveAPI(object):
         :param smart: a smart way to show sample log name with more information
         :return:
         """
-        if self._myLogHelper is None:
+        if self._mySlicingManager is None:
             return False, 'Log helper has not been initialized.'
 
-        status, ret_obj = self._myLogHelper.get_sample_log_names(with_info=smart)
+        status, ret_obj = self._mySlicingManager.get_sample_log_names(with_info=smart)
         if status is False:
             return False, str(ret_obj)
         else:
@@ -345,7 +384,7 @@ class VDriveAPI(object):
         """
         assert isinstance(log_name, str)
         try:
-            vec_times, vec_value = self._myLogHelper.get_sample_data(run_number=run_number,
+            vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
                                                                      sample_log_name=log_name,
                                                                      start_time=start_time,
                                                                      stop_time=stop_time,
@@ -359,25 +398,65 @@ class VDriveAPI(object):
         """ Load session from saved file
         Load session from a session file
         :param in_file_name:
-        :return:
+        :return: 2-tuple: (boolean, object)
         """
         save_dict = futil.load_from_xml(in_file_name)
 
         # Set from dictionary
-        # class variables
-        self._myInstrumentName = save_dict['myInstrumentName']
-        self._myRootDataDir = save_dict['myRootDataDir']
+        # matching instrument name
+        loaded_instrument = save_dict['myInstrumentName']
+        assert loaded_instrument == self._myInstrument
+
+        # archive root directory and working directory
+        self._myArchiveManager.root_directory = save_dict['myRootDataDir']
         self._myWorkDir = save_dict['myWorkDir']
 
-        self._myFacilityHelper = futil.FacilityUtilityHelper(self._myInstrumentName)
-
-        # create a VDProject
+        # load vdrive project to _myProject
         self._myProject.load_session_from_dict(save_dict['myProject'])
 
         return True, in_file_name
 
+    def reduce_data_set(self, norm_by_vanadium=False):
+        """ Reduce a set of data
+        Purpose:
+            Reduce a set of event data
+        Requirements:
+            Project is well set up
+            - At least more than 1 run is set to reduce
+            -
+        Guarantees:
+            Event data will be reduced to diffraction pattern.
+
+        :param norm_by_vanadium: flag to normalize the final reduction data by vanadium
+        :return: 2-tuple (boolean, object)
+        """
+        # Check requirements
+        num_runs_flagged = self._myProject.get_number_reduction_runs()
+        assert num_runs_flagged > 0, 'At least one run should be flagged for reduction.'
+
+        # Reduce vanadium run for calibration
+        if norm_by_vanadium is True:
+            try:
+                self._myProject.reduce_vanadium_runs()
+            except RuntimeError as run_err:
+                err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
+                return False, err_msg
+        # END-IF (nom_by_vanadium)
+
+        # Reduce runs
+        status, ret_obj = self._myProject.reduce_runs()
+        # FIXME/TODO/SOON/NOW Remove the previous line!
+        try:
+            status, ret_obj = self._myProject.reduce_runs()
+        except AssertionError as re:
+            print '[ERROR] Assertion error from reduce_runs.'
+            status = False
+            ret_obj = str(re)
+
+        return status, ret_obj
+
     def set_data_root_directory(self, root_dir):
-        """ Set root data directory to
+        """ Set root archive directory
         :rtype : tuple
         :param root_dir:
         :return:
@@ -386,8 +465,42 @@ class VDriveAPI(object):
         if os.path.exists(root_dir) is False:
             return False, 'Directory %s cannot be found.' % root_dir
 
-        self._myRootDataDir = root_dir
-        self._myFacilityHelper.set_data_root_path(self._myRootDataDir)
+        self._myArchiveManager.set_data_root_path(root_dir)
+
+        return True, ''
+
+    def set_reduction_flag(self, file_flag_list, clear_flags):
+        """ Turn on the flag to reduce for files in the list
+        TODO/FIXME/NOW Doc and Fill-in
+
+        :param file_flag_list: list of tuples as "base" file name and boolean flag
+        :param clear_flags: clear reduction previously-set reduction flags
+        :return:
+        """
+        # FIXME - This has the same functionality as method set_runs_to_reduce()
+        # Check requirements
+        print 'Fill me'
+
+        # Clear
+        if clear_flags is True:
+            self._myProject.clear_reduction_flags()
+
+        # Set flags
+        num_flags_set = 0
+        err_msg = ''
+        for run_number, reduction_flag in file_flag_list:
+            try:
+                self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
+                num_flags_set += 1
+            except AssertionError as e:
+                err_msg += 'Unable to set flag to run %d due to %s\n' % (run_number, str(e))
+        # END-FOR
+
+        # Return with error
+        if err_msg != '':
+            return False, '%d of %d runs cannot be set to reduce due to %s. ' % (
+                len(file_flag_list)-num_flags_set, len(file_flag_list), err_msg
+            )
 
         return True, ''
 
@@ -398,8 +511,8 @@ class VDriveAPI(object):
         """
         # Create a dictionary for current set up
         save_dict = dict()
-        save_dict['myInstrumentName'] = self._myInstrumentName
-        save_dict['myRootDataDir'] = self._myRootDataDir
+        save_dict['myInstrumentName'] = self._myInstrument
+        save_dict['myRootDataDir'] = self._myArchiveManager.root_directory
         save_dict['myWorkDir'] = self._myWorkDir
         save_dict['myProject'] = self._myProject.save_session(out_file_name=None)
 
@@ -420,7 +533,7 @@ class VDriveAPI(object):
         :param file_name:
         :return:
         """
-        status, err_msg = self._myLogHelper.save_splitter_ws(run_number, sample_log_name, file_name)
+        status, err_msg = self._mySlicingManager.save_splitter_ws(run_number, sample_log_name, file_name)
 
         return status, err_msg
 
@@ -438,7 +551,7 @@ class VDriveAPI(object):
         assert isinstance(file_name, str)
 
         # Form Segments
-        run_start = self._myLogHelper.get_run_start(ref_run_number, unit='second')
+        run_start = self._mySlicingManager.get_run_start(ref_run_number, unit='second')
 
         segment_list = list()
         i_target = 1
@@ -480,7 +593,7 @@ class VDriveAPI(object):
 
         if by_time is True:
             # Slice data by time
-            status, ret_obj = self._myLogHelper.get_slicer_by_time(run_number)
+            status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
             if status is False:
                 err_msg = ret_obj
                 return False, err_msg
@@ -492,7 +605,7 @@ class VDriveAPI(object):
             # Slice data by log value
             assert isinstance(sample_log_name, str)
             print '[DB] Run number = ', run_number, '\n'
-            status, ret_obj = self._myLogHelper.get_slicer_by_log(run_number, sample_log_name)
+            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, sample_log_name)
             if status is False:
                 print '[DB]', ret_obj, '\n'
                 return False, ret_obj
@@ -506,17 +619,113 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def set_ipts(self, ipts_number):
-        """ Set IPTS to the workflow
-        :param ipts_number: intege for IPTS number
+    def set_focus_calibration_file(self, calibration_file):
+        """
+        Purpose:
+            Set the time focusing calibration file to reduction manager
+        Requirements:
+            Input calibration file is a string
+        Guarantees:
+            The file is set to reduction manager for future usage
+        :param calibration_file:
         :return:
         """
-        try:
-            self._currentIPTS = int(ipts_number)
-        except ValueError as e:
-            return False, 'Unable to set IPTS number due to %s.' % str(e)
+        # Check requirement
+        assert isinstance(calibration_file, str), 'Input calibration_file must be of type str.'
+
+        # Set to reduction manager
+        self._myProject.set_focus_calibration_file(calibration_file)
+
+        return
+
+    def set_ipts(self, ipts_number):
+        """ Set IPTS to the workflow
+        Purpose
+
+        Requirement:
+
+        Guarantees:
+
+        :param ipts_number: integer for IPTS number
+        :return:
+        """
+        # Requirements
+        assert isinstance(ipts_number, int)
+        assert ipts_number > 0
+
+        self._myArchiveManager.set_ipts_number(ipts_number)
 
         return True, ''
+
+    def set_reduction_parameters(self, parameter_dict):
+        """ Set parameters used for reducing powder event data
+        Purpose:
+            Set up the reduction parameters
+        Requirements:
+            Parameters' value are given via dictionary
+        Guarantees:
+            ... ...
+        :return:
+        """
+        assert isinstance(parameter_dict, dict)
+
+        try:
+            self._myProject.set_reduction_parameters(parameter_dict)
+            status = True
+            error_msg = ''
+        except RuntimeError as re:
+            status = False
+            error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
+
+        return status, error_msg
+
+    def set_vanadium_calibration_files(self, run_numbers, vanadium_file_names):
+        """
+        Purpose:
+
+        Requirements:
+            1. run_numbers is list of integers
+            2. vanadium_file_names is a list of string
+            3. size of run_numbers is equal to size of vanadium file names
+        Guarantees:
+            1. vanadium calibration file is linked to run number in myProject
+        :param run_numbers:
+        :param vanadium_file_names:
+        :return:
+        """
+        # TODO/NOW/COMPLETE
+
+        # Check requirements
+
+        # Set pair by pair
+
+        return
+
+    def set_runs_to_reduce(self, run_numbers):
+        """ Set runs for reduction
+        Purpose:
+            Mark the runs to be reduced;
+        Requirements:
+            Run numbers given should be already loaded
+        Guarantees:
+            All raw data file should be accessible
+        :param run_numbers:
+        :return: 2-tuple (boolean, string) for status and error message
+        """
+        # Check requirements
+        assert isinstance(run_numbers, list)
+        assert self._myProject is not None
+
+        # Pass the run number list to VDriveProject
+        return_status = True
+        error_message = ''
+        try:
+            self._myProject.mark_runs_to_reduce(run_numbers)
+        except RuntimeError as re:
+            return_status = False
+            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
+
+        return return_status, error_message
 
     def set_slicer_helper(self, nxs_file_name, run_number):
         """
@@ -530,7 +739,7 @@ class VDriveAPI(object):
         else:
             run_number = futil.getIptsRunFromFileName(nxs_file_name)[1]
 
-        status, errmsg = self._myLogHelper.checkout_session(nxs_file_name, run_number)
+        status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
 
         return status, errmsg
 
@@ -545,11 +754,11 @@ class VDriveAPI(object):
 
         if splitter_src == 'samplelog':
             assert isinstance(sample_log_name, str)
-            self._myLogHelper.set_current_slicer_sample_log(sample_log_name)
+            self._mySlicingManager.set_current_slicer_sample_log(sample_log_name)
         elif splitter_src == 'time':
-            self._myLogHelper.set_current_slicer_time()
+            self._mySlicingManager.set_current_slicer_time()
         elif splitter_src == 'manual':
-            self._myLogHelper.set_current_slicer_manaul()
+            self._mySlicingManager.set_current_slicer_manaul()
         else:
             raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
 
@@ -582,69 +791,69 @@ class VDriveAPI(object):
 
 
 def filter_runs_by_run(run_tuple_list, start_run, end_run):
-        """
-        Filter runs by range of run numbers
-        :param run_tuple_list:
-        :param start_run:
-        :param end_run:
-        :return:
-        """
-        # Check
-        assert(isinstance(run_tuple_list, list))
-        assert(isinstance(start_run, int))
-        assert(isinstance(end_run, int))
-        assert(start_run <= end_run)
-
-        # Sort by runs
-        run_tuple_list.sort(key=lambda x: x[0])
-
-        # FIXME - Use binary search for determine the range of run numbers in the tuple-list
-        result_list = []
-        for tup in run_tuple_list:
-            assert(isinstance(tup[0], int))
-            if start_run <= tup[0] <= end_run:
-                result_list.append(tup)
-
-        return True, result_list
+    """
+    Filter runs by range of run numbers
+    :param run_tuple_list:
+    :param start_run:
+    :param end_run:
+    :return:
+    """
+    # Check
+    assert(isinstance(run_tuple_list, list))
+    assert(isinstance(start_run, int))
+    assert(isinstance(end_run, int))
+    assert(start_run <= end_run)
+    
+    # Sort by runs
+    run_tuple_list.sort(key=lambda x: x[0])
+    
+    # FIXME - Use binary search for determine the range of run numbers in the tuple-list
+    result_list = []
+    for tup in run_tuple_list:
+        assert(isinstance(tup[0], int))
+        if start_run <= tup[0] <= end_run:
+            result_list.append(tup)
+    
+    return True, result_list
 
 
 def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=False):
-        """
-        Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
-        will be included.
-        :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
-        :param start_date:
-        :param end_date:
-        :param include_end_date: Flag whether the end-date will be included in the return
-        :return:
-        """
-        # Get starting date and end date's epoch time
-        try:
-            assert(isinstance(start_date, str))
-            epoch_start = futil.convert_to_epoch(start_date)
-            epoch_end = futil.convert_to_epoch(end_date)
-            if include_end_date is True:
-                # Add one day for next date
-                epoch_end += 24*3600
-            print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                                   (epoch_end-epoch_start)/3600.)
-        except ValueError as e:
-            return False, str(e)
-
-        # Sort by time
-        assert isinstance(run_tuple_list, list)
-        run_tuple_list.sort(key=lambda x: x[1])
-
-        # FIXME - Using binary search will be great!
-        result_list = []
-        for tup in run_tuple_list:
-            file_epoch = tup[1]
-            if epoch_start <= file_epoch < epoch_end:
-                result_list.append(tup[:])
-            # END-IF
+    """
+    Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
+    will be included.
+    :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
+    :param start_date:
+    :param end_date:
+    :param include_end_date: Flag whether the end-date will be included in the return
+    :return:
+    """
+    # Get starting date and end date's epoch time
+    try:
+        assert(isinstance(start_date, str))
+        epoch_start = vdrivehelper.convert_to_epoch(start_date)
+        epoch_end = vdrivehelper.convert_to_epoch(end_date)
+        if include_end_date is True:
+            # Add one day for next date
+            epoch_end += 24*3600
+        print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
+                                                               (epoch_end-epoch_start)/3600.)
+    except ValueError as e:
+        return False, str(e)
+    
+    # Sort by time
+    assert isinstance(run_tuple_list, list)
+    run_tuple_list.sort(key=lambda x: x[1])
+    
+    # FIXME - Using binary search will be great!
+    result_list = []
+    for tup in run_tuple_list:
+        file_epoch = tup[1]
+        if epoch_start <= file_epoch < epoch_end:
+            result_list.append(tup[:])
         # END-IF
+    # END-IF
 
-        return True, result_list
+    return True, result_list
 
 
 def get_splitters_names(base_name):

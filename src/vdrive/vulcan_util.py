@@ -1,31 +1,9 @@
 ####
 # Utility methods for VULCAN
 ####
-
-# TODO/FIXME : Clean the code
-
 import os
 
-def locateVulcanVRecordFile(basepath):
-    """ Get the path and name of a VULCAN's vanadium record file
-    """
-    relpath = "shared/Calibrationfiles/Instrument/Standard/Vanadium"
-    relpathname = os.path.join(relpath, "VRecord.txt")    
-    vrecordfilename = os.path.join(basepath, relpathname)
 
-    return vrecordfilename
-    
-    
-def locateVulcanExpRecordFile(ipts, basepath):
-    """ Get the path and name of a VULCAN's experiment record file
-    """
-    relpath = "IPTS-%d/shared/" % (int(ipts))
-    relpathname = os.path.join(relpath, "AutoRecord.txt")
-    exprecordfilename = os.path.join(basepath, relpathname)
-    
-    return exprecordfilename
-    
-    
 def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
     """ Add a list of run numbers and check whether they are valid or not.
     """
@@ -43,21 +21,6 @@ def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
         return (False, errmsg)
     
     return (True, nxsfilename)
-    
-    
-def checkIPTSExist(ipts, basepath):
-    """ Check whether an IPTS number is valid
-    """
-    ipts = int(ipts)
-    print "[DB] base path = ", basepath, " type = ", type(basepath)
-    iptsdir = os.path.join(basepath, "IPTS-%d"%(ipts))
-    msg = "IPTS directory: %s" %(iptsdir)
-    
-    if os.path.isdir(iptsdir) is True:
-        return (True, msg)
-    
-    return (False, msg)
-
 
 def getLogsList(vandbfile):
     """ Get the log list from vanadium database file (van record.txt)
@@ -122,10 +85,10 @@ def getLogsList(vandbfile):
     return (titlelist, examples)
     
 
-class AutoVanadiumCalibrationLocator:
+class AutoVanadiumCalibrationLocator(object):
     """ Class to locate calibration file automatically
     """
-    def __init__(self, ipts, basepath="/SNS/VULCAN/", vrecordfile=None, autorecordfile=None):
+    def __init__(self, ipts, base_path='/SNS/VULCAN/', vrecordfile=None, autorecordfile=None):
         """ Initialization
         Arguments:
          - ipts     :: ipts number
@@ -133,38 +96,49 @@ class AutoVanadiumCalibrationLocator:
          - vrecordfile :: name of the vanadium runs record file
          - autorecordfile :: name of experiment record file, i.e., 'AutoRecord.txt'
         """
-        # check whether the IPTS exist
-        iptsgood, msg = checkIPTSExist(ipts, basepath)
-        if iptsgood is False:
-            raise NotImplementedError("IPTS %d does not exist for VULCAN. FYI: %s" % (ipts, msg))
-        
-        # ipts number
-        self._ipts = ipts
+        # IPTS
+        assert isinstance(ipts, int)
+        self._iptsNumber = ipts
+
+        # root path to data archive
+        assert isinstance(base_path, str)
+        assert os.path.exists(base_path)
+        self._rootArchiveDirectory = base_path
+
+        # check access to IPTS
+        is_ipts_valid, message = self.check_ipts_valid()
+        if is_ipts_valid is False:
+            raise RuntimeError('IPTS %d does not exist for VULCAN. FYI: %s' % (ipts, message))
+
+        # set up v-record file
+        if vrecordfile is None:
+            vrecordfile = self.locate_vulcan_vanadium_record_file()
+        else:
+            assert isinstance(vrecordfile, str)
+            assert os.path.exists(vrecordfile), 'User specified V-record file %s cannot be found.' % vrecordfile
         
         # import v-record
-        if vrecordfile is None:
-            vrecordfile = locateVulcanVRecordFile(basepath)
-        if os.path.isfile(vrecordfile) is False:
-            raise NotImplementedError("VRecord file %s does not exist." % (vrecordfile))
         self._importVRecord(vrecordfile)
         
         # import auto record
         if autorecordfile is None:
-            autorecordfile = locateVulcanExpRecordFile(ipts, basepath)
-        if os.path.isfile(autorecordfile) is False:
-            raise NotImplementedError("Experiment record file %s does not exist." % 
-                    (autorecordfile))
+            autorecordfile = self.locate_auto_record()
+        else:
+            assert isinstance(autorecordfile, str)
+            assert os.path.exists(autorecordfile), 'User specified AutoRecord file %s cannot be found.' % autorecordfile
         self._importExperimentRecord(autorecordfile)
         
         # runs
         self._runs = []
         
         return
-        
-    def getIPTS(self):
-        """ IPTS is a key to the object
+
+    @property
+    def ipts_number(self):
         """
-        return self._ipts
+        :return: IPTS number
+        """
+        return self._iptsNumber
        
     def addRuns(self, runs):
         """ Add a runs to find whether they are in experiment record file
@@ -177,11 +151,10 @@ class AutoVanadiumCalibrationLocator:
                 self._runs.append(run)
                 numrunsadded += 1
             else:
-                errmsg += "Run %d does not exist in IPTS %d (record file)\n" % (run, self._ipts)
+                errmsg += "Run %d does not exist in IPTS %d (record file)\n" % (run, self._iptsNumber)
         # ENDFOR
         
-        return (numrunsadded, errmsg)
-
+        return numrunsadded, errmsg
 
     def getVanRunLogs(self, logname):
         """ Get a specific log's value of all vanadium runs
@@ -426,5 +399,50 @@ class AutoVanadiumCalibrationLocator:
 
         print "There are %d runs that are found in record file %s." % (len(self._expRecordDict.keys()), exprecfile)
         
-        return 
-        
+        return
+
+    def locate_vulcan_vanadium_record_file(self):
+        """ Get the path and name of a VULCAN's vanadium record file
+        Purpose:
+            locate the v-record file from archive under shared/Calibrationfiles/Instrument/Standard/Vanadium
+        Requirements:
+            root data archive path exists
+        Guarantees:
+            an accessible file path is returned
+        :return: string as full path to v-record file
+        """
+        # check requirements: no need as the check is done in __init__()
+
+        rel_path = "shared/Calibrationfiles/Instrument/Standard/Vanadium"
+        rel_path_v_name = os.path.join(rel_path, "VRecord.txt")
+        vrecord_filename = os.path.join(self._rootArchiveDirectory, rel_path_v_name)
+
+        return vrecord_filename
+
+    def locate_auto_record(self):
+        """ Get the path and name of a VULCAN's experiment record file, i.e., AutoRecord.txt
+        Purpose:
+            get the full path to an IPTS's auto record file
+        Requirements:
+            input IPTS is valid and root path exists
+        Guarantees:
+            return the full path to AutoRecord.txt of the given IPTS
+        """
+        # there is no need to check requirement because __init__() check it already
+        rel_path = "IPTS-%d/shared/" % (int(ipts))
+        rel_path_name = os.path.join(rel_path, "AutoRecord.txt")
+        exprecordfilename = os.path.join(self._rootArchiveDirectory, rel_path_name)
+
+        return exprecordfilename
+
+    def check_ipts_valid(self):
+        """ Check whether an IPTS number is valid
+        """
+        ipts_dir = os.path.join(self._rootArchiveDirectory, "IPTS-%d" % (self._iptsNumber))
+        if os.path.isdir(ipts_dir) is True:
+            return True, ''
+
+        msg = "IPTS directory: %s does not exist." % ipts_dir
+
+        return False, msg
+

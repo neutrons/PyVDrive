@@ -16,7 +16,7 @@ from os.path import expanduser
 
 import vdrive
 import vdrive.VDProject as vdproj
-import vdrive.FacilityUtil as futil 
+import vdrive.archivemanager as futil
 import vdrive.vulcan_util
 
 VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768, 
@@ -285,7 +285,7 @@ class VDriveAPI:
             raise NotImplementedError('Project %s does not have run %s.'%(projname, datafilename))
 
         # Get data
-        reduceddatadict = project.getReducedData(datafilename, unit)
+        reduceddatadict = project.get_reduced_runs(datafilename, unit)
         if reduceddatadict is None:
             raise NotImplementedError('Run %s is not reduced in project %s.'%(datafilename, projname))
         else:
@@ -358,7 +358,7 @@ class VDriveAPI:
         """ Get data sets from processed vanadium runs
         """
         project = self._rProjectDict[projname]
-        vandatadict, history = project.getProcessedVanadium(datafilename)
+        vandatadict, history = project.get_processed_vanadium(datafilename)
         print "[DB Ui_VDrive] History = ", history
 
         return vandatadict
@@ -384,7 +384,7 @@ class VDriveAPI:
         """
         """
         project = self._rProjectDict[projname]
-        smoothdatadict = project.getTempSmoothedVanadium(datafilename)
+        smoothdatadict = project.get_smoothed_vanadium(datafilename)
 
         return smoothdatadict
 
@@ -592,17 +592,14 @@ class VDriveAPI:
         vdriveproj = self._rProjectDict[projectname]
 
         # Search runs under IPTS according
-        myfacility = futil.FacilityUtilityHelper(self._myInstrument)
+        myfacility = futil.DataArchiveManager(self._myInstrument)
         myfacility.set_data_root_path(self._dataRootPath)
-
-        doexist = myfacility.setIPTS(ipts)
-        if doexist is False:
-            raise RuntimeError("IPTS %d does not exist." % (ipts))
+        myfacility.set_ipts_number(ipts)
 
         # Search runs 
-        self._iptsRunInfoDict[ipts] = myfacility.searchRuns(deltaDays)
+        self._iptsRunInfoDict[ipts] = myfacility.search_experiment_runs_by_time(deltaDays)
 
-        return (True, '')
+        return True, ''
 
 
     # def setDefaultDataPath(self, basedatapath):
@@ -758,7 +755,7 @@ class VDriveAPI:
         """
         self._checkProjectExistence(projname, "set characterization file")
         
-        self._rProjectDict[projname].setParameters(reductionparamdict)
+        self._rProjectDict[projname].set_parameters(reductionparamdict)
         
         return
         

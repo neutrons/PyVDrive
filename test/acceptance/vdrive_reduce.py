@@ -68,11 +68,7 @@ ipts_number = 10311
 def init_workflow(step):
     """ Set up including
     """
-    wk_flow = vdapi.VDriveAPI()
-    wk_flow.set_data_root_directory('/SNS/VULCAN')
-    wk_flow.set_working_directory('~/Temp/VDriveTest/')
-
-    my_data.set(wk_flow)
+    # We don't need this!
 
     return
 
@@ -81,9 +77,21 @@ def init_workflow(step):
 def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
+    # Initialize work flow
+    wk_flow = vdapi.VDriveAPI('VULCAN')
+    archive_root = '/SNS/VULCAN'
+    if os.path.exists(archive_root) is False:
+        archive_root = None
+    wk_flow.set_data_root_directory(archive_root)
+    wk_flow.set_working_directory('~/Temp/VDriveTest/')
+
+    # Set to my_data
+    my_data.set(wk_flow)
+
     wk_flow = my_data.get()
 
     # Set up IPTS
+    assert ipts_number is not None
     wk_flow.set_ipts(ipts_number)
 
     # Get runs
@@ -183,60 +191,108 @@ def load_session(step):
     assert(isinstance(wk_flow, vdapi.VDriveAPI))
 
     # Create a new workflow and load the file to the new workflow instance
-    new_wk_flow = vdapi.VDriveAPI()
+    new_wk_flow = vdapi.VDriveAPI('vulcan')
 
     saved_file_name = os.path.join(wk_flow.get_working_dir(), 'test1234.xml')
     new_wk_flow.load_session(saved_file_name)
 
     # Compare the new workflow and old one
-
-
     assert_equals(wk_flow.get_number_runs(), new_wk_flow.get_number_runs())
     assert_equals(wk_flow.get_working_dir(), new_wk_flow.get_working_dir())
 
     return
 
-'''
+
+@step(u'Then I add add a run number to the VDrive project for reduction')
+def add_run_to_reduce(step):
+    """ Add a run to reduce
+    :param step:
+    :return:
+    """
+    workflow = my_data.get()
+
+    workflow.set_runs_to_reduce(run_numbers=[57072])
+
+    return
+
 @step(u'Then I reduce the data')
-def reduceData(step):
+def reduce_data(step):
     """ Set up reduction parametera and reduce data
     """
-    wkflow = my_data.get()
+    workflow = my_data.get()
 
-    wkflow.setInstrumentName('VULCAN')
-    wkflow.setCalibrationFile(projname ='Test001', 
-            calibfilename = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal')
+    # Set reduction parameters
+    focus_calib_file = '/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal'
+
+    workflow.set_focus_calibration_file(focus_calib_file)
 
     # set up reduction parameters
     outputdir = os.getcwd()
     paramdict = {
-            "Extension": "_event.nxs",
-            "PreserveEvents": True,
-            "Binning" : -0.001,
-            "OutputDirectory" : outputdir, 
-            "NormalizeByCurrent":  False,
-            "FilterBadPulses": False,
-            "CompressTOFTolerance": False,
-            "FrequencyLogNames": "skf1.speed",
-            "WaveLengthLogNames": "skf12.lambda"
-            }
-    wkflow.setReductionParameters('Test001', paramdict)
+        "Extension": "_event.nxs",
+        "PreserveEvents": True,
+        "Binning" : -0.001,
+        "OutputDirectory" : outputdir,
+        "NormalizeByCurrent":  False,
+        "FilterBadPulses": False,
+        "CompressTOFTolerance": False,
+        "FrequencyLogNames": "skf1.speed",
+        "WaveLengthLogNames": "skf12.lambda",
+    }
+
+    workflow.set_reduction_parameters(paramdict)
 
     # reduce
-    reductionlist = [ ('VULCAN_57075_event.nxs', True) ]
+    reduction_list = [(58802, True)]
+    workflow.set_reduction_flag(file_flag_list=reduction_list, clear_flags=True)
 
-    wkflow.setReductionFlags(projname='Test001', filepairlist=reductionlist)
-    wkflow.reduceData(projname='Test001', normByVan=False, tofmin=None, tofmax=None)
+    status, ret_obj = workflow.reduce_data_set(norm_by_vanadium=False)
+    print\
+        '[Message] ', str(ret_obj)
+    print
+    assert_true(status, str(ret_obj))
 
     return
 
-@step(u'Then I should see a matrix workspace generated')
-def retrieveReducedData(step):
-    wkflow = my_data.get()
+@step(u'Then I check a matrix workspace generated from that run')
+def retrieve_reduced_data(step=9):
+    """ Test retrieve reduced data
+    :param step:
+    :return:
+    """
+    # Get workflow
+    work_flow = my_data.get()
 
-    reducedrunlist = wkflow.getReducedRuns(projectname = 'Test001')
-    numredws = len(reducedrunlist)
-    assert_equals(numredws, 1)
+    reduced_run_list = work_flow.get_reduced_runs()
+    num_reduced_runs = len(reduced_run_list)
+    assert_equals(num_reduced_runs, 1)
+    status, reduced_data = work_flow.get_reduced_data(reduced_run_list[0], 'dspace')
+    assert_true(status)
+    assert_true(isinstance(reduced_data, dict))
+    assert_equals(len(reduced_data.keys()), 2)
+    assert_equals(len(reduced_data), 2)
+    assert_equals(len(reduced_data[0]), 3)
 
-    print "Retrieve reduced data"
-'''
+
+@step(u'Reduce 2 runs and check results')
+def reduce_2_runs(step=10):
+    """ Test to reduce multiple runs
+    :param step:
+    :return:
+    """
+    # Get workflow
+    work_flow = my_data.get()
+
+if __name__ == "__main__":
+
+    if False:
+        init_workflow(1)
+        setup_ipts(2)
+        filter_runs(3)
+        set_ipts_runs(4)
+        save_session(5)
+        load_session(6)
+        add_run_to_reduce(7)
+        reduce_data(8)
+        retrieve_reduced_data(9)
+

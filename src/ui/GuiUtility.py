@@ -197,6 +197,7 @@ def setTextToQTableCell(table, irow, icol, text):
 
     return
 
+
 def addCheckboxToWSTCell(table, row, col, state):
     """ function to add a new select checkbox to a cell in a table row
     won't add a new checkbox if one already exists
