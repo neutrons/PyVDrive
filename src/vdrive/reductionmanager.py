@@ -924,41 +924,74 @@ class ReductionManager(object):
 
         return
 
-    def convert_to_vulcan_bin(self, run_number):
-        """
-        Convert to VULCAN binning
-        Purpose:
+    def convert_to_vulcan_bin(self, run_number, out_gss_name):
+        """ Convert to VULCAN binning
+        Purpose: Convert the workspace to vulcan's IDL bin and write out GSAS file
         Requirements:
         Guarantees:
         :param run_number:
+        :param out_gss_name: name of the output GSAS file name
         :return:
         """
-        # TODO/NOW: docs: 1st!
         # Check requirements
-        assert isinstance(run_number, int), 'bla bla ...'
-        assert run_number in self._reductionTrackDict, 'bla bla ...'
+        assert isinstance(run_number, int), 'Input run number must be an integer but %s.' % str(type(run_number))
+        assert run_number in self._reductionTrackDict, 'Run number %d is not tracked.' % run_number
 
         # Tracker
         tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker), 'bla bla ...'
+        assert isinstance(tracker, DataReductionTracker), 'The object in track dictionary is not correct.'
 
         # Get workspace name
-        assert tracker.is_reduced, 'bla bla ...'
+        assert tracker.is_reduced, 'Run %d is not reduced yet.' % run_number
+        ipts_number = self._myProject.get_ipts_number(run_number)
 
         # Convert unit and save for VULCAN GSS
         reduced_ws_name = tracker.event_workspace_name
         self.mtd_convert_units(reduced_ws_name, 'TOF')
-        self.mtd_save_vulcan_gss(reduced_ws_name, binning_ref_file, out_file_name, ipts, gss_parm_file_name)
+        self.mtd_save_vulcan_gss(source_ws_name=reduced_ws_name,
+                                 out_gss_file=out_gss_name,
+                                 ipts=ipts_number,
+                                 binning_reference_file=self._binningReferenceFile,
+                                 gss_parm_file='Vulcan.parm')
 
-        """
-        vulcanws = ConvertUnits(InputWorkspace="VULCAN_%d"%(runnumber),
-                OutputWorkspace="VULCAN_%d_SNSReduc"%(runnumber),
-                Target="TOF", EMode="Elastic", AlignBins=False)
+        return
 
-        SaveVulcanGSS(InputWorkspace=vulcanws, BinFilename=refLogTofFilename,
-        OutputWorkspace="Proto2Bank", GSSFilename=outfilename,
-        IPTS = ipts, GSSParmFilename="Vulcan.prm")
+    @staticmethod
+    def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
+        """ Convert to VULCAN's IDL and save to GSAS file
+        Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
+        Requirements:
+        1. input source workspace is reduced
+        2. output gsas file name is a string
+        3. ipts number is integer
+        4. binning reference file exists
+        5. gss parameter file name is a string
+        :param source_ws_name:
+        :param out_gss_file:
+        :param ipts:
+        :param binning_reference_file:
+        :param gss_parm_file:
+        :return:
         """
+        # Check requirements
+        assert isinstance(source_ws_name, str)
+        src_ws = mantid_helper.retrieve_workspace(source_ws_name)
+        assert src_ws.getNumberHistograms() < 10
+
+        assert isinstance(out_gss_file, str)
+        assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
+        assert isinstance(binning_reference_file, str)
+        assert os.path.exists(binning_reference_file)
+        assert isinstance(gss_parm_file, str)
+
+        final_ws_name = source_ws_name + '_IDL'
+
+        mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
+                                BinFilename=binning_reference_file,
+                                OutputWorkspace=final_ws_name,
+                                GSSFilename=gss_parm_file,
+                                IPTS = ipts,
+                                GSSParmFilename=gss_parm_file)
 
         return
 
