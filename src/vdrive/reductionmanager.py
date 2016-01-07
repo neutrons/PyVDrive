@@ -110,20 +110,43 @@ class PowderReductionParameters(object):
     @property
     def compress_tolerance(self):
         """
-        TODOD/DOC
-        :return:
+        :return: value of compress tolerance
         """
         return self._compressTolerance
 
-    # FIXME/TODO - implement setter
+    @compress_tolerance.setter
+    def compress_tolerance(self, value):
+        """ Set value to _compressTolerance
+        Requirements: positive float
+        :return:
+        """
+        assert isinstance(value, float)
+        assert value > 0
+
+        self._compressTolerance = value
+
+        return
 
     @property
     def filter_bad_pulse(self):
         """
-
-        :return:
+        Get the status whether bad pulse will be filtered
+        :return: boolean
         """
         return self._filterBadPulse
+
+    @filter_bad_pulse.setter
+    def filter_bad_pulse(self, value):
+        """
+        Set the flag whether bad pulse shall be filtered
+        :param value:
+        :return:
+        """
+        isinstance(value, bool)
+
+        self._filterBadPulse = value
+
+        return
 
     @property
     def focus_calibration_file(self):
@@ -228,12 +251,24 @@ class PowderReductionParameters(object):
     @property
     def preserve_events(self):
         """
-
+        Return the flag whether events will be preserved during reduction
         :return:
         """
         return self._preserveEvents
 
-    # FIXME/TODO/NOW: add setter
+    @preserve_events.setter
+    def preserve_events(self, value):
+        """
+        Set the flag to preserve events during reduciton
+        Requirements: value must be bool
+        :param value:
+        :return:
+        """
+        assert isinstance(value, bool)
+
+        self._preserveEvents = value
+
+        return
 
     def form_binning_parameter(self):
         """
@@ -252,15 +287,13 @@ class PowderReductionParameters(object):
 
         return bin_par
 
-
     def set_from_dictionary(self, param_dict):
-        """
-        TODO/NOW/DOC + Fill-in
+        """ Set reduction parameters' values from a dictionary
         :param param_dict:
         :return:
         """
         # Check requirements
-        print 'Fill me'
+        assert isinstance(param_dict, dict), 'Input must be a dictionary but not %s.' % str(type(param_dict))
 
         # Set
         for param_name in param_dict:
@@ -269,8 +302,8 @@ class PowderReductionParameters(object):
             elif param_name in self.__dict__:
                 setattr(self, param_name, param_dict[param_name])
             else:
-                pass
-                # print '[DB] Parameter %s is not an attribute' % param_name
+                print '[Warning] Parameter %s is not an attribute for ' \
+                      'reduction parameter' % param_name
 
         return
 
@@ -386,7 +419,7 @@ class DataReductionTracker(object):
         # set up
         self._runNumber = run_number
         self._filePath = file_path
-        # TODO - it is not clear whether it is better to use vanadium file name or vanadium run number
+        # FIXME - it is not clear whether it is better to use vanadium file name or vanadium run number
         self._vanadiumCalibrationRunNumber = vanadium_calibration
 
         # Workspaces' names
@@ -403,7 +436,7 @@ class DataReductionTracker(object):
     @property
     def event_workspace_name(self):
         """
-        TODO/NOW/DOC
+        Get the name of the event workspace
         :return:
         """
         return self._eventWorkspace
@@ -411,12 +444,19 @@ class DataReductionTracker(object):
     @event_workspace_name.setter
     def event_workspace_name(self, value):
         """
-        TODO/NOW/DOC
+        Set the name of the event workspace
+        Requirements:
+            1. Input is a string
+            2. Workspace must be in AnalysisDataService
         :param value:
         :return:
         """
-        print 'Check requirements ... ...'
+        # Check
+        assert  isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
+        ws = mantid_helper.retrieve_workspace(value)
+        assert ws is not None
 
+        # Set
         self._eventWorkspace = value
 
     @property
@@ -556,11 +596,12 @@ class ReductionManager(object):
     def get_event_workspace_name(self, run_number):
         """
         Get or generate the name of a run
-        TODO/NOW/DOC
+        Requirements: run number must be a positive integer
         :param run_number:
         :return:
         """
         assert isinstance(run_number, int)
+        assert run_number > 0
 
         event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
 
@@ -606,8 +647,9 @@ class ReductionManager(object):
         :param listindex:
         :return: Workspace (success) or 2-tuple (False and error message)
         """
-        # TODO/NOW/FIXME - Complete it & Doc!
-
+        # Check requirements
+        assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
+        # get tracker
         tracker = self._reductionTrackDict[run_number]
         assert isinstance(tracker, DataReductionTracker)
 
@@ -628,11 +670,8 @@ class ReductionManager(object):
             All requirements for align and focus in Mantid is satisifed
         Guarantees:
             Event workspace is reduced
-
-        Arguments:
-         - eventwksp
-
-        Return: focussed event workspace
+        :param event_ws_name:
+        :return: focused event workspace
         """
         # Check requirement
         assert isinstance(event_ws_name, str)
@@ -777,12 +816,24 @@ class ReductionManager(object):
     def mtd_normalize_by_current(event_ws_name):
         """
         Normalize by current
-        TODO/NOW - Doc, Check requiremetns
+        Purpose: call Mantid NormalisebyCurrent
+        Requirements: a valid string as an existing workspace's name
+        Guarantees: workspace is normalized by current
         :param event_ws_name:
         :return:
         """
+        # Check requirements
+        assert isinstance(event_ws_name, str), 'Input event workspace name must be a string.'
+        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert event_ws is not None
+
+        # Call mantid algorithm
         mantidapi.NormaliseByCurrent(InputWorkspace=event_ws_name,
                                      OutputWorkspace=event_ws_name)
+
+        # Check
+        out_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert out_ws is not None
 
         return
 
@@ -899,14 +950,15 @@ class ReductionManager(object):
 
     def set_focus_calibration_file(self, focus_calibration_file):
         """ Set time focusing calibration file
-        Purpose:
-        Requirements:
-        Guarantees:
+        Purpose: Get the calibration file to do time focusing (offset, calibration, mask and etc)
+        Requirements: Input file must exist
+        Guarantees: file name is set to class variable
         :return:
         """
-        # TODO/NOW/Complete it
         # Check requirements
-        print 'Fill me'
+        assert isinstance(focus_calibration_file, str)
+        assert os.path.exists(focus_calibration_file), 'Focus calibration file %s ' \
+                                                       'does not exist.' % focus_calibration_file
 
         # Set value
         self._focusCalibrationFile = focus_calibration_file
@@ -1145,19 +1197,17 @@ class ReductionManager(object):
 
     def set_parameters(self, param_dict):
         """ Set parameters for reduction
-        Purpose:
-
-        Requirements:
-
-        Guarantees:
+        Purpose: set parameters' value from a parameter dictionary with parameter name as key and value as value
+        Requirements: input is a dictionary
+        Guarantees: parameters' value are set
         :param param_dict:
         :return:
         """
-        # TODO/NOW/Doc and etc
         # Check requirements
-
+        assert isinstance(param_dict, dict)
         assert self._reductionParameters is not None
 
+        # Set
         self._reductionParameters.set_from_dictionary(param_dict)
 
         return

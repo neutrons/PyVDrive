@@ -24,13 +24,95 @@ import mantid.api
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 
+EVENT_WORKSPACE_ID = "EventWorkspace"
 
-def calculate_reflections():
-    """
 
-    :return:
+class UnitCell(object):
+    """ A simple class to pass the unit cell information
     """
-    # TODO/NOW 1st - Doc, assertion and clean!
+    PRIMITIVE = 0
+    BCC = 1
+    FCC = 2
+
+    SpaceGroupDict = {
+        PRIMITIVE: 'P m m m',
+        BCC: 'I m m m',
+        FCC: 'F m m m'
+    }
+
+    def __init__(self, unit_cell_type, a, b=None, c=None):
+        """
+        Initialize and set up a unit cell
+        :param unit_cell_type:
+        :param a:
+        :param b:
+        :param c:
+        :return:
+        """
+        # unit cell type, primitive, bcc or fcc
+        assert 0 <= unit_cell_type <= 2, 'Unit cell type %d is not supported.' % unit_cell_type
+        self._unitCellType = unit_cell_type
+
+        # lattice size
+        assert isinstance(a, float)
+        assert a > 0, 'Lattice parameter must larger than 0.'
+        self._a = a
+
+        assert (b is None and c is None) or (b is not None and c is not None)
+        if b is None and c is None:
+            # cubic
+            self._isCubic = True
+            self._b = self._a
+            self._c = self._a
+        else:
+            # tetrehedron
+            self._isCubic = False
+            assert isinstance(b, float)
+            assert b > 0
+            self._b = b
+            assert isinstance(c, float)
+            assert c > 0
+            self._c = c
+
+        return
+
+    @property
+    def space_group(self):
+        """ Get space group
+        :return:
+        """
+        return UnitCell.SpaceGroupDict[self._unitCellType]
+
+    def get_cell_parameters(self):
+        """
+        Put cell parameters a, b and c to a list and return
+        :return: list of 3 elements, a, b and c
+        """
+        return [self._a, self._b, self._c]
+
+    def is_cubic(self):
+        """ Whether it is cubic
+        :return:
+        """
+        return self._isCubic
+
+
+def calculate_reflections(unit_cell, min_d, max_d):
+    """ Calculate reflections' position in d-spacing
+    Purpose:
+        Calculate a crystal's Bragg peaks' positions in d-spacing
+    Requirements:
+        Crystal unit cell must be tetrahegonal (including cubic)
+        Lattice parameters (a, b, c) must be valid
+        d-spacing range must be given
+        Structure must be primitive, body-centre, or face-centre
+    Guarantees:
+        Bragg peaks' position along with HKL will be returned
+    :param unit_cell: UnitCell instance
+    :param min_d: minimum d-spacing value
+    :param max_d: maximum d-spacing value
+    :return: a list of reflections.  Each reflection is a 2-tuple as ... ...
+    """
     from mantid.geometry import CrystalStructure, ReflectionGenerator, ReflectionConditionFilter
 
     def get_generator(lattice_parameters, space_group):
@@ -62,22 +144,28 @@ def calculate_reflections():
 
         return zip(hkls, dvalues)
 
+    # Check inputs
+    assert isinstance(unit_cell, UnitCell), 'Input must be an instance of UnitCell but not %s.' % str(type(unit_cell))
+    assert 0 < min_d < max_d
 
-    cell_parameters = [5, 4, 3]
+    # cell_parameters = [5, 4, 3]
+    cell_parameters = unit_cell.get_cell_parameters()
+    cell_type = unit_cell.space_group
 
+    reflection_list = get_unique_reflections(cell_parameters, cell_type, min_d, max_d)
+
+    """
     print get_unique_reflections(cell_parameters, 'P m m m', 0.5, 5.0)  # primitive
-
     print get_unique_reflections(cell_parameters, 'I m m m', 0.5, 5.0)  # body center
-
     print get_unique_reflections(cell_parameters, 'F m m m', 0.5, 5.0)  # face center
-
     print get_all_reflections(cell_parameters, 'F m m m', 0.5, 5.0)
+    """
 
-    return
+    return reflection_list
 
 
 def delete_workspace(workspace):
-    """
+    """ Delete a workspace in AnalysisService
     :param workspace:
     :return:
     """
@@ -91,11 +179,37 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                   log_name, min_log_value, max_log_value, log_value_interval,
                                   log_value_change_direction):
     """
-
+    Generate event filter by log value
+    Purpose: call Mantid GenerateEventsFilter to generate splitters workspace in AnalysisDataService
+    Requirements:
+        input workspace name points to an existing workspace
+        splitters_ws_name and info_ws_name are string
+        log_name is string
+        minimum log value is smaller than maximum log value
+    :param ws_name:
+    :param splitter_ws_name:
+    :param info_ws_name:
+    :param min_time:
+    :param max_time:
+    :param log_name:
+    :param min_log_value:
+    :param max_log_value:
+    :param log_value_interval:
+    :param log_value_change_direction:
     :return:
     """
-    # TODO/FIXME Doc 1st
     print '[TRACE] Generate Filter By Log'
+    # Check requirements
+    assert isinstance(ws_name, str)
+    src_ws = retrieve_workspace(ws_name)
+    assert src_ws is not None
+
+    assert isinstance(splitter_ws_name, str)
+    assert isinstance(info_ws_name)
+
+    assert isinstance(log_name, str)
+
+    # Call Mantid algorithm
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
                                    LogName=log_name,
@@ -105,13 +219,15 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                    LogValueInterval=log_value_interval,
                                    FilterLogValueByChangingDirection=log_value_change_direction)
 
-    return
+    return True, (splitter_ws_name, info_ws_name)
 
 
 def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
                                    start_time, stop_time, delta_time, time_unit):
     """
-    TODO/FIXME Doc!
+    Generate event filters by time interval
+    Purpose: Generate splitters by calling Mantid's GenerateEventsFilter
+    Requirements:
     :param ws_name:
     :param start_time:
     :param stop_time:
@@ -139,14 +255,6 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
 
     try:
         mantidapi.GenerateEventsFilter(**my_arg_dict)
-        """
-        mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
-                                       OutputWorkspace=splitter_ws_name,
-                                       InformationWorkspace=info_ws_name,
-                                       StartTime=start_time,
-                                       StopTime=stop_time,
-                                       TimeInterval=delta_time)
-        """
     except RuntimeError as e:
         return False, str(e)
 
@@ -395,6 +503,21 @@ def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VU
     assert isinstance(instrument_name, str), 'Instrument name must be a string but not %s.' % str(type(instrument_name))
 
     return '%s_%d_%s' % (instrument_name, run_number, out_base_name)
+
+
+def is_event_workspace(workspace_name):
+    """
+    Check whether a workspace, specified by name, is an event workspace
+    :param workspace_name:
+    :return:
+    """
+    # Check requirement
+    assert isinstance(workspace_name, str)
+
+    event_ws = retrieve_workspace(workspace_name)
+    assert event_ws is not None
+
+    return event_ws.id() == EVENT_WORKSPACE_ID
 
 
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
