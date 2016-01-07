@@ -4,7 +4,6 @@
 #
 ########################################################################
 import sys
-
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -15,6 +14,85 @@ except AttributeError:
 
 import GuiUtility
 import gui.VdrivePeakPicker as VdrivePeakPicker
+
+
+# List of supported unit cell
+UnitCellList = [('BCC', 'I m -3 m'),
+                ('FCC', 'F d -3 m'),
+                ('HCP', 'P 63/m m c'),
+                ('Body-Center', 'I m m m'),
+                ('Face-Center', 'F m m m'),
+                ('Primitive', 'P m m m')]
+
+
+class PhaseWidgets(object):
+    """
+    A set of widgets to define a phase
+    """
+    def __init__(self):
+        """
+
+        :return:
+        """
+        self._lineEdit_a = None
+        self._lineEdit_b = None
+        self._lineEdit_c = None
+
+        self._lineEdit_name = None
+        self._comboBox_type = None
+
+        self._checkBox_selected = None
+
+        return
+
+    def set_widgets(self, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
+        """
+
+        :param edit_a:
+        :param edit_b:
+        :param edit_c:
+        :param edit_name:
+        :param combo_box_type:
+        :param check_box_select:
+        :return:
+        """
+        # TODO/NOW/1st: Assertion!
+
+        self._lineEdit_a = edit_a
+        self._lineEdit_b = edit_b
+        self._lineEdit_c = edit_c
+        self._lineEdit_name = edit_name
+        self._comboBox_type = combo_box_type
+        self._checkBox_selected = check_box_select
+
+        return
+
+    def is_selected(self):
+        """
+
+        :return:
+        """
+        # TODO/NOW/1st: Doc and ...
+        assert isinstance(self._checkBox_selected, QtGui.QCheckBox)
+
+        return self._checkBox_selected.isChecked()
+
+    def get_phase(self):
+        """
+
+        :return: list as [name, type, a, b, c]
+        """
+        # TODO/NOW/1st: Doc and assertion
+
+        name = str(self._lineEdit_name.text()).strip()
+        assert len(name) > 0, 'bla bla'
+
+        cell_type = str(self._comboBox_type.currentText()).split()[0]
+        a = float(self._lineEdit_a.text())
+        b = float(self._lineEdit_b.text())
+        c = float(self._lineEdit_c.text())
+
+        return [name, cell_type, a, b, c]
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -35,18 +113,39 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         # Define event handling methods
-        self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_claim_overlapped_peaks)
+        # phase set up
+        self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
+                     self.do_set_phases)
 
+        self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
+                     # TODO/FIXME/1st add this method
+                     self.do_clear_phases)
+
+        self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
+                     # TODO/FIXME/1st add this method
+                     self.do_undo_phase_changes)
+
+        # peak processing
         self.connect(self.ui.pushButton_addAllPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_add_all_peaks)
 
+        self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_find_peaks)
+
+        self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_claim_overlapped_peaks)
+
+        # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_calibration_file)
 
         self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
                      self.do_load_data)
 
+        self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.do_load_bank)
+
+        # save and quit
         self.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
 
@@ -93,6 +192,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.treeView_iptsRun.set_main_window(self)
 
         self.ui.tableWidget_peakParameter.setup()
+
+        # set up unit cell string list
+        unit_cell_str_list = []
+        for tup in UnitCellList:
+            info_str = '%s (%s)' % (tup[0], tup[1])
+            unit_cell_str_list.append(info_str)
+
+        self.ui.comboBox_structure1.clear()
+        self.ui.comboBox_structure1.addItems(unit_cell_str_list)
+
+        # TODO/1st set up the box 2 and 3
 
         return
 
@@ -218,23 +328,51 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Check requirements
         assert self._myController
-        blabla
 
-        # Gather information for calling
-        try:
-            peak_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
-        except RuntimeError as re:
-            GuiUtility.pop_dialog_error(self, str(re))
-            return
+        # FIXME/NOW/1st - how to define minD and maxD???
+        min_d = 0.5
+        max_d = 5.0
+
+        # List all peaks according to
+        if len(self._phaseList) > 0:
+            # At least 1 phase should be defined.
+            reflection_list = list()
+            for phase in self._phaseList:
+                print phase
+                sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
+                for peak_tup in sub_list:
+                    print peak_tup[1], peak_tup[0]
+                reflection_list.extend(sub_list)
+
+        else:
+            # Use algorithm to find peak automatically
+            try:
+                reflection_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
+            except RuntimeError as re:
+                GuiUtility.pop_dialog_error(self, str(re))
+                return
 
         # Set the peaks to canvas
-        peak_pos_list = retrieve_peak_positions(peak_list)
+        peak_pos_list = retrieve_peak_positions(reflection_list)
         self.ui.graphicsView_main.add_peak_indicators(peak_pos_list)
 
         # Set the peaks' parameters to table
-        self.ui.tableWidget.append_peaks(peak_list)
+        self.ui.tableWidget_peakParameter.append_peaks(reflection_list)
 
         return
+
+    def do_load_bank(self):
+        """
+
+        :return:
+        """
+        print 'Load another bank!'
+
+    def do_clear_phases(self):
+        pass
+
+    def do_undo_phase_changes(self):
+        pass
 
     def do_load_calibration_file(self):
         """
@@ -268,6 +406,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees:
         :return:
         """
+        # FIXME/NOW/1st - Should move the MockController to VDriveAPI
+
         # Check requirements
         assert self._myController is not None
 
@@ -278,6 +418,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
             load_chop_data = True
         if len(str(self.ui.lineEdit_runToLoad.text())) > 0:
             load_run_data = True
+
+        # Load data
         if load_chop_data and load_run_data:
             # Specify too many.  Unable to handle
             GuiUtility.pop_dialog_error('Both run and chopped are specified. Unable to handle.')
@@ -285,27 +427,37 @@ class PeakPickerWindow(QtGui.QMainWindow):
         elif load_chop_data:
             # Load chopped data
             chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
+            raise RuntimeError('Implement ASAP to load chopped data %s' % chop_data_name)
         elif load_run_data:
             # Load data via run
             run_data_name = str(self.ui.lineEdit_runToLoad.text())
+            raise RuntimeError('Implement ASAP to load reduced run %s.' % run_data_name)
         else:
+            # Load GSAS file
             diff_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
 
-        # Load data via parent
-        try:
-            data_key = self._myController.load_diffraction_file(diff_file_name, 'gsas')
-        except RuntimeError as re:
-            GuiUtility.pop_dialog_error(self, str(re))
-            return
+            # Load data via parent
+            try:
+                data_key = self._myController.load_diffraction_file(diff_file_name, 'gsas')
+            except RuntimeError as re:
+                GuiUtility.pop_dialog_error(self, str(re))
+                return
+        # END-IF-ELSE
 
         # Plot data
-        # FIXME/NOW : make this section more well-defined
-        vecx, vecy = self._myController.get_diffraction_pattern(data_key, bank=1)
-        self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.plot_diffraction_pattern(vecx, vecy)
+        run_number, num_banks = self._myController.get_diffraction_pattern_info(data_key)
 
+        # update widgets
+        self.ui.comboBox_runNumber.addItem(str(run_number))
         self.ui.comboBox_bankNumbers.clear()
-        self.ui.comboBox_bankNumbers.addItems(['1', '2'])
+        for i_bank in xrange(num_banks):
+            self.ui.comboBox_bankNumbers.addItem(str(i_bank+1))
+        self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+
+        # load bank 1 as default
+        vec_x, vec_y = self._myController.get_diffraction_pattern(data_key, bank=1)
+        self.ui.graphicsView_main.clear_all_lines()
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
 
         return
 
@@ -343,6 +495,31 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the selected peaks to controller
         self._myController.append_peaks(selected_peaks)
+
+        return
+
+    def do_set_phases(self):
+        """ Set phases from GUI
+        Purpose:
+        Requirements:
+        Guarantees:
+        :return:
+        """
+        # TODO/NOW/1st: doc and assertion, and add phase 2 and 3
+
+        # Phase 1
+
+        for i_phase in xrange(3):
+            pass
+
+        # TODO/FIXME/1st: this is a prototype. after testing, make it good for up to 3 phases
+        self._phaseList = list()
+        phase_widgets = PhaseWidgets()
+        phase_widgets.set_widgets(self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
+                                  self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
+                                  self.ui.checkBox_usePhase1)
+        phase = phase_widgets.get_phase()
+        self._phaseList.append(phase)
 
         return
 
@@ -693,6 +870,48 @@ class MockController(object):
         self._currWS = None
 
         return
+
+    def calculate_peaks_position(self, phase, min_d, max_d):
+        """
+
+        :param phase:
+        :param min_d:
+        :param max_d:
+        :return:
+        """
+        # FIXME/TODO/NOW/1st - Doc, Assertion and Implement from prototype
+        import PyVDrive.vdrive.mantid_helper as mantid_helper
+
+        silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43) #, 5.43, 5.43)
+        reflections = mantid_helper.calculate_reflections(silicon, 1.0, 5.0)
+
+        # Sort by d-space... NOT FINISHED YET
+        num_ref = len(reflections)
+        ref_dict = dict()
+        for i_ref in xrange(num_ref):
+            ref_tup = reflections[i_ref]
+            pos_d = ref_tup[1]
+            hkl = ref_tup[0]
+            if pos_d not in ref_dict:
+                ref_dict[pos_d] = list()
+            ref_dict[pos_d].append(hkl)
+
+        return reflections
+
+    def get_diffraction_pattern_info(self, data_key):
+        """
+        :return:
+        """
+        import os
+        # TODO/NOW: Doc and assertion
+        print 'Data key is %s of type %s' % (str(data_key), str(type(data_key)))
+
+        # Key (temporary) is the file name
+        run_number = int(os.path.basename(data_key).split('.')[0])
+        #
+        num_banks = self._currWS.getNumberHistograms()
+
+        return run_number, num_banks
 
     def get_diffraction_pattern(self, data_key, bank):
         """

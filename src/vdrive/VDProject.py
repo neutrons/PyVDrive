@@ -539,7 +539,7 @@ class VDProject(object):
         # Set value
         self._sampleRunReductionFlagDict[run_number] = flag
 
-        return False
+        return
 
     def set_reduction_parameters(self, parameter_dict):
         """

@@ -33,11 +33,15 @@ class UnitCell(object):
     PRIMITIVE = 0
     BCC = 1
     FCC = 2
+    BC = 3  # body-centre
+    FC = 4  # face-centre
 
     SpaceGroupDict = {
         PRIMITIVE: 'P m m m',
-        BCC: 'I m m m',
-        FCC: 'F m m m'
+        BC: 'I m m m',
+        FC: 'F m m m',
+        BCC: 'I m -3 m',
+        FCC: 'F d -3 m',
     }
 
     def __init__(self, unit_cell_type, a, b=None, c=None):
@@ -50,7 +54,7 @@ class UnitCell(object):
         :return:
         """
         # unit cell type, primitive, bcc or fcc
-        assert 0 <= unit_cell_type <= 2, 'Unit cell type %d is not supported.' % unit_cell_type
+        assert 0 <= unit_cell_type <= 4, 'Unit cell type %d is not supported.' % unit_cell_type
         self._unitCellType = unit_cell_type
 
         # lattice size
@@ -596,6 +600,3 @@ def workspace_does_exist(workspace_name):
 
     return does_exist
 
-
-if __name__ == "__main__":
-    calculate_reflections()

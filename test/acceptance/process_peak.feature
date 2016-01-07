@@ -7,5 +7,6 @@ Feature: Wenduo Zhou
 
 	Scenario: Calculate reflections of silicon in d-spacing
  		Given I know the IPTS number and run number of a run for silicon
-	  	Then I input the lattice parameters of silicon and calculate the reflections in d spacing.
+	  	Then I input the lattice parameters of silicon and calculate the reflections in d spacing
+	    Then I reduce a silicon run
 

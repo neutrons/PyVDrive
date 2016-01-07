@@ -494,7 +494,8 @@ class VDriveAPI(object):
         """
         # FIXME - This has the same functionality as method set_runs_to_reduce()
         # Check requirements
-        print 'Fill me'
+        assert isinstance(file_flag_list, list), 'bla bla ...'
+        assert isinstance(clear_flags, bool)
 
         # Clear
         if clear_flags is True:
@@ -504,6 +505,7 @@ class VDriveAPI(object):
         num_flags_set = 0
         err_msg = ''
         for run_number, reduction_flag in file_flag_list:
+            print '[DB] Set reduction flag for run %d with flag %s.' % (run_number, str(reduction_flag))
             try:
                 self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
                 num_flags_set += 1

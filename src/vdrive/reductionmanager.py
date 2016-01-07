@@ -444,18 +444,15 @@ class DataReductionTracker(object):
     @event_workspace_name.setter
     def event_workspace_name(self, value):
         """
-        Set the name of the event workspace
+        Set the name of the event workspace.  This operation might be called
+        before the workspace is created.
         Requirements:
             1. Input is a string
-            2. Workspace must be in AnalysisDataService
         :param value:
         :return:
         """
         # Check
-        assert  isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
-        ws = mantid_helper.retrieve_workspace(value)
-        assert ws is not None
-
+        assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
         # Set
         self._eventWorkspace = value
 
