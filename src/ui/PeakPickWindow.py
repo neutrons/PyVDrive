@@ -29,13 +29,14 @@ class PhaseWidgets(object):
     """
     A set of widgets to define a phase
     """
-    def __init__(self, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
+    def __init__(self, parent, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
         """
         Initialize the phase widgets group
         Requirements: all the inputs should be the proper PyQt widgets
         :return:
         """
         # Check requirements
+        assert isinstance(parent, QtGui.QMainWindow)
         assert isinstance(edit_a, QtGui.QLineEdit)
         assert isinstance(edit_b, QtGui.QLineEdit)
         assert isinstance(edit_c, QtGui.QLineEdit)
@@ -59,28 +60,41 @@ class PhaseWidgets(object):
         for type_tup in UnitCellList:
             self._cellTypeList.append(type_tup[0])
 
+        parent.connect(combo_box_type, QtCore.SIGNAL('currentIndexChanged(int)'),
+                       self.event_space_group_changed)
+
         return
 
-    def is_selected(self):
+    def enable_widgets(self, enabled):
         """
-        Return the flag whether this phase is selected
+
+        :param enabled:
         :return:
         """
-        return self._checkBox_selected.isChecked()
+        assert isinstance(enabled, bool)
 
-    def reset(self):
+        self._lineEdit_a.setEnabled(enabled)
+        self._lineEdit_b.setEnabled(enabled)
+        self._lineEdit_c.setEnabled(enabled)
+        self._comboBox_type.setEnabled(enabled)
+        self._lineEdit_name.setEnabled(enabled)
+
+        return
+
+    def event_space_group_changed(self):
         """
-        Reset the widgets
+        Purpose: handle the change of space group
+        Requirements:
         :return:
         """
-        # Clear name, a, b, c
-        self._lineEdit_a.setText('')
-        self._lineEdit_b.setText('')
-        self._lineEdit_c.clear()
-        self._lineEdit_name.setText('')
+        curr_space_group = str(self._comboBox_type.currentText())
 
-        # Set the unit type to primitive
-        self.set_unit_cell_type('Primitive')
+        cell_type = curr_space_group.split()[0]
+
+        self.set_unit_cell_type(cell_type)
+
+        return
+
 
     def get_phase(self):
         """
@@ -109,22 +123,26 @@ class PhaseWidgets(object):
 
         return [name, cell_type, a, b, c]
 
-    def set_unit_cell_type(self, cell_type):
+    def is_selected(self):
         """
-        Set unit cell type and enable/disable the line edits for a, b and c
-        :param cell_type:
+        Return the flag whether this phase is selected
         :return:
         """
-        # Check
-        assert isinstance(cell_type, str)
-        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
+        return self._checkBox_selected.isChecked()
 
-        # Set
-        list_index = self._cellTypeList.index(cell_type)
-        self._comboBox_type.setCurrentIndex(list_index)
+    def reset(self):
+        """
+        Reset the widgets
+        :return:
+        """
+        # Clear name, a, b, c
+        self._lineEdit_a.setText('')
+        self._lineEdit_b.setText('')
+        self._lineEdit_c.clear()
+        self._lineEdit_name.setText('')
 
-        # Disable some
-        self.set_lattice_widgets_values(cell_type)
+        # Set the unit type to primitive
+        self.set_unit_cell_type('Primitive')
 
         return
 
@@ -156,24 +174,28 @@ class PhaseWidgets(object):
 
         return
 
-    def enable_widgets(self, enabled):
+    def set_unit_cell_type(self, cell_type):
         """
-
-        :param enabled:
+        Set unit cell type and enable/disable the line edits for a, b and c
+        :param cell_type:
         :return:
         """
-        assert isinstance(enabled, bool)
+        # Check
+        assert isinstance(cell_type, str)
+        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
 
-        self._lineEdit_a.setEnabled(enabled)
-        self._lineEdit_b.setEnabled(enabled)
-        self._lineEdit_c.setEnabled(enabled)
-        self._comboBox_type.setEnabled(enabled)
-        self._lineEdit_name.setEnabled(enabled)
+        # Set
+        list_index = self._cellTypeList.index(cell_type)
+        self._comboBox_type.setCurrentIndex(list_index)
+
+        # Disable some
+        self.set_lattice_widgets_values(cell_type)
 
         return
 
+
 class PeakPickerWindow(QtGui.QMainWindow):
-    """ Class for general-puposed plot window
+    """ Class for general-purposed plot window
     """
     # class
     def __init__(self, parent=None):
@@ -195,22 +217,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_set_phases)
 
         self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
-                     # TODO/FIXME/1st add this method
                      self.do_clear_phases)
 
         self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
-                     # TODO/FIXME/1st add this method
                      self.do_undo_phase_changes)
 
         # peak processing
-        self.connect(self.ui.pushButton_addAllPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_add_all_peaks)
 
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
 
         self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_claim_overlapped_peaks)
+
+        self.connect(self.ui.pushButton_showPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_add_all_peaks)
+
+        self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_highlight_peaks)
 
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
@@ -239,15 +263,18 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                         self.on_mouse_motion)
 
         # Set up widgets
+        self._phaseWidgetsGroupList = list()
         self._init_widgets_setup()
 
         # Define state variables
         self._isInitialized = False
 
-        self._dataLoaded = False  # state flag that data is loaded
-        self._currDataFile = None  # name of the data file that is currently loaded
-        self._myController = None  # Reference to controller class
-        self._dataDirectory = None
+        self._isDataLoaded = False    # state flag that data is loaded
+        self._currDataFile = None     # name of the data file that is currently loaded
+        self._currentBankNumber = -1  # current bank number
+        self._myController = None     # Reference to controller class
+        self._dataDirectory = None    # default directory to load data
+        self._currDataKey = None      # Data key to look up reduced data from controller
 
         # Peak selection mode
         self._peakSelectionMode = ''
@@ -283,7 +310,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.comboBox_structure1.addItems(unit_cell_str_list)
 
         # TODO/1st set up the box 2 and 3
-        self._phaseWidgetsGroupList = list()
+
+        # TODO/FIXME/1st: this is a prototype. after testing, make it good for up to 3 phases
+        phase_widgets = PhaseWidgets(self, self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
+                                     self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
+                                     self.ui.checkBox_usePhase1)
+        self._phaseWidgetsGroupList.append(phase_widgets)
 
         return
 
@@ -300,7 +332,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Check requirements
         assert self._isInitialized is False
-        assert isinstance(controller, vapi.VDriveAPI)
+        assert isinstance(controller, vdapi.VDriveAPI)
 
         # Set up
         self._myController = controller
@@ -323,7 +355,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Check requirements
         assert self._isInitialized is True, 'Instance is not initialized.'
-        assert self._dataLoaded is True, 'No data is loaded.'
+        assert self._isDataLoaded is True, 'No data is loaded.'
 
         # Find out the highlighted (i.e., current) peak from canvas
         try:
@@ -368,6 +400,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def do_clear_phases(self):
+        """
+        Clear all phases
+        :return:
+        """
+        # Clear phase list
+        self._phaseList = list()
+
+        # Clear all the widgets
+        for phase_widgets in self._phaseWidgetsGroupList:
+            phase_widgets.reset()
+
+        return
+
     def do_clear_peaks_fm_canvas(self):
         """
         Purpose:
@@ -384,10 +430,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         raise NotImplementedError('Add button to GUI')
 
-    def do_delete_peaks_fm_table(self):
+    def do_delete_peaks(self):
         """
         Purpose:
-            Delete the added peak from table and place holder
+            Delete the added peak from table and place holder and their indicators
         Requirements:
             At least one peak is selected in the table
         Guarantees:
@@ -419,10 +465,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # At least 1 phase should be defined.
             reflection_list = list()
             for phase in self._phaseList:
-                print phase
+                # print phase
                 sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
-                for peak_tup in sub_list:
-                    print peak_tup[1], peak_tup[0]
+                # for peak_tup in sub_list:
+                #     print peak_tup[1], peak_tup[0]
                 reflection_list.extend(sub_list)
 
         else:
@@ -435,12 +481,35 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the peaks to canvas
         peak_pos_list = retrieve_peak_positions(reflection_list)
-        self.ui.graphicsView_main.add_peak_indicators(peak_pos_list)
+        for peak_pos in peak_pos_list:
+            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
 
         # Set the peaks' parameters to table
-        self.ui.tableWidget_peakParameter.append_peaks(reflection_list)
+        for peak_tup in reflection_list:
+            hkl = str(peak_tup[0])
+            peak_pos = peak_tup[1]
+            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, hkl, peak_pos, 0.03)
 
         return
+
+    def do_undo_phase_changes(self):
+        """ Purpose: undo all the changes from last 'set phase'
+        :return:
+        """
+        # TODO/FIXME/1st add this method
+        pass
+
+    def do_highlight_peaks(self):
+        """
+        Purpose: Highlight selected peaks' indicators
+        :return:
+        """
+        # Search selected peaks from table
+        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
+
+        for peak_pos in peak_pos_list:
+            # FIXME/TODO/NOW 1st: this is just proof of concept
+            self.ui.graphicsView_main.highlight_peak_indicator(0)  # should use peak_pos
 
     def do_load_bank(self):
         """
@@ -452,38 +521,27 @@ class PeakPickerWindow(QtGui.QMainWindow):
         if new_bank == self._currentBankNumber:
             # same bank as before. no need to do anything
             return
+        if self._isDataLoaded is False:
+            # it is about to load new data, plotting will be called explicitly. no need to re-plot her
+            return
 
         # Save the current peaks to memory and back up to disk
-        self.ui.tableWidget_peakParameter.save()
+        self.ui.tableWidget_peakParameter.save(self._currentBankNumber)
 
         # Clear table and canvas
         self.ui.tableWidget_peakParameter.clear()
         self.ui.graphicsView_main.clear_all_lines()
 
-        # Replot
-        self._myController.get_diffraction_pattern(bank=new_bank)
+        # Re-plot
+        vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
+        self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
 
         self._currentBankNumber = new_bank
+        self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (
+            self._currentRunNumber, self._currentBankNumber))
 
         return
-
-    def do_clear_phases(self):
-        """
-        Clear all phases
-        :return:
-        """
-        # Clear phase list
-        self._phaseList = list()
-
-        # Clear all the widgets
-        for phase_widgets in self._phaseWidgetsGroupList:
-            phase_widgets.reset()
-
-        return
-
-    def do_undo_phase_changes(self):
-        pass
 
     def do_load_calibration_file(self):
         """
@@ -555,20 +613,27 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 return
         # END-IF-ELSE
 
-        # Plot data
-        run_number, num_banks = self._myController.get_diffraction_pattern_info(data_key)
-
         # update widgets
-        self.ui.comboBox_runNumber.addItem(str(run_number))
+        self._isDataLoaded = False
+
+        run_number, num_banks = self._myController.get_diffraction_pattern_info(data_key)
         self.ui.comboBox_bankNumbers.clear()
         for i_bank in xrange(num_banks):
             self.ui.comboBox_bankNumbers.addItem(str(i_bank+1))
+        self.ui.comboBox_bankNumbers.setCurrentIndex(0)
+        self.ui.comboBox_runNumber.addItem(str(run_number))
+
         self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
-        # load bank 1 as default
+        # Plot data: load bank 1 as default
         vec_x, vec_y = self._myController.get_diffraction_pattern(data_key, bank=1)
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
+
+        self._currentRunNumber = run_number
+        self._currentBankNumber = 1
+        self._currDataKey = data_key
+        self._isDataLoaded = True
 
         return
 
@@ -623,13 +688,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for i_phase in xrange(3):
             pass
 
-        # TODO/FIXME/1st: this is a prototype. after testing, make it good for up to 3 phases
-        phase_widgets = PhaseWidgets()
-        phase_widgets.set_widgets(self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
-                                  self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
-                                  self.ui.checkBox_usePhase1)
+        phase_widgets = self._phaseWidgetsGroupList[0]
         phase = phase_widgets.get_phase()
         self._phaseList.append(phase)
+
+        # TODO/NOW/1st: need to record the current value such that the change in future can be reversed.
+        print 'bla bla bla'
 
         return
 
@@ -925,23 +989,23 @@ class PeakPickerWindow(QtGui.QMainWindow):
         return
 
 
-def retrieve_peak_positions(peak_list):
+def retrieve_peak_positions(peak_tup_list):
     """
     Purpose:
         Retrieve peak positions from peaks in given list
     Requirements:
-        Input is a list of DiffractionPeak object
+        Input is a list of 2-tuples as HKL and d-spacing
     Guarantees:
         Retrieve the peaks' positions out
-    :param peak_list:
+    :param peak_tup_list:
     :return: a list of
     """
-    assert isinstance(peak_list, list)
+    assert isinstance(peak_tup_list, list)
 
     peak_pos_list = list()
-    for peak in peak_list:
-        assert isinstance(peak, df.DiffractionPeak)
-        peak_pos = peak.centre
+    for peak in peak_tup_list:
+        peak_pos = peak[1]
+        print peak_pos
         peak_pos_list.append(peak_pos)
     # END-FOR(peak)
 

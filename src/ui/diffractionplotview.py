@@ -9,7 +9,7 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
     for specific needs of the graphics view for interactive plotting of diffraction patten,
     including peak and background
     """
-    def __index__(self, parent):
+    def __init__(self, parent):
         """
         Purpose
         :return:
@@ -17,7 +17,7 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
         gui.mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
         # Define the class variable
-        # list of tuple as (peak position, indictor key)
+        # list of tuple as (peak position, indicator key)
         self._peakIndicatorList = list()
 
         return

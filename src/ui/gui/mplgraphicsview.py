@@ -213,14 +213,20 @@ class IndicatorManager(object):
 
         return ret_key
 
-    def get_line_style(self, line_id=None):
+    @staticmethod
+    def get_line_style(line_id=None):
         """
 
         :param line_id:
         :return:
         """
-        assert isinstance(line_id, None)
-        return '--'
+        if line_id is not None:
+            print '[DB] Get line style. ID = %s' % str(line_id)
+            style = '--'
+        else:
+            style = '--'
+
+        return style
 
     def get_live_indicator_ids(self):
         """
