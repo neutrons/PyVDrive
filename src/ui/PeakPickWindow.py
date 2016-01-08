@@ -29,71 +29,148 @@ class PhaseWidgets(object):
     """
     A set of widgets to define a phase
     """
-    def __init__(self):
+    def __init__(self, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
         """
-
+        Initialize the phase widgets group
+        Requirements: all the inputs should be the proper PyQt widgets
         :return:
         """
-        self._lineEdit_a = None
-        self._lineEdit_b = None
-        self._lineEdit_c = None
+        # Check requirements
+        assert isinstance(edit_a, QtGui.QLineEdit)
+        assert isinstance(edit_b, QtGui.QLineEdit)
+        assert isinstance(edit_c, QtGui.QLineEdit)
+        assert isinstance(edit_name, QtGui.QLineEdit)
+        assert isinstance(combo_box_type, QtGui.QComboBox)
+        assert isinstance(check_box_select, QtGui.QCheckBox)
 
-        self._lineEdit_name = None
-        self._comboBox_type = None
-
-        self._checkBox_selected = None
-
-        return
-
-    def set_widgets(self, edit_a, edit_b, edit_c, edit_name, combo_box_type, check_box_select):
-        """
-
-        :param edit_a:
-        :param edit_b:
-        :param edit_c:
-        :param edit_name:
-        :param combo_box_type:
-        :param check_box_select:
-        :return:
-        """
-        # TODO/NOW/1st: Assertion!
-
+        # Lattice parameters
         self._lineEdit_a = edit_a
         self._lineEdit_b = edit_b
         self._lineEdit_c = edit_c
+        # Phase' name
         self._lineEdit_name = edit_name
+        # Phase' type
         self._comboBox_type = combo_box_type
+        # Phase selected or not
         self._checkBox_selected = check_box_select
+
+        # set up the unit cell dictionary
+        self._cellTypeList = list()
+        for type_tup in UnitCellList:
+            self._cellTypeList.append(type_tup[0])
 
         return
 
     def is_selected(self):
         """
-
+        Return the flag whether this phase is selected
         :return:
         """
-        # TODO/NOW/1st: Doc and ...
-        assert isinstance(self._checkBox_selected, QtGui.QCheckBox)
-
         return self._checkBox_selected.isChecked()
+
+    def reset(self):
+        """
+        Reset the widgets
+        :return:
+        """
+        # Clear name, a, b, c
+        self._lineEdit_a.setText('')
+        self._lineEdit_b.setText('')
+        self._lineEdit_c.clear()
+        self._lineEdit_name.setText('')
+
+        # Set the unit type to primitive
+        self.set_unit_cell_type('Primitive')
 
     def get_phase(self):
         """
-
+        Get the phase's parameters
+        Requirements:
+        1. a, b and c are positive floats
+        2. phase name must be given
         :return: list as [name, type, a, b, c]
         """
-        # TODO/NOW/1st: Doc and assertion
-
         name = str(self._lineEdit_name.text()).strip()
-        assert len(name) > 0, 'bla bla'
+        assert len(name) > 0, 'Phase name must be given!'
 
         cell_type = str(self._comboBox_type.currentText()).split()[0]
-        a = float(self._lineEdit_a.text())
-        b = float(self._lineEdit_b.text())
-        c = float(self._lineEdit_c.text())
+        try:
+            a = float(self._lineEdit_a.text())
+            if self._lineEdit_b.isEnabled():
+                b = float(self._lineEdit_b.text())
+            else:
+                b = a
+            if self._lineEdit_c.isEnabled():
+                c = float(self._lineEdit_c.text())
+            else:
+                c = a
+        except TypeError as e:
+            raise RuntimeError('Lattice parameters a, b or c does not have correct value.')
 
         return [name, cell_type, a, b, c]
 
+    def set_unit_cell_type(self, cell_type):
+        """
+        Set unit cell type and enable/disable the line edits for a, b and c
+        :param cell_type:
+        :return:
+        """
+        # Check
+        assert isinstance(cell_type, str)
+        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
+
+        # Set
+        list_index = self._cellTypeList.index(cell_type)
+        self._comboBox_type.setCurrentIndex(list_index)
+
+        # Disable some
+        self.set_lattice_widgets_values(cell_type)
+
+        return
+
+    def set_lattice_widgets_values(self, cell_type):
+        """
+        Purpose:
+            enable or disabled some widgets according to unit cell type
+            set the values to disabled lattice parameters
+        :param cell_type:
+        :return:
+        """
+        assert cell_type in self._cellTypeList, 'Unit cell type %s is not supported.' % cell_type
+
+        if cell_type in ['BCC', 'FCC']:
+            # Disable inputs for b and c
+            self._lineEdit_b.setEnabled(False)
+            self._lineEdit_c.setEnabled(False)
+            self._lineEdit_b.setText('')
+            self._lineEdit_c.setText('')
+        elif cell_type in ['HCP']:
+            # Disable b and enable c
+            self._lineEdit_b.setEnabled(False)
+            self._lineEdit_c.setEnabled(True)
+            self._lineEdit_b.setText('')
+        else:
+            # enable all
+            self._lineEdit_b.setEnabled(True)
+            self._lineEdit_c.setEnabled(True)
+
+        return
+
+    def enable_widgets(self, enabled):
+        """
+
+        :param enabled:
+        :return:
+        """
+        assert isinstance(enabled, bool)
+
+        self._lineEdit_a.setEnabled(enabled)
+        self._lineEdit_b.setEnabled(enabled)
+        self._lineEdit_c.setEnabled(enabled)
+        self._comboBox_type.setEnabled(enabled)
+        self._lineEdit_name.setEnabled(enabled)
+
+        return
 
 class PeakPickerWindow(QtGui.QMainWindow):
     """ Class for general-puposed plot window
@@ -182,6 +259,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currMousePosX = 0
         self._currMousePosY = 0
 
+        # Phases
+        self._phaseList = list()
+
         return
 
     def _init_widgets_setup(self):
@@ -203,6 +283,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.comboBox_structure1.addItems(unit_cell_str_list)
 
         # TODO/1st set up the box 2 and 3
+        self._phaseWidgetsGroupList = list()
 
         return
 
@@ -363,13 +444,43 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_load_bank(self):
         """
-
+        Save the current selected peaks to a temporary file and load a new bank
         :return:
         """
-        print 'Load another bank!'
+        # Get new bank
+        new_bank = int(self.ui.comboBox_bankNumbers.currentText())
+        if new_bank == self._currentBankNumber:
+            # same bank as before. no need to do anything
+            return
+
+        # Save the current peaks to memory and back up to disk
+        self.ui.tableWidget_peakParameter.save()
+
+        # Clear table and canvas
+        self.ui.tableWidget_peakParameter.clear()
+        self.ui.graphicsView_main.clear_all_lines()
+
+        # Replot
+        self._myController.get_diffraction_pattern(bank=new_bank)
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
+
+        self._currentBankNumber = new_bank
+
+        return
 
     def do_clear_phases(self):
-        pass
+        """
+        Clear all phases
+        :return:
+        """
+        # Clear phase list
+        self._phaseList = list()
+
+        # Clear all the widgets
+        for phase_widgets in self._phaseWidgetsGroupList:
+            phase_widgets.reset()
+
+        return
 
     def do_undo_phase_changes(self):
         pass
@@ -513,7 +624,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             pass
 
         # TODO/FIXME/1st: this is a prototype. after testing, make it good for up to 3 phases
-        self._phaseList = list()
         phase_widgets = PhaseWidgets()
         phase_widgets.set_widgets(self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
                                   self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
