@@ -95,7 +95,6 @@ class PhaseWidgets(object):
 
         return
 
-
     def get_phase(self):
         """
         Get the phase's parameters
@@ -223,18 +222,26 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_undo_phase_changes)
 
         # peak processing
-
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
+
+        self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
+                     self.do_import_peaks_from_file)
 
         self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_claim_overlapped_peaks)
 
         self.connect(self.ui.pushButton_showPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_add_all_peaks)
+                     self.do_show_peaks)
 
         self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_highlight_peaks)
+                     self.do_hide_peaks)
+
+        self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
+                     self.do_select_all_peaks)
+
+        self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
+                     self.do_switch_table_editable)
 
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
@@ -367,16 +374,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error('Unable to find highlighted peak in canvas.')
             return
 
-        # Add the peak to both the placeholder and table
-        try:
-            diff_peak = self._myController.fit_peak(self._currDataFile, pos_x)
-        except RuntimeError as e:
-            GuiUtility.pop_dialog_error(self, 'Unable to add peak at x = %f due to %s' % (pos_x, str(e)))
-            return
+        # TODO/FIXME/NOW: 1st - set the same flag to them in column 'Group'
+        blablabla()
 
         return
 
-    def do_add_all_peaks(self):
+    def do_show_peaks(self):
         """
         Purpose:
             add all peaks that can be found in the data or on the canvas to table
@@ -492,14 +495,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def do_undo_phase_changes(self):
-        """ Purpose: undo all the changes from last 'set phase'
+    def do_switch_table_editable(self):
+        """ Purpose: switch on/off the edit mode of the peak table
+
         :return:
         """
-        # TODO/FIXME/1st add this method
-        pass
+        # TODO/NOW/1st: Implement it!
+        blabla()
 
-    def do_highlight_peaks(self):
+    def do_hide_peaks(self):
         """
         Purpose: Highlight selected peaks' indicators
         :return:
@@ -510,6 +514,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for peak_pos in peak_pos_list:
             # FIXME/TODO/NOW 1st: this is just proof of concept
             self.ui.graphicsView_main.highlight_peak_indicator(0)  # should use peak_pos
+
+    def do_import_peaks_from_file(self):
+        """ Purpose: import peaks' IDs from peak file
+
+        :return:
+        """
+        # TODO/NOW/1st: ASAP for ALL!
 
     def do_load_bank(self):
         """
@@ -674,6 +685,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def do_select_all_peaks(self):
+        """
+        Purpose: select or deselct all peaks
+        :return:
+        """
+        # TODO/NOW/1st - doc, assertion and implementation!
+        print '[TODO/NOW!] Current state is ', self.ui.checkBox_selectPeaks.isChecked()
+
     def do_set_phases(self):
         """ Set phases from GUI
         Purpose:
@@ -696,6 +715,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
         print 'bla bla bla'
 
         return
+
+    def do_undo_phase_changes(self):
+        """ Purpose: undo all the changes from last 'set phase'
+        :return:
+        """
+        # TODO/FIXME/1st add this method
+        blabla()
 
     def set_controller(self, controller):
         """
@@ -1047,8 +1073,15 @@ class MockController(object):
 
     def calculate_peaks_position(self, phase, min_d, max_d):
         """
+        Purpose: calculate the bragg peaks' position from
 
-        :param phase:
+        Requirements:
+
+        Guarantees:
+          1. return a list of reflections
+          2. each reflection is a tuple. first is a float for peak position. second is a list of list for HKLs
+
+        :param phase: [name, type, a, b, c]
         :param min_d:
         :param max_d:
         :return:
@@ -1056,7 +1089,10 @@ class MockController(object):
         # FIXME/TODO/NOW/1st - Doc, Assertion and Implement from prototype
         import PyVDrive.vdrive.mantid_helper as mantid_helper
 
-        silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43) #, 5.43, 5.43)
+        # Check requirements
+        blabla()
+
+        silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43)  #, 5.43, 5.43)
         reflections = mantid_helper.calculate_reflections(silicon, 1.0, 5.0)
 
         # Sort by d-space... NOT FINISHED YET
@@ -1069,6 +1105,11 @@ class MockController(object):
             if pos_d not in ref_dict:
                 ref_dict[pos_d] = list()
             ref_dict[pos_d].append(hkl)
+
+        # Merge all the peaks with peak position within tolerance
+        TOL = 0.0001
+        # sort the list again with peak positions...
+        blabla()
 
         return reflections
 

@@ -27,6 +27,7 @@ class NTableWidget(QtGui.QTableWidget):
 
         self._myHeaderList = None
         self._myColumnTypeList = None
+        self._editableList = list()
 
         return
 
@@ -149,7 +150,9 @@ class NTableWidget(QtGui.QTableWidget):
         :param column_tup_list: list of 2-tuple as string (column name) and string (data type)
         :return:
         """
-        print '[DB] Init set up table with %d columns!' % len(column_tup_list)
+        # Check requirements
+        assert isinstance(column_tup_list, list)
+        assert len(column_tup_list) > 0
 
         # Define column headings
         num_cols = len(column_tup_list)
@@ -166,6 +169,9 @@ class NTableWidget(QtGui.QTableWidget):
 
         self.setColumnCount(num_cols)
         self.setHorizontalHeaderLabels(self._myHeaderList)
+
+        # Set the editable flags
+        self._editableList = [False] * num_cols
 
         return
 

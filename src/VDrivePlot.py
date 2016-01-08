@@ -53,7 +53,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Define status variables
         # new work flow
-        self._myWorkflow = vdrive.VDriveAPI()
+        self._myWorkflow = vdrive.VDriveAPI('VULCAN')
         self._numSnapViews = 6
 
         # Initialize widgets
@@ -522,7 +522,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
-        # FIXME - THIS SHOULD BE REFACTORED INTO VdriveAPI
+        # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
         raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
         status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
                                                      include_end_date=True)

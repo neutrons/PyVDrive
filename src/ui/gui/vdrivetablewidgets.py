@@ -199,6 +199,8 @@ class PeakParameterTable(NT.NTableWidget):
                       ('Name', 'string'),
                       ('Centre', 'float'),
                       ('Width', 'float'),
+                      ('HKLs', 'string'),
+                      ('Group', 'int'),
                       ('Select', 'checkbox')]
 
     def __init__(self, parent):

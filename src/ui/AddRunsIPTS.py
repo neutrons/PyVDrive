@@ -59,6 +59,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.pushButton_cancel_2, QtCore.SIGNAL('clicked()'),
                                self.do_reject_quit)
 
+        self.connect(self.ui.checkBox_skipScan, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_skip_scan_data)
+
         # Disable some unused widget until 'browse' or 'set' is pushed.
         self.ui.pushButton_iptsInfo.setDisabled(True)
         self.ui.dateEdit_begin.setDisabled(True)
@@ -263,6 +266,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.close()
 
         return
+
+    def evt_skip_scan_data(self):
+        """
+        Purpose: enable/disable the requirement to scan directory before add data!s
+        :return:
+        """
+        # TODO/NOW/1st: Implement
+        blablabla
 
     def get_date_run_range(self):
         """
