@@ -217,6 +217,8 @@ class PeakParameterTable(NT.NTableWidget):
         NT.NTableWidget.__init__(self, parent)
 
         self._buffer = dict()
+        # group ID for overlapped peaks
+        self._currGroupID = 0
 
         return
 
@@ -272,6 +274,14 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
+    def get_next_group_id(self):
+        """
+        Get the next group ID and involve the current one to the next one
+        :return:
+        """
+        self._currGroupID += 1
+        return self._currGroupID
+
     def get_peak(self, peak_index):
         """ Get the peak's information from the table
         Purpose:
@@ -298,13 +308,11 @@ class PeakParameterTable(NT.NTableWidget):
         """ Purpose: get selected peaks' positions
         Requirements: At least 1 peak must be selected
         Guarantees:
-        :return:
+        :return: a list of peak positions of the peaks that are selected.
         """
-        # TODO/NOW/1st: Doc/Assertion
-
         # Go over
         row_number_list = self.get_selected_rows()
-        assert len(row_number_list) > 0, 'bla bla bla'
+        assert len(row_number_list) > 0, 'At least one peak must be selected.'
 
         pos_col_index = 2
         peak_pos_list = list()
@@ -325,6 +333,24 @@ class PeakParameterTable(NT.NTableWidget):
             row_i = self.get_row_value(i_row)
             self._buffer[bank_id].append(row_i)
             # print 'row %d' % i_row, row_i, type(row_i)
+
+        return
+
+    def set_group_id(self, row_index, group_id):
+        """ Set group ID to a grow
+        Purpose: set a value to column 'Group'
+        Requirements: group ID must be a non-negative integer
+        :param row_index: index of a row
+        :param group_id
+        :return:
+        """
+        # Check requirements
+        assert isinstance(group_id, int)
+        assert group_id >= 0
+
+        # Get the column index and set the value
+        column_index = PeakParameterTable.PeakTableSetup.index(('Group', 'int'))
+        self.set_value_cell(row_index, column_index, group_id)
 
         return
 

@@ -488,7 +488,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_add_runs_by_ipts(self):
-        """ import runs by IPTS number
+        """ import runs by IPTS number or directory
+        Purpose: Import runs from archive according to IPTS or specified data directory
+        Guarantees: launch a window and get user inputs from the dialog
         :return: None
         """
         # Launch window
@@ -513,7 +515,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 ipts_number = ret_obj
         begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
 
-        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir)
+        # Get a list of runs including run numbers and data file paths.
+        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -523,9 +526,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
-        raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
-        status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                     include_end_date=True)
+        # raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
+        # Filter by time if it is specified
+        if begin_date is not None and end_date is not None:
+            status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
+                                                         include_end_date=True)
+        elif begin_date is not None or end_date is not None:
+            raise RuntimeError('Unable to handle the case that only begin date or end date is specified.')
+
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -535,6 +543,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             return
 
         # Filter runs by run
+        """
         status, ret_obj = vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
         if status is False:
             guiutil.pop_dialog_error(ret_obj)
@@ -546,6 +555,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if status is False:
             guiutil.pop_dialog_error(self, error_message)
             return
+        """
 
         # Set to tree
         if ipts_number == 0:
@@ -560,6 +570,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        raise NotImplementedError('Required to test this feature!')
 
         return
 

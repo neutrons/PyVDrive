@@ -95,6 +95,13 @@ class PhaseWidgets(object):
 
         return
 
+    def set_phase_values(self, phase_value_list):
+        """
+        Purpose: set the phase values to the input list
+        :param phase_value_list:
+        :return:
+        """
+
     def get_phase(self):
         """
         Get the phase's parameters
@@ -270,7 +277,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                         self.on_mouse_motion)
 
         # Set up widgets
-        self._phaseWidgetsGroupList = list()
+        self._phaseWidgetsGroupDict = dict()
         self._init_widgets_setup()
 
         # Define state variables
@@ -293,8 +300,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currMousePosX = 0
         self._currMousePosY = 0
 
-        # Phases
-        self._phaseList = list()
+        # Phases and initialize
+        self._phaseDict = dict()
+        for i in xrange(1, 4):
+            self._phaseDict[i] = ['', '', 0., 0., 0.]
 
         return
 
@@ -316,13 +325,21 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.comboBox_structure1.clear()
         self.ui.comboBox_structure1.addItems(unit_cell_str_list)
 
-        # TODO/1st set up the box 2 and 3
+        # Set up the phase widget groups
+        phase_widgets1 = PhaseWidgets(self, self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
+                                      self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
+                                      self.ui.checkBox_usePhase1)
+        self._phaseWidgetsGroupDict[1] = phase_widgets1
 
-        # TODO/FIXME/1st: this is a prototype. after testing, make it good for up to 3 phases
-        phase_widgets = PhaseWidgets(self, self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
-                                     self.ui.lineEdit_phaseName1, self.ui.comboBox_structure1,
-                                     self.ui.checkBox_usePhase1)
-        self._phaseWidgetsGroupList.append(phase_widgets)
+        phase_widgets2 = PhaseWidgets(self, self.ui.lineEdit_a2, self.ui.lineEdit_b2, self.ui.lineEdit_c2,
+                                      self.ui.lineEdit_phaseName2, self.ui.comboBox_structure2,
+                                      self.ui.checkBox_usePhase3)
+        self._phaseWidgetsGroupDict[2] = phase_widgets2
+
+        phase_widgets3 = PhaseWidgets(self, self.ui.lineEdit_a3, self.ui.lineEdit_b3, self.ui.lineEdit_c3,
+                                      self.ui.lineEdit_phaseName3, self.ui.comboBox_structure3,
+                                      self.ui.checkBox_usePhase3)
+        self._phaseWidgetsGroupDict[3] = phase_widgets3
 
         return
 
@@ -374,8 +391,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error('Unable to find highlighted peak in canvas.')
             return
 
-        # TODO/FIXME/NOW: 1st - set the same flag to them in column 'Group'
-        blablabla()
+        # Get the rows that are selected. Find the next group ID.  Set these rows with same group ID
+        row_index_list = self.ui.tableWidget_peakParameter.get_selected_rows()
+        assert len(row_index_list) > 0, 'There is no row that is selected for grouping.'
+
+        group_id = self.ui.tableWidget_peakParameter.get_next_group_id()
+        for row_index in row_index_list:
+            self.ui.tableWidget_peakParameter.set_group_id(row_index, group_id)
 
         return
 
@@ -409,10 +431,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Clear phase list
-        self._phaseList = list()
+        for i_phase in xrange(1, 4):
+            self._phaseDict[i_phase] = ['', '', 0., 0., 0.]
 
         # Clear all the widgets
-        for phase_widgets in self._phaseWidgetsGroupList:
+        for phase_widgets in self._phaseWidgetsGroupDict:
             phase_widgets.reset()
 
         return
@@ -459,28 +482,57 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Check requirements
         assert self._myController
 
-        # FIXME/NOW/1st - how to define minD and maxD???
-        min_d = 0.5
-        max_d = 5.0
+        # Get minimum and maximum d-spacing to calculate by the range in the graph
+        min_d, max_d = self.ui.graphicsView_main.getXLimit()
+        print '[DB] Get d-range: %f, %f' % (min_d, max_d)
 
-        # List all peaks according to
-        if len(self._phaseList) > 0:
-            # At least 1 phase should be defined.
-            reflection_list = list()
-            for phase in self._phaseList:
-                # print phase
-                sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
-                # for peak_tup in sub_list:
-                #     print peak_tup[1], peak_tup[0]
-                reflection_list.extend(sub_list)
+        # List all peaks if any is selected
+        num_phases_used = 0
+        reflection_list = list()
+        err_msg = ''
+        for i_phase in self._phaseDict.keys():
+            # Add all peaks calculated from this phase if it is selected
 
-        else:
+            # skip the phase if it is not selected
+            if self._phaseWidgetsGroupDict[i_phase].is_selected() is False:
+                continue
+
+            num_phases_used += 1
+
+            # get the valid phase from widgets
+            try:
+                phase = self._phaseWidgetsGroupDict[i_phase].get_pahse()
+            except AssertionError as e:
+                err_msg += 'Phase %d cannot be used due to %s.' % (i_phase, str(e))
+                continue
+
+            # Calcuate peaks' positions
+            sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
+            # for peak_tup in sub_list:
+            #     print peak_tup[1], peak_tup[0]
+            reflection_list.extend(sub_list)
+        # END-FOR
+
+        # Check result
+        if len(err_msg) > 0:
+            # Phase selected but not valid
+            GuiUtility.pop_dialog_error(self, 'Unable to calculate reflections due to %s.' % err_msg)
+            return
+
+        # Try to find reflections in auto mode
+        if num_phases_used == 0:
             # Use algorithm to find peak automatically
             try:
                 reflection_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
+
+        # Return if no reflection can be found
+        if len(reflection_list) == 0:
+            # No reflection can be found
+            GuiUtility.pop_dialog_error(self, 'Unable to find any reflection between %f and %f.' % (min_d, max_d))
+            return
 
         # Set the peaks to canvas
         peak_pos_list = retrieve_peak_positions(reflection_list)
@@ -497,11 +549,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_switch_table_editable(self):
         """ Purpose: switch on/off the edit mode of the peak table
-
+        Guarantees: the table is switched to editable or non-editable mode
         :return:
         """
-        # TODO/NOW/1st: Implement it!
-        blabla()
+        is_editable = self.ui.tableWidget_existingPeakFile.is_editable()
+        self.ui.tableWidget_peakParameter.set_editable(is_editable)
+
+        return
 
     def do_hide_peaks(self):
         """
@@ -517,10 +571,25 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_import_peaks_from_file(self):
         """ Purpose: import peaks' IDs from peak file
-
+        Requirements: my controller is set up
         :return:
         """
-        # TODO/NOW/1st: ASAP for ALL!
+        # Check requirement
+        assert self._myController is not None
+
+        # Pop out dialog for file and import the file
+        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', self._dataDirectory))
+        try:
+            peak_list = self._myController.import_gsas_peak_file(peak_file)
+        except RuntimeError as err:
+            GuiUtility.pop_dialog_error(self, str(err))
+
+        # Set the peaks to table
+        if self.ui.checkBox_clearPeakTable.isChecked():
+            self.ui.tableWidget_peakParameter.remove_all_rows()
+        self.ui.tableWidget_peakParameter.add_peaks(peak_list)
+
+        return
 
     def do_load_bank(self):
         """
@@ -687,32 +756,31 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_select_all_peaks(self):
         """
-        Purpose: select or deselct all peaks
+        Purpose: select or de-select all peaks
+        Requirements: None
+        Guarantees: select or de-select all peaks according to check box selectPeaks
         :return:
         """
-        # TODO/NOW/1st - doc, assertion and implementation!
         print '[TODO/NOW!] Current state is ', self.ui.checkBox_selectPeaks.isChecked()
 
+        select_all_peaks = self.ui.checkBox_selectPeaks.isChecked()
+        self.ui.tableWidget_peakParameter.select_all_rows(select_all_peaks)
+
+        return
+
     def do_set_phases(self):
-        """ Set phases from GUI
-        Purpose:
-        Requirements:
-        Guarantees:
+        """ Set the parameters value of phases to
+        Purpose: Read the parameter values from GUI and set them up in list
+        Requirements: if any input have a value set up, then it must be correct!
+        Guarantees: the values are set
         :return:
         """
-        # TODO/NOW/1st: doc and assertion, and add phase 2 and 3
+        # Check whether phase dictionary that have been set up.
+        assert len(self._phaseDict, 3)
 
-        # Phase 1
-
-        for i_phase in xrange(3):
-            pass
-
-        phase_widgets = self._phaseWidgetsGroupList[0]
-        phase = phase_widgets.get_phase()
-        self._phaseList.append(phase)
-
-        # TODO/NOW/1st: need to record the current value such that the change in future can be reversed.
-        print 'bla bla bla'
+        # Set the values
+        for i_phase in self._phaseWidgetsGroupDict.keys():
+            self._phaseWidgetsGroupDict.set_phase_values(self._phaseDict[i_phase])
 
         return
 
@@ -1084,42 +1152,88 @@ class MockController(object):
         :param phase: [name, type, a, b, c]
         :param min_d:
         :param max_d:
-        :return:
+        :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
         """
-        # FIXME/TODO/NOW/1st - Doc, Assertion and Implement from prototype
         import PyVDrive.vdrive.mantid_helper as mantid_helper
 
         # Check requirements
-        blabla()
+        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
+        assert len(phase) == 5, 'Input phase  of type list must have 5 elements'
 
-        silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43)  #, 5.43, 5.43)
-        reflections = mantid_helper.calculate_reflections(silicon, 1.0, 5.0)
+        # Get information
+        phase_type = phase[1]
+        lattice_a = phase[2]
+        lattice_b = phase[3]
+        lattice_c = phase[4]
+
+        # Get reflections
+        # silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43)  #, 5.43, 5.43)
+        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
+        reflections = mantid_helper.calculate_reflections(unit_cell, 1.0, 5.0)
 
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
         ref_dict = dict()
         for i_ref in xrange(num_ref):
             ref_tup = reflections[i_ref]
+            assert isinstance(ref_tup, list)
+            assert len(ref_tup) == 2
             pos_d = ref_tup[1]
+            assert isinstance(pos_d, float)
+            assert pos_d > 0
             hkl = ref_tup[0]
+            assert isinstance(hkl, list)
+            assert len(hkl) == 3
+
+            # pos_d has not such key, then add it
             if pos_d not in ref_dict:
                 ref_dict[pos_d] = list()
             ref_dict[pos_d].append(hkl)
+        # END-FOR
 
         # Merge all the peaks with peak position within tolerance
         TOL = 0.0001
         # sort the list again with peak positions...
-        blabla()
+        peak_pos_list = ref_dict.keys()
+        peak_pos_list.sort()
+        print '[DB] List of peak positions: ', peak_pos_list
+        curr_list = None
+        curr_pos = -1
+        for peak_pos in peak_pos_list:
+            if peak_pos - curr_pos < TOL:
+                # combine the element (list)
+                assert isinstance(curr_list, list)
+                curr_list.extend(ref_dict[peak_pos])
+                del ref_dict[peak_pos]
+            else:
+                curr_list = ref_dict[peak_pos]
+                curr_pos = peak_pos
+        # END-FOR
 
-        return reflections
+        # Convert from dictionary to list as 2-tuples
+
+        print '[DB-BAT] List of final reflections:', ref_dict
+        d_list = ref_dict.keys()
+        d_list.sort(reverse=True)
+        reflection_list = list()
+        for peak_pos in d_list:
+            reflection_list.append((peak_pos, ref_dict[peak_pos]))
+
+        return reflection_list
 
     def get_diffraction_pattern_info(self, data_key):
-        """
+        """ Get information from a diffraction pattern, i.e., a loaded workspace
+        Purpose: get run number from "data key" and number of banks
+        Requirements: data_key is an existing key as a string and it is the path to the data file
+                      where the run number can be extracted
+        Requirements: find out the run number and bank number
         :return:
         """
         import os
-        # TODO/NOW: Doc and assertion
         print 'Data key is %s of type %s' % (str(data_key), str(type(data_key)))
+
+        # Check requirements
+        assert isinstance(data_key, str), 'Data key must be a string.'
 
         # Key (temporary) is the file name
         run_number = int(os.path.basename(data_key).split('.')[0])
@@ -1128,16 +1242,37 @@ class MockController(object):
 
         return run_number, num_banks
 
-    def get_diffraction_pattern(self, data_key, bank):
+    def get_diffraction_pattern(self, data_key, bank, include_err=False):
         """
-
+        Purpose: get diffraction pattern of a bank
+        Requirements:
+            1. date key exists
+            2. bank is a valid integer
+        Guarantees: returned a 2 or 3 vector
         :param data_key:
         :param bank:
+        :param include_err:
         :return:
         """
+        # Check requirements
+        assert self.does_exist_data(data_key)
+        assert isinstance(bank, int)
+        assert bank > 0
+        assert isinstance(include_err, bool)
+
+        # Get data
+        ws_index = self.convert_bank_to_ws(bank)
         ws_index = bank-1
-        vec_x = self._currWS.readX(ws_index)
-        vec_y = self._currWS.readY(ws_index)
+
+        if self._currDataKey == data_key:
+            vec_x = self._currWS.readX(ws_index)
+            vec_y = self._currWS.readY(ws_index)
+        else:
+            raise RuntimeError('Current workspace is not the right data set!')
+
+        if include_err:
+            vec_e = []
+            return vec_x, vec_y, vec_e
 
         return vec_x, vec_y
 
@@ -1147,6 +1282,8 @@ class MockController(object):
         :param file_type:
         :return:
         """
+        import sys
+        sys.path.append('/Users/wzz/MantidBuild/debug/bin')
         import mantid.simpleapi
 
         if file_type.lower() == 'gsas':

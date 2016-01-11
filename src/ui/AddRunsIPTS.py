@@ -237,13 +237,19 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                                    'Use Cancel instead of OK.')
             return
 
-        begin_date = self.ui.dateEdit_begin.date()
-        assert(isinstance(begin_date, QtCore.QDate))
-        self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
+        if self.ui.dateEdit_begin.isEnabled():
+            begin_date = self.ui.dateEdit_begin.date()
+            assert(isinstance(begin_date, QtCore.QDate))
+            self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
+        else:
+            self._beginDate = None
 
-        end_date = self.ui.dateEdit_end.date()
-        assert(isinstance(end_date, QtCore.QDate))
-        self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+        if self.ui.dateEdit_end.isEnabled():
+            end_date = self.ui.dateEdit_end.date()
+            assert(isinstance(end_date, QtCore.QDate))
+            self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+        else:
+            self._endDate = None
 
         begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
         if begin_run is not None:
@@ -269,11 +275,29 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
     def evt_skip_scan_data(self):
         """
-        Purpose: enable/disable the requirement to scan directory before add data!s
+        Purpose: enable/disable the requirement to scan directory before add data!
         :return:
         """
-        # TODO/NOW/1st: Implement
-        blablabla
+        # get new state
+        skip_scan_data = self.ui.checkBox_skipScan.isChecked()
+
+        # 2 cases
+        if skip_scan_data:
+            # Set the widgets to be enabled for input run numbers' range
+            self.ui.lineEdit_begin.setEnabled(True)
+            self.ui.lineEdit_end.setEnabled(True)
+            self.ui.dateEdit_begin.setEnabled(False)
+            self.ui.dateEdit_end.setEnabled(False)
+            self.ui.pushButton_OK_2.setEnabled(True)
+        else:
+            # enforce to scan the archive
+            self.ui.lineEdit_begin.setEnabled(False)
+            self.ui.lineEdit_end.setEnabled(False)
+            self.ui.dateEdit_begin.setEnabled(False)
+            self.ui.dateEdit_end.setEnabled(False)
+            self.ui.pushButton_OK_2.setEnabled(False)
+
+        return
 
     def get_date_run_range(self):
         """
