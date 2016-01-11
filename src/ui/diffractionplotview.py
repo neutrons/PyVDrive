@@ -35,6 +35,8 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
         """
         # Check
         left_x, right_x = self.getXLimit()
+        assert isinstance(peak_pos, float), 'Input peak position must be a float'
+        assert peak_pos > 0.
         assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
                                               '(%f, %f)' % (peak_pos, left_x, right_x)
 
@@ -143,6 +145,20 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
 
         return
 
+    def remove_all_peak_indicators(self):
+        """ Remove all peaks' indicators
+        :return:
+        """
+        # Remove all indicators
+        for indicator_tup in self._peakIndicatorList:
+            indicator_key = indicator_tup[1]
+            self.remove_indicator(indicator_key)
+
+        # Clear the indicator position-key list
+        self._peakIndicatorList = list()
+
+        return
+
     def remove_peak_indicator(self, peak_indicator_index):
         """ Remove a peak indicator
         Purpose:
@@ -157,7 +173,7 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
         self.remove_indicator(peak_indicator_index)
 
         # remove the tuple from list
-        self._peakIndicatorList.pop(i) #((peak_pos, indicator_key))
+        self._peakIndicatorList.pop(i)  #((peak_pos, indicator_key))
 
 
         return

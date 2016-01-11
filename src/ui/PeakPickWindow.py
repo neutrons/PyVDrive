@@ -250,6 +250,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
                      self.do_switch_table_editable)
 
+        self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_delete_peaks)
+
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_calibration_file)
@@ -281,8 +284,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Define state variables
-        self._isInitialized = False
-
         self._isDataLoaded = False    # state flag that data is loaded
         self._currDataFile = None     # name of the data file that is currently loaded
         self._currentBankNumber = -1  # current bank number
@@ -355,7 +356,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._isInitialized is False
+        assert self._myController is None, 'Workflow controller has been already set up.'
         assert isinstance(controller, vdapi.VDriveAPI)
 
         # Set up
@@ -378,26 +379,23 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return: None
         """
         # Check requirements
-        assert self._isInitialized is True, 'Instance is not initialized.'
+        assert self._myController is not None, 'Instance is not initialized.'
         assert self._isDataLoaded is True, 'No data is loaded.'
-
-        # Find out the highlighted (i.e., current) peak from canvas
-        try:
-            pos_x, pos_y = self.ui.graphicsView_main.get_highlight_peak()
-        except RuntimeError as re:
-            GuiUtility.pop_dialog_error(str(re))
-            return
-        if pos_x is None or pos_y is None:
-            GuiUtility.pop_dialog_error('Unable to find highlighted peak in canvas.')
-            return
 
         # Get the rows that are selected. Find the next group ID.  Set these rows with same group ID
         row_index_list = self.ui.tableWidget_peakParameter.get_selected_rows()
-        assert len(row_index_list) > 0, 'There is no row that is selected for grouping.'
+        assert len(row_index_list) >= 2, 'At least 2 rows should be selected for grouping.'
 
+        # Set the group ID to table
         group_id = self.ui.tableWidget_peakParameter.get_next_group_id()
         for row_index in row_index_list:
             self.ui.tableWidget_peakParameter.set_group_id(row_index, group_id)
+
+        # Show the peak indicators
+        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
+        for peak_pos in peak_pos_list:
+            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
+
 
         return
 
@@ -466,7 +464,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
             The selected peak is removed from both placeholder and table
         :return:
         """
-        raise NotImplemented('Add button to GUI')
+        self.ui.tableWidget_peakParameter.remove_all_rows()
+
+        return
 
     def do_find_peaks(self):
         """
@@ -501,7 +501,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
             # get the valid phase from widgets
             try:
-                phase = self._phaseWidgetsGroupDict[i_phase].get_pahse()
+                phase = self._phaseWidgetsGroupDict[i_phase].get_phase()
             except AssertionError as e:
                 err_msg += 'Phase %d cannot be used due to %s.' % (i_phase, str(e))
                 continue
@@ -522,6 +522,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Try to find reflections in auto mode
         if num_phases_used == 0:
             # Use algorithm to find peak automatically
+            GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
             try:
                 reflection_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
             except RuntimeError as re:
@@ -541,8 +542,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the peaks' parameters to table
         for peak_tup in reflection_list:
-            hkl = str(peak_tup[0])
-            peak_pos = peak_tup[1]
+            hkl = str(peak_tup[1])
+            peak_pos = peak_tup[0]
             self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, hkl, peak_pos, 0.03)
 
         return
@@ -559,15 +560,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_hide_peaks(self):
         """
-        Purpose: Highlight selected peaks' indicators
+        Purpose: Highlight all peaks' indicators
         :return:
         """
-        # Search selected peaks from table
-        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
+        self.ui.graphicsView_main.remove_all_peak_indicators()
 
-        for peak_pos in peak_pos_list:
-            # FIXME/TODO/NOW 1st: this is just proof of concept
-            self.ui.graphicsView_main.highlight_peak_indicator(0)  # should use peak_pos
+        return
 
     def do_import_peaks_from_file(self):
         """ Purpose: import peaks' IDs from peak file
@@ -776,11 +774,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Check whether phase dictionary that have been set up.
-        assert len(self._phaseDict, 3)
+        assert len(self._phaseDict) == 3
 
         # Set the values
         for i_phase in self._phaseWidgetsGroupDict.keys():
-            self._phaseWidgetsGroupDict.set_phase_values(self._phaseDict[i_phase])
+            self._phaseWidgetsGroupDict[i_phase].set_phase_values(self._phaseDict[i_phase])
 
         return
 
@@ -1098,7 +1096,7 @@ def retrieve_peak_positions(peak_tup_list):
 
     peak_pos_list = list()
     for peak in peak_tup_list:
-        peak_pos = peak[1]
+        peak_pos = peak[0]
         print peak_pos
         peak_pos_list.append(peak_pos)
     # END-FOR(peak)
@@ -1166,6 +1164,21 @@ class MockController(object):
         lattice_b = phase[3]
         lattice_c = phase[4]
 
+        # Convert phase type to
+        phase_type = phase_type.split()[0]
+        if phase_type == 'BCC':
+            phase_type = mantid_helper.UnitCell.BCC
+        elif phase_type == 'FCC':
+            phase_type = mantid_helper.UnitCell.FCC
+        elif phase_type == 'HCP':
+            phase_type = mantid_helper.UnitCell.HCP
+        elif phase_type == 'Body-Center':
+            phase_type = mantid_helper.UnitCell.BC
+        elif phase_type == 'Face-Center':
+            phase_type = mantid_helper.UnitCell.FC
+        else:
+            raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
+
         # Get reflections
         # silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43)  #, 5.43, 5.43)
         unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
@@ -1176,14 +1189,14 @@ class MockController(object):
         ref_dict = dict()
         for i_ref in xrange(num_ref):
             ref_tup = reflections[i_ref]
-            assert isinstance(ref_tup, list)
+            assert isinstance(ref_tup, tuple)
             assert len(ref_tup) == 2
             pos_d = ref_tup[1]
             assert isinstance(pos_d, float)
             assert pos_d > 0
-            hkl = ref_tup[0]
-            assert isinstance(hkl, list)
-            assert len(hkl) == 3
+            # HKL should be an instance of mantid.kernel._kernel.V3D
+            hkl_v3d = ref_tup[0]
+            hkl = [hkl_v3d.X(), hkl_v3d.Y(), hkl_v3d.Z()]
 
             # pos_d has not such key, then add it
             if pos_d not in ref_dict:
@@ -1212,14 +1225,22 @@ class MockController(object):
 
         # Convert from dictionary to list as 2-tuples
 
-        print '[DB-BAT] List of final reflections:', ref_dict
+        print '[DB-BAT] List of final reflections:', type(ref_dict)
         d_list = ref_dict.keys()
         d_list.sort(reverse=True)
         reflection_list = list()
         for peak_pos in d_list:
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
+            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
 
         return reflection_list
+
+    def does_exist_data(self, data_key):
+        """
+        TODO/NOW/1s: should be implemented in the workflow controller!
+        :return:
+        """
+        return True
 
     def get_diffraction_pattern_info(self, data_key):
         """ Get information from a diffraction pattern, i.e., a loaded workspace
@@ -1261,18 +1282,22 @@ class MockController(object):
         assert isinstance(include_err, bool)
 
         # Get data
-        ws_index = self.convert_bank_to_ws(bank)
-        ws_index = bank-1
+        # FIXME/TODO/NOW - 1st: Make it True and implement for real workflow controller
+        if False:
+            ws_index = self.convert_bank_to_ws(bank)
 
-        if self._currDataKey == data_key:
+            if self._currDataKey == data_key:
+                vec_x = self._currWS.readX(ws_index)
+                vec_y = self._currWS.readY(ws_index)
+                if include_err:
+                    vec_e = []
+                    return vec_x, vec_y, vec_e
+            else:
+                raise RuntimeError('Current workspace is not the right data set!')
+        else:
+            ws_index = bank-1
             vec_x = self._currWS.readX(ws_index)
             vec_y = self._currWS.readY(ws_index)
-        else:
-            raise RuntimeError('Current workspace is not the right data set!')
-
-        if include_err:
-            vec_e = []
-            return vec_x, vec_y, vec_e
 
         return vec_x, vec_y
 

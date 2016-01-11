@@ -244,7 +244,9 @@ class PeakParameterTable(NT.NTableWidget):
 
         # Get new index
         # new_index = self.rowCount()
-        self.append_row([bank, name, centre, width, False])
+        status, message = self.append_row([bank, name, centre, width, name, -1, False])
+        if status is False:
+            raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
 
         return
 
