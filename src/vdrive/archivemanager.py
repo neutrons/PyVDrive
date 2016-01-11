@@ -136,7 +136,7 @@ class DataArchiveManager(object):
 
         return time_file_list
 
-    def get_experiment_run_info(self, ipts_number=None):
+    def get_experiment_run_info(self, ipts_number=None, start_run=None, end_run=None):
         """ Get runs' information of an IPTS
         Purpose:
             Get data path information for all runs of an IPTS number
@@ -147,6 +147,7 @@ class DataArchiveManager(object):
         :param ipts_number: IPTS number to match the current IPTS number
         :return: list of 3-tuples
         """
+        # TODO/DOC/1st
         # Check requirements
         assert self._iptsNo is not None, 'No valid IPTS number has been assigned to ArchiveManager.'
         assert isinstance(ipts_number, int) or ipts_number is None
@@ -156,7 +157,12 @@ class DataArchiveManager(object):
                                                 'current IPTS number %d.' % (ipts_number, self._iptsNo)
 
         # Get run
-        run_tup_list = self.get_experiment_run_info_from_directory(self._iptsDataDir)
+        if start_run is None or end_run is None:
+            print '[DB-BAT] Get full list from a directory.'
+            run_tup_list = self.get_experiment_run_info_from_directory(self._iptsDataDir)
+        else:
+            print '[DB-BAT] Get partial list with given run number.'
+            run_tup_list = self.get_experiment_run_info_from_archive(self._iptsDataDir, start_run, end_run)
 
         assert(isinstance(run_tup_list, list))
         print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsDataDir)
@@ -206,6 +212,57 @@ class DataArchiveManager(object):
 
             # add to list for return
             run_tup_list.append((run_number, create_time, full_path_name))
+        # END-FOR
+
+        return run_tup_list
+
+    def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
+        """ Get information of standard SNS event NeXus files in a given directory.
+        Purpose:
+            Get full path of all SNS event NeXus files from a directory
+        Requirements:
+            Given directory does exist
+        Guarantees:
+            Experimental run information including run number, creation time and full file path will be returned
+        Note:
+            Data archiving might put wrong time stamps on the event NeXus files.  For example,
+            the creation time sometime is later than modified time.  In this case,
+            return the earliest time between creation time and modified time.
+
+        :exception: RuntimeError for non-existing IPTS
+        :rtype: list
+        :param directory:
+        :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
+        """
+        # TODO/NOW/1st: Doc, assertion
+
+        # Get home directory for IPTS
+        assert os.path.exists(directory), 'IPTS directory %s cannot be found.' % directory
+        assert isinstance(start_run, int), 'blabla'
+        assert isinstance(end_run, int), 'blabla'
+        assert start_run <= end_run, 'blabla'
+
+        # List all files
+        run_tup_list = list()
+        for run_number in xrange(start_run, end_run+1):
+            file_name = '%s_%d_event.nxs' % (self._dataArchiveInstrumentName, run_number)
+            full_file_path = os.path.join(directory, file_name)
+
+            # skip non-existing file
+            if os.path.exists(full_file_path) is False:
+                print '[DB-BAT] Skip non-existing run number %d with name %s' % (run_number, full_file_path)
+                continue
+
+            # get file information
+            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
+            ipts_number, run_number = vdrivehelper.getIptsRunFromFileName(file_name)
+            create_time = os.path.getctime(full_file_path)
+            modify_time = os.path.getmtime(full_file_path)
+            if modify_time < create_time:
+                create_time = modify_time
+
+            # add to list for return
+            run_tup_list.append((run_number, create_time, full_file_path))
         # END-FOR
 
         return run_tup_list

@@ -297,17 +297,20 @@ class VDriveAPI(object):
 
         return file_name
 
-    def get_ipts_info(self, ipts):
+    def get_ipts_info(self, ipts, begin_run=None, end_run=None):
         """
         Get runs and their information for a certain IPTS
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
+        # TODO/NOW/1st:
         try:
             if isinstance(ipts, int):
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts)
+                print '[DB-BAT] Get experimental information from archive.'
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts, begin_run, end_run)
             elif isinstance(ipts, str):
                 ipts_dir = ipts
+                print '[DB-BAT] Get experimental information from directory %s.' % ipts_dir
                 run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)

@@ -85,8 +85,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._iptsDirFromDir = ''
 
         self._dataDir = '/SNS/VULCAN'
-
         self._homeDir = os.path.expanduser('~')
+
+        self._skipScanData = False
 
         return
 
@@ -279,10 +280,10 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         # get new state
-        skip_scan_data = self.ui.checkBox_skipScan.isChecked()
+        self._skipScanData = self.ui.checkBox_skipScan.isChecked()
 
         # 2 cases
-        if skip_scan_data:
+        if self._skipScanData:
             # Set the widgets to be enabled for input run numbers' range
             self.ui.lineEdit_begin.setEnabled(True)
             self.ui.lineEdit_end.setEnabled(True)
@@ -331,6 +332,13 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         self._dataDir = root_dir
+
+    def scan_data_skipped(self):
+        """
+        Return the status whether the data directory/archive that has been skipped
+        :return:
+        """
+        return self._skipScanData
 
 
 """ Test Main """

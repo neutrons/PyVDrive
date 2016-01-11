@@ -225,11 +225,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # Retrieve the runs to reduce
-        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
-        if len(run_number_list) == 0:
-            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
-
         # Process data slicers
         if self.ui.checkBox_chopRun.isChecked():
             raise NotImplementedError('Binning data with option to chop will be solved later!')
@@ -274,6 +269,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
 
         # Reduce data
+        # retrieve the runs to reduce
+        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        if len(run_number_list) == 0:
+            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+        status, error_message = self._myWorkflow.set_runs_to_reduce(run_numbers=run_number_list)
+        if status is False:
+            guiutil.pop_dialog_error(self, error_message)
+
         status, ret_obj = self._myWorkflow.reduce_data_set()
         if status is False:
             error_msg = ret_obj
@@ -281,6 +284,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Show message to notify user that the reduction is complete
         guiutil.pop_dialog_information(self, 'Reduction is complete.')
+        # switch the tab to 'VIEW'
+        self.ui.tabWidget_reduceData.setCurrentIndex(2)
 
         return
 
@@ -503,7 +508,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if ipts_dir is None:
             return
 
-        # Add IPTS
+        # Get IPTS from dialog and set to archive
         ipts_number = child_window.get_ipts_number()
         if ipts_number is None:
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
@@ -513,10 +518,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 ipts_number = 0
             else:
                 ipts_number = ret_obj
+        self._myWorkflow.set_ipts(ipts_number)
+
         begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
+        print '[DB-BAT] Dialog gives out %s, %s, %s, %s' % (str(begin_date), str(end_date),
+                                                            str(begin_run), str(end_run))
+        in_archive = child_window.scan_data_skipped()
 
         # Get a list of runs including run numbers and data file paths.
-        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
+        if in_archive:
+            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_number, begin_run, end_run)
+        else:
+            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -529,16 +542,23 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
         # Filter by time if it is specified
         if begin_date is not None and end_date is not None:
+            # Filter runs by date
             status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
                                                          include_end_date=True)
+            if status is True:
+                run_tup_list = ret_obj
+            else:
+                #  pop error
+                error_message = ret_obj
+                guiutil.pop_dialog_error(self, error_message)
+                return
         elif begin_date is not None or end_date is not None:
+            # Unsupported scenario
             raise RuntimeError('Unable to handle the case that only begin date or end date is specified.')
 
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            #  pop error
-            error_message = ret_obj
+        # Add runs to workflow
+        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
+        if status is False:
             guiutil.pop_dialog_error(self, error_message)
             return
 
@@ -570,8 +590,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
-
-        raise NotImplementedError('Required to test this feature!')
 
         return
 

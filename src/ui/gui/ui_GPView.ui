@@ -42,68 +42,6 @@
          </spacer>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="1" column="1">
-           <widget class="QLabel" name="labe_currentProject">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>13</pointsize>
-              <italic>true</italic>
-             </font>
-            </property>
-            <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
-            </property>
-            <property name="text">
-             <string>(project name)</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_projectTitle">
-            <property name="font">
-             <font>
-              <pointsize>13</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Project</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_8">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Preferred</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
          <layout class="QGridLayout" name="gridLayout_6">
           <item row="1" column="0">
            <widget class="QLabel" name="label_currentRun">
@@ -161,7 +99,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_8">
           <item>
-           <widget class="QLineEdit" name="lineEdit_run">
+           <widget class="QLineEdit" name="lineEdit_runs">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -173,22 +111,34 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QPushButton" name="pushButton_plot">
-            <property name="text">
-             <string>Plot</string>
-            </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3"/>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="comboBox_spectraList">
+            <item>
+             <property name="text">
+              <string>All</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="comboBox_spectraList"/>
-          </item>
-         </layout>
+         <widget class="QPushButton" name="pushButton_plot">
+          <property name="text">
+           <string>Plot</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox">
+          <property name="text">
+           <string>Overplot on Previous</string>
+          </property>
+         </widget>
         </item>
         <item>
          <spacer name="verticalSpacer_5">
@@ -241,15 +191,29 @@
          </spacer>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QPushButton" name="pushButton_cancel">
-            <property name="text">
-             <string>Cancel</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QPushButton" name="pushButton_allFillPlot">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Plot All</string>
+          </property>
+         </widget>
         </item>
         <item>
          <spacer name="verticalSpacer">
@@ -267,6 +231,13 @@
           </property>
          </spacer>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_cancel">
+          <property name="text">
+           <string>Cancel</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
@@ -283,52 +254,106 @@
             </property>
            </widget>
           </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_13">
-            <item>
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="3">
+             <widget class="QLabel" name="label_2">
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
               </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
+              <property name="text">
+               <string>Range</string>
               </property>
-             </spacer>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
             </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_allFillPlot">
+            <item row="1" column="3">
+             <widget class="QPushButton" name="pushButton_normByVanadium">
+              <property name="text">
+               <string>Normalize By Vanadium</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="4">
+             <widget class="QPushButton" name="pushButton_normVacant">
+              <property name="text">
+               <string>Normalize By </string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QComboBox" name="comboBox_unit">
+              <item>
+               <property name="text">
+                <string>TOF</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>d-Spacing</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Q</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>X-Axis</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
+             <widget class="QLineEdit" name="lineEdit_minX">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>200</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="pushButton_normByCurrent">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Plot All</string>
+               <string>Normalize By Current</string>
               </property>
              </widget>
             </item>
-            <item>
-             <spacer name="horizontalSpacer_3">
+            <item row="0" column="5">
+             <widget class="QLineEdit" name="lineEdit_maxX">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Y-Axis</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="6">
+             <spacer name="horizontalSpacer">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
@@ -343,212 +368,14 @@
               </property>
              </spacer>
             </item>
-            <item>
-             <widget class="QLabel" name="label_2">
+            <item row="1" column="6">
+             <widget class="QPushButton" name="pushButton_apply">
               <property name="text">
-               <string>TOF Min</string>
+               <string>Apply</string>
               </property>
              </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="lineEdit">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_3">
-              <property name="text">
-               <string>Max</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="lineEdit_2">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton">
-              <property name="text">
-               <string>Set</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
             </item>
            </layout>
-          </item>
-          <item>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QLineEdit" name="lineEdit_3"/>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_10">
-          <item>
-           <widget class="QPushButton" name="pushButton_normByCurrent">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Normalize By Current</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QPushButton" name="pushButton_normByVanadium">
-            <property name="text">
-             <string>Normalize By Vanadium</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_11">
-          <item>
-           <widget class="QPushButton" name="pushButton_normVacant">
-            <property name="text">
-             <string>Normalize By </string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_6">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Expanding</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
-           <widget class="QPushButton" name="pushButton_showVanadiumPeaks">
-            <property name="text">
-             <string>Show Vanadium Peaks</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_9">
-          <item>
-           <widget class="QPushButton" name="pushButton_stripVPeaks">
-            <property name="text">
-             <string>Strip Vanadium Peaks</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QPushButton" name="pushButton_smoothVanadium">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Smooth Vanadium</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_applyVanSmooth">
-            <property name="text">
-             <string>Apply</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_undoVanSmooth">
-            <property name="text">
-             <string>Undo</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Smooth Parameters</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEdit_vanSmoothParams">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="verticalSpacer_7">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
           </item>
          </layout>
         </item>
