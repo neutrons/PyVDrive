@@ -23,6 +23,7 @@ except AttributeError:
         
 import gui.ui_GPView
 
+
 class Window_GPPlot(QMainWindow):
     """ Class for general-puposed plot window
     """
@@ -33,8 +34,9 @@ class Window_GPPlot(QMainWindow):
         # call base
         QMainWindow.__init__(self)
 
-        # parent
+        # Parent & others
         self._myParent = parent
+        self._myController = None
 
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
@@ -42,12 +44,13 @@ class Window_GPPlot(QMainWindow):
 
         # Event handling
         # push buttons 
-        # self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'), 
-        #         self.doPlotRunPrev)
-        # self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
-        #         self.doPlotRunNext)
-        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-        #         self.doPlotRunSelected)
+        self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'),
+                     self.doPlotRunPrev)
+        self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
+                     self.doPlotRunNext)
+        self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
+                     self.doPlotRunSelected)
+
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
         #         self.doPlotAllRuns)
 
@@ -66,7 +69,9 @@ class Window_GPPlot(QMainWindow):
         # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
         #         self.doQuit)
 
-        # # combo boxes
+        # combo boxes
+        self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_select_new_run_number)
         # self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
         #         self.doPlotSelectedSpectra)
 
@@ -181,12 +186,26 @@ class Window_GPPlot(QMainWindow):
     #     return
 
 
-    # def doPlotRunSelected(self):
-    #     """ Plot the current run
-    #     """
+    def doPlotRunSelected(self):
+        """
+        Plot the current run. The first choice is from the line edit. If it is blank,
+        then from combo box
+        :return:
+        """
+        # Get run numbers
+        runs_str = str(self.ui.lineEdit_runs.text()).strip()
+        if len(runs_str) > 0:
+            run_numbers = parse_runs_list(runs_str)
+        else:
+            run_numbers = [int(self.ui.comboBox_runs.currentText())]
+
+        for run_number in run_numbers:
+            self.plot_run(run_number)
+
+
     #     # Attempt 1 to read line edit input
     #     try: 
-    #         run = str(self.ui.lineEdit_run.text())
+    #
     #         if run in self._runList:
     #             usecombobox = False
     #         else:
@@ -235,33 +254,55 @@ class Window_GPPlot(QMainWindow):
     #     return
     #     
 
-    # def doPlotRunPrev(self):
-    #     """ Plot the previous run
-    #     """
-    #     # Get previous run
-    #     if self._currRunIndex == 0:
-    #         self.getLog().logError("There is no previous run.  Run %s is the first." % (self._currRun))
-    #     else:
-    #         self._currRunIndex -= 1
-    #         self._currRun = self._runList[self._currRunIndex]
-    #    
-    #     # FIXME - Refactor!
-    #     print "Run %s is selected." % (run)
-    #     # get current run and plot
-    #     reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, run)
+    def doPlotRunPrev(self):
+        """
+        Purpose: plot the previous run in the list and update the run list
+        :return:
+        """
+        # Get previous index from combo box
+        current_index = self.ui.comboBox_runs.currentIndex()
+        current_index -= 1
+        # if the current index is at the beginning, then loop to the last run number
+        if current_index < 0:
+            current_index = self.ui.comboBox_runs.count()-1
 
-    #     print "Check point 1"
+        # Get the current run
+        self.ui.comboBox_runs.setCurrentIndex(current_index)
+        run_number = int(self.ui.comboBox_runs.currentText())
 
-    #     # set up the spectrum combobox
-    #     self._respondToComboBoxSpectraListChange = False
-    #     self.ui.comboBox_spectraList.clear()
-    #     self.ui.comboBox_spectraList.addItem('%s: All'%(run))
+        # Plot
+        bank_id = int(self.ui.comboBox_spectraList.currentText())
+        self.plot_run(run_number, bank_id)
 
-    #     # Plot spectra
-    #     print "Number of spectra: %d" % (len(reduceddatalist.keys()))
-    #     self._clearPlot()
-    #     for spectrum in sorted(reduceddatalist.keys()): 
-    #         vecx, vecy = reduceddatalist[spectrum]
+        return
+
+    def plot_run(self, run_number, bank_id):
+        """
+        Plot a run on graph
+        Requirements:
+         1. run number is a positive integer
+         2. bank id is a positive integer
+        Guarantees:
+        :param run_number:
+        :param bank_id:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(run_number, int)
+        assert run_number > 0
+        assert isinstance(bank_id, int)
+        assert bank_id > 0
+
+        # Get data
+        # get current run and plot
+        vec_x, vec_y = self._myController.get_reduced_runs(run_number, bank_id)
+
+        # clear plot?
+        if self.ui.checkBox_overPlot.isChecked() is False:
+            self.ui.graphicsView_mainPlot.clear_lines()
+
+
+
     #         label = "%s-%d"%(run, spectrum)
     #         self._plot(vecx, vecy, label=label, overplot=True)
 
@@ -594,7 +635,39 @@ class Window_GPPlot(QMainWindow):
     #     
     #     return
 
+    def evt_select_new_run_number(self):
+        """ Event handling the case that a new run number is selected in combobox_run
+        :return:
+        """
+        # Get the new run number
+        run_number = int(self.ui.comboBox_runs.currentText())
+        bank_id_list, num_spec = self._myController.get_reduced_run_info(run_number)
 
+        # Re-set the spectra list combo box
+        self.ui.comboBox_spectraList.clear()
+        for bank_id in bank_id_list:
+            self.ui.comboBox_spectraList.addItems(str(bank_id))
+        self.ui.comboBox_spectraList.addItem('All')
+
+        return
+
+    def setup(self, controller):
+        """ Set up the GUI from controller
+        :param controller:
+        :return:
+        """
+        # Check
+        # assert isinstance(controller, VDriveAPI)
+        self._myController = controller
+
+        # Set the reduced runs
+        reduced_run_number_list = self._myController.get_reduced_runs()
+        reduced_run_number_list.sort()
+        self.ui.comboBox_runs.clear()
+        for run_number in reduced_run_number_list:
+            self.ui.comboBox_runs.addItems(str(run_number))
+
+        return
 
 class MockParent:
     """ Mocking parent for universal purpose
