@@ -163,6 +163,22 @@ class GSASPeakFileManager(object):
 
         return
 
+    def get_number_peaks(self):
+        """ Get the number of peaks in this class
+        :param peak_file:
+        :return:
+        """
+        return len(self._peakDict)
+
+    def get_peaks(self):
+        """
+        Get all peaks by transforming ... self._peakDict = dict()
+        :return:
+        """
+        # TODO/NOW/1st - Implement this!
+
+        return
+
     def import_peaks(self, peak_file):
         """ Import peaks from a GSAS single peak file
         Purpose: Read a standard GSAS peak file and
@@ -215,12 +231,6 @@ class GSASPeakFileManager(object):
 
         return
 
-    def get_number_peaks(self):
-        """ Get the number of peaks in this class
-        :param peak_file:
-        :return:
-        """
-        return len(self._peakDict)
 
 
 def format_significant_4(float_number):

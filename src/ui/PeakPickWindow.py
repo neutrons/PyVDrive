@@ -200,6 +200,45 @@ class PhaseWidgets(object):
         return
 
 
+class PeakWidthSetupDialog(QtGui.QDialog):
+    """
+    Class for set up dialog
+    """
+    # TODO/NOW/1st: Docs, assertions and implement!
+    def __init__(self, parent):
+        """
+        Init ...
+        :return:
+        """
+        import gui.ui_PeakWidthSetup as width_setup
+
+        # Initialize
+        QtGui.QDialog.__init__(self, parent)
+
+        self.ui = width_setup.Ui_Dialog()
+        self.ui.setupUi(self)
+
+        # Define event handlers
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
+
+        return
+
+    def do_quit(self):
+        """
+        ... ...
+        :return:
+        """
+        self.close()
+
+    def get_peak_width(self):
+        """
+        ... ...
+        :return:
+        """
+        return 1234.
+
+
 class PeakPickerWindow(QtGui.QMainWindow):
     """ Class for general-purposed plot window
     """
@@ -243,6 +282,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
                      self.do_hide_peaks)
+
+        self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
+                     self.do_set_peaks_width)
+
+        self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_sort_peaks)
 
         self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
                      self.do_select_all_peaks)
@@ -396,30 +441,36 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for peak_pos in peak_pos_list:
             self.ui.graphicsView_main.add_peak_indicator(peak_pos)
 
-
         return
 
     def do_show_peaks(self):
         """
         Purpose:
-            add all peaks that can be found in the data or on the canvas to table
+            Show the selected peaks' indicators
         Requires:
-            Window has been set with parent controller
-            data has been loaded;
-            GUI is in peak selection mode;
+            There must be some peaks to be selected
         Guarantees
+            Peaks indicator are shown
         :return:
         """
-        # Check requirements
-        assert self._currDataFile is not None
-        assert self._myController is not None
-        blabla
+        # Get positions of the selected peaks
+        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
+        if len(peak_pos_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'No peak is selected.')
+            return
 
-        # Get all peaks from canvas, i.e., all peak indicators in canvas
-        peak_pos_list = self.ui.graphicsView_main.get_peaks_pos()
+        # Sort peak list
+        peak_pos_list.sort()
 
-        # Set the peaks' position to placeholder and table
-        blabla
+        # Re-set the graph range
+        x_min, x_max = self.ui.graphicsView_main.getXLimit()
+        if peak_pos_list[0] < x_min or peak_pos_list[-1] > x_max:
+            # resize! TODO/NOW/1st: IMPLEMENT
+            raise NotImplementedError('ASAP')
+
+        # Plot
+        for peak_pos in peak_pos_list:
+            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
 
         return
 
@@ -457,14 +508,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_delete_peaks(self):
         """
         Purpose:
-            Delete the added peak from table and place holder and their indicators
+            Delete the selected peak from table and place holder and their indicators
         Requirements:
             At least one peak is selected in the table
         Guarantees:
             The selected peak is removed from both placeholder and table
         :return:
         """
-        self.ui.tableWidget_peakParameter.remove_all_rows()
+        # TODO/NOW/1st: make this right!
+
+        # Get rows that are selected
+        blabla()
+
+        # Delete the selected rows
+        self.ui.tableWidget_peakParameter.remove_rows(run_number_list)
 
         return
 
@@ -558,6 +615,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def do_sort_peaks(self):
+        """
+        Purpose: sort peaks by peak position in either ascending or descending order.
+        Requirements:
+        Guarantees:
+        :return:
+        """
+        import PyQt4.Qt as Qt
+        # TODO/NOW/1st: IMPLEMENT IT!
+
+        print 'Sorting is enabled?', self.ui.tableWidget_peakParameter.isSortingEnabled()
+        # Here is prototype
+        p_int = 2
+        Qt_SortOrder=0
+        self.ui.tableWidget_peakParameter.sortByColumn(p_int, Qt_SortOrder)
+
+        return
+
     def do_hide_peaks(self):
         """
         Purpose: Highlight all peaks' indicators
@@ -607,7 +682,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.tableWidget_peakParameter.save(self._currentBankNumber)
 
         # Clear table and canvas
-        self.ui.tableWidget_peakParameter.clear()
+        self.ui.tableWidget_peakParameter.remove_all_rows()
         self.ui.graphicsView_main.clear_all_lines()
 
         # Re-plot
@@ -763,6 +838,22 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         select_all_peaks = self.ui.checkBox_selectPeaks.isChecked()
         self.ui.tableWidget_peakParameter.select_all_rows(select_all_peaks)
+
+        return
+
+    def do_set_peaks_width(self):
+        """
+        Purpose: set selected peaks' width to same value
+        Requirements: ... ...
+        Guarantees: ... ...
+        :return:
+        """
+        # Create the dialog
+        peak_width_dialog = PeakWidthSetupDialog(self)
+        peak_width_dialog.exec_()
+
+        peak_width = peak_width_dialog.get_peak_width()
+        print 'Get log value = ', peak_width
 
         return
 
@@ -1300,6 +1391,23 @@ class MockController(object):
             vec_y = self._currWS.readY(ws_index)
 
         return vec_x, vec_y
+
+    def import_gsas_peak_file(self, peak_file_name):
+        """
+
+        :param peak_file_name:
+        :return:
+        """
+        # TODO/NOW/1st: Check requirements and finish the algorithm
+        import PyVDrive.vdrive.io_peak_file as pio
+
+        # Check requirements
+        assert isinstance(peak_file_name, str)
+
+        peak_manager = pio.GSASPeakFileManager()
+        peak_manager.import_peaks(peak_file_name)
+
+        return peaks
 
     def load_diffraction_file(self, file_name, file_type):
         """
