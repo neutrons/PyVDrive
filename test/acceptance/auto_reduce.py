@@ -221,6 +221,8 @@ def export_to_gsas(step=9):
 
     return
 
+# TODO/NOW/1st: Think of some crazy things to process the reduced data such as normalize by current, change unit, and etc.
+
 
 if __name__ == "__main__":
 

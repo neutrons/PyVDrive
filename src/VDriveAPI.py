@@ -229,12 +229,6 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_runs(self):
-        """ Get the runs (run numbers) that have been reduced successfully
-        :return:
-        """
-        return self._myProject.get_reduced_runs()
-
     def get_reduced_data(self, run_number, target_unit):
         """ Get reduced data
         Purpose:
@@ -244,7 +238,7 @@ class VDriveAPI(object):
         :param target_unit:
         :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW - Doc
+        # TODO/NOW - Doc 1st
         assert isinstance(run_number, int), 'blabla'
         assert isinstance(target_unit, str), 'blabla'
 
@@ -255,6 +249,30 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, data_set
+
+    def get_reduced_run_info(self, run_number):
+        """
+        Purpose: get information of a reduced run
+        Requirements: ... ...
+        Guarantees: ... ...
+        :param run_number:
+        :return:
+        """
+        # TODO/NOW/1st: doc and etc.
+        assert isinstance(run_number, int), 'blabla'
+
+        try:
+            info = self._myProject.get_reduced_run_information(run_number)
+        except AssertionError as e:
+            return False, str(e)
+
+        return True, info
+
+    def get_reduced_runs(self):
+        """ Get the runs (run numbers) that have been reduced successfully
+        :return: list of strings?
+        """
+        return self._myProject.get_reduced_runs()
 
     def get_working_dir(self):
         """

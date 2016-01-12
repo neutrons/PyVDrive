@@ -175,7 +175,7 @@ class VDProject(object):
 
     def get_reduced_runs(self):
         """ Get the run/run numbers of the reduced runs
-        :return:
+        :return: list of strings
         """
         return self._reductionManager.get_reduced_runs()
 
@@ -202,6 +202,22 @@ class VDProject(object):
         assert isinstance(data_set_dict, dict), 'bla bla...'
 
         return data_set_dict
+
+    def get_reduced_run_information(self, run_number):
+        """
+        Purpose: ...
+        Requirements: ...
+        :param run_number:
+        :return: a list of integers as bank ID
+        """
+        # TODO/NOW/1st: Doc and assertion
+
+        # Get workspace
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number)
+        ws_info = mantid_helper.get_workspace_information(run_ws_name)
+
+        return ws_info
+
 
     def get_run_info(self, run_number):
         """

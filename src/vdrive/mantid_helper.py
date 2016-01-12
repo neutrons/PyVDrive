@@ -464,6 +464,21 @@ def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
 
     return segment_list
 
+def get_workspace_information(run_ws_name):
+    """
+    Purpose: ... ...
+    Requirements: ... ...
+    Guarantees: ... ...
+    :param run_ws_name:
+    :return:
+    """
+    # TODO/NOW/1st: Doc & assertion
+    workspace = retrieve_workspace(run_ws_name)
+    num_spec = workspace.getNumberHistograms()
+    bank_id_list = range(1, num_spec+1)
+
+    return bank_id_list
+
 
 def event_data_ws_name(run_number):
     """ workspace name for raw event data
@@ -482,7 +497,7 @@ def retrieve_workspace(ws_name):
     Guarantee:
         return the reference to the workspace or None if it does not exist
     :param ws_name:
-    :return:
+    :return: workspace instance
     """
     assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
                                                                                                   str(type(ws_name)))

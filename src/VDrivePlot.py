@@ -20,6 +20,7 @@ import PyVDrive
 import PyVDrive.ui.gui.VdriveMain as mainUi
 import PyVDrive.ui.GuiUtility as guiutil
 import PyVDrive.ui.snapgraphicsview as spview
+import ui.ReducedDataView as data_view
 
 """ import PyVDrive library """
 import PyVDrive.VDriveAPI as vdrive
@@ -106,6 +107,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Tab-2
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
                      self.do_bin_data)
+
+        # Tab-3: view reduction result
+        self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
+                     self.do_view_reduction)
 
         # Column 4
         self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
@@ -291,12 +296,47 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
     def do_update_selected_runs(self):
         """
-        # TODO/FIXME
+        # TODO/FIXME/
         :return:
         """
         curr_state = self.ui.checkBox_selectRuns.isChecked()
 
         self.ui.tableWidget_selectedRuns.select_all_rows(curr_state)
+
+        return
+
+    def do_view_reduction(self):
+        """
+        Purpose: Launch reduction view
+        Requirements: ... ...
+        Guarantees: ... ...
+        :return:
+        """
+        # TODO/NOW/1st complete it!
+
+        # Launch data view and set up
+        self._reducedDataViewWindow = data_view.GeneralPurposedDataViewWindow(self)
+        self._reducedDataViewWindow.setup(self._myWorkflow)
+        # set up more parameters such as unit ...
+        # ... ...
+
+        """ TODO/NOW/ Add methods to set up to plot window
+        radioButton_viewInTOF
+        radioButton_viewInD
+        radioButton_viewInQ
+
+        lineEdit_minX
+        lineEdit_maxX
+
+        checkBox_normaliseCurrent
+        checkBox_normaliseByVanadium
+        checkBox_logScaleIntensity
+        """
+
+        self._reducedDataViewWindow.show()
+
+        # register the window for closing procedure!
+        blablabla
 
         return
 
@@ -461,6 +501,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.checkBox_chopRun.setCheckState(QtCore.Qt.Unchecked)
         self.ui.tabWidget_reduceData.setCurrentIndex(1)
         self.ui.tabWidget_reduceData.setTabEnabled(0, False)
+
+        # Reduction
+        self.ui.radioButton_binStandard.setChecked(True)
+
+        # View
+        self.ui.radioButton_viewInTOF.setChecked(True)
+        self.ui.radioButton_plotData1D.setChecked(True)
 
         # Plotting log
         self.ui.checkBox_logSkipSec.setCheckState(QtCore.Qt.Checked)

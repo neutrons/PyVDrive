@@ -4,15 +4,12 @@
 #
 ########################################################################
 import sys
-import os
 import numpy
 
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-# import matplotlib
-# import matplotlib.pyplot
+import GuiUtility
 
 
 try:
@@ -24,7 +21,7 @@ except AttributeError:
 import gui.ui_GPView
 
 
-class Window_GPPlot(QMainWindow):
+class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
@@ -37,6 +34,11 @@ class Window_GPPlot(QMainWindow):
         # Parent & others
         self._myParent = parent
         self._myController = None
+
+        # current status
+        self._currRunNumber = None
+        self._currBank = 1
+        self._currUnit = 'TOF'
 
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
@@ -60,51 +62,20 @@ class Window_GPPlot(QMainWindow):
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                      self.do_normalise_by_current)
 
-        # self.connect(self.ui.pushButton_normByVanadium, QtCore.SIGNAL('clicked()'),
-        #         self.doNormByVanadium)
-
-        # self.connect(self.ui.pushButton_showVanadiumPeaks, QtCore.SIGNAL('clicked()'),
-        #         self.doShowVanadiumPeaks)
-        # self.connect(self.ui.pushButton_stripVPeaks, QtCore.SIGNAL('clicked()'),
-        #         self.doStripVanPeaks)
-        # self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
-        #         self.doSmoothVanadium)
-
-        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-        #         self.doQuit)
-
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
 
-        # # on-graph operation
-        # # FIXME : Disabled for future developing
-        # #self.ui.graphicsView_mainPlot.canvas.mpl_connect('button_press_event', self.on_mouseDownEvent)
+        # TODO/NOW/1st : add these
+        """
+        comboBox_unit
+        pushButton_apply : new range
+        """
 
-        # # Input validator
-        # # FIXME / TODO - Add validators... 
+        return
 
-        # # GUI event handling flag
-        # self._respondToComboBoxSpectraListChange = False
-
-        # # Class status variable
-        # self._runList = []
-        # self._currRun = None
-        # self._currRunIndex = 0
-
-        # # Flag
-        # self._canvasMode2D = False
-
-        # # Initialze graph
-        # self._initFigureCanvas()
-
-        # return
-
-    #---------------------------------------------------------------------------
-    # Widget event handling methods
-    #---------------------------------------------------------------------------
     def do_normalise_by_current(self):
         """
         Normalize by current/proton charge if the reduced run is not.
@@ -128,91 +99,6 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
-    #     """
-    #     """
-    #     execstatus, errmsg = self.getWorkflow().normalize_by_current(self._currProjectName, self._currRun)
-    #     if execstatus is False:
-    #         self.getLog().logError(errmsg)
-
-    #     return
-
-    # def doNormByVanadium(self):
-    #     """ Normalize by vanadium spectrum
-    #     """
-    #     execstatus, errmsg = self.getWorkflow().normalizeByVanadium(self._currProjectName, self._currRun)
-    #     if execstatus is False:
-    #         self.getLog().logError(errmsg)
-
-    #     return
-
-
-    # def doPlotAllRuns(self):
-    #     """ Plot all runs in a fill plot style
-    #     """
-    #     print '------------------------  PLOTTING (2D) ------------------------------'
-    #     # Get list of all reduced data
-    #     runlist = self._myParent.getWorkflowObj().getReducedRuns(self._myProjectName)
-    #     print "[DB] Number of reduced runs = %d" % (len(runlist))
-
-    #     # Convert the workspaces to 2D vector
-    #     vecylist = []
-    #     yticklabels = []
-    #     xmin = None
-    #     xmax = None
-
-    #     # FIXME - Should have a selection!
-    #     ikey = 0
-
-    #     sizesame = True
-    #     prevsize = -1
-
-    #     for runno in sorted(runlist):
-    #         # put y values to list for constructing 2D array
-    #         # TODO : Remove vecx, vecy = self._myControl.getVectorToPlot(expno, scanno)
-    #         reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, runno)
-    #         specid = sorted(reduceddatadict.keys())[ikey]
-    #         vecx, vecy = reduceddatadict[specid]
-
-    #         print "[DB] Add Run %s, VecY Size = %d." % (runno, len(vecy))
-    #         if prevsize >= 0 and len(vecx) != prevsize:
-    #             sizesame = False
-    #             break
-    #         else:
-    #             prevsize = len(vecx)
-
-    #         vecylist.append(vecy)
-    #         # yticklabels.append('Exp %d Scan %d' % (expno, scanno))
-    #         #print "[DB] Scan ", scanno, ": X range: ", vecx[0], vecx[-1], " Size X = ", len(vecx)
-
-    #         # set up range of x
-    #         if xmin is None:
-    #             xmin = vecx[0]
-    #             xmax = vecx[-1]
-    #         # ENDIF
-    #     # ENDFOR
-
-    #     # Return if unable to plot in 2D
-    #     if sizesame is False:
-    #         # TODO - Make it a pop-up error window.
-    #         print "[Error] Unable to do 2D plot because the size of Y vectors of all the workspaces are not same!"
-    #         return
-
-    #     dim2array = numpy.array(vecylist)
-    #     print "[DB] Type of 2D array: %s." % (str(type(dim2array)))
-    #     self._plot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, ymax=len(vecylist), clearimage=True)
-
-    #     ## Plot
-    #     #holdprev=False
-    #     #self.ui.graphicsView_mergeRun.clearAllLines()
-    #     #self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, \
-    #     #    ymax=len(vecylist), holdprev=holdprev, yticklabels=yticklabels)
-
-    #     print '------------------------  ENDING   (2D) ------------------------------'
-
-    #     return
-
-
     def doPlotRunSelected(self):
         """
         Plot the current run. The first choice is from the line edit. If it is blank,
@@ -226,60 +112,13 @@ class Window_GPPlot(QMainWindow):
         else:
             run_numbers = [int(self.ui.comboBox_runs.currentText())]
 
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+        # TODO/FIXME/1st: replace the following by a method as get_bank_ids() for 'All' case
+        bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
-            self.plot_run(run_number)
+            self.plot_run(run_number, bank_id, over_plot)
 
-
-    #     # Attempt 1 to read line edit input
-    #     try: 
-    #
-    #         if run in self._runList:
-    #             usecombobox = False
-    #         else:
-    #             usecombobox = True
-    #     except ValueError as e:
-    #         usecombobox = True
-
-    #     # Attempt 2 to read from combo box
-    #     if usecombobox is True:
-    #         try: 
-    #             run = str(self.ui.comboBox_runs.currentText())
-    #             if run not in self._runList: 
-    #                 print  "Run %s from combo box is not a valid run." % (run)
-    #                 return (False, "No line edit input... ")
-    #         except ValueError as e:
-    #             print "No valid ... "
-    #             return (False, "No valid ... ")
-
-    #     print "Run %s is selected." % (run)
-    #     # get current run and plot
-    #     reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, run)
-
-    #     # set up the spectrum combobox
-    #     self._respondToComboBoxSpectraListChange = False
-    #     self.ui.comboBox_spectraList.clear()
-    #     self.ui.comboBox_spectraList.addItem('%s: All'%(run))
-
-    #     # Plot spectra
-    #     print "Number of spectra: %d" % (len(reduceddatalist.keys()))
-    #     self._clearPlot()
-    #     for spectrum in sorted(reduceddatalist.keys()): 
-    #         vecx, vecy = reduceddatalist[spectrum]
-    #         label = "%s-%d"%(run, spectrum)
-    #         self._plot(vecx, vecy, label=label, overplot=True)
-
-    #         # add to comobox
-    #         self.ui.comboBox_spectraList.addItem("%s: %d" % (run, spectrum))
-    #     # ENDFOR
-
-    #     # Update class variable
-    #     self._currRun = run
-    #     self._currSpectrum = 'All'
-
-    #     self._respondToComboBoxSpectraListChange = True
-
-    #     return
-    #
+        return
 
     def doPlotRunNext(self):
         """
@@ -340,6 +179,8 @@ class Window_GPPlot(QMainWindow):
         :param bank_id:
         :return:
         """
+        # TODO/NOW/1st Review
+
         # Check requirements
         assert isinstance(run_number, int)
         assert run_number > 0
@@ -347,17 +188,28 @@ class Window_GPPlot(QMainWindow):
         assert bank_id > 0
 
         # Get data
-        # get current run and plot
-        vec_x, vec_y = self._myController.get_reduced_runs(run_number, bank_id)
+        if run_number != self._currRunNumber:
+            # get new data
+            self._reducedDataDict = self._myController.get_reduced_data(run_number, self._currUnit)
+            # update information
+            self._currRunNumber = run_number
+
+        # Get data from bank: convert bank to spectrum
+        assert (bank_id-1) in self._reducedDataDict, 'bla bla'
+        vec_x, vec_y = self._reducedDataDict[bank_id-1]
+        self._currBank = bank_id
 
         # if previous image is not supposed to keep, then clear the holder
         if over_plot is False:
             self._linesDict = dict()
 
         # Plot the run
-        label = "run %d bank %d"%(run_number, bank_id)
+        label = "run %d bank %d" % (run_number, bank_id)
         line_id = self._plot(vec_x, vec_y, label=label, overplot=over_plot)
         self._linesDict[(run_number, bank_id)] = line_id
+
+        # Change label
+        self.ui.label_currentRun.setText(str(run_number))
 
         return
 
@@ -368,317 +220,10 @@ class Window_GPPlot(QMainWindow):
         :return:
         """
         curr_bank_id = int(self.ui.comboBox_spectraList.currentText())
-
-        vec_x, vec_y = self._myController.get_reduced_run(run_number, curr_bank_id)
-
-        # clear plot?
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        # Plot the run
-        label = "run %d bank %d"%(run_number, bank_id)
-        self._plot(vec_x, vec_y, label=label, overplot=over_plot)
+        keep_prev = self.ui.checkBox_overPlot.isChecked()
+        self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
 
         return
-
-    #     """
-    #     """
-    #     # Return if it is not set to reponding mode
-    #     if self._respondToComboBoxSpectraListChange is False:
-    #         return
-
-    #     # Parse option
-    #     plotspectraoption = str(self.ui.comboBox_spectraList.currentText())
-    #     terms = plotspectraoption.split(':')
-    #     runstr = terms[0].strip()
-    #     spectrumstr = terms[1].strip()
-    #     if spectrumstr == 'All':
-    #         print "Plot all spectrum"
-    #     else:
-    #         iws = int(spectrumstr)
-    #         self._currSpectrum = iws
-    #         print "Plot spectrum %d" % (iws)
-
-    #     # Get current run and plot
-    #     reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, runstr)
-
-    #     # Plot spectra
-    #     firsttouch = True
-    #     for spectrum in sorted(reduceddatalist.keys()): 
-
-    #         if spectrumstr == 'All' or iws == spectrum:
-    #             vecx, vecy = reduceddatalist[spectrum]
-    #             label = "%s-%d"%(runstr, spectrum)
-
-    #             if firsttouch is True:
-    #                 overplot = False
-    #             else:
-    #                 overplot = True
-
-    #             self._plot(vecx, vecy, label=label, overplot=overplot)
-
-    #             firsttouch = False
-    #         # ENDIF (spectrum)
-    #     # ENDFOR
-
-    #     return
-
-
-    # def doShowVanadiumPeaks(self):
-    #     """ Convert reduced data to d-spacing, re-plot and plot vanadium peaks
-    #     """
-    #     if self._currSpectrum == 'All':
-    #         print "Unable to show vanadium peaks with all spectra on canvas.  Pick up 1"
-
-    #     reduceddatalist = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun, unit='dSpacing')
-    #     
-    #     vecx, vecy = reduceddatalist[self._currSpectrum] 
-    #     label = "%s-%d"%(self._currRun, self._currSpectrum)
-    #     self._plot(vecx, vecy, label=label, overplot=False)
-
-    #     # Get vanadium peak and plot
-    #     vanpeakposlist = self._myParent.getWorkflowObj().getVanadiumPeakPosList(min(vecx), max(vecy))
-    #     self._plotPeakIndicators(vanpeakposlist)
-
-    #     return
-
-
-    def doQuit(self):
-        """ Quit this viewing window, i.e., close window without any operation
-        :return:
-        """
-        self.close()
-
-        return
-
-    # def doSmoothVanadium(self):
-    #     """ Smooth vanadium data
-    #     """
-    #     status, errmsg = self._myParent.getWorkflowObj().smoothVanadiumData(self._myProjectName, 
-    #             self._currRun)
-    #     if status is False:
-    #         raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
-
-    #     # get pre-smooth data
-    #     vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
-    #     vanvecx, vanvecy = vandatadict[self._currSpectrum]
-
-    #     # get smoothed but temporary data
-    #     smoothdatadict = self._myParent.getWorkflowObj().get_smoothed_vanadium(self._myProjectName, self._currRun)
-    #     smoothvecx, smoothvecy = smoothdatadict[self._currSpectrum]
-
-    #     # plot
-    #     self._clearPlot()
-    #     self._plot(vanvecx, vanvecy, label='vanadium', color='black', marker='.', overplot=True)
-    #     self._plot(smoothvecx, smoothvecy, label='smoothed', color='red', marker='None', overplot=True)
-
-    #     return
-
-    # 
-    # def doStripVanPeaks(self):
-    #     """ Strip vanadium peaks
-    #     """
-    #     status, errmsg = self._myParent.getWorkflowObj().stripVanadiumPeaks(self._myProjectName, 
-    #             self._currRun)
-
-    #     if status is False:
-    #         raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
-
-    #     reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun)
-    #     vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
-    #     print "[DB] Type of reduced data  dict: ", str(type(reduceddatadict)), " keys: ", str(reduceddatadict.keys())
-    #     print "[DB] Type of vanadium data dict: ", str(type(vandatadict))    , " keys: ", str(vandatadict.keys())
-    #     print "[DB] Current spectrum = %d" % (self._currSpectrum)
-
-    #     origvecx, origvecy = reduceddatadict[self._currSpectrum]
-    #     vanvecx, vanvecy = vandatadict[self._currSpectrum]
-
-    #     print "[DB] doStripVanPeaks: OrigX.size = %d, OrigY.size=%d"%(len(origvecx), len(origvecy)), origvecx, origvecy
-    #     print "[DB] doStripVanPeaks: VanDX.size = %d, VanDY.size=%d"%(len(vanvecx), len(vanvecy)), vanvecx, vanvecy
-
-    #     diffvecx = vanvecx
-    #     diffvecy = origvecy - vanvecy
-    #     maxdiffy = max(diffvecy)
-    #     diffvecy = diffvecy - 1.5*maxdiffy
-
-    #     self._clearPlot()
-    #     self._plot(origvecx, origvecy, label='original', color='black', marker='.', overplot=False) 
-    #     self._plot(vanvecx, vanvecy, label='van peak stripped', color='red', marker='.', overplot=True)
-    #     self._plot(diffvecx, diffvecy, label='diff', color='green', marker='+', overplot=True)
-
-    #     return
-
-
-    # #---------------------------------------------------------------------------
-    # # Set up
-    # #---------------------------------------------------------------------------
-    # def resetRuns(self):
-    #     """ Reset runs in comboBox_runs 
-    #     """
-    #     # clear
-    #     del self._runList[:]
-
-    #     # clear combo box
-    #     self.ui.comboBox_runs.clear()
-
-    #     return
-
-    # def setCurrentRun(self, run):
-    #     """ Set current run to a specified value
-    #     If this run does not exist in _runList, it is not accepted
-    #     """
-    #     if run in self._runList:
-    #         qindex = self._runList.index(run)
-    #         self.ui.comboBox_runs.setCurrentIndex(qindex)
-    #         self.ui.label_currentRun.setText(str(run))
-    #     else:
-    #         print "Run %s does not exist!" % (run)
-
-    #     return
-
-
-    # def setProject(self, vdprojectname):
-    #     """ Set VDProject's name  for future reference
-    #     """
-    #     self._myProjectName = vdprojectname
-    #     self.ui.labe_currentProject.setText(vdprojectname)
-
-    #     return
-
-
-    # def setRuns(self, runslist):
-    #     """ Add runs shown in runs list to comboBox_runs
-    #     """ 
-    #     # Add run to _runList
-    #     for run in runslist:
-    #         if run not in self._runList: 
-    #             self._runList.append(run)
-    #     # ENDFOR
-
-    #     # Sort by value
-    #     self._runList = sorted(self._runList)
-
-    #     # Set the sorted lsit to combo box
-    #     self.ui.comboBox_runs.clear() 
-    #     self.ui.comboBox_runs.addItems(self._runList)
-
-    #     return
-
-
-    # #--------------------------------------------------------------------
-    # # Event handling methods: WxPython canvas operation
-    # #--------------------------------------------------------------------
-    # def on_mouseDownEvent(self, event):
-    #     """ Respond to pick up a value with mouse down event
-    #     """
-    #     x = event.xdata
-    #     y = event.ydata
-
-    #     if x is not None and y is not None:
-    #         msg = "You've clicked on a bar with coords:\n %f, %f" % (x, y)
-    #         QMessageBox.information(self, "Click!", msg)
-
-    #     return
-
-    # #---------------------------------------------------------------------------
-    # # Private methods
-    # #---------------------------------------------------------------------------
-    # def _clearPlot(self):
-    #     """ 
-    #     """ 
-    #     self.ui.graphicsView_mainPlot.clearAllLines()
-
-    #     return
-
-
-    # def _initFigureCanvas(self):
-    #     """ Initialize graph
-    #     """
-    #     # TODO - ASAP
-
-    #     if False: 
-    #         # 
-    #         # TODO - Refactor this part
-    #         vecx, vecy, xlim, ylim = self.computeMock()
-    #         self.ui.mainplot = self.ui.graphicsView.getPlot()
-
-    #         self.mainline = self.ui.mainplot.plot(vecx, vecy, 'r-')
-    #         self.plotlinelist = [self.mainline]
-
-    #         leftx = [xlim[0], xlim[0]]
-    #         lefty = [ylim[0], ylim[1]]
-    #         self.leftslideline = self.ui.mainplot.plot(leftx, lefty, 'b--')
-    #         rightx = [xlim[1], xlim[1]]
-    #         righty = [ylim[0], ylim[1]]
-    #         self.rightslideline = self.ui.mainplot.plot(rightx, righty, 'g--')
-    #         upperx = [xlim[0], xlim[1]]
-    #         uppery = [ylim[1], ylim[1]]
-    #         self.upperslideline = self.ui.mainplot.plot(upperx, uppery, 'b--')
-    #         lowerx = [xlim[0], xlim[1]]
-    #         lowery = [ylim[0], ylim[0]]
-    #         self.lowerslideline = self.ui.mainplot.plot(lowerx, lowery, 'g--')
-    #     
-    #     return
-
-
-    # def _plot(self, vecx, vecy, label, overplot, color='black', marker='.', xlabel=None):
-    #     """ Plot data with vec_x and vec_y
-    #     """
-    #     # Remove all previous lines on canvas if overplot is not selected
-    #     if overplot is False:
-    #         self.ui.graphicsView_mainPlot.clearAllLines()
-
-    #     if self._canvasMode2D is True:
-    #         self.ui.graphicsView_mainPlot.clearCanvas()
-    #         self._canvasMode2D = False
-
-    #     # Plot
-    #     self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color=color, marker=marker, label=label, xlabel=xlabel)
-
-    #     # Re-set XY limit
-    #     if overplot is False:
-    #         xmin = min(vecx)
-    #         xmax = max(vecx)
-    #         dx = xmax-xmin
-
-    #         ymin = min(vecy)
-    #         ymax = max(vecy)
-    #         dy = ymax-ymin
-
-    #         self.ui.graphicsView_mainPlot.setXYLimit(xmin-0.01*dx, xmax+0.01*dx, ymin-0.01*dy, ymax+0.01*dy)
-    #     # ENDIF
-
-    #     return
-
-
-    # def _plot2D(self, array2d, xmin, xmax, ymin, ymax, clearimage=True):
-    #     """ Plot 2D
-    #     self._plot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, ymax=len(vecylist), clearimage=True)
-    #     """
-    #     # Clear image
-    #     if clearimage is True:
-    #         self.ui.graphicsView_mainPlot.clearCanvas()
-
-    #     # Add 2D plot 
-    #     self.ui.graphicsView_mainPlot.addPlot2D(array2d, xmin, xmax, ymin, ymax, holdprev=False, yticklabels=None)
-
-    #     self._canvasMode2D = True
-
-    #     return
-
-
-    # def _plotPeakIndicators(self, peakposlist):
-    #     """ Plot indicators for peaks
-    #     """ 
-    #     rangex = self.ui.graphicsView_mainPlot.getXLimit()
-    #     rangey = self.ui.graphicsView_mainPlot.getYLimit()
-
-    #     for pos in peakposlist:
-    #         if pos >= rangex[0] and pos <= rangex[1]:
-    #             vecx = numpy.array([pos, pos])
-    #             vecy = numpy.array([rangey[0], rangey[1]])
-    #             self.ui.graphicsView_mainPlot.addPlot(vecx, vecy, color='red', linestyle='--') 
-    #     # ENDFOR
-    #     
-    #     return
 
     def evt_select_new_run_number(self):
         """ Event handling the case that a new run number is selected in combobox_run
@@ -686,9 +231,12 @@ class Window_GPPlot(QMainWindow):
         """
         # Get the new run number
         run_number = int(self.ui.comboBox_runs.currentText())
-        bank_id_list, num_spec = self._myController.get_reduced_run_info(run_number)
+        status, run_info = self._myController.get_reduced_run_info(run_number)
+        if status is False:
+            GuiUtility.pop_dialog_error(self, run_info)
 
         # Re-set the spectra list combo box
+        bank_id_list = run_info
         self.ui.comboBox_spectraList.clear()
         for bank_id in bank_id_list:
             self.ui.comboBox_spectraList.addItems(str(bank_id))
@@ -710,7 +258,7 @@ class Window_GPPlot(QMainWindow):
         reduced_run_number_list.sort()
         self.ui.comboBox_runs.clear()
         for run_number in reduced_run_number_list:
-            self.ui.comboBox_runs.addItems(str(run_number))
+            self.ui.comboBox_runs.addItem(str(run_number))
 
         return
 
@@ -817,7 +365,7 @@ def testmain(argv):
     app = QtGui.QApplication(argv)
 
     # my plot window app
-    myapp = Window_GPPlot(parent)
+    myapp = GeneralPurposedDataViewWindow(parent)
     # myapp.setRuns(['002271'])
     myapp.show()
 

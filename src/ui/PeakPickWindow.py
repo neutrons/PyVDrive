@@ -721,7 +721,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_load_data(self):
         """
         Purpose:
-            Load GSAS data
+            Load GSAS data or
         Requirements:
             Controller has been set to this object
         Requires:
@@ -729,6 +729,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # FIXME/NOW/1st - Should move the MockController to VDriveAPI
+
+        # TODO/Now/1st
 
         # Check requirements
         assert self._myController is not None
@@ -883,8 +885,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def set_controller(self, controller):
         """
         """
-        # TODO/NOW/Doc
+        # TODO/NOW/Doc 1st: check ... and finish!
         self._myController = controller
+
+        # Get reduced data ...
+
+        # Set
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=blabla, run_number_list=blabla)
 
     def menu_add_peak(self):
         """ Add a peak to table

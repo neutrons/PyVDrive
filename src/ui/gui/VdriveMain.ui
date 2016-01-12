@@ -454,7 +454,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="tab_12">
              <attribute name="title">
@@ -1423,7 +1423,7 @@
                      </widget>
                     </item>
                     <item row="0" column="1">
-                     <widget class="QLineEdit" name="lineEdit_19"/>
+                     <widget class="QLineEdit" name="lineEdit_minX"/>
                     </item>
                     <item row="0" column="2">
                      <widget class="QLabel" name="label_14">
@@ -1433,7 +1433,7 @@
                      </widget>
                     </item>
                     <item row="0" column="3">
-                     <widget class="QLineEdit" name="lineEdit_20"/>
+                     <widget class="QLineEdit" name="lineEdit_maxX"/>
                     </item>
                    </layout>
                   </widget>
@@ -1445,21 +1445,21 @@
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_5">
                     <item>
-                     <widget class="QCheckBox" name="checkBox_16">
+                     <widget class="QCheckBox" name="checkBox_normaliseCurrent">
                       <property name="text">
                        <string>Normalize Intensity to proton charge</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QCheckBox" name="checkBox_17">
+                     <widget class="QCheckBox" name="checkBox_normaliseByVanadium">
                       <property name="text">
-                       <string>Normalize Int. to Vanadium</string>
+                       <string>Normalize Intensity to Vanadium</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QCheckBox" name="checkBox_15">
+                     <widget class="QCheckBox" name="checkBox_logScaleIntensity">
                       <property name="text">
                        <string>Logscale intensity</string>
                       </property>
@@ -1483,6 +1483,9 @@
                     </item>
                     <item>
                      <widget class="QRadioButton" name="radioButton_plotData2D">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="text">
                        <string>2D Contour</string>
                       </property>
@@ -1490,6 +1493,9 @@
                     </item>
                     <item>
                      <widget class="QRadioButton" name="radioButton_plotData3D">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="text">
                        <string>3D Surface</string>
                       </property>
@@ -1497,6 +1503,9 @@
                     </item>
                     <item>
                      <widget class="QRadioButton" name="radioButton_plotDataSampleLog">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="text">
                        <string>vs. chosen sample log</string>
                       </property>
@@ -1522,6 +1531,9 @@
                       </item>
                       <item>
                        <widget class="QComboBox" name="comboBox_xLabelLogName">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
