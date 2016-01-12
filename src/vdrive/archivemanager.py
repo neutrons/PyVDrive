@@ -145,9 +145,10 @@ class DataArchiveManager(object):
         Guarantees:
             Experimental run information including run number, creation time and full file path will be returned
         :param ipts_number: IPTS number to match the current IPTS number
-        :return: list of 3-tuples
+        :param start_run:
+        :param end_run
+        :return: list of 3-tuples as run number,
         """
-        # TODO/DOC/1st
         # Check requirements
         assert self._iptsNo is not None, 'No valid IPTS number has been assigned to ArchiveManager.'
         assert isinstance(ipts_number, int) or ipts_number is None

@@ -42,6 +42,9 @@ class Window_GPPlot(QMainWindow):
         self.ui = gui.ui_GPView.Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # Controlling data structure on lines that are plotted on graph
+        self._linesDict = dict()  # key: tuple as run number and bank ID, value: line ID
+
         # Event handling
         # push buttons 
         self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'),
@@ -54,8 +57,9 @@ class Window_GPPlot(QMainWindow):
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
         #         self.doPlotAllRuns)
 
-        # self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
-        #         self.doNormByCurrent)
+        self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
+                     self.do_normalise_by_current)
+
         # self.connect(self.ui.pushButton_normByVanadium, QtCore.SIGNAL('clicked()'),
         #         self.doNormByVanadium)
 
@@ -72,8 +76,8 @@ class Window_GPPlot(QMainWindow):
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
-        # self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #         self.doPlotSelectedSpectra)
+        self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_bank_id_changed)
 
         # # on-graph operation
         # # FIXME : Disabled for future developing
@@ -101,8 +105,31 @@ class Window_GPPlot(QMainWindow):
     #---------------------------------------------------------------------------
     # Widget event handling methods
     #---------------------------------------------------------------------------
-    # def doNormByCurrent(self):
-    #     """ Normalize by current/proton charge
+    def do_normalise_by_current(self):
+        """
+        Normalize by current/proton charge if the reduced run is not.
+        :return:
+        """
+        # Get run number
+        run_number = int(self.ui.comboBox_runs.currentText())
+
+        # Check
+        if self._myController.get_reduced_run_history(run_number).is_noramalised_by_current() is True:
+            GuiUtil.pop_error_message(self, 'Run %d has been normalised by current already.' % run_number)
+            return
+
+        # Normalize by current
+        self._myController.normalise_by_current(run_number=run_number)
+
+        # Re-plot
+        bank_id = int(self.ui.comboBox_spectraList.currentText())
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+        self.plot_run(run_number=run_number, bank_id=bank_id, over_plot=over_plot)
+
+        return
+
+
+    #     """
     #     """
     #     execstatus, errmsg = self.getWorkflow().normalize_by_current(self._currProjectName, self._currRun)
     #     if execstatus is False:
@@ -195,7 +222,7 @@ class Window_GPPlot(QMainWindow):
         # Get run numbers
         runs_str = str(self.ui.lineEdit_runs.text()).strip()
         if len(runs_str) > 0:
-            run_numbers = parse_runs_list(runs_str)
+            run_numbers = self.parse_runs_list(runs_str)
         else:
             run_numbers = [int(self.ui.comboBox_runs.currentText())]
 
@@ -252,7 +279,32 @@ class Window_GPPlot(QMainWindow):
     #     self._respondToComboBoxSpectraListChange = True
 
     #     return
-    #     
+    #
+
+    def doPlotRunNext(self):
+        """
+        Purpose: plot the previous run in the list and update the run list
+        :return:
+        """
+        # Get previous index from combo box
+        current_index = self.ui.comboBox_runs.currentIndex()
+        current_index += 1
+        # if the current index is at the beginning, then loop to the last run number
+        if current_index == self.ui.comboBox_runs.count():
+            current_index = 0
+        elif current_index > self.ui.comboBox_runs.count():
+            raise RuntimeError('It is impossible to have index larger than number of items.')
+
+        # Get the current run
+        self.ui.comboBox_runs.setCurrentIndex(current_index)
+        run_number = int(self.ui.comboBox_runs.currentText())
+
+        # Plot
+        bank_id = int(self.ui.comboBox_spectraList.currentText())
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+        self.plot_run(run_number, bank_id, over_plot)
+
+        return
 
     def doPlotRunPrev(self):
         """
@@ -272,11 +324,12 @@ class Window_GPPlot(QMainWindow):
 
         # Plot
         bank_id = int(self.ui.comboBox_spectraList.currentText())
-        self.plot_run(run_number, bank_id)
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+        self.plot_run(run_number, bank_id, over_plot)
 
         return
 
-    def plot_run(self, run_number, bank_id):
+    def plot_run(self, run_number, bank_id, over_plot):
         """
         Plot a run on graph
         Requirements:
@@ -297,43 +350,35 @@ class Window_GPPlot(QMainWindow):
         # get current run and plot
         vec_x, vec_y = self._myController.get_reduced_runs(run_number, bank_id)
 
+        # if previous image is not supposed to keep, then clear the holder
+        if over_plot is False:
+            self._linesDict = dict()
+
+        # Plot the run
+        label = "run %d bank %d"%(run_number, bank_id)
+        line_id = self._plot(vec_x, vec_y, label=label, overplot=over_plot)
+        self._linesDict[(run_number, bank_id)] = line_id
+
+        return
+
+    def evt_bank_id_changed(self):
+        """
+        Handling the event that the bank ID is changed: the figure should be re-plot.
+        It should be avoided to plot the same data twice against evt_select_new_run_number
+        :return:
+        """
+        curr_bank_id = int(self.ui.comboBox_spectraList.currentText())
+
+        vec_x, vec_y = self._myController.get_reduced_run(run_number, curr_bank_id)
+
         # clear plot?
-        if self.ui.checkBox_overPlot.isChecked() is False:
-            self.ui.graphicsView_mainPlot.clear_lines()
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+        # Plot the run
+        label = "run %d bank %d"%(run_number, bank_id)
+        self._plot(vec_x, vec_y, label=label, overplot=over_plot)
 
+        return
 
-
-    #         label = "%s-%d"%(run, spectrum)
-    #         self._plot(vecx, vecy, label=label, overplot=True)
-
-    #         # add to comobox
-    #         self.ui.comboBox_spectraList.addItem("%s: %d" % (run, spectrum))
-    #     # ENDFOR
-
-    #     # Update class variable
-    #     self._currRun = run
-    #     self._currSpectrum = 'All'
-
-    #     self._respondToComboBoxSpectraListChange = True
-
-    #     print '------------------------  ENDING ------------------------------'
-
-    #     return
-
-    # def doPlotRunNext(self):
-    #     """ Plot the next run
-    #     """
-    #     if self._currRunIndex == len(self._runList)-1:
-    #         self.getLog().logError("There is no next run.  Run %d is the last run in the list." % (
-    #             self._currRunIndex))
-    #     else:
-    #         # TODO - ASAP ASAP ASAP
-    #         raise NotImplementedError("ASAP")
-
-    #     return
-
-
-    # def doPlotSelectedSpectra(self):
     #     """
     #     """
     #     # Return if it is not set to reponding mode
@@ -396,13 +441,13 @@ class Window_GPPlot(QMainWindow):
     #     return
 
 
-    # def doQuit(self):
-    #     """ Quit
-    #     """
-    #     self.close()
+    def doQuit(self):
+        """ Quit this viewing window, i.e., close window without any operation
+        :return:
+        """
+        self.close()
 
-    #     return
-
+        return
 
     # def doSmoothVanadium(self):
     #     """ Smooth vanadium data
@@ -668,6 +713,28 @@ class Window_GPPlot(QMainWindow):
             self.ui.comboBox_runs.addItems(str(run_number))
 
         return
+
+    @staticmethod
+    def parse_runs_list(run_list_str):
+        """ Parse a list of runs in string such as 122, 133, 444, i.e., run numbers are separated by ,
+        :param run_list_str:
+        :return:
+        """
+        assert isinstance(run_list_str, str)
+
+        items = run_list_str.strip().split(',')
+        run_number_list = list()
+        for item in items:
+            item = item.strip()
+            if item.isdigit():
+                run_number = int(item)
+                run_number_list.append(run_number)
+        # END-FOR
+
+        assert len(run_number_list) > 0, 'There is no valid run number in string %s.' % run_list_str
+
+        return run_number_list
+
 
 class MockParent:
     """ Mocking parent for universal purpose

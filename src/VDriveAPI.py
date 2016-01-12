@@ -99,15 +99,26 @@ class VDriveAPI(object):
         """
         Purpose: export a reduced run to GSAS data file
         Requirements:
-
-        Guarantees:
-
+        1. run number is a valid integer
+        2. run number exists in project
+        3. gsas file name includes a path that is writable
+        Guarantees: A gsas file is written
         :param run_number:
         :param gsas_file_name:
         :return:
         """
-        # TODO/NOW - 1st Doc, assertion and implement
+        # Check requirements
+        assert isinstance(run_number, int)
+        assert run_number > 0
 
+        assert isinstance(gsas_file_name, str)
+        out_dir = os.path.dirname(gsas_file_name)
+        assert os.writable(out_dir)
+
+        try:
+            self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
+        except KeyError as e:
+            return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, gsas_file_name)
         raise
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
@@ -300,10 +311,14 @@ class VDriveAPI(object):
     def get_ipts_info(self, ipts, begin_run=None, end_run=None):
         """
         Get runs and their information for a certain IPTS
+        Purpose: Get the runs' information of an IPTS
+        Requirements: IPTS is either an integer as a valid IPTS number of a directory containing all runs
+                      under an IPTS
+                      Begin run and end run are optional to define the range of runs
+        Guarantees: the runs' information including creation time and file path will be returned
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
-        # TODO/NOW/1st:
         try:
             if isinstance(ipts, int):
                 print '[DB-BAT] Get experimental information from archive.'
@@ -325,6 +340,7 @@ class VDriveAPI(object):
         :param ipts_dir:
         :return: 2-tuple: integer as IPTS number; 0 as unable to find
         """
+        # FIXME - It is broken!
         return futil.get_ipts_number_from_dir(ipts_dir)
 
     def get_run_info(self, run_number):
