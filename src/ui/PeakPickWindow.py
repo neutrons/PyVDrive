@@ -95,12 +95,32 @@ class PhaseWidgets(object):
 
         return
 
-    def set_phase_values(self, phase_value_list):
+    def get_phase_value(self, phase_value_list):
         """
-        Purpose: set the phase values to the input list
+        Purpose: set the phase values to the input list. It is used for save the values of phase temporarily.
+            if value is not set up, then it will ignored;
+        Requirements:  if the value is set, then it must be valid
+
         :param phase_value_list:
         :return:
         """
+        # Check requirements:
+        assert isinstance(phase_value_list, list), 'bla bla'
+        assert len(phase_value_list) == 5
+
+        # Set name
+        phase_value_list[0] = str(self._lineEdit_name.text()).strip()
+        # Set phase
+        phase_value_list[1] = str(self._comboBox_type.currentText()).split()[0]
+        # Set a, b and c
+        a = GuiUtility.parse_float(self._lineEdit_a)
+        phase_value_list[2] = a
+        b = GuiUtility.parse_float(self._lineEdit_b)
+        phase_value_list[3] = b
+        c = GuiUtility.parse_float(self._lineEdit_c)
+        phase_value_list[4] = c
+
+        return
 
     def get_phase(self):
         """
@@ -199,6 +219,46 @@ class PhaseWidgets(object):
 
         return
 
+    def set_value(self, unit_cell_value):
+        """ Set value to unit cell (usually for undo)
+        Purpose: set the values of unit cell (stored in list) to widgets
+        Requirements: unit cell value should be stored in a list with 5 elements
+        Guarantees: unit cell values are set up
+        :param unit_cell_value: 5-element list
+        :return:
+        """
+        # Check requirements
+        assert isinstance(unit_cell_value, list), 'blabla'
+        assert len(unit_cell_value) == 5
+
+        # Set phase name
+        self._lineEdit_name.setText(unit_cell_value[0])
+        # Set a, b and c
+        if unit_cell_value[2] is None:
+            self._lineEdit_a.clear()
+        else:
+            self._lineEdit_a.setText(str(unit_cell_value[2]))
+        if unit_cell_value[3] is None:
+            self._lineEdit_a.clear()
+        else:
+            self._lineEdit_a.setText(str(unit_cell_value[3]))
+        if unit_cell_value[4] is None:
+            self._lineEdit_a.clear()
+        else:
+            self._lineEdit_a.setText(str(unit_cell_value[4]))
+        # Set unit cell type
+        new_index = -1
+        for index in xrange(len(UnitCellList)):
+            if unit_cell_value[1] == UnitCellList[index][0]:
+                new_index = index
+                break
+        if new_index == -1:
+            raise RuntimeError('Impossible to find unit cell type %s not in the list.' % unit_cell_value[1])
+        else:
+            self._comboBox_type.setCurrentIndex(new_index)
+
+        return
+
 
 class PeakWidthSetupDialog(QtGui.QDialog):
     """
@@ -221,22 +281,49 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         # Define event handlers
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
+        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
+                     self.do_set_width)
+
+        # Class variables
+        self._peakWidth = None
 
         return
 
     def do_quit(self):
         """
-        ... ...
+        Return without doing anything
         :return:
         """
         self.close()
 
-    def get_peak_width(self):
+    def do_set_width(self):
         """
-        ... ...
+        Set peak width
         :return:
         """
-        return 1234.
+        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
+        if peak_width is None:
+            GuiUtility.pop_dialog_error('Peak width is not set up!')
+            return
+        if peak_width <= 0.:
+            GuiUtility.pop_dialog_error('Peak width %f cannot be 0 or negative!' % peak_width)
+            return
+
+        self._peakWidth = peak_width
+
+        # Close
+        self.close()
+
+        return
+
+    def get_peak_width(self):
+        """ Get peak width
+        Purpose: Get the stored peak width from the window object
+        Requirements: it must be set up
+        Guarantees: the peak width is given if it is set up
+        :return:
+        """
+        assert self._
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -779,6 +866,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
 
+        raise NotImplementedError('Need to find out how to deal with this in the final version!')
 
         # Get diffraction file
         """
@@ -918,22 +1006,32 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the values
         for i_phase in self._phaseWidgetsGroupDict.keys():
-            self._phaseWidgetsGroupDict[i_phase].set_phase_values(self._phaseDict[i_phase])
+            self._phaseWidgetsGroupDict[i_phase].get_phase_value(self._phaseDict[i_phase])
 
         return
 
     def do_undo_phase_changes(self):
-        """ Purpose: undo all the changes from last 'set phase'
+        """ Purpose: undo all the changes from last 'set phase' by get the information from
+        the save phase parameters
+        Requirements: None
+        Guarantees:
         :return:
         """
-        # TODO/FIXME/1st add this method
-        blabla()
+        for i_phase in range(1, 4):
+            self._phaseWidgetsGroupDict[i_phase].set_values(self._phaseDict[i_phase])
+
+        return
 
     def set_controller(self, controller):
-        """
+        """ Set up workflow controller to this window object
+        Purpose: Set the workflow controller to this window object
+        Requirement: controller must be VDriveAPI or Mock
+        Guarantees: controller is set up. Reduced runs are get from controller and set to
         """
         # TODO/NOW/Doc 1st: check ... and finish!
         self._myController = controller
+
+        raise NotImplementedError('bla bla bla ...')
 
         # Get reduced data ...
 
