@@ -46,6 +46,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Controlling data structure on lines that are plotted on graph
         self._linesDict = dict()  # key: tuple as run number and bank ID, value: line ID
+        self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
 
         # Event handling
         # push buttons 
@@ -65,12 +66,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
                      self.do_apply_new_range)
 
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_close)
+
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
-        self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int'),
+        self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_unit_changed)
 
         return
@@ -83,7 +87,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return: None
         """
         # Get new x range
-        curr_min_x, curr_max_x = self.ui.graphicsView_mainPlot.getXLimits()
+        curr_min_x, curr_max_x = self.ui.graphicsView_mainPlot.getXLimit()
         new_min_x_str = str(self.ui.lineEdit_minX.text()).strip()
         if len(new_min_x_str) != 0:
             curr_min_x = float(new_min_x_str)
@@ -93,14 +97,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             curr_max_x = float(new_max_x_str)
 
         if curr_max_x <= curr_min_x:
-            GuiUtility.pop_dialog_error(
-                    'Minimum X %f is equal to or larger than maximum X %f!' % (curr_min_x, curr_max_x))
+            GuiUtility.pop_dialog_error(self,
+                                        'Minimum X %f is equal to or larger than maximum X %f!' % (curr_min_x,
+                                                                                                   curr_max_x))
             return
 
         # Set new X range
-        self.ui.graphicsView_mainPlot.setXLimits(curr_min_x, curr_max_x)
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=curr_min_x, xmax=curr_max_x)
 
         return
+
+    def do_close(self):
+        """ Close the window
+        :return:
+        """
+        self.close()
 
     def do_normalise_by_current(self):
         """
@@ -111,8 +122,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         run_number = int(self.ui.comboBox_runs.currentText())
 
         # Check
-        if self._myController.get_reduced_run_history(run_number).is_noramalised_by_current() is True:
-            GuiUtil.pop_error_message(self, 'Run %d has been normalised by current already.' % run_number)
+        if self._myController.get_reduced_run_info(run_number).is_noramalised_by_current() is True:
+            GuiUtility.pop_dialog_error(self, 'Run %d has been normalised by current already.' % run_number)
             return
 
         # Normalize by current
@@ -205,24 +216,33 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param bank_id:
         :return:
         """
-        # TODO/NOW/1st Review
-
         # Check requirements
-        assert isinstance(run_number, int)
+        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
+                                                                                              str(type(run_number)))
         assert run_number > 0
-        assert isinstance(bank_id, int)
+        assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
+                                                                                         str(type(bank_id)))
         assert bank_id > 0
 
-        # Get data
-        if run_number != self._currRunNumber:
+        # Get data (run)
+        if run_number not in self._reducedDataDict:
             # get new data
-            self._reducedDataDict = self._myController.get_reduced_data(run_number, self._currUnit)
+            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit)
+            if status is False:
+                GuiUtility.pop_dialog_error(self, ret_obj)
+            self._reducedDataDict[run_number] = ret_obj
             # update information
             self._currRunNumber = run_number
 
         # Get data from bank: convert bank to spectrum
-        assert (bank_id-1) in self._reducedDataDict, 'bla bla'
-        vec_x, vec_y = self._reducedDataDict[bank_id-1]
+        assert isinstance(self._reducedDataDict[run_number], dict), \
+            'Should be dict but not %s.' % str(type(self._reducedDataDict[run_number]))
+        assert (bank_id-1) in self._reducedDataDict[run_number], \
+            'Bank %d/spectrum %d is not in data dictionary of run %d. ' \
+            'Keys are %s.' % (bank_id, bank_id-1, run_number,
+                              str(self._reducedDataDict[run_number].keys()))
+        vec_x = self._reducedDataDict[run_number][bank_id-1][0]
+        vec_y = self._reducedDataDict[run_number][bank_id-1][1]
         self._currBank = bank_id
 
         # if previous image is not supposed to keep, then clear the holder
@@ -231,7 +251,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Plot the run
         label = "run %d bank %d" % (run_number, bank_id)
-        line_id = self._plot(vec_x, vec_y, label=label, overplot=over_plot)
+        if over_plot is False:
+            self.ui.graphicsView_mainPlot.clear_all_lines()
+        line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x,vec_y=vec_y, label=label, x_label=self._currUnit)
         self._linesDict[(run_number, bank_id)] = line_id
 
         # Change label
@@ -245,9 +267,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         It should be avoided to plot the same data twice against evt_select_new_run_number
         :return:
         """
-        curr_bank_id = int(self.ui.comboBox_spectraList.currentText())
+        # Get new bank ID
+        new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
+        if new_bank_str.isdigit() is False:
+            print '[DB] New bank ID %s is not an allowed integer.' % new_bank_str
+            return
+
+        curr_bank_id = int(new_bank_str)
         keep_prev = self.ui.checkBox_overPlot.isChecked()
-        self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
+        if self._currRunNumber is not None:
+            self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
 
         return
 
@@ -257,6 +286,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         # Get the new run number
         run_number = int(self.ui.comboBox_runs.currentText())
+        self._currRunNumber = run_number
         status, run_info = self._myController.get_reduced_run_info(run_number)
         if status is False:
             GuiUtility.pop_dialog_error(self, run_info)
@@ -265,8 +295,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         bank_id_list = run_info
         self.ui.comboBox_spectraList.clear()
         for bank_id in bank_id_list:
-            self.ui.comboBox_spectraList.addItems(str(bank_id))
-        self.ui.comboBox_spectraList.addItem('All')
+            self.ui.comboBox_spectraList.addItem(str(bank_id))
+        # self.ui.comboBox_spectraList.addItem('All')
 
         return
 
@@ -277,6 +307,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         # Check
         new_unit = str(self.ui.comboBox_unit.currentText())
+
+        print '[DB-BAT] Responding to new unit: ', new_unit, '... ...'
+        print
 
         # Get the data sets and replace them with new unit
         for run_number in self._reducedDataDict.keys():

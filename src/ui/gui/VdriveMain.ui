@@ -1577,21 +1577,21 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_20">
                  <item>
-                  <widget class="QCheckBox" name="checkBox_4">
+                  <widget class="QCheckBox" name="checkBox_singlePeakNormaliseByCurrent">
                    <property name="text">
                     <string>Normalize Int. to proton charge</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QCheckBox" name="checkBox_3">
+                  <widget class="QCheckBox" name="checkBox_singlePeakNormaliseByVanadium">
                    <property name="text">
                     <string>Normalize Int. to Vanadium</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QCheckBox" name="checkBox_5">
+                  <widget class="QCheckBox" name="checkBox_updatePeakPosition">
                    <property name="text">
                     <string>Update peak postion</string>
                    </property>
@@ -1637,14 +1637,14 @@
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_16">
                     <item>
-                     <widget class="QRadioButton" name="radioButton_23">
+                     <widget class="QRadioButton" name="radioButton_gaussian">
                       <property name="text">
                        <string>Gaussian</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QRadioButton" name="radioButton_25">
+                     <widget class="QRadioButton" name="radioButton_tofProfile">
                       <property name="text">
                        <string>Tof profile</string>
                       </property>
@@ -1663,7 +1663,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="pushButton_9">
+                    <widget class="QPushButton" name="pushButton_loadPeakIDFile">
                      <property name="text">
                       <string>Load Peak ID File</string>
                      </property>
@@ -1672,7 +1672,7 @@
                   </layout>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="pushButton_7">
+                  <widget class="QPushButton" name="pushButton_createPeakListFromRun1">
                    <property name="toolTip">
                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;CALL gui TO PICK PEAKS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>

@@ -21,6 +21,7 @@ import PyVDrive.ui.gui.VdriveMain as mainUi
 import PyVDrive.ui.GuiUtility as guiutil
 import PyVDrive.ui.snapgraphicsview as spview
 import ui.ReducedDataView as data_view
+import ui.PeakPickWindow as PeakPickWindow
 
 """ import PyVDrive library """
 import PyVDrive.VDriveAPI as vdrive
@@ -111,6 +112,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Tab-3: view reduction result
         self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
                      self.do_view_reduction)
+
+        # Tab-4: fig single peak
+        self.connect(self.ui.pushButton_fitSinglePeak, QtCore.SIGNAL('clicked()'),
+                     self.do_fit_single_peak)
 
         # Column 4
         self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
@@ -335,8 +340,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         self._reducedDataViewWindow.show()
 
-        # register the window for closing procedure!
-        blablabla
+        # TODO/FIXME/NOW/1st register the window for closing procedure!
 
         return
 
@@ -719,6 +723,15 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 break
 
         return
+
+    def do_fit_single_peak(self):
+        """ Collect parameters and launch Peak-picker window
+        :return:
+        """
+        # TODO/NOW/1st collect parameters' values to set up the peak-picker window
+        self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
+        self._peakPickerWindow.show()
+
 
     def do_load_calibration(self):
         """

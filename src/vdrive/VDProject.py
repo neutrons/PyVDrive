@@ -203,12 +203,20 @@ class VDProject(object):
 
         return data_set_dict
 
+    def get_reduced_run_history(self, run_number):
+        """ Get the processing history of a reduced run
+        :param run_number:
+        :return:
+        """
+        # TODO/NOW/1st: think of how to implement!
+        return blabla
+
     def get_reduced_run_information(self, run_number):
         """
         Purpose: ...
         Requirements: ...
         :param run_number:
-        :return: a list of integers as bank ID
+        :return: a list of integers as bank ID. reduction history...
         """
         # TODO/NOW/1st: Doc and assertion
 
@@ -217,7 +225,6 @@ class VDProject(object):
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
-
 
     def get_run_info(self, run_number):
         """

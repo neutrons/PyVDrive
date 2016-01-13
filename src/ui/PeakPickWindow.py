@@ -323,7 +323,7 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         Guarantees: the peak width is given if it is set up
         :return:
         """
-        assert self._
+        assert self._peakWidth
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -695,6 +695,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the peaks' parameters to table
         for peak_tup in reflection_list:
+            # TODO/NOW/1st: get a better name for peak other than using HKL!
             hkl = str(peak_tup[1])
             peak_pos = peak_tup[0]
             self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, hkl, peak_pos, 0.03)
@@ -752,11 +753,26 @@ class PeakPickerWindow(QtGui.QMainWindow):
             peak_list = self._myController.import_gsas_peak_file(peak_file)
         except RuntimeError as err:
             GuiUtility.pop_dialog_error(self, str(err))
+            return
 
         # Set the peaks to table
-        if self.ui.checkBox_clearPeakTable.isChecked():
+        # clear the previous peaks
+        if self.ui.checkBox_keepPeaksInTable.isChecked() is False:
             self.ui.tableWidget_peakParameter.remove_all_rows()
-        self.ui.tableWidget_peakParameter.add_peaks(peak_list)
+
+        # Write peaks to table
+        # TODO/NOW/1st: sort the bank in ascending order and sort the peaks in d-spacing of descending order
+        for peak_info in peak_list:
+            bank = peak_info[0]
+            name = peak_info[1]
+            peak_pos = peak_info[2]
+            peak_width = peak_info[3]
+            self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width)
+
+
+        # Check groups
+        # TODO/NOW/1st: implement it!
+        print 'bla bla bla'
 
         return
 
@@ -826,8 +842,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # FIXME/NOW/1st - Should move the MockController to VDriveAPI
 
-        # TODO/Now/1st
-
         # Check requirements
         assert self._myController is not None
 
@@ -835,10 +849,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
         end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
 
+        # Get the GSAS file names
         gsas_file_list = list()
         if start_run_number is None or end_run_number is None:
             # no valid range of run numbers are given, then load the data explicitly
-            # load GSAS file
             gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
             gsas_file_list.append(gsas_file_name)
         else:
@@ -849,59 +863,47 @@ class PeakPickerWindow(QtGui.QMainWindow):
             gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', self._dataDirectory))
 
             # form file names: standard VULCAN style
+            error_message = ''
             for run_number in range(start_run_number, end_run_number+1):
                 gsas_file_name = os.path.join(gsas_dir, '%d.gda' % run_number)
-                gsas_file_list.append(gsas_file_name)
+                if os.path.exists(gsas_file_name):
+                    gsas_file_list.append(gsas_file_name)
+                else:
+                    error_message += '%s, ' % gsas_file_name
             # END-FOR
+
+            # output error
+            if len(error_message) > 0:
+                GuiUtility.pop_dialog_error(self, 'GSAS file %s cannot be found.' % error_message)
         # END-IF-ELSE
 
-        # Load data
+        # Load data from GSAS file
+        data_key_list = list()
         for gsas_file_name in gsas_file_list:
             # Load data via parent
             try:
                 data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas')
+                data_key_list.append(data_key)
                 # add to tree
                 self.ui.treeView_iptsRun.add_child_current_item(data_key)
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
+        # END-FOR
 
-        raise NotImplementedError('Need to find out how to deal with this in the final version!')
+        # Plot data if there is only one GSAS file
+        if len(gsas_file_list) == 1:
+            self.plot_run(data_key_list[0])
 
-        # Get diffraction file
+        return
+
+    def plot_run(self, data_key):
         """
-        load_chop_data = False
-        load_run_data = False
-        if len(str(self.ui.lineEdit_chopDataToLoad.text())) > 0:
-            load_chop_data = True
-        if len(str(self.ui.lineEdit_runToLoad.text())) > 0:
-            load_run_data = True
 
-        # Load data
-        if load_chop_data and load_run_data:
-            # Specify too many.  Unable to handle
-            GuiUtility.pop_dialog_error('Both run and chopped are specified. Unable to handle.')
-            return
-        elif load_chop_data:
-            # Load chopped data
-            chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
-            raise RuntimeError('Implement ASAP to load chopped data %s' % chop_data_name)
-        elif load_run_data:
-            # Load data via run
-            run_data_name = str(self.ui.lineEdit_runToLoad.text())
-            raise RuntimeError('Implement ASAP to load reduced run %s.' % run_data_name)
-        else:
-            # Load GSAS file
-            diff_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
-
-            # Load data via parent
-            try:
-                data_key = self._myController.load_diffraction_file(diff_file_name, 'gsas')
-            except RuntimeError as re:
-                GuiUtility.pop_dialog_error(self, str(re))
-                return
-        # END-IF-ELSE
+        :param data_key:
+        :return:
         """
+        # TODO/NOW/1st: doc and etc...
 
         # update widgets
         self._isDataLoaded = False
@@ -926,6 +928,32 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._isDataLoaded = True
 
         return
+
+    def do_plot_run(self):
+        """
+        Plot a run from tree
+        :return:
+        """
+        # TODO/NOW/1st: need to re-write the tree widget's event handling methods
+        data_key = self.ui.treeView_iptsRun.get_current_run()
+        print '[DB-BAT] From tree: current data key = ', data_key
+
+        return
+
+    def load_chop_data(self):
+        """
+        Load chopped data... prototype
+        :return:
+        """
+        # FIXME/NOW/1st: Need to find out how to integrate this to GUI
+
+        # Get diffraction file
+        load_chop_data = False
+        if len(str(self.ui.lineEdit_chopDataToLoad.text())) > 0:
+            load_chop_data = True
+
+        chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
+        raise RuntimeError('Implement ASAP to load chopped data %s' % chop_data_name)
 
     def do_quit(self):
         """
@@ -1029,14 +1057,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: controller is set up. Reduced runs are get from controller and set to
         """
         # TODO/NOW/Doc 1st: check ... and finish!
+        assert controller.__class__.__name__.count('VDriveAPI') == 1, 'Controller is not a valid VDriveAPI instance,' \
+                                                                      'but is %s.' % controller.__class__.__name__
+
         self._myController = controller
 
-        raise NotImplementedError('bla bla bla ...')
-
-        # Get reduced data ...
+        # Get reduced data
+        reduced_run_number_list = self._myController.get_reduced_runs()
+        ipts = 1
 
         # Set
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=blabla, run_number_list=blabla)
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
 
     def menu_add_peak(self):
         """ Add a peak to table
@@ -1351,7 +1382,7 @@ def main(argv):
     """ Main method for testing purpose
     """
     parent = None
-    controller = MockController()
+    controller = MockVDriveAPI()
 
     app = QtGui.QApplication(argv)
 
@@ -1367,7 +1398,7 @@ def main(argv):
     return
 
 
-class MockController(object):
+class MockVDriveAPI(object):
     """
 
     """
@@ -1544,11 +1575,18 @@ class MockController(object):
 
         return vec_x, vec_y
 
+    def get_reduced_runs(self):
+        """
+
+        :return:
+        """
+        return []
+
     def import_gsas_peak_file(self, peak_file_name):
         """
 
         :param peak_file_name:
-        :return:
+        :return: XXXX XXXX
         """
         # TODO/NOW/1st: Check requirements and finish the algorithm
         import PyVDrive.vdrive.io_peak_file as pio
@@ -1556,10 +1594,12 @@ class MockController(object):
         # Check requirements
         assert isinstance(peak_file_name, str)
 
+        # Import peak file and get peaks
         peak_manager = pio.GSASPeakFileManager()
         peak_manager.import_peaks(peak_file_name)
+        peak_list = peak_manager.get_peaks()
 
-        return peaks
+        return peak_list
 
     def load_diffraction_file(self, file_name, file_type):
         """

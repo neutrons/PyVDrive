@@ -175,9 +175,17 @@ class GSASPeakFileManager(object):
         Get all peaks by transforming ... self._peakDict = dict()
         :return:
         """
-        # TODO/NOW/1st - Implement this!
+        # TODO/NOW/1st - doc and etc.
 
-        return
+        peak_list = list()
+        for key_tup in self._peakDict.keys():
+            bank = key_tup[0]
+            name = key_tup[1]
+            peak_info = [bank, name]
+            peak_info.extend(self._peakDict[key_tup])
+            peak_list.append(peak_info)
+
+        return peak_list
 
     def import_peaks(self, peak_file):
         """ Import peaks from a GSAS single peak file

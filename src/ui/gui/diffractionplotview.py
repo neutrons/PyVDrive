@@ -1,9 +1,9 @@
 __author__ = 'wzz'
 
-import gui.mplgraphicsview
+import mplgraphicsview
 
 
-class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
+class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
     """
     Class ... extends ...
     for specific needs of the graphics view for interactive plotting of diffraction patten,
@@ -14,7 +14,7 @@ class DiffractionPlotView(gui.mplgraphicsview.MplGraphicsView):
         Purpose
         :return:
         """
-        gui.mplgraphicsview.MplGraphicsView.__init__(self, parent)
+        mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
         # Define the class variable
         # list of tuple as (peak position, indicator key)
