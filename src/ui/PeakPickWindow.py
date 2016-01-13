@@ -3,7 +3,7 @@
 # Window for set up log slicing splitters
 #
 ########################################################################
-import sys
+import sys, os
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -346,6 +346,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currMousePosX = 0
         self._currMousePosY = 0
 
+        self._currTableOrder = 0  # 0 for ascending, 1 for descending
+
         # Phases and initialize
         self._phaseDict = dict()
         for i in xrange(1, 4):
@@ -465,8 +467,16 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Re-set the graph range
         x_min, x_max = self.ui.graphicsView_main.getXLimit()
         if peak_pos_list[0] < x_min or peak_pos_list[-1] > x_max:
-            # resize! TODO/NOW/1st: IMPLEMENT
-            raise NotImplementedError('ASAP')
+            # resize the image.  extend the range by 5% of the x min
+            new_x_min = min(peak_pos_list[0], x_min)
+            new_x_max = max(peak_pos_list[-1], x_max)
+            dx = new_x_max - new_x_min
+            if new_x_min < x_min:
+                x_min = new_x_min - dx * 0.05
+            if new_x_max > x_max:
+                x_max = new_x_max + dx * 0.05
+            self.ui.graphicsView_main.setXLimits(x_min, x_max)
+        # END-IF
 
         # Plot
         for peak_pos in peak_pos_list:
@@ -515,13 +525,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
             The selected peak is removed from both placeholder and table
         :return:
         """
-        # TODO/NOW/1st: make this right!
-
-        # Get rows that are selected
-        blabla()
+        # Get the rows that contain the peaks to delete
+        row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows()
+        assert len(row_number_list) > 0, 'No peak is selected to delete.'
 
         # Delete the selected rows
-        self.ui.tableWidget_peakParameter.remove_rows(run_number_list)
+        self.ui.tableWidget_peakParameter.remove_rows(row_number_list)
 
         return
 
@@ -618,18 +627,18 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_sort_peaks(self):
         """
         Purpose: sort peaks by peak position in either ascending or descending order.
-        Requirements:
-        Guarantees:
+        Requirements: At least more than 2 rows
+        Guarantees: Rows are sorted by column 2 (3rd column)
         :return:
         """
-        import PyQt4.Qt as Qt
-        # TODO/NOW/1st: IMPLEMENT IT!
-
         print 'Sorting is enabled?', self.ui.tableWidget_peakParameter.isSortingEnabled()
         # Here is prototype
-        p_int = 2
-        Qt_SortOrder=0
-        self.ui.tableWidget_peakParameter.sortByColumn(p_int, Qt_SortOrder)
+        p_int = self.ui.tableWidget_peakParameter.get_peak_pos_col_index()
+        qt_sort_order = self._currTableOrder
+        self.ui.tableWidget_peakParameter.sortByColumn(p_int, qt_sort_order)
+
+        # Switch the sort order for table
+        self._currTableOrder = 1 - self._currTableOrder
 
         return
 
@@ -721,7 +730,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_load_data(self):
         """
         Purpose:
-            Load GSAS data or
+            Load GSAS data or a list of GSAS data files
         Requirements:
             Controller has been set to this object
         Requires:
@@ -735,7 +744,44 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Check requirements
         assert self._myController is not None
 
+        # Get the run numbers
+        start_run_number = GuiUtility.parse_integer(self.ui.lineEdit_startRunNumber)
+        end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
+
+        gsas_file_list = list()
+        if start_run_number is None or end_run_number is None:
+            # no valid range of run numbers are given, then load the data explicitly
+            # load GSAS file
+            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
+            gsas_file_list.append(gsas_file_name)
+        else:
+            # valid range of run numbers, assuming that their GSAS files are in same directory.
+            assert end_run_number >= start_run_number, 'End run %d must be larger than ' \
+                                                       'or equal to start run %d.' % (end_run_number, start_run_number)
+            # get directory containing GSAS files
+            gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', self._dataDirectory))
+
+            # form file names: standard VULCAN style
+            for run_number in range(start_run_number, end_run_number+1):
+                gsas_file_name = os.path.join(gsas_dir, '%d.gda' % run_number)
+                gsas_file_list.append(gsas_file_name)
+            # END-FOR
+        # END-IF-ELSE
+
+        # Load data
+        for gsas_file_name in gsas_file_list:
+            # Load data via parent
+            try:
+                data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas')
+                # add to tree
+                self.ui.treeView_iptsRun.add_child_current_item(data_key)
+            except RuntimeError as re:
+                GuiUtility.pop_dialog_error(self, str(re))
+                return
+
+
         # Get diffraction file
+        """
         load_chop_data = False
         load_run_data = False
         if len(str(self.ui.lineEdit_chopDataToLoad.text())) > 0:
@@ -767,6 +813,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
         # END-IF-ELSE
+        """
 
         # update widgets
         self._isDataLoaded = False

@@ -220,7 +220,7 @@ class DataArchiveManager(object):
     def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
         """ Get information of standard SNS event NeXus files in a given directory.
         Purpose:
-            Get full path of all SNS event NeXus files from a directory
+            Get full path of a subset of NeXus files from a directory according to given run number
         Requirements:
             Given directory does exist
         Guarantees:
@@ -233,17 +233,18 @@ class DataArchiveManager(object):
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
         :param directory:
+        :param start_run:
+        :param end_run
         :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
         """
-        # TODO/NOW/1st: Doc, assertion
-
-        # Get home directory for IPTS
+        # Check requirements
         assert os.path.exists(directory), 'IPTS directory %s cannot be found.' % directory
-        assert isinstance(start_run, int), 'blabla'
-        assert isinstance(end_run, int), 'blabla'
-        assert start_run <= end_run, 'blabla'
+        assert isinstance(start_run, int), 'Start run number should be an integer but is %s.' % str(type(start_run))
+        assert isinstance(end_run, int), 'End run number should be an integer but is %s.' % str(type(end_run))
+        assert start_run <= end_run, 'Start run %d must be less or equal to end run %d.' % (start_run, end_run)
 
-        # List all files
+        # Go through VULCAN_StartRun_event.nxs to VULCAN_EndRun_event.nxs, and get information for existing run
+        # numbers, i.e., existing event file
         run_tup_list = list()
         for run_number in xrange(start_run, end_run+1):
             file_name = '%s_%d_event.nxs' % (self._dataArchiveInstrumentName, run_number)
@@ -251,7 +252,7 @@ class DataArchiveManager(object):
 
             # skip non-existing file
             if os.path.exists(full_file_path) is False:
-                print '[DB-BAT] Skip non-existing run number %d with name %s' % (run_number, full_file_path)
+                # print '[DB-BAT] Skip non-existing run number %d with name %s' % (run_number, full_file_path)
                 continue
 
             # get file information

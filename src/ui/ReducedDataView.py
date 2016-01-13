@@ -62,17 +62,43 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                      self.do_normalise_by_current)
 
+        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
+                     self.do_apply_new_range)
+
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
+        self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int'),
+                     self.evt_unit_changed)
 
-        # TODO/NOW/1st : add these
+        return
+
+    def do_apply_new_range(self):
+        """ Apply new data range to the plots on graph
+        Purpose: Change the X limits of the figure
+        Requirements: min X and max X are valid float
+        Guarantees: figure is re-plot
+        :return: None
         """
-        comboBox_unit
-        pushButton_apply : new range
-        """
+        # Get new x range
+        curr_min_x, curr_max_x = self.ui.graphicsView_mainPlot.getXLimits()
+        new_min_x_str = str(self.ui.lineEdit_minX.text()).strip()
+        if len(new_min_x_str) != 0:
+            curr_min_x = float(new_min_x_str)
+
+        new_max_x_str = str(self.ui.lineEdit_maxX.text()).strip()
+        if len(new_max_x_str) != 0:
+            curr_max_x = float(new_max_x_str)
+
+        if curr_max_x <= curr_min_x:
+            GuiUtility.pop_dialog_error(
+                    'Minimum X %f is equal to or larger than maximum X %f!' % (curr_min_x, curr_max_x))
+            return
+
+        # Set new X range
+        self.ui.graphicsView_mainPlot.setXLimits(curr_min_x, curr_max_x)
 
         return
 
@@ -241,6 +267,31 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         for bank_id in bank_id_list:
             self.ui.comboBox_spectraList.addItems(str(bank_id))
         self.ui.comboBox_spectraList.addItem('All')
+
+        return
+
+    def evt_unit_changed(self):
+        """
+        Purpose: Re-plot the current plots with new unit
+        :return:
+        """
+        # Check
+        new_unit = str(self.ui.comboBox_unit.currentText())
+
+        # Get the data sets and replace them with new unit
+        for run_number in self._reducedDataDict.keys():
+            self._reducedDataDict[run_number] = self._myController.get_reduced_data(run_number, new_unit)
+
+        # Clear the line dictionary
+        self._linesDict = dict()
+
+        # Clear previous image and re-plot
+        self.ui.graphicsView_mainPlot.remove_all_lines()
+        for run_number in self._reducedDataDict.keys():
+            self.plot_run(run_number, self._currBank, over_plot=True)
+
+        # Reset current unit
+        self._currUnit = new_unit
 
         return
 
