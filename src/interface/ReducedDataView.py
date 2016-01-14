@@ -3,13 +3,9 @@
 # General-purposed plotting window
 #
 ########################################################################
-import sys
-import numpy
-
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtGui import *
 
-import GuiUtility
+import gui.GuiUtility as GuiUtility
 
 
 try:
@@ -21,15 +17,15 @@ except AttributeError:
 import gui.ui_GPView
 
 
-class GeneralPurposedDataViewWindow(QMainWindow):
-    """ Class for general-puposed plot window
+class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
+    """ Class for general-purposed plot window
     """
     # class
     def __init__(self, parent=None):
         """ Init
         """
         # call base
-        QMainWindow.__init__(self)
+        QtGui.QMainWindow.__init__(self)
 
         # Parent & others
         self._myParent = parent

@@ -13,7 +13,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import GuiUtility as gutil
+import gui.GuiUtility as gutil
 import gui.ui_LogSnapView as ui_LogSnapView
 
 

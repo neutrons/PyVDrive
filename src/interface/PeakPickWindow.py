@@ -3,7 +3,8 @@
 # Window for set up log slicing splitters
 #
 ########################################################################
-import sys, os
+import sys
+import os
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -12,7 +13,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import GuiUtility
+import gui.GuiUtility as GuiUtility
 import gui.VdrivePeakPicker as VdrivePeakPicker
 
 

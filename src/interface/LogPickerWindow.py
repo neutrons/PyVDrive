@@ -13,7 +13,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import GuiUtility
+import gui.GuiUtility as GuiUtility
 import gui.VdriveLogPicker as VdriveLogPicker
 
 
