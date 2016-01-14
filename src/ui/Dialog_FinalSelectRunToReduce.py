@@ -16,6 +16,7 @@ import GuiUtility as gutil
 #import GUI components generated from Qt Designer .ui file
 from ui_FinalSelectRunToReduce import *
 
+
 class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
     """ GUI (sub) for select run to reduce as final decision before reduction
     """

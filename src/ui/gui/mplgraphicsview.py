@@ -213,13 +213,20 @@ class IndicatorManager(object):
 
         return ret_key
 
-    def get_line_style(self, line_id=None):
+    @staticmethod
+    def get_line_style(line_id=None):
         """
 
         :param line_id:
         :return:
         """
-        return '--'
+        if line_id is not None:
+            print '[DB] Get line style. ID = %s' % str(line_id)
+            style = '--'
+        else:
+            style = '--'
+
+        return style
 
     def get_live_indicator_ids(self):
         """
@@ -326,7 +333,7 @@ class IndicatorManager(object):
         :return:
         """
         for i_id in self._lineManager.keys():
-            # FIXME - Need a new flag for direction of the indicating line, vertical or horizontal
+            # NEXT - Need a new flag for direction of the indicating line, vertical or horizontal
             if True:
                 self._lineManager[i_id][1][0] = y_range[0]
                 self._lineManager[i_id][1][-1] = y_range[1]
@@ -394,8 +401,8 @@ class MplGraphicsView(QtGui.QWidget):
                     marker=None, line_style=None, line_width=1):
         """ Add a new plot
         """
-        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label,
-                                              marker, line_style, line_width)
+        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
+                                              line_width)
 
         return line_key
 
@@ -424,6 +431,9 @@ class MplGraphicsView(QtGui.QWidget):
         :param color:
         :return:
         """
+        if master_line is not None:
+            raise RuntimeError('Implement how to use master_line ASAP.')
+
         x_min, x_max = self._myCanvas.getXLimit()
         if x is None:
             x = (x_min + x_max) * 0.5
@@ -488,6 +498,7 @@ class MplGraphicsView(QtGui.QWidget):
     def add_vertical_indicator(self, x=None, color=None):
         """
         Add a vertical indicator line
+        Guarantees: an indicator is plot and its ID is returned
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
         :return: indicator ID

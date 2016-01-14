@@ -59,6 +59,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.pushButton_cancel_2, QtCore.SIGNAL('clicked()'),
                                self.do_reject_quit)
 
+        self.connect(self.ui.checkBox_skipScan, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_skip_scan_data)
+
         # Disable some unused widget until 'browse' or 'set' is pushed.
         self.ui.pushButton_iptsInfo.setDisabled(True)
         self.ui.dateEdit_begin.setDisabled(True)
@@ -82,8 +85,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._iptsDirFromDir = ''
 
         self._dataDir = '/SNS/VULCAN'
-
         self._homeDir = os.path.expanduser('~')
+
+        self._skipScanData = False
 
         return
 
@@ -234,13 +238,19 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                                    'Use Cancel instead of OK.')
             return
 
-        begin_date = self.ui.dateEdit_begin.date()
-        assert(isinstance(begin_date, QtCore.QDate))
-        self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
+        if self.ui.dateEdit_begin.isEnabled():
+            begin_date = self.ui.dateEdit_begin.date()
+            assert(isinstance(begin_date, QtCore.QDate))
+            self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
+        else:
+            self._beginDate = None
 
-        end_date = self.ui.dateEdit_end.date()
-        assert(isinstance(end_date, QtCore.QDate))
-        self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+        if self.ui.dateEdit_end.isEnabled():
+            end_date = self.ui.dateEdit_end.date()
+            assert(isinstance(end_date, QtCore.QDate))
+            self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+        else:
+            self._endDate = None
 
         begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
         if begin_run is not None:
@@ -261,6 +271,32 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         """
         self.quit = True
         self.close()
+
+        return
+
+    def evt_skip_scan_data(self):
+        """
+        Purpose: enable/disable the requirement to scan directory before add data!
+        :return:
+        """
+        # get new state
+        self._skipScanData = self.ui.checkBox_skipScan.isChecked()
+
+        # 2 cases
+        if self._skipScanData:
+            # Set the widgets to be enabled for input run numbers' range
+            self.ui.lineEdit_begin.setEnabled(True)
+            self.ui.lineEdit_end.setEnabled(True)
+            self.ui.dateEdit_begin.setEnabled(False)
+            self.ui.dateEdit_end.setEnabled(False)
+            self.ui.pushButton_OK_2.setEnabled(True)
+        else:
+            # enforce to scan the archive
+            self.ui.lineEdit_begin.setEnabled(False)
+            self.ui.lineEdit_end.setEnabled(False)
+            self.ui.dateEdit_begin.setEnabled(False)
+            self.ui.dateEdit_end.setEnabled(False)
+            self.ui.pushButton_OK_2.setEnabled(False)
 
         return
 
@@ -296,6 +332,13 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         self._dataDir = root_dir
+
+    def scan_data_skipped(self):
+        """
+        Return the status whether the data directory/archive that has been skipped
+        :return:
+        """
+        return self._skipScanData
 
 
 """ Test Main """

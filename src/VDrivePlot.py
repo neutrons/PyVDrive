@@ -20,6 +20,8 @@ import PyVDrive
 import PyVDrive.ui.gui.VdriveMain as mainUi
 import PyVDrive.ui.GuiUtility as guiutil
 import PyVDrive.ui.snapgraphicsview as spview
+import PyVDrive.ui.ReducedDataView as data_view
+import PyVDrive.ui.PeakPickWindow as PeakPickWindow
 
 """ import PyVDrive library """
 import PyVDrive.VDriveAPI as vdrive
@@ -53,7 +55,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Define status variables
         # new work flow
-        self._myWorkflow = vdrive.VDriveAPI()
+        self._myWorkflow = vdrive.VDriveAPI('VULCAN')
         self._numSnapViews = 6
 
         # Initialize widgets
@@ -106,6 +108,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Tab-2
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
                      self.do_bin_data)
+
+        # Tab-3: view reduction result
+        self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
+                     self.do_view_reduction)
+
+        # Tab-4: fig single peak
+        self.connect(self.ui.pushButton_fitSinglePeak, QtCore.SIGNAL('clicked()'),
+                     self.do_fit_single_peak)
 
         # Column 4
         self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
@@ -225,11 +235,6 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # Retrieve the runs to reduce
-        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
-        if len(run_number_list) == 0:
-            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
-
         # Process data slicers
         if self.ui.checkBox_chopRun.isChecked():
             raise NotImplementedError('Binning data with option to chop will be solved later!')
@@ -274,6 +279,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
 
         # Reduce data
+        # retrieve the runs to reduce
+        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
+        if len(run_number_list) == 0:
+            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+        status, error_message = self._myWorkflow.set_runs_to_reduce(run_numbers=run_number_list)
+        if status is False:
+            guiutil.pop_dialog_error(self, error_message)
+
         status, ret_obj = self._myWorkflow.reduce_data_set()
         if status is False:
             error_msg = ret_obj
@@ -281,17 +294,53 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Show message to notify user that the reduction is complete
         guiutil.pop_dialog_information(self, 'Reduction is complete.')
+        # switch the tab to 'VIEW'
+        self.ui.tabWidget_reduceData.setCurrentIndex(2)
 
         return
 
     def do_update_selected_runs(self):
         """
-        # TODO/FIXME
+        # TODO/FIXME/
         :return:
         """
         curr_state = self.ui.checkBox_selectRuns.isChecked()
 
         self.ui.tableWidget_selectedRuns.select_all_rows(curr_state)
+
+        return
+
+    def do_view_reduction(self):
+        """
+        Purpose: Launch reduction view
+        Requirements: ... ...
+        Guarantees: ... ...
+        :return:
+        """
+        # TODO/NOW/1st complete it!
+
+        # Launch data view and set up
+        self._reducedDataViewWindow = data_view.GeneralPurposedDataViewWindow(self)
+        self._reducedDataViewWindow.setup(self._myWorkflow)
+        # set up more parameters such as unit ...
+        # ... ...
+
+        """ TODO/NOW/ Add methods to set up to plot window
+        radioButton_viewInTOF
+        radioButton_viewInD
+        radioButton_viewInQ
+
+        lineEdit_minX
+        lineEdit_maxX
+
+        checkBox_normaliseCurrent
+        checkBox_normaliseByVanadium
+        checkBox_logScaleIntensity
+        """
+
+        self._reducedDataViewWindow.show()
+
+        # TODO/FIXME/NOW/1st register the window for closing procedure!
 
         return
 
@@ -457,6 +506,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         self.ui.tabWidget_reduceData.setCurrentIndex(1)
         self.ui.tabWidget_reduceData.setTabEnabled(0, False)
 
+        # Reduction
+        self.ui.radioButton_binStandard.setChecked(True)
+
+        # View
+        self.ui.radioButton_viewInTOF.setChecked(True)
+        self.ui.radioButton_plotData1D.setChecked(True)
+
         # Plotting log
         self.ui.checkBox_logSkipSec.setCheckState(QtCore.Qt.Checked)
         self.ui.lineEdit_numSecLogSkip.setText('1')
@@ -488,7 +544,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         return
 
     def do_add_runs_by_ipts(self):
-        """ import runs by IPTS number
+        """ import runs by IPTS number or directory
+        Purpose: Import runs from archive according to IPTS or specified data directory
+        Guarantees: launch a window and get user inputs from the dialog
         :return: None
         """
         # Launch window
@@ -501,7 +559,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if ipts_dir is None:
             return
 
-        # Add IPTS
+        # Get IPTS from dialog and set to archive
         ipts_number = child_window.get_ipts_number()
         if ipts_number is None:
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
@@ -511,9 +569,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 ipts_number = 0
             else:
                 ipts_number = ret_obj
-        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
+        self._myWorkflow.set_ipts(ipts_number)
 
-        status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir)
+        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
+        print '[DB-BAT] Dialog gives out %s, %s, %s, %s' % (str(begin_date), str(end_date),
+                                                            str(begin_run), str(end_run))
+        in_archive = child_window.scan_data_skipped()
+
+        # Get a list of runs including run numbers and data file paths.
+        if in_archive:
+            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_number, begin_run, end_run)
+        else:
+            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -522,19 +589,32 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             guiutil.pop_dialog_error(self, error_message)
             return
 
-        # FIXME - THIS SHOULD BE REFACTORED INTO VdriveAPI
-        raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
-        status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                     include_end_date=True)
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            #  pop error
-            error_message = ret_obj
+        # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
+        # raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
+        # Filter by time if it is specified
+        if begin_date is not None and end_date is not None:
+            # Filter runs by date
+            status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
+                                                         include_end_date=True)
+            if status is True:
+                run_tup_list = ret_obj
+            else:
+                #  pop error
+                error_message = ret_obj
+                guiutil.pop_dialog_error(self, error_message)
+                return
+        elif begin_date is not None or end_date is not None:
+            # Unsupported scenario
+            raise RuntimeError('Unable to handle the case that only begin date or end date is specified.')
+
+        # Add runs to workflow
+        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
+        if status is False:
             guiutil.pop_dialog_error(self, error_message)
             return
 
         # Filter runs by run
+        """
         status, ret_obj = vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
         if status is False:
             guiutil.pop_dialog_error(ret_obj)
@@ -546,6 +626,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         if status is False:
             guiutil.pop_dialog_error(self, error_message)
             return
+        """
 
         # Set to tree
         if ipts_number == 0:
@@ -640,6 +721,17 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 print '[DB] Left box No. %d log index is changed to %d' % (i, curr_index)
                 spview.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
                 break
+
+        return
+
+    def do_fit_single_peak(self):
+        """ Collect parameters and launch Peak-picker window
+        :return:
+        """
+        # TODO/NOW/1st collect parameters' values to set up the peak-picker window
+        self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
+        self._peakPickerWindow.set_controller(self._myWorkflow)
+        self._peakPickerWindow.show()
 
         return
 

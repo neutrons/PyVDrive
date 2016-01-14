@@ -27,6 +27,7 @@ class NTableWidget(QtGui.QTableWidget):
 
         self._myHeaderList = None
         self._myColumnTypeList = None
+        self._editableList = list()
 
         return
 
@@ -59,6 +60,7 @@ class NTableWidget(QtGui.QTableWidget):
             item = QtGui.QTableWidgetItem()
             item.setText(_fromUtf8(str(row_value_list[i_col])))
             item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+            # item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
             if type_list[i_col] == 'checkbox':
                 self.set_check_box(row_number, i_col, False)
             else:
@@ -129,8 +131,9 @@ class NTableWidget(QtGui.QTableWidget):
         return ret_list
 
     def get_selected_rows(self):
-        """
-
+        """ Purpose:
+        Requirements:
+        Guarantees:
         :return: a list of row numbers
         """
         rows_list = list()
@@ -147,7 +150,9 @@ class NTableWidget(QtGui.QTableWidget):
         :param column_tup_list: list of 2-tuple as string (column name) and string (data type)
         :return:
         """
-        print '[DB] Init set up table with %d columns!' % len(column_tup_list)
+        # Check requirements
+        assert isinstance(column_tup_list, list)
+        assert len(column_tup_list) > 0
 
         # Define column headings
         num_cols = len(column_tup_list)
@@ -164,6 +169,9 @@ class NTableWidget(QtGui.QTableWidget):
 
         self.setColumnCount(num_cols)
         self.setHorizontalHeaderLabels(self._myHeaderList)
+
+        # Set the editable flags
+        self._editableList = [False] * num_cols
 
         return
 
@@ -258,7 +266,8 @@ class NTableWidget(QtGui.QTableWidget):
         # Init cell
         cell_item = QtGui.QTableWidgetItem()
         cell_item.setText(_fromUtf8(str(value)))
-        cell_item.setFlags(cell_item.flags() & ~QtCore.Qt.ItemIsEditable)
+        # cell_item.setFlags(cell_item.flags() & ~QtCore.Qt.ItemIsEditable)
+        cell_item.setFlags(cell_item.flags() | ~QtCore.Qt.ItemIsEditable)
 
         self.setItem(row, col, cell_item)
 

@@ -13,6 +13,7 @@ import vdrive.VDProject as vp
 import vdrive.archivemanager as futil
 import vdrive.SampleLogHelper as logHelper
 import vdrive.vdrivehelper as vdrivehelper
+import vdrive.mantid_helper as mantid_helper
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -74,6 +75,104 @@ class VDriveAPI(object):
 
         return True, ''
 
+    @staticmethod
+    def calculate_peaks_position(phase, min_d, max_d):
+        """
+        Purpose: calculate the bragg peaks' position from
+
+        Requirements:
+            minimum d-spacing value cannot be 0.
+        Guarantees:
+          1. return a list of reflections
+          2. each reflection is a tuple. first is a float for peak position. second is a list of list for HKLs
+
+        :param phase: [name, type, a, b, c]
+        :param min_d: minimum d-spacing value
+        :param max_d:
+        :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
+        """
+        # Check requirements
+        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
+        assert len(phase) == 5, 'Input phase  of type list must have 5 elements'
+        assert min_d < max_d
+        assert min_d > 0.01
+
+        # Get information
+        phase_type = phase[1]
+        lattice_a = phase[2]
+        lattice_b = phase[3]
+        lattice_c = phase[4]
+
+        # Convert phase type to
+        phase_type = phase_type.split()[0]
+        if phase_type == 'BCC':
+            phase_type = mantid_helper.UnitCell.BCC
+        elif phase_type == 'FCC':
+            phase_type = mantid_helper.UnitCell.FCC
+        elif phase_type == 'HCP':
+            phase_type = mantid_helper.UnitCell.HCP
+        elif phase_type == 'Body-Center':
+            phase_type = mantid_helper.UnitCell.BC
+        elif phase_type == 'Face-Center':
+            phase_type = mantid_helper.UnitCell.FC
+        else:
+            raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
+
+        # Get reflections
+        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
+        reflections = mantid_helper.calculate_reflections(unit_cell, min_d, max_d)
+
+        # Sort by d-space... NOT FINISHED YET
+        num_ref = len(reflections)
+        ref_dict = dict()
+        for i_ref in xrange(num_ref):
+            ref_tup = reflections[i_ref]
+            assert isinstance(ref_tup, tuple)
+            assert len(ref_tup) == 2
+            pos_d = ref_tup[1]
+            assert isinstance(pos_d, float)
+            assert pos_d > 0
+            # HKL should be an instance of mantid.kernel._kernel.V3D
+            hkl_v3d = ref_tup[0]
+            hkl = [hkl_v3d.X(), hkl_v3d.Y(), hkl_v3d.Z()]
+
+            # pos_d has not such key, then add it
+            if pos_d not in ref_dict:
+                ref_dict[pos_d] = list()
+            ref_dict[pos_d].append(hkl)
+        # END-FOR
+
+        # Merge all the peaks with peak position within tolerance
+        TOL = 0.0001
+        # sort the list again with peak positions...
+        peak_pos_list = ref_dict.keys()
+        peak_pos_list.sort()
+        print '[DB] List of peak positions: ', peak_pos_list
+        curr_list = None
+        curr_pos = -1
+        for peak_pos in peak_pos_list:
+            if peak_pos - curr_pos < TOL:
+                # combine the element (list)
+                assert isinstance(curr_list, list)
+                curr_list.extend(ref_dict[peak_pos])
+                del ref_dict[peak_pos]
+            else:
+                curr_list = ref_dict[peak_pos]
+                curr_pos = peak_pos
+        # END-FOR
+
+        # Convert from dictionary to list as 2-tuples
+
+        print '[DB-BAT] List of final reflections:', type(ref_dict)
+        d_list = ref_dict.keys()
+        d_list.sort(reverse=True)
+        reflection_list = list()
+        for peak_pos in d_list:
+            reflection_list.append((peak_pos, ref_dict[peak_pos]))
+            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
+
+        return reflection_list
+
     def clean_memory(self, run_number, slicer_tag=None):
         """ Clear memory by deleting workspaces
         :param run_number: run number for the slicer
@@ -94,6 +193,32 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, ''
+
+    def export_gsas_file(self, run_number, gsas_file_name):
+        """
+        Purpose: export a reduced run to GSAS data file
+        Requirements:
+        1. run number is a valid integer
+        2. run number exists in project
+        3. gsas file name includes a path that is writable
+        Guarantees: A gsas file is written
+        :param run_number:
+        :param gsas_file_name:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(run_number, int)
+        assert run_number > 0
+
+        assert isinstance(gsas_file_name, str)
+        out_dir = os.path.dirname(gsas_file_name)
+        assert os.writable(out_dir)
+
+        try:
+            self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
+        except KeyError as e:
+            return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, gsas_file_name)
+        raise
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """
@@ -203,12 +328,6 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_runs(self):
-        """ Get the runs (run numbers) that have been reduced successfully
-        :return:
-        """
-        return self._myProject.get_reduced_runs()
-
     def get_reduced_data(self, run_number, target_unit):
         """ Get reduced data
         Purpose:
@@ -216,9 +335,9 @@ class VDriveAPI(object):
         Guarantees: returned with 3 numpy arrays, x, y and e
         :param run_number:
         :param target_unit:
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW - Doc
+        # TODO/NOW - Doc 1st
         assert isinstance(run_number, int), 'blabla'
         assert isinstance(target_unit, str), 'blabla'
 
@@ -229,6 +348,30 @@ class VDriveAPI(object):
             return False, str(e)
 
         return True, data_set
+
+    def get_reduced_run_info(self, run_number):
+        """
+        Purpose: get information of a reduced run
+        Requirements: ... ...
+        Guarantees: ... ...
+        :param run_number:
+        :return: list of bank ID
+        """
+        # TODO/NOW/1st: doc and etc.
+        assert isinstance(run_number, int), 'blabla'
+
+        try:
+            info = self._myProject.get_reduced_run_information(run_number)
+        except AssertionError as e:
+            return False, str(e)
+
+        return True, info
+
+    def get_reduced_runs(self):
+        """ Get the runs (run numbers) that have been reduced successfully
+        :return: list of strings?
+        """
+        return self._myProject.get_reduced_runs()
 
     def get_working_dir(self):
         """
@@ -282,17 +425,24 @@ class VDriveAPI(object):
 
         return file_name
 
-    def get_ipts_info(self, ipts):
+    def get_ipts_info(self, ipts, begin_run=None, end_run=None):
         """
         Get runs and their information for a certain IPTS
+        Purpose: Get the runs' information of an IPTS
+        Requirements: IPTS is either an integer as a valid IPTS number of a directory containing all runs
+                      under an IPTS
+                      Begin run and end run are optional to define the range of runs
+        Guarantees: the runs' information including creation time and file path will be returned
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
         try:
             if isinstance(ipts, int):
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts)
+                print '[DB-BAT] Get experimental information from archive.'
+                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts, begin_run, end_run)
             elif isinstance(ipts, str):
                 ipts_dir = ipts
+                print '[DB-BAT] Get experimental information from directory %s.' % ipts_dir
                 run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
             else:
                 return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
@@ -307,6 +457,7 @@ class VDriveAPI(object):
         :param ipts_dir:
         :return: 2-tuple: integer as IPTS number; 0 as unable to find
         """
+        # FIXME - It is broken!
         return futil.get_ipts_number_from_dir(ipts_dir)
 
     def get_run_info(self, run_number):
@@ -479,7 +630,8 @@ class VDriveAPI(object):
         """
         # FIXME - This has the same functionality as method set_runs_to_reduce()
         # Check requirements
-        print 'Fill me'
+        assert isinstance(file_flag_list, list), 'bla bla ...'
+        assert isinstance(clear_flags, bool)
 
         # Clear
         if clear_flags is True:
@@ -489,6 +641,7 @@ class VDriveAPI(object):
         num_flags_set = 0
         err_msg = ''
         for run_number, reduction_flag in file_flag_list:
+            print '[DB] Set reduction flag for run %d with flag %s.' % (run_number, str(reduction_flag))
             try:
                 self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
                 num_flags_set += 1
@@ -536,7 +689,6 @@ class VDriveAPI(object):
         status, err_msg = self._mySlicingManager.save_splitter_ws(run_number, sample_log_name, file_name)
 
         return status, err_msg
-
 
     def save_time_segment(self, time_segment_list, ref_run_number, file_name):
         """
