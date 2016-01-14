@@ -510,7 +510,6 @@ class VDProject(object):
 
         return (True, '')
 
-
     def save_session(self, out_file_name):
         """ Save session to a dictionary
         :param out_file_name:

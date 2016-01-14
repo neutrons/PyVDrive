@@ -9,7 +9,7 @@ from PyQt4 import QtGui
 #vdrive_path = os.path.expanduser('~/Projects/PyVDrive/PyVDrive/src')
 #sys.path.append(vdrive_path)
 
-from ui.VDrivePlot import VDrivePlotBeta
+from interface.VDrivePlot import VdriveMainWindow
 
 
 def lava_app():
@@ -21,6 +21,6 @@ def lava_app():
 
 app = lava_app()
 
-reducer = VDrivePlotBeta()  # the main ui class in this file is called MainWindow
+reducer = VdriveMainWindow()  # the main ui class in this file is called MainWindow
 reducer.show()
 app.exec_()

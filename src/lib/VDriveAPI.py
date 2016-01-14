@@ -9,11 +9,11 @@
 import os
 import datetime
 
-import vdrive.VDProject as vp
-import vdrive.archivemanager as futil
-import vdrive.SampleLogHelper as logHelper
-import vdrive.vdrivehelper as vdrivehelper
-import vdrive.mantid_helper as mantid_helper
+import VDProject as vp
+import archivemanager as futil
+import SampleLogHelper as logHelper
+import vdrivehelper as vdrivehelper
+import mantid_helper as mantid_helper
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -551,7 +551,14 @@ class VDriveAPI(object):
         :param in_file_name:
         :return: 2-tuple: (boolean, object)
         """
-        save_dict = futil.load_from_xml(in_file_name)
+        # Check requirements
+        assert isinstance(in_file_name, str)
+        assert len(in_file_name) > 0
+
+        status, save_dict = futil.load_from_xml(in_file_name)
+        if status is False:
+            error_message = save_dict
+            return status, error_message
 
         # Set from dictionary
         # matching instrument name

@@ -6,7 +6,7 @@ import sys
 import os
 
 # import PyQt modules
-from PyQt4 import QtGui, QtCore, Qt
+from PyQt4 import QtGui, QtCore
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -15,20 +15,19 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 """ import GUI components generated from Qt Designer .ui file """
-sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
-import PyVDrive
+# sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
+
+import snapgraphicsview as SnapGView
+import ReducedDataView as DataView
+import PeakPickWindow as PeakPickWindow
 import gui.VdriveMain as mainUi
-import gui.GuiUtility as guiutil
-import PyVDrive.ui.snapgraphicsview as spview
-import PyVDrive.ui.ReducedDataView as data_view
-import PyVDrive.ui.PeakPickWindow as PeakPickWindow
+import gui.GuiUtility as GuiUtility
+import AddRunsIPTS as dlgrun
+import Window_LogPicker as LogPicker
+import LogSnapView as dlgSnap
 
 """ import PyVDrive library """
-import PyVDrive.VDriveAPI as vdrive
-
-import PyVDrive.ui.AddRunsIPTS as dlgrun
-import PyVDrive.ui.Window_LogPicker as LogPicker
-import PyVDrive.ui.LogSnapView as dlgSnap
+import PyVDrive.lib.VDriveAPI as VdriveAPI
 
 # Define enumerate
 ACTIVE_SLICER_TIME = 0
@@ -36,7 +35,7 @@ ACTIVE_SLICER_LOG = 1
 ACTIVE_SLICER_MANUAL = 2
 
 
-class VDrivePlotBeta(QtGui.QMainWindow):
+class VdriveMainWindow(QtGui.QMainWindow):
     """ Main GUI class for VDrive of the beta version
     """
     # Define signals to child windows as None(s)
@@ -55,7 +54,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         # Define status variables
         # new work flow
-        self._myWorkflow = vdrive.VDriveAPI('VULCAN')
+        self._myWorkflow = VdriveAPI.VDriveAPI('VULCAN')
         self._numSnapViews = 6
 
         # Initialize widgets
@@ -196,14 +195,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         found = False
         for i_radio in xrange(self._numSnapViews):
             if self._groupedSnapViewList[i_radio].is_selected() is True:
-                self._currSlicerLogName = spview.SampleLogView(
+                self._currSlicerLogName = SnapGView.SampleLogView(
                     self._groupedSnapViewList[i_radio], self).get_log_name()
                 found = True
                 print '[DB] VDrivePlot: snap view for radio button %d is selected.' % i_radio
                 break
 
         if found is False:
-            guiutil.pop_dialog_error('Unable to locate any sample log to be picked up.')
+            GuiUtility.pop_dialog_error('Unable to locate any sample log to be picked up.')
 
 
         # self._apply_slicer_snap_view() : disabled because there is no need to do this
@@ -246,13 +245,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             bin_par = None
         elif self.ui.radioButton_binCustomized.isChecked():
             # customized bin parameters
-            bin_width = guiutil.parse_float(self.ui.lineEdit_binWidth)
-            min_tof = guiutil.parse_float(self.ui.lineEdit_binMinTOF)
-            max_tof = guiutil.parse_float(self.ui.lineEdit_binMaxTOF)
+            bin_width = GuiUtility.parse_float(self.ui.lineEdit_binWidth)
+            min_tof = GuiUtility.parse_float(self.ui.lineEdit_binMinTOF)
+            max_tof = GuiUtility.parse_float(self.ui.lineEdit_binMaxTOF)
             bin_par = (min_tof, bin_width, max_tof)
         else:
             # violate requirements
-            guiutil.pop_dialog_error(self, '')
+            GuiUtility.pop_dialog_error(self, '')
             return
 
         # bin over pixel
@@ -260,13 +259,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             # binning pixel
             bin_pixel_direction = ''
             if self.ui.radioButton_binVerticalPixels.isChecked():
-                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeVertical)
+                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeVertical)
                 bin_pixel_direction = 'vertical'
             elif self.ui.radioButton_binHorizontalPixels.isChecked():
-                bin_pixel_size = guiutil.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
+                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
                 bin_pixel_direction = 'horizontal'
             else:
-                guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+                GuiUtility.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
                 return
             raise NotImplementedError('Will be implemented in #32.')
         # END-IF-ELSE
@@ -282,18 +281,18 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # retrieve the runs to reduce
         run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
         if len(run_number_list) == 0:
-            guiutil.pop_dialog_error(self, 'No run is selected in run number table.')
+            GuiUtility.pop_dialog_error(self, 'No run is selected in run number table.')
         status, error_message = self._myWorkflow.set_runs_to_reduce(run_numbers=run_number_list)
         if status is False:
-            guiutil.pop_dialog_error(self, error_message)
+            GuiUtility.pop_dialog_error(self, error_message)
 
         status, ret_obj = self._myWorkflow.reduce_data_set()
         if status is False:
             error_msg = ret_obj
-            guiutil.pop_dialog_error(self, error_msg)
+            GuiUtility.pop_dialog_error(self, error_msg)
 
         # Show message to notify user that the reduction is complete
-        guiutil.pop_dialog_information(self, 'Reduction is complete.')
+        GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
         # switch the tab to 'VIEW'
         self.ui.tabWidget_reduceData.setCurrentIndex(2)
 
@@ -320,7 +319,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # TODO/NOW/1st complete it!
 
         # Launch data view and set up
-        self._reducedDataViewWindow = data_view.GeneralPurposedDataViewWindow(self)
+        self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
         self._reducedDataViewWindow.setup(self._myWorkflow)
         # set up more parameters such as unit ...
         # ... ...
@@ -351,9 +350,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         # get run to delete
         try:
-            remove_run = guiutil.parse_integer(self.ui.lineEdit_runsToDelete)
+            remove_run = GuiUtility.parse_integer(self.ui.lineEdit_runsToDelete)
         except ValueError as ve:
-            guiutil.pop_dialog_error(str(ve))
+            GuiUtility.pop_dialog_error(str(ve))
             return
 
         # determine the rows for the runs to delete
@@ -361,14 +360,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             row_number_list = self.ui.tableWidget_selectedRuns.get_rows_by_run([remove_run])
             # check
             if row_number_list[0] < 0:
-                guiutil.pop_dialog_error(self, 'Run number %d is not in the selected runs.' % remove_run)
+                GuiUtility.pop_dialog_error(self, 'Run number %d is not in the selected runs.' % remove_run)
                 return
             else:
                 self.ui.lineEdit_runsToDelete.setText('')
         else:
             row_number_list = self.ui.tableWidget_selectedRuns.get_selected_rows()
             if len(row_number_list) == 0:
-                guiutil.pop_dialog_error(self, 'There is no run selected to delete.')
+                GuiUtility.pop_dialog_error(self, 'There is no run selected to delete.')
                 return
 
         # delete
@@ -389,9 +388,9 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Check radio button to generate relative-time slicer
         if self.ui.radioButton_chopContantDeltaT.isChecked() is True:
             # chop data by standard runs
-            start_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStartTime)
-            time_interval = guiutil.parse_float(self.ui.lineEdit_chopTimeSegInterval)
-            stop_time = guiutil.parse_float(self.ui.lineEdit_chopTimeSegStopTime)
+            start_time = GuiUtility.parse_float(self.ui.lineEdit_chopTimeSegStartTime)
+            time_interval = GuiUtility.parse_float(self.ui.lineEdit_chopTimeSegInterval)
+            stop_time = GuiUtility.parse_float(self.ui.lineEdit_chopTimeSegStopTime)
 
             if do_connect_runs is True:
                 # special handling to chop data by connecting runs
@@ -414,7 +413,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                         err_msg += ret_obj + '\n'
                 # END-FOR
                 if err_msg != '':
-                    guiutil.pop_dialog_error(err_msg)
+                    GuiUtility.pop_dialog_error(err_msg)
 
         elif self.ui.radioButton_chopByTimeSegments.isChecked() is True:
             # chop with user-defined time segment
@@ -422,7 +421,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
         else:
             # Impossible status
-            guiutil.pop_dialog_error(self, 'User must choose one radio button.')
+            GuiUtility.pop_dialog_error(self, 'User must choose one radio button.')
             return
 
         # Pop a summary dialog and optionally shift next tab
@@ -448,7 +447,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Save slicer for run  57325  sample log  Voltage
 
         if self._currSlicerLogName is None:
-            guiutil.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
+            GuiUtility.pop_dialog_error(self, 'Neither log-value slicer nor manual slicer is applied.')
             return
         else:
             # Save splitters workspace
@@ -459,7 +458,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 status, err_msg = self._myWorkflow.save_splitter_workspace(
                     self._currLogRunNumber, self._currSlicerLogName, out_file_name)
                 if status is False:
-                    guiutil.pop_dialog_error(self, err_msg)
+                    GuiUtility.pop_dialog_error(self, err_msg)
 
         return
 
@@ -537,7 +536,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 raise RuntimeError('GUI changed but python code is not changed accordingly: %s'%(str(e)))
             else:
                 # set up group
-                graph_group = spview.SnapGraphicsView(graph_view, combo1, combo2, radio_button)
+                graph_group = SnapGView.SnapGraphicsView(graph_view, combo1, combo2, radio_button)
                 self._groupedSnapViewList.append(graph_group)
         # END_FOR(i)
 
@@ -565,7 +564,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
             if status is False:
                 message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
-                guiutil.pop_dialog_error(self, message)
+                GuiUtility.pop_dialog_error(self, message)
                 ipts_number = 0
             else:
                 ipts_number = ret_obj
@@ -586,7 +585,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         else:
             # Pop error
             error_message = ret_obj
-            guiutil.pop_dialog_error(self, error_message)
+            GuiUtility.pop_dialog_error(self, error_message)
             return
 
         # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
@@ -594,14 +593,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Filter by time if it is specified
         if begin_date is not None and end_date is not None:
             # Filter runs by date
-            status, ret_obj = vdrive.filter_runs_by_date(run_tup_list, begin_date, end_date,
+            status, ret_obj = VdriveAPI.filter_runs_by_date(run_tup_list, begin_date, end_date,
                                                          include_end_date=True)
             if status is True:
                 run_tup_list = ret_obj
             else:
                 #  pop error
                 error_message = ret_obj
-                guiutil.pop_dialog_error(self, error_message)
+                GuiUtility.pop_dialog_error(self, error_message)
                 return
         elif begin_date is not None or end_date is not None:
             # Unsupported scenario
@@ -610,7 +609,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Add runs to workflow
         status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
-            guiutil.pop_dialog_error(self, error_message)
+            GuiUtility.pop_dialog_error(self, error_message)
             return
 
         # Filter runs by run
@@ -664,13 +663,13 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             else:
                 # Error!
                 error_message = ret_obj
-                guiutil.pop_dialog_error(self, error_message)
+                GuiUtility.pop_dialog_error(self, error_message)
                 return
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
             # case to add a subset of runs
-            start_run = guiutil.parse_integer(self.ui.lineEdit_runFirst)
-            end_run = guiutil.parse_integer(self.ui.lineEdit_runLast)
+            start_run = GuiUtility.parse_integer(self.ui.lineEdit_runFirst)
+            end_run = GuiUtility.parse_integer(self.ui.lineEdit_runLast)
 
             # switch start run and end run if user specifies in wrong order
             if start_run > end_run:
@@ -688,15 +687,15 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             else:
                 # Error and return
                 error_message = ret_obj
-                guiutil.pop_dialog_error(error_message)
+                GuiUtility.pop_dialog_error(error_message)
                 return
 
             if len(run_list) == 0:
                 error_message = 'No available run can be found between %d and %d ' \
                                 'for this project.' % (start_run, end_run)
-                guiutil.pop_dialog_error(self, error_message)
+                GuiUtility.pop_dialog_error(self, error_message)
         else:
-            guiutil.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
+            GuiUtility.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
             return
 
         # Add all runs to table
@@ -709,7 +708,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         Event handling if user chooses to plot another log in snap view
         :return:
         """
-        num_skip_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
+        num_skip_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
 
         for i in xrange(len(self._group_left_box_list)):
             curr_index = int(self._group_left_box_list[i].currentIndex())
@@ -719,7 +718,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             if curr_index != self._group_left_box_values[i]:
                 self._group_left_box_values[i] = curr_index
                 print '[DB] Left box No. %d log index is changed to %d' % (i, curr_index)
-                spview.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
+                SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
                 break
 
         return
@@ -779,10 +778,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         print '[DB-BAR] Importing time segment file: %s' % seg_file_name
 
         # Import file
-        status, ret_obj = vdrive.parse_time_segment_file(seg_file_name)
+        status, ret_obj = VdriveAPI.parse_time_segment_file(seg_file_name)
         if status is False:
             err_msg = ret_obj
-            guiutil.pop_dialog_error(self, err_msg)
+            GuiUtility.pop_dialog_error(self, err_msg)
             return
         else:
             ref_run, run_start, time_seg_list = ret_obj
@@ -818,10 +817,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                     # local data file
                     log_path = os.path.dirname(run_file_name)
             else:
-                guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+                GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
             self._currLogRunNumber = run_number
         else:
-            guiutil.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+            GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
         # END-IF
 
         # Dialog to get the file name
@@ -835,7 +834,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
         if do_skip is True:
-            num_sec_skipped = guiutil.parse_integer(self.ui.lineEdit_numSecLogSkip)
+            num_sec_skipped = GuiUtility.parse_integer(self.ui.lineEdit_numSecLogSkip)
         else:
             num_sec_skipped = None
 
@@ -843,7 +842,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
-            log_widget = spview.SampleLogView(snap_widget, self)
+            log_widget = SnapGView.SampleLogView(snap_widget, self)
 
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
@@ -866,7 +865,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """ Save the slicer (splitters) for future splitting
         :return:
         """
-        guiutil.pop_dialog_error('ASAP')
+        GuiUtility.pop_dialog_error('ASAP')
 
     def do_show_calibration_map(self):
         """
@@ -1081,11 +1080,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
             QtGui.QFileDialog.getOpenFileName(self, 'Load Session', self._myWorkflow.get_working_dir(),
                                               'XML files (*.xml);; All files (*.*)')
         )
+        if len(input_file_name) == 0:
+            # aborted, quit
+            return
 
         # Load
         status, input_file_name = self._myWorkflow.load_session(input_file_name)
         if status is False:
-            guiutil.pop_dialog_error('Unable to load session from %s' % input_file_name)
+            GuiUtility.pop_dialog_error('Unable to load session from %s' % input_file_name)
 
         # Set input file to default session back up file
         self._savedSessionFileName = input_file_name
@@ -1141,7 +1143,7 @@ class VDrivePlotBeta(QtGui.QMainWindow):
                 or self._currentSnapViewIndex >= len(self._groupedSnapViewList):
             error_message = 'Current snap view index (%d) is either not defined ' \
                             'or out of boundary' % self._currentSnapViewIndex
-            guiutil.pop_dialog_error(error_message)
+            GuiUtility.pop_dialog_error(error_message)
 
         # Create a Snap view window if needed
         if self._snapViewWindow is None:
@@ -1152,14 +1154,14 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         # Refresh?
         if self._snapViewWindow.allow_new_session() is False:
             # If window is open but not saved, pop error message
-                guiutil.pop_dialog_error(self, 'Current window is not saved.')
+                GuiUtility.pop_dialog_error(self, 'Current window is not saved.')
                 return
         # END-IF
 
         # Get the final data
-        sample_log_view = spview.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
+        sample_log_view = SnapGView.SampleLogView(self._groupedSnapViewList[self._currentSnapViewIndex], self)
         sample_log_name = sample_log_view.get_log_name()
-        num_skipped_second = guiutil.parse_float(self.ui.lineEdit_numSecLogSkip)
+        num_skipped_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
         self._snapViewWindow.setup(self._myWorkflow, self._currLogRunNumber, sample_log_name, num_skipped_second)
 
         self._snapViewWindow.show()
@@ -1192,8 +1194,8 @@ class VDrivePlotBeta(QtGui.QMainWindow):
 
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)
-    myapp = VDrivePlotBeta()
-    myapp.show()
+    my_app = VdriveMainWindow()
+    my_app.show()
 
     #exit_code=app.exec_()
     #sys.exit(exit_code)

@@ -435,15 +435,19 @@ def load_from_xml(xml_file_name):
     :param xml_file_name:
     :return:
     """
-    #import pprint
-    pkl_file = open(xml_file_name, 'rb')
+    # import saved xml project file
+    try:
+        pkl_file = open(xml_file_name, 'rb')
+    except IOError as error:
+        return False, 'Unable to open saved project xml file <%s> due to %s.' % (
+            xml_file_name, str(error))
 
     save_dict = pickle.load(pkl_file)
     # pprint.pprint(save_dict)
 
     pkl_file.close()
 
-    return save_dict
+    return True, save_dict
 
 def save_to_xml(save_dict, xml_file_name):
     """
