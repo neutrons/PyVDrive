@@ -33,13 +33,15 @@ class UnitCell(object):
     PRIMITIVE = 0
     BCC = 1
     FCC = 2
-    BC = 3  # body-centre
-    FC = 4  # face-centre
+    BC = 3   # body-centre
+    FC = 4   # face-centre
+    HCP = 5  # HCP
 
     SpaceGroupDict = {
         PRIMITIVE: 'P m m m',
         BC: 'I m m m',
         FC: 'F m m m',
+        HCP: 'P 63/m m c',
         BCC: 'I m -3 m',
         FCC: 'F d -3 m',
     }
@@ -150,7 +152,8 @@ def calculate_reflections(unit_cell, min_d, max_d):
 
     # Check inputs
     assert isinstance(unit_cell, UnitCell), 'Input must be an instance of UnitCell but not %s.' % str(type(unit_cell))
-    assert 0 < min_d < max_d
+    assert min_d < max_d, 'Minimum d-spacing %f must be smaller than maximum d-spacing %f.' % (min_d, max_d)
+    assert 0. <= min_d, 'Minimum d-spacing %f must be larger or equal to 0.' % min_d
 
     # cell_parameters = [5, 4, 3]
     cell_parameters = unit_cell.get_cell_parameters()
@@ -470,7 +473,7 @@ def get_workspace_information(run_ws_name):
     Requirements: ... ...
     Guarantees: ... ...
     :param run_ws_name:
-    :return:
+    :return: list of bank ID
     """
     # TODO/NOW/1st: Doc & assertion
     workspace = retrieve_workspace(run_ws_name)

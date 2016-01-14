@@ -641,7 +641,6 @@ class ReductionManager(object):
          - unit :: target unit; If None, then no need to convert unit
         :param run_number:
         :param unit:
-        :param listindex:
         :return: Workspace (success) or 2-tuple (False and error message)
         """
         # Check requirements
@@ -749,7 +748,8 @@ class ReductionManager(object):
     @staticmethod
     def mtd_convert_units(ws_name, target_unit):
         """
-        Convert the unit of a workspace
+        Convert the unit of a workspace.
+        Guarantees: if the original workspace is point data, then the output must be point data
         :param event_ws_name:
         :param target_unit:
         :return:
@@ -761,17 +761,25 @@ class ReductionManager(object):
         assert isinstance(target_unit, str), 'Input target unit should be a string,' \
                                              'but is %s.' % str(type(target_unit))
 
+        # Record whether the input workspace is histogram
+        is_histogram = workspace.isHistogramData()
+
         # Correct target unit
         if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:
             target_unit = 'dSpacing'
         elif target_unit.lower() == 'tof':
             target_unit = 'TOF'
 
-        # Do absorption and multiple scattering correction in TOF with sample parameters set
+        # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
+        if is_histogram is False:
+            mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
         mantidapi.ConvertUnits(InputWorkspace=ws_name,
                                OutputWorkspace=ws_name,
                                Target=target_unit,
                                EMode='Elastic')
+        if is_histogram is False:
+            mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+
         # Check output
         out_ws = mantid_helper.retrieve_workspace(ws_name)
         assert out_ws

@@ -34,6 +34,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         # ... ... self.setColumnWidth(1, 60)
 
         # Add action menu: to use right mouse operation for pop-up sub menu
+        """
         action_del = QtGui.QAction('Delete', self)
         action_del.triggered.connect(self.do_delete_leaf)
         self.addAction(action_del)
@@ -41,6 +42,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         action_info = QtGui.QAction('Info', self)
         action_info.triggered.connect(self.do_show_info)
         self.addAction(action_info)
+        """
 
         self.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 

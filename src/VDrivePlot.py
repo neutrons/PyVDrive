@@ -20,8 +20,8 @@ import PyVDrive
 import PyVDrive.ui.gui.VdriveMain as mainUi
 import PyVDrive.ui.GuiUtility as guiutil
 import PyVDrive.ui.snapgraphicsview as spview
-import ui.ReducedDataView as data_view
-import ui.PeakPickWindow as PeakPickWindow
+import PyVDrive.ui.ReducedDataView as data_view
+import PyVDrive.ui.PeakPickWindow as PeakPickWindow
 
 """ import PyVDrive library """
 import PyVDrive.VDriveAPI as vdrive
@@ -730,8 +730,10 @@ class VDrivePlotBeta(QtGui.QMainWindow):
         """
         # TODO/NOW/1st collect parameters' values to set up the peak-picker window
         self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
+        self._peakPickerWindow.set_controller(self._myWorkflow)
         self._peakPickerWindow.show()
 
+        return
 
     def do_load_calibration(self):
         """

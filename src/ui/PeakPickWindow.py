@@ -264,7 +264,6 @@ class PeakWidthSetupDialog(QtGui.QDialog):
     """
     Class for set up dialog
     """
-    # TODO/NOW/1st: Docs, assertions and implement!
     def __init__(self, parent):
         """
         Init ...
@@ -324,6 +323,8 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         :return:
         """
         assert self._peakWidth
+
+        return self._peakWidth
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -393,7 +394,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_load_data)
 
         self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.do_load_bank)
+                     self.evt_switch_bank)
 
         # save and quit
         self.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
@@ -416,12 +417,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Define state variables
-        self._isDataLoaded = False    # state flag that data is loaded
-        self._currDataFile = None     # name of the data file that is currently loaded
-        self._currentBankNumber = -1  # current bank number
-        self._myController = None     # Reference to controller class
-        self._dataDirectory = None    # default directory to load data
-        self._currDataKey = None      # Data key to look up reduced data from controller
+        self._isDataLoaded = False     # state flag that data is loaded
+        self._currentDataFile = None      # name of the data file that is currently loaded
+        self._currentRunNumber = None  # current run number
+        self._currentBankNumber = -1   # current bank number
+        self._currentDataSet = dict()  # current data as {bank1: (vecX, vecY, vecE); bank2: (vecX, vecY, vecE) ...}
+        self._myController = None      # Reference to controller class
+        self._dataDirectory = None     # default directory to load data
+        self._currDataKey = None       # Data key to look up reduced data from controller
 
         # Peak selection mode
         self._peakSelectionMode = ''
@@ -459,6 +462,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         self.ui.comboBox_structure1.clear()
         self.ui.comboBox_structure1.addItems(unit_cell_str_list)
+        self.ui.comboBox_structure2.clear()
+        self.ui.comboBox_structure2.addItems(unit_cell_str_list)
+        self.ui.comboBox_structure3.clear()
+        self.ui.comboBox_structure3.addItems(unit_cell_str_list)
 
         # Set up the phase widget groups
         phase_widgets1 = PhaseWidgets(self, self.ui.lineEdit_a1, self.ui.lineEdit_b1, self.ui.lineEdit_c1,
@@ -514,7 +521,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Check requirements
         assert self._myController is not None, 'Instance is not initialized.'
-        assert self._isDataLoaded is True, 'No data is loaded.'
 
         # Get the rows that are selected. Find the next group ID.  Set these rows with same group ID
         row_index_list = self.ui.tableWidget_peakParameter.get_selected_rows()
@@ -562,7 +568,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 x_min = new_x_min - dx * 0.05
             if new_x_max > x_max:
                 x_max = new_x_max + dx * 0.05
-            self.ui.graphicsView_main.setXLimits(x_min, x_max)
+            self.ui.graphicsView_main.setXYLimit(xmin=x_min, xmax=x_max)
         # END-IF
 
         # Plot
@@ -636,7 +642,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
+        # FIXME/NOW/1st - Need to create a dialog for d-range.
         min_d, max_d = self.ui.graphicsView_main.getXLimit()
+        min_d = 0.8
         print '[DB] Get d-range: %f, %f' % (min_d, max_d)
 
         # List all peaks if any is selected
@@ -659,7 +667,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 err_msg += 'Phase %d cannot be used due to %s.' % (i_phase, str(e))
                 continue
 
-            # Calcuate peaks' positions
+            # Calculate peaks' positions
             sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
             # for peak_tup in sub_list:
             #     print peak_tup[1], peak_tup[0]
@@ -776,7 +784,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def do_load_bank(self):
+    def evt_switch_bank(self):
         """
         Save the current selected peaks to a temporary file and load a new bank
         :return:
@@ -785,9 +793,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
         new_bank = int(self.ui.comboBox_bankNumbers.currentText())
         if new_bank == self._currentBankNumber:
             # same bank as before. no need to do anything
+            print '[DB] Newly selected bank %d is same as current bank %d.' % (new_bank, self._currentBankNumber)
             return
         if self._isDataLoaded is False:
             # it is about to load new data, plotting will be called explicitly. no need to re-plot her
+            print '[DB] Data is in loading stage. Change to bank %d won\'t have any effect.' % new_bank
             return
 
         # Save the current peaks to memory and back up to disk
@@ -798,7 +808,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.graphicsView_main.clear_all_lines()
 
         # Re-plot
-        vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
+        # vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
+        new_spec = new_bank-1
+        vec_x = self._currentDataSet[new_spec][0]
+        vec_y = self._currentDataSet[new_spec][1]
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
 
@@ -893,50 +906,73 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Plot data if there is only one GSAS file
         if len(gsas_file_list) == 1:
-            self.plot_run(data_key_list[0])
+            self.load_plot_run(data_key_list[0])
 
         return
 
-    def plot_run(self, data_key):
-        """
-
+    def load_plot_run(self, data_key):
+        """ Load and plot a run
+        Purpose: ...
+        Requirements: ...
+        Guarantees: ...
         :param data_key:
         :return:
         """
-        # TODO/NOW/1st: doc and etc...
+        # TODO/NOW/1st: Doc & Polish
 
-        # update widgets
+        # Get run number
+        if isinstance(data_key, int):
+            run_number = data_key
+        else:
+            assert isinstance(data_key, str), 'data key must be a string but not %s.' % str(type(data_key))
+            if data_key.isdigit():
+                run_number = int(data_key)
+            else:
+                run_number = None
+            # END-IF-ELSE
+        # END-IF-ELSE
+
+        # Get reduced run information
+        if run_number is None:
+            run_number, bank_id_list = self._myController.get_loaded_run_info(data_key)
+        else:
+            status, ret_obj = self._myController.get_reduced_run_info(run_number)
+            assert status, ret_obj
+            bank_id_list = ret_obj
+
+        # Set the mutex flag
         self._isDataLoaded = False
 
-        run_number, num_banks = self._myController.get_diffraction_pattern_info(data_key)
+        # Update widgets, including run number, bank IDs
         self.ui.comboBox_bankNumbers.clear()
-        for i_bank in xrange(num_banks):
-            self.ui.comboBox_bankNumbers.addItem(str(i_bank+1))
+        for i_bank in bank_id_list:
+            self.ui.comboBox_bankNumbers.addItem(str(i_bank))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
         self.ui.comboBox_runNumber.addItem(str(run_number))
-
         self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
-        vec_x, vec_y = self._myController.get_diffraction_pattern(data_key, bank=1)
+        status, ret_obj = self._myController.get_reduced_data(run_number, 'dSpacing')
+        if status is False:
+            GuiUtility.pop_dialog_error(self, ret_obj)
+            return
+        # get spectrum 0, i.e, bank 1
+        assert isinstance(ret_obj, dict)
+        self._currentDataSet = ret_obj
+        data_bank_1 = self._currentDataSet[0]
+        # FIXME - It might return vec_x, vec_y AND vec_e
+        vec_x = data_bank_1[0]
+        vec_y = data_bank_1[1]
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
 
+        # Set up class variables
         self._currentRunNumber = run_number
         self._currentBankNumber = 1
         self._currDataKey = data_key
+
+        # Release the mutex flag
         self._isDataLoaded = True
-
-        return
-
-    def do_plot_run(self):
-        """
-        Plot a run from tree
-        :return:
-        """
-        # TODO/NOW/1st: need to re-write the tree widget's event handling methods
-        data_key = self.ui.treeView_iptsRun.get_current_run()
-        print '[DB-BAT] From tree: current data key = ', data_key
 
         return
 
@@ -979,10 +1015,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
             Save the peak positions and other parameters to controller
         :return:
         """
-        # Check requirements
-        assert (self._myController is not None)
+        # TODO/NOW/1st: First priority to implement this method!
 
-        selected_peaks = self.ui.tableWidget.get_peak(flag=True)
+        # Check requirements
+        assert self._myController is not None
+
+        # Get the output file
+        out_file_name = str(QtGui.QFileDialog.getSaveFile(self, 'Save peaks to GSAS peak file'))
+        print '[DB] Output file name =', out_file_name
+
+        num_peaks = self.ui.tableWidget_peakParameter.rowCount()
+        for i_peak in xrange(num_peaks):
+            peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
+            print type(peak_i), peak_i
+
         if len(selected_peaks) == 0:
             GuiUtility.pop_dialog_error(self, 'No peak is selected.  Unable to execute saving peaks.')
             return
@@ -1047,6 +1093,22 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         for i_phase in range(1, 4):
             self._phaseWidgetsGroupDict[i_phase].set_values(self._phaseDict[i_phase])
+
+        return
+
+    def load_runs(self, run_id_list):
+        """
+        Load runs and called from tree!
+        :param run_id_list:
+        :return:
+        """
+        # Return error message
+        if len(run_id_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'No run is given!')
+            return
+
+        # Plot
+        self.load_plot_run(run_id_list[0])
 
         return
 
@@ -1411,176 +1473,12 @@ class MockVDriveAPI(object):
 
         return
 
-    def calculate_peaks_position(self, phase, min_d, max_d):
-        """
-        Purpose: calculate the bragg peaks' position from
-
-        Requirements:
-
-        Guarantees:
-          1. return a list of reflections
-          2. each reflection is a tuple. first is a float for peak position. second is a list of list for HKLs
-
-        :param phase: [name, type, a, b, c]
-        :param min_d:
-        :param max_d:
-        :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
-        """
-        import PyVDrive.vdrive.mantid_helper as mantid_helper
-
-        # Check requirements
-        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
-        assert len(phase) == 5, 'Input phase  of type list must have 5 elements'
-
-        # Get information
-        phase_type = phase[1]
-        lattice_a = phase[2]
-        lattice_b = phase[3]
-        lattice_c = phase[4]
-
-        # Convert phase type to
-        phase_type = phase_type.split()[0]
-        if phase_type == 'BCC':
-            phase_type = mantid_helper.UnitCell.BCC
-        elif phase_type == 'FCC':
-            phase_type = mantid_helper.UnitCell.FCC
-        elif phase_type == 'HCP':
-            phase_type = mantid_helper.UnitCell.HCP
-        elif phase_type == 'Body-Center':
-            phase_type = mantid_helper.UnitCell.BC
-        elif phase_type == 'Face-Center':
-            phase_type = mantid_helper.UnitCell.FC
-        else:
-            raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
-
-        # Get reflections
-        # silicon = mantid_helper.UnitCell(mantid_helper.UnitCell.FC, 5.43)  #, 5.43, 5.43)
-        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
-        reflections = mantid_helper.calculate_reflections(unit_cell, 1.0, 5.0)
-
-        # Sort by d-space... NOT FINISHED YET
-        num_ref = len(reflections)
-        ref_dict = dict()
-        for i_ref in xrange(num_ref):
-            ref_tup = reflections[i_ref]
-            assert isinstance(ref_tup, tuple)
-            assert len(ref_tup) == 2
-            pos_d = ref_tup[1]
-            assert isinstance(pos_d, float)
-            assert pos_d > 0
-            # HKL should be an instance of mantid.kernel._kernel.V3D
-            hkl_v3d = ref_tup[0]
-            hkl = [hkl_v3d.X(), hkl_v3d.Y(), hkl_v3d.Z()]
-
-            # pos_d has not such key, then add it
-            if pos_d not in ref_dict:
-                ref_dict[pos_d] = list()
-            ref_dict[pos_d].append(hkl)
-        # END-FOR
-
-        # Merge all the peaks with peak position within tolerance
-        TOL = 0.0001
-        # sort the list again with peak positions...
-        peak_pos_list = ref_dict.keys()
-        peak_pos_list.sort()
-        print '[DB] List of peak positions: ', peak_pos_list
-        curr_list = None
-        curr_pos = -1
-        for peak_pos in peak_pos_list:
-            if peak_pos - curr_pos < TOL:
-                # combine the element (list)
-                assert isinstance(curr_list, list)
-                curr_list.extend(ref_dict[peak_pos])
-                del ref_dict[peak_pos]
-            else:
-                curr_list = ref_dict[peak_pos]
-                curr_pos = peak_pos
-        # END-FOR
-
-        # Convert from dictionary to list as 2-tuples
-
-        print '[DB-BAT] List of final reflections:', type(ref_dict)
-        d_list = ref_dict.keys()
-        d_list.sort(reverse=True)
-        reflection_list = list()
-        for peak_pos in d_list:
-            reflection_list.append((peak_pos, ref_dict[peak_pos]))
-            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
-
-        return reflection_list
-
     def does_exist_data(self, data_key):
         """
         TODO/NOW/1s: should be implemented in the workflow controller!
         :return:
         """
         return True
-
-    def get_diffraction_pattern_info(self, data_key):
-        """ Get information from a diffraction pattern, i.e., a loaded workspace
-        Purpose: get run number from "data key" and number of banks
-        Requirements: data_key is an existing key as a string and it is the path to the data file
-                      where the run number can be extracted
-        Requirements: find out the run number and bank number
-        :return:
-        """
-        import os
-        print 'Data key is %s of type %s' % (str(data_key), str(type(data_key)))
-
-        # Check requirements
-        assert isinstance(data_key, str), 'Data key must be a string.'
-
-        # Key (temporary) is the file name
-        run_number = int(os.path.basename(data_key).split('.')[0])
-        #
-        num_banks = self._currWS.getNumberHistograms()
-
-        return run_number, num_banks
-
-    def get_diffraction_pattern(self, data_key, bank, include_err=False):
-        """
-        Purpose: get diffraction pattern of a bank
-        Requirements:
-            1. date key exists
-            2. bank is a valid integer
-        Guarantees: returned a 2 or 3 vector
-        :param data_key:
-        :param bank:
-        :param include_err:
-        :return:
-        """
-        # Check requirements
-        assert self.does_exist_data(data_key)
-        assert isinstance(bank, int)
-        assert bank > 0
-        assert isinstance(include_err, bool)
-
-        # Get data
-        # FIXME/TODO/NOW - 1st: Make it True and implement for real workflow controller
-        if False:
-            ws_index = self.convert_bank_to_ws(bank)
-
-            if self._currDataKey == data_key:
-                vec_x = self._currWS.readX(ws_index)
-                vec_y = self._currWS.readY(ws_index)
-                if include_err:
-                    vec_e = []
-                    return vec_x, vec_y, vec_e
-            else:
-                raise RuntimeError('Current workspace is not the right data set!')
-        else:
-            ws_index = bank-1
-            vec_x = self._currWS.readX(ws_index)
-            vec_y = self._currWS.readY(ws_index)
-
-        return vec_x, vec_y
-
-    def get_reduced_runs(self):
-        """
-
-        :return:
-        """
-        return []
 
     def import_gsas_peak_file(self, peak_file_name):
         """

@@ -253,11 +253,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         label = "run %d bank %d" % (run_number, bank_id)
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
-        line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x,vec_y=vec_y, label=label, x_label=self._currUnit)
+        line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
+                                                            x_label=self._currUnit)
         self._linesDict[(run_number, bank_id)] = line_id
 
         # Change label
         self.ui.label_currentRun.setText(str(run_number))
+
+        # And resize the image if it is necessary
+        self.resize_canvas()
 
         return
 
@@ -308,23 +312,27 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Check
         new_unit = str(self.ui.comboBox_unit.currentText())
 
-        print '[DB-BAT] Responding to new unit: ', new_unit, '... ...'
-        print
-
         # Get the data sets and replace them with new unit
         for run_number in self._reducedDataDict.keys():
-            self._reducedDataDict[run_number] = self._myController.get_reduced_data(run_number, new_unit)
+            status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
+            if status is False:
+                GuiUtility.pop_dialog_error(self, 'Unable to get run %d with new unit %s due to %s.' % (
+                    run_number, new_unit, ret_obj
+                ))
+                return
+            self._reducedDataDict[run_number] = ret_obj
+        # END-FOR
+
+        # Reset current unit
+        self._currUnit = new_unit
 
         # Clear the line dictionary
         self._linesDict = dict()
 
         # Clear previous image and re-plot
-        self.ui.graphicsView_mainPlot.remove_all_lines()
+        self.ui.graphicsView_mainPlot.clear_all_lines()
         for run_number in self._reducedDataDict.keys():
             self.plot_run(run_number, self._currBank, over_plot=True)
-
-        # Reset current unit
-        self._currUnit = new_unit
 
         return
 
@@ -367,97 +375,26 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return run_number_list
 
-
-class MockParent:
-    """ Mocking parent for universal purpose
-    """
-    def __init__(self):
-        """ Init
+    def resize_canvas(self):
         """
-        # self._arrayX, self._arrayY, self._noteList = self._parseData()
+        Resize the canvas if it is necessary
+        :return:
+        """
+        # Init
+        min_x = 1.E20
+        max_x = -1.E20
+
+        # Find minimum x and maximum x
+        for run_number in self._reducedDataDict.keys():
+            run_data_dict = self._reducedDataDict[run_number]
+            assert isinstance(run_data_dict, dict)
+            for spec_id in run_data_dict.keys():
+                vec_x = run_data_dict[spec_id][0]
+                min_x = min(min_x, vec_x[0])
+                max_x = max(max_x, vec_x[-1])
+        # END-FOR
+
+        # Resize the canvas
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
 
         return
-
-
-    def _parseData(self):
-        datafile = open('./tests/mockdata.dat', 'r')
-        rawlines = datafile.readlines()
-        datafile.close()
-
-        xlist = []
-        ylist = []
-        tlist = []
-
-        for rline in rawlines:
-            line = rline.strip()
-            if len(line) == 0:
-                continue
-
-            terms = line.split()
-            x = float(terms[0])
-            y = float(terms[1])
-            t = terms[0]
-
-            xlist.append(x)
-            ylist.append(y)
-            tlist.append(t)
-
-        x_array = numpy.array(xlist)
-        y_array = numpy.array(ylist)
-
-        return x_array, y_array, tlist
-
-    # #--------------------------------------------------------------------
-    # # For testing purpose
-    # #--------------------------------------------------------------------
-    # def computeMock(self):
-    #     """ Compute vecx and vecy as mocking
-    #     """
-    #     import random, math
-
-    #     x0 = 0.
-    #     xf = 1.
-    #     dx = 0.1
-
-    #     vecx = []
-    #     vecy = []
-
-    #     x = x0
-    #     while x < xf:
-    #         y = 0.0
-    #         vecx.append(x)
-    #         vecy.append(y)
-    #         x += dx
-
-    #     xlim = [x0, xf]
-    #     ylim = [-1., 1]
-
-    #     return (vecx, vecy, xlim, ylim)
-
-
-
-    # def getData(self, runnumber):
-    #     """ Form two numpy array for plotting
-    #     """
-    #     return (self._arrayX, self._arrayY, self._noteList)
-
-def testmain(argv):
-    """ Main method for testing purpose
-    """
-    parent = MockParent()
-
-    app = QtGui.QApplication(argv)
-
-    # my plot window app
-    myapp = GeneralPurposedDataViewWindow(parent)
-    # myapp.setRuns(['002271'])
-    myapp.show()
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)
-
-
-    return
-
-if __name__ == "__main__":
-    testmain(sys.argv)

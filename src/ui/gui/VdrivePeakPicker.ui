@@ -24,7 +24,7 @@
           <item>
            <layout class="QGridLayout" name="gridLayout_4">
             <item row="0" column="0">
-             <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
+             <widget class="SinglePeakFitManageTree" name="treeView_iptsRun">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -937,11 +937,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>VdriveRunManagerTree</class>
-   <extends>QTreeView</extends>
-   <header>vdrivetreewidgets.h</header>
-  </customwidget>
-  <customwidget>
    <class>DiffractionPlotView</class>
    <extends>QGraphicsView</extends>
    <header>diffractionplotview.h</header>
@@ -950,6 +945,11 @@
    <class>PeakParameterTable</class>
    <extends>QTableWidget</extends>
    <header>vdrivetablewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>SinglePeakFitManageTree</class>
+   <extends>QTreeView</extends>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

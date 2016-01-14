@@ -13,6 +13,7 @@ import vdrive.VDProject as vp
 import vdrive.archivemanager as futil
 import vdrive.SampleLogHelper as logHelper
 import vdrive.vdrivehelper as vdrivehelper
+import vdrive.mantid_helper as mantid_helper
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -73,6 +74,104 @@ class VDriveAPI(object):
             self._myProject.add_run(run_number, file_name, ipts_number)
 
         return True, ''
+
+    @staticmethod
+    def calculate_peaks_position(phase, min_d, max_d):
+        """
+        Purpose: calculate the bragg peaks' position from
+
+        Requirements:
+            minimum d-spacing value cannot be 0.
+        Guarantees:
+          1. return a list of reflections
+          2. each reflection is a tuple. first is a float for peak position. second is a list of list for HKLs
+
+        :param phase: [name, type, a, b, c]
+        :param min_d: minimum d-spacing value
+        :param max_d:
+        :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
+        """
+        # Check requirements
+        assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
+        assert len(phase) == 5, 'Input phase  of type list must have 5 elements'
+        assert min_d < max_d
+        assert min_d > 0.01
+
+        # Get information
+        phase_type = phase[1]
+        lattice_a = phase[2]
+        lattice_b = phase[3]
+        lattice_c = phase[4]
+
+        # Convert phase type to
+        phase_type = phase_type.split()[0]
+        if phase_type == 'BCC':
+            phase_type = mantid_helper.UnitCell.BCC
+        elif phase_type == 'FCC':
+            phase_type = mantid_helper.UnitCell.FCC
+        elif phase_type == 'HCP':
+            phase_type = mantid_helper.UnitCell.HCP
+        elif phase_type == 'Body-Center':
+            phase_type = mantid_helper.UnitCell.BC
+        elif phase_type == 'Face-Center':
+            phase_type = mantid_helper.UnitCell.FC
+        else:
+            raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
+
+        # Get reflections
+        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
+        reflections = mantid_helper.calculate_reflections(unit_cell, min_d, max_d)
+
+        # Sort by d-space... NOT FINISHED YET
+        num_ref = len(reflections)
+        ref_dict = dict()
+        for i_ref in xrange(num_ref):
+            ref_tup = reflections[i_ref]
+            assert isinstance(ref_tup, tuple)
+            assert len(ref_tup) == 2
+            pos_d = ref_tup[1]
+            assert isinstance(pos_d, float)
+            assert pos_d > 0
+            # HKL should be an instance of mantid.kernel._kernel.V3D
+            hkl_v3d = ref_tup[0]
+            hkl = [hkl_v3d.X(), hkl_v3d.Y(), hkl_v3d.Z()]
+
+            # pos_d has not such key, then add it
+            if pos_d not in ref_dict:
+                ref_dict[pos_d] = list()
+            ref_dict[pos_d].append(hkl)
+        # END-FOR
+
+        # Merge all the peaks with peak position within tolerance
+        TOL = 0.0001
+        # sort the list again with peak positions...
+        peak_pos_list = ref_dict.keys()
+        peak_pos_list.sort()
+        print '[DB] List of peak positions: ', peak_pos_list
+        curr_list = None
+        curr_pos = -1
+        for peak_pos in peak_pos_list:
+            if peak_pos - curr_pos < TOL:
+                # combine the element (list)
+                assert isinstance(curr_list, list)
+                curr_list.extend(ref_dict[peak_pos])
+                del ref_dict[peak_pos]
+            else:
+                curr_list = ref_dict[peak_pos]
+                curr_pos = peak_pos
+        # END-FOR
+
+        # Convert from dictionary to list as 2-tuples
+
+        print '[DB-BAT] List of final reflections:', type(ref_dict)
+        d_list = ref_dict.keys()
+        d_list.sort(reverse=True)
+        reflection_list = list()
+        for peak_pos in d_list:
+            reflection_list.append((peak_pos, ref_dict[peak_pos]))
+            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
+
+        return reflection_list
 
     def clean_memory(self, run_number, slicer_tag=None):
         """ Clear memory by deleting workspaces
@@ -236,7 +335,7 @@ class VDriveAPI(object):
         Guarantees: returned with 3 numpy arrays, x, y and e
         :param run_number:
         :param target_unit:
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
         # TODO/NOW - Doc 1st
         assert isinstance(run_number, int), 'blabla'
@@ -256,7 +355,7 @@ class VDriveAPI(object):
         Requirements: ... ...
         Guarantees: ... ...
         :param run_number:
-        :return:
+        :return: list of bank ID
         """
         # TODO/NOW/1st: doc and etc.
         assert isinstance(run_number, int), 'blabla'
