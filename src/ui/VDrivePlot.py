@@ -17,8 +17,8 @@ except AttributeError:
 """ import GUI components generated from Qt Designer .ui file """
 sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
 import PyVDrive
-import PyVDrive.ui.gui.VdriveMain as mainUi
-import PyVDrive.ui.GuiUtility as guiutil
+import gui.VdriveMain as mainUi
+import gui.GuiUtility as guiutil
 import PyVDrive.ui.snapgraphicsview as spview
 import PyVDrive.ui.ReducedDataView as data_view
 import PyVDrive.ui.PeakPickWindow as PeakPickWindow
