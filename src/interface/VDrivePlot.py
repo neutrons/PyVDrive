@@ -23,7 +23,7 @@ import PeakPickWindow as PeakPickWindow
 import gui.VdriveMain as mainUi
 import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
-import Window_LogPicker as LogPicker
+import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 
 """ import PyVDrive library """
