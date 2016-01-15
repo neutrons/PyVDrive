@@ -6,7 +6,6 @@ import datetime
 import time
 
 from PyQt4 import QtGui, QtCore
-import GuiUtility as gutil
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -14,6 +13,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
+import gui.GuiUtility as gutil
 import gui.ui_DialogAddRunsIPTS as dlgrun
 
 

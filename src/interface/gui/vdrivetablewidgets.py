@@ -222,8 +222,40 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
-    def add_peak(self, bank, name, centre, width):
+    def add_peak(self, bank, name, centre, width, overlapped_peak_pos_list):
         """ Append a peak to the table
+        Purpose:
+            Append a new peak to the table
+        Requirements:
+            Peak centre must be in d-spacing.  And it is within the peak range
+        Guarantees:
+            A row is append
+        :param centre:
+        :param bank: bank number
+        :param width: peak width
+        :param overlapped_peak_pos_list:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(centre, float)
+        assert isinstance(bank, int)
+        assert isinstance(width, float)
+        assert isinstance(name, str)
+        assert width > 0
+
+        # Get new index
+        # new_index = self.rowCount()
+        group_id = -1
+        if len(overlapped_peak_pos_list) >= 2:
+            group_id = N
+        status, message = self.append_row([bank, name, centre, width, name, group_id, False])
+        if status is False:
+            raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
+
+        return
+
+    def add_peak_to_buffer(self, bank, name, centre, width, overlapped_peak_pos_list):
+        """ Append a peak to the buffer
         Purpose:
             Append a new peak to the table
         Requirements:
@@ -241,12 +273,14 @@ class PeakParameterTable(NT.NTableWidget):
         assert isinstance(width, float)
         assert isinstance(name, str)
         assert width > 0
+        assert isinstance(overlapped_peak_pos_list, list)
+        # FIXME/NOW/1st: overlapped_peak_pos_list is not used!
 
-        # Get new index
-        # new_index = self.rowCount()
-        status, message = self.append_row([bank, name, centre, width, name, -1, False])
-        if status is False:
-            raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
+        # Add buffer
+        if bank not in self._buffer:
+            self._buffer[bank] = list()
+
+        self._buffer[bank].append([bank, name, centre, width, '', -1])
 
         return
 
@@ -276,6 +310,76 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
+    def get_buffered_peaks(self, excluded_bank_id_list):
+        """
+        Return the buffered peaks
+        :param excluded_bank_id_list
+        :return: a dictionary of a list of peaks (in 5-element list)
+        """
+        # Check
+        assert isinstance(excluded_bank_id_list, list)
+
+        # Get bank IDs
+        bank_id_list = sorted(self._buffer.keys())
+        bank_peak_dict = dict()
+        for bank_id in bank_id_list:
+
+            # skip the bank IDs to be excluded
+            if bank_id in excluded_bank_id_list:
+                continue
+
+            # transform the peaks
+            peak_row_list = self._buffer[bank_id]
+
+            peak_list = list()
+            for peak_row in peak_row_list:
+                # check request
+                assert isinstance(peak_row, list), 'Each peak row should be a list but NOT of %s.' % str(type(peak_row))
+                bank = peak_row[0]
+                peak_name = peak_row[1]
+                peak_centre = peak_row[2]
+                peak_width = peak_row[3]
+                peak_group = peak_row[5]
+
+                peak_i = [bank, peak_name, peak_centre, peak_width, [], peak_group]
+                peak_list.append(peak_i)
+            # END-FOR
+
+            # check group for overlapped peaks: use index in peak list as the reference to centre
+            overlapped_peaks_group = dict()
+            for i_peak in xrange(len(peak_list)):
+                peak_i = peak_list[i_peak]
+                if peak_i[-1] >= 0:
+                    group_i = peak_i[-1]
+                    if group_i not in overlapped_peaks_group:
+                        overlapped_peaks_group[group_i] = list()
+                    overlapped_peaks_group[group_i].append(peak_i[2])
+            # END-FOR
+
+            # set up the overlapped peak right!
+            group_num_list = sorted(overlapped_peaks_group.keys())
+            for i_peak in xrange(len(peak_list)):
+                peak_i = peak_list[i_peak]
+                curr_group = peak_i[-1]
+                if curr_group in group_num_list:
+                    # it has overlapped peak
+                    for over_peak_index in overlapped_peaks_group[curr_group]:
+                        if over_peak_index != i_peak:
+                            over_peak_pos = peak_list[over_peak_index][2]
+                            peak_i[-2].append(over_peak_pos)
+                        # END-IF (different peak)
+                    # END-FOR (loop over overlapped peaks)
+                # END-IF (peak has overlapped peaks)
+                # get rid of last element
+                peak_i.pop()
+            # END-FOR (all peaks)
+
+            # add to dictionary
+            bank_peak_dict[bank_id] = peak_list
+        # END-FOR (bank)
+
+        return bank_peak_dict
+
     def get_next_group_id(self):
         """
         Get the next group ID and involve the current one to the next one
@@ -285,7 +389,7 @@ class PeakParameterTable(NT.NTableWidget):
         return self._currGroupID
 
     def get_peak(self, peak_index):
-        """ Get the peak's information from the table
+        """ Get one peak's information from the table according to its row number
         Purpose:
             Get the peak's information including centre, and range
         Requirements:
@@ -293,18 +397,35 @@ class PeakParameterTable(NT.NTableWidget):
         Guarantees:
             Return a dictionary containing peak centre in d-dpacing and its range
         :param peak_index:
-        :return:
+        :return: a list as bank, name, peak position, width, a list of positions of other overlapped peak positions
         """
         # Check requirements
         assert isinstance(peak_index, int)
         assert 0 <= peak_index < self.rowCount(), 'Index of peak %d is out of boundary' % peak_index
 
         # Get information
-        peak_dict = {'Centre': self.get_cell_value(peak_index, 1),
-                     'xmin': self.get_cell_value(peak_index, 2),
-                     'xmax': self.get_cell_value(peak_index, 3)}
+        bank = self.get_cell_value(peak_index, 0)
+        name = self.get_cell_value(peak_index, 1)
+        position = self.get_cell_value(peak_index, 2)
+        width = self.get_cell_value(peak_index, 3)
 
-        return peak_dict
+        # Get overlapped peaks' positions
+        group = self.get_cell_value(peak_index, 5)
+        overlap_pos_list = list()
+        if group >= 0:
+            for i_row in xrange(len(self.rowCount())):
+                # skip this peak
+                if i_row == peak_index:
+                    continue
+                # get group
+                group_i = self.get_cell_value(i_row, 5)
+                if group_i == group:
+                    peak_pos_i = self.get_cell_value(i_row, 2)
+                    overlap_pos_list.append(group_i)
+            # END-FOR (i_row)
+        # END-IF
+
+        return [bank, name, position, width, overlap_pos_list]
 
     def get_selected_peaks_position(self):
         """ Purpose: get selected peaks' positions

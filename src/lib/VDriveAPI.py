@@ -9,11 +9,12 @@
 import os
 import datetime
 
-import vdrive.VDProject as vp
-import vdrive.archivemanager as futil
-import vdrive.SampleLogHelper as logHelper
-import vdrive.vdrivehelper as vdrivehelper
-import vdrive.mantid_helper as mantid_helper
+import VDProject as vp
+import archivemanager as futil
+import SampleLogHelper as logHelper
+import vdrivehelper as vdrivehelper
+import mantid_helper as mantid_helper
+import io_peak_file
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -219,6 +220,48 @@ class VDriveAPI(object):
         except KeyError as e:
             return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, gsas_file_name)
         raise
+
+    @staticmethod
+    def export_gsas_peak_file(bank_peak_dict, out_file_name):
+        """ Export a list of peaks to a GSAS peak file
+        Purpose: export a list of peaks to an ASCII file of GSAS peak file format
+        Requirements:
+            1. peak parameter dictionary is a dictionary of list of list, key is the bank number, value is list of peaks
+                of that bank
+            2. each sub-list is for one peak.  it should be composed of bank, name, peak centre, peak width and a list
+                of centres of overlapped peaks
+        Guarantees: a GSAS peak file is created
+        :param bank_peak_dict: a dictionary of list of peak value list
+        :param out_file_name:
+        :return:
+        """
+        # check requirements
+        assert isinstance(bank_peak_dict, dict), 'Input must be a dict but not %s.' % str(type(bank_peak_dict))
+        assert isinstance(out_file_name, str)
+
+        # create a manager
+        peak_file_manager = io_peak_file.GSASPeakFileManager()
+
+        # add peaks
+        for bank_id in sorted(bank_peak_dict.keys()):
+            peak_param_list = bank_peak_dict[bank_id]
+            assert isinstance(peak_param_list, list)
+            for peak_i in peak_param_list:
+                assert len(peak_i) == 5
+                bank = peak_i[0]
+                peak_name = peak_i[1]
+                centre = peak_i[2]
+                width = peak_i[3]
+                overlapped_list = peak_i[4]
+                peak_file_manager.add_peak(bank=bank, name=peak_name, position=centre,
+                                           width=width, overlapped_peaks_pos=overlapped_list)
+            # END-FOR(peak_i)
+        # END-FOR (bank)
+
+        # write
+        peak_file_manager.export_peaks(out_file_name)
+
+        return
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """
@@ -545,13 +588,40 @@ class VDriveAPI(object):
 
         return True, (vec_times, vec_value)
 
+    @staticmethod
+    def import_gsas_peak_file(peak_file_name):
+        """ Import a GSAS peak file
+        Purpose: import a gsas peak file
+        Requirements: peak file is a valid file name
+        Guarantees: all peaks are imported
+        :param self:
+        :param peak_file_name:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(peak_file_name, str)
+
+        # Import peak file and get peaks
+        peak_manager = io_peak_file.GSASPeakFileManager()
+        peak_manager.import_peaks(peak_file_name)
+        peak_list = peak_manager.get_peaks()
+
+        return peak_list
+
     def load_session(self, in_file_name):
         """ Load session from saved file
         Load session from a session file
         :param in_file_name:
         :return: 2-tuple: (boolean, object)
         """
-        save_dict = futil.load_from_xml(in_file_name)
+        # Check requirements
+        assert isinstance(in_file_name, str)
+        assert len(in_file_name) > 0
+
+        status, save_dict = futil.load_from_xml(in_file_name)
+        if status is False:
+            error_message = save_dict
+            return status, error_message
 
         # Set from dictionary
         # matching instrument name
