@@ -15,7 +15,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 """ import GUI components generated from Qt Designer .ui file """
-# sys.path.append('//home/wzz/Projects/PyVDrive/PyVDrive/')
+sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView

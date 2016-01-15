@@ -3,6 +3,7 @@ import os
 import numpy
 
 # Import mantid directory
+sys.path.append('/opt/mantidnightly/bin/')
 """
 user_root = os.path.expanduser('~')
 for p in sys.path:

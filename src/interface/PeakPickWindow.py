@@ -757,7 +757,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController is not None
 
         # Pop out dialog for file and import the file
-        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', self._dataDirectory))
+        if self._dataDirectory is None:
+            print '[DB] Data directory is not set up!. Force it to current directory'
+            root_dir = os.getcwd()
+        else:
+            root_dir = self._dataDirectory
+        filters = "Text files (*.txt);; All files (*.*)"
+        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', root_dir, filters))
         try:
             peak_list = self._myController.import_gsas_peak_file(peak_file)
         except RuntimeError as err:
