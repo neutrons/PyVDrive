@@ -14,8 +14,11 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-""" import GUI components generated from Qt Designer .ui file """
-sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
+# Set up path to PyVDrive
+import socket
+# if it is on analysis computer... 
+if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
+    sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView
