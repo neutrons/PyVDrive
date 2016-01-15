@@ -1497,26 +1497,5 @@ def main(argv):
     return
 
 
-class ToRemove(object):
-    """
-
-    """
-    def __init__(self):
-        """
-
-        :return:
-        """
-        self._currWS = None
-
-        return
-
-    def does_exist_data(self, data_key):
-        """
-        TODO/NOW/1s: should be implemented in the workflow controller!
-        :return:
-        """
-        return True
-
-
 if __name__ == "__main__":
     main(sys.argv)

@@ -392,6 +392,21 @@ class VDriveAPI(object):
 
         return True, data_set
 
+    def get_loaded_run_info(self, data_key):
+        """
+        Purpose:
+        Requirements:
+        Guarantees:
+        :param data_key:
+        :return: 2-tuple (run number, list of bank IDs)
+        """
+        # FIXME/TODO/1st/1st - Now it is a mock!
+
+        run_number = int(data_key.split('.')[0])
+        bank_id_list = [1, 2]
+
+        return run_number, bank_id_list
+
     def get_reduced_run_info(self, run_number):
         """
         Purpose: get information of a reduced run
