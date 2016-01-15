@@ -770,22 +770,30 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.tableWidget_peakParameter.remove_all_rows()
 
         # Write peaks to table only for the current bank and store the rest to buffer
+        print '[DB] There are %d peaks to add to current bank %s.' % (len(peak_list), str(self._currentBankNumber))
         for peak_info in peak_list:
+            # check
+            assert isinstance(peak_info, list)
+            assert len(peak_info) == 5
+            # parse
             bank = peak_info[0]
             name = peak_info[1]
             peak_pos = peak_info[2]
             peak_width = peak_info[3]
-            # FIXME/NOW/1st1st: HOW TO DEAL WITH THE OVERLAPPED PEAKS?
-
-            if bank == self._currentBankNumber:
-                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width)
+            if peak_info[4] is None:
+                overlap_peak_pos_list = []
             else:
-                self.ui.tableWidget_peakParameter.add_peak_to_buffer(bank, name, peak_pos, peak_width)
+                overlap_peak_pos_list = peak_info[4]
+                assert isinstance(overlap_peak_pos_list, list)
+
+            if bank == self._currentBankNumber or self._currentBankNumber < 0:
+                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width, overlap_peak_pos_list)
+            else:
+                self.ui.tableWidget_peakParameter.add_peak_to_buffer(bank, name, peak_pos, peak_width,
+                                                                     overlap_peak_pos_list)
         # END-FOR (peak_info)
 
         # Check groups
-        # TODO/NOW/1st: implement it!
-        print 'bla bla bla'
 
         return
 
@@ -1458,8 +1466,10 @@ def retrieve_peak_positions(peak_tup_list):
 def main(argv):
     """ Main method for testing purpose
     """
+    import mocks.mockvdriveapi as mocks
+
     parent = None
-    controller = MockVDriveAPI()
+    controller = mocks.MockVDriveAPI()
 
     app = QtGui.QApplication(argv)
 
@@ -1475,7 +1485,7 @@ def main(argv):
     return
 
 
-class MockVDriveAPI(object):
+class ToRemove(object):
     """
 
     """

@@ -27,7 +27,7 @@ class MockVDriveAPI(object):
         :param max_d:
         :return: list of 2-tuples.  Each tuple is a float as d-spacing and a list of HKL's
         """
-        import PyVDrive.vdrive.mantid_helper as mantid_helper
+        import PyVDrive.lib.mantid_helper as mantid_helper
 
         # Check requirements
         assert isinstance(phase, list), 'Input Phase must be a list but not %s.' % (str(type(phase)))
@@ -190,7 +190,7 @@ class MockVDriveAPI(object):
         :return: XXXX XXXX
         """
         # TODO/NOW/1st: Check requirements and finish the algorithm
-        import PyVDrive.vdrive.io_peak_file as pio
+        import PyVDrive.lib.io_peak_file as pio
 
         # Check requirements
         assert isinstance(peak_file_name, str)
@@ -199,6 +199,9 @@ class MockVDriveAPI(object):
         peak_manager = pio.GSASPeakFileManager()
         peak_manager.import_peaks(peak_file_name)
         peak_list = peak_manager.get_peaks()
+
+        for peak in peak_list:
+            print type(peak), peak
 
         return peak_list
 

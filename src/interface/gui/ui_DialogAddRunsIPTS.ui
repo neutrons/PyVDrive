@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>624</width>
-    <height>328</height>
+    <width>627</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,33 +28,15 @@
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <layout class="QGridLayout" name="gridLayout_4">
-        <item row="2" column="0">
-         <widget class="QRadioButton" name="radioButton_useDir">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>120</width>
-            <height>16777215</height>
-           </size>
-          </property>
+        <item row="3" column="3">
+         <widget class="QPushButton" name="pushButton_iptsInfo">
           <property name="text">
-           <string>IPTS Folder</string>
+           <string>Scan Data</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="lineEdit_iptsDir"/>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineEdit_iptsNumber"/>
         </item>
         <item row="0" column="0">
          <widget class="QRadioButton" name="radioButton_useNumber">
@@ -88,8 +70,8 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit_iptsNumber"/>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="lineEdit_iptsDir"/>
         </item>
         <item row="0" column="3">
          <widget class="QPushButton" name="pushButton_verify">
@@ -98,20 +80,45 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="3">
-         <widget class="QPushButton" name="pushButton_iptsInfo">
+        <item row="2" column="0">
+         <widget class="QRadioButton" name="radioButton_useDir">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="text">
-           <string>Scan Data</string>
+           <string>IPTS Folder</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="4" column="3">
          <widget class="QCheckBox" name="checkBox_skipScan">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
           </property>
           <property name="text">
            <string>Skip Scan</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_loadingStatus">
+          <property name="text">
+           <string/>
           </property>
          </widget>
         </item>

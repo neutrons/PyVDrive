@@ -222,7 +222,7 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
-    def add_peak(self, bank, name, centre, width):
+    def add_peak(self, bank, name, centre, width, overlapped_peak_pos_list):
         """ Append a peak to the table
         Purpose:
             Append a new peak to the table
@@ -233,6 +233,7 @@ class PeakParameterTable(NT.NTableWidget):
         :param centre:
         :param bank: bank number
         :param width: peak width
+        :param overlapped_peak_pos_list:
         :return:
         """
         # Check requirements
@@ -244,13 +245,16 @@ class PeakParameterTable(NT.NTableWidget):
 
         # Get new index
         # new_index = self.rowCount()
-        status, message = self.append_row([bank, name, centre, width, name, -1, False])
+        group_id = -1
+        if len(overlapped_peak_pos_list) >= 2:
+            group_id = N
+        status, message = self.append_row([bank, name, centre, width, name, group_id, False])
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
 
         return
 
-    def add_peak_to_buffer(self, bank, name, centre, width):
+    def add_peak_to_buffer(self, bank, name, centre, width, overlapped_peak_pos_list):
         """ Append a peak to the buffer
         Purpose:
             Append a new peak to the table
@@ -269,6 +273,8 @@ class PeakParameterTable(NT.NTableWidget):
         assert isinstance(width, float)
         assert isinstance(name, str)
         assert width > 0
+        assert isinstance(overlapped_peak_pos_list, list)
+        # FIXME/NOW/1st: overlapped_peak_pos_list is not used!
 
         # Add buffer
         if bank not in self._buffer:
