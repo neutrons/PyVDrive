@@ -171,12 +171,14 @@ class GSASPeakFileManager(object):
         return len(self._peakDict)
 
     def get_peaks(self):
-        """
+        """ Return all peaks
+        Purpose: get all peaks to client
+        Requirements: None
+        Guarantees: peaks are exported as a list of list.  Each sub list is for one peak as
+            [bank, name, centre, width, overlapped positions]
         Get all peaks by transforming ... self._peakDict = dict()
         :return:
         """
-        # TODO/NOW/1st - doc and etc.
-
         peak_list = list()
         for key_tup in self._peakDict.keys():
             bank = key_tup[0]

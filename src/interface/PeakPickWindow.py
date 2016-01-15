@@ -769,15 +769,19 @@ class PeakPickerWindow(QtGui.QMainWindow):
         if self.ui.checkBox_keepPeaksInTable.isChecked() is False:
             self.ui.tableWidget_peakParameter.remove_all_rows()
 
-        # Write peaks to table
-        # TODO/NOW/1st: sort the bank in ascending order and sort the peaks in d-spacing of descending order
+        # Write peaks to table only for the current bank and store the rest to buffer
         for peak_info in peak_list:
             bank = peak_info[0]
             name = peak_info[1]
             peak_pos = peak_info[2]
             peak_width = peak_info[3]
-            self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width)
+            # FIXME/NOW/1st1st: HOW TO DEAL WITH THE OVERLAPPED PEAKS?
 
+            if bank == self._currentBankNumber:
+                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_pos, peak_width)
+            else:
+                self.ui.tableWidget_peakParameter.add_peak_to_buffer(bank, name, peak_pos, peak_width)
+        # END-FOR (peak_info)
 
         # Check groups
         # TODO/NOW/1st: implement it!
@@ -1016,8 +1020,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             Save the peak positions and other parameters to controller
         :return:
         """
-        # TODO/NOW/1st: First priority to implement this method!
-
         # Check requirements
         assert self._myController is not None
 
@@ -1025,17 +1027,29 @@ class PeakPickerWindow(QtGui.QMainWindow):
         out_file_name = str(QtGui.QFileDialog.getSaveFile(self, 'Save peaks to GSAS peak file'))
         print '[DB] Output file name =', out_file_name
 
-        num_peaks = self.ui.tableWidget_peakParameter.rowCount()
-        for i_peak in xrange(num_peaks):
-            peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
-            print type(peak_i), peak_i
+        # Get the peaks from buffer
+        peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks([self._currentBankNumber])
 
-        if len(selected_peaks) == 0:
+        # Get the peaks from table
+        num_peaks = self.ui.tableWidget_peakParameter.rowCount()
+        peak_list = list()
+        for i_peak in xrange(num_peaks):
+            # get a list from the peak
+            peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
+            peak_list.append(peak_i)
+            print '[DB-BAT]', type(peak_i), peak_i
+        peak_bank_dict[self._currentBankNumber] = peak_list
+
+        # Check
+        total_peaks = 0
+        for peak_list in peak_bank_dict.values():
+            total_peaks += len(peak_list)
+        if total_peaks == 0:
             GuiUtility.pop_dialog_error(self, 'No peak is selected.  Unable to execute saving peaks.')
             return
 
         # Set the selected peaks to controller
-        self._myController.append_peaks(selected_peaks)
+        self._myController.export_gsas_peak_file(peak_bank_dict, out_file_name)
 
         return
 
@@ -1480,25 +1494,6 @@ class MockVDriveAPI(object):
         :return:
         """
         return True
-
-    def import_gsas_peak_file(self, peak_file_name):
-        """
-
-        :param peak_file_name:
-        :return: XXXX XXXX
-        """
-        # TODO/NOW/1st: Check requirements and finish the algorithm
-        import PyVDrive.vdrive.io_peak_file as pio
-
-        # Check requirements
-        assert isinstance(peak_file_name, str)
-
-        # Import peak file and get peaks
-        peak_manager = pio.GSASPeakFileManager()
-        peak_manager.import_peaks(peak_file_name)
-        peak_list = peak_manager.get_peaks()
-
-        return peak_list
 
     def load_diffraction_file(self, file_name, file_type):
         """
