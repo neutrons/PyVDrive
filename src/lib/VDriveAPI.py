@@ -608,6 +608,24 @@ class VDriveAPI(object):
 
         return peak_list
 
+    def load_diffraction_file(self, file_name, file_type):
+        """
+
+        :param file_type:
+        :return:
+        """
+        # TODO/FIXME/NOW/1st: need to think of how to put the reduced data to project to manage
+        if file_type.lower() == 'gsas':
+            # load
+            gss_ws_name = get_standard_ws_name(file_name, False)
+            mantid_helper.load_gsas_file(file_name, gss_ws_name)
+        else:
+            raise RuntimeError('Unable to support %s file.' % file_type)
+
+        data_key = os.path.basename(file_name)
+
+        return data_key
+
     def load_session(self, in_file_name):
         """ Load session from saved file
         Load session from a session file
@@ -1101,6 +1119,9 @@ def get_standard_ws_name(file_name, meta_only):
     :return:
     """
     ws_name = os.path.basename(file_name).split('.')[0]
+    file_type = os.path.basename(file_name).split('.')[1]
+    if file_type.lower() == 'gsa' or file_type.lower() == 'gda':
+        ws_name += '_gda'
 
     if meta_only is True:
         ws_name += '_Meta'

@@ -543,6 +543,39 @@ def is_event_workspace(workspace_name):
     return event_ws.id() == EVENT_WORKSPACE_ID
 
 
+def load_gsas_file(gss_file_name, out_ws_name):
+    """
+    :param gss_file_name:
+    :return:
+    """
+    # TODO/NOW/1st: Doc
+
+    # Check
+    assert isinstance(gss_file_name, str), 'bla bla'
+
+    # Load GSAS
+    mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
+    gss_ws = retrieve_workspace(out_ws_name)
+    assert gss_ws is not None, 'bla bla'
+
+    # set instrument geometry: this is for VULCAN-only
+    if gss_ws.getNumberHistograms() == 2:
+        mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
+                                                PrimaryFlightPath=43.753999999999998,
+                                                SpectrumIDs='1,2',
+                                                L2='2.00944,2.00944',
+                                                Polar='90,270')
+    else:
+        raise RuntimeError('It is not implemented for cases more than 2 spectra.')
+
+    # convert unit and to point data
+    mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
+                           Target='dSpacing')
+    mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
+
+    return out_ws_name
+
+
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
     """ Load NeXus file
     :param data_file_name:

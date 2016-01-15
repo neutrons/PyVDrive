@@ -882,10 +882,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
         end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
 
         # Get the GSAS file names
+        filters = 'GSAS files (*.gda);; All files (*.*)'
         gsas_file_list = list()
+        data_dir = self._dataDirectory
+        if data_dir is None:
+            data_dir = os.getcwd()
+
         if start_run_number is None or end_run_number is None:
             # no valid range of run numbers are given, then load the data explicitly
-            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', self._dataDirectory))
+            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', data_dir, filters))
             gsas_file_list.append(gsas_file_name)
         else:
             # valid range of run numbers, assuming that their GSAS files are in same directory.
@@ -1152,6 +1157,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                                       'but is %s.' % controller.__class__.__name__
 
         self._myController = controller
+        self.set_data_dir(self._myController.get_working_dir())
 
         # Get reduced data
         reduced_run_number_list = self._myController.get_reduced_runs()
@@ -1511,37 +1517,6 @@ class ToRemove(object):
         """
         return True
 
-    def load_diffraction_file(self, file_name, file_type):
-        """
-
-        :param file_type:
-        :return:
-        """
-        import sys
-        sys.path.append('/Users/wzz/MantidBuild/debug/bin')
-        import mantid.simpleapi
-
-        if file_type.lower() == 'gsas':
-            # load
-            temp_ws = mantid.simpleapi.LoadGSS(Filename=file_name, OutputWorkspace='Temp')
-            # set instrument geometry
-            if temp_ws.getNumberHistograms() == 2:
-                mantid.simpleapi.EditInstrumentGeometry(Workspace='Temp',
-                                                        PrimaryFlightPath=43.753999999999998,
-                                                        SpectrumIDs='1,2',
-                                                        L2='2.00944,2.00944',
-                                                        Polar='90,270')
-            else:
-                raise RuntimeError('It is not implemented for cases more than 2 spectra.')
-            # convert unit
-            mantid.simpleapi.ConvertUnits(InputWorkspace='Temp', OutputWorkspace='Temp',
-                                          Target='dSpacing')
-
-            self._currWS = mantid.simpleapi.ConvertToPointData(InputWorkspace='Temp', OutputWorkspace='Temp')
-        else:
-            raise NotImplementedError('File type %s is not supported.' % file_type)
-
-        return file_name
 
 if __name__ == "__main__":
     main(sys.argv)
