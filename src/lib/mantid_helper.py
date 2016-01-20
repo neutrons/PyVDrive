@@ -4,6 +4,7 @@ import numpy
 
 # Import mantid directory
 sys.path.append('/opt/mantidnightly/bin/')
+sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
 """
 user_root = os.path.expanduser('~')
 for p in sys.path:
