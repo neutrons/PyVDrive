@@ -10,6 +10,7 @@ import os
 import datetime
 
 import VDProject as vp
+from analysisproject import AnalysisProject
 import archivemanager as futil
 import SampleLogHelper as logHelper
 import vdrivehelper as vdrivehelper
@@ -52,6 +53,7 @@ class VDriveAPI(object):
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
         self._myProject = vp.VDProject('New Project')
+        self._myAnalysisProject = AnalysisProject('New Analysis Project')
         self._myArchiveManager = futil.DataArchiveManager(self._myInstrument)
         self._mySlicingManager = logHelper.SampleLogManager()
 
@@ -371,24 +373,32 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_data(self, run_number, target_unit):
+    def get_reduced_data(self, run_id, target_unit):
         """ Get reduced data
-        Purpose:
-        Requirements:
+        Purpose: Get all data from a reduced run, either from run number or data key
+        Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_number:
+        :param run_id: it is a run number or data key
         :param target_unit:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW - Doc 1st
-        assert isinstance(run_number, int), 'blabla'
-        assert isinstance(target_unit, str), 'blabla'
+        # Check
+        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
+                                                                   'but not %s.' % str(type(run_id))
 
-        try:
+        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
+
+        if isinstance(run_id, int):
+            # case as run number
+            run_number = run_id
             data_set = self._myProject.get_reduced_data(run_number, target_unit)
-            assert isinstance(data_set, dict), 'bla bla bla... ...'
-        except RuntimeError as e:
-            return False, str(e)
+        else:
+            # case as dat key
+            data_key = run_id
+            data_set = self._myAnalysisProject.get_data(data_key)
+        # END-IF
+
+        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
 
         return True, data_set
 
@@ -407,7 +417,7 @@ class VDriveAPI(object):
 
         return run_number, bank_id_list
 
-    def get_reduced_run_info(self, run_number):
+    def get_reduced_run_info(self, run_number, data_key=None):
         """
         Purpose: get information of a reduced run
         Requirements: ... ...
@@ -415,13 +425,24 @@ class VDriveAPI(object):
         :param run_number:
         :return: list of bank ID
         """
-        # TODO/NOW/1st: doc and etc.
-        assert isinstance(run_number, int), 'blabla'
+        if isinstance(run_number, int):
+            # given run number
+            try:
+                info = self._myProject.get_reduced_run_information(run_number)
+            except AssertionError as e:
+                return False, str(e)
 
-        try:
-            info = self._myProject.get_reduced_run_information(run_number)
-        except AssertionError as e:
-            return False, str(e)
+        elif run_number is None and isinstance(data_key, str):
+            # given data key
+            assert len(data_key) > 0, 'bla bla'
+            try:
+                info = self._myAnalysisProject.get_data_information(data_key)
+            except AssertionError as e:
+                return False, str(e)
+
+        else:
+            # unsupported case
+            raise AssertionError('run number %s and data key %s is not supported.' % (str(run_number), str(data_key)))
 
         return True, info
 
@@ -624,20 +645,29 @@ class VDriveAPI(object):
         return peak_list
 
     def load_diffraction_file(self, file_name, file_type):
-        """
-
+        """ Load reduced diffraction file to analysis project
+        Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
         :param file_type:
         :return:
         """
-        # TODO/FIXME/NOW/1st: need to think of how to put the reduced data to project to manage
+        # Check requirements
+        assert isinstance(file_name, str), 'blabla'
+        assert isinstance(file_type, str), 'blabla'
+
+        # Load
         if file_type.lower() == 'gsas':
             # load
+            data_key = self._myAnalysisProject.load_data(data_file_name=file_name, data_type=file_type)
+            """
             gss_ws_name = get_standard_ws_name(file_name, False)
             mantid_helper.load_gsas_file(file_name, gss_ws_name)
+            """
         else:
             raise RuntimeError('Unable to support %s file.' % file_type)
 
-        data_key = os.path.basename(file_name)
+        # data_key = os.path.basename(file_name)
+
+        print '[DB-BAT] Load %s and reference it by %s.' % (file_name, data_key)
 
         return data_key
 

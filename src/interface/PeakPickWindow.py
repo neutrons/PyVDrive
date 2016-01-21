@@ -939,10 +939,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: ...
         Requirements: ...
         Guarantees: ...
-        :param data_key:
+        :param data_key: key to the reduced data.  It can be string key or integer key (run number)
         :return:
         """
         # TODO/NOW/1st: Doc & Polish
+
+        print '[DB-BAT] Load plot run : data key = ', data_key, 'of type', type(data_key)
 
         # Get run number
         if isinstance(data_key, int):
@@ -958,7 +960,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get reduced run information
         if run_number is None:
-            run_number, bank_id_list = self._myController.get_loaded_run_info(data_key)
+            status, bank_id_list = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
+            # run_number, bank_id_list = self._myController.get_loaded_run_info(data_key)
         else:
             status, ret_obj = self._myController.get_reduced_run_info(run_number)
             assert status, ret_obj
@@ -973,10 +976,16 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.comboBox_bankNumbers.addItem(str(i_bank))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
         self.ui.comboBox_runNumber.addItem(str(run_number))
-        self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+        if run_number is None:
+            self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
+        else:
+            self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
-        status, ret_obj = self._myController.get_reduced_data(run_number, 'dSpacing')
+        if run_number is None:
+            status, ret_obj = self._myController.get_reduced_data(data_key, 'dSpacing')
+        else:
+            status, ret_obj = self._myController.get_reduced_data(run_number, 'dSpacing')
         if status is False:
             GuiUtility.pop_dialog_error(self, ret_obj)
             return

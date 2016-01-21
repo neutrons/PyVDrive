@@ -5,21 +5,6 @@ import numpy
 # Import mantid directory
 sys.path.append('/opt/mantidnightly/bin/')
 sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
-"""
-user_root = os.path.expanduser('~')
-for p in sys.path:
-    if os.path.isdir(p):
-        dir_p = p
-    else:
-        dir_p = os.path.dirname(p)
-    print p, dir_p
-    if dir_p.startswith(user_root) and dir_p.count('site-package') > 0:
-        mantid_path = os.path.join(dir_p, 'Mantid')
-        print 'mantid path = ', mantid_path
-        if os.path.exists(mantid_path) is True:
-            sys.path.append(mantid_path)
-            break
-"""
 
 import mantid
 import mantid.api
@@ -390,7 +375,7 @@ def get_data_from_workspace(workspace_name, point_data):
     :param point_data:
     :return:
     """
-    # TODO/DOC
+    # TODO/DOC/1st
     
     # Requirements
     # ....
@@ -469,15 +454,20 @@ def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
 
     return segment_list
 
+
 def get_workspace_information(run_ws_name):
     """
-    Purpose: ... ...
-    Requirements: ... ...
-    Guarantees: ... ...
+    Purpose: Get bank information from a workspace in analysis data service
+    Requirements: Workspace name is a string for an existing workspace in analysis data service
+    Guarantees: a list of banks
     :param run_ws_name:
-    :return: list of bank ID
+    :return: list of bank ID, [1, 2, ...]
     """
-    # TODO/NOW/1st: Doc & assertion
+    # Check requirements
+    assert isinstance(run_ws_name, str), 'Input workspace name should be a string but not %s.' % str(type(run_ws_name))
+    assert workspace_does_exist(run_ws_name), 'Workspace %s does not exist.' % run_ws_name
+
+    # Retrieve workspace and get bank list (bank number is from 1)
     workspace = retrieve_workspace(run_ws_name)
     num_spec = workspace.getNumberHistograms()
     bank_id_list = range(1, num_spec+1)
@@ -513,9 +503,30 @@ def retrieve_workspace(ws_name):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
+def get_standard_ws_name(file_name, meta_only):
+    """
+    Get the standard name for a loaded workspace
+    Requirements: file name is a string
+    :param file_name:
+    :param meta_only:
+    :return:
+    """
+    assert isinstance(file_name, str), 'File name should be a string but not %s.' % str(type(file_name))
+
+    ws_name = os.path.basename(file_name).split('.')[0]
+    file_type = os.path.basename(file_name).split('.')[1]
+    if file_type.lower() == 'gsa' or file_type.lower() == 'gda':
+        ws_name += '_gda'
+
+    if meta_only is True:
+        ws_name += '_Meta'
+
+    return ws_name
+
+
 def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VULCAN'):
     """
-    Workspace name for splitted event data
+    Workspace name for split event data
     :param run_number:
     :param out_base_name:
     :param instrument_name: name of the instrument
@@ -545,19 +556,21 @@ def is_event_workspace(workspace_name):
 
 
 def load_gsas_file(gss_file_name, out_ws_name):
-    """
+    """ Load GSAS file and set instrument information as 2-bank VULCAN and convert units to d-spacing
+    Requirements: GSAS file name is a full path; output workspace name is a string;
+    Guarantees:
     :param gss_file_name:
-    :return:
+    :param out_ws_name:
+    :return: output workspace name
     """
-    # TODO/NOW/1st: Doc
-
     # Check
-    assert isinstance(gss_file_name, str), 'bla bla'
+    assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
+    assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
 
     # Load GSAS
     mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
     gss_ws = retrieve_workspace(out_ws_name)
-    assert gss_ws is not None, 'bla bla'
+    assert gss_ws is not None, 'Output workspace cannot be found.'
 
     # set instrument geometry: this is for VULCAN-only
     if gss_ws.getNumberHistograms() == 2:
@@ -594,25 +607,33 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     return True, out_ws
 
 
-def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, splitted_ws_base_name, tof_correction=False):
+def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):
     """
-    Split workspaces
+    Split events in a workspace
+    Requirements: given raw event workspace, splitter workspace, information workspace are in ADS.
     :param raw_event_ws_name:
     :param splitter_ws_name:
     :param info_ws_name:
+    :param split_ws_base_name:
     :param tof_correction:
     :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
     """
+    # Check requirements
+    assert workspace_does_exist(raw_event_ws_name)
+    assert workspace_does_exist(splitter_ws_name)
+    assert workspace_does_exist(info_ws_name)
+    assert isinstance(splitter_ws_name, str)
+
     if tof_correction is True:
         correction = 'Elastic'
     else:
         correction = 'None'
 
-    print '[DB] Information workspace = %s of type %s\n' % (str(info_ws_name), str(type(info_ws_name)))
+    # print '[DB] Information workspace = %s of type %s\n' % (str(info_ws_name), str(type(info_ws_name)))
     ret_list = mantidapi.FilterEvents(InputWorkspace=raw_event_ws_name,
                                       SplitterWorkspace=splitter_ws_name,
                                       InformationWorkspace=info_ws_name,
-                                      OutputWorkspaceBaseName=splitted_ws_base_name,
+                                      OutputWorkspaceBaseName=split_ws_base_name,
                                       FilterByPulseTime=False,
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
@@ -641,12 +662,14 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, splitted
 
 
 def workspace_does_exist(workspace_name):
-    """ TODO/NOW/DOC
+    """ Check whether a workspace exists in analysis data service by its name
+    Requirements: input workspace name must be a non-empty string
     :param workspace_name:
-    :return:
+    :return: boolean
     """
     # Check
     assert isinstance(workspace_name, str), 'Workspace name must be string but not %s.' % str(type(workspace_name))
+    assert len(workspace_name) > 0, 'It is impossible to for a workspace with empty string as name.'
 
     #
     does_exist = mantid.AnalysisDataService.doesExist(workspace_name)

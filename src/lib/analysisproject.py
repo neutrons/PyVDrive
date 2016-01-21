@@ -1,7 +1,8 @@
-__author__ = 'wzz'
-
 import os
 import mantid_helper
+
+__author__ = 'wzz'
+
 
 class AnalysisProject(object):
     """ VDrive Analysis Project.  This is a simplified project manager than VDriveProject.
@@ -68,27 +69,50 @@ class AnalysisProject(object):
 
         return len(data_key)
 
-    def get_data(self, data_key=None, data_file_name=None, bank_id=1):
-        """ Get data
+    def get_data(self, data_key=None, data_file_name=None):
+        """ Get whole data set as a dictionary.  Each entry is of a bank
+        Requirements: data key or data file name is specified
+        Guarantees:
+        :param data_key:
+        :param data_file_name:
+        :return:
+        """
+        # Check requirements
+        assert data_key is None and data_file_name is None, 'Neither of ... specified... blabla'
+        assert data_key is not None and data_file_name is not None, 'Both of ... blabla'
+
+        # check and convert to data key
+        if data_file_name is not None:
+            assert isinstance(data_file_name, str), 'blabla'
+            # TODO: make this to a method ???
+            data_key = os.path.basename(data_file_name)
+        else:
+            assert isinstance(data_key, str), 'blabla'
+
+        # check existence
+        if data_key not in self._dataWorkspaceDict:
+            raise KeyError('data key %s does not exist.' % data_key)
+
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save time
+        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
+
+        return True, data_set_dict
+
+    def get_data_information(self, data_key):
+        """ Get bank information of a loaded data file (workspace)
+        Requirements: data_key is a valid string as an existing key to the MatrixWorkspace
+        Guarantees: return
         :param data_key:
         :return:
         """
-        """ Get data X, Y and E
-        """
-        # get file name
-        fullpathdatafname = self._getFullpathFileName(basedatafilename)
-        if fullpathdatafname is None:
-            return (False, "Data file name %s does not exist in project. " % (basedatafilename))
+        # Check requirements
+        assert isinstance(data_key, str), 'Data key must be a string but not %s.' % str(type(data_key))
+        assert data_key in self._dataWorkspaceDict, 'Data key %s does not exist.' % data_key
 
-        if os.path.exists(fullpathdatafname):
-            return (False, "Data file name %s cannot be found. " % (fullpathdatafname))
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save time
+        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
 
-        # retrieve
-        ws = mantid.LoadGSS(Filename=fullpathdatafname)
-
-        # FIXME - Consider single-spectrum GSS file only!
-
-        return (True, [ws.readX(0), ws.readY(0), ws.readE(0)])
+        return data_set_dict.keys()
 
     def load_data(self, data_file_name, data_type='GSAS'):
         """
@@ -103,7 +127,7 @@ class AnalysisProject(object):
         assert os.path.exists(data_file_name), 'Data file %s does not exist.' % data_file_name
 
         # Get output workspace name
-        out_ws_name = mantid_helper.workspace_name(data_file_name)
+        out_ws_name = mantid_helper.get_standard_ws_name(data_file_name, False)
 
         if data_type.upper() == 'GSAS':
             mantid_helper.load_gsas_file(data_file_name, out_ws_name)

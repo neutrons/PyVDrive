@@ -151,8 +151,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Sub windows
         # controls to the sub windows
-        self._openSubWindows = []
-        self._manualPikerWindow = None
+        self._myChildWindows = []
+        self._logPickerWindow = None
+        self._peakPickerWindow = None
         self._snapViewWindow = None
 
         # Snap view related variables and data structures
@@ -734,6 +735,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
         self._peakPickerWindow.set_controller(self._myWorkflow)
         self._peakPickerWindow.show()
+        self._myChildWindows.append(self._peakPickerWindow)
 
         return
 
@@ -979,7 +981,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.save_settings()
 
         # FIXME - Save the session automatically before leaving
+        for child_window in self._myChildWindows:
+            child_window.close()
+
         self.close()
+
+        return
 
     def get_sample_log_value(self, log_name, relative=False):
         """
@@ -1114,8 +1121,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return:
         """
         # Start
-        if isinstance(self._manualPikerWindow, LogPicker.WindowLogPicker):
-            self._manualPikerWindow.show()
+        if isinstance(self._logPickerWindow, LogPicker.WindowLogPicker):
+            self._logPickerWindow.show()
         else:
             # Get selected run number from sidebar tree view
             status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
@@ -1127,13 +1134,13 @@ class VdriveMainWindow(QtGui.QMainWindow):
                     run_number = None
             else:
                 run_number = None
-            self._manualPikerWindow = LogPicker.WindowLogPicker(self, run_number)
+            self._logPickerWindow = LogPicker.WindowLogPicker(self, run_number)
 
         # Set up tree view for runs
-        self._manualPikerWindow.setup()
+        self._logPickerWindow.setup()
 
         # Show
-        self._manualPikerWindow.show()
+        self._logPickerWindow.show()
 
         return
 
