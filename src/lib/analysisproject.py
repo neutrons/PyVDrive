@@ -73,13 +73,15 @@ class AnalysisProject(object):
         """ Get whole data set as a dictionary.  Each entry is of a bank
         Requirements: data key or data file name is specified
         Guarantees:
-        :param data_key:
-        :param data_file_name:
+        :param data_key: data key generated in Vdrive project
+        :param data_file_name: full path data file
         :return:
         """
         # Check requirements
-        assert data_key is None and data_file_name is None, 'Neither of ... specified... blabla'
-        assert data_key is not None and data_file_name is not None, 'Both of ... blabla'
+        assert (data_key is None and data_file_name is None) is False, \
+            'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
+        assert (data_key is not None and data_file_name is not None) is False, \
+            'Both data key and data file name are given.'
 
         # check and convert to data key
         if data_file_name is not None:

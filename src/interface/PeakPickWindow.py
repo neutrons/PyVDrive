@@ -929,6 +929,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # END-FOR
 
         # Plot data if there is only one GSAS file
+        print '[DB-BAT] Data key to load: ', data_key_list
         if len(gsas_file_list) == 1:
             self.load_plot_run(data_key_list[0])
 
@@ -936,14 +937,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def load_plot_run(self, data_key):
         """ Load and plot a run
-        Purpose: ...
-        Requirements: ...
-        Guarantees: ...
+        Purpose: Load and plot a run by its data key
+        Requirements: Input data key must be either an integer (run number) or a string (data file name)
+        Guarantees: Reduced run (run number) or loaded file shall be loaded and plot
         :param data_key: key to the reduced data.  It can be string key or integer key (run number)
         :return:
         """
-        # TODO/NOW/1st: Doc & Polish
-
         print '[DB-BAT] Load plot run : data key = ', data_key, 'of type', type(data_key)
 
         # Get run number
@@ -960,9 +959,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get reduced run information
         if run_number is None:
+            # in case of a loaded data file (gsas, fullprof..)
             status, bank_id_list = self._myController.get_reduced_run_info(run_number=None, data_key=data_key)
-            # run_number, bank_id_list = self._myController.get_loaded_run_info(data_key)
         else:
+            # in case of a previously reduced run
             status, ret_obj = self._myController.get_reduced_run_info(run_number)
             assert status, ret_obj
             bank_id_list = ret_obj

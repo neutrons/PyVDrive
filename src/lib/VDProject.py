@@ -180,26 +180,25 @@ class VDProject(object):
         return self._reductionManager.get_reduced_runs()
 
     def get_reduced_data(self, run_number, unit):
-        """ Get reduced data of a run
+        """ Get data (x, y and e) of a reduced run in the specified unit
         Purpose: Get reduced data including all spectra
-        Requirements:
-        Guarantees:
+        Requirements: run number is a valid integer; unit is a string for supported unit
+        Guarantees: all data of the reduced run will be returned
         :param run_number:
-        :param unit:
+        :param unit: target unit for the output X vector.  If unit is None, then no request
         :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW: Doc!
-        """
+        # check
+        assert isinstance(run_number, int), 'Input run number must be an integer.'
+        assert unit is None or isinstance(unit, str)
 
-        Arguments:
-         - unit :: target unit for the output X vector.  If unit is None, then no request
-
-        Return ::
-        """
+        # get reduced workspace name
         reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)
 
+        # get data
         data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
-        assert isinstance(data_set_dict, dict), 'bla bla...'
+        assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
+                                                'but not %s.' % str(type(data_set_dict))
 
         return data_set_dict
 
@@ -213,12 +212,13 @@ class VDProject(object):
 
     def get_reduced_run_information(self, run_number):
         """
-        Purpose: ...
-        Requirements: ...
+        Purpose: Get the reduced run's information including list of banks
+        Requirements: run number is an integer
         :param run_number:
         :return: a list of integers as bank ID. reduction history...
         """
-        # TODO/NOW/1st: Doc and assertion
+        # Check
+        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
         run_ws_name = self._reductionManager.get_reduced_workspace(run_number)
@@ -751,32 +751,6 @@ class DeprecatedReductionProject(VDProject):
             pairlist.append( (datafile, self._datacalibfiledict[datafile]) )
 
         return pairlist
-        
-    def getProcessedVanadium(self, run):
-        """          vandatalist, history = project.
-        """
-        runbasename = os.path.basename(run)
-
-        returndict = None
-        if self._myRunPdrDict.has_key(runbasename):
-            runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.get_processed_vanadium()
-            
-            if ws is not None:
-                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
-
-                returndict = {}
-                for iws in xrange(ws.getNumberHistograms()):
-                    vecx = ws.readX(iws)[:]
-                    vecy = ws.readY(iws)[:]
-                    print type(vecx), type(vecy)
-                    returndict[iws] = (vecx, vecy)
-                    print "[DB Vanadium] iws = %d, vecx = "%(iws), str(vecx)
-                # ENDFOR
-            # ENDIF
-        # ENDIF
-        
-        return (returndict, "Blabla;blabla")
 
     def getTempSmoothedVanadium(self, run):
         """
@@ -800,8 +774,7 @@ class DeprecatedReductionProject(VDProject):
             # ENDIF
         # ENDIF
         
-        return (returndict)
-
+        return returndict
 
     def getVanadiumRecordFile(self):
         """

@@ -395,7 +395,11 @@ class VDriveAPI(object):
         else:
             # case as dat key
             data_key = run_id
-            data_set = self._myAnalysisProject.get_data(data_key)
+            print '[DB-BAT] VDriveAPI... get data of data key', data_key, 'of type', type(run_id)
+            status, ret_obj = self._myAnalysisProject.get_data(data_key=data_key)
+            if status is False:
+                return False, ret_obj
+            data_set = ret_obj
         # END-IF
 
         assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
