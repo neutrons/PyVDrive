@@ -917,7 +917,7 @@
      <x>0</x>
      <y>0</y>
      <width>1512</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">
@@ -926,12 +926,30 @@
     </property>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuPhases">
+    <property name="title">
+     <string>Phases</string>
+    </property>
+    <addaction name="actionLoad"/>
+   </widget>
    <addaction name="menuTest"/>
+   <addaction name="menuPhases"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExit">
    <property name="text">
     <string>Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>

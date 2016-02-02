@@ -11,10 +11,10 @@ import datetime
 
 import VDProject as vp
 from analysisproject import AnalysisProject
-import archivemanager as futil
-import SampleLogHelper as logHelper
-import vdrivehelper as vdrivehelper
-import mantid_helper as mantid_helper
+import archivemanager
+import SampleLogHelper
+import vdrivehelper
+import mantid_helper
 import io_peak_file
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
@@ -54,10 +54,11 @@ class VDriveAPI(object):
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
         self._myProject = vp.VDProject('New Project')
         self._myAnalysisProject = AnalysisProject('New Analysis Project')
-        self._myArchiveManager = futil.DataArchiveManager(self._myInstrument)
-        self._mySlicingManager = logHelper.SampleLogManager()
+        self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
+        self._mySlicingManager = SampleLogHelper.SampleLogManager()
 
-        # default working directory to current directory. if it is not writable, then use /tmp/
+        # default working directory to current directory.
+        #  if it is not writable, then use /tmp/
         self._myWorkDir = os.getcwd()
         if os.access(self._myWorkDir, os.W_OK) is False:
             self._myWorkDir = '/tmp/'
@@ -342,13 +343,13 @@ class VDriveAPI(object):
 
         # FIXME - Need to pass value change direction
         self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-                                                        min_time=start_time, max_time=end_time,
-                                                        relative_time=True,
-                                                        min_log_value=min_log_value,
-                                                        max_log_value=max_log_value,
-                                                        log_value_interval=log_value_step,
-                                                        value_change_direction='Both',
-                                                        tag=tag)
+                                                             min_time=start_time, max_time=end_time,
+                                                             relative_time=True,
+                                                             min_log_value=min_log_value,
+                                                             max_log_value=max_log_value,
+                                                             log_value_interval=log_value_step,
+                                                             value_change_direction='Both',
+                                                             tag=tag)
 
         return
 
@@ -541,7 +542,7 @@ class VDriveAPI(object):
         :return: 2-tuple: integer as IPTS number; 0 as unable to find
         """
         # FIXME - It is broken!
-        return futil.get_ipts_number_from_dir(ipts_dir)
+        return archivemanager.get_ipts_number_from_dir(ipts_dir)
 
     def get_run_info(self, run_number):
         """ Get a run's information
@@ -685,7 +686,7 @@ class VDriveAPI(object):
         assert isinstance(in_file_name, str)
         assert len(in_file_name) > 0
 
-        status, save_dict = futil.load_from_xml(in_file_name)
+        status, save_dict = archivemanager.load_from_xml(in_file_name)
         if status is False:
             error_message = save_dict
             return status, error_message
@@ -811,7 +812,7 @@ class VDriveAPI(object):
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
             print '[INFO] Session file is saved to working directory as %s.' % out_file_name
 
-        futil.save_to_xml(save_dict, out_file_name)
+        archivemanager.save_to_xml(save_dict, out_file_name)
 
         return True, out_file_name
 
@@ -850,7 +851,7 @@ class VDriveAPI(object):
                 i_target += 1
             else:
                 tmp_target = '%s' % str(time_seg[2])
-            tmp_seg = logHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
+            tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
             segment_list.append(tmp_seg)
         # END-IF
 
@@ -866,7 +867,7 @@ class VDriveAPI(object):
         # END-IF
 
         # Write to file
-        logHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
+        SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
 
         return
 
@@ -1026,7 +1027,7 @@ class VDriveAPI(object):
         if run_number is not None:
             assert isinstance(run_number, int)
         else:
-            run_number = futil.getIptsRunFromFileName(nxs_file_name)[1]
+            run_number = archivemanager.getIptsRunFromFileName(nxs_file_name)[1]
 
         status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
 
@@ -1184,7 +1185,7 @@ def parse_time_segment_file(file_name):
     :param file_name:
     :return:
     """
-    status, ret_obj = logHelper.parse_time_segments(file_name)
+    status, ret_obj = SampleLogHelper.parse_time_segments(file_name)
 
     return status, ret_obj
 

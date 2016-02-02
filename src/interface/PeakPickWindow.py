@@ -98,7 +98,7 @@ class PhaseWidgets(object):
 
     def get_phase_value(self, phase_value_list):
         """
-        Purpose: set the phase values to the input list. It is used for save the values of phase temporarily.
+        Purpose: set the phase values to the input list. It is used for save_to_buffer the values of phase temporarily.
             if value is not set up, then it will ignored;
         Requirements:  if the value is set, then it must be valid
 
@@ -146,7 +146,7 @@ class PhaseWidgets(object):
             else:
                 c = a
         except TypeError as e:
-            raise RuntimeError('Lattice parameters a, b or c does not have correct value.')
+            raise RuntimeError('Lattice parameters a, b or c does not have correct value. Error: %s.' % str(e))
 
         return [name, cell_type, a, b, c]
 
@@ -270,12 +270,12 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         Init ...
         :return:
         """
-        import gui.ui_PeakWidthSetup as width_setup
+        import gui.ui_PeakWidthSetup as widthSetupWindow
 
         # Initialize
         QtGui.QDialog.__init__(self, parent)
 
-        self.ui = width_setup.Ui_Dialog()
+        self.ui = widthSetupWindow.Ui_Dialog()
         self.ui.setupUi(self)
 
         # Define event handlers
@@ -303,10 +303,10 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         """
         peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
         if peak_width is None:
-            GuiUtility.pop_dialog_error('Peak width is not set up!')
+            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
             return
         if peak_width <= 0.:
-            GuiUtility.pop_dialog_error('Peak width %f cannot be 0 or negative!' % peak_width)
+            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
             return
 
         self._peakWidth = peak_width
@@ -397,7 +397,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_switch_bank)
 
-        # save and quit
+        # save_to_buffer and quit
         self.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
 
@@ -412,6 +412,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                         self.on_mouse_release_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
+
+        # Menu
+        self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
+                     self.menu_load_phase)
+        self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
+                     self.menu_exit)
 
         # Set up widgets
         self._phaseWidgetsGroupDict = dict()
@@ -631,7 +637,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
     def do_find_peaks(self):
         """
         Purpose:
-            Find all peaks in the spectrum
+            Find all peaks in the spectrum by space group calculation
         Requirements:
             Data is loaded
             Peak profile is determined (such as Gaussian or etc)
@@ -704,10 +710,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set the peaks' parameters to table
         for peak_tup in reflection_list:
-            # TODO/NOW/1st: get a better name for peak other than using HKL!
-            hkl = str(peak_tup[1])
+            # TODO/NOW/1st: get a better name for peak other than using HKL! Peak Width!
+            hkl = peak_tup[1][0]
+            assert len(hkl) == 3, 'HKL is not a 3-item list but %s of type %s.' % (str(hkl), str(type(hkl)))
+            temp_name = '%d%d%d' % (hkl[0], hkl[1], hkl[2])
             peak_pos = peak_tup[0]
-            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, hkl, peak_pos, 0.03)
+            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, temp_name, peak_pos, 0.03, [])
+        # END-FOR
 
         return
 
@@ -820,7 +829,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             return
 
         # Save the current peaks to memory and back up to disk
-        self.ui.tableWidget_peakParameter.save(self._currentBankNumber)
+        self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
 
         # Clear table and canvas
         self.ui.tableWidget_peakParameter.remove_all_rows()
@@ -855,7 +864,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController is not None
 
         # Launch dialog box for calibration file name
-        cal_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Calibration File')
+        file_filter = 'Calibration (*.cal);;Text (*.txt);;All files (*.*)'
+        cal_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
 
         # Load
         self._myController.load_calibration_file(cal_file_name)
@@ -1052,8 +1062,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController is not None
 
         # Get the output file
-        out_file_name = str(QtGui.QFileDialog.getSaveFile(self, 'Save peaks to GSAS peak file'))
-        print '[DB] Output file name =', out_file_name
+        file_filter = 'Text (*.txt);;All files (*.*)'
+        out_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
+                                                              self._dataDirectory, file_filter))
 
         # Get the peaks from buffer
         peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks([self._currentBankNumber])
@@ -1065,7 +1076,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # get a list from the peak
             peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
             peak_list.append(peak_i)
-            print '[DB-BAT]', type(peak_i), peak_i
+            print '[DB-BAT-22527]', type(peak_i), peak_i
         peak_bank_dict[self._currentBankNumber] = peak_list
 
         # Check
@@ -1129,7 +1140,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_undo_phase_changes(self):
         """ Purpose: undo all the changes from last 'set phase' by get the information from
-        the save phase parameters
+        the save_to_buffer phase parameters
         Requirements: None
         Guarantees:
         :return:
@@ -1160,10 +1171,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: Set the workflow controller to this window object
         Requirement: controller must be VDriveAPI or Mock
         Guarantees: controller is set up. Reduced runs are get from controller and set to
+        :param controller:
+        :return:
         """
-        # TODO/NOW/Doc 1st: check ... and finish!
-        assert controller.__class__.__name__.count('VDriveAPI') == 1, 'Controller is not a valid VDriveAPI instance,' \
-                                                                      'but is %s.' % controller.__class__.__name__
+        assert controller.__class__.__name__.count('VDriveAPI') == 1, \
+            'Controller is not a valid VDriveAPI instance , but not %s.' % controller.__class__.__name__
 
         self._myController = controller
         self.set_data_dir(self._myController.get_working_dir())
@@ -1174,6 +1186,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Set
         self.ui.treeView_iptsRun.add_ipts_runs(ipts_number=ipts, run_number_list=reduced_run_number_list)
+
+        return
 
     def menu_add_peak(self):
         """ Add a peak to table
@@ -1233,6 +1247,37 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         print 'bla bla ...', 'Delete peak around x = %f' % self._currMousePosX
+
+    def menu_exit(self):
+        """
+        Quit the window
+        :return:
+        """
+        self.close()
+
+        return
+
+    def menu_load_phase(self):
+        """
+        Load a file with phase information
+        :return:
+        """
+        # Get the file name
+        file_filter = 'Text (*.txt);;All files (*.*)'
+        phase_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Import phase information', self._dataDirectory,
+                                                            file_filter)
+
+        # return if action is cancelled
+        if phase_file_name is None:
+            return
+        phase_file_name = str(phase_file_name)
+        if len(phase_file_name.strip()) == 0:
+            return
+
+        # TODO/NOW/1st: import phase file and set widgets
+        print 'Importing phase information file!'
+
+        return
 
     def menu_select_peak(self):
         """ Select a peak including specifying its width and position
@@ -1502,8 +1547,6 @@ def main(argv):
 
     exit_code=app.exec_()
     sys.exit(exit_code)
-
-    return
 
 
 if __name__ == "__main__":

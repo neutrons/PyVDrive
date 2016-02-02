@@ -95,7 +95,7 @@ class AnalysisProject(object):
         if data_key not in self._dataWorkspaceDict:
             raise KeyError('data key %s does not exist.' % data_key)
 
-        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save time
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
         data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
 
         return True, data_set_dict
@@ -111,7 +111,7 @@ class AnalysisProject(object):
         assert isinstance(data_key, str), 'Data key must be a string but not %s.' % str(type(data_key))
         assert data_key in self._dataWorkspaceDict, 'Data key %s does not exist.' % data_key
 
-        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save time
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
         data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
 
         return data_set_dict.keys()

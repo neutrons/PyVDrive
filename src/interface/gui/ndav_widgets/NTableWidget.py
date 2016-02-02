@@ -90,9 +90,14 @@ class NTableWidget(QtGui.QTableWidget):
             assert isinstance(item_i_j, QtGui.QTableWidgetItem)
             value = str(item_i_j.text())
             if c_type == 'int':
+                # integer
                 return_value = int(value)
             elif c_type == 'float':
+                # float
                 return_value = float(value)
+            else:
+                # just string
+                return_value = value
 
         return return_value
 

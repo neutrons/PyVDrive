@@ -741,7 +741,7 @@ class DeprecatedReductionProject(VDProject):
         # FIXME - _calibfiledatadict will be set up only before reduction
         # self._calibfiledatadict.pop(vanfilename)
 
-        return (True, "")
+        return True, ""
 
     def getDataFilePairs(self):
         """ Get to know 

@@ -1,18 +1,17 @@
-#from PyQt4 import QtGui
-import ndav_widgets.NTableWidget as NT
+import ndav_widgets.NTableWidget as NdavTable
 
 Data_Slicer_Table_Setup = [('Start', 'float'),
                            ('Stop', 'float'),
                            ('', 'checkbox')]
 
 
-class DataSlicerSegmentTable(NT.NTableWidget):
+class DataSlicerSegmentTable(NdavTable.NTableWidget):
     """
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         return
 
@@ -128,12 +127,10 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_stop_time, time_segments[0][1])
         self.update_cell_value(row_number, i_stop_time, time_segments[0][1])
 
-        # Insert the rest
+        # Insert the rest by inserting rows and set values
         for index in xrange(1, len(time_segments)):
-            print '[DB-HUGE] Insert a row @ %d. Total number of rows = %d' % (row_number+1, self.rowCount())
             self.insertRow(row_number+1)
         for index in xrange(1, len(time_segments)):
-            print '[DB-HUGE] Set cell value for row %d: ' % (row_number+index) , time_segments[index][0], time_segments[index][1]
             self.set_value_cell(row_number+index, i_start_time, time_segments[index][0])
             self.set_value_cell(row_number+index, i_stop_time, time_segments[index][1])
             self.set_value_cell(row_number+index, i_select, False)
@@ -191,7 +188,7 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         return
 
 
-class PeakParameterTable(NT.NTableWidget):
+class PeakParameterTable(NdavTable.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters
     """
@@ -214,7 +211,7 @@ class PeakParameterTable(NT.NTableWidget):
         :param parent:
         :return:
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         self._buffer = dict()
         # group ID for overlapped peaks
@@ -232,6 +229,7 @@ class PeakParameterTable(NT.NTableWidget):
             A row is append
         :param centre:
         :param bank: bank number
+        :param name: peak name
         :param width: peak width
         :param overlapped_peak_pos_list:
         :return:
@@ -247,7 +245,9 @@ class PeakParameterTable(NT.NTableWidget):
         # new_index = self.rowCount()
         group_id = -1
         if len(overlapped_peak_pos_list) >= 2:
-            group_id = N
+            # use -2 as temporary group ID such that the table can visit it later.
+            group_id = -2
+            raise NotImplementedError('This situation is not supported yet!')
         status, message = self.append_row([bank, name, centre, width, name, group_id, False])
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
@@ -261,10 +261,12 @@ class PeakParameterTable(NT.NTableWidget):
         Requirements:
             Peak centre must be in d-spacing.  And it is within the peak range
         Guarantees:
-            A row is append
-        :param centre:
+            A row is append in the buffer
         :param bank: bank number
+        :param name: peak name
+        :param centre:
         :param width: peak width
+        :param overlapped_peak_pos_list: list of overlapped peaks' positions
         :return:
         """
         # Check requirements
@@ -445,8 +447,9 @@ class PeakParameterTable(NT.NTableWidget):
 
         return peak_pos_list
 
-    def save(self, bank_id):
-        """ Save table
+    def save_to_buffer(self, bank_id):
+        """ Save table to buffer
+        :param bank_id:
         :return:
         """
         self._buffer[bank_id] = list()
@@ -495,14 +498,14 @@ TimeSegment_TableSetup = [('Start', 'float'),
                           ('Destination', 'int')]
 
 
-class TimeSegmentsTable(NT.NTableWidget):
+class TimeSegmentsTable(NdavTable.NTableWidget):
     """
     Table for show time segments for data splitting
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         self._currRowNumber = 0
 
@@ -534,13 +537,13 @@ Run_Selection_Table_Setup = [('Run Number', 'int'),
                              ('', 'checkbox')]
 
 
-class VdriveRunTableWidget(NT.NTableWidget):
+class VdriveRunTableWidget(NdavTable.NTableWidget):
     """
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
     def append_runs(self, run_list):
         """
@@ -568,8 +571,8 @@ class VdriveRunTableWidget(NT.NTableWidget):
         return run_number_list
 
     def get_rows_by_run(self, run_list):
-        """
-
+        """ Get row number/index for specified run numbers
+        :param run_list: list of run numbers
         :return:
         """
         assert isinstance(run_list, list)
@@ -600,4 +603,3 @@ class VdriveRunTableWidget(NT.NTableWidget):
         self.setColumnWidth(1, 25)
 
         return
-

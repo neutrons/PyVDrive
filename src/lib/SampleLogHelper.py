@@ -95,7 +95,7 @@ class SampleLogManager(object):
 
     def checkout_session(self, nxs_file_name, run_number):
         """ Load NeXus file
-        This is the only way to set new and save old session
+        This is the only way to set new and save_to_buffer old session
         :param nxs_file_name:
         :return:
         """
@@ -567,7 +567,7 @@ class SampleLogManager(object):
 
     def restore_session(self, nxs_base_name):
         """
-        Restore a save session
+        Restore a save_to_buffer session
         :param nxs_base_name: as key
         :return:
         """

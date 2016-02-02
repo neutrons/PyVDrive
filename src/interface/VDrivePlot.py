@@ -458,7 +458,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             if self._currSlicerLogName == '__manual__':
                 raise NotImplementedError('ASAP')
             else:
-                # save splitters from log
+                # save_to_buffer splitters from log
                 status, err_msg = self._myWorkflow.save_splitter_workspace(
                     self._currLogRunNumber, self._currSlicerLogName, out_file_name)
                 if status is False:

@@ -1004,7 +1004,7 @@ class ReductionManager(object):
         assert tracker.is_reduced, 'Run %d is not reduced yet.' % run_number
         ipts_number = self._myProject.get_ipts_number(run_number)
 
-        # Convert unit and save for VULCAN GSS
+        # Convert unit and save_to_buffer for VULCAN GSS
         reduced_ws_name = tracker.event_workspace_name
         self.mtd_convert_units(reduced_ws_name, 'TOF')
         self.mtd_save_vulcan_gss(source_ws_name=reduced_ws_name,
@@ -1017,7 +1017,7 @@ class ReductionManager(object):
 
     @staticmethod
     def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
-        """ Convert to VULCAN's IDL and save to GSAS file
+        """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
         Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
         Requirements:
         1. input source workspace is reduced
