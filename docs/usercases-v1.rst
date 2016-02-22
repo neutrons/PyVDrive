@@ -2,6 +2,13 @@ Descrption
 ----------
 
 This is the document recording all the use cases. 
+It serves as both the guideline of software development
+and examples for users.
+
+
+Use case:
+
+
 
 Use case: Determine slicing strategy
 ====================================
