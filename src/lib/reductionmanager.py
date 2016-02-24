@@ -47,6 +47,12 @@ class PowderReductionParameters(object):
     Many of them server as default values
     """
     # FIXME/TODO/NOW Improve & refine!
+
+    # define the default calibration files
+    refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
+    TimeFocusCalibrationFilePath = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
+    VULCANCharacterizationFilePath = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
+
     def __init__(self):
         """ Initialization
         """
@@ -55,20 +61,15 @@ class PowderReductionParameters(object):
         self._tofMin = None
         self._tofMax = None
 
-        # events related
-
-        refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-        calibrationfilename = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-        characterfilename = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
-
-        self._focusFileName = calibrationfilename
+        # define class variables with defaults
+        self._focusFileName = PowderReductionParameters.TimeFocusCalibrationFilePath
         self._preserveEvents = True
-        self._LRef              = 0   # default = 0
-        self._DIFCref           = 0
+        self._LRef = 0   # default = 0
+        self._DIFCref = 0
         self._compressTolerance = 0.01
         self._removePromptPulseWidth = 0.0
-        self._lowResTOFoffset   = -1
-        self._wavelengthMin     = 0.0
+        self._lowResTOFoffset = -1
+        self._wavelengthMin = 0.0
 
         self._filterBadPulse = False
         self._normalizeByCurrent = True
@@ -606,17 +607,14 @@ class ReductionManager(object):
 
     def get_processed_vanadium(self, vanadium_run_number):
         """ Get processed vanadium data (workspace name)
-        Purpose:
-
-        Requirements:
-
-        Guarantees
-
+        Purpose: Get process vanadium workspace (name) by vanadium run number
+        Requirements: vanadium run number is a valid integer and it is reduced
+        Guarantees: the workspace's name of the reduced vanadium is returned
         :param vanadium_run_number:
         :return:
         """
-        # TODO/NOW/ ... ...
-        return self._processedVanadiumWSDict[vanadium_run_number]
+        # TODO/NEXT:
+        raise NotImplementedError('Implement ASAP!')
 
     def get_reduced_runs(self):
         """
