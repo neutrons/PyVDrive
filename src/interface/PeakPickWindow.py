@@ -1099,8 +1099,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: select or de-select all peaks according to check box selectPeaks
         :return:
         """
-        print '[TODO/NOW!] Current state is ', self.ui.checkBox_selectPeaks.isChecked()
-
         select_all_peaks = self.ui.checkBox_selectPeaks.isChecked()
         self.ui.tableWidget_peakParameter.select_all_rows(select_all_peaks)
 

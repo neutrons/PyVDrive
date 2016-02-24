@@ -407,21 +407,6 @@ class VDriveAPI(object):
 
         return True, data_set
 
-    def get_loaded_run_info(self, data_key):
-        """
-        Purpose:
-        Requirements:
-        Guarantees:
-        :param data_key:
-        :return: 2-tuple (run number, list of bank IDs)
-        """
-        # FIXME/TODO/1st/1st - Now it is a mock!
-
-        run_number = int(data_key.split('.')[0])
-        bank_id_list = [1, 2]
-
-        return run_number, bank_id_list
-
     def get_reduced_run_info(self, run_number, data_key=None):
         """
         Purpose: get information of a reduced run
@@ -733,8 +718,6 @@ class VDriveAPI(object):
         # END-IF (nom_by_vanadium)
 
         # Reduce runs
-        status, ret_obj = self._myProject.reduce_runs()
-        # FIXME/TODO/SOON/NOW Remove the previous line!
         try:
             status, ret_obj = self._myProject.reduce_runs()
         except AssertionError as re:
@@ -760,40 +743,59 @@ class VDriveAPI(object):
 
     def set_reduction_flag(self, file_flag_list, clear_flags):
         """ Turn on the flag to reduce for files in the list
-        TODO/FIXME/NOW Doc and Fill-in
-
+        Requirements: input a list of data files with reduction flag
+        Guarantees: the reduction flag is set properly on the file
+        Note: this is a complicated version of set_runs_to_reduce
         :param file_flag_list: list of tuples as "base" file name and boolean flag
         :param clear_flags: clear reduction previously-set reduction flags
         :return:
         """
-        # FIXME - This has the same functionality as method set_runs_to_reduce()
         # Check requirements
-        assert isinstance(file_flag_list, list), 'bla bla ...'
+        assert isinstance(file_flag_list, list), 'Input file/flag must be a list ' \
+                                                 'but not %s.' % str(type(file_flag_list))
         assert isinstance(clear_flags, bool)
 
         # Clear
         if clear_flags is True:
             self._myProject.clear_reduction_flags()
 
-        # Set flags
-        num_flags_set = 0
-        err_msg = ''
+        # Create a list of runs to reduce
+        run_number_list = list()
         for run_number, reduction_flag in file_flag_list:
-            print '[DB] Set reduction flag for run %d with flag %s.' % (run_number, str(reduction_flag))
-            try:
-                self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
-                num_flags_set += 1
-            except AssertionError as e:
-                err_msg += 'Unable to set flag to run %d due to %s\n' % (run_number, str(e))
+            if reduction_flag:
+                run_number_list.append(run_number)
+            # END-IF
         # END-FOR
 
-        # Return with error
-        if err_msg != '':
-            return False, '%d of %d runs cannot be set to reduce due to %s. ' % (
-                len(file_flag_list)-num_flags_set, len(file_flag_list), err_msg
-            )
+        status, err_msg = self.set_runs_to_reduce(run_number_list)
 
-        return True, ''
+        return status, err_msg
+
+    def set_runs_to_reduce(self, run_numbers):
+        """ Set runs for reduction
+        Purpose:
+            Mark the runs to be reduced;
+        Requirements:
+            Run numbers given should be already loaded
+        Guarantees:
+            All raw data file should be accessible
+        :param run_numbers:
+        :return: 2-tuple (boolean, string) for status and error message
+        """
+        # Check requirements
+        assert isinstance(run_numbers, list)
+        assert self._myProject is not None
+
+        # Pass the run number list to VDriveProject
+        return_status = True
+        error_message = ''
+        try:
+            self._myProject.mark_runs_to_reduce(run_numbers)
+        except RuntimeError as re:
+            return_status = False
+            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
+
+        return return_status, error_message
 
     def save_session(self, out_file_name):
         """ Save current session
@@ -872,15 +874,21 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, sample_log_name=None, by_time=False):
-        """ TODO - DOC
+        """ Slice data (corresponding to a run) by either log value or time.
+        Requirements: slicer/splitters has already been set up for this run.
+        Guarantees:
+        :param run_number: run number
+        :param sample_log_name:
+        :param by_time:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # Check
+        # Check. Must either by sample log or by time
         if sample_log_name is not None and by_time is True:
             return False, 'It is not allowed to specify both sample log name and time!'
         elif sample_log_name is None and by_time is False:
             return False, 'it is not allowed to specify neither sample log nor time!'
 
+        # Get and check slicers/splitters
         if by_time is True:
             # Slice data by time
             status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
@@ -904,6 +912,7 @@ class VDriveAPI(object):
             # slicer is a tuple for names of splitter workspace and information workspace
             # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
 
+        # Slice/split data
         status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
                                                      sample_log_name.replace('.', '-'))
 
@@ -990,32 +999,6 @@ class VDriveAPI(object):
         # Set pair by pair
 
         return
-
-    def set_runs_to_reduce(self, run_numbers):
-        """ Set runs for reduction
-        Purpose:
-            Mark the runs to be reduced;
-        Requirements:
-            Run numbers given should be already loaded
-        Guarantees:
-            All raw data file should be accessible
-        :param run_numbers:
-        :return: 2-tuple (boolean, string) for status and error message
-        """
-        # Check requirements
-        assert isinstance(run_numbers, list)
-        assert self._myProject is not None
-
-        # Pass the run number list to VDriveProject
-        return_status = True
-        error_message = ''
-        try:
-            self._myProject.mark_runs_to_reduce(run_numbers)
-        except RuntimeError as re:
-            return_status = False
-            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
-
-        return return_status, error_message
 
     def set_slicer_helper(self, nxs_file_name, run_number):
         """
