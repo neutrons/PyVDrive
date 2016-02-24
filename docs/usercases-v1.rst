@@ -11,11 +11,11 @@ Use case: Simple data reduction
 
 Simple data reduction
 
-  1. User clicks button *IPTS*.  In the pop-up window, user selects an IPTS (???) and a range of run numbers;
+  1. User clicks button *Select IPTS folders*.  In the pop-up window, user selects an IPTS (*16053*) and a range of run numbers;
   2. **V-drive** checks and loads runs under IPTS to the project files tree (left most column);
   3. User selects one or multiple runs from the project tree, add them to the reduction list;
-  4. User sets up the bin size and other reduction parameters;
-  5. User clicks the *Reduce* button;
+  4. In tab *VBIN*, user sets up the bin size and other reduction parameters;
+  5. User clicks the *BIN DATA* button;
   6. **V-drive** reduces the selected runs;
   7. User may launch the *general plot* window to view the reduced data;
   8. User clicks the *Save* in the menu *File* to save the reduction result;
