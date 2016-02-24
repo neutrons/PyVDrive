@@ -87,7 +87,7 @@ class AnalysisProject(object):
         if data_file_name is not None:
             assert isinstance(data_file_name, str), 'blabla'
             # TODO: make this to a method ???
-            data_key = os.path.basename(data_file_name)
+            data_key = get_data_key(data_file_name)
         else:
             assert isinstance(data_key, str), 'blabla'
 
@@ -142,3 +142,13 @@ class AnalysisProject(object):
         self._dataWorkspaceDict[base_name] = out_ws_name
 
         return base_name
+
+
+def get_data_key(file_name):
+    """ Generate data key according to file name
+    :param file_name:
+    :return:
+    """
+    assert isinstance(file_name, str)
+
+    return  os.path.basename(file_name)

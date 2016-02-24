@@ -8,10 +8,16 @@ FifteenYearsInSecond = 15*356*24*3600
 
 class TimeSegment(object):
     """ Time segment for splitters
+    Class variables:
+    - start time (_data[0]) and stop time (_data[1]) can be either epoch time or relative time.
+      and their units are SECONDS
     """
     def __init__(self, start_time, stop_time, target_id):
         """
-
+        Initialization
+        Requirements:
+         - start time and stop time are float
+         - target id is a string or an integer
         :param start_time:
         :param stop_time:
         :param target_id:
@@ -42,14 +48,14 @@ class TimeSegment(object):
 
     def get_time_segment(self):
         """
-
+        Get the segment of time
         :return:
         """
         return self._data[0], self._data[1]
 
     def get_target_id(self):
         """
-
+        Get the target ID (very likely the ID to identify the output workspace
         :return:
         """
         return self._data[2]
@@ -61,6 +67,13 @@ class TimeSegment(object):
         :return:
         """
         return self._data[0]
+
+    @property
+    def stop(self):
+        """ stop time
+        :return:
+        """
+        return self._data[1]
 
 
 class SampleLogManager(object):
@@ -80,6 +93,7 @@ class SampleLogManager(object):
         self._currRunNumber = None
         self._currWorkspace = None
         self._currWorkspaceName = ''
+        self._currentSplitterWS = None
         self._currLogNamesList = list()
         self._currSplittersDict = dict()  # key = sample log name, value = (split ws name, info ws name)
 
@@ -329,23 +343,25 @@ class SampleLogManager(object):
 
         return True, ret_obj
 
-
-
-    def get_log_workspace(self, run_number, nxs_file_name=None):
+    def get_log_workspace(self, run_number):
         """
-
+        Get the workspace containing sample logs (only!) according to run number
         :param run_number:
-        :param nxs_file_name:
         :return:
         """
-        # FIXME/TODO/NOW : Make it more robust with run_number is None
-        if run_number is None:
-            raise NotImplementedError('ASAP')
+        assert isinstance(run_number, int) and run_number > 0
 
+        # return current workspace if run number is current run number
         if run_number == self._currRunNumber:
             return self._currWorkspace
 
-        raise NotImplementedError('ASAP if it is in stored session.')
+        # run number (might) be in stored session
+        if run_number not in self._prevSessionDict:
+            stored_runs_str = str(self._prevSessionDict.keys())
+            raise RuntimeError('Run %d has not been processed. Processed runs are %s.' % (run_number,
+                                                                                          stored_runs_str))
+
+        return self._prevSessionDict[run_number]
 
     def get_sample_log_names(self, with_info=False):
         """
@@ -535,18 +551,22 @@ class SampleLogManager(object):
 
     def set_current_slicer_time(self):
         """
-        TODO
+        Set the current slicer as a time slicer set up previously
         :return:
         """
+        assert 'Time' in self._currSplittersDict, 'No time slicer set up.'
+
         self._currentSplitterWS = self._currSplittersDict['Time']
 
         return
 
     def set_current_slicer_manaul(self):
         """
-        TODO
+        Set up current splitter workspace/slicer to a previously setup slicer in manual mode.
         :return:
         """
+        assert 'Manual' in self._currSplittersDict, 'No manually set up slicer found in splicers dictionary.'
+
         self._currentSplitterWS = self._currSplittersDict['Manual']
 
         return

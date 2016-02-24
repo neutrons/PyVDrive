@@ -370,20 +370,22 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
 def get_data_from_workspace(workspace_name, point_data):
     """
-    
+    Purpose: get data from a workspace
+    Requirements: a valid matrix workspace is given
+    Guarantees: transform all the data to 1-dimension arrays.
     :param workspace_name:
-    :param point_data:
-    :return:
+    :param point_data: If point data is true, then the output arrays must have equal sizes of x and y arrays
+    :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
-    # TODO/DOC/1st
-    
     # Requirements
-    # ....
-    
+    assert isinstance(workspace_name, str) and isinstance(point_data, bool)
+    assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+
     # Convert to point data
     if point_data is True:
         mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                      OutputWorkspace=workspace_name)
+
     # Set up variables
     data_set_dict = dict()
     workspace = retrieve_workspace(workspace_name)
@@ -429,7 +431,6 @@ def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
     # Check input
     split_ws = retrieve_workspace(split_ws_name)
     assert split_ws, 'Workspace %s does not exist.' % split_ws_name
-
 
     segment_list = list()
     if unit == 'Seconds':

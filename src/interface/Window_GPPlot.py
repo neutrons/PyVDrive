@@ -23,8 +23,9 @@ except AttributeError:
         
 import ui_GPPlot
 
+
 class Window_GPPlot(QMainWindow):
-    """ Class for general-puposed plot window
+    """ Class for general-purposed plot window
     """
     # class
     def __init__(self, parent=None):

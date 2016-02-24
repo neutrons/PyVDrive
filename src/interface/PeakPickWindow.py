@@ -1191,11 +1191,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """ Add a peak to table
         Purpose: Add a peak under cursor in a simple way
         Requirements:
-        Guarantees:
+        Guarantees: add peak from graphic view's pop-up menu
         :return:
         """
-        # TODO/NOW  Assertion doc
-
         # Get common information
         bank_number = int(self.ui.comboBox_bankNumbers.currentText())
         peak_name = 'new'
