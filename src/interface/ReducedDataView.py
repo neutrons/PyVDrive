@@ -117,8 +117,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get run number
         run_number = int(self.ui.comboBox_runs.currentText())
 
-        # Check
-        if self._myController.get_reduced_run_info(run_number).is_noramalised_by_current() is True:
+        # Get reduction information from run number
+        status, ret_obj = self._myController.get_reduced_run_info(run_number)
+        assert status, ret_obj
+        reduction_info = ret_obj
+
+        if reduction_info.is_noramalised_by_current() is True:
             GuiUtility.pop_dialog_error(self, 'Run %d has been normalised by current already.' % run_number)
             return
 
@@ -250,7 +254,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
         line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
-                                                            x_label=self._currUnit)
+                                                            x_label=self._currUnit, marker='.', color='red')
         self._linesDict[(run_number, bank_id)] = line_id
 
         # Change label

@@ -649,9 +649,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
-        # FIXME/NOW/1st - Need to create a dialog for d-range.
-        min_d, max_d = self.ui.graphicsView_main.getXLimit()
-        min_d = 0.8
+        min_d = GuiUtility.parse_float()
+        max_d = GuiUtility.parse_float()
+        if min_d is None:
+            min_d = self.ui.graphicsView_main.getXLimit()[0]
+        if max_d is None:
+            max_d = self.ui.graphicsView_main.getXLimit()[1]
         print '[DB] Get d-range: %f, %f' % (min_d, max_d)
 
         # List all peaks if any is selected
@@ -692,9 +695,27 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # Use algorithm to find peak automatically
             GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
             try:
-                reflection_list = self._myController.find_peaks(pattern=self._currPattern, profile='Gaussian')
+                peak_pos_list, peak_width_list = self._myController.find_peaks(run_number=self._currentRunNumber,
+                                                                               bank_number=self._currentBankNumber,
+                                                                               x_range=(min_d, max_d),
+                                                                               profile='Gaussian',
+                                                                               auto=True)
+                hkl = [(0, 0, 0)] * len(peak_pos_list)
+                reflection_list = (peak_pos_list, hkl)
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
+                return
+        else:
+            # Use algorithm find peak with given peak positions to eliminate the non-existing peaks
+            try:
+                peak_pos_list, peak_width_list = self._myController.find_peaks(run_number=self._currentRunNumber,
+                                                                               bank_number=self._currentBankNumber,
+                                                                               x_range=(min_d, max_d),
+                                                                               peak_positions=reflection_list[0],
+                                                                               hkl_list=reflection_list[1],
+                                                                               profile='Gaussian')
+            except RuntimeError as e:
+                GuiUtility.pop_dialog_error(self, str(e))
                 return
 
         # Return if no reflection can be found
@@ -709,13 +730,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.graphicsView_main.add_peak_indicator(peak_pos)
 
         # Set the peaks' parameters to table
-        for peak_tup in reflection_list:
-            # TODO/NOW/1st: get a better name for peak other than using HKL! Peak Width!
-            hkl = peak_tup[1][0]
+        for i_peak in xrange(len(peak_pos_list)):
+            hkl = hkl[i_peak]  # reflection list???
+            peak_pos = peak_pos_list[i_peak]
+            peak_width = peak_width_list[i_peak]
             assert len(hkl) == 3, 'HKL is not a 3-item list but %s of type %s.' % (str(hkl), str(type(hkl)))
             temp_name = '%d%d%d' % (hkl[0], hkl[1], hkl[2])
-            peak_pos = peak_tup[0]
-            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, temp_name, peak_pos, 0.03, [])
+            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, temp_name, peak_pos, peak_width, [])
         # END-FOR
 
         return

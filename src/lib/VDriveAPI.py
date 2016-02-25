@@ -266,6 +266,55 @@ class VDriveAPI(object):
 
         return
 
+    def find_peaks(self, run_number, bank_number, x_range,
+                   peak_positions, hkl_list, profile, auto):
+        """
+        Find peaks in a given diffraction pattern
+        Requirements:
+         - by run number, a workspace containing the reduced run must be found
+         - either auto (mode) is on or peak positions are given;
+         - peak profile must be Gaussian and blabla
+        :param run_number:
+        :param bank_number:
+        :param x_range:
+        :param peak_positions:
+        :param hkl_list:
+        :param profile:
+        :param auto:
+        :return:
+        """
+        # Check
+        assert isinstance(run_number, int)
+        assert isinstance(bank_number, int)
+        assert isinstance(x_range, tuple) and len(x_range) == 2
+        assert isinstance(profile, str)
+        assert isinstance(peak_positions, list) or peak_positions is None
+
+        if isinstance(peak_positions, list) and auto:
+            raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+        if peak_positions is None and auto is False:
+            raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
+
+        # Get workspace from
+        data_ws_name = self._myProject.get_reduced_workspace(run_number)
+
+        if auto:
+            peak_pos_list, hkl_list, peak_width_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range,
+                                                                                profile)
+        else:
+            peak_pos_list, hkl_list, peak_width_list = mantid_helper.find_peaks(data_ws_name,
+                                                                                bank_number, x_range, peak_positions,
+                                                                                hkl_list, profile)
+
+
+        """
+        :return:
+        """
+        # TODO/NOW - being worked on
+        peak_pos_list, peak_width_list = mantid_helper.find_peaks(diff_data, profile, auto=True)
+
+        return peak_pos_list, peak_width_list
+
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """
         :param run_number:
@@ -410,9 +459,10 @@ class VDriveAPI(object):
     def get_reduced_run_info(self, run_number, data_key=None):
         """
         Purpose: get information of a reduced run
-        Requirements: ... ...
+        Requirements: either run number is specified as a valid integer or data key is given;
         Guarantees: ... ...
         :param run_number:
+        :param data_key:
         :return: list of bank ID
         """
         if isinstance(run_number, int):
