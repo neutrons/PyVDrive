@@ -85,11 +85,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_remove_runs_from_reduction)
         self.connect(self.ui.pushButton_sortSelectedRuns, QtCore.SIGNAL('clicked()'),
                      self.do_sort_selected_runs)
+        self.connect(self.ui.pushButton_reduceRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_to_reduction_stage)
 
         self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_chop_run_state_change)
-        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
-                     self.pop_manual_picker)
 
         # Column 3
         # Tab-1
@@ -98,6 +98,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_load_time_seg_file)
         self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
                      self.do_slice_data_by_time)
+        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
+                     self.pop_manual_picker)
 
         # sub-tab-2
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
@@ -299,6 +301,41 @@ class VdriveMainWindow(QtGui.QMainWindow):
         GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
         # switch the tab to 'VIEW'
         self.ui.tabWidget_reduceData.setCurrentIndex(2)
+
+        return
+
+    def do_to_reduction_stage(self):
+        """ Advance to data-reduction stage from run-selection stage
+        :return:
+        """
+        # get runs to be reduced
+        selected_row_list = self.ui.tableWidget_selectedRuns.get_selected_rows()
+        if len(selected_row_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'No run is selected.')
+            return
+        else:
+            run_number_list = list()
+            for i_row in selected_row_list:
+                row_number = self.ui.tableWidget_selectedRuns.get_cell_value(i_row, 0)
+                run_number_list.append(row_number)
+
+        # check status
+        if self.ui.checkBox_chopRun.isChecked():
+            # advance to 'chop'-tab
+            self.ui.tabWidget_reduceData.setCurrentIndex(0)
+
+            # set up current run to chop
+            current_run_number = run_number_list[0]
+            self.ui.comboBox_chopTabRunList.clear()
+            for run_number in run_number_list:
+                self.ui.comboBox_chopTabRunList.addItem('%d' % run_number)
+
+            # set up current run and run list in chop-tab
+            self._myWorkflow.load_log_only(current_run_number)
+
+        else:
+            # advance to 'bin'-tab
+            self.ui.tabWidget_reduceData.setCurrentIndex(1)
 
         return
 
@@ -805,7 +842,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Get the default file path
         log_path = self._myWorkflow.get_data_root_directory()
 
-        # If
+        # Set up a more detailed file path to load log file according to selected run
+        # from the project tree
+        # TODO! this is very bad!
         status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
         if status is True:
             run_number = ret_obj

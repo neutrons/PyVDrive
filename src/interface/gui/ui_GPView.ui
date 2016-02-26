@@ -256,6 +256,22 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_2">
+            <item row="1" column="2">
+             <widget class="QPushButton" name="pushButton_normByCurrent">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Normalize By Current</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="6">
+             <widget class="QLineEdit" name="lineEdit_2"/>
+            </item>
+            <item row="1" column="5">
+             <widget class="QLineEdit" name="lineEdit"/>
+            </item>
             <item row="0" column="1">
              <widget class="QLabel" name="label">
               <property name="text">
@@ -266,17 +282,7 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Y-Axis</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3">
+            <item row="0" column="4">
              <widget class="QLabel" name="label_2">
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
@@ -289,6 +295,33 @@
               </property>
              </widget>
             </item>
+            <item row="1" column="7">
+             <widget class="QPushButton" name="pushButton_apply">
+              <property name="text">
+               <string>Apply</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="5">
+             <widget class="QLineEdit" name="lineEdit_minX">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="6">
+             <widget class="QLineEdit" name="lineEdit_maxX">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="3">
              <widget class="QPushButton" name="pushButton_normByVanadium">
               <property name="text">
@@ -296,13 +329,13 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="4">
-             <widget class="QLineEdit" name="lineEdit_minX">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+            <item row="1" column="1">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Y-Axis</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
               </property>
              </widget>
             </item>
@@ -324,56 +357,6 @@
                </property>
               </item>
              </widget>
-            </item>
-            <item row="0" column="5">
-             <widget class="QLineEdit" name="lineEdit_maxX">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="4">
-             <widget class="QPushButton" name="pushButton_normVacant">
-              <property name="text">
-               <string>Normalize By </string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QPushButton" name="pushButton_normByCurrent">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Normalize By Current</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="6">
-             <widget class="QPushButton" name="pushButton_apply">
-              <property name="text">
-               <string>Apply</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="6">
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::Preferred</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
             </item>
            </layout>
           </item>
