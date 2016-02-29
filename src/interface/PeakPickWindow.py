@@ -328,6 +328,13 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         return self._peakWidth
 
 
+class PeakPickerMode(object):
+    """ Enumerate
+    """
+    Normal = 0
+    QuickPick = 1
+
+
 class PeakPickerWindow(QtGui.QMainWindow):
     """ Class for general-purposed plot window
     """
@@ -387,6 +394,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
                      self.do_delete_peaks)
 
+        self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
+                     self.do_process_pick_mode)
+
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_calibration_file)
@@ -406,12 +416,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Define canvas event hanlders
         # Event handling for pickers
+        """ Temporarily Disabled
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
                                                         self.on_mouse_press_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
                                                         self.on_mouse_release_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
+        """
 
         # Menu
         self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
@@ -434,6 +446,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currDataKey = None       # Data key to look up reduced data from controller
 
         # Peak selection mode
+        self._peakPickerMode = PeakPickerMode.Normal
         self._peakSelectionMode = ''
         self._indicatorIDList = None
         self._indicatorPositionList = None
@@ -913,9 +926,18 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Get the GSAS file names
         filters = 'GSAS files (*.gda);; All files (*.*)'
         gsas_file_list = list()
+
+        # TODO/NOW - make the work to set up data directory clear!
         data_dir = self._dataDirectory
+        # FIXME - this is just for test loading session
+        data_dir = None
         if data_dir is None:
-            data_dir = os.getcwd()
+            dir_list = self._myController.get_ipts_config()
+
+            if dir_list[1] is None:
+                data_dir = os.getcwd()
+            else:
+                data_dir = dir_list[1]
 
         if start_run_number is None or end_run_number is None:
             # no valid range of run numbers are given, then load the data explicitly
@@ -1050,6 +1072,28 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
         raise RuntimeError('Implement ASAP to load chopped data %s' % chop_data_name)
+
+    def do_process_pick_mode(self):
+        """ Enter for leave peak picker mode
+        :return:
+        """
+        if self._peakPickerMode == PeakPickerMode.Normal:
+            self._peakPickerMode = PeakPickerMode.QuickPick
+            self.ui.pushButton_peakPickerMode.setText('Enter Normal Mode')
+            self.ui.graphicsView_main.set_quick_add_mode(True)
+
+            """
+            cursor1 = QtGui.QCursor(QtCore.Qt.CrossCursor)
+            cursor2 = QtGui.QCursor(QtCore.Qt.SplitHCursor)
+            QtGui.QApplication.setOverrideCursor(cursor2)
+            """
+
+        else:
+            self._peakPickerMode = PeakPickerMode.Normal
+            self.ui.pushButton_peakPickerMode.setText('Enter Pick Mode')
+            self.ui.graphicsView_main.set_quick_add_mode(False)
+
+        return
 
     def do_quit(self):
         """
@@ -1350,6 +1394,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currMousePosX = x
         self._currMousePosY = y
 
+        if self._peakPickerMode == PeakPickerMode.QuickPick:
+            self._inside_quick_peak_mode(button, x)
+
         if button == 1:
             # left button
             if self._peakSelectionMode == 'MoveCentre' or self._peakSelectionMode == 'ChangeWidth':
@@ -1360,6 +1407,27 @@ class PeakPickerWindow(QtGui.QMainWindow):
             pass
 
         # FIXME/TODO/NOW - Define the response event from mouse
+
+        return
+
+    def _inside_quick_peak_mode(self, button, x):
+        """
+        :param button:
+        :param x:
+        :return:
+        """
+        if button == 1:
+            # left one, add peak
+            print '[DB-XXX] Add peak and peak range at %f' % x
+            self.ui.graphicsView_main.add_peak_indicator(x)
+            self.ui.graphicsView_main.add_peak_indicator(x+0.3)
+            self.ui.graphicsView_main.add_peak_indicator(x-0.3)
+
+        """
+        cursor1 = QtGui.QCursor(QtCore.Qt.CrossCursor)
+        cursor2 = QtGui.QCursor(QtCore.Qt.ArrowCursor)
+        QtGui.QApplication.setOverrideCursor(cursor2)
+        """
 
         return
 

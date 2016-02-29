@@ -1,5 +1,6 @@
 __author__ = 'wzz'
 
+from PyQt4 import QtGui, QtCore
 import mplgraphicsview
 
 
@@ -9,18 +10,124 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
     for specific needs of the graphics view for interactive plotting of diffraction patten,
     including peak and background
     """
+    class PeakAdditionMode:
+        """ Enumerate for peak adding mode
+        """
+        NormalMode = 0
+        QuickMode = 1
+
+        def __init__(self):
+            """ Init
+            """
+            return
+
     def __init__(self, parent):
         """
         Purpose
         :return:
         """
+        # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
         # Define the class variable
-        # list of tuple as (peak position, indicator key)
-        self._peakIndicatorList = list()
+        # Peak selection mode
+        self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
+        # peak process status
+
+        # List of current peaks (in QuickMode);
+        # each element should be a tuple as
+        # (peak center position, indicator ID (center), indicator ID (left boundary), indicator ID (right boundary))
+        self._currentPeakList = list()
+
+        # default peak width
+        self._defaultPeakWidth = 0.03
+
+        # Interaction with the canvas
+        self._myCanvas.mpl_connect('button_press_event', self.on_mouse_press_event)
+        self._myCanvas.mpl_connect('button_release_event', self.on_mouse_release_event)
+        self._myCanvas.mpl_connect('motion_notify_event', self.on_mouse_motion)
 
         return
+
+    def set_quick_add_mode(self, mode):
+        """
+
+        :param mode:
+        :return:
+        """
+        # TODO/NOW - Doc
+        if mode is True:
+            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.QuickMode
+        else:
+            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
+
+        return
+
+    def on_mouse_motion(self, event):
+        """
+        :param event:
+        :return:
+        """
+        """
+        if pressed:
+            cursor1 = QtGui.QCursor(QtCore.Qt.CrossCursor)
+            cursor2 = QtGui.QCursor(QtCore.Qt.SplitHCursor)
+            QtGui.QApplication.setOverrideCursor(cursor2)
+        """
+
+        return
+
+    def on_mouse_press_event(self, event):
+        """
+
+        :return:
+        """
+        # Get data
+        x = event.xdata
+        # y = event.ydata
+        button = event.button
+
+        # if mode is 2, it means that the zoom button is pressed and shouldn't do anything at all!
+        # print '[DB-BAT] Tool bar mode = ', self._myToolBar.get_mode()
+        if self._myToolBar.get_mode() != 0:
+            return
+
+        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
+            print '[DB-BAT] Peak selection-Normal Mode: No operation.'
+            pass
+        elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
+            # operation
+            if button == 1:
+                # left button
+                self._respond_left_button(x)
+            elif button == 3:
+                # right button
+                self._reponse_right_button(x)
+        else:
+            # unrecognized
+            raise RuntimeError('Peak selection mode %s is not supported!' % str(self._myPeakSelectionMode))
+
+        return
+
+    def _respond_left_button(self, x):
+        """
+
+        :param x:
+        :return:
+        """
+        peak_id = self.add_vertical_indicator(x, 'red')
+        left_id = self.add_vertical_indicator(x - self._defaultPeakWidth, 'orange')
+        right_id = self.add_vertical_indicator(x + self._defaultPeakWidth, 'blue')
+
+        return
+
+    def on_mouse_release_event(self, event):
+        """
+
+        :param event:
+        :return:
+        """
+        print 'Released @ ', event.x, event.y
 
     def add_peak_indicator(self, peak_pos):
         """
@@ -44,7 +151,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         indicator_key = self.add_vertical_indicator(peak_pos, 'red')
 
         # Update peak indicator list
-        self._peakIndicatorList.append((peak_pos, indicator_key))
+        self._currentPeakList.append((peak_pos, indicator_key))
 
         return
 
@@ -99,11 +206,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # Check requirements
-        assert 0 <= indicator_index < len(self._peakIndicatorList), \
-            'Indicator index %d is out of index range [0, %d).' % (indicator_index, len(self._peakIndicatorList))
+        assert 0 <= indicator_index < len(self._currentPeakList), \
+            'Indicator index %d is out of index range [0, %d).' % (indicator_index, len(self._currentPeakList))
 
         # Get indicator key
-        indicator_key = self._peakIndicatorList[indicator_index][1]
+        indicator_key = self._currentPeakList[indicator_index][1]
 
         # Re-plot
         self.highlight_indictor(indicator_key)
@@ -125,8 +232,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Check requirement
 
         # Return if there is only one peak
-        if len(self._peakIndicatorList) == 1:
-            return self._peakIndicatorList[0][1]
+        if len(self._currentPeakList) == 1:
+            return self._currentPeakList[0][1]
 
         # Use binary search to locate the nearest peak indicator to peak position.
         # TODO/NOW - Complete it!
@@ -150,12 +257,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # Remove all indicators
-        for indicator_tup in self._peakIndicatorList:
+        for indicator_tup in self._currentPeakList:
             indicator_key = indicator_tup[1]
             self.remove_indicator(indicator_key)
 
         # Clear the indicator position-key list
-        self._peakIndicatorList = list()
+        self._currentPeakList = list()
 
         return
 
@@ -173,7 +280,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self.remove_indicator(peak_indicator_index)
 
         # remove the tuple from list
-        self._peakIndicatorList.pop(i)  #((peak_pos, indicator_key))
+        self._currentPeakList.pop(i)  #((peak_pos, indicator_key))
 
 
         return

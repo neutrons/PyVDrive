@@ -558,6 +558,26 @@ class VDriveAPI(object):
 
         return file_name
 
+    def get_ipts_config(self, ipts=None):
+        """
+
+        :param ipts:
+        :return:
+        """
+        # TODO/NOW - Doc
+
+        print '[DB-BAT] IPTS config dict = ', self._iptsConfigDict
+
+        if ipts is None:
+            if len(self._iptsConfigDict) == 0:
+                return [None, None]
+            else:
+                ipts = self._iptsConfigDict.keys()[0]
+                return self._iptsConfigDict[ipts]
+        # END-IF
+
+        return self._iptsConfigDict[ipts]
+
     def get_ipts_info(self, ipts, begin_run=None, end_run=None):
         """
         Get runs and their information for a certain IPTS
@@ -757,6 +777,13 @@ class VDriveAPI(object):
         self._myArchiveManager.root_directory = save_dict['myRootDataDir']
         self._myWorkDir = save_dict['myWorkDir']
 
+        # ipts dir
+        # TODO/NOW - more work!
+        ipts_number = int(save_dict['IPTSConfig'])
+        if ipts_number > 0:
+            bin_dir = save_dict['IPTSGSSDir']
+            self._iptsConfigDict[ipts_number] = ['', bin_dir]
+
         # load vdrive project to _myProject
         self._myProject.load_session_from_dict(save_dict['myProject'])
 
@@ -885,6 +912,17 @@ class VDriveAPI(object):
         save_dict['myInstrumentName'] = self._myInstrument
         save_dict['myRootDataDir'] = self._myArchiveManager.root_directory
         save_dict['myWorkDir'] = self._myWorkDir
+
+        # IPTS configuration
+        # TODO/NOW - More data to be saved
+        if len(self._iptsConfigDict) > 0:
+            curr_ipts = self._iptsConfigDict.keys()[0]
+            binned_dir = self._iptsConfigDict[curr_ipts][1]
+            save_dict['IPTSConfig'] = curr_ipts
+            save_dict['IPTSGSSDir'] = binned_dir
+        else:
+            save_dict['IPTSConfig'] = -1
+
         save_dict['myProject'] = self._myProject.save_session(out_file_name=None)
 
         # Out file name
@@ -1033,6 +1071,21 @@ class VDriveAPI(object):
         self._myArchiveManager.set_ipts_number(ipts_number)
 
         return True, ''
+
+    def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
+        """
+        Set configuration for a particular IPTS
+        :param ipts_number:
+        :param data_dir:
+        :param binned_data_dir:
+        :return:
+        """
+        # TODO/NOW - check validity
+
+        # ... ...
+        self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
+
+        return
 
     def set_reduction_parameters(self, parameter_dict):
         """ Set parameters used for reducing powder event data

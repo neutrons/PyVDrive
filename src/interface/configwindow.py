@@ -21,12 +21,18 @@ class ConfigWindow(QtGui.QMainWindow):
     def __init__(self, parent):
         """
         Initialization
-	:param parent:
+        :param parent:
         """
         QtGui.QMainWindow.__init__(self)
 
         self.ui = ui_ConfigWindow.Ui_MainWindow()
         self.ui.setupUi(self)
+
+        # Define event handling
+        self.connect(self.ui.pushButton_applyIPTS, QtCore.SIGNAL('clicked()'),
+                     self.do_apply_ipts_config)
+        self.connect(self.ui.pushButton_cancelQuit, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
 
         # class variables
         self._myController = None
@@ -80,5 +86,23 @@ class ConfigWindow(QtGui.QMainWindow):
 
         return
 
+    def do_apply_ipts_config(self):
+        """ Apply IPTS configuration
+        :return:
+        """
+        # TODO - check and make more rigorous
 
+        #
+        ipts_number = int(self.ui.lineEdit_IPTS.text())
+        ipts_bin_dir = str(self.ui.lineEdit_iptsGssDir.text())
 
+        self._myController.set_ipts_config(ipts_number, '', ipts_bin_dir)
+
+        return
+
+    def do_quit(self):
+        """
+        Quit
+        :return:
+        """
+        self.close()

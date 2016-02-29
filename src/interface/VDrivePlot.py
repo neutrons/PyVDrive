@@ -28,6 +28,7 @@ import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
+import configwindow
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
@@ -138,14 +139,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_save_session)
+                     self.menu_save_project)
         self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
                      self.menu_save_session_as)
         self.connect(self.ui.actionOpen_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_session)
-
+                     self.menu_load_project)
+        self.connect(self.ui.actionAuto_Saved, QtCore.SIGNAL('triggered()'),
+                     self.menu_load_auto)
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
                      self.evt_quit)
+
+        self.connect(self.ui.actionOpen_Configuration, QtCore.SIGNAL('triggered()'),
+                     self.menu_config)
 
         # Group widgets
         self._groupedSnapViewList = list()
@@ -1092,15 +1097,25 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return log_name_list
 
-    def menu_save_session(self):
+    def menu_save_project(self):
         """
         Save session called from menu
         :return:
         """
         if self._savedSessionFileName is None:
-            self._savedSessionFileName = str(
-                QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
-                                                  'XML files (*.xml);; All files (*.*)'))
+            # save to configuration directory
+            # get default path, make it if does not exist
+            default_path = os.path.expanduser('~/.vdrive')
+            if os.path.exists(default_path) is False:
+                os.mkdir(default_path)
+
+            # get the default name
+            session_file_name = os.path.join(default_path, 'auto_save.xml')
+            self._savedSessionFileName = session_file_name
+
+            #self._savedSessionFileName = str(
+            #    QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
+            #                                      'XML files (*.xml);; All files (*.*)'))
 
         self._myWorkflow.save_session(self._savedSessionFileName)
 
@@ -1119,7 +1134,46 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def menu_load_session(self):
+    def menu_load_auto(self):
+        """ Load auto-saved project
+        :return:
+        """
+        default_path = os.path.expanduser('~/.vdrive')
+        session_file_name = os.path.join(default_path, 'auto_save.xml')
+        assert os.path.exists(session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
+
+        self.load_project(session_file_name)
+
+        return
+
+    def load_project(self, project_file_name):
+        """
+
+        :param project_file_name:
+        :return:
+        """
+        # Load
+        status, input_file_name = self._myWorkflow.load_session(project_file_name)
+        if status is False:
+            GuiUtility.pop_dialog_error('Unable to load session from %s' % input_file_name)
+
+        # Set input file to default session back up file
+        self._savedSessionFileName = input_file_name
+
+        # Set up tree
+        # FIXME - Consider to refactor these to a method with do_add_runs_by_ipts
+        ipts_dict = self._myWorkflow.get_project_runs()
+        for ipts_number in sorted(ipts_dict.keys()):
+            self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, ipts_dict[ipts_number])
+            # FIXME - Need to figure out how to deal with this
+            home_dir = '/SNS/VULCAN'
+            curr_dir = os.path.join(home_dir, 'IPTS-%d' % ipts_number)
+            self.ui.treeView_runFiles.set_root_path(home_dir)
+            self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return
+
+    def menu_load_project(self):
         """
         Load session from file
         :return:
@@ -1134,6 +1188,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             return
 
         # Load
+        # FIXME/NOW - consider to replace the following by method load_project!
         status, input_file_name = self._myWorkflow.load_session(input_file_name)
         if status is False:
             GuiUtility.pop_dialog_error('Unable to load session from %s' % input_file_name)
@@ -1151,6 +1206,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
             curr_dir = os.path.join(home_dir, 'IPTS-%d' % ipts_number)
             self.ui.treeView_runFiles.set_root_path(home_dir)
             self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return
+
+    def menu_config(self):
+        """ Open configuration menu
+        :return:
+        """
+        self._configWindow = configwindow.ConfigWindow(self)
+
+        self._configWindow.set_controller(self._myWorkflow)
+
+        self._configWindow.show()
 
         return
 

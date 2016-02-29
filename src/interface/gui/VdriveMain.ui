@@ -2081,23 +2081,32 @@
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
      <width>1451</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_Project"/>
+    <widget class="QMenu" name="menuRecent_Projects">
+     <property name="title">
+      <string>Recent Projects</string>
+     </property>
+     <addaction name="actionAuto_Saved"/>
+    </widget>
     <addaction name="actionNewProject"/>
+    <addaction name="actionOpen_Project"/>
     <addaction name="actionSave_Project"/>
     <addaction name="actionSave_Project_As"/>
+    <addaction name="separator"/>
+    <addaction name="menuRecent_Projects"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -2123,7 +2132,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionConfiguration_2"/>
    </widget>
    <widget class="QMenu" name="menuRuns">
     <property name="title">
@@ -2146,7 +2154,6 @@
    <addaction name="menuConfiguration"/>
    <addaction name="menuAbout"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNewProject">
    <property name="text">
     <string>New Project</string>
@@ -2199,7 +2206,7 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionConfiguration_2">
+  <action name="action_openConfigWindow">
    <property name="text">
     <string>Configuration</string>
    </property>
@@ -2224,17 +2231,25 @@
     <string>Open Configuration</string>
    </property>
   </action>
+  <action name="actionAuto_Saved">
+   <property name="text">
+    <string>Auto Saved</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+G</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>MplGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mplgraphicsview.h</header>
-  </customwidget>
   <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdrivetreewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MplGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview.h</header>
   </customwidget>
   <customwidget>
    <class>FileSystemTreeView</class>
