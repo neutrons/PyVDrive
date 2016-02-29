@@ -239,6 +239,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert isinstance(bank, int)
         assert isinstance(width, float)
         assert isinstance(name, str)
+        assert isinstance(overlapped_peak_pos_list, list)
         assert width > 0
 
         # Get new index

@@ -62,8 +62,27 @@ class VDriveAPI(object):
         self._myWorkDir = os.getcwd()
         if os.access(self._myWorkDir, os.W_OK) is False:
             self._myWorkDir = '/tmp/'
+        self._rootDataDir = '/SNS/VULCAN/'
+        # relative data directory to IPTS data directory for binned GSAS data
+        self._relativeBinnedDir = 'binned/'
+        # IPTS configuration
+        self._iptsConfigDict = dict()
 
         return
+
+    @staticmethod
+    def _get_default_session_file(mkdir_dir=False):
+        """
+        Get the default session file name and with full path
+        :return:
+        """
+        session_path = os.path.expanduser('~/.vdrive/')
+        if mkdir_dir is True and os.path.exists(session_path) is False:
+            os.mkdir(session_path)
+
+        session_file_name = os.path.join(session_path, 'vdrive_session.dat')
+
+        return session_file_name
 
     def add_runs(self, run_tup_list, ipts_number):
         """
@@ -306,12 +325,7 @@ class VDriveAPI(object):
                                                                                 bank_number, x_range, peak_positions,
                                                                                 hkl_list, profile)
 
-
-        """
-        :return:
-        """
-        # TODO/NOW - being worked on
-        peak_pos_list, peak_width_list = mantid_helper.find_peaks(diff_data, profile, auto=True)
+        peak_pos_list, peak_width_list = mantid_helper.find_peaks(data_ws_name, profile, auto=True)
 
         return peak_pos_list, peak_width_list
 
@@ -711,14 +725,22 @@ class VDriveAPI(object):
 
         return data_key
 
-    def load_session(self, in_file_name):
+    def load_session(self, in_file_name=None):
         """ Load session from saved file
         Load session from a session file
         :param in_file_name:
         :return: 2-tuple: (boolean, object)
         """
         # Check requirements
-        assert isinstance(in_file_name, str)
+        assert isinstance(in_file_name, str) or in_file_name is None
+
+        # get default session file if is not given
+        if in_file_name is None:
+            in_file_name = self._get_default_session_file()
+            if os.path.exists(in_file_name) is False:
+                return False, 'Unable to locate default session file %s.' % in_file_name
+
+        # check session file
         assert len(in_file_name) > 0
 
         status, save_dict = archivemanager.load_from_xml(in_file_name)
@@ -847,11 +869,17 @@ class VDriveAPI(object):
 
         return return_status, error_message
 
-    def save_session(self, out_file_name):
+    def save_session(self, out_file_name=None):
         """ Save current session
-        :param out_file_name:
+        :param out_file_name: target file name to save session. If left None, a default will be created
         :return:
         """
+        # check
+        if out_file_name is None:
+            out_file_name = self._get_default_session_file(mkdir_dir=True)
+        else:
+            assert isinstance(out_file_name, str)
+
         # Create a dictionary for current set up
         save_dict = dict()
         save_dict['myInstrumentName'] = self._myInstrument

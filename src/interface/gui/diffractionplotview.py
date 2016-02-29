@@ -141,7 +141,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Record the data for future usage... ...
 
         # Plot
-        pattern_key = self.add_plot_1d(vec_x, vec_y)
+        pattern_key = self.add_plot_1d(vec_x, vec_y, color='blue', marker='.')
 
         return
 

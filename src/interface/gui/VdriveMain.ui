@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1505</width>
-    <height>1014</height>
+    <width>1451</width>
+    <height>801</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -2086,8 +2086,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1505</width>
-     <height>25</height>
+     <width>1451</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2133,10 +2133,17 @@
     <addaction name="actionDelete_Runs_By_IPTS"/>
     <addaction name="actionDelete_Run"/>
    </widget>
+   <widget class="QMenu" name="menuConfiguration">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="actionOpen_Configuration"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuRuns"/>
+   <addaction name="menuConfiguration"/>
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -2212,17 +2219,22 @@
     <string>Delete Run</string>
    </property>
   </action>
+  <action name="actionOpen_Configuration">
+   <property name="text">
+    <string>Open Configuration</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>VdriveRunManagerTree</class>
-   <extends>QTreeView</extends>
-   <header>vdrivetreewidgets.h</header>
-  </customwidget>
   <customwidget>
    <class>MplGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>mplgraphicsview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>VdriveRunManagerTree</class>
+   <extends>QTreeView</extends>
+   <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
    <class>FileSystemTreeView</class>

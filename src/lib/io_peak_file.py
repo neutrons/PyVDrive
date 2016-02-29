@@ -53,7 +53,7 @@ class GSASPeakFileManager(object):
         :param name:
         :param position:
         :param width:
-        :param overlapped_peaks_pos: list of positions of the overlapped peaks
+        :param overlapped_peaks_pos: list of positions of the overlapped peaks OR None for no overlapped
         :return:
         """
         # Check requirements

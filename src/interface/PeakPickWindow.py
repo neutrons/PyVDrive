@@ -903,8 +903,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees:
         :return:
         """
-        # FIXME/NOW/1st - Should move the MockController to VDriveAPI
-
         # Check requirements
         assert self._myController is not None
 
@@ -974,8 +972,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :param data_key: key to the reduced data.  It can be string key or integer key (run number)
         :return:
         """
-        print '[DB-BAT] Load plot run : data key = ', data_key, 'of type', type(data_key)
-
         # Get run number
         if isinstance(data_key, int):
             run_number = data_key
@@ -1230,7 +1226,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
             peak_width = abs(self._indicatorPositionList[0] - self._indicatorPositionList[1])
 
         # Add peak to table
-        self.ui.tableWidget_peakParameter.add_peak(bank_number, peak_name, peak_pos, peak_width)
+        overlapped_peaks_list = []
+        self.ui.tableWidget_peakParameter.add_peak(bank_number, peak_name, peak_pos, peak_width,
+                                                   overlapped_peaks_list)
 
         # Quit selection mode
         self.menu_cancel_selection()

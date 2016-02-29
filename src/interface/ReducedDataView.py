@@ -54,7 +54,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                      self.doPlotRunSelected)
 
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
-        #         self.doPlotAllRuns)
+        #         self.do_plot_all_runs)
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                      self.do_normalise_by_current)
