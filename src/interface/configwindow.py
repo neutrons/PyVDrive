@@ -21,6 +21,7 @@ class ConfigWindow(QtGui.QMainWindow):
     def __init__(self, parent):
         """
         Initialization
+	:param parent:
         """
         QtGui.QMainWindow.__init__(self)
 
