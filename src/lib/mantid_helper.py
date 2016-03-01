@@ -175,7 +175,12 @@ def find_peaks(diff_data, peak_profile, auto):
     :param auto:
     :return:
     """
+    mantidapi.FindPeaks(InputWorkspace='82403_gda',
+                        WorkspaceIndex=1,
+                        BackgroundType='Quadratic',
+                        PeaksList='peaks')
 
+    return 'peaks'
 
 
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
