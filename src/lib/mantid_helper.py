@@ -242,7 +242,6 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     :param stop_time:
     :param delta_time:
     :param time_unit:
-    :param relative_time:
     :return:
     """
     # define optional inputs

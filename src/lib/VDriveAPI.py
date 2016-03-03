@@ -513,6 +513,8 @@ class VDriveAPI(object):
         """
         return self._myWorkDir
 
+    def get_binned_data_directory(self):
+
     def get_data_root_directory(self):
         """ Get root data directory such as /SNS/VULCAN
         :return: data root directory, such as /SNS/VULCAN

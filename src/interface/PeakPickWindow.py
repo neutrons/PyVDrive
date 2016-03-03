@@ -414,16 +414,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
                      self.do_save_peaks)
 
-        # Define canvas event hanlders
-        # Event handling for pickers
-        """ Temporarily Disabled
-        self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
-                                                        self.on_mouse_press_event)
-        self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
-                                                        self.on_mouse_release_event)
-        self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
-                                                        self.on_mouse_motion)
-        """
+        # Define canvas event handlers
 
         # Menu
         self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
@@ -442,8 +433,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._currentBankNumber = -1   # current bank number
         self._currentDataSet = dict()  # current data as {bank1: (vecX, vecY, vecE); bank2: (vecX, vecY, vecE) ...}
         self._myController = None      # Reference to controller class
-        self._dataDirectory = None     # default directory to load data
-        self._currDataKey = None       # Data key to look up reduced data from controller
+        # disabled. leave to controller self._dataDirectory = None     # default directory to load data
+        self._currGraphDataKey = None   # Data key of the current data plot on canvas
+        self._dataKeyList = list()
 
         # Peak selection mode
         self._peakPickerMode = PeakPickerMode.Normal
@@ -799,14 +791,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Check requirement
         assert self._myController is not None
 
-        # Pop out dialog for file and import the file
-        if self._dataDirectory is None:
-            print '[DB] Data directory is not set up!. Force it to current directory'
-            root_dir = os.getcwd()
-        else:
-            root_dir = self._dataDirectory
+        # get working directory for peak files
+        work_dir = self._myController.get_working_dir()
         filters = "Text files (*.txt);; All files (*.*)"
-        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', root_dir, filters))
+        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', work_dir, filters))
         try:
             peak_list = self._myController.import_gsas_peak_file(peak_file)
         except RuntimeError as err:
@@ -912,8 +900,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
             Load GSAS data or a list of GSAS data files
         Requirements:
             Controller has been set to this object
-        Requires:
         Guarantees:
+            Load data from start run to end run in line edits and plot the first run on canvas
+            1. if the range of run numbers is given, then only the directory for all the files shall be specified;
+            2. otherwise, a dialog will be popped for the file
         :return:
         """
         # Check requirements
@@ -924,31 +914,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
         end_run_number = GuiUtility.parse_integer(self.ui.lineEdit_endRunNumber)
 
         # Get the GSAS file names
-        filters = 'GSAS files (*.gda);; All files (*.*)'
         gsas_file_list = list()
-
-        # TODO/NOW - make the work to set up data directory clear!
-        data_dir = self._dataDirectory
-        # FIXME - this is just for test loading session
-        data_dir = None
-        if data_dir is None:
-            dir_list = self._myController.get_ipts_config()
-
-            if dir_list[1] is None:
-                data_dir = os.getcwd()
-            else:
-                data_dir = dir_list[1]
-
-        if start_run_number is None or end_run_number is None:
-            # no valid range of run numbers are given, then load the data explicitly
-            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open GSAS File', data_dir, filters))
-            gsas_file_list.append(gsas_file_name)
-        else:
-            # valid range of run numbers, assuming that their GSAS files are in same directory.
-            assert end_run_number >= start_run_number, 'End run %d must be larger than ' \
-                                                       'or equal to start run %d.' % (end_run_number, start_run_number)
+        if start_run_number is not None and end_run_number is not None:
+            # complete range
+            assert start_run_number <= end_run_number, 'End run %d must be larger than ' \
+                                                       'or equal to start run %d.' % (end_run_number,
+                                                                                      start_run_number)
             # get directory containing GSAS files
-            gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', self._dataDirectory))
+            default_dir = self._myController.get_binned_data_dir(range(start_run_number, end_run_number))
+            gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
 
             # form file names: standard VULCAN style
             error_message = ''
@@ -963,15 +937,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # output error
             if len(error_message) > 0:
                 GuiUtility.pop_dialog_error(self, 'GSAS file %s cannot be found.' % error_message)
+
+        else:
+            # get single GSAS file
+            filters = 'GSAS files (*.gda);; All files (*.*)'
+            default_dir = self._myController.get_binned_data_directory()
+            # TODO/NOW - consider self._myController.get_ipts_config()
+
+            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Load GSAS File',
+                                                                   default_dir, filters))
+            gsas_file_list.append(gsas_file_name)
         # END-IF-ELSE
 
         # Load data from GSAS file
-        data_key_list = list()
         for gsas_file_name in gsas_file_list:
             # Load data via parent
             try:
                 data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas')
-                data_key_list.append(data_key)
+                self._dataKeyList.append(data_key)
                 # add to tree
                 self.ui.treeView_iptsRun.add_child_current_item(data_key)
             except RuntimeError as re:
@@ -980,9 +963,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # END-FOR
 
         # Plot data if there is only one GSAS file
-        print '[DB-BAT] Data key to load: ', data_key_list
-        if len(gsas_file_list) == 1:
-            self.load_plot_run(data_key_list[0])
+        if len(gsas_file_list) > 0:
+            self.load_plot_run(self._dataKeyList[0])
 
         return
 
@@ -1051,7 +1033,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Set up class variables
         self._currentRunNumber = run_number
         self._currentBankNumber = 1
-        self._currDataKey = data_key
+        self._currGraphDataKey = data_key
 
         # Release the mutex flag
         self._isDataLoaded = True
