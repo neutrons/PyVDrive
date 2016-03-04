@@ -65,7 +65,7 @@ class VDriveAPI(object):
         self._rootDataDir = '/SNS/VULCAN/'
         # relative data directory to IPTS data directory for binned GSAS data
         self._relativeBinnedDir = 'binned/'
-        # IPTS configuration
+        # IPTS configuration: key = IPTS number (int), value = list as [raw data dir, binned data dir]
         self._iptsConfigDict = dict()
 
         return
@@ -513,7 +513,28 @@ class VDriveAPI(object):
         """
         return self._myWorkDir
 
-    def get_binned_data_directory(self):
+    def get_binned_data_directory(self, ipts_number=None, run_number_list=None):
+        """ Get the directory for the binned data
+        :param ipts_number:
+        :return:
+        """
+        # TODO/NOW - Doc & check
+        if ipts_number is None:
+            if run_number_list is None:
+                ipts_number = None
+            else:
+                ipts_number = self.get_run_info(run_number_list[0])
+
+        if ipts_number is None:
+            if len(self._iptsConfigDict) == 0:
+                binned_dir = os.getcwd()
+            else:
+                ipts0 = self._iptsConfigDict.keys()[0]
+                binned_dir = self._iptsConfigDict[ipts0][1]
+        else:
+            binned_dir = self._iptsConfigDict[ipts_number][1]
+
+        return binned_dir
 
     def get_data_root_directory(self):
         """ Get root data directory such as /SNS/VULCAN

@@ -14,150 +14,6 @@ import mantid.simpleapi as mantidapi
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
-class UnitCell(object):
-    """ A simple class to pass the unit cell information
-    """
-    PRIMITIVE = 0
-    BCC = 1
-    FCC = 2
-    BC = 3   # body-centre
-    FC = 4   # face-centre
-    HCP = 5  # HCP
-
-    SpaceGroupDict = {
-        PRIMITIVE: 'P m m m',
-        BC: 'I m m m',
-        FC: 'F m m m',
-        HCP: 'P 63/m m c',
-        BCC: 'I m -3 m',
-        FCC: 'F d -3 m',
-    }
-
-    def __init__(self, unit_cell_type, a, b=None, c=None):
-        """
-        Initialize and set up a unit cell
-        :param unit_cell_type:
-        :param a:
-        :param b:
-        :param c:
-        :return:
-        """
-        # unit cell type, primitive, bcc or fcc
-        assert 0 <= unit_cell_type <= 4, 'Unit cell type %d is not supported.' % unit_cell_type
-        self._unitCellType = unit_cell_type
-
-        # lattice size
-        assert isinstance(a, float)
-        assert a > 0, 'Lattice parameter must larger than 0.'
-        self._a = a
-
-        assert (b is None and c is None) or (b is not None and c is not None)
-        if b is None and c is None:
-            # cubic
-            self._isCubic = True
-            self._b = self._a
-            self._c = self._a
-        else:
-            # tetrehedron
-            self._isCubic = False
-            assert isinstance(b, float)
-            assert b > 0
-            self._b = b
-            assert isinstance(c, float)
-            assert c > 0
-            self._c = c
-
-        return
-
-    @property
-    def space_group(self):
-        """ Get space group
-        :return:
-        """
-        return UnitCell.SpaceGroupDict[self._unitCellType]
-
-    def get_cell_parameters(self):
-        """
-        Put cell parameters a, b and c to a list and return
-        :return: list of 3 elements, a, b and c
-        """
-        return [self._a, self._b, self._c]
-
-    def is_cubic(self):
-        """ Whether it is cubic
-        :return:
-        """
-        return self._isCubic
-
-
-def calculate_reflections(unit_cell, min_d, max_d):
-    """ Calculate reflections' position in d-spacing
-    Purpose:
-        Calculate a crystal's Bragg peaks' positions in d-spacing
-    Requirements:
-        Crystal unit cell must be tetrahegonal (including cubic)
-        Lattice parameters (a, b, c) must be valid
-        d-spacing range must be given
-        Structure must be primitive, body-centre, or face-centre
-    Guarantees:
-        Bragg peaks' position along with HKL will be returned
-    :param unit_cell: UnitCell instance
-    :param min_d: minimum d-spacing value
-    :param max_d: maximum d-spacing value
-    :return: a list of reflections.  Each reflection is a 2-tuple as ... ...
-    """
-    from mantid.geometry import CrystalStructure, ReflectionGenerator, ReflectionConditionFilter
-
-    def get_generator(lattice_parameters, space_group):
-        """
-        """
-        crystal_structure = CrystalStructure(' '.join([str(x) for x in lattice_parameters]), space_group, '')
-        generator = ReflectionGenerator(crystal_structure, ReflectionConditionFilter.Centering)
-        return generator
-
-    def get_unique_reflections(lattice_parameters, space_group, d_min, d_max):
-        """
-        """
-        generator = get_generator(lattice_parameters, space_group)
-
-        hkls = generator.getUniqueHKLs(d_min, d_max)
-
-        dvalues = generator.getDValues(hkls)
-
-        return zip(hkls, dvalues)
-
-    def get_all_reflections(lattice_parameters, space_group, d_min, d_max):
-        """
-        """
-        generator = get_generator(lattice_parameters, space_group)
-
-        hkls = generator.getHKLs(d_min, d_max)
-
-        dvalues = generator.getDValues(hkls)
-
-        return zip(hkls, dvalues)
-
-    # Check inputs
-    assert isinstance(unit_cell, UnitCell), 'Input must be an instance of UnitCell but not %s.' % str(type(unit_cell))
-    assert min_d < max_d, 'Minimum d-spacing %f must be smaller than maximum d-spacing %f.' % (min_d, max_d)
-    assert 0. <= min_d, 'Minimum d-spacing %f must be larger or equal to 0.' % min_d
-
-    # cell_parameters = [5, 4, 3]
-    cell_parameters = unit_cell.get_cell_parameters()
-    cell_type = unit_cell.space_group
-
-    reflection_list = get_unique_reflections(cell_parameters, cell_type, min_d, max_d)
-
-    """
-    print get_unique_reflections(cell_parameters, 'P m m m', 0.5, 5.0)  # primitive
-    print get_unique_reflections(cell_parameters, 'I m m m', 0.5, 5.0)  # body center
-    print get_unique_reflections(cell_parameters, 'F m m m', 0.5, 5.0)  # face center
-    print get_all_reflections(cell_parameters, 'F m m m', 0.5, 5.0)
-    """
-
-    return reflection_list
-
-
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:
@@ -620,6 +476,233 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 
     return True, out_ws
+
+
+def mtd_align_and_focus(self, event_ws_name, reduction_parameters, _myGroupWorkspaceName,
+                        _myOffsetWorkspaceName):
+        """ Align and focus raw event workspaces: the original workspace will be replaced
+        Purpose:
+            Run Mantid.AlignAndFocus() by current parameters
+        Requirements:
+            Input event_wksp is not None
+            Output workspace name is string
+            All requirements for align and focus in Mantid is satisifed
+        Guarantees:
+            Event workspace is reduced
+        :param event_ws_name:
+        :return: focused event workspace
+        """
+        # Check requirement
+        assert isinstance(event_ws_name, str)
+        event_ws = retrieve_workspace(event_ws_name)
+
+        assert event_ws.id() == EVENT_WORKSPACE_ID, \
+            'Input must be an EventWorkspace for align and focus. Current input is %s' % event_ws.id()
+        assert isinstance(reduction_parameters, PowderReductionParameters), \
+            'Input parameter must be of an instance of PowderReductionParameters'
+
+        assert isinstance(_myGroupWorkspaceName, str)
+        assert workspace_does_exist(_myGroupWorkspaceName)
+        assert isinstance(_myOffsetWorkspaceName, str)
+        assert workspace_does_exist(_myOffsetWorkspaceName)
+
+        # Execute algorithm AlignAndFocusPowder()
+        # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
+        user_geometry_dict = dict()
+        if self._reductionParameters.min_tof is None or self._reductionParameters.max_tof is None:
+            # if TOF range is not set up, use default min and max
+            user_geometry_dict['DMin'] = 0.5
+            user_geometry_dict['DMax'] = 5.5
+
+        # FIXME - Need to find out what it is in __snspowderreduction
+        mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
+                                      OutputWorkspace=event_ws_name,   # in-place align and focus
+                                      GroupingWorkspace=_myGroupWorkspaceName,
+                                      OffsetsWorkspace=_myOffsetWorkspaceName,
+                                      CalibrationWorkspace=self._myCalibrationWorkspaceName,
+                                      MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
+                                      Params=reduction_parameters.form_binning_parameter(),
+                                      PreserveEvents=reduction_parameters.preserve_events,
+                                      RemovePromptPulseWidth=0,  # Fixed to 0
+                                      CompressTolerance=reduction_parameters.compress_tolerance,
+                                      # 0.01 as default
+                                      Dspacing=True,            # fix the option
+                                      UnwrapRef=0,              # do not use = 0
+                                      LowResRef=0,              # do not use  = 0
+                                      CropWavelengthMin=0,      # no in use = 0
+                                      CropWavelengthMax=0,
+                                      LowResSpectrumOffset=-1,  # powgen's option. not used by vulcan
+                                      PrimaryFlightPath=43.753999999999998,
+                                      SpectrumIDs='1,2',
+                                      L2='2.00944,2.00944',
+                                      Polar='90.122,90.122',
+                                      Azimuthal='0,0',
+                                      ReductionProperties='__snspowderreduction',
+                                      **user_geometry_dict)
+
+        # Check
+        out_ws = retrieve_workspace(event_ws_name)
+        assert out_ws is not None
+
+        return True
+
+
+def mtd_compress_events(event_ws_name, tolerance=0.01):
+        """ Call Mantid's CompressEvents algorithm
+        :param event_ws_name:
+        :param tolerance: default as 0.01 as 10ns
+        :return:
+        """
+        # Check requirements
+        assert isinstance(event_ws_name, str), 'Input event workspace name is not a string,' \
+                                               'but is a %s.' % str(type(event_ws_name))
+        event_ws = retrieve_workspace(event_ws_name)
+        assert is_event_workspace(event_ws)
+
+        mantidapi.CompressEvents(InputWorkspace=event_ws_name,
+                                 OutputWorkspace=event_ws_name,
+                                 Tolerance=tolerance)
+
+        out_event_ws = retrieve_workspace(event_ws_name)
+        assert out_event_ws
+
+        return
+
+
+def mtd_convert_units(ws_name, target_unit):
+        """
+        Convert the unit of a workspace.
+        Guarantees: if the original workspace is point data, then the output must be point data
+        :param event_ws_name:
+        :param target_unit:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
+        workspace = retrieve_workspace(ws_name)
+        assert workspace
+        assert isinstance(target_unit, str), 'Input target unit should be a string,' \
+                                             'but is %s.' % str(type(target_unit))
+
+        # Record whether the input workspace is histogram
+        is_histogram = workspace.isHistogramData()
+
+        # Correct target unit
+        if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:
+            target_unit = 'dSpacing'
+        elif target_unit.lower() == 'tof':
+            target_unit = 'TOF'
+
+        # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
+        if is_histogram is False:
+            mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+        mantidapi.ConvertUnits(InputWorkspace=ws_name,
+                               OutputWorkspace=ws_name,
+                               Target=target_unit,
+                               EMode='Elastic')
+        if is_histogram is False:
+            mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
+
+        # Check output
+        out_ws = retrieve_workspace(ws_name)
+        assert out_ws
+
+        return
+
+
+def mtd_filter_bad_pulses(ws_name, lower_cutoff=95.):
+        """ Filter bad pulse
+        Requirements: input workspace name is a string for a valid workspace
+        :param ws_name:
+        :param lower_cutoff: float as (self._filterBadPulses)
+        :return:
+        """
+        # Check requirements
+        assert isinstance(ws_name, str), 'Input workspace name should be string,' \
+                                         'but is of type %s.' % str(type(ws_name))
+        assert isinstance(lower_cutoff, float)
+
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        assert isinstance(event_ws, mantid.api.IEventWorkspace), \
+            'Input workspace %s is not event workspace but of type %s.' % (ws_name, event_ws.__class__.__name__)
+
+        # Get statistic
+        num_events_before = event_ws.getNumberEvents()
+
+        mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
+                                  LowerCutoff=lower_cutoff)
+
+        event_ws = mantid_helper.retrieve_workspace(ws_name)
+        num_events_after = event_ws.getNumberEvents()
+
+        print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
+              'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name)
+
+        return
+
+
+def mtd_normalize_by_current(event_ws_name):
+        """
+        Normalize by current
+        Purpose: call Mantid NormalisebyCurrent
+        Requirements: a valid string as an existing workspace's name
+        Guarantees: workspace is normalized by current
+        :param event_ws_name:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(event_ws_name, str), 'Input event workspace name must be a string.'
+        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert event_ws is not None
+
+        # Call mantid algorithm
+        mantidapi.NormaliseByCurrent(InputWorkspace=event_ws_name,
+                                     OutputWorkspace=event_ws_name)
+
+        # Check
+        out_ws = mantid_helper.retrieve_workspace(event_ws_name)
+        assert out_ws is not None
+
+        return
+
+
+def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
+        """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
+        Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
+        Requirements:
+        1. input source workspace is reduced
+        2. output gsas file name is a string
+        3. ipts number is integer
+        4. binning reference file exists
+        5. gss parameter file name is a string
+        :param source_ws_name:
+        :param out_gss_file:
+        :param ipts:
+        :param binning_reference_file:
+        :param gss_parm_file:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(source_ws_name, str)
+        src_ws = mantid_helper.retrieve_workspace(source_ws_name)
+        assert src_ws.getNumberHistograms() < 10
+
+        assert isinstance(out_gss_file, str)
+        assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
+        assert isinstance(binning_reference_file, str)
+        assert os.path.exists(binning_reference_file)
+        assert isinstance(gss_parm_file, str)
+
+        final_ws_name = source_ws_name + '_IDL'
+
+        mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
+                                BinFilename=binning_reference_file,
+                                OutputWorkspace=final_ws_name,
+                                GSSFilename=gss_parm_file,
+                                IPTS = ipts,
+                                GSSParmFilename=gss_parm_file)
+
+        return
 
 
 def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):

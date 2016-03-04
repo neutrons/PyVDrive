@@ -654,191 +654,16 @@ class ReductionManager(object):
 
         return reduced_ws_name
 
-    def mtd_align_and_focus(self, event_ws_name):
-        """ Align and focus raw event workspaces: the original workspace will be replaced
-        Purpose:
-            Run Mantid.AlignAndFocus() by current parameters
-        Requirements:
-            Input event_wksp is not None
-            Output workspace name is string
-            All requirements for align and focus in Mantid is satisifed
-        Guarantees:
-            Event workspace is reduced
-        :param event_ws_name:
-        :return: focused event workspace
+    def align_and_focus(self, event_ws_name):
         """
-        # Check requirement
-        assert isinstance(event_ws_name, str)
-        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
 
-        assert event_ws.id() == EVENT_WORKSPACE_ID, \
-            'Input must be an EventWorkspace for align and focus. Current input is %s' % event_wksp.id()
-        assert isinstance(self._reductionParameters, PowderReductionParameters), \
-            'Input parameter must be of an instance of PowderReductionParameters'
-
-        assert isinstance(self._myGroupWorkspaceName, str)
-        assert mantid_helper.workspace_does_exist(self._myGroupWorkspaceName)
-        assert isinstance(self._myOffsetWorkspaceName, str)
-        assert mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName)
-
-        # Execute algorithm AlignAndFocusPowder()
-        # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
-        user_geometry_dict = dict()
-        if self._reductionParameters.min_tof is None or self._reductionParameters.max_tof is None:
-            # if TOF range is not set up, use default min and max
-            user_geometry_dict['DMin'] = 0.5
-            user_geometry_dict['DMax'] = 5.5
-
-        # FIXME - Need to find out what it is in __snspowderreduction
-        mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
-                                      OutputWorkspace=event_ws_name,   # in-place align and focus
-                                      GroupingWorkspace=self._myGroupWorkspaceName,
-                                      OffsetsWorkspace=self._myOffsetWorkspaceName,
-                                      CalibrationWorkspace=self._myCalibrationWorkspaceName,
-                                      MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
-                                      Params=self._reductionParameters.form_binning_parameter(),
-                                      PreserveEvents=self._reductionParameters.preserve_events,
-                                      RemovePromptPulseWidth=0,  # Fixed to 0
-                                      CompressTolerance=self._reductionParameters.compress_tolerance,
-                                      # 0.01 as default
-                                      Dspacing=True,            # fix the option
-                                      UnwrapRef=0,              # do not use = 0
-                                      LowResRef=0,              # do not use  = 0
-                                      CropWavelengthMin=0,      # no in use = 0
-                                      CropWavelengthMax=0,
-                                      LowResSpectrumOffset=-1,  # powgen's option. not used by vulcan
-                                      PrimaryFlightPath=43.753999999999998,
-                                      SpectrumIDs='1,2',
-                                      L2='2.00944,2.00944',
-                                      Polar='90.122,90.122',
-                                      Azimuthal='0,0',
-                                      ReductionProperties='__snspowderreduction',
-                                      **user_geometry_dict)
-
-        # Check
-        out_ws = mantid_helper.retrieve_workspace(event_ws_name)
-        assert out_ws is not None
+        :param event_ws_name:
+        :return:
+        """
+        mantid_helper.mtd_align_and_focus(event_ws_name, self._reductionParameters,
+                                          self._myGroupWorkspaceName)
 
         return True
-
-    @staticmethod
-    def mtd_compress_events(event_ws_name, tolerance=0.01):
-        """ Call Mantid's CompressEvents algorithm
-        :param event_ws_name:
-        :param tolerance: default as 0.01 as 10ns
-        :return:
-        """
-        # Check requirements
-        assert isinstance(event_ws_name, str), 'Input event workspace name is not a string,' \
-                                               'but is a %s.' % str(type(event_ws_name))
-        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
-        assert mantid_helper.is_event_workspace(event_ws)
-
-        mantidapi.CompressEvents(InputWorkspace=event_ws_name,
-                                 OutputWorkspace=event_ws_name,
-                                 Tolerance=tolerance)
-
-        out_event_ws = mantid_helper.retrieve_workspace(event_ws_name)
-        assert out_event_ws
-
-        return
-
-    @staticmethod
-    def mtd_convert_units(ws_name, target_unit):
-        """
-        Convert the unit of a workspace.
-        Guarantees: if the original workspace is point data, then the output must be point data
-        :param event_ws_name:
-        :param target_unit:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(ws_name, str), 'Input workspace name is not a string but is a %s.' % str(type(ws_name))
-        workspace = mantid_helper.retrieve_workspace(ws_name)
-        assert workspace
-        assert isinstance(target_unit, str), 'Input target unit should be a string,' \
-                                             'but is %s.' % str(type(target_unit))
-
-        # Record whether the input workspace is histogram
-        is_histogram = workspace.isHistogramData()
-
-        # Correct target unit
-        if target_unit.lower() == 'd' or target_unit.lower().count('spac') == 1:
-            target_unit = 'dSpacing'
-        elif target_unit.lower() == 'tof':
-            target_unit = 'TOF'
-
-        # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
-        if is_histogram is False:
-            mantidapi.ConvertToHistogram(InputWorkspace=ws_name, OutputWorkspace=ws_name)
-        mantidapi.ConvertUnits(InputWorkspace=ws_name,
-                               OutputWorkspace=ws_name,
-                               Target=target_unit,
-                               EMode='Elastic')
-        if is_histogram is False:
-            mantidapi.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=ws_name)
-
-        # Check output
-        out_ws = mantid_helper.retrieve_workspace(ws_name)
-        assert out_ws
-
-        return
-
-    @staticmethod
-    def mtd_filter_bad_pulses(ws_name, lower_cutoff=95.):
-        """ Filter bad pulse
-        Requirements: input workspace name is a string for a valid workspace
-        :param ws_name:
-        :param lower_cutoff: float as (self._filterBadPulses)
-        :return:
-        """
-        # Check requirements
-        assert isinstance(ws_name, str), 'Input workspace name should be string,' \
-                                         'but is of type %s.' % str(type(ws_name))
-        assert isinstance(lower_cutoff, float)
-
-        event_ws = mantid_helper.retrieve_workspace(ws_name)
-        assert isinstance(event_ws, mantid.api.IEventWorkspace), \
-            'Input workspace %s is not event workspace but of type %s.' % (ws_name, event_ws.__class__.__name__)
-
-        # Get statistic
-        num_events_before = event_ws.getNumberEvents()
-
-        mantidapi.FilterBadPulses(InputWorkspace=ws_name, OutputWorkspace=ws_name,
-                                  LowerCutoff=lower_cutoff)
-
-        event_ws = mantid_helper.retrieve_workspace(ws_name)
-        num_events_after = event_ws.getNumberEvents()
-
-        print '[Info] FilterBadPulses reduces number of events from %d to %d (under %.3f percent) ' \
-              'of workspace %s.' % (num_events_before, num_events_after, lower_cutoff, ws_name)
-
-        return
-
-    @staticmethod
-    def mtd_normalize_by_current(event_ws_name):
-        """
-        Normalize by current
-        Purpose: call Mantid NormalisebyCurrent
-        Requirements: a valid string as an existing workspace's name
-        Guarantees: workspace is normalized by current
-        :param event_ws_name:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(event_ws_name, str), 'Input event workspace name must be a string.'
-        event_ws = mantid_helper.retrieve_workspace(event_ws_name)
-        assert event_ws is not None
-
-        # Call mantid algorithm
-        mantidapi.NormaliseByCurrent(InputWorkspace=event_ws_name,
-                                     OutputWorkspace=event_ws_name)
-
-        # Check
-        out_ws = mantid_helper.retrieve_workspace(event_ws_name)
-        assert out_ws is not None
-
-        return
 
     def reduce_sample_run(self, run_number):
         """ Reduce one sample run, which is not a vanadium run
@@ -883,7 +708,7 @@ class ReductionManager(object):
             tracker.add_history(ReductionHistory.FilterBadPulse)
 
         # Align and focus
-        status = self.mtd_align_and_focus(event_ws_name)
+        status = self.align_and_focus(event_ws_name)
         assert status
         tracker.add_history(ReductionHistory.AlignAndFocus)
 
@@ -1004,51 +829,12 @@ class ReductionManager(object):
 
         # Convert unit and save_to_buffer for VULCAN GSS
         reduced_ws_name = tracker.event_workspace_name
-        self.mtd_convert_units(reduced_ws_name, 'TOF')
+        mantid_helper.mtd_convert_units(reduced_ws_name, 'TOF')
         self.mtd_save_vulcan_gss(source_ws_name=reduced_ws_name,
                                  out_gss_file=out_gss_name,
                                  ipts=ipts_number,
                                  binning_reference_file=self._binningReferenceFile,
                                  gss_parm_file='Vulcan.parm')
-
-        return
-
-    @staticmethod
-    def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
-        """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
-        Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
-        Requirements:
-        1. input source workspace is reduced
-        2. output gsas file name is a string
-        3. ipts number is integer
-        4. binning reference file exists
-        5. gss parameter file name is a string
-        :param source_ws_name:
-        :param out_gss_file:
-        :param ipts:
-        :param binning_reference_file:
-        :param gss_parm_file:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(source_ws_name, str)
-        src_ws = mantid_helper.retrieve_workspace(source_ws_name)
-        assert src_ws.getNumberHistograms() < 10
-
-        assert isinstance(out_gss_file, str)
-        assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-        assert isinstance(binning_reference_file, str)
-        assert os.path.exists(binning_reference_file)
-        assert isinstance(gss_parm_file, str)
-
-        final_ws_name = source_ws_name + '_IDL'
-
-        mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
-                                BinFilename=binning_reference_file,
-                                OutputWorkspace=final_ws_name,
-                                GSSFilename=gss_parm_file,
-                                IPTS = ipts,
-                                GSSParmFilename=gss_parm_file)
 
         return
 
@@ -1125,9 +911,9 @@ class ReductionManager(object):
 
         # Filter bad pulse
         self.mtd_filter_bad_pulses(van_ws_name)
-        self.mtd_align_and_focus(van_ws_name)
-        self.mtd_compress_events(van_ws_name)
-        self.mtd_convert_units(van_ws_name, 'TOF')
+        self.align_and_focus(van_ws_name)
+        mantid_helper.mtd_compress_events(van_ws_name)
+        mantid_helper.mtd_convert_units(van_ws_name, 'TOF')
 
         mantidapi.SetSampleMaterial(InputWorkspace=wksp, 
                                  ChemicalFormula="V", 

@@ -763,7 +763,7 @@ class DeprecatedReductionProject(VDProject):
             ws = runpdr.get_smoothed_vanadium()
             
             if ws is not None:
-                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
+                ws = ConvertToPointData(InputWorkspace=ws)
 
                 returndict = {}
                 for iws in xrange(ws.getNumberHistograms()):
