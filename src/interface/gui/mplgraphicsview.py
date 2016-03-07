@@ -730,6 +730,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def get_indicator_position(self, indicator_key):
         """ Get position (x or y) of the indicator
+        :param indicator_key
         :return: a tuple.  (0) horizontal (x, x); (1) vertical (y, y); (2) 2-way (x, y)
         """
         # Get indicator's type
