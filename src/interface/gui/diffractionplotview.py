@@ -97,6 +97,27 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def _close_to_canvas_edget(self, x, y):
+        """ Check whether the cursor (x, y) is very close to the edge of the canvas
+        :param x:
+        :param y:
+        :return:
+        """
+        assert isinstance(x, float), 'x is not a float but a %s.' % str(type(x))
+        assert isinstance(y, float), 'y is not a float but a %s.' % str(type(y))
+
+        xmin, xmax = self.getXLimit()
+        if abs(x-xmin) <= 2*self._mouseResolution or abs(x-xmax) <= 2*self._mouseResolution:
+            # close to left or right boundary
+            return True
+
+        ymin, ymax = self.getYLimit()
+        if abs(y-ymin) <= 2*self._mouseResolution or abs(y-ymax) <= 2*self._mouseResolution:
+            # close to top or bottom boundary
+            return True
+
+        return False
+
     def _construct_peak_range_map(self):
         """ Construct a 2-vector-tuple to check peak range quickly
         :return:
@@ -316,12 +337,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
             print '[DB-BAT] Out of canvas! Current cursor type is ', self._cursorType
+            QtGui.QApplication.restoreOverrideCursor()
             if self._cursorType != 0:
                 # set the cursor back to arrow
                 new_cursor = QtCore.Qt.ArrowCursor
                 self._cursorType = 0
-                print '[DB-BAT] Cursor type is changed to arrow!'
-                QtGui.QApplication.setOverrideCursor(new_cursor)
+                QtGui.QApplication.restoreOverrideCursor()
+                #print '[DB-BAT] Cursor type is changed to arrow!'
+                #QtGui.QApplication.setOverrideCursor(new_cursor)
             return
 
         # Check movement
@@ -363,6 +386,15 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # left mouse button is pressed and move
             print '[DB-BAT] Current peak index = ', self._currPeakIndicator
             self._move_selected_peak(event.xdata)
+
+        elif self._close_to_canvas_edget(event.xdata, event.ydata) is True:
+            # the cursor is very close to edge the canvas, then treat
+            # this situation as no man's land
+            if self._currPeakIndicator >= 0:
+                self._cursorType = 0
+                self._currPeakIndicator = -1
+                new_cursor = QtCore.Qt.ArrowCursor
+                QtGui.QApplication.setOverrideCursor(new_cursor)
 
         elif len(self._inPickPeakList) > 0:
             # get position information for peak and boundary vicinity

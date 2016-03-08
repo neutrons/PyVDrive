@@ -364,6 +364,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_undo_phase_changes)
 
         # peak processing
+        self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_add_picked_peaks)
+
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
 
@@ -516,6 +519,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._myController = controller
 
         return
+
+    def do_add_picked_peaks(self):
+        """ Add the picked up peaks in canvas
+        :return:
+        """
+        num_peaks = self.ui.graphicsView_main.get_number_of_peaks()
+        for i_peak in xrange(num_peaks):
+            peak_tuple = self.ui.graphicsView_main.get_peak(i_peak)
 
     def do_claim_overlapped_peaks(self):
         """
