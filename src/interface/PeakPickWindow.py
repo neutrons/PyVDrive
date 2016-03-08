@@ -546,7 +546,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Show the peak indicators
         peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
         for peak_pos in peak_pos_list:
-            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
+            self.ui.graphicsView_main.add_picked_peak(peak_pos, peak_width)
 
         return
 
@@ -585,7 +585,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Plot
         for peak_pos in peak_pos_list:
-            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
+            self.ui.graphicsView_main.add_picked_peak(peak_pos, peak_width)
 
         return
 
@@ -732,7 +732,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Set the peaks to canvas
         peak_pos_list = retrieve_peak_positions(reflection_list)
         for peak_pos in peak_pos_list:
-            self.ui.graphicsView_main.add_peak_indicator(peak_pos)
+            self.ui.graphicsView_main.add_in_pick_peak(peak_pos)
 
         # Set the peaks' parameters to table
         for i_peak in xrange(len(peak_pos_list)):
@@ -1348,68 +1348,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self._peakSelectionMode = 'MoveCentre'
         else:
             raise RuntimeError('Peak selection mode %s is not switchable.' % self._peakSelectionMode)
-
-        return
-
-    def on_mouse_press_event(self, event):
-        """ If in the picking up mode, as mouse's left button is pressed down,
-        the indicator/picker
-        is in the moving mode
-
-        event.button has 3 values:
-         1: left
-         2: middle
-         3: right
-        """
-        # Get event data
-        x = event.xdata
-        y = event.ydata
-        button = event.button
-        print "[DB] Button %d is (pressed) down at (%s, %s)." % (button, str(x), str(y))
-
-        # Select situation
-        if x is None or y is None:
-            # mouse is out of canvas, return
-            return
-
-        # FIXME/NOW Make these 2 to init
-        self._currMousePosX = x
-        self._currMousePosY = y
-
-        if self._peakPickerMode == PeakPickerMode.QuickPick:
-            self._inside_quick_peak_mode(button, x)
-
-        if button == 1:
-            # left button
-            if self._peakSelectionMode == 'MoveCentre' or self._peakSelectionMode == 'ChangeWidth':
-                self._inEditMode = True
-
-        elif button == 3:
-            # right button
-            pass
-
-        # FIXME/TODO/NOW - Define the response event from mouse
-
-        return
-
-    def _inside_quick_peak_mode(self, button, x):
-        """
-        :param button:
-        :param x:
-        :return:
-        """
-        if button == 1:
-            # left one, add peak
-            print '[DB-XXX] Add peak and peak range at %f' % x
-            self.ui.graphicsView_main.add_peak_indicator(x)
-            self.ui.graphicsView_main.add_peak_indicator(x+0.3)
-            self.ui.graphicsView_main.add_peak_indicator(x-0.3)
-
-        """
-        cursor1 = QtGui.QCursor(QtCore.Qt.CrossCursor)
-        cursor2 = QtGui.QCursor(QtCore.Qt.ArrowCursor)
-        QtGui.QApplication.setOverrideCursor(cursor2)
-        """
 
         return
 

@@ -378,6 +378,19 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def add_arrow(self, start_x, start_y, stop_x, stop_y):
+        """
+
+        :param start_x:
+        :param start_y:
+        :param stop_x:
+        :param stop_y:
+        :return:
+        """
+        self._myCanvas.add_arrow(start_x, start_y, stop_x, stop_y)
+
+        return
+
     def add_line_set(self, vec_set, color, marker, line_style, line_width):
         """ Add a set of line and manage together
         :param vec_set:
@@ -867,6 +880,21 @@ class Qt4MplCanvas(FigureCanvas):
 
         # legend and color bar
         self._colorBar = None
+
+        return
+
+    def add_arrow(self, start_x, start_y, stop_x, stop_y):
+        """
+        0, 0, 0.5, 0.5, head_width=0.05, head_length=0.1, fc='k', ec='k')
+        :return:
+        """
+        head_width = 0.05
+        head_length = 0.1
+        fc = 'k'
+        ec = 'k'
+
+        self.axes.arrrow(start_x, start_y, stop_x, stop_y, head_width,
+                         head_length, fc, ec)
 
         return
 

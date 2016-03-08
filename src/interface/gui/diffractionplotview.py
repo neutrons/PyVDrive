@@ -89,8 +89,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._inPickPeakList.append([peak_center, center_id, left_id, right_id])
 
         # [DB] FIXME/TODO/Delete me ASAP
-        for p in self._inPickPeakList:
-            print p
+        # for p in self._inPickPeakList:
+        #    print p
 
         self._construct_peak_range_map()
         self._construct_vicinity_map()
@@ -107,8 +107,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # sort all peaks
         self._inPickPeakList.sort()
-
-        print '[DB] Construct peak range map!'
 
         # create vectors
         num_peaks = len(self._inPickPeakList)
@@ -139,8 +137,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         current_peak_list = self._inPickPeakList[:]
         current_peak_list.extend(self._pickedPeakList)
-
-        print '[DB] Construct vicinity map: Current peak list: ', current_peak_list
 
         for peak in current_peak_list:
             # consider to refactor it with section in method _construct_peak_range_map
@@ -176,10 +172,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self._currPeakIndicator = center_id
         # END-FOR
 
+        """
         print self._vecPeakVicinityX
         print self._vecPeakVicinityPID
         print self._vecBoundaryID
         print '................  [DB]  ....................\n'
+        """
 
         return
 
@@ -198,6 +196,36 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 return peak_tup
 
         return None
+
+    def add_peak(self, peak_pos, peak_width, in_pick):
+        """ Add a peak's indicators (center, left and right boundaries)
+        Requirements:
+            Peak position must be given in current range
+        Guarantees:
+            A dashed line is drawn vertically across the figure as an indicator
+        :param peak_pos:
+        :param peak_width:
+        :param in_pick:
+        :return:
+        """
+        # Check
+        left_x, right_x = self.getXLimit()
+        assert isinstance(peak_pos, float), 'Input peak position must be a float'
+        assert peak_pos > 0.
+        assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
+                                              '(%f, %f)' % (peak_pos, left_x, right_x)
+
+        # Add indicator
+        indicator_key = self.add_vertical_indicator(peak_pos, 'red')
+
+        # Update peak indicator list
+        if in_pick is True:
+            self._add_peak(peak_center, peak_id, left_id, right_id)
+        else:
+            self._add_non_editable_peak(peak_center, peak_id, left_id, right_id)
+
+        return
+
 
     def clear_peak_by_position(self, peak_pos):
         """
@@ -280,20 +308,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return None
 
-    def set_quick_add_mode(self, mode):
-        """
-
-        :param mode:
-        :return:
-        """
-        # TODO/NOW - Doc
-        if mode is True:
-            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.QuickMode
-        else:
-            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
-
-        return
-
     def on_mouse_motion(self, event):
         """
         :param event:
@@ -301,6 +315,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
+            print '[DB-BAT] Out of canvas! Current cursor type is ', self._cursorType
+            if self._cursorType != 0:
+                # set the cursor back to arrow
+                new_cursor = QtCore.Qt.ArrowCursor
+                self._cursorType = 0
+                print '[DB-BAT] Cursor type is changed to arrow!'
+                QtGui.QApplication.setOverrideCursor(new_cursor)
             return
 
         # Check movement
@@ -384,6 +405,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             if cursor_type != self._cursorType:
                 self._cursorType = cursor_type
+                print '[DB-BAT] Set cursor to type ', self._cursorType
                 QtGui.QApplication.setOverrideCursor(new_cursor)
 
             # re-define x-interval boundary/range
@@ -595,47 +617,17 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def add_peak_indicator(self, peak_pos):
+    def set_quick_add_mode(self, mode):
         """
-        Purpose:
-            Indicate the position of a peak on the figure
-        Requirements:
-            Peak position must be given in current range
-        Guarantees:
-            A dashed line is drawn vertically across the figure as an indicator
-        :param peak_pos:
+
+        :param mode:
         :return:
         """
-        # Check
-        left_x, right_x = self.getXLimit()
-        assert isinstance(peak_pos, float), 'Input peak position must be a float'
-        assert peak_pos > 0.
-        assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
-                                              '(%f, %f)' % (peak_pos, left_x, right_x)
-
-        # Add indicator
-        indicator_key = self.add_vertical_indicator(peak_pos, 'red')
-
-        # Update peak indicator list
-        self._inPickPeakList.append((peak_pos, indicator_key))
-
-        return
-
-    def clear_highlights(self):
-        """
-        Purpose:
-            Clear all highlighted data
-        Requirements:
-            None
-        Guarantees:
-            All plots to highlight are removed
-        :return:
-        """
-        # Get key/index for highlighted plots
-        num_highlighted = len(self._myHighlightsList)
-        for i_line in xrange(num_highlighted):
-            h_key = self._myHighlighsList[i_line]
-            self.remove_line(h_key)
+        # TODO/NOW - Doc
+        if mode is True:
+            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.QuickMode
+        else:
+            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
 
         return
 
@@ -652,9 +644,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param right_x:
         :return:
         """
+        self.add_arrow(0.5, 5000, )
+
         # Check requirements
-        assert len(self._vecX) > 1
-        assert self._vecX[0] <= left_x < right_x <= self._vecX[-1]
+        # assert len(self._vecX) > 1
+        # assert self._vecX[0] <= left_x < right_x <= self._vecX[-1]
 
         # Get the sub data set of
 
