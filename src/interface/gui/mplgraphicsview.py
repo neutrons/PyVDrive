@@ -126,13 +126,13 @@ class IndicatorManager(object):
     def add_vertical_indicator(self, x, y_min, y_max, color):
         """
         Add a vertical indicator to data structure moving horizontally
-        :return: indicator ID
+        :return: indicator ID as an integer
         """
         # Get ID
-        this_id = str(self._autoLineID)
+        this_id = self._autoLineID
         self._autoLineID += 1
 
-        #
+        # form vec x and vec y
         vec_x = np.array([x, x])
         vec_y = np.array([y_min, y_max])
 
@@ -142,19 +142,19 @@ class IndicatorManager(object):
 
         return this_id
 
-    def get_canvas_line_index(self, my_id):
+    def get_canvas_line_index(self, indicator_id):
         """
-
-        :param my_id:
+        Get a line's ID (on canvas) from an indicator ID
+        :param indicator_id:
         :return:
         """
-        assert isinstance(my_id, str)
+        assert isinstance(indicator_id, int)
 
-        if my_id not in self._canvasLineKeyDict:
+        if indicator_id not in self._canvasLineKeyDict:
             raise RuntimeError('Indicator ID %s cannot be found. Current keys are %s.' % (
-                my_id, str(sorted(self._canvasLineKeyDict.keys()))
+                indicator_id, str(sorted(self._canvasLineKeyDict.keys()))
             ))
-        return self._canvasLineKeyDict[my_id]
+        return self._canvasLineKeyDict[indicator_id]
 
     def get_line_type(self, my_id):
         """
