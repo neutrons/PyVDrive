@@ -301,14 +301,17 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         Requirements: index is valid for list self._inPickPeakList
         Guarantees: peak-tuple is returned
         :param index:
-        :return:
+        :return: 2-float tuple as (peak center, width)
         """
         assert isinstance(index, int), 'Peak index must be a integer but not %s.' % str(type(index))
         assert 0 <= index < len(self._inPickPeakList)
 
         peak_tuple = self._inPickPeakList[index]
 
-        return peak_tuple
+        peak_center = peak_tuple[0]
+        left_bound_x = self.get_indicator_position(peak_tuple[2])[0]
+
+        return peak_center, abs(peak_center - left_bound_x)
 
     def get_peak_by_indicator(self, indicator_id):
         """ Get peak by peak's indicator ID (or canvas indicator ID)
@@ -336,7 +339,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
-            print '[DB-BAT] Out of canvas! Current cursor type is ', self._cursorType
+
             QtGui.QApplication.restoreOverrideCursor()
             if self._cursorType != 0:
                 # set the cursor back to arrow
@@ -454,11 +457,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # END-IF-ELSE
 
             # debug print
-            print 'peak list: ', self._inPickPeakList
-            print 'map vec x: ', self._vecPeakVicinityX
-            print 'map bound: ', self._vecBoundaryID
-            print 'map peak:  ', self._vecPeakVicinityPID
-            print 'x = ', event.xdata, 'index = ', x_index, 'current peak index = ', self._currPeakIndicator
+            # print 'peak list: ', self._inPickPeakList
+            # print 'map vec x: ', self._vecPeakVicinityX
+            # print 'map bound: ', self._vecBoundaryID
+            # print 'map peak:  ', self._vecPeakVicinityPID
+            # print 'x = ', event.xdata, 'index = ', x_index, 'current peak index = ', self._currPeakIndicator
         # END-IF-ELSE
 
         self._mouseX = event.xdata

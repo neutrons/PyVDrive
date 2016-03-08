@@ -417,6 +417,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
                      self.do_save_peaks)
 
+        self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
+                     self.evt_table_selection_changed)
+
         # Define canvas event handlers
 
         # Menu
@@ -459,6 +462,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self._phaseDict[i] = ['', '', 0., 0., 0.]
 
         return
+
+    def evt_table_selection_changed(self):
+        print 'current row is ', self.ui.tableWidget_peakParameter.currentRow(), self.ui.tableWidget_peakParameter.currentColumn()
 
     def _init_widgets_setup(self):
         """
@@ -527,6 +533,16 @@ class PeakPickerWindow(QtGui.QMainWindow):
         num_peaks = self.ui.graphicsView_main.get_number_of_peaks()
         for i_peak in xrange(num_peaks):
             peak_tuple = self.ui.graphicsView_main.get_peak(i_peak)
+
+            bank = int(self.ui.comboBox_bankNumbers.currentText())
+            name = ''
+            peak_center = peak_tuple[0]
+            width = peak_tuple[1]
+
+            self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, [])
+        # END-FOR
+
+        return
 
     def do_claim_overlapped_peaks(self):
         """
@@ -762,8 +778,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: the table is switched to editable or non-editable mode
         :return:
         """
-        is_editable = self.ui.tableWidget_existingPeakFile.is_editable()
-        self.ui.tableWidget_peakParameter.set_editable(is_editable)
+        # is_editable = self.ui.tableWidget_peakParameter.is_editable()
+        # self.ui.tableWidget_peakParameter.set_editable(is_editable)
+
+        item = self.ui.tableWidget_peakParameter.item(0, 1)
+        # FIXME/TODO/NOW - Implement this to NTableWidget
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        print type(item)
+        self.ui.tableWidget_peakParameter.editItem(item)
 
         return
 
