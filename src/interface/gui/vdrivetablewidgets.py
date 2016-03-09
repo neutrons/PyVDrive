@@ -195,7 +195,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
     PeakTableSetup = [('Bank', 'int'),
                       ('Name', 'string'),
                       ('Centre', 'float'),
-                      ('Width', 'float'),
+                      ('Range', 'float'),   # range of the single peak or overlapped peaks
                       ('HKLs', 'string'),
                       ('Group', 'int'),
                       ('Select', 'checkbox')]
@@ -430,7 +430,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
 
         return [bank, name, position, width, overlap_pos_list]
 
-    def get_selected_peaks_position(self):
+    def get_selected_peaks(self):
         """ Purpose: get selected peaks' positions
         Requirements: At least 1 peak must be selected
         Guarantees:
@@ -440,11 +440,15 @@ class PeakParameterTable(NdavTable.NTableWidget):
         row_number_list = self.get_selected_rows()
         assert len(row_number_list) > 0, 'At least one peak must be selected.'
 
+        # FIXME - Made this more flexible for column index
         pos_col_index = 2
+        width_col_index = 3
+
         peak_pos_list = list()
         for i_row in row_number_list:
             peak_pos = self.get_cell_value(i_row, pos_col_index)
-            peak_pos_list.append(peak_pos)
+            peak_width = self.get_cell_value(i_row, width_col_index)
+            peak_pos_list.append((peak_pos, peak_width))
 
         return peak_pos_list
 

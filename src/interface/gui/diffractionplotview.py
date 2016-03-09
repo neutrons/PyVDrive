@@ -17,10 +17,70 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         NormalMode = 0
         QuickMode = 1
+        MultiMode = 2
 
         def __init__(self):
             """ Init
             """
+            return
+
+    class GroupedPeaksInfo(object):
+        """ Simple class to contain the information of peaks belonged to
+        the same group.
+        Peaks in the group will share the same range.
+        """
+        def __init__(self, left_boundary_id, left_x, right_boundary_id, right_x):
+            """ Init
+            """
+            # check
+            # TODO/NOW
+
+            #
+            self._leftID = left_boundary_id
+            self._rightID = right_boundary_id
+
+            self._leftX = left_x
+            self._rightX = right_x
+
+            self._peakIDPosList = list()  # a list of 2-tuple as peak position and indicator ID
+
+            return
+
+        @property
+        def left_boundary(self):
+            """
+            """
+            return self._leftX
+
+        @left_boundary.setter
+        def left_boundary(self, x):
+            """
+            """
+            assert isinstance(x, float)
+            self._leftX = x
+
+            return
+
+        @property
+        def right_boundary(self):
+            """
+            """
+            return self._rightX
+
+        @right_boundary.setter
+        def right_boundary(self, x):
+            """
+            """
+            assert isinstance(x, float)
+            assert x > self._leftX
+            self._rightX = x
+            return
+
+        def add_peak(self, indicator_id, peak_pos):
+            """ Add a peak
+            """
+            self._peakIDPosList.append((indicator_id, peak_pos))
+
             return
 
     def __init__(self, parent):
@@ -77,27 +137,32 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def _add_peak(self, peak_center, center_id, left_id, right_id):
+    def _add_peaks_group(self, peak_center, center_id, left_id, right_id):
         """
-        Add a peak to list
+        Add grouped-peaks to current
         :param peak_center:
         :param center_id:
         :param left_id:
         :param right_id:
         :return:
         """
-        self._inPickPeakList.append([peak_center, center_id, left_id, right_id])
+        # create an instance of GroupedPeaksInfo
+        left_x = self.get_indicator_position(left_id)[0]
+        right_x = self.get_indicator_position(right_id)[0]
+        grouped_peak = DiffractionPlotView.GroupedPeaksInfo(left_x, left_id, right_x, right_id)
 
-        # [DB] FIXME/TODO/Delete me ASAP
-        # for p in self._inPickPeakList:
-        #    print p
+        if peak_center is not None:
+            grouped_peak.add_peak(center_id, peak_center)
 
-        self._construct_peak_range_map()
+        # add to _inPickPeakList
+        self._inPickPeakList.append(grouped_peak)
+
+        # re-establish the look up table for peaks and grouped peak ranges
         self._construct_vicinity_map()
 
         return
 
-    def _close_to_canvas_edget(self, x, y):
+    def _close_to_canvas_edge(self, x, y):
         """ Check whether the cursor (x, y) is very close to the edge of the canvas
         :param x:
         :param y:
@@ -117,32 +182,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             return True
 
         return False
-
-    def _construct_peak_range_map(self):
-        """ Construct a 2-vector-tuple to check peak range quickly
-        :return:
-        """
-        # clear the 2-tuple
-        self._vecX = list()
-        self._vecPeakID = list()
-
-        # sort all peaks
-        self._inPickPeakList.sort()
-
-        # create vectors
-        num_peaks = len(self._inPickPeakList)
-        for i_peak in xrange(num_peaks):
-            # get peak parameters
-            peak_center, center_id, left_id, right_id = self._inPickPeakList[i_peak]
-            # get boundaries
-            left_x = self.get_indicator_position(left_id)[0]
-            right_x = self.get_indicator_position(right_id)[1]
-            assert left_x < peak_center < right_x
-            # add to vector
-            self._vecX.extend([left_x, right_x])
-            self._vecPeakID.extend([-1, center_id])
-
-        return
 
     def _construct_vicinity_map(self):
         """
@@ -241,7 +280,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # Update peak indicator list
         if in_pick is True:
-            self._add_peak(peak_center, peak_id, left_id, right_id)
+            self._add_peaks_group(peak_center, peak_id, left_id, right_id)
         else:
             self._add_non_editable_peak(peak_center, peak_id, left_id, right_id)
 
@@ -390,7 +429,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             print '[DB-BAT] Current peak index = ', self._currPeakIndicator
             self._move_selected_peak(event.xdata)
 
-        elif self._close_to_canvas_edget(event.xdata, event.ydata) is True:
+        elif self._close_to_canvas_edge(event.xdata, event.ydata) is True:
             # the cursor is very close to edge the canvas, then treat
             # this situation as no man's land
             if self._currPeakIndicator >= 0:
@@ -580,7 +619,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self._respond_left_button(x)
             elif button == 3:
                 # right button
-                print 'HERE!'
                 self._respond_right_button(x)
         else:
             # unrecognized
@@ -606,7 +644,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         left_id = self.add_vertical_indicator(x - self._defaultPeakWidth, 'orange')
         right_id = self.add_vertical_indicator(x + self._defaultPeakWidth, 'blue')
 
-        self._add_peak(x, peak_id, left_id, right_id)
+        self._add_peaks_group(x, peak_id, left_id, right_id)
 
         return
 
@@ -617,6 +655,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # FIXME/TODO/ Clean after development is finished
+        """ Disabled due to no use!
         print self._vecX
         print self._vecPeakID
 
@@ -629,6 +668,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             peak_center_index = self._vecPeakID[range_index]
             print '[DB-BAT] Peak center index is ', peak_center_index, 'peak position is ', \
                 self.get_indicator_position(peak_center_index)
+        """
 
         return
 
@@ -652,15 +692,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def set_quick_add_mode(self, mode):
+    def set_peak_selection_mode(self, single_mode, multi_mode):
         """
-
-        :param mode:
+        Set peak-selection mode
+        :param single_mode:
+        :param multi_mode:
         :return:
         """
-        # TODO/NOW - Doc
-        if mode is True:
+        # check
+        assert not (single_mode and multi_mode), 'Ambiguous selection mode'
+
+        if single_mode is True:
             self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.QuickMode
+        elif multi_mode is True:
+            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.MultiMode
         else:
             self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
 
@@ -747,14 +792,18 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def remove_all_peak_indicators(self):
+    def remove_all_in_pick_peaks(self):
         """ Remove all peaks' indicators
         :return:
         """
         # Remove all indicators
         for indicator_tup in self._inPickPeakList:
             indicator_key = indicator_tup[1]
+            left_key = indicator_tup[2]
+            right_key = indicator_tup[3]
             self.remove_indicator(indicator_key)
+            self.remove_indicator(left_key)
+            self.remove_indicator(right_key)
 
         # Clear the indicator position-key list
         self._inPickPeakList = list()

@@ -1208,7 +1208,7 @@ class Qt4MplCanvas(FigureCanvas):
         debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
         debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (
             str(plot_key), plot_key in self._lineDict)
-        print debug_info
+        # print debug_info
 
         if plot_key in self._lineDict:
             self.axes.lines.remove(self._lineDict[plot_key])

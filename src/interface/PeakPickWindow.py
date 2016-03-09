@@ -333,6 +333,7 @@ class PeakPickerMode(object):
     """
     Normal = 0
     QuickPick = 1
+    MultiPeakPick = 2
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -464,7 +465,19 @@ class PeakPickerWindow(QtGui.QMainWindow):
         return
 
     def evt_table_selection_changed(self):
-        print 'current row is ', self.ui.tableWidget_peakParameter.currentRow(), self.ui.tableWidget_peakParameter.currentColumn()
+        print 'current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
+            self.ui.tableWidget_peakParameter.currentColumn()
+
+        print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
+        model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+        print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+
+        mode_index = model_selected_rows[0]
+        print mode_index.row
+        print mode_index.row()
+        print type(mode_index.row())
+
+        return
 
     def _init_widgets_setup(self):
         """
@@ -542,6 +555,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, [])
         # END-FOR
 
+        # clear the picked up peaks from canvas
+        self.ui.graphicsView_main.remove_all_in_pick_peaks()
+
         return
 
     def do_claim_overlapped_peaks(self):
@@ -571,8 +587,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.tableWidget_peakParameter.set_group_id(row_index, group_id)
 
         # Show the peak indicators
-        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
-        for peak_pos in peak_pos_list:
+        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks()
+        for peak_tup in peak_pos_list:
+            peak_pos = peak_tup[0]
+            peak_width = peak_tup[1]
             self.ui.graphicsView_main.add_picked_peak(peak_pos, peak_width)
 
         return
@@ -588,20 +606,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Get positions of the selected peaks
-        peak_pos_list = self.ui.tableWidget_peakParameter.get_selected_peaks_position()
-        if len(peak_pos_list) == 0:
+        peak_info_list = self.ui.tableWidget_peakParameter.get_selected_peaks()
+        if len(peak_info_list) == 0:
             GuiUtility.pop_dialog_error(self, 'No peak is selected.')
             return
 
         # Sort peak list
-        peak_pos_list.sort()
+        peak_info_list.sort()
 
         # Re-set the graph range
         x_min, x_max = self.ui.graphicsView_main.getXLimit()
-        if peak_pos_list[0] < x_min or peak_pos_list[-1] > x_max:
+        if peak_info_list[0][0] < x_min or peak_info_list[-1][0] > x_max:
             # resize the image.  extend the range by 5% of the x min
-            new_x_min = min(peak_pos_list[0], x_min)
-            new_x_max = max(peak_pos_list[-1], x_max)
+            new_x_min = min(peak_info_list[0][0], x_min)
+            new_x_max = max(peak_info_list[-1][0], x_max)
             dx = new_x_max - new_x_min
             if new_x_min < x_min:
                 x_min = new_x_min - dx * 0.05
@@ -611,7 +629,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # END-IF
 
         # Plot
-        for peak_pos in peak_pos_list:
+        for peak_info_tup in peak_info_list:
+            peak_pos = peak_info_tup[0]
+            peak_width = peak_info_tup[1]
             self.ui.graphicsView_main.add_picked_peak(peak_pos, peak_width)
 
         return
@@ -812,7 +832,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: Highlight all peaks' indicators
         :return:
         """
-        self.ui.graphicsView_main.remove_all_peak_indicators()
+        self.ui.graphicsView_main.remove_all_in_pick_peaks()
 
         return
 
@@ -1034,15 +1054,18 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Set the mutex flag
         self._isDataLoaded = False
 
-        # Update widgets, including run number, bank IDs
+        # Update widgets, including run number, bank IDs (bank ID starts from 1)
         self.ui.comboBox_bankNumbers.clear()
         for i_bank in bank_id_list:
-            self.ui.comboBox_bankNumbers.addItem(str(i_bank))
+            self.ui.comboBox_bankNumbers.addItem(str(i_bank + 1))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
-        self.ui.comboBox_runNumber.addItem(str(run_number))
+
+        self.ui.comboBox_runNumber.clear()
         if run_number is None:
+            self.ui.comboBox_runNumber.addItem(str(data_key))
             self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
+            self.ui.comboBox_runNumber.addItem(str(run_number))
             self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
@@ -1093,20 +1116,25 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         if self._peakPickerMode == PeakPickerMode.Normal:
+            # enter normal mode to quick-pick mode (for single peak)
             self._peakPickerMode = PeakPickerMode.QuickPick
-            self.ui.pushButton_peakPickerMode.setText('Enter Normal Mode')
-            self.ui.graphicsView_main.set_quick_add_mode(True)
+            self.ui.pushButton_peakPickerMode.setText('Select Multi-Peaks')
+            self.ui.graphicsView_main.set_peak_selection_mode(single_mode=True, multi_mode=False)
+            self.ui.label_peakSelectionMode.setText('Single-Peak Selection Mode')
 
-            """
-            cursor1 = QtGui.QCursor(QtCore.Qt.CrossCursor)
-            cursor2 = QtGui.QCursor(QtCore.Qt.SplitHCursor)
-            QtGui.QApplication.setOverrideCursor(cursor2)
-            """
+        elif self._peakPickerMode == PeakPickerMode.QuickPick:
+            # enter multiple peaks-pick mode from quick mode
+            self._peakPickerMode = PeakPickerMode.MultiPeakPick
+            self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection')
+            self.ui.graphicsView_main.set_peak_selection_mode(single_mode=False, multi_mode=True)
+            self.ui.label_peakSelectionMode.setText('Multiple-Peaks Selection Mode')
 
         else:
+            # non-selection mode
             self._peakPickerMode = PeakPickerMode.Normal
-            self.ui.pushButton_peakPickerMode.setText('Enter Pick Mode')
-            self.ui.graphicsView_main.set_quick_add_mode(False)
+            self.ui.pushButton_peakPickerMode.setText('Select Single-Peaks')
+            self.ui.graphicsView_main.set_peak_selection_mode(False, False)
+            self.ui.label_peakSelectionMode.setText('')
 
         return
 
