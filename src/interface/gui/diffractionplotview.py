@@ -33,7 +33,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             """ Init
             """
             # check
-            # TODO/NOW
+            assert isinstance(left_boundary_id, int)
+            assert isinstance(left_x, float)
+            assert isinstance(right_boundary_id, int)
+            assert isinstance(right_x, float)
 
             #
             self._leftID = left_boundary_id
@@ -128,7 +131,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         def get_peaks(self):
             """ Get all the peaks' tuple
-            :return: a list of 2-tuples (peak position and
+            :return: a list of 2-tuples (peak position and peak ID)
             """
             self._peakIDPosList.sort()
 
@@ -195,9 +198,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             assert isinstance(range_left, float)
             assert isinstance(range_right, float)
             assert range_left < range_right
-            assert isinstance(indicator_id, int)
+            assert isinstance(indicator_id, int), 'Indicator ID %s must be an integer,' \
+                                                  'but not %s.' % (str(indicator_id),
+                                                                   str(type(indicator_id)))
             assert isinstance(item_type, int)
-            assert 0 <= item_type < 2
+            assert 0 <= item_type <= 2, 'Indicator type %s must be 0, 1, or 2' % str(item_type)
 
             # find the spot to insert
             index = bisect.bisect_right(self._vecX, range_left)
@@ -238,7 +243,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         def get_information(self, cursor_x):
             """ Get information, including indicator ID and indicator Type
             :param cursor_x: x position
-            :return:
+            :return: 2-tuple as ID and type
             """
             # check
             assert isinstance(cursor_x, float)
@@ -249,6 +254,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             if x_index == 0 or x_index >= len(self._vecX):
                 # out of boundary
                 return -1, -1
+
+            return self._vecID[x_index], self._vecType[x_index]
 
         def update_item_position(self, indicator_id, new_left_x, new_right_x):
             """
@@ -290,7 +297,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             return True, 0
 
-
     def __init__(self, parent):
         """
         Purpose
@@ -323,25 +329,33 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # mouse position
         self._mouseX = 0
         self._mouseY = 0
-        self._mouseResolution = 0.01
-        self._cursorType = 0
+        self._mouseRelativeResolution = 0.005  # 0.5 percent of the image
         self._mousePressed = 0  # integer: 0 for no pressed, 1 for left button, 3 for right button
 
-        self._vecX = list()
-        self._vecPeakID = list()
+        # cursor type
+        self._cursorType = 0
+        self._cursorRestored = False
 
-        self._vecPeakVicinityX = list()
-        self._vecBoundaryID = list()
-        self._vecPeakVicinityPID = list()
+        #self._vecX = list()
+        #self._vecPeakID = list()
+
+        #self._vecPeakVicinityX = list()
+        #self._vecBoundaryID = list()
+        #self._vecPeakVicinityPID = list()
 
         self._boundaryRightEdge = -0.
         self._boundaryLeftEdge = -0.
 
         # indicator of the current selected peak (center)
-        self._currPeakIndicator = -1
+        # self._currPeakIndicator = -1
 
         # flag to reconstruct the peak list maps including ... and ...
         self._reconstructMaps = False
+        min_data_resolution = 0.003  # For Vulcan
+        self._cursorPositionMap = DiffractionPlotView.CursorPositionMap(min_data_resolution)
+
+        self._currIndicatorID = -1
+        self._currIndicatorType = -1
 
         return
 
@@ -357,7 +371,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # create an instance of GroupedPeaksInfo
         left_x = self.get_indicator_position(left_id)[0]
         right_x = self.get_indicator_position(right_id)[0]
-        grouped_peak = DiffractionPlotView.GroupedPeaksInfo(left_x, left_id, right_x, right_id)
+        grouped_peak = DiffractionPlotView.GroupedPeaksInfo(left_id, left_x, right_id, right_x)
 
         if peak_center is not None:
             grouped_peak.add_peak(center_id, peak_center)
@@ -366,7 +380,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._inPickPeakList.append(grouped_peak)
 
         # re-establish the look up table for peaks and grouped peak ranges
-        self._construct_vicinity_map()
+        self._construct_vicinity_map([-1])
 
         return
 
@@ -380,72 +394,59 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert isinstance(y, float), 'y is not a float but a %s.' % str(type(y))
 
         xmin, xmax = self.getXLimit()
-        if abs(x-xmin) <= 2*self._mouseResolution or abs(x-xmax) <= 2*self._mouseResolution:
+        if abs(x-xmin) <= 2*self._mouseRelativeResolution or abs(x-xmax) <= 2*self._mouseRelativeResolution:
             # close to left or right boundary
             return True
 
         ymin, ymax = self.getYLimit()
-        if abs(y-ymin) <= 2*self._mouseResolution or abs(y-ymax) <= 2*self._mouseResolution:
+        if abs(y-ymin) <= 2*self._mouseRelativeResolution or abs(y-ymax) <= 2*self._mouseRelativeResolution:
             # close to top or bottom boundary
             return True
 
         return False
 
-    def _construct_vicinity_map(self):
+    def _construct_vicinity_map(self, new_group_index_list):
         """
         Create a set of mapping vectors to check whether the mouse cursor is in between 2 peaks,
         in the vicinity of a peaks boundary or in the vicinity of peak center.
         peak range for cursor
+        :param new_group_index_list:
         :return:
         """
-        # reset all the list
-        self._vecPeakVicinityX = list()
-        self._vecBoundaryID = list()
-        self._vecPeakVicinityPID = list()
+        # check
+        assert self._cursorPositionMap is not None
+        assert isinstance(new_group_index_list, list)
 
-        current_peak_list = self._inPickPeakList[:]
-        current_peak_list.extend(self._pickedPeakList)
+        # work
+        for i_group in new_group_index_list:
+            new_group = self._inPickPeakList[i_group]
 
-        for peak in current_peak_list:
-            # consider to refactor it with section in method _construct_peak_range_map
-            peak_center, center_id, left_id, right_id = peak
-            # get boundaries
-            left_x = self.get_indicator_position(left_id)[0]
-            right_x = self.get_indicator_position(right_id)[1]
-            assert left_x < peak_center < right_x
+            # left boundary of group
+            left_bound_center = new_group.left_boundary
+            left_bound_id = new_group.left_boundary_id
+            left_range = 0.005  # FIXME - smart?
+            self._cursorPositionMap.add_item(left_bound_center-left_range,
+                                             left_bound_center+left_range,
+                                             left_bound_id, 0)
 
-            # add to left boundary
-            temp_x_left = left_x - (peak_center - left_x) * 0.2  # use 20% dx
-            temp_x_right = peak_center - (peak_center - left_x) * 0.5  # half distance
-            self._vecPeakVicinityX.extend([temp_x_left, temp_x_right])
-            self._vecBoundaryID.extend([-1, center_id])
-            self._vecPeakVicinityPID.extend([-1, -1])
+            # peaks
+            peak_info_list = new_group.get_peaks()
+            for p_info in peak_info_list:
+                peak_pos, peak_id = p_info
+                peak_range = 0.005
+                self._cursorPositionMap.add_item(peak_pos - peak_range,
+                                                 peak_pos + peak_range,
+                                                 peak_id, 1)
+            # END-FOR
 
-            real_left_x = temp_x_left
-
-            # add to peak
-            temp_x_right = peak_center + (right_x - peak_center) * 0.5
-            self._vecPeakVicinityX.append(temp_x_right)
-            self._vecBoundaryID.append(-1)
-            self._vecPeakVicinityPID.append(center_id)
-
-            # add to right boundary
-            temp_x_right = right_x + (right_x - peak_center) * 0.2
-            self._vecPeakVicinityX.append(temp_x_right)
-            self._vecPeakVicinityPID.append(-1)
-            self._vecBoundaryID.append(center_id)
-
-            # update current peak index
-            if real_left_x <= self._mouseX <= temp_x_right:
-                self._currPeakIndicator = center_id
+            # right boundary
+            right_bound_center = new_group.right_boundary
+            right_bound_id = new_group.right_boundary_id
+            right_range = 0.005
+            self._cursorPositionMap.add_item(right_bound_center - right_range,
+                                             right_bound_center + right_range,
+                                             right_bound_id, 2)
         # END-FOR
-
-        """
-        print self._vecPeakVicinityX
-        print self._vecPeakVicinityPID
-        print self._vecBoundaryID
-        print '................  [DB]  ....................\n'
-        """
 
         return
 
@@ -586,43 +587,41 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
-
-            QtGui.QApplication.restoreOverrideCursor()
-            if self._cursorType != 0:
-                # set the cursor back to arrow
-                new_cursor = QtCore.Qt.ArrowCursor
-                self._cursorType = 0
+            # restore cursor if it is necessary
+            if self._cursorRestored is False:
+                self._cursorRestored = True
                 QtGui.QApplication.restoreOverrideCursor()
-                #print '[DB-BAT] Cursor type is changed to arrow!'
-                #QtGui.QApplication.setOverrideCursor(new_cursor)
+                self._cursorType = 0
             return
 
-        # Check movement
+        # Calculate current absolute resolution and determine whether the movement
+        # is smaller than resolution
         x_min, x_max = self.getXLimit()
-        resolution_x = (x_max - x_min) * self._mouseResolution
+        resolution_x = (x_max - x_min) * self._mouseRelativeResolution
         y_min, y_max = self.getYLimit()
-        resolution_y = (y_max - y_min) * self._mouseResolution
+        resolution_y = (y_max - y_min) * self._mouseRelativeResolution
 
-        # print '[DB] Mouse moves to ', event.xdata
-
-        if abs(event.xdata - self._mouseX) < resolution_x and \
-                        abs(event.ydata - self._mouseY) < resolution_y:
-            # movement is small
+        abs_move_x = abs(event.xdata - self._mouseX)
+        abs_move_y = abs(event.ydata - self._mouseY)
+        if abs_move_x < resolution_x and abs_move_y < resolution_y:
+            # movement is too small to require operation
             return
 
         # No operation if NOT in peak picking mode
-        if self._myPeakSelectionMode != DiffractionPlotView.PeakAdditionMode.QuickMode:
+        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
             return
 
         # check zoom mode
         if self._myToolBar.get_mode() != 0 and self._inZoomMode is False:
+            # just transit to the zoom mode
             self._inZoomMode = True
-            print 'Try to set main window title 1'
-            self._myCanvas.setWindowTitle('Zoom mode! Unable to add peak!')
+            # useless: self._myCanvas.setWindowTitle('Zoom mode! Unable to add peak!')
+
         elif self._myToolBar.get_mode() == 0 and self._inZoomMode is True:
+            # just transit out of the zoom mode
             self._inZoomMode = False
-            print 'Try to set main window title 1'
-            self._myCanvas.setWindowTitle('Add peak!')
+            # self._myCanvas.setWindowTitle('Add peak!')
+
         else:
             pass
             # print 'No operation'
@@ -634,83 +633,39 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         elif self._mousePressed == 1:
             # left mouse button is pressed and move
-            print '[DB-BAT] Current peak index = ', self._currPeakIndicator
+            print '[DB-BAT] Current peak index = ', self._currIndicatorID
             self._move_selected_peak(event.xdata)
-
-        elif self._close_to_canvas_edge(event.xdata, event.ydata) is True:
-            # the cursor is very close to edge the canvas, then treat
-            # this situation as no man's land
-            if self._currPeakIndicator >= 0:
-                self._cursorType = 0
-                self._currPeakIndicator = -1
-                new_cursor = QtCore.Qt.ArrowCursor
-                QtGui.QApplication.setOverrideCursor(new_cursor)
 
         elif len(self._inPickPeakList) > 0:
             # get position information for peak and boundary vicinity
-            x_index = bisect.bisect_left(self._vecPeakVicinityX, event.xdata)
+            indicator_id, indicator_type = self._cursorPositionMap.get_information(event.xdata)
 
-            # check peak vicinity
-            assert len(self._vecPeakVicinityPID) == len(self._vecBoundaryID)
-            if x_index < len(self._vecBoundaryID):
-                # x is within the range of x-vector of the lookup map
-                peak_vicinity_index = self._vecPeakVicinityPID[x_index]
-                # check peak boundary vicinity
-                bound_peak_indicator = self._vecBoundaryID[x_index]
-                # check
-                assert not (peak_vicinity_index >= 0 and bound_peak_indicator >= 0), \
-                    'Impossible to be in 2 regions simultaneous.'
-            else:
-                # x is beyond right most peak's right boundary
-                peak_vicinity_index = -1
-                bound_peak_indicator = -1
-            # END-IF-ELSE
+            self._currIndicatorID = indicator_id
 
-            if peak_vicinity_index >= 0:
-                # peak vicinity region
-                cursor_type = 1
-                new_cursor = QtCore.Qt.DragMoveCursor
-                self._currPeakIndicator = self._vecPeakVicinityPID[x_index]
+            if indicator_type == self._currIndicatorType:
+                # no change
+                pass
 
-            elif bound_peak_indicator >= 0:
-                # boundary vicinity region
-                cursor_type = 2
+            elif indicator_type == 0 or indicator_type == 2:
+                # left or right boundary
                 new_cursor = QtCore.Qt.SplitHCursor
-                self._currPeakIndicator = self._vecBoundaryID[x_index]
+                QtGui.QApplication.setOverrideCursor(new_cursor)
+                self._cursorType = 2
 
-            else:
-                # in the middle of nowhere (between peaks)
-                cursor_type = 0
-                new_cursor = QtCore.Qt.ArrowCursor
-                self._currPeakIndicator = -1
-            # END-IF-ELSE
-
-            if cursor_type != self._cursorType:
-                self._cursorType = cursor_type
-                print '[DB-BAT] Set cursor to type ', self._cursorType
+            elif indicator_type == 1:
+                # peak
+                self._cursorType = 1
+                new_cursor = QtCore.Qt.DragMoveCursor
                 QtGui.QApplication.setOverrideCursor(new_cursor)
 
-            # re-define x-interval boundary/range
-            if x_index == 0:
-                # x is outside of left most peak's range
-                self._boundaryLeftEdge = -0.
-                self._boundaryRightEdge = self._vecPeakVicinityX[x_index]
-            elif x_index == len(self._vecPeakVicinityX):
-                self._boundaryLeftEdge = self._vecPeakVicinityX[-1]
-                self._boundaryRightEdge = self._vecPeakVicinityX[-1] + 100
             else:
-                self._boundaryLeftEdge = self._vecPeakVicinityX[x_index-1]
-                self._boundaryRightEdge = self._vecPeakVicinityX[x_index]
+                # in the middle of nowhere
+                self._cursorType = 0
+                QtGui.QApplication.restoreOverrideCursor()
             # END-IF-ELSE
-
-            # debug print
-            # print 'peak list: ', self._inPickPeakList
-            # print 'map vec x: ', self._vecPeakVicinityX
-            # print 'map bound: ', self._vecBoundaryID
-            # print 'map peak:  ', self._vecPeakVicinityPID
-            # print 'x = ', event.xdata, 'index = ', x_index, 'current peak index = ', self._currPeakIndicator
         # END-IF-ELSE
 
+        # update mouse position
         self._mouseX = event.xdata
         self._mouseY = event.ydata
 
@@ -824,7 +779,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # operation
             if button == 1:
                 # left button
-                self._respond_left_button(x)
+                pass
             elif button == 3:
                 # right button
                 self._respond_right_button(x)
@@ -844,7 +799,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert x is not None, 'X cannot be None, i.e., out of canvas'
 
         # take no operation if the cursor is within range of any peak
-        if self._currPeakIndicator >= 0:
+        if self._currIndicatorID >= 0:
             return
 
         # add a peak
@@ -892,6 +847,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
             return
+
+        if event.button == 1:
+            # left button
+            self._respond_left_button(event.xdata)
 
         # reconstruct the query map
         if self._reconstructMaps is True:
