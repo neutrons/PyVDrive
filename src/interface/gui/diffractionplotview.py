@@ -62,6 +62,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             return
 
         @property
+        def left_boundary_id(self):
+            """ Indicator ID of the left boundary
+            :return:
+            """
+            return self._leftID
+
+        @property
+        def right_boundary_id(self):
+            """ Indicator ID of the right boundary
+            :return:
+            """
+            return self._rightID
+
+        @property
         def right_boundary(self):
             """
             """
@@ -77,11 +91,205 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             return
 
         def add_peak(self, indicator_id, peak_pos):
-            """ Add a peak
             """
-            self._peakIDPosList.append((indicator_id, peak_pos))
+            Add a peak
+            :param indicator_id:
+            :param peak_pos:
+            :return:
+            """
+            # check
+            assert isinstance(indicator_id, int)
+            assert isinstance(peak_pos, float)
+
+            # add to peak list
+            self._peakIDPosList.append((peak_pos, indicator_id))
 
             return
+
+        def delete_peak(self, peak_id):
+            """
+            Delete a peak by its indicator ID
+            :param peak_id:
+            :return: boolean whether peak indicator is found and deleted
+            """
+            # check
+            assert isinstance(peak_id, int)
+
+            # remove
+            found_peak = False
+            for i_peak in xrange(len(self._peakIDPosList)):
+                p_id = self._peakIDPosList[i_peak][1]
+                if p_id == peak_id:
+                    found_peak = True
+                    self._peakIDPosList.pop(i_peak)
+                    break
+
+            return found_peak
+
+        def get_peaks(self):
+            """ Get all the peaks' tuple
+            :return: a list of 2-tuples (peak position and
+            """
+            self._peakIDPosList.sort()
+
+            return self._peakIDPosList[:]
+
+        def update_peak_position(self, peak_id, center_position):
+            """ Update peak position
+            :param peak_id:
+            :param center_position:
+            :return:
+            """
+            # check
+            assert isinstance(peak_id, int)
+            assert isinstance(center_position, float)
+
+            found_peak = False
+            for i_peak in xrange(len(self._peakIDPosList)):
+                p_id = self._peakIDPosList[i_peak][1]
+                if p_id == peak_id:
+                    self._peakIDPosList[i_peak] = (center_position, peak_id)
+                    found_peak = True
+                    break
+            # END-FOR
+
+            return found_peak
+
+    class CursorPositionMap(object):
+        """
+        A lookup table to map the cursor's position to its shape and peak or boundary that it is
+        belonged to
+        """
+        def __init__(self, resolution=0.00001):
+            """
+            Initialization
+            Note: range of boundary should be close to 2 twice of bin size
+            :param resolution:
+            :return:
+            """
+            # check
+            assert isinstance(resolution, float)
+            assert resolution > 0.
+
+            # vector of X of region boundaries, x0, x1, x2, x3, where (x0, x1) is for group 1's left boundary
+            self._vecX = list()
+            # vector of peak/boundary' indicator IDs corresponding to vecX
+            self._vecID = list()
+            # vector of indicator types including left boundary (0), peak (1) and right boundary (2)
+            self._vecType = list()
+
+            self._resolution = resolution
+
+            return
+
+        def add_item(self, range_left, range_right, indicator_id, item_type):
+            """
+            Add an item
+            :param range_left:
+            :param range_right:
+            :param indicator_id:
+            :param item_type:
+            :return:
+            """
+            # check
+            assert isinstance(range_left, float)
+            assert isinstance(range_right, float)
+            assert range_left < range_right
+            assert isinstance(indicator_id, int)
+            assert isinstance(item_type, int)
+            assert 0 <= item_type < 2
+
+            # find the spot to insert
+            index = bisect.bisect_right(self._vecX, range_left)
+
+            # determine whether to insert the left boundary
+            if index == len(self._vecX):
+                # appending mode
+                self._vecX.extend([range_left, range_right])
+                self._vecID.extend([-1, indicator_id])
+                self._vecType.extend([-1, item_type])
+            else:
+                # insertion mode
+                # insert left boundary information
+                # check requirement of the left boundary and set the minimum distance to the right boundary of left item
+                assert range_left > self._vecX[index] - self._resolution, 'Left boundary of region range is too left'
+                range_left = max(range_left, self._vecX[index] + self._resolution)
+                self._vecX.insert(index, range_left)
+                self._vecID.insert(index, -1)
+                self._vecType.insert(index, -1)
+                index += 1
+                # insert right boundary
+                # check
+                assert self._vecID[index] == 1, 'the right side must be a start of new region'
+
+                # check requirement of the right boundary and set the maximum distance to the left boundary o
+                # right item
+                assert range_right < self._vecX[index] + self._resolution
+                range_right = min(range_right, self._vecX[index] - self._resolution)
+
+                # right boundary does not overlap with left boundary of next
+                self._vecX.insert(index, range_right)
+                self._vecID.insert(index, indicator_id)
+                self._vecType.insert(index, item_type)
+            # END-IF
+
+            return
+
+        def get_information(self, cursor_x):
+            """ Get information, including indicator ID and indicator Type
+            :param cursor_x: x position
+            :return:
+            """
+            # check
+            assert isinstance(cursor_x, float)
+
+            # locate index by bisect
+            x_index = bisect.bisect_right(self._vecX, cursor_x)
+
+            if x_index == 0 or x_index >= len(self._vecX):
+                # out of boundary
+                return -1, -1
+
+        def update_item_position(self, indicator_id, new_left_x, new_right_x):
+            """
+            Update the peak or boundary position
+            :param indicator_id:
+            :param new_left_x:
+            :param new_right_x:
+            :return: 2-tuple as (updated successful, error message).  0: over left boundary; 1: over right boundary
+            """
+            # check some status
+            num_x = len(self._vecX)
+            assert num_x == len(self._vecID)
+
+            # locate position in list by indicator ID
+            map_index = -1
+            for index in xrange(num_x):
+                if self._vecID == indicator_id:
+                    map_index = index
+                    break
+            # END-FOR
+            assert map_index >= 0, 'Indicator ID %d cannot be found' % indicator_id
+            assert map_index > 0, 'It is logically wrong to find it at index 0.'
+            if self._vecID[map_index-1] != -1:
+                # shared boundary situation: it is not allowed!
+                raise RuntimeError('It is not allowed to shared boundary of peak/group boundary')
+
+            # update the right boundary position
+            # check whether new region boundary is valid
+            if map_index != num_x - 1 and new_right_x >= self._vecX[map_index+1] - self._resolution:
+                # over the boundary of the right indicator
+                return False, 1
+            if map_index >= 2 and new_left_x < self._vecX[map_index-2] + self._resolution:
+                # over the boundary of the left indicator
+                return False, 2
+
+            # update!
+            self._vecX[map_index] = new_right_x
+            self._vecX[map_index-1] = new_left_x
+
+            return True, 0
+
 
     def __init__(self, parent):
         """
