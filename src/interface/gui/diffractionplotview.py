@@ -185,6 +185,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             return
 
+        def pretty_print(self):
+            """
+            Print prettily
+            :return:
+            """
+            w_buf = 'Pretty Print:\n'
+            number = len(self._vecX)
+            for index in xrange(number):
+                w_buf += '%.5f\t%-4d\t%-2d\n' % (self._vecX[index], self._vecID[index], self._vecType[index])
+
+            print w_buf
+
+            return
+
         def add_item(self, range_left, range_right, indicator_id, item_type):
             """
             Add an item
@@ -448,6 +462,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                                              right_bound_id, 2)
         # END-FOR
 
+        # print as debug
+        self._cursorPositionMap.pretty_print()
+
         return
 
     def _get_peak_tuple(self, center_id):
@@ -639,6 +656,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         elif len(self._inPickPeakList) > 0:
             # get position information for peak and boundary vicinity
             indicator_id, indicator_type = self._cursorPositionMap.get_information(event.xdata)
+            print '[DB] ID = ', indicator_id, 'Type = ', indicator_type, 'Current ID and Type',
+            print self._currIndicatorID, self._currIndicatorType
 
             self._currIndicatorID = indicator_id
 
@@ -661,8 +680,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             else:
                 # in the middle of nowhere
                 self._cursorType = 0
-                QtGui.QApplication.restoreOverrideCursor()
+                new_cursor = QtCore.Qt.ArrowCursor
+                QtGui.QApplication.setOverrideCursor(new_cursor)
+                # QtGui.QApplication.restoreOverrideCursor()
             # END-IF-ELSE
+
+            self._currIndicatorType = indicator_type
+
         # END-IF-ELSE
 
         # update mouse position
