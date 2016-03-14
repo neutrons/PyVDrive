@@ -229,27 +229,41 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self._vecType.extend([-1, item_type])
             else:
                 # insertion mode
-                # insert left boundary information
-                # check requirement of the left boundary and set the minimum distance to the right boundary of left item
-                assert range_left > self._vecX[index] - self._resolution, 'Left boundary of region range is too left'
-                range_left = max(range_left, self._vecX[index] + self._resolution)
+                assert range_right < self._vecX[index] - self._resolution, 'Right side overlaps with' \
+                                                                           'left side of next item.'
                 self._vecX.insert(index, range_left)
                 self._vecID.insert(index, -1)
                 self._vecType.insert(index, -1)
                 index += 1
+                self._vecX.insert(index, range_right)
+                self._vecID.insert(index,  indicator_id)
+                self._vecType.insert(index, item_type)
+
+                # insert left boundary information
+                # check requirement of the left boundary and set the minimum distance to
+                # the right boundary of left item
+                #assert range_left < self._vecX[index] - self._resolution, \
+                #    'Specified left side of region %f is right to located index %d at %f.' % (range_left,
+                #                                                                              index,
+                #                                                                              self._vecX[index])
+                #range_left = min(range_left, self._vecX[index] + self._resolution)
+                #self._vecX.insert(index, range_left)
+                #self._vecID.insert(index, -1)
+                #self._vecType.insert(index, -1)
+                #index += 1
                 # insert right boundary
                 # check
-                assert self._vecID[index] == 1, 'the right side must be a start of new region'
+                #assert self._vecID[index] == 1, 'the right side must be a start of new region'
 
                 # check requirement of the right boundary and set the maximum distance to the left boundary o
                 # right item
-                assert range_right < self._vecX[index] + self._resolution
-                range_right = min(range_right, self._vecX[index] - self._resolution)
+                #assert range_right < self._vecX[index] + self._resolution
+                #range_right = min(range_right, self._vecX[index] - self._resolution)
 
                 # right boundary does not overlap with left boundary of next
-                self._vecX.insert(index, range_right)
-                self._vecID.insert(index, indicator_id)
-                self._vecType.insert(index, item_type)
+                #self._vecX.insert(index, range_right)
+                #self._vecID.insert(index, indicator_id)
+                #self._vecType.insert(index, item_type)
             # END-IF
 
             return
@@ -382,6 +396,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param right_id:
         :return:
         """
+        print '[DB] About to add peak @ ', peak_center, 'to ....'
+        self._cursorPositionMap.pretty_print()
+
         # create an instance of GroupedPeaksInfo
         left_x = self.get_indicator_position(left_id)[0]
         right_x = self.get_indicator_position(right_id)[0]
@@ -605,10 +622,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
             # restore cursor if it is necessary
-            if self._cursorRestored is False:
-                self._cursorRestored = True
-                QtGui.QApplication.restoreOverrideCursor()
-                self._cursorType = 0
+            # if self._cursorRestored is False:
+            self._cursorRestored = True
+            QtGui.QApplication.restoreOverrideCursor()
+            self._cursorType = 0
             return
 
         # Calculate current absolute resolution and determine whether the movement
@@ -866,7 +883,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # set the mouse pressed status back
-        self._mousePressed = 0
+        if self._mousePressed != 0:
+            self._mousePressed = 0
+        else:
+            print '[DB] Mouse is not pressed but released.'
+
+        # skip the zoom or whatever mode
+        if self._myToolBar.get_mode() != 0:
+            return
 
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
@@ -874,7 +898,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         if event.button == 1:
             # left button
-            self._respond_left_button(event.xdata)
+            if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
+                self._respond_left_button(event.xdata)
 
         # reconstruct the query map
         if self._reconstructMaps is True:
