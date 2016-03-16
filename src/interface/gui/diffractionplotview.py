@@ -285,6 +285,37 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             return self._vecID[x_index], self._vecType[x_index]
 
+        def inside_peak_group_range(self, cursor_x):
+            """ Check whether the cursor is inside any peak group's range
+            :param cursor_x:
+            :return:
+            """
+            # check
+            assert isinstance(cursor_x, float)
+
+            # locate index in vecX with bisection
+            x_index = bisect.bisect_right(self._vecX, cursor_x)
+
+            print '[DB] X = ', cursor_x, 'index = ', x_index, 'size of vector of x = ', len(self._vecX)
+
+            # check inside/outside peak group range
+            if x_index == 0 or x_index >= len(self._vecX):
+                # outside limit of vecX
+                return False
+
+            if x_index % 2 == 1:
+                # index is odd because it is within some cursor range
+                print '[DB] It is ODD to be in an indicator\'s range.'
+                raise RuntimeError('No operation to the situation to be ON another indicator.')
+
+            # if the right side of x is the left boundary of a group, then it must be outside
+            # of any peak range
+            assert self._vecType[x_index] == -1, 'start of a new indicator. must be -1.'
+            if self._vecType[x_index+1] == 0:
+                return False
+
+            return True
+
         def update_item_position(self, indicator_id, new_left_x, new_right_x):
             """
             Update the peak or boundary position
@@ -364,13 +395,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._cursorType = 0
         self._cursorRestored = False
 
-        #self._vecX = list()
-        #self._vecPeakID = list()
-
-        #self._vecPeakVicinityX = list()
-        #self._vecBoundaryID = list()
-        #self._vecPeakVicinityPID = list()
-
         self._boundaryRightEdge = -0.
         self._boundaryLeftEdge = -0.
 
@@ -404,7 +428,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         right_x = self.get_indicator_position(right_id)[0]
         grouped_peak = DiffractionPlotView.GroupedPeaksInfo(left_id, left_x, right_id, right_x)
 
-        if peak_center is not None:
+        if peak_center is not None and center_id is not None:
             grouped_peak.add_peak(center_id, peak_center)
 
         # add to _inPickPeakList
@@ -824,31 +848,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             elif button == 3:
                 # right button
                 self._respond_right_button(x)
+        elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+            # multi-peak selection mode
+            pass
         else:
             # unrecognized
             raise RuntimeError('Peak selection mode %s is not supported!' % str(self._myPeakSelectionMode))
-
-        return
-
-    def _respond_left_button(self, x):
-        """
-        Add peak if the cursor is not within boundaries of any peak
-        :param x:
-        :return:
-        """
-        # check
-        assert x is not None, 'X cannot be None, i.e., out of canvas'
-
-        # take no operation if the cursor is within range of any peak
-        if self._currIndicatorID >= 0:
-            return
-
-        # add a peak
-        peak_id = self.add_vertical_indicator(x, 'red')
-        left_id = self.add_vertical_indicator(x - self._defaultPeakWidth, 'orange')
-        right_id = self.add_vertical_indicator(x + self._defaultPeakWidth, 'blue')
-
-        self._add_peaks_group(x, peak_id, left_id, right_id)
 
         return
 
@@ -899,7 +904,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if event.button == 1:
             # left button
             if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
-                self._respond_left_button(event.xdata)
+                # quick mode: add peak and peak range
+                self._add_range_peak(event.xdata, add_peak=True)
+
+            elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+                # multi-peak-indication mode:
+                if self._cursorPositionMap.inside_peak_group_range(event.xdata):
+                    # add peak if cursor is inside any peak group range
+                    self._add_peak_to_group(event.xdata)
+                else:
+                    # add range if cursor is outside any peak group range
+                    self._add_range_peak(event.xdata, add_peak=False)
+                # END-IF-ELSE (inside/outside peak group range)
+            # END-IF-ELSE (mode)
+        # END-IF-ELSE (button)
 
         # reconstruct the query map
         if self._reconstructMaps is True:
@@ -907,6 +925,46 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._construct_vicinity_map()
 
         return
+
+    def _add_range_peak(self, cursor_x, add_peak):
+        """
+        Add peak range and a peak as an option.
+        Requirements:
+        1. if the cursor is not within boundaries of any peak
+        :param cursor_x:
+        :param add_peak
+        :return:
+        """
+        # check
+        assert cursor_x is not None, 'X cannot be None, i.e., out of canvas'
+
+        # take no operation if the cursor is within range of any peak
+        if self._currIndicatorID >= 0:
+            return
+
+        if add_peak is True:
+            # add a peak
+            peak_id = self.add_vertical_indicator(cursor_x, 'red')
+        else:
+            # no peak to add
+            peak_id = None
+
+        # add peak(s)' range
+        left_id = self.add_vertical_indicator(cursor_x - self._defaultPeakWidth, 'orange')
+        right_id = self.add_vertical_indicator(cursor_x + self._defaultPeakWidth, 'blue')
+
+        # add peaks' group
+        self._add_peaks_group(cursor_x, peak_id, left_id, right_id)
+
+        return
+
+    def _add_peak_to_group(self, cursor_x):
+        """
+        Add a peak to an existing peak group if cursor_x is in the range
+        :param cursor_x:
+        :return:
+        """
+        print '[DB] Add a peak @ ', cursor_x
 
     def set_peak_selection_mode(self, single_mode, multi_mode):
         """
