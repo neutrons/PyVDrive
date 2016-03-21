@@ -543,16 +543,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """ Add the picked up peaks in canvas
         :return:
         """
-        num_peaks = self.ui.graphicsView_main.get_number_of_peaks()
-        for i_peak in xrange(num_peaks):
-            peak_tuple = self.ui.graphicsView_main.get_peak(i_peak)
+        # get bank
+        bank = int(self.ui.comboBox_bankNumbers.currentText())
 
-            bank = int(self.ui.comboBox_bankNumbers.currentText())
+        # get number of groups
+        num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
+        for i_grp in xrange(num_groups):
+            group = self.ui.graphicsView_main.get_peaks_group(i_grp)
             name = ''
-            peak_center = peak_tuple[0]
-            width = peak_tuple[1]
+            width = group.right_boundary - group.left_boundary
 
-            self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, [])
+            peak_tup_list = group.get_peaks()
+            for peak_tup in peak_tup_list:
+                peak_center = peak_tup[0]
+                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, [])
         # END-FOR
 
         # clear the picked up peaks from canvas
@@ -1121,6 +1125,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setText('Select Multi-Peaks')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=True, multi_mode=False)
             self.ui.label_peakSelectionMode.setText('Single-Peak Selection Mode')
+            self.ui.pushButton_addPeaks.setEnabled(False)
 
         elif self._peakPickerMode == PeakPickerMode.QuickPick:
             # enter multiple peaks-pick mode from quick mode
@@ -1128,6 +1133,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=False, multi_mode=True)
             self.ui.label_peakSelectionMode.setText('Multiple-Peaks Selection Mode')
+            self.ui.pushButton_addPeaks.setEnabled(True)
 
         else:
             # non-selection mode
@@ -1135,6 +1141,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setText('Select Single-Peaks')
             self.ui.graphicsView_main.set_peak_selection_mode(False, False)
             self.ui.label_peakSelectionMode.setText('')
+            self.ui.pushButton_addPeaks.setEnabled(False)
 
         return
 
