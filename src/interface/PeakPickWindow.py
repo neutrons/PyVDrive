@@ -465,9 +465,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         return
 
     def evt_table_selection_changed(self):
-        print 'current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
+        """
+        Event handling as the selection of the row changed
+        :return:
+        """
+        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
             self.ui.tableWidget_peakParameter.currentColumn()
 
+        """
         print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
         model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
         print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
@@ -476,6 +481,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         print mode_index.row
         print mode_index.row()
         print type(mode_index.row())
+        """
 
         return
 
@@ -636,7 +642,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for peak_info_tup in peak_info_list:
             peak_pos = peak_info_tup[0]
             peak_width = peak_info_tup[1]
-            self.ui.graphicsView_main.add_picked_peak(peak_pos, peak_width)
+            self.ui.graphicsView_main.add_peak(peak_pos, peak_width, in_pick=False)
 
         return
 
@@ -802,14 +808,26 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: the table is switched to editable or non-editable mode
         :return:
         """
+        # get selected row
+        row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows(True)
+        if len(row_number_list) == 0:
+            GuiUtility.pop_dialog_information(self, 'No row is selected to edit!')
+
+        # set to editable
+        # FIXME - can we make this more flexible?
+        col_index = 1
+        for row_number in row_number_list:
+            item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
+
+            # FIXME/TODO/NOW - Implement this to NTableWidget
+            item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
+            self.ui.tableWidget_peakParameter.editItem(item_i)
+        # END-FOR
+
         # is_editable = self.ui.tableWidget_peakParameter.is_editable()
         # self.ui.tableWidget_peakParameter.set_editable(is_editable)
+        # item = self.ui.tableWidget_peakParameter.item(0, 1)
 
-        item = self.ui.tableWidget_peakParameter.item(0, 1)
-        # FIXME/TODO/NOW - Implement this to NTableWidget
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-        print type(item)
-        self.ui.tableWidget_peakParameter.editItem(item)
 
         return
 
@@ -1133,7 +1151,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=False, multi_mode=True)
             self.ui.label_peakSelectionMode.setText('Multiple-Peaks Selection Mode')
-            self.ui.pushButton_addPeaks.setEnabled(True)
+            self.ui.pushButton_addPeaks.setEnabled(False)
 
         else:
             # non-selection mode
@@ -1141,14 +1159,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setText('Select Single-Peaks')
             self.ui.graphicsView_main.set_peak_selection_mode(False, False)
             self.ui.label_peakSelectionMode.setText('')
-            self.ui.pushButton_addPeaks.setEnabled(False)
+            self.ui.pushButton_addPeaks.setEnabled(True)
 
         return
 
     def do_quit(self):
         """
         Purpose:
-            Close the dialog window without saving
+            Close the dialog window without savinge
         Requires:
             None
         Guarantees:
