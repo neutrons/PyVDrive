@@ -762,57 +762,39 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             print 'Move boundary to %f' % new_x
             assert self._cursorType == 2
 
-            """
-            peak_tuple = self._get_peak_tuple(self._currPeakIndicator)
-            # peak_tuple = self._inPickPeakList[self._currPeakIndicator]
-            peak_pos, peak_id, left_id, right_id = peak_tuple
-            if self._boundaryRightEdge < peak_pos:
-                # left boundary
-                # prev_bound_x = self.get_indicator_position(left_id)[0]
-                d_x = self._mouseX - new_x
-
-            elif self._boundaryLeftEdge > peak_pos:
-                # right boundary
-                # prev_bound_x =
-                d_x = new_x - self._mouseX
+            # calculate displacement
+            if self._currIndicatorType == 0:
+                delta_x_left = new_x - self._currPeakGroup.left_boundary
+                delta_x_right = -delta_x_left
             else:
-                err_msg = 'Left boundary  = %f, Right boundary = %f, Peak position = %f. ' \
-                          'Situation of mouse cursor is not defined!' % (self._boundaryLeftEdge,
-                                                                         self._boundaryRightEdge,
-                                                                         peak_pos)
-                raise RuntimeError(err_msg)
-            """
+                delta_x_right = new_x - self._currPeakGroup.right_boundary
+                delta_x_left = -delta_x_right
 
-        elif self._cursorType == 1:
-            # select a peak's center, then move the whole peak (center and boundary)
+            # move the indicators for 2 boundary
+            self.move_indicator(self._currPeakGroup.left_boundary, delta_x_left, 0.)
+            self.move_indicator(self._currPeakGroup.right_boundary, delta_x_right, 0.)
 
+            # update to peak group
+            self._currPeakGroup.left_boundary += delta_x_left
+            self._currPeakGroup.right_boundary += delta_x_right
 
-            peak_tuple = self._get_peak_tuple(center_id=self._currPeakIndicator)
-            # peak_tuple = self._inPickPeakList[self._currPeakIndicator]
-            peak_indicator_id = peak_tuple[1]
-            left_indicator_id = peak_tuple[2]
-            right_indicator_id = peak_tuple[3]
-
-            # move
-            d_x = new_x - self._mouseX
-            new_center = peak_tuple[0] + d_x
-
-            self.move_indicator(peak_indicator_id, d_x, 0)
-            self.move_indicator(left_indicator_id, d_x, 0)
-            self.move_indicator(right_indicator_id, d_x, 0)
-
-            peak_tuple[0] = new_center
-            # self._inPickPeakList[self._currPeakIndicator] =
-            #   (new_center, peak_tuple[1], peak_tuple[2], peak_tuple[3])
-
+            # update
             self._reconstructMaps = True
 
-        elif self._cursorType == 2:
+        elif self._currIndicatorType == 1:
+            # select a peak's center, then move the peak
+            assert self._cursorType == 1, 'Cursor type should be 1 as drag/move'
 
+            # check whether the movement exceeds the boundary of the peak group
+            if new_x <= self._currPeakGroup.left_boundary or new_x >= self._currPeakGroup.right_boundary:
+                return False
 
-            # change the peak boundaries
-            self.move_indicator(left_id, -d_x, 0)
-            self.move_indicator(right_id, d_x, 0)
+            # move (peak) indicator
+            delta_x = new_x - self.get_indicator_position(self._currIndicatorID)[0]
+            self.move_indicator(self._currIndicatorID, delta_x)
+
+            # update the peak group
+            self._currPeakGroup.update_peak_position(self._currIndicatorID, new_x)
 
             self._reconstructMaps = True
 
