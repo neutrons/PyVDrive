@@ -377,7 +377,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_claim_overlapped_peaks)
 
-        self.connect(self.ui.pushButton_showPeaks, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
                      self.do_show_peaks)
 
         self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
@@ -411,10 +411,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_switch_bank)
 
-        # save_to_buffer and quit
-        self.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-
+        # save_to_buffer
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
                      self.do_save_peaks)
 
@@ -555,14 +552,28 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get number of groups
         num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
         for i_grp in xrange(num_groups):
+            # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
             name = ''
             width = group.right_boundary - group.left_boundary
 
             peak_tup_list = group.get_peaks()
+
+            # determine group ID
+            if len(peak_tup_list) > 0:
+                # single peak or multiple peaks, no group
+                group_id = self.ui.tableWidget_peakParameter.get_next_group_id()
+            else:
+                # peak group without any peak
+                return
+
             for peak_tup in peak_tup_list:
                 peak_center = peak_tup[0]
-                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, [])
+                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, group_id)
+
+            # clone to PeakPickWindow's
+            print '[DB] It is about to store peaks group to somewhere!'
+
         # END-FOR
 
         # clear the picked up peaks from canvas
@@ -642,7 +653,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for peak_info_tup in peak_info_list:
             peak_pos = peak_info_tup[0]
             peak_width = peak_info_tup[1]
-            self.ui.graphicsView_main.add_peak(peak_pos, peak_width, in_pick=False)
+            self.ui.graphicsView_main.plot_peak_indicator(peak_pos)
 
         return
 
@@ -854,7 +865,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: Highlight all peaks' indicators
         :return:
         """
-        self.ui.graphicsView_main.remove_all_in_pick_peaks()
+        self.ui.remove_picked_peaks_indicators()
 
         return
 

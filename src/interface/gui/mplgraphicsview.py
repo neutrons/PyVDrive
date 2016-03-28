@@ -1225,6 +1225,9 @@ class Qt4MplCanvas(FigureCanvas):
         """
         """
         line = self._lineDict[ikey]
+        if line is None:
+            print '[ERROR] Line (key = %d) is None. Unable to update' % ikey
+            return
 
         if vecx is not None and vecy is not None:
             line.set_xdata(vecx)

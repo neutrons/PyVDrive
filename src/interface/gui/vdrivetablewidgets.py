@@ -219,7 +219,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
 
         return
 
-    def add_peak(self, bank, name, centre, width, overlapped_peak_pos_list):
+    def add_peak(self, bank, name, centre, width, group_id):
         """ Append a peak to the table
         Purpose:
             Append a new peak to the table
@@ -239,16 +239,10 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert isinstance(bank, int)
         assert isinstance(width, float)
         assert isinstance(name, str)
-        assert isinstance(overlapped_peak_pos_list, list)
+        assert isinstance(group_id, int), 'Group ID must be an integer.'
         assert width > 0
 
         # Get new index
-        # new_index = self.rowCount()
-        group_id = -1
-        if len(overlapped_peak_pos_list) >= 2:
-            # use -2 as temporary group ID such that the table can visit it later.
-            group_id = -2
-            raise NotImplementedError('This situation is not supported yet!')
         status, message = self.append_row([bank, name, centre, width, name, group_id, False])
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
@@ -389,6 +383,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         :return:
         """
         self._currGroupID += 1
+
         return self._currGroupID
 
     def get_peak(self, peak_index):

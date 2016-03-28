@@ -46,9 +46,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._leftX = left_x
             self._rightX = right_x
 
-            self._peakIDPosList = list()  # a list of 2-tuple as peak position and indicator ID
+            self._peakPosIDList = list()  # a list of 2-tuple as peak position and indicator ID
 
             return
+
+        def __str__(self):
+            """ Pretty print for Grouped PeaksInfo
+            :return:
+            """
+            out_str = '[Left boundary (%d): %.7f, ' % (self.left_boundary_id, self.left_boundary)
+            for i_peak in xrange(len(self._peakPosIDList)):
+                out_str += 'P_%d (%d): %.7f, ' % (i_peak, self._peakPosIDList[i_peak][1],
+                                                  self._peakPosIDList[i_peak][0])
+            out_str += 'Right boundary (%d): %.7f]' % (self.right_boundary_id, self.right_boundary)
+
+            return out_str
 
         @property
         def left_boundary(self):
@@ -106,7 +118,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             assert isinstance(peak_pos, float)
 
             # add to peak list
-            self._peakIDPosList.append((peak_pos, indicator_id))
+            self._peakPosIDList.append((peak_pos, indicator_id))
 
             return
 
@@ -121,22 +133,28 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             # remove
             found_peak = False
-            for i_peak in xrange(len(self._peakIDPosList)):
-                p_id = self._peakIDPosList[i_peak][1]
+            for i_peak in xrange(len(self._peakPosIDList)):
+                p_id = self._peakPosIDList[i_peak][1]
                 if p_id == peak_id:
                     found_peak = True
-                    self._peakIDPosList.pop(i_peak)
+                    self._peakPosIDList.pop(i_peak)
                     break
 
             return found_peak
+
+        def get_number_peaks(self):
+            """ Get number of peaks in this peaks group
+            :return:
+            """
+            return len(self._peakPosIDList)
 
         def get_peaks(self):
             """ Get all the peaks' tuple
             :return: a list of 2-tuples (peak position and peak ID)
             """
-            self._peakIDPosList.sort()
+            self._peakPosIDList.sort()
 
-            return self._peakIDPosList[:]
+            return self._peakPosIDList[:]
 
         def update_peak_position(self, peak_id, center_position):
             """ Update peak position
@@ -149,10 +167,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             assert isinstance(center_position, float)
 
             found_peak = False
-            for i_peak in xrange(len(self._peakIDPosList)):
-                p_id = self._peakIDPosList[i_peak][1]
+            for i_peak in xrange(len(self._peakPosIDList)):
+                p_id = self._peakPosIDList[i_peak][1]
                 if p_id == peak_id:
-                    self._peakIDPosList[i_peak] = (center_position, peak_id)
+                    self._peakPosIDList[i_peak] = (center_position, peak_id)
                     found_peak = True
                     break
             # END-FOR
@@ -199,6 +217,22 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             print w_buf
 
             return
+
+        def in_vicinity(self, x_value):
+            """ Check whether a position (x_value) is in the vicinity of any item
+            (i.e., peak or boundary)
+            :param x_value:
+            :return:
+            """
+            assert isinstance(x_value, float), 'Input value must be a float but not %s.' % str(type(x_value))
+            index = bisect.bisect_right(self._vecX, x_value)
+            if index == len(self._vecX):
+                return False
+            if self._vecID[index] == -1:
+                # between a region
+                return False
+
+            return True
 
         def add_item(self, range_left, range_right, indicator_id, item_type):
             """
@@ -492,13 +526,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         indicator_id, indicator_type = self._cursorPositionMap.get_information(pos_x)
 
         peak_group = None
-        if indicator_id == 0:
+        if indicator_type == 0:
             # left boundary. search inPickList by ID
             for p_grp in self._inPickPeakList:
                 if p_grp.left_boundary_id == indicator_id:
                     peak_group = p_grp
                     break
-        elif indicator_id == 2:
+        elif indicator_type == 2:
             # right boundary. search inPickList by ID
             for p_grp in self._inPickPeakList:
                 if p_grp.right_boundary_id == indicator_id:
@@ -513,10 +547,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # rule out the case that peak group is not found if it is within indicator range
         if peak_group is None and indicator_id >= 0:
+
             err_msg = 'It is logically wrong that at X = %.5f, group is not found but ' % pos_x
-            err_msg += 'its has a valid indicator ID %d and a valid indicator type %d.' % (
+            err_msg += 'its has a valid indicator ID %d and a valid indicator type %d.\n' % (
                 indicator_id, indicator_type
             )
+            err_msg += 'There are %d peaks group:\n' % len(self._inPickPeakList)
+            for i_group in xrange(len(self._inPickPeakList)):
+                err_msg += '%s\n' % str(self._inPickPeakList[i_group])
             raise RuntimeError(err_msg)
 
         return peak_group, indicator_id, indicator_type
@@ -537,7 +575,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return None
 
-    def add_peak(self, peak_pos, peak_width, in_pick):
+    def plot_peak_indicator(self, peak_pos):
         """ Add a peak's indicators (center, left and right boundaries)
         Requirements:
             Peak position must be given in current range
@@ -558,11 +596,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Add indicator
         indicator_key = self.add_vertical_indicator(peak_pos, 'red')
 
-        # Update peak indicator list
-        if in_pick is True:
-            self._add_peaks_group(peak_center, peak_id, left_id, right_id)
-        else:
-            self._add_non_editable_peak(peak_center, peak_id, left_id, right_id)
+        # Add peak to data structure for mananging
+        self._pickedPeakList.append(indicator_key)
 
         return
 
@@ -704,7 +739,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         elif self._mousePressed == 1:
             # left mouse button is pressed and move
-            self._move_about_peak_group(event.xdata)
+            if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
+                self._move_peak_and_boundaries(event.xdata)
+            elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+                self._move_peak_group_multi_mode(event.xdata)
 
         elif len(self._inPickPeakList) > 0:
             # get position information for peak and boundary vicinity
@@ -755,13 +793,110 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param new_x:
         :return:
         """
-        # FIXME/TODO/NOW - copy the structure of '_move_about_peak_group' and
-        #                  implement what is proposed
+        if self._currIndicatorID < 0:
+            # cursor is not in vicinity of any peak or boundary. return with out any operation
+            return
+
+        if self._currPeakGroup is None:
+            err_msg = 'Current peak group is None.  Cursor at X = %.5f, ID = %d, Type = %d' % (
+                new_x, self._currIndicatorID, self._currIndicatorType)
+            raise RuntimeError(err_msg)
+
+        # absolute displacement
+        delta_x = new_x - self._mouseX
+
+        if self._currIndicatorType == 0 or self._currIndicatorType == 2:
+            # cursor is in vicinity of either left boundary or right boundary
+            # select a peak's boundary, then widen or narrow the peak's boundary
+            assert self._cursorType == 2, 'Cursor type %d must be 2!' % self._cursorType
+            # print '[DB] Move (left/right %d) boundary to %f' % (self._currIndicatorType, new_x)
+            # print '[DB] Left boundary ID = %d, Right boundary ID = %d' % (
+            #    self._currPeakGroup.left_boundary_id, self._currPeakGroup.right_boundary_id)
+
+            # calculate displacement
+            if self._currIndicatorType == 0:
+                delta_x_left = delta_x
+                delta_x_right = -delta_x_left
+                new_x_left = self._currPeakGroup.left_boundary + delta_x_left
+                new_x_right = self._currPeakGroup.right_boundary + delta_x_right
+            else:
+                delta_x_right = delta_x
+                delta_x_left = -delta_x_right
+                new_x_left = self._currPeakGroup.left_boundary + delta_x_left
+                new_x_right = self._currPeakGroup.right_boundary + delta_x_right
+
+            # update the cursor map and check validity
+            self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
+                                                         new_x_left - 0.005,
+                                                         new_x_left + 0.005)
+            self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
+                                                         new_x_right - 0.005,
+                                                         new_x_right + 0.055)
+
+            # move the indicators for 2 boundary
+            self.move_indicator(self._currPeakGroup.left_boundary_id, delta_x_left, 0.)
+            self.move_indicator(self._currPeakGroup.right_boundary_id, delta_x_right, 0.)
+
+            # update to peak group
+            self._currPeakGroup.left_boundary += delta_x_left
+            self._currPeakGroup.right_boundary += delta_x_right
+
+        elif self._currIndicatorType == 1:
+            # cursor is in the vicinity of a peak
+            assert self._cursorType == 1, 'Cursor type (now %d) must be 2!' % self._cursorType
+            assert self._currPeakGroup.get_number_peaks() == 1, 'There must be one peak in the peaks group.'
+
+            # get peak
+            peak_pos, peak_id = self._currPeakGroup.get_peaks()[0]
+            assert isinstance(peak_id, int)
+
+            # calculate new position
+            new_peak_pos = peak_pos + delta_x
+            new_x_left = self._currPeakGroup.left_boundary + delta_x
+            new_x_right = self._currPeakGroup.right_boundary + delta_x
+
+            # update cursor map and check validity
+            if delta_x < 0:
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
+                                                             new_x_left - 0.005,
+                                                             new_x_left + 0.005)
+            else:
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
+                                                             new_x_right - 0.005,
+                                                             new_x_right + 0.005)
+            self._cursorPositionMap.update_item_position(peak_id,
+                                                         new_peak_pos - 0.005,
+                                                         new_peak_pos + 0.005)
+            if delta_x < 0:
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
+                                                             new_x_right - 0.005,
+                                                             new_x_right + 0.005)
+            else:
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
+                                                             new_x_left - 0.005,
+                                                             new_x_left + 0.005)
+
+            # update the peak group
+            self._currPeakGroup.update_peak_position(peak_id, new_x)
+            self._currPeakGroup.left_boundary = new_x_left
+            self._currPeakGroup.right_boundary = new_x_right
+
+            # move the peak
+            self.move_indicator(peak_id, delta_x, 0.)
+
+            # move the boundary
+            self.move_indicator(self._currPeakGroup.left_boundary_id, delta_x, 0.)
+            self.move_indicator(self._currPeakGroup.right_boundary_id, delta_x, 0.)
+
+        else:
+            err_msg = 'Cursor type %d is not supported in peak group moving mode.' % self._currIndicatorType
+            raise RuntimeError(err_msg)
 
         return
 
-    def _move_about_peak_group(self, new_x):
-        """ Event handling while mouse's left button is pressed and moved
+    def _move_peak_group_multi_mode(self, new_x):
+        """ Event handling while mouse's left button is pressed and moved as it is in
+        multi-peak selection mode.
         Method is going to check the curse (i.e., the region that the mouse in)
         In this case, neither cursor's type nor selected peak can be changed
         :param new_x:
@@ -774,39 +909,53 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # not within any indicator range.
             print '[DB] No indicator is selected. Nothing to move!'
             assert self._cursorType == 0, 'arrow cursor, between 2 peaks, no operation.'
+            return
 
-        elif self._currIndicatorType == 0 or self._currIndicatorType == 2:
+        # check status
+        assert self._currPeakGroup is not None, 'Current peak group cannot be None!'
+
+        if self._currIndicatorType == 0 or self._currIndicatorType == 2:
             # left boundary or right boundary
-            # select a peak's boundary, then widen or narrow the peak's boundary
-            assert self._currPeakGroup is not None, 'Current peak group cannot be None!'
+            # select a peak's boundary, then move that
+            # check
             assert self._cursorType == 2, 'Cursor type %d must be 2!' % self._cursorType
+
             print '[DB] Move (left/right %d) boundary to %f' % (self._currIndicatorType, new_x)
             print '[DB] Left boundary ID = %d, Right boundary ID = %d' % (
                 self._currPeakGroup.left_boundary_id, self._currPeakGroup.right_boundary_id)
 
             # calculate displacement
+            move_left = False
             if self._currIndicatorType == 0:
-                delta_x_left = new_x - self._currPeakGroup.left_boundary
-                delta_x_right = -delta_x_left
+                # move left boundary
+                delta_x = new_x - self._currPeakGroup.left_boundary
+                move_left = True
             else:
-                delta_x_right = new_x - self._currPeakGroup.right_boundary
-                delta_x_left = -delta_x_right
+                # move right boundary
+                delta_x = new_x - self._currPeakGroup.right_boundary
 
-            # move the indicators for 2 boundary
-            self.move_indicator(self._currPeakGroup.left_boundary_id, delta_x_left, 0.)
-            self.move_indicator(self._currPeakGroup.right_boundary_id, delta_x_right, 0.)
+            # move!
+            if move_left is True:
+                # move left boundary
+                # update the cursor map to see whether move is reasonable
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
+                                                             new_x - 0.005,
+                                                             new_x + 0.005)
+                # move indicator on canvas
+                self.move_indicator(self._currPeakGroup.left_boundary_id, delta_x, 0.)
+                # update to peak group
+                self._currPeakGroup.left_boundary = new_x
 
-            # update to peak group
-            self._currPeakGroup.left_boundary += delta_x_left
-            self._currPeakGroup.right_boundary += delta_x_right
-
-            # update the cursor map
-            self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
-                                                         self._currPeakGroup.left_boundary - 0.005,
-                                                         self._currPeakGroup.left_boundary + 0.005)
-            self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
-                                                         self._currPeakGroup.right_boundary - 0.005,
-                                                         self._currPeakGroup.right_boundary + 0.055)
+            else:
+                # move the right boundary
+                # update the cursor map and thus check whether the move is valid
+                self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
+                                                             new_x - 0.005,
+                                                             new_x + 0.055)
+                # move the indicators for right boundary
+                self.move_indicator(self._currPeakGroup.right_boundary_id, delta_x, 0.)
+                # update the peak gorup
+                self._currPeakGroup.right_boundary =  new_x
 
         elif self._currIndicatorType == 1:
             # select a peak's center, then move the peak
@@ -816,16 +965,19 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             if new_x <= self._currPeakGroup.left_boundary or new_x >= self._currPeakGroup.right_boundary:
                 return False
 
-            # move (peak) indicator
+            # calculate the displacement
             delta_x = new_x - self.get_indicator_position(self._currIndicatorID)[0]
-            self.move_indicator(self._currIndicatorID, delta_x, 0.)
-
-            # update the peak group
-            self._currPeakGroup.update_peak_position(self._currIndicatorID, new_x)
-            # update the map
+            # update the map so that check the validity of moving
             self._cursorPositionMap.update_item_position(self._currIndicatorID, new_x - 0.005,
                                                          new_x + 0.005)
-
+            # update the peak group
+            self._currPeakGroup.update_peak_position(self._currIndicatorID, new_x)
+            # move (peak) indicator
+            self.move_indicator(self._currIndicatorID, delta_x, 0.)
+        else:
+            # unsupported case
+            err_msg = 'Cursor type %d is not supported.' % self._currIndicatorType
+            raise RuntimeError(err_msg)
         # END-IF-ELSE
 
         return
@@ -862,51 +1014,42 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             print '[DB] Peak group is None, ID = %d Type = %d' % (self._currIndicatorID,
                                                                   self._currIndicatorType)
 
-        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
-            # mode 0
-            # no operation for any button
-            # print '[DB-BAT] Peak selection-Normal Mode: No operation.'
-            pass
-        elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
-            # mode 1
-            # operation
-            if event.button == 1:
-                # no operation left button
-                pass
-            elif event.button == 3:
-                # right button
-                self._respond_right_button(event.xdata)
-        elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
-            # mode 2
-            # multi-peak selection mode
-            pass
-        else:
-            # unrecognized
-            raise RuntimeError('Peak selection mode %s is not supported!' % str(self._myPeakSelectionMode))
+        # respond according to mouse button pressed
+        if event.button == 3:
+            self._respond_right_button(event)
 
         return
 
-    def _respond_right_button(self, x):
+    def _respond_right_button(self, event):
         """
-
+        Pop up the menu to (mostly) to remove the peak or peak group
         :param x:
         :return:
         """
-        # FIXME/TODO/ Clean after development is finished
-        """ Disabled due to no use!
-        print self._vecX
-        print self._vecPeakID
+        # no operation required for the non-edit mode
+        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
+            return
 
-        range_index = bisect.bisect_left(self._vecX, x)
-        if range_index == len(self._vecX):
-            print '[DB-BAT] Out of range rightmost'
-        elif self._vecPeakID[range_index] < 0:
-            print '[DB-BAT] Out of range'
-        else:
-            peak_center_index = self._vecPeakID[range_index]
-            print '[DB-BAT] Peak center index is ', peak_center_index, 'peak position is ', \
-                self.get_indicator_position(peak_center_index)
-        """
+        # no operation if event is outside of canvas
+        if event.xdata is None or event.ydata is None:
+            return
+
+        # create a menu in the edit mode
+        self.menu = QtGui.QMenu(self)
+
+        # optionally add optin to delete peak
+        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+            action2 = QtGui.QAction('Delete Peak', self)
+            action2.triggered.connect(self.menu_delete_peak_in_pick)
+            self.menu.addAction(action2)
+
+        # add item to delete peak group
+        action1 = QtGui.QAction('Delete Group', self)
+        action1.triggered.connect(self.menu_delete_group_in_pick)
+        self.menu.addAction(action1)
+
+        # add other required actions
+        self.menu.popup(QtGui.QCursor.pos())
 
         return
 
@@ -1008,7 +1151,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         w_buf = ''
         for grp in self._inPickPeakList:
             w_buf += '%f < ' % grp.left_boundary
-        print '[DB] Is peak group ordered? ', w_buf
+        print '[DB-Check] Is peak group ordered? ', w_buf
 
         # FIXME - this is a brute force search.  but easy to code
         # find out the peak group where it should be belonged to
@@ -1016,12 +1159,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         for index in xrange(len(self._inPickPeakList)):
             p_group = self._inPickPeakList[index]
             if p_group.left_boundary <= cursor_x <= p_group.right_boundary:
+                # check whether it is OK to add
+                left_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x - 0.005)
+                right_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x + 0.005)
+                allow_to_add = not left_in_vicinity and not right_in_vicinity
+                if allow_to_add is False:
+                    raise RuntimeError('Unable to add new peak due to its range overlaps other peak/boundary'
+                                       'in this peak group.')
                 # create a peak as an indicator and save the indicator (peak) ID
                 peak_id = self.add_vertical_indicator(cursor_x, 'red')
-                p_group.add_peak(peak_id, cursor_x)
                 # update to cursor map
                 self._cursorPositionMap.add_item(cursor_x - 0.005, cursor_x + 0.005,
                                                  peak_id, 1)
+                p_group.add_peak(peak_id, cursor_x)
+
                 peak_added = True
                 break
             # END-IF
@@ -1120,6 +1271,21 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def menu_delete_group_in_pick(self):
+        """ Delete the peak group (in-pick mode) where the cursor is
+        :return:
+        """
+        assert self._eventX is not None
+
+    def menu_delete_peak_in_pick(self):
+        """
+
+        :return:
+        """
+        assert self._eventX is not None
+
+        return
+
     def plot_diffraction_pattern(self, vec_x, vec_y):
         """
         TODO/NOW/ Doc
@@ -1170,5 +1336,17 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # remove the tuple from list
         self._inPickPeakList.pop(i)  #((peak_pos, indicator_key))
 
+        return
+
+    def remove_picked_peaks_indicators(self):
+        """ Removed all the being-picked peaks' indicators stored in _pickedPeaksList
+        :return:
+        """
+        # remove indicators from canvas
+        for peak_indicator_id in self._pickedPeakList:
+            self.remove_indicator(peak_indicator_id)
+
+        # clear the inPickPeakList
+        self._inPickPeakList = list()
 
         return
