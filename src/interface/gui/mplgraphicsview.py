@@ -235,13 +235,13 @@ class IndicatorManager(object):
         """
         return sorted(self._lineManager.keys())
 
-    def get_marker(self):
+    @staticmethod
+    def get_marker():
         """
         Get the marker a line
-        :param line_id:
         :return:
         """
-        return 'o'
+        return '.'
 
     def get_next_color(self):
         """
@@ -508,12 +508,13 @@ class MplGraphicsView(QtGui.QWidget):
 
         return my_id
 
-    def add_vertical_indicator(self, x=None, color=None):
+    def add_vertical_indicator(self, x=None, color=None, style=None, line_width=1):
         """
         Add a vertical indicator line
         Guarantees: an indicator is plot and its ID is returned
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
+        :param style:
         :return: indicator ID
         """
         # For indicator line's position
@@ -531,14 +532,19 @@ class MplGraphicsView(QtGui.QWidget):
         else:
             assert isinstance(color, str)
 
+        # style
+        if style is None:
+            style = self._myIndicatorsManager.get_line_style()
+
         # Form
         my_id = self._myIndicatorsManager.add_vertical_indicator(x, y_min, y_max, color)
         vec_x, vec_y = self._myIndicatorsManager.get_data(my_id)
 
         canvas_line_index = self._myCanvas.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
-                                                       color=color, marker=self._myIndicatorsManager.get_marker(),
-                                                       line_style=self._myIndicatorsManager.get_line_style(),
-                                                       line_width=1)
+                                                       color=color,
+                                                       marker=self._myIndicatorsManager.get_marker(),
+                                                       line_style=style,
+                                                       line_width=line_width)
 
         self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
 
