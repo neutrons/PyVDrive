@@ -62,18 +62,61 @@ class GroupedPeaksManager(object):
         return
 
     def _remove_items(self, index_list):
-        """ Remove items
+        """ Remove items by their indexes
+        Requirements: the input is a list of integers
         :param index_list:
         :return:
         """
+        # check
+        assert isinstance(index_list, list), 'Input index_list must be a list but not %s.' % str(type(index_list))
 
-    def _update_item(self, indicator_id, new_pos):
+        # sort index_list
+        index_list.sort(reverse=True)
+
+        # pop items from back to frond
+        for index in index_list:
+            self._vecX.pop(index)
+            self._vecID.pop(index)
+            self._vecType.pop(index)
+            self._vecGroupID.pop(index)
+        # END-FOR
+
+        return
+
+    def _update_item_position(self, indicator_id, new_pos):
         """
-
+        Update the position of an indicator
+        Requirements: indicator_id is an existing indicator (integer) and new_pos is still in between its neighbors
         :param indicator_id:
         :param new_pos:
         :return:
         """
+        # check
+        assert isinstance(indicator_id, int), 'Indicator ID must be an integer but not %s.' % str(type(indicator_id))
+        assert isinstance(new_pos, float), 'New position must be a float but not %s.' % str(type(indicator_id))
+
+        # search entry for this indicator by brute force
+        updated = False
+        for index in xrange(len(self._vecID)):
+            if indicator_id == self._vecID[index]:
+                # check whether new position meets requirement
+                if index > 0 and new_pos <= self._vecX[index-1]:
+                    raise RuntimeError('Indicator %d at index %d has new position %f smaller than X[%d] = %f.' % (
+                        indicator_id, index, new_pos, index-1, self._vecX[index-1]
+                    ))
+                elif index < len(self._vecX) - 1 and new_pos >= self._vecX[index+1]:
+                    raise RuntimeError('Indicator %d at index %d has new position %f larger than X[%d] = %f.' % (
+                        indicator_id, index, new_pos, index+1, self._vecX[index+1]
+                    ))
+                # set new position to right X
+                self._vecX[index] = new_pos
+                updated = False
+            # END-IF
+        # END-FOR
+
+        assert updated is True, 'Indicator %d does not exist.' % indicator_id
+
+        return True
 
     def add_group(self, new_group):
         """ Add a new group
@@ -86,7 +129,7 @@ class GroupedPeaksManager(object):
             # unable to add new group
             raise RuntimeError('Unable to add group!')
 
-        # add new group
+        # add new group by getting ID, add group to both list and dictionary, and sort
         group_id = new_group.get_id()
 
         self._myGroupList.append(new_group)
@@ -95,7 +138,7 @@ class GroupedPeaksManager(object):
         self._groupSorted = False
         self.sort_group()
 
-        # update ...
+        # update the dynamic cursor map by adding boundaries and peaks in the group
         self._add_item(new_group.left_boundary, new_group.left_boundary_id, group_id, 0)
         peak_list = new_group.get_peaks()
         for peak_i in peak_list:
@@ -108,14 +151,18 @@ class GroupedPeaksManager(object):
         return
 
     def add_peak(self, group_id, peak_pos, peak_id):
-        """
-
+        """ Add a peak to a peak group and update the dynamic cursor map
         :param group_id:
         :param peak_pos:
+        :param peak_id: peak indicator ID
         :return:
         """
+        #
         assert group_id in self._myGroupDict
+        assert isinstance(peak_pos, float), 'Peak position must be a float but not a %s.' % str(type(peak_pos))
+        assert isinstance(peak_id, int), 'Peak indicator ID must be an integer but not a %s.' % str(type(peak_id))
 
+        # add peak to the group
         self._myGroupDict[group_id].add_peak(indicator_id=peak_id, peak_pos=peak_pos)
 
         # add to dynamic map
@@ -127,12 +174,37 @@ class GroupedPeaksManager(object):
         return
 
     def can_add_group(self, left_boundary, right_boundary):
-        """
-
+        """ check whether a peak (noted by its left and right boundaries) among a list of group
+        Guarantees: It is defined for not being able to add a peak-group if
+        (1) either left boundary or right boundary is inside a peak group
+        (2) left boundary and right boundary are in different neighbor hood.
         :param left_boundary:
         :param right_boundary:
         :return:
         """
+        # check
+        assert isinstance(left_boundary, float), 'Left boundary should be a float.'
+        assert isinstance(right_boundary, float), 'Right boundary should be a float.'
+        assert left_boundary < right_boundary, 'Left boundary %f should be smaller than right boundary %f' \
+                                               '.' % (left_boundary, right_boundary)
+
+        # always true for an empty vecX
+        if len(self._vecX) == 0:
+            return True
+
+        # find the position
+        left_bound_index = bisect.bisect_right(self._vecX, left_boundary)
+        right_bound_index = bisect.bisect_right(self._vecX, right_boundary)
+
+        # indexes of left boundary and right boundary should be same because there must not be any indicator
+        # between these 2 boundaries
+        if left_bound_index != right_bound_index:
+            return
+
+        # the group ID of the boundaries' neighbors must be different, such that these two boundaries
+        # won't be inside any peak group
+        if index == 0:
+
         return True
 
     def delete_group(self, group_id):
