@@ -3,6 +3,8 @@ __author__ = 'wzz'
 import operator
 import bisect
 
+TINY = 1.0E-20
+
 
 class GroupedPeaksManager(object):
     """ Manager for grouped peaks
@@ -85,7 +87,7 @@ class GroupedPeaksManager(object):
 
     def _update_item_position(self, indicator_id, new_pos):
         """
-        Update the position of an indicator
+        Update the position of an indicator in the dynamic item-map (cursor map)
         Requirements: indicator_id is an existing indicator (integer) and new_pos is still in between its neighbors
         :param indicator_id:
         :param new_pos:
@@ -180,7 +182,7 @@ class GroupedPeaksManager(object):
         (2) left boundary and right boundary are in different neighbor hood.
         :param left_boundary:
         :param right_boundary:
-        :return:
+        :return: boolean
         """
         # check
         assert isinstance(left_boundary, float), 'Left boundary should be a float.'
@@ -203,9 +205,17 @@ class GroupedPeaksManager(object):
 
         # the group ID of the boundaries' neighbors must be different, such that these two boundaries
         # won't be inside any peak group
-        if index == 0:
+        if right_bound_index == 0:
+            # left to left end of the scale
+            ret_value = True
+        elif left_bound_index == len(self._vecX):
+            # right to right end of the scale
+            ret_value = True
+        else:
+            # in the middle: they must be between 2 different groups
+            ret_value = self._vecGroupID[left_bound_index-1] != self._vecGroupID[right_bound_index+1]
 
-        return True
+        return ret_value
 
     def delete_group(self, group_id):
         """
@@ -214,14 +224,74 @@ class GroupedPeaksManager(object):
         :return:
         """
 
-    def get_group_id(self, peak_pos):
-        """
+        return
 
-        :param peak_pos:
+    def get_boundaries(self, x, x_limit):
+        """
+        Find out the left and right boundary of a potential peak-group
+        :param x:
+        :param x_limit:
         :return:
         """
+        assert len(x_limit) == 2
+        assert x_limit[0] < x_limit[1]
 
-        return -1
+        # in case emtpy
+        if len(self._vecX) == 0:
+            return x_limit[0], x_limit[1]
+
+        # find index of x
+        index_x = bisect.bisect_right(self._vecX, x)
+        if index_x == 0:
+            # left to everything
+            left_bound = x_limit[0]
+            right_bound = self._vecX[0]
+
+        elif index_x == len(self._vecX):
+            # right to everything
+            left_bound  = self._vecX[-1]
+            right_bound = x_limit[1]
+
+        else:
+            # in the middle
+            left_bound = self._vecX[index_x-1]
+            right_bound = self._vecX[index_x]
+
+        # END-IF-ELSE
+        # check
+        assert left_bound < right_bound
+
+        return left_bound, right_bound
+
+    def get_group(self, group_id):
+        """
+
+        :param group_id:
+        :return:
+        """
+        return self._myGroupDict[group_id]
+
+    def get_group_id(self, x):
+        """
+        Find out a position (x) inside any group
+        :param x:
+        :return:
+        """
+        assert isinstance(x, float)
+
+        # find nearest index for x
+        index_x = bisect.bisect_right(self._vecX, x)
+
+        if index_x == 0 or index_x == len(self._vecX):
+            # x is left to everything or right to everything
+            group_id = -1
+        else:
+            # x is in between 2 items, check whether their group ID are same or not
+            group_id = self._vecGroupID[index_x]
+            if group_id != self._vecGroupID[index_x-1]:
+                group_id = -1
+
+        return group_id
 
     def get_new_group_id(self):
         """
@@ -233,12 +303,27 @@ class GroupedPeaksManager(object):
 
         return new_id
 
+    def has_group(self, group_id):
+        """
+
+        :param group_id:
+        :return:
+        """
+        return group_id in self._myGroupDict
+
     def in_vicinity(self, x, resolution):
         """
         :param x:
         :return:
         """
+        # DOC!
         assert isinstance(x, float)
+
+        free_zone = -1, -1, -1
+
+        # rule out the situation that is empty
+        if len(self._vecX) == 0:
+            return free_zone
 
         index = bisect.bisect_right(self._vecX, x)
 
@@ -255,14 +340,99 @@ class GroupedPeaksManager(object):
             # x is within resolution range to its left
             ret_index = index - 1
         elif self._vecX[index] - x < resolution:
-            # x is within resolution rnage to its right
+            # x is within resolution range to its right
             ret_index = index
 
         # set up return
         if ret_index is None:
-            return -1, -1, -1
+            return free_zone
 
-        return self._vecID[0], self._vecType[0], self._vecGroupID[0]
+        return self._vecID[ret_index], self._vecType[ret_index], self._vecGroupID[ret_index]
+
+    def can_move_left(self, item_pos, delta_x, x_left_limit):
+        """
+
+        :return:
+        """
+        assert delta_x < 0
+
+        index_left = bisect.bisect_right(self._vecX, item_pos-TINY)
+        if index_left == 0:
+            # there is nothing to the group's left. free to go!
+            left_wall = x_left_limit
+            left_group = -2
+        else:
+            left_wall = self._vecX[index_left-1]
+            left_group = self._vecGroupID[index_left-1]
+
+        # return False if the left bound is hit
+        if item_pos + delta_x <= left_wall:
+            print '[DB] Unable to move left boundary to left as Left wall @ %f of group %d is hit' % (left_wall,
+                                                                                                      left_group)
+            return False
+
+        return True
+
+    def can_move_right(self, item_pos, delta_x, x_right_limit):
+        """
+
+        :param item_pos:
+        :param delta_x:
+        :param x_right_limit:
+        :return:
+        """
+        assert delta_x > 0
+
+        # check right wall
+        index_right = bisect.bisect_right(self._vecX, item_pos+TINY)
+        if index_right == len(self._vecX):
+            # to the very right of anything
+            right_wall = x_right_limit
+            right_group = -2
+        else:
+            # something to its right
+            right_wall = self._vecX[index_right]
+            right_group = self._vecGroupID[index_right]
+
+        # return False if the right bound is hit
+        if item_pos + delta_x >= right_wall:
+            print '[DB] Unable to move group to right as right wall @ %f of group %d is hit.' % (right_wall,
+                                                                                                 right_group)
+            return False
+
+        return True
+
+    def move_group(self, group_id, delta_x, limit_x):
+        """ Move a group to a same direction
+        :param group_id:
+        :param delta_x:
+        :param limit_x:
+        :return: boolean.  False if it is not allowed to move
+        """
+        # find the left boundary and right boundary of the group to be moved
+        group_2_move = self.get_group(group_id)
+
+        # check whether it is allowed to move that far
+        if delta_x < 0:
+            # can move left?
+            can_move = self.can_move_left(group_2_move.left_boundary, delta_x, limit_x[0])
+            if can_move is False:
+                return False
+        else:
+            # can move right?
+            can_move = self.can_move_right(group_2_move.right_boundary, delta_x, limit_x[1])
+            if can_move is False:
+                return False
+
+        # move the group
+        group_2_move.left_boundary += delta_x
+        group_2_move.right_boundary += delta_x
+        group_2_move.shift_peaks_position(peak_id=None, shift=delta_x, check=False)
+
+        # update the map
+        self._update_group_position(group_id, delta_x, check=False)
+
+        return
 
     @property
     def is_sorted(self):
