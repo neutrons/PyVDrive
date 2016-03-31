@@ -219,10 +219,32 @@ class GroupedPeaksManager(object):
 
     def delete_group(self, group_id):
         """
-
+        Delete a group and remove all of its entries in the dynamic map
         :param group_id:
         :return:
         """
+        # check
+        assert group_id in self._myGroupDict
+
+        # pop group from list
+        group = None
+        for i_group in self._myGroupList:
+            group = self._myGroupList[i_group]
+            if group.get_id() == group_id:
+                group = self._myGroupList.pop(i_group)
+        # END-FOR
+        assert group is not None
+
+        # delete group from dictionary
+        del self._myGroupDict[group_id]
+
+        # remove from the maps
+        index_remove_list = list()
+        for index in xrange(len(self._vecGroupID)):
+            if self._vecGroupID[index] == group_id:
+                index_remove_list.append(index)
+        # END-IF
+        self._remove_items(index_remove_list)
 
         return
 
