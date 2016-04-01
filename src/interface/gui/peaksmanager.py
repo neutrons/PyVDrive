@@ -248,6 +248,44 @@ class GroupedPeaksManager(object):
 
         return
 
+    def delete_peak(self, group_id, peak_id):
+        """ Delete a peak from a PeaksGroup and from the cursor map as well
+        :param group_id:
+        :param peak_id:
+        :return: boolean. True if peak ID exists in group
+        """
+        # check
+        assert isinstance(group_id, int)
+        if group_id not in self._myGroupDict:
+            return False
+
+        assert isinstance(peak_id, int)
+        group = self._myGroupDict[group_id]
+        if group.has_peak(peak_id) is False:
+            return False
+
+        # remove peak from PeaksGroup
+        peak_pos = group.get_peak_pos(peak_id)
+        group.delete_peak(peak_id)
+
+        # update the dynamic cursor map
+        index_xp = bisect.bisect_right(self._vecX, peak_pos)
+        if index_xp == 0:
+            # peak cannot be at the begin of the items list
+            index_xp = 1
+        elif index_xp == len(self._vecX):
+            # peak cannot be at the end of the items list
+            index_xp = len(self._vecX) - 1
+        else:
+            # find out the nearest one
+            if peak_pos - self._vecX[index_xp-1] < self._vecX[index_xp] - peak_pos:
+                index_xp -= index_xp
+        # END-IF-ELSE
+
+        self._remove_items([index_xp])
+
+        return True
+
     def get_boundaries(self, x, x_limit):
         """
         Find out the left and right boundary of a potential peak-group
@@ -287,7 +325,7 @@ class GroupedPeaksManager(object):
 
     def get_group(self, group_id):
         """
-
+        Get the reference to a group by its group ID
         :param group_id:
         :return:
         """
@@ -317,7 +355,7 @@ class GroupedPeaksManager(object):
 
     def get_new_group_id(self):
         """
-
+        Get the next NEW group ID for uniqueness
         :return:
         """
         new_id = self._nextGroupID
@@ -327,19 +365,22 @@ class GroupedPeaksManager(object):
 
     def has_group(self, group_id):
         """
-
+        Check whether the group manager has a group with a specified ID
         :param group_id:
         :return:
         """
+        assert isinstance(group_id, int), 'Group ID must be an integer but not %s.' % str(type(group_id))
+
         return group_id in self._myGroupDict
 
-    def in_vicinity(self, x, resolution):
-        """
+    def in_vicinity(self, x, item_range):
+        """ Get the information of a position X in the item/cursor map
         :param x:
-        :return:
+        :param item_range: range of an item to claim that the cursor is in its vicinity region
+        :return: 3-tuple as (item indicator ID, item type,  group ID)
         """
-        # DOC!
         assert isinstance(x, float)
+        assert isinstance(item_range, float) and item_range > 0
 
         free_zone = -1, -1, -1
 
@@ -351,17 +392,17 @@ class GroupedPeaksManager(object):
 
         ret_index = None
         if index == 0:
-            if self._vecX[0] - x < resolution:
+            if self._vecX[0] - x < item_range:
                 # before X[0] and within resolution range
                 ret_index = 0
         elif index == len(self._vecX):
-            if x - self._vecX[-1] < resolution:
+            if x - self._vecX[-1] < item_range:
                 # after X[-1] and within resolution range
                 ret_index = len(self._vecX) - 1
-        elif x - self._vecX[index-1] < resolution:
+        elif x - self._vecX[index-1] < item_range:
             # x is within resolution range to its left
             ret_index = index - 1
-        elif self._vecX[index] - x < resolution:
+        elif self._vecX[index] - x < item_range:
             # x is within resolution range to its right
             ret_index = index
 

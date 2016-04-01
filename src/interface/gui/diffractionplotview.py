@@ -490,7 +490,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         elif len(self._inEditGroupList) > 0:
             # get position information for peak and boundary vicinity
             indicator_id, indicator_type, group_id = self._myPeakGroupManager.in_vicinity(event.xdata,
-                                                                                          resolution=0.005)
+                                                                                          item_range=0.005)
 
             if indicator_type == self._currIndicatorType:
                 # no change
@@ -649,9 +649,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param new_x:
         :return:
         """
-        # FIXME/TODO/NOW - after method _move_peak_and_boundaries() is done,
-        #                  (1) rename (2) apply to function caller
-
         if self._currIndicatorID < 0:
             # not within any indicator range.
             print '[DB] No indicator is selected. Nothing to move!'
@@ -755,7 +752,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # get vicinity/cursor map information
 
         # record current selected group
-        info_tup = self._myPeakGroupManager.in_vicinity(event.xdata, resolution=0.005)
+        info_tup = self._myPeakGroupManager.in_vicinity(event.xdata, item_range=0.005)
         self._currIndicatorID = info_tup[0]
         self._currIndicatorType = info_tup[1]
         self._currGroupID = info_tup[2]
@@ -984,29 +981,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def get_peak_indicator_by_position(self, peak_pos):
-        """
-        Purpose:
-            Locate the peak indicator that is nearest to the peak position
-        Requirements:
-            1. peak position is within data range;
-            2. at least there is one peak indicator;
-        Guarantees:
-            The key (or index) of the peak indicator will be returned
-        :param peak_pos:
-        :return:
-        """
-        # Check requirement
-
-        # Return if there is only one peak
-        if len(self._inEditGroupList) == 1:
-            return self._inEditGroupList[0][1]
-
-        # Use binary search to locate the nearest peak indicator to peak position.
-        # TODO/NOW - Complete it!
-
-        return
-
     def menu_delete_group_in_pick(self):
         """ Delete the peak group (in-pick mode) where the cursor is
         :return:
@@ -1030,16 +1004,24 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         item_id, item_type, group_id = self._myPeakGroupManager.in_vicinity(self._eventX, 0.005)
         print '[DB] Current Item = %d of type %d in Group %d.' % (item_id, item_type, group_id)
 
+        return
 
-    def plot_diffraction_pattern(self, vec_x, vec_y):
+    def plot_diffraction_pattern(self, vec_x, vec_y, key=None):
         """
-        TODO/NOW/ Doc
+        Plot a diffraction pattern on canvas
+        :param vec_x: 1d array or list for X
+        :param vec_y: 1d array or list for Y
         :return:
         """
-        # Record the data for future usage... ...
+        # check
+        assert len(vec_x) == len(vec_y), 'vector of x and y have different size!'
 
         # Plot
         pattern_key = self.add_plot_1d(vec_x, vec_y, color='black', marker='.')
+
+        # Record the data for future usage
+        if key is not None:
+            self._myPatternDict[key] = (vec_x, vec_y, pattern_key)
 
         return
 
@@ -1076,10 +1058,15 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param peak_indicator_index:
         :return:
         """
-        self.remove_indicator(peak_indicator_index)
+        # check
+        assert isinstance(peak_indicator_index, int)
 
-        # remove the tuple from list
-        self._inEditGroupList.pop(i)  #((peak_pos, indicator_key))
+        # find and remove indicator from peak group manager
+        removable = self._myPeakGroupManager.delete_peak(peak_indicator_index)
+
+        # remove indicator on the canvas
+        if removable:
+            self.remove_indicator(peak_indicator_index)
 
         return
 
