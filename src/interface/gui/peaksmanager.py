@@ -85,12 +85,17 @@ class GroupedPeaksManager(object):
 
         return
 
-    def _update_item_position(self, indicator_id, new_pos):
+    def _update_map_item_pos(self, indicator_id, new_pos, check):
         """
         Update the position of an indicator in the dynamic item-map (cursor map)
         Requirements: indicator_id is an existing indicator (integer) and new_pos is still in between its neighbors
+
+        :exception: if the check is turned on and the mono-increment of vecX is destroyed
+        :exception: if the indicator is not found
+
         :param indicator_id:
         :param new_pos:
+        :param check: flag to check whether this update is allowed. Check should be turned off during mass move
         :return:
         """
         # check
@@ -101,15 +106,19 @@ class GroupedPeaksManager(object):
         updated = False
         for index in xrange(len(self._vecID)):
             if indicator_id == self._vecID[index]:
-                # check whether new position meets requirement
-                if index > 0 and new_pos <= self._vecX[index-1]:
-                    raise RuntimeError('Indicator %d at index %d has new position %f smaller than X[%d] = %f.' % (
-                        indicator_id, index, new_pos, index-1, self._vecX[index-1]
-                    ))
-                elif index < len(self._vecX) - 1 and new_pos >= self._vecX[index+1]:
-                    raise RuntimeError('Indicator %d at index %d has new position %f larger than X[%d] = %f.' % (
-                        indicator_id, index, new_pos, index+1, self._vecX[index+1]
-                    ))
+                # find the item in the list with desired indicator ID
+                if check:
+                    # check whether new position meets requirement
+                    if index > 0 and new_pos <= self._vecX[index-1]:
+                        raise RuntimeError('Indicator %d at index %d has new position %f smaller than X[%d] = %f.' % (
+                            indicator_id, index, new_pos, index-1, self._vecX[index-1]
+                        ))
+                    elif index < len(self._vecX) - 1 and new_pos >= self._vecX[index+1]:
+                        raise RuntimeError('Indicator %d at index %d has new position %f larger than X[%d] = %f.' % (
+                            indicator_id, index, new_pos, index+1, self._vecX[index+1]
+                        ))
+                # END-IF
+
                 # set new position to right X
                 self._vecX[index] = new_pos
                 updated = False
@@ -465,35 +474,54 @@ class GroupedPeaksManager(object):
 
         return True
 
-    def move_group(self, group_id, delta_x, limit_x):
+    def move_group(self, group_id, delta_x, limit_x, check):
         """ Move a group to a same direction
         :param group_id:
         :param delta_x:
         :param limit_x:
+        :param check: check validity
         :return: boolean.  False if it is not allowed to move
         """
+        # check
+        assert isinstance(limit_x, tuple) or isinstance(limit_x, list)
+        assert len(limit_x) == 2
+
         # find the left boundary and right boundary of the group to be moved
         group_2_move = self.get_group(group_id)
 
         # check whether it is allowed to move that far
-        if delta_x < 0:
-            # can move left?
-            can_move = self.can_move_left(group_2_move.left_boundary, delta_x, limit_x[0])
+        if check:
+            if delta_x < 0:
+                # can move left?
+                can_move = self.can_move_left(group_2_move.left_boundary, delta_x, limit_x[0])
+            else:
+                # can move right?
+                can_move = self.can_move_right(group_2_move.right_boundary, delta_x, limit_x[1])
             if can_move is False:
                 return False
-        else:
-            # can move right?
-            can_move = self.can_move_right(group_2_move.right_boundary, delta_x, limit_x[1])
-            if can_move is False:
-                return False
+        # END-IF
 
-        # move the group
+        # move the group by update positions of boundaries and peaks
         group_2_move.left_boundary += delta_x
         group_2_move.right_boundary += delta_x
         group_2_move.shift_peaks_position(peak_id=None, shift=delta_x, check=False)
 
         # update the map
-        self._update_group_position(group_id, delta_x, check=False)
+        self._update_map_item_pos(indicator_id=group_2_move.left_boundary_id,
+                                  new_pos=group_2_move.left_boundary,
+                                  check=False)
+        self._update_map_item_pos(indicator_id=group_2_move.right_boundary_id,
+                                  new_pos=group_2_move.right_boundary,
+                                  check=False)
+        for peak_info in group_2_move.get_peaks():
+            peak_pos, peak_id = peak_info
+            self._update_map_item_pos(indicator_id=peak_id,
+                                      new_pos=peak_pos,
+                                      check=False)
+        # check integrity
+        # TODO/NOW - Implement _check_vector_x()
+        if self._check_vector_x() is False:
+            raise RuntimeError('Impossible to have vecX out of order.')
 
         return
 
