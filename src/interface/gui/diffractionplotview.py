@@ -347,10 +347,18 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
     def clear_peak_by_position(self, peak_pos):
         """
-
+        Purpose: clear a peak by given its position
         :param peak_pos:
         :return:
         """
+        # check
+        assert isinstance(peak_pos, float) and peak_pos > 0
+
+        # find peak with position
+        self._myPeakGroupManager.get_peak_by_position(peak_pos)
+
+        # remove
+        self._myPeakGroupManager.delete_peak(group_id, peak_id)
 
         return False
 
