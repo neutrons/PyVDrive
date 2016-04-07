@@ -3,7 +3,7 @@ __author__ = 'wzz'
 import operator
 import bisect
 
-TINY = 1.0E-20
+TINY = 1.0E-9
 
 
 class GroupedPeaksManager(object):
@@ -499,8 +499,12 @@ class GroupedPeaksManager(object):
 
         # return False if the left bound is hit
         if item_pos + delta_x <= left_wall:
-            print '[DB] Unable to move left boundary to left as Left wall @ %f of group %d is hit' % (left_wall,
-                                                                                                      left_group)
+            # form error message
+            msg = 'Item position = %.9f, Left wall index = %d\n' % (item_pos, index_left-1)
+            msg += 'Group information: \n%s\n' % self.pretty()
+            msg += '[DB] Unable to move left boundary to left as Left wall @ %f of group %d is hit' % (left_wall,
+                                                                                                       left_group)
+            print msg
             return False
 
         return True
@@ -575,9 +579,12 @@ class GroupedPeaksManager(object):
                                   check=False)
         for peak_info in group_2_move.get_peaks():
             peak_pos, peak_id = peak_info
+            print '[DB...] Peak position = ', peak_pos, 'of type ', type(peak_pos)
+            print '[DB...] Peak Id       = ', peak_id, 'of type', type(peak_id)
             self._update_map_item_pos(indicator_id=peak_id,
                                       new_pos=peak_pos,
                                       check=False)
+
         # check integrity
         if self._check_vector_x() is False:
             raise RuntimeError('Impossible to have vecX out of order.')
@@ -664,10 +671,10 @@ class GroupedPeaksManager(object):
         for p_g in self._myGroupList:
             w_buf += '%s\n' % str(p_g)
 
-        w_buf += '%-5s\t%-5s\t%-5s\t%-5s\n' % ('X', 'ID', 'Type', 'Group')
+        w_buf += '%-10s\t%-5s\t%-5s\t%-5s\n' % ('X', 'ID', 'Type', 'Group')
         number = len(self._vecX)
         for index in xrange(number):
-            w_buf += '%.5f\t%-4d\t%-4d\t%-4d\n' % (self._vecX[index], self._vecID[index],
+            w_buf += '%.9f\t%-4d\t%-4d\t%-4d\n' % (self._vecX[index], self._vecID[index],
                                                    self._vecType[index], self._vecGroupID[index])
 
         return w_buf

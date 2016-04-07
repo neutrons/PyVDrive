@@ -883,8 +883,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             p_group = self._inEditGroupList[index]
             if p_group.left_boundary <= cursor_x <= p_group.right_boundary:
                 # check whether it is OK to add
-
-
                 left_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x - RESOLUTION)
                 right_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x + RESOLUTION)
                 allow_to_add = not left_in_vicinity and not right_in_vicinity
