@@ -63,6 +63,23 @@ class GroupedPeaksManager(object):
 
         return
 
+    def _check_vector_x(self):
+        """ Check whether all items/elements in self._vecX are in ascending order
+        :return: True if all elements in self._vecX are n ascending order
+        """
+        # special case for empty vector or 1-element vector
+        if len(self._vecX) <= 1:
+            return True
+
+        # check
+        vec_size = len(self._vecX)
+        for index in xrange(1, vec_size):
+            if self._vecX[index-1] >= self._vecX[index]:
+                # previous element is not smaller than the current element
+                return False
+
+        return True
+
     def _remove_items(self, index_list):
         """ Remove items by their indexes
         Requirements: the input is a list of integers
@@ -121,7 +138,7 @@ class GroupedPeaksManager(object):
 
                 # set new position to right X
                 self._vecX[index] = new_pos
-                updated = False
+                updated = True
             # END-IF
         # END-FOR
 
@@ -223,6 +240,49 @@ class GroupedPeaksManager(object):
         else:
             # in the middle: they must be between 2 different groups
             ret_value = self._vecGroupID[left_bound_index-1] != self._vecGroupID[right_bound_index+1]
+
+        return ret_value
+
+    def can_move_item(self, item_id, delta_x, limit):
+        """
+        Check whether an item can be moved by not cross its neighbors
+        :param item_id:
+        :param delta_x:
+        :param limit:
+        :return:
+        """
+        # check
+        assert isinstance(item_id, int) and item_id >= 0
+        assert isinstance(delta_x, float)
+        assert isinstance(limit, tuple) or isinstance(limit, list)
+        assert len(limit) == 2
+
+        # locate item by search for item_id in the vecID
+        index = None
+        for id_index in xrange(len(self._vecID)):
+            if self._vecID[id_index] == item_id:
+                index = id_index
+        # END-FOR (id_index)
+        assert index is not None, 'Indicator ID %d does not exist in group map %s.' % (item_id, self.pretty())
+
+        # check with its neighbor
+        if delta_x < 0:
+            # tending to move to the left
+            if index == 0:
+                # already leftmost, check limit
+                ret_value = self._vecX[index] + delta_x > limit[0]
+            else:
+                # compare with the left neighbor
+                ret_value = self._vecX[index] + delta_x > self._vecX[index-1]
+        else:
+            # tending to move to the right
+            if index == len(self._vecX) - 1:
+                # already rightmost, check limit
+                right_wall = limit[1]
+            else:
+                # compare with right neighbor
+                right_wall = self._vecX[index+1]
+            ret_value = self._vecX[index] + delta_x < right_wall
 
         return ret_value
 
@@ -474,10 +534,10 @@ class GroupedPeaksManager(object):
 
         return True
 
-    def move_group(self, group_id, delta_x, limit_x, check):
+    def move_group(self, group_id, displacement, limit_x, check):
         """ Move a group to a same direction
         :param group_id:
-        :param delta_x:
+        :param displacement:
         :param limit_x:
         :param check: check validity
         :return: boolean.  False if it is not allowed to move
@@ -491,20 +551,20 @@ class GroupedPeaksManager(object):
 
         # check whether it is allowed to move that far
         if check:
-            if delta_x < 0:
+            if displacement < 0:
                 # can move left?
-                can_move = self.can_move_left(group_2_move.left_boundary, delta_x, limit_x[0])
+                can_move = self.can_move_left(group_2_move.left_boundary, displacement, limit_x[0])
             else:
                 # can move right?
-                can_move = self.can_move_right(group_2_move.right_boundary, delta_x, limit_x[1])
+                can_move = self.can_move_right(group_2_move.right_boundary, displacement, limit_x[1])
             if can_move is False:
                 return False
         # END-IF
 
         # move the group by update positions of boundaries and peaks
-        group_2_move.left_boundary += delta_x
-        group_2_move.right_boundary += delta_x
-        group_2_move.shift_peaks_position(peak_id=None, shift=delta_x, check=False)
+        group_2_move.left_boundary += displacement
+        group_2_move.right_boundary += displacement
+        group_2_move.shift_peaks_position(peak_id=None, shift=displacement, check=False)
 
         # update the map
         self._update_map_item_pos(indicator_id=group_2_move.left_boundary_id,
@@ -519,11 +579,74 @@ class GroupedPeaksManager(object):
                                       new_pos=peak_pos,
                                       check=False)
         # check integrity
-        # TODO/NOW - Implement _check_vector_x()
         if self._check_vector_x() is False:
             raise RuntimeError('Impossible to have vecX out of order.')
 
         return
+
+    def move_left_boundary(self, group_id, displacement, check):
+        """
+        Move the left boundary of a peak group and update the cursor map
+        :param group_id:
+        :param displacement: delta x
+        :param check:
+        :return:
+        """
+        # check arguments
+        assert isinstance(group_id, int)
+        assert isinstance(displacement, float)
+        assert isinstance(check, bool)
+
+        # get group
+        assert group_id in self._myGroupDict
+        peak_group = self._myGroupDict[group_id]
+        left_bound_id = peak_group.left_boundary_id
+
+        # check whether moving is allowed
+        if check and not self.can_move_item(left_bound_id, displacement, (0, 1000000)):
+            return False
+
+        # update peak group
+        peak_group.left_boundary += displacement
+
+        # update the cursor map
+        self._update_map_item_pos(indicator_id=left_bound_id,
+                                  new_pos=peak_group.left_boundary,
+                                  check=check)
+
+        return True
+
+    def move_right_boundary(self, group_id, displacement, check):
+        """
+        Move the right boundary of a peak group and update the cursor map
+        :param group_id:
+        :param displacement: delta x
+        :param check:
+        :return:
+        """
+        # check argument
+        assert isinstance(group_id, int)
+        assert isinstance(displacement, float)
+        assert isinstance(check, bool)
+
+        # get group
+        assert group_id in self._myGroupDict
+        peak_group = self._myGroupDict[group_id]
+        right_bound_id = peak_group.right_boundary_id
+
+        # check whether moving is allowed
+        if check and not self.can_move_item(right_bound_id, displacement, (0, 1000000)):
+            return False
+
+        # update peak group
+        peak_group.right_boundary += displacement
+
+        # update the cursor map
+        self._update_map_item_pos(indicator_id=right_bound_id,
+                                  new_pos=peak_group.right_boundary,
+                                  check=check)
+
+        return True
 
     @property
     def is_sorted(self):
@@ -720,6 +843,29 @@ class GroupedPeaksInfo(object):
         :return:
         """
         self._inEditMode = mode
+
+        return
+
+    def shift_peaks_position(self, peak_id, shift, check):
+        """
+        Shift one peak or all peaks' position
+        :param peak_id: None or integer
+        :param shift:
+        :param check:
+        :return:
+        """
+        # check
+        assert peak_id is None or isinstance(peak_id, int)
+        assert isinstance(shift, float)
+        assert check is False, 'It is not supported for check is True'
+
+        num_peaks = len(self._peakPosIDList)
+        for i_peak in xrange(num_peaks):
+            peak_id_i, peak_pos_i = self._peakPosIDList[i_peak]
+            if peak_id is None or peak_id == peak_id_i:
+                self._peakPosIDList[i_peak] = (peak_pos_i+shift, peak_id_i)
+
+        return
 
     def update_peak_position(self, peak_id, center_position):
         """ Update peak position

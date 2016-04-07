@@ -1022,9 +1022,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Quit application without saving
         :return:
         """
+        # TODO/NEXT - Save the session automatically before leaving
         self.save_settings()
+        # and ... ...
 
-        # FIXME - Save the session automatically before leaving
+        print '[DB-BAT] Close Application!'
+
         for child_window in self._myChildWindows:
             child_window.close()
 

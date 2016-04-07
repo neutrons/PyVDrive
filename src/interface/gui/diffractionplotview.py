@@ -583,11 +583,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             # check whether it is allowed to move left and move right
             left_bound_id = curr_group.left_boundary_id
-            # TODO/NOW/Implement can_move_item()
             can_move_left = self._myPeakGroupManager.can_move_item(item_id=left_bound_id,
                                                                    delta_x=delta_x_left,
                                                                    limit=self.getXLimit())
-            # TODO/NOW/Implement
             can_move_right = self._myPeakGroupManager.can_move_item(item_id=curr_group.right_boundary_id,
                                                                     delta_x=delta_x_right,
                                                                     limit=self.getXLimit())
@@ -599,11 +597,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self.move_indicator(curr_group.right_boundary_id, delta_x_right, 0.)
 
                 # update the peak group manager
-                # TODO/NOW/Implement move_left_boundary()
                 self._myPeakGroupManager.move_left_boundary(group_id=curr_group_id,
                                                             displacement=delta_x_left,
                                                             check=False)
-                # TODO/NOW/Implement move_right_boundary()
                 self._myPeakGroupManager.move_right_boundary(group_id=curr_group_id,
                                                              displacement=delta_x_right,
                                                              check=False)
