@@ -603,6 +603,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 self._myPeakGroupManager.move_right_boundary(group_id=curr_group_id,
                                                              displacement=delta_x_right,
                                                              check=False)
+            else:
+                # unable to move
+                print '[DB...] group: ', curr_group.get_id(), 'can move left = ', can_move_left,
+                print '; can move right = ', can_move_right
+                print self._myPeakGroupManager.pretty()
 
         elif self._currIndicatorType == 1:
             # cursor is in the vicinity of a peak. so the peaks-group will be moved
@@ -624,6 +629,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 # move the boundary
                 self.move_indicator(curr_group.left_boundary_id, delta_x, 0.)
                 self.move_indicator(curr_group.right_boundary_id, delta_x, 0.)
+            else:
+                print '[DB....Warning] Group %d cannot be moved.' % curr_group.get_id()
 
         else:
             # non-supported
@@ -650,6 +657,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # check status
         assert self._myPeakGroupManager.has_group(self._currGroupID), \
             'Current peak group (ID: %s) does not exist.' % str(self._currGroupID)
+        curr_group = self._myPeakGroupManager.get_group(self._currGroupID)
+        # calculate displacement: current mouse position to previous mouse position
+        delta_x = new_x - self._mouseX
 
         if self._currIndicatorType == 0 or self._currIndicatorType == 2:
             # left boundary or right boundary
@@ -657,60 +667,62 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # check
             assert self._cursorType == 2, 'Cursor type %d must be 2!' % self._cursorType
 
-            print '[DB] Move (left/right %d) boundary to %f' % (self._currIndicatorType, new_x)
-            print '[DB] Left boundary ID = %d, Right boundary ID = %d' % (
-                self._currPeakGroup.left_boundary_id, self._currPeakGroup.right_boundary_id)
+            print '[DB] Move (left/right %d) boundary from %f to %f' % (self._currIndicatorType,
+                                                                        self._mouseX, new_x),
+            print 'Left boundary ID = %d, Right boundary ID = %d' % (
+                curr_group.left_boundary_id, curr_group.right_boundary_id)
 
-            # calculate displacement
-            move_left = False
+            move_left_boundary = False
             if self._currIndicatorType == 0:
                 # move left boundary
-                delta_x = new_x - self._currPeakGroup.left_boundary
-                move_left = True
+                # delta_x = new_x - curr_group.left_boundary
+                move_left_boundary = True
             else:
                 # move right boundary
-                delta_x = new_x - self._currPeakGroup.right_boundary
+                # delta_x = new_x - curr_group.right_boundary
+                pass
 
-            # move!
-            if move_left is True:
-                # move left boundary
-                # update the cursor map to see whether move is reasonable
-                self._cursorPositionMap.update_item_position(self._currPeakGroup.left_boundary_id,
-                                                             new_x - RESOLUTION,
-                                                             new_x + RESOLUTION)
+            # check whether move is allowed
+            movable = self._myPeakGroupManager.can_move_item(curr_group.left_boundary_id, delta_x,
+                                                             self.getXLimit())
+
+            if movable and move_left_boundary:
+                # move left boundary of the group
                 # move indicator on canvas
-                self.move_indicator(self._currPeakGroup.left_boundary_id, delta_x, 0.)
-                # update to peak group
-                self._currPeakGroup.left_boundary = new_x
-
+                self.move_indicator(curr_group.left_boundary_id, delta_x, 0.)
+                # update peak group manager
+                self._myPeakGroupManager.move_left_boundary(self._currGroupID, delta_x, False)
+            elif movable and not move_left_boundary:
+                # move right boundary of the group
+                # move indicator on canvas
+                self.move_indicator(curr_group.right_boundary_id, delta_x, 0.)
+                # update peak group manager
+                self._myPeakGroupManager.move_right_boundary(self._currGroupID, delta_x, False)
             else:
-                # move the right boundary
-                # update the cursor map and thus check whether the move is valid
-                self._cursorPositionMap.update_item_position(self._currPeakGroup.right_boundary_id,
-                                                             new_x - RESOLUTION,
-                                                             new_x + 0.055)
-                # move the indicators for right boundary
-                self.move_indicator(self._currPeakGroup.right_boundary_id, delta_x, 0.)
-                # update the peak gorup
-                self._currPeakGroup.right_boundary =  new_x
+                print '[DB...] Boundary (left=%s) cannot be moved.' % str(movable)
 
         elif self._currIndicatorType == 1:
             # select a peak's center, then move the peak
             assert self._cursorType == 1, 'Cursor type should be 1 as drag/move'
 
-            # check whether the movement exceeds the boundary of the peak group
-            if new_x <= self._currPeakGroup.left_boundary or new_x >= self._currPeakGroup.right_boundary:
-                return False
+            # check whether the peak can be moved by specified displacement
+            peak_movable = self._myPeakGroupManager.can_move_item(self._currIndicatorID, delta_x,
+                                                                  self.getXLimit())
 
-            # calculate the displacement
-            delta_x = new_x - self.get_indicator_position(self._currIndicatorID)[0]
-            # update the map so that check the validity of moving
-            self._cursorPositionMap.update_item_position(self._currIndicatorID, new_x - RESOLUTION,
-                                                         new_x + RESOLUTION)
-            # update the peak group
-            self._currPeakGroup.update_peak_position(self._currIndicatorID, new_x)
-            # move (peak) indicator
-            self.move_indicator(self._currIndicatorID, delta_x, 0.)
+            if peak_movable:
+                # move the peak
+                # move the peak's indicator on canvas
+                self.move_indicator(self._currIndicatorID, delta_x, 0.)
+
+                # update the peak group manager
+                self._myPeakGroupManager.move_peak(group_id=self._currGroupID, peak_id=self._currIndicatorID,
+                                                   delta_x=delta_x, check=False)
+
+            else:
+                print '[DB...] Peak (indicator %d in group %d) cannot moved by %f.' % (self._currIndicatorID,
+                                                                                       self._currGroupID,
+                                                                                       delta_x)
+
         else:
             # unsupported case
             err_msg = 'Cursor type %d is not supported.' % self._currIndicatorType

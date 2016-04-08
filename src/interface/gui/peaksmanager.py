@@ -224,10 +224,14 @@ class GroupedPeaksManager(object):
         left_bound_index = bisect.bisect_right(self._vecX, left_boundary)
         right_bound_index = bisect.bisect_right(self._vecX, right_boundary)
 
+        print '[DB... Try to add group] New group region: ', left_boundary, ', ', right_boundary,
+        print '; Boundary index = ', left_bound_index, ', ', right_bound_index
+        print self.pretty()
+
         # indexes of left boundary and right boundary should be same because there must not be any indicator
         # between these 2 boundaries
         if left_bound_index != right_bound_index:
-            return
+            return False
 
         # the group ID of the boundaries' neighbors must be different, such that these two boundaries
         # won't be inside any peak group
@@ -589,7 +593,7 @@ class GroupedPeaksManager(object):
         if self._check_vector_x() is False:
             raise RuntimeError('Impossible to have vecX out of order.')
 
-        return
+        return True
 
     def move_left_boundary(self, group_id, displacement, check):
         """
@@ -652,6 +656,37 @@ class GroupedPeaksManager(object):
         self._update_map_item_pos(indicator_id=right_bound_id,
                                   new_pos=peak_group.right_boundary,
                                   check=check)
+
+        return True
+
+    def move_peak(self, group_id, peak_id, delta_x, check):
+        """
+
+        :param group_id:
+        :param peak_id:
+        :param delta_x:
+        :param check:
+        :return:
+        """
+        # TODO/NOW - Doc and check
+        # assert ...
+
+        # get group
+        curr_group = self._myGroupDict[group_id]
+
+        # check
+        if check:
+            # TODO/NOW
+            raise NotImplementedError('Implement ASAP')
+
+        # update peak position inside group
+        is_displacement = True
+        updated = curr_group.update_peak_position(peak_id, delta_x, is_displacement)
+        assert updated
+
+        # update the dynamic cursor map
+        self._update_map_item_pos(indicator_id=peak_id, new_pos=curr_group.get_peak_pos(peak_id),
+                                  check=False)
 
         return True
 
@@ -827,6 +862,23 @@ class GroupedPeaksInfo(object):
         :return:
         """
         return len(self._peakPosIDList)
+
+    def get_peak_pos(self, peak_id):
+        """
+
+        :param peak_id:
+        :return:
+        """
+        # TODO/NOW - Doc & check
+        # assert ...
+
+        # get peak
+        for peak_tup in self._peakPosIDList:
+            peak_pos_i, peak_id_i = peak_tup
+            if peak_id == peak_id_i:
+                return peak_pos_i
+
+        return None
     
     def get_peaks(self):
         """ Get all the peaks' tuple
@@ -878,24 +930,35 @@ class GroupedPeaksInfo(object):
 
         return
 
-    def update_peak_position(self, peak_id, center_position):
+    def update_peak_position(self, peak_id, x, is_displacement):
         """ Update peak position
         :param peak_id:
-        :param center_position:
+        :param x: ... ...
         :return:
         """
+        # TODO/NOW - doc!
         # check
         assert isinstance(peak_id, int)
-        assert isinstance(center_position, float)
+        assert isinstance(x, float)
     
         found_peak = False
         for i_peak in xrange(len(self._peakPosIDList)):
             p_id = self._peakPosIDList[i_peak][1]
             if p_id == peak_id:
+                # peak is found
+
+                # calculate peak's new position
+                if is_displacement:
+                    # x is delta x
+                    new_peak_pos = self._peakPosIDList[i_peak][0] + x
+                else:
+                    # x is new peak position
+                    new_peak_pos = x
+
                 print '[DB.... update peak %d position] peak ID = %d new position is %f.' % (
-                    i_peak, p_id, center_position
-                )
-                self._peakPosIDList[i_peak] = (center_position, peak_id)
+                    i_peak, p_id, new_peak_pos)
+
+                self._peakPosIDList[i_peak] = (new_peak_pos, peak_id)
                 found_peak = True
                 break
         # END-FOR
