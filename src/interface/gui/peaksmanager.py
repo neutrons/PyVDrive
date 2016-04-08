@@ -833,6 +833,7 @@ class GroupedPeaksInfo(object):
         :return: a list of 2-tuples (peak position and peak ID)
         """
         self._peakPosIDList.sort()
+        print '[DB...] get_peaks: return...', self._peakPosIDList
     
         return self._peakPosIDList[:]
 
@@ -868,8 +869,11 @@ class GroupedPeaksInfo(object):
 
         num_peaks = len(self._peakPosIDList)
         for i_peak in xrange(num_peaks):
-            peak_id_i, peak_pos_i = self._peakPosIDList[i_peak]
+            peak_pos_i, peak_id_i = self._peakPosIDList[i_peak]
             if peak_id is None or peak_id == peak_id_i:
+                assert isinstance(peak_pos_i+shift, float)
+                assert isinstance(peak_id_i, int), \
+                    'Peak ID %s must be an integer but not a %s.' % (str(peak_id_i), str(type(peak_id_i)))
                 self._peakPosIDList[i_peak] = (peak_pos_i+shift, peak_id_i)
 
         return
@@ -888,6 +892,9 @@ class GroupedPeaksInfo(object):
         for i_peak in xrange(len(self._peakPosIDList)):
             p_id = self._peakPosIDList[i_peak][1]
             if p_id == peak_id:
+                print '[DB.... update peak %d position] peak ID = %d new position is %f.' % (
+                    i_peak, p_id, center_position
+                )
                 self._peakPosIDList[i_peak] = (center_position, peak_id)
                 found_peak = True
                 break
