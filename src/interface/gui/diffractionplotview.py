@@ -428,9 +428,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         Get number of peak groups that are of in-pick mode on the canvas
         :return:
         """
-        print '[DB] _inPickPeakList: ', self._inEditGroupList
-
-        return len(self._inEditGroupList)
+        return len(self._myPeakGroupManager.get_group_ids())
 
     def get_peaks_group(self, index):
         """ Get peak by the simple index from 0 to (num peaks - 1)
@@ -439,6 +437,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param index:
         :return: peak group
         """
+        # get group index
+        group_id_list = self._myPeakGroupManager.get_group_ids()
+        assert 0 <= index < len(group_id_list), 'Group sequence index %d is out of bound.' % index
+        group_id = group_id_list[index]
+
+        peak_group = self._myPeakGroupManager.get_group(group_id)
+
+        """
         assert isinstance(index, int), 'Peak index must be a integer but not %s.' % str(type(index))
         assert 0 <= index < len(self._inEditGroupList)
 
@@ -446,6 +452,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         peak_group = self._inEditGroupList[index]
         assert isinstance(peak_group, peaksmanager.GroupedPeaksInfo)
+        """
 
         return peak_group
 

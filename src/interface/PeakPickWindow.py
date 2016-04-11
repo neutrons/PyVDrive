@@ -1221,6 +1221,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                               self._dataDirectory, file_filter))
 
         # Get the peaks from buffer
+        print 'Get buffered peaks of bank %d' % self._currentBankNumber
         peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks([self._currentBankNumber])
 
         # Get the peaks from table

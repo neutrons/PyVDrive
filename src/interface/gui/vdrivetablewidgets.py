@@ -314,6 +314,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
         :param excluded_bank_id_list
         :return: a dictionary of a list of peaks (in 5-element list)
         """
+        #
+        raise NotImplementedError('Re-write as the data structure changed!')
         # Check
         assert isinstance(excluded_bank_id_list, list)
 
@@ -356,8 +358,10 @@ class PeakParameterTable(NdavTable.NTableWidget):
 
             # set up the overlapped peak right!
             group_num_list = sorted(overlapped_peaks_group.keys())
+            print '[DB...BAT] group number list: ', group_num_list
             for i_peak in xrange(len(peak_list)):
                 peak_i = peak_list[i_peak]
+                print '[DB...BAT] peak_i = ', peak_i, 'of type', type(peak_i)
                 curr_group = peak_i[-1]
                 if curr_group in group_num_list:
                     # it has overlapped peak
