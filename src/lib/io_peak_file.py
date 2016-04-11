@@ -37,14 +37,15 @@ class GSASPeakFileManager(object):
         """ Initialization
         :return:
         """
-        # key: a tuple as bank number and peak name
+        # This is a dictionary of dictionary
+        # level-1 key: bank ID, level-2 key: group ID, value: (peak name, peak center, peak width)
         self._peakDict = dict()
         # List of bank numbers
         self._bankNumberList = list()
 
         return
 
-    def add_peak(self, bank, name, position, width, overlapped_peaks_pos):
+    def add_peak(self, bank, name, position, width, group_id):
         """ Add a peak
         Purpose: add a peak to the object
         Requirement: the bank and name pair is unique, width is positive, position is positive
@@ -53,7 +54,7 @@ class GSASPeakFileManager(object):
         :param name:
         :param position:
         :param width:
-        :param overlapped_peaks_pos: list of positions of the overlapped peaks OR None for no overlapped
+        :param group_id: list of positions of the overlapped peaks OR None for no overlapped
         :return:
         """
         # Check requirements
@@ -62,23 +63,22 @@ class GSASPeakFileManager(object):
         assert position > 0., 'Peak position must be greater than 0, but given %f.' % position
         assert isinstance(width, float), 'Peak width must be a string but not %s.' % str(type(width))
         assert width > 0., 'Peak width must be greater than 0 but not %f.' % width
-        assert overlapped_peaks_pos is None or isinstance(overlapped_peaks_pos, list), 'Over lapped peak list ' \
-                                                                                       'must either None or a list.'
-        if isinstance(overlapped_peaks_pos, list):
-            for peak_pos in overlapped_peaks_pos:
-                assert isinstance(peak_pos, float)
-                assert peak_pos > 0.
+        assert isinstance(group_id, int)
+
+        # Locate the level-1 and level-2 keys: bank and group ID
+        if bank not in self._peakDict:
+            self._peakDict[bank] = dict()
+        if group_id not in self._peakDict[bank]:
+            self._peakDict[bank][group_id] = list()
 
         # peak name
         assert isinstance(name, str), 'Peak name must be a string but not %s.' % str(type(name))
         if name == '':
             # automatic peak name
-            peak_index = len(self._peakDict) + 1
-            name = 'Peak_B%d_%d' % (bank, peak_index)
+            peak_index = len(self._peakDict[bank][group_id]) + 1
+            name = 'Peak_B%dG%d_%d' % (bank, group_id, peak_index)
 
-        assert (bank, name) not in self._peakDict, 'Bank %d peak %s has already been added.' % (bank, name)
-
-        self._peakDict[(bank, name)] = [position, width, overlapped_peaks_pos]
+        self._peakDict[bank][group_id].append((name, position, width))
 
         # Update bank number
         if bank not in self._bankNumberList:
@@ -134,6 +134,12 @@ class GSASPeakFileManager(object):
 
         # Write
         for bank in self._bankNumberList:
+            raise NotImplementedError('TODO/NOW ASAP Different data structure now!')
+            # it will be changed to 3 for loops: bank, group and ...
+
+            # ... there should be sorting on group order with 1 peak position from low to high!
+
+            # NOTE: the following codes are good, and will be kept!
             wbuf += '$ bank, name, number of peak, position, width\n'
             for i_pos in xrange(len(peak_pos_name_dict[bank])):
                 # get all necessary value

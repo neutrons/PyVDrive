@@ -276,7 +276,7 @@ class VDriveAPI(object):
                 width = peak_i[3]
                 overlapped_list = peak_i[4]
                 peak_file_manager.add_peak(bank=bank, name=peak_name, position=centre,
-                                           width=width, overlapped_peaks_pos=overlapped_list)
+                                           width=width, group_id=overlapped_list)
             # END-FOR(peak_i)
         # END-FOR (bank)
 

@@ -308,16 +308,16 @@ class PeakParameterTable(NdavTable.NTableWidget):
 
         return
 
-    def get_buffered_peaks(self, excluded_bank_id_list):
+    def get_buffered_peaks(self, excluded_banks):
         """
         Return the buffered peaks
-        :param excluded_bank_id_list
-        :return: a dictionary of a list of peaks (in 5-element list)
+        :param excluded_banks: bank ID that will be excluded
+        :return: a dictionary of a list of peaks (in 5-element list): bank, name, center, width, group
         """
-        #
-        raise NotImplementedError('Re-write as the data structure changed!')
+        # TODO/NOW - check and doc
+
         # Check
-        assert isinstance(excluded_bank_id_list, list)
+        assert isinstance(excluded_banks, list)
 
         # Get bank IDs
         bank_id_list = sorted(self._buffer.keys())
@@ -325,7 +325,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         for bank_id in bank_id_list:
 
             # skip the bank IDs to be excluded
-            if bank_id in excluded_bank_id_list:
+            if bank_id in excluded_banks:
                 continue
 
             # transform the peaks
@@ -341,40 +341,11 @@ class PeakParameterTable(NdavTable.NTableWidget):
                 peak_width = peak_row[3]
                 peak_group = peak_row[5]
 
-                peak_i = [bank, peak_name, peak_centre, peak_width, [], peak_group]
+                peak_i = [bank, peak_name, peak_centre, peak_width, peak_group]
                 peak_list.append(peak_i)
-            # END-FOR
 
-            # check group for overlapped peaks: use index in peak list as the reference to centre
-            overlapped_peaks_group = dict()
-            for i_peak in xrange(len(peak_list)):
-                peak_i = peak_list[i_peak]
-                if peak_i[-1] >= 0:
-                    group_i = peak_i[-1]
-                    if group_i not in overlapped_peaks_group:
-                        overlapped_peaks_group[group_i] = list()
-                    overlapped_peaks_group[group_i].append(peak_i[2])
+                print 'Appending peak %d: %s' % (len(peak_list)-1, str(peak_i))
             # END-FOR
-
-            # set up the overlapped peak right!
-            group_num_list = sorted(overlapped_peaks_group.keys())
-            print '[DB...BAT] group number list: ', group_num_list
-            for i_peak in xrange(len(peak_list)):
-                peak_i = peak_list[i_peak]
-                print '[DB...BAT] peak_i = ', peak_i, 'of type', type(peak_i)
-                curr_group = peak_i[-1]
-                if curr_group in group_num_list:
-                    # it has overlapped peak
-                    for over_peak_index in overlapped_peaks_group[curr_group]:
-                        if over_peak_index != i_peak:
-                            over_peak_pos = peak_list[over_peak_index][2]
-                            peak_i[-2].append(over_peak_pos)
-                        # END-IF (different peak)
-                    # END-FOR (loop over overlapped peaks)
-                # END-IF (peak has overlapped peaks)
-                # get rid of last element
-                peak_i.pop()
-            # END-FOR (all peaks)
 
             # add to dictionary
             bank_peak_dict[bank_id] = peak_list

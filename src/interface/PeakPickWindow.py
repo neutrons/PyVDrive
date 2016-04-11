@@ -1220,9 +1220,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
         out_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
                                                               self._dataDirectory, file_filter))
 
+        # TODO/FIXME/NOW
+        print '[DB...BAT] Current bank number = ', self._currentRunNumber
+
         # Get the peaks from buffer
         print 'Get buffered peaks of bank %d' % self._currentBankNumber
-        peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks([self._currentBankNumber])
+        peak_bank_dict = self.ui.tableWidget_peakParameter.get_buffered_peaks(
+            excluded_banks=[self._currentBankNumber])
 
         # Get the peaks from table
         num_peaks = self.ui.tableWidget_peakParameter.rowCount()
