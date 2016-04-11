@@ -394,6 +394,80 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def edit_group(self, group_id, status):
+        """
+        Enable or disable a group to be in edit mode according to the group ID
+        :param group_id:
+        :param status:
+        :return:
+        """
+        # check
+        assert isinstance(group_id, int)
+        assert self._myPeakGroupManager.has_group(group_id)
+        assert isinstance(status, bool)
+
+        # enter/enable or leave/disable edit mode
+        if status:
+            # add all the indicators
+            self._add_group_to_canvas(group_id)
+
+        else:
+            # remove all the indicators of this group
+            self._remove_group_from_canvas(group_id)
+
+        return
+
+    def _add_group_to_canvas(self, group_id):
+        """ (private)
+        For an existing PeakGroup, plot all of its boundaries and peaks to the canvas
+        and set the indicator ID to the peak group
+        :param group_id:
+        :return:
+        """
+        # get group
+        pk_group = self._myPeakGroupManager.get_group(group_id)
+        assert isinstance(pk_group, peaksmanager.GroupedPeaksInfo)
+
+        # get all the indicators' position from peak group and add to canvas
+        left_bound_id = self.add_vertical_indicator(x=pk_group.left_boundary, color='blue',
+                                                    style='-', line_width=2)
+        right_bound_id = self.add_vertical_indicator(x=pk_group.right_boundary, color='green',
+                                                     style='-', line_width=2)
+        peak_id_list = list()
+        for peak_tup in pk_group.get_peaks():
+            peak_pos = peak_tup[0]
+            peak_id = self.add_vertical_indicator(x=peak_pos, color='red',
+                                                  style='--', line_width=1)
+            peak_id_list.append(peak_id)
+        # END-FOR (peak_tup)
+
+        # set to group
+        self._myPeakGroupManager.group_enter_edit_mode(group_id, left_bound_id, right_bound_id, peak_id_list)
+
+        return
+
+    def _remove_group_from_canvas(self, group_id):
+        """ (private)
+        Remove all the indicators belonged to peaks group from canvas and thus the corresponding PeaksGroup
+        :param group_id:
+        :return:
+        """
+        # get the group
+        pk_group = self._myPeakGroupManager.get_group(group_id)
+        assert isinstance(pk_group, peaksmanager.GroupedPeaksInfo)
+
+        # get all the indicator IDs from peak group and remove from canvas
+        self.remove_indicator(pk_group.left_boundary_id)
+        self.remove_indicator(pk_group.right_boundary_id)
+        for peak_tup in pk_group.get_peaks():
+            peak_id = peak_tup[1]
+            self.remove_indicator(peak_id)
+
+        # remove the indicator IDs from PeaksGroup by setting to -1
+        self._myPeakGroupManager.group_leave_edit_mode(group_id)
+
+        return
+
     def get_number_peaks_groups(self):
         """
         Get number of peak groups that are of in-pick mode on the canvas
@@ -414,7 +488,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert 0 <= index < len(self._inEditGroupList)
 
         peak_group = self._inEditGroupList[index]
-        assert isinstance(peak_group, DiffractionPlotView.GroupedPeaksInfo)
+        assert isinstance(peak_group, peaksmanager.GroupedPeaksInfo)
 
         return peak_group
 
@@ -716,7 +790,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
                 # update the peak group manager
                 self._myPeakGroupManager.move_peak(group_id=self._currGroupID, peak_id=self._currIndicatorID,
-                                                   delta_x=delta_x, check=False)
+                                                   delta_x=delta_x, check=False, limit=self.getXLimit())
 
             else:
                 print '[DB...] Peak (indicator %d in group %d) cannot moved by %f.' % (self._currIndicatorID,
@@ -987,14 +1061,52 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """ Delete the peak group (in-pick mode) where the cursor is
         :return:
         """
+        # check
         assert self._eventX is not None
+
+        # find out the current position
+        curr_group_id = self._currGroupID
+
+        print '[DB....Delete Group] About to delete group %d.' % curr_group_id
+
+        # delete group on canvas
+        removed = self.remove_group(curr_group_id)
+        assert removed
+
+        # delete group from peak group manager
+        removed = self._myPeakGroupManager.delete_group(curr_group_id)
+        assert removed, 'Unable to delete group %d from group manager.' % curr_group_id
+
+        print '[DB....Result]\n', self._myPeakGroupManager.pretty()
+
+        return
 
     def menu_delete_peak_in_pick(self):
         """
-
+        Delete a peak from canvas
         :return:
         """
+        # check
         assert self._eventX is not None
+
+        # find out the current position
+        curr_group_id = self._currGroupID
+        curr_item_id = self._currIndicatorID
+        curr_item_type = self._currIndicatorType
+
+        print '[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
+                                                                                    curr_item_id,
+                                                                                    curr_item_type)
+        assert curr_item_type == 1, \
+            'Current item type must be equal 1 for peak but not %d.' % curr_item_type
+
+
+        # delete peak on canvas
+        removed = self.remove_peak_indicator(curr_item_id)
+        assert removed
+
+        # delete peak from peak group manager
+        removed = self._myPeakGroupManager.delete_peak(curr_group_id, curr_item_id)
 
         return
 
@@ -1070,7 +1182,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if removable:
             self.remove_indicator(peak_indicator_index)
 
-        return
+        return True
 
     def remove_picked_peaks_indicators(self):
         """ Removed all the being-picked peaks' indicators stored in _pickedPeaksList

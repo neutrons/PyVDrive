@@ -574,9 +574,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # clone to PeakPickWindow's
             print '[DB] It is about to store peaks group to somewhere!'
 
+            # make the group quit the edit mode
+            self.ui.graphicsView_main.edit_group(group_id, False)
+
         # END-FOR
 
         # clear the picked up peaks from canvas
+        raise NotImplementedError('Remove this!')
         self.ui.graphicsView_main.remove_all_in_pick_peaks()
 
         return

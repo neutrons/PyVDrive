@@ -1,7 +1,9 @@
-__author__ = 'wzz'
-
 import operator
 import bisect
+
+__author__ = 'wzz'
+
+
 
 TINY = 1.0E-9
 
@@ -339,6 +341,7 @@ class GroupedPeaksManager(object):
 
         # remove peak from PeaksGroup
         peak_pos = group.get_peak_pos(peak_id)
+        assert peak_pos is not None, 'Peak ID %d does not exist in PeaksGroup.' % peak_id
         group.delete_peak(peak_id)
 
         # update the dynamic cursor map
@@ -435,6 +438,46 @@ class GroupedPeaksManager(object):
         self._nextGroupID += 1
 
         return new_id
+
+    def group_enter_edit_mode(self, group_id, left_bound_id, right_bound_id, peak_id_list):
+        """
+
+        :return:
+        """
+        # check
+        assert isinstance(group_id, int) and group_id in self._myGroupDict
+
+        # get group
+        group = self._myGroupDict[group_id]
+        assert isinstance(group, GroupedPeaksInfo)
+
+        # set the IDs to the group
+        group.enter_edit_mode(left_bound_id, right_bound_id, peak_id_list)
+
+        # update dynamic cursor map
+        self._add_item(group.left_boundary, group.left_boundary_id, group_id, 0)
+        for peak_tup in group.get_peaks():
+            peak_pos, peak_id = peak_tup
+            self._add_item(peak_pos, peak_id, group_id, 1)
+        self._add_item(group.right_boundary, group.right_boundary_id, group_id, 2)
+
+        return
+
+    def group_leave_edit_mode(self, group_id):
+        """
+        :param group_id:
+        :return:
+        """
+        # check
+        assert isinstance(group_id, int) and group_id in self._myGroupDict
+
+        # get group
+        target_group = self._myGroupDict[group_id]
+
+        # leave edit mode
+        target_group.quit_edit_mode()
+
+        return
 
     def has_group(self, group_id):
         """
@@ -659,25 +702,34 @@ class GroupedPeaksManager(object):
 
         return True
 
-    def move_peak(self, group_id, peak_id, delta_x, check):
+    def move_peak(self, group_id, peak_id, delta_x, check, limit):
         """
-
+        Move a peak in a PeakGroup given by Group ID, peakID
         :param group_id:
         :param peak_id:
         :param delta_x:
         :param check:
-        :return:
+        :param limit: limit of X to move.  only needed if it is required to check whether it is allowed to move
+        :return: boolean.  True if the peak is 'moved' in the PeakGroup and dynamic cursor map
         """
-        # TODO/NOW - Doc and check
-        # assert ...
+        # check group ID
+        assert isinstance(group_id, int)
+        assert group_id in self._myGroupDict
 
         # get group
         curr_group = self._myGroupDict[group_id]
 
+        # check peak ID
+        assert isinstance(peak_id, int)
+        assert curr_group.has_peak(peak_id)
+
         # check
         if check:
-            # TODO/NOW
-            raise NotImplementedError('Implement ASAP')
+            # check whether the moving is allowed or not.
+            assert limit is not None and len(limit) == 2
+            movable = self.can_move_item(peak_id, delta_x, limit)
+            if not movable:
+                return False
 
         # update peak position inside group
         is_displacement = True
@@ -865,12 +917,12 @@ class GroupedPeaksInfo(object):
 
     def get_peak_pos(self, peak_id):
         """
-
+        Get a peak's position by its peak ID in the peak group
         :param peak_id:
-        :return:
+        :return: peak position as a float or None if not fouind
         """
-        # TODO/NOW - Doc & check
-        # assert ...
+        # check
+        assert isinstance(peak_id, int)
 
         # get peak
         for peak_tup in self._peakPosIDList:
@@ -885,9 +937,80 @@ class GroupedPeaksInfo(object):
         :return: a list of 2-tuples (peak position and peak ID)
         """
         self._peakPosIDList.sort()
-        print '[DB...] get_peaks: return...', self._peakPosIDList
+        #  print '[DB...] get_peaks: return...', self._peakPosIDList
     
         return self._peakPosIDList[:]
+
+    def has_peak(self, peak_id):
+        """ Check whether a peak (specified by its peak ID) does exist
+        :param peak_id:
+        :return:
+        """
+        # check
+        assert isinstance(peak_id, int)
+
+        # go through
+        peak_found = False
+        for peak_tup in self._peakPosIDList:
+            peak_id_i = peak_tup[1]
+            if peak_id_i == peak_id:
+                peak_found = True
+                break
+
+        return peak_found
+
+    def enter_edit_mode(self, left_bound_id, right_bound_id, peak_id_list):
+        """
+        Enter edit mode by setting up all the indicators
+        :param left_bound_id:
+        :param right_bound_id:
+        :param peak_id_list:
+        :return:
+        """
+        # check
+        if self._inEditMode is True:
+            # already in edit mode.  it should not be entered again
+            raise RuntimeError('Group %d is already out of edit mode. Check logic!' % self._groupID)
+
+        assert isinstance(left_bound_id, int) and left_bound_id >= 0
+        assert isinstance(right_bound_id, int) and right_bound_id >= 0
+        assert isinstance(peak_id_list, list), 'Peak ID list must be an list but not %s.' % str(type(peak_id_list))
+
+        num_peaks = len(peak_id_list)
+        assert num_peaks == len(self._peakPosIDList), \
+            'Input peak ID list (%d) should have same size as the peaks in group ' \
+            '(%d).' % (num_peaks, len(self._peakPosIDList))
+
+        # set up
+        self._leftID = left_bound_id
+        self._rightID = right_bound_id
+        for i_peak in xrange(num_peaks):
+            peak_pos = self._peakPosIDList[i_peak][0]
+            self._peakPosIDList[i_peak] = (peak_pos, peak_id_list[i_peak])
+
+        return
+
+    def quit_edit_mode(self):
+        """ Quit edit mode, i.e., the indicator lines are removed from canvas.
+        Set all the indicator IDs to -1
+        :return:
+        """
+        # check
+        if self._inEditMode is False:
+            # already out of edit mode. it should not be called twice
+            raise RuntimeError('Group %d is already out of edit mode. Check logic!' % self._groupID)
+
+        # remove all the ID's to -1
+        self._leftID = -1
+        self._rightID = -1
+
+        num_peaks = len(self._peakPosIDList)
+        for i_peak in xrange(num_peaks):
+            peak_pos = self._peakPosIDList[i_peak]
+            self._peakPosIDList[i_peak] = (peak_pos, -1)
+        # END-FOR
+
+        return
 
     def set_id(self, group_id):
         """
@@ -933,13 +1056,14 @@ class GroupedPeaksInfo(object):
     def update_peak_position(self, peak_id, x, is_displacement):
         """ Update peak position
         :param peak_id:
-        :param x: ... ...
-        :return:
+        :param x: a float for either (1) peak position or (2) displacement from previous position (delta)
+        :param is_displacement: boolean. True then x is delta x; otherwise, x is new peak position
+        :return: boolean if peak is found and thus updated
         """
-        # TODO/NOW - doc!
         # check
         assert isinstance(peak_id, int)
         assert isinstance(x, float)
+        assert isinstance(is_displacement, bool)
     
         found_peak = False
         for i_peak in xrange(len(self._peakPosIDList)):

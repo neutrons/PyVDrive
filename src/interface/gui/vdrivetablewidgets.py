@@ -235,7 +235,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
         :return:
         """
         # Check requirements
-        assert isinstance(centre, float)
+        assert isinstance(centre, float), 'Peak center %s must be a float but not %s.' % (str(centre),
+                                                                                          str(type(centre)))
         assert isinstance(bank, int)
         assert isinstance(width, float)
         assert isinstance(name, str)
