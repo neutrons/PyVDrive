@@ -212,54 +212,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return False
 
-    def _construct_vicinity_map(self, new_group_index_list):
-        """
-        Create a set of mapping vectors to check whether the mouse cursor is in between 2 peaks,
-        in the vicinity of a peaks boundary or in the vicinity of peak center.
-        peak range for cursor
-        :param new_group_index_list:
-        :return:
-        """
-        # check
-        assert self._cursorPositionMap is not None
-        assert isinstance(new_group_index_list, list)
-
-        # work
-        for i_group in new_group_index_list:
-            new_group = self._inEditGroupList[i_group]
-
-            # left boundary of group
-            left_bound_center = new_group.left_boundary
-            left_bound_id = new_group.left_boundary_id
-            left_range = RESOLUTION  # FIXME - smart?
-            self._cursorPositionMap.add_item(left_bound_center-left_range,
-                                             left_bound_center+left_range,
-                                             left_bound_id, 0)
-
-            # peaks
-            peak_info_list = new_group.get_peaks()
-            for p_info in peak_info_list:
-                peak_pos, peak_id = p_info
-                peak_range = RESOLUTION
-                self._cursorPositionMap.add_item(peak_pos - peak_range,
-                                                 peak_pos + peak_range,
-                                                 peak_id, 1)
-            # END-FOR
-
-            # right boundary
-            right_bound_center = new_group.right_boundary
-            right_bound_id = new_group.right_boundary_id
-            right_range = RESOLUTION
-            self._cursorPositionMap.add_item(right_bound_center - right_range,
-                                             right_bound_center + right_range,
-                                             right_bound_id, 2)
-        # END-FOR
-
-        # print as debug
-        self._cursorPositionMap.pretty_print()
-
-        return
-
     def _get_peak_group(self, pos_x):
         """ Locate the in-pick peaks group
         :param pos_x:
@@ -403,7 +355,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         # check
         assert isinstance(group_id, int)
-        assert self._myPeakGroupManager.has_group(group_id)
+        assert self._myPeakGroupManager.has_group(group_id), \
+            'Peak group manager has no group with ID %d, candidates are %s.' % (
+                group_id, self._myPeakGroupManager.get_group_ids())
         assert isinstance(status, bool)
 
         # enter/enable or leave/disable edit mode
@@ -461,6 +415,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self.remove_indicator(pk_group.right_boundary_id)
         for peak_tup in pk_group.get_peaks():
             peak_id = peak_tup[1]
+            print '[DB...BAT] Remove ID %d' % peak_id
             self.remove_indicator(peak_id)
 
         # remove the indicator IDs from PeaksGroup by setting to -1
@@ -486,6 +441,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         assert isinstance(index, int), 'Peak index must be a integer but not %s.' % str(type(index))
         assert 0 <= index < len(self._inEditGroupList)
+
+        peak_group = self._myPeakGroupManager.get_group_id()
 
         peak_group = self._inEditGroupList[index]
         assert isinstance(peak_group, peaksmanager.GroupedPeaksInfo)
@@ -1194,5 +1151,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # clear the inPickPeakList
         self._inEditGroupList = list()
+
+        return
+
+    def reset(self):
+        """ Reset the canvas and peaks managers
+        :return:
+        """
+        self.clear_all_lines()
+        self._myPeakGroupManager.reset()
 
         return

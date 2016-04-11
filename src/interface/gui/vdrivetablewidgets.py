@@ -412,7 +412,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         group = self.get_cell_value(peak_index, 5)
         overlap_pos_list = list()
         if group >= 0:
-            for i_row in xrange(len(self.rowCount())):
+            for i_row in xrange(self.rowCount()):
                 # skip this peak
                 if i_row == peak_index:
                     continue
@@ -459,7 +459,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         for i_row in xrange(num_rows):
             row_i = self.get_row_value(i_row)
             self._buffer[bank_id].append(row_i)
-            # print 'row %d' % i_row, row_i, type(row_i)
+            print 'row %d' % i_row, row_i, type(row_i)
 
         return
 

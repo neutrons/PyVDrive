@@ -176,7 +176,7 @@ class GroupedPeaksManager(object):
         self._add_item(new_group.right_boundary, new_group.right_boundary_id, group_id, 2)
 
         # debug output
-        print '[DB] Group list information:\n%s' % self.pretty()
+        print '[DB] Add new group %d\nGroup list information:\n%s' % (group_id, self.pretty())
 
         return
 
@@ -428,6 +428,18 @@ class GroupedPeaksManager(object):
                 group_id = -1
 
         return group_id
+
+    def get_group_ids(self):
+        """ Get IDs of all the groups
+        :return:
+        """
+        gid_list = list()
+        for group in self._myGroupList:
+            gid_list.append(group.get_id())
+
+        print '[DB...] From dictionary: Keys = ', self._myGroupDict.keys()
+
+        return gid_list
 
     def get_new_group_id(self):
         """
@@ -766,6 +778,21 @@ class GroupedPeaksManager(object):
 
         return w_buf
 
+    def reset(self):
+        """ Reset the list, dict and map
+        :return:
+        """
+        # TODO/NOW : need to save the previous one
+
+        self._myGroupDict.clear()
+        self._myGroupList = list()
+        self._vecX = list()
+        self._vecID = list()
+        self._vecGroupID = list()
+        self._vecType = list()
+
+        return
+
     def sort_group(self):
         """
 
@@ -1006,7 +1033,7 @@ class GroupedPeaksInfo(object):
 
         num_peaks = len(self._peakPosIDList)
         for i_peak in xrange(num_peaks):
-            peak_pos = self._peakPosIDList[i_peak]
+            peak_pos = self._peakPosIDList[i_peak][0]
             self._peakPosIDList[i_peak] = (peak_pos, -1)
         # END-FOR
 

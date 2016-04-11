@@ -554,7 +554,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for i_grp in xrange(num_groups):
             # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
-            name = ''
+            peak_name = ''
             width = group.right_boundary - group.left_boundary
 
             peak_tup_list = group.get_peaks()
@@ -562,15 +562,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # determine group ID
             if len(peak_tup_list) > 0:
                 # single peak or multiple peaks, no group
-                group_id = self.ui.tableWidget_peakParameter.get_next_group_id()
+                # group_id = self.ui.tableWidget_peakParameter
+                group_id = group.get_id()
             else:
                 # peak group without any peak
                 return
 
+            #  print '[DB...KILL]: Peak-tuple List:', peak_tup_list
+
             for peak_tup in peak_tup_list:
                 peak_center = peak_tup[0]
-                self.ui.tableWidget_peakParameter.add_peak(bank, name, peak_center, width, group_id)
+                print 'Peak center = ', peak_center, 'of type', type(peak_center)
+                if isinstance(peak_center, tuple):
+                    peak_center = peak_center[0]
 
+                self.ui.tableWidget_peakParameter.add_peak(bank=bank, name=peak_name,
+                                                           centre=peak_center,
+                                                           width=width,
+                                                           group_id=group_id)
             # clone to PeakPickWindow's
             print '[DB] It is about to store peaks group to somewhere!'
 
@@ -578,10 +587,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.graphicsView_main.edit_group(group_id, False)
 
         # END-FOR
-
-        # clear the picked up peaks from canvas
-        raise NotImplementedError('Remove this!')
-        self.ui.graphicsView_main.remove_all_in_pick_peaks()
 
         return
 
@@ -945,19 +950,23 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Clear table and canvas
         self.ui.tableWidget_peakParameter.remove_all_rows()
-        self.ui.graphicsView_main.clear_all_lines()
+        self.ui.graphicsView_main.reset()
 
         # Re-plot
         # vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
-        new_spec = new_bank-1
+        new_spec = new_bank - 1
         vec_x = self._currentDataSet[new_spec][0]
         vec_y = self._currentDataSet[new_spec][1]
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
 
+        # take care of the run number
+        if self._currentRunNumber is None:
+            self._currentRunNumber = str(self.ui.comboBox_runNumber.currentText())
+
         self._currentBankNumber = new_bank
-        self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (
-            self._currentRunNumber, self._currentBankNumber))
+        self.ui.label_diffractionMessage.setText('Run %s Bank %d' % (
+            str(self._currentRunNumber), self._currentBankNumber))
 
         return
 
@@ -1098,6 +1107,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
 
         self.ui.comboBox_runNumber.clear()
+        # FIXME/NOW - Run number is tricky!
         if run_number is None:
             self.ui.comboBox_runNumber.addItem(str(data_key))
             self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))

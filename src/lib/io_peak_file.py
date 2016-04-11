@@ -58,11 +58,9 @@ class GSASPeakFileManager(object):
         """
         # Check requirements
         assert isinstance(bank, int), 'Bank number must be an integer but not %s.' % str(type(bank))
-        assert isinstance(name, str), 'Peak name must be a string but not %s.' % str(type(name))
-        assert (bank, name) not in self._peakDict, 'Bank %d peak %s has already been added.' % (bank, name)
         assert isinstance(position, float), 'Peak position must be a float but not %s.' % str(type(position))
         assert position > 0., 'Peak position must be greater than 0, but given %f.' % position
-        assert isinstance(width,float), 'Peak width must be a string but not %s.' % str(type(width))
+        assert isinstance(width, float), 'Peak width must be a string but not %s.' % str(type(width))
         assert width > 0., 'Peak width must be greater than 0 but not %f.' % width
         assert overlapped_peaks_pos is None or isinstance(overlapped_peaks_pos, list), 'Over lapped peak list ' \
                                                                                        'must either None or a list.'
@@ -70,6 +68,15 @@ class GSASPeakFileManager(object):
             for peak_pos in overlapped_peaks_pos:
                 assert isinstance(peak_pos, float)
                 assert peak_pos > 0.
+
+        # peak name
+        assert isinstance(name, str), 'Peak name must be a string but not %s.' % str(type(name))
+        if name == '':
+            # automatic peak name
+            peak_index = len(self._peakDict) + 1
+            name = 'Peak_B%d_%d' % (bank, peak_index)
+
+        assert (bank, name) not in self._peakDict, 'Bank %d peak %s has already been added.' % (bank, name)
 
         self._peakDict[(bank, name)] = [position, width, overlapped_peaks_pos]
 
@@ -240,7 +247,6 @@ class GSASPeakFileManager(object):
                 raise TypeError('Line "%s" is not in a supported format.' % line)
 
         return
-
 
 
 def format_significant_4(float_number):
