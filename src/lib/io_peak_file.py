@@ -72,8 +72,9 @@ class GSASPeakFileManager(object):
             self._peakDict[bank][group_id] = list()
 
         # peak name
-        assert isinstance(name, str), 'Peak name must be a string but not %s.' % str(type(name))
-        if name == '':
+        assert isinstance(name, str) or name is None, 'Peak name must be a string or None but not %s.' \
+                                                      '' % str(type(name))
+        if name == '' or name is None:
             # automatic peak name
             peak_index = len(self._peakDict[bank][group_id]) + 1
             name = 'Peak_B%dG%d_%d' % (bank, group_id, peak_index)

@@ -31,12 +31,49 @@ def find_peaks(diff_data, peak_profile, auto):
     :param auto:
     :return:
     """
-    mantidapi.FindPeaks(InputWorkspace='82403_gda',
-                        WorkspaceIndex=1,
-                        BackgroundType='Quadratic',
-                        PeaksList='peaks')
+    #mantidapi.FindPeaks(InputWorkspace=diff_data, # '82403_gda',
+    #                    WorkspaceIndex=1,
+    #                    BackgroundType='Quadratic',
+    #                    PeaksList='peaks')
 
-    return 'peaks'
+    # TODO/NOW - Make it work in the code!
+
+    ws_index = 0
+    out_ws_name = '70269_gda_peaks'
+    min_peak_height = 200
+    peak_profile = 'Gaussian'
+
+    mantidapi.FindPeaks(InputWorkspace=diff_data,
+                        WorkspaceIndex=ws_index,
+                        HighBackground=False,
+                        PeaksList=out_ws_name,
+                        MinimumPeakHeight=min_peak_height,
+                        PeakFunction=peak_profile,
+                        BackgroundType='Linear')
+
+    peak_ws = mantidapi.AnalysisDataService.retrieve(out_ws_name)
+    # check blablabla...
+
+    col_names = peak_ws.getColumnNames()
+    col_index_centre = col_names.index('centre')
+    col_index_height = col_names.index('height')
+    col_index_width = col_names.index('width')
+    col_index_chi2 = col_names.index('chi2')
+
+    peak_list = list()
+    for index in range(peak_ws.rowCount()):
+        peak_i_center = peak_ws.cell(index, col_index_centre)
+        peak_i_chi2 = peak_ws.cell(index, col_index_chi2)
+        if peak_i_chi2 < 100:
+            peak_i_height = peak_ws.cell(index, col_index_height)
+            peak_i_width = peak_ws.cell(index, col_index_width)
+            peak_list.append((peak_i_center, peak_i_height, peak_i_width))
+
+            print ('Find peak @ ', peak_i_center, 'chi2 = ', peak_i_chi2)
+        else:
+            print ('No peak   @ ', peak_i_center)
+
+    return peak_list
 
 
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,

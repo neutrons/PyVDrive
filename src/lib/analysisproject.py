@@ -116,6 +116,19 @@ class AnalysisProject(object):
 
         return data_set_dict.keys()
 
+    def get_workspace_name(self, data_key):
+        """ Get workspace name
+        :param data_key:
+        :return:
+        """
+        # TODO/NOW - Doc and Check requirements
+
+        assert data_key in self._dataWorkspaceDict, 'There is no workspace for data key %s. ' \
+                                                    'Candidates are %s.' % (str(data_key),
+                                                                            str(self._dataWorkspaceDict.keys()))
+
+        return self._dataWorkspaceDict[data_key]
+
     def load_data(self, data_file_name, data_type='GSAS'):
         """
         Load GSAS data
@@ -132,6 +145,7 @@ class AnalysisProject(object):
         out_ws_name = mantid_helper.get_standard_ws_name(data_file_name, False)
 
         if data_type.upper() == 'GSAS':
+            # GSAS format
             mantid_helper.load_gsas_file(data_file_name, out_ws_name)
         else:
             raise NotImplementedError('Data type %s is not supported yet!' % data_type)
@@ -149,6 +163,7 @@ def get_data_key(file_name):
     :param file_name:
     :return:
     """
+    # TODO/NOW - Doc!
     assert isinstance(file_name, str)
 
-    return  os.path.basename(file_name)
+    return os.path.basename(file_name)

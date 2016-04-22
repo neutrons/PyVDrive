@@ -285,8 +285,9 @@ class VDriveAPI(object):
 
         return
 
-    def find_peaks(self, run_number, bank_number, x_range,
-                   peak_positions, hkl_list, profile, auto):
+    def find_peaks(self, data_key, run_number, bank_number, x_range,
+                   auto_find, profile='Gaussian',
+                   peak_positions=None, hkl_list=None):
         """
         Find peaks in a given diffraction pattern
         Requirements:
@@ -299,33 +300,37 @@ class VDriveAPI(object):
         :param peak_positions:
         :param hkl_list:
         :param profile:
-        :param auto:
+        :param auto_find:
         :return:
         """
+        # TODO/NOW - Make more logic!
+
+        if isinstance(run_number, int) is False:
+            print '[DB...BAT] To find_peaks(), run number %s is not integer.' % str(run_number)
+
         # Check
-        assert isinstance(run_number, int)
+        # ... ... assert isinstance(run_number, int)
         assert isinstance(bank_number, int)
         assert isinstance(x_range, tuple) and len(x_range) == 2
         assert isinstance(profile, str)
         assert isinstance(peak_positions, list) or peak_positions is None
 
-        if isinstance(peak_positions, list) and auto:
+        if isinstance(peak_positions, list) and auto_find:
             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-        if peak_positions is None and auto is False:
+        if peak_positions is None and auto_find is False:
             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
 
         # Get workspace from
-        data_ws_name = self._myProject.get_reduced_workspace(run_number)
+        data_ws_name = self._myAnalysisProject.get_workspace_name(data_key)
 
-        if auto:
-            peak_pos_list, hkl_list, peak_width_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range,
-                                                                                profile)
+        if auto_find:
+            # find peaks in an automatic way
+            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
         else:
+            # ... ...
             peak_pos_list, hkl_list, peak_width_list = mantid_helper.find_peaks(data_ws_name,
                                                                                 bank_number, x_range, peak_positions,
                                                                                 hkl_list, profile)
-
-        peak_pos_list, peak_width_list = mantid_helper.find_peaks(data_ws_name, profile, auto=True)
 
         return peak_pos_list, peak_width_list
 

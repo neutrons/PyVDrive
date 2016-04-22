@@ -731,8 +731,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         assert self._myController
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
-        min_d = GuiUtility.parse_float()
-        max_d = GuiUtility.parse_float()
+        min_d = GuiUtility.parse_float(self.ui.lineEdit_xMin)
+        max_d = GuiUtility.parse_float(self.ui.lineEdit_xMax)
         if min_d is None:
             min_d = self.ui.graphicsView_main.getXLimit()[0]
         if max_d is None:
@@ -772,16 +772,20 @@ class PeakPickerWindow(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error(self, 'Unable to calculate reflections due to %s.' % err_msg)
             return
 
+        # other information
+        curr_data = str(self.ui.comboBox_runNumber.currentText())
+
         # Try to find reflections in auto mode
         if num_phases_used == 0:
             # Use algorithm to find peak automatically
             GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
             try:
-                peak_pos_list, peak_width_list = self._myController.find_peaks(run_number=self._currentRunNumber,
-                                                                               bank_number=self._currentBankNumber,
-                                                                               x_range=(min_d, max_d),
-                                                                               profile='Gaussian',
-                                                                               auto=True)
+                peak_info_list = self._myController.find_peaks(data_key=curr_data,
+                                                               run_number=self._currentRunNumber,
+                                                               bank_number=self._currentBankNumber,
+                                                               x_range=(min_d, max_d),
+                                                               profile='Gaussian',
+                                                               auto_find=True)
                 hkl = [(0, 0, 0)] * len(peak_pos_list)
                 reflection_list = (peak_pos_list, hkl)
             except RuntimeError as re:
@@ -790,12 +794,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         else:
             # Use algorithm find peak with given peak positions to eliminate the non-existing peaks
             try:
-                peak_pos_list, peak_width_list = self._myController.find_peaks(run_number=self._currentRunNumber,
-                                                                               bank_number=self._currentBankNumber,
-                                                                               x_range=(min_d, max_d),
-                                                                               peak_positions=reflection_list[0],
-                                                                               hkl_list=reflection_list[1],
-                                                                               profile='Gaussian')
+                peak_info_list = self._myController.find_peaks(run_number=self._currentRunNumber,
+                                                               bank_number=self._currentBankNumber,
+                                                               x_range=(min_d, max_d),
+                                                               peak_positions=reflection_list[0],
+                                                               hkl_list=reflection_list[1],
+                                                               profile='Gaussian')
             except RuntimeError as e:
                 GuiUtility.pop_dialog_error(self, str(e))
                 return
