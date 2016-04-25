@@ -786,8 +786,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                                x_range=(min_d, max_d),
                                                                profile='Gaussian',
                                                                auto_find=True)
-                hkl = [(0, 0, 0)] * len(peak_pos_list)
-                reflection_list = (peak_pos_list, hkl)
+
+                hkl = [(0, 0, 0)] * len(peak_info_list)
+                reflection_list = [p_tup + (hkl[index],) for index, p_tup in enumerate(peak_info_list)]
+
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
                 return
@@ -811,10 +813,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
             return
 
         # Set the peaks to canvas
-        peak_pos_list = retrieve_peak_positions(reflection_list)
-        for peak_pos in peak_pos_list:
-            self.ui.graphicsView_main.add_in_pick_peak(peak_pos)
+        self.ui.graphicsView_main.sort_n_add_peaks(peak_info_list, plot=True)
 
+        """
         # Set the peaks' parameters to table
         for i_peak in xrange(len(peak_pos_list)):
             hkl = hkl[i_peak]  # reflection list???
@@ -824,6 +825,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             temp_name = '%d%d%d' % (hkl[0], hkl[1], hkl[2])
             self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, temp_name, peak_pos, peak_width, [])
         # END-FOR
+        """""
 
         return
 
@@ -1640,12 +1642,13 @@ def retrieve_peak_positions(peak_tup_list):
     :param peak_tup_list:
     :return: a list of
     """
-    assert isinstance(peak_tup_list, list)
+    assert isinstance(peak_tup_list, list), 'Peak tuple list should be a list but not of type ' \
+                                            '%s.' % str(type(list))
 
     peak_pos_list = list()
     for peak in peak_tup_list:
-        peak_pos = peak[0]
-        print peak_pos
+        peak_info_tup = peak[0]
+        peak_pos = peak_info_tup[0]
         peak_pos_list.append(peak_pos)
     # END-FOR(peak)
 

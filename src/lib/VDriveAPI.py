@@ -301,7 +301,7 @@ class VDriveAPI(object):
         :param hkl_list:
         :param profile:
         :param auto_find:
-        :return:
+        :return: list of tuples for peak information as (peak center, height, width)
         """
         # TODO/NOW - Make more logic!
 
@@ -328,11 +328,10 @@ class VDriveAPI(object):
             peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
         else:
             # ... ...
-            peak_pos_list, hkl_list, peak_width_list = mantid_helper.find_peaks(data_ws_name,
-                                                                                bank_number, x_range, peak_positions,
-                                                                                hkl_list, profile)
+            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
+                                                      hkl_list, profile)
 
-        return peak_pos_list, peak_width_list
+        return peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """

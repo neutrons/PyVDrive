@@ -29,7 +29,7 @@ def find_peaks(diff_data, peak_profile, auto):
     :param diff_data:
     :param peak_profile:
     :param auto:
-    :return:
+    :return: List of tuples for peak information. Tuple = (peak center, height, width)
     """
     #mantidapi.FindPeaks(InputWorkspace=diff_data, # '82403_gda',
     #                    WorkspaceIndex=1,

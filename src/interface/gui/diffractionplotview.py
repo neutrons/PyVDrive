@@ -139,7 +139,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
     def add_peak(self, peak_pos, group_id=None):
         """
-
+        Add peak as edit mode.
+        This is the only 'peak adding' method supported by diffractionplotview
+        Requirements:
+          - peak group must be aded to DiffractionPlotView before
         :param peak_pos:
         :param group_id:
         :return:
@@ -1169,3 +1172,28 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._myPeakGroupManager.reset()
 
         return
+
+    def sort_n_add_peaks(self, peak_info_list, edit_mode=True, plot=True):
+        """ Sort and add peaks to edit mode
+        Requirements:
+         1. peak info list: list of peak information tuple (centre, height, width, HKL)
+        Guarantees:
+         1. peaks will be sorted and grouped by considering overlapping range
+        :param peak_info_list:
+        :param plot:
+        :return:
+        """
+        # check requirements
+
+        # order the peaks in reverse order
+
+        # create list of peak index with peak boundary
+
+        # merge the peaks with overlapped boundaries
+
+        # add peak groups and peak
+
+        # plot
+
+        return
+
