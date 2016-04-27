@@ -151,12 +151,13 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
 
         return run_list
 
-    def get_current_run(self):
+    def get_current_run(self, allow_str=False):
         """ Get current run selected by mouse
         note: if multiple items are selected,
           (1) currentIndex() returns the first selected item
           (2) selectedIndexes() returns all the selected items
-        :return: status, run number in integer
+        :param allow_str:
+        :return: 2-tuple: status, run number in integer or data key in string
         """
         # Get current index and item
         current_index = self.currentIndex()
@@ -174,10 +175,16 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
             # Top-level leaf, IPTS number
             return False, 'Top-level leaf for IPTS number'
 
-        try:
-            value_str = str(current_item.text())
+        # convert to integer
+        value_str = str(current_item.text())
+        if value_str.isdigit():
+            # convert to integer if it can be converted to an integer
             run = int(value_str)
-        except ValueError:
+        elif allow_str:
+            # return in string/data key format if user allows a return as a string
+            run = value_str
+        else:
+            # otherwise...
             return False, 'Unable to convert %s to run number as integer.' % value_str
 
         return True, run
@@ -188,7 +195,8 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         status, current_run = self.get_current_run()
 
         if self._mainWindow is not None:
-            self._mainWindow.set_run(current_run)
+            print '[INFO] Load and plot data with key = %s.' % str(current_run)
+            self._mainWindow.load_plot_run(current_run)
 
         return
 

@@ -459,6 +459,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for i in xrange(1, 4):
             self._phaseDict[i] = ['', '', 0., 0., 0.]
 
+        # Event handlers lock
+        self._evtLockComboBankNumber = False
+
         return
 
     def evt_table_selection_changed(self):
@@ -940,6 +943,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Save the current selected peaks to a temporary file and load a new bank
         :return:
         """
+        # Check lock
+        if self._evtLockComboBankNumber:
+            return
+
         # Get new bank
         new_bank = int(self.ui.comboBox_bankNumbers.currentText())
         if new_bank == self._currentBankNumber:
@@ -1069,7 +1076,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Plot data if there is only one GSAS file
         if len(gsas_file_list) > 0:
-            self.load_plot_run(self._dataKeyList[0])
+            self.load_plot_run(self._dataKeyList[-1])
 
         return
 
@@ -1100,20 +1107,28 @@ class PeakPickerWindow(QtGui.QMainWindow):
         else:
             # in case of a previously reduced run
             status, ret_obj = self._myController.get_reduced_run_info(run_number)
-            assert status, ret_obj
+            assert status, str(ret_obj)
             bank_id_list = ret_obj
 
         # Set the mutex flag
         self._isDataLoaded = False
 
+        print '[DB...BAT] Load and Plot: load run number %s and data key %s.' % (str(run_number),
+                                                                                 str(data_key))
+
         # Update widgets, including run number, bank IDs (bank ID starts from 1)
+        self._evtLockComboBankNumber = True
+
         self.ui.comboBox_bankNumbers.clear()
         for i_bank in bank_id_list:
+            assert isinstance(i_bank, int), 'Bank index %s should be integer but not %s.' \
+                                            '' % (str(i_bank), str(type(i_bank)))
             self.ui.comboBox_bankNumbers.addItem(str(i_bank + 1))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
 
-        self.ui.comboBox_runNumber.clear()
-        # FIXME/NOW - Run number is tricky!
+        self._evtLockComboBankNumber = False
+
+        # self.ui.comboBox_runNumber.clear()
         if run_number is None:
             self.ui.comboBox_runNumber.addItem(str(data_key))
             self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
