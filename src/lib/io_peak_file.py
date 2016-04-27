@@ -63,7 +63,8 @@ class GSASPeakFileManager(object):
         assert position > 0., 'Peak position must be greater than 0, but given %f.' % position
         assert isinstance(width, float), 'Peak width must be a string but not %s.' % str(type(width))
         assert width > 0., 'Peak width must be greater than 0 but not %f.' % width
-        assert isinstance(group_id, int)
+        assert isinstance(group_id, int), 'Group ID (%s) must be an integer but not %s.' \
+                                          '' % (str(group_id), str(type(group_id)))
 
         # Locate the level-1 and level-2 keys: bank and group ID
         if bank not in self._peakDict:
@@ -114,63 +115,83 @@ class GSASPeakFileManager(object):
         assert isinstance(peak_file, str), 'Peak file path must be a string but not %s.' % str(type(peak_file))
         assert len(self._peakDict) > 0, 'There must be at least one peak added.'
 
-        # Start
-        wbuf = ''
+        # For each bank, create a list sortable by group positions
+        # by assuming that there is no peak of another group inside any group
+        group_pos_dict = dict()
+        for bank in self._peakDict.keys():
+            group_pos_list = list()
+            for group_id in self._peakDict[bank].keys():
+                group_pos = -1
+                for peak_info_tup in self._peakDict[bank][group_id]:
+                    peak_pos = peak_info_tup[1]
+                    group_pos = peak_pos
+                    break
+                # END-FOR (peak)
 
-        # Re-organize the list of peaks
-        peak_pos_name_dict = dict()
-        for bank in self._bankNumberList:
-            peak_pos_name_dict[bank] = list()
-            print 'Add bank %d' % bank
+                # append to group_position list for sorting
+                group_pos_list.append((group_pos, group_id))
+            # END-FOR (group)
 
-        # For each bank, create a list sortable by peak positions
-        for bank, name in self._peakDict.keys():
-            peak_pos = self._peakDict[(bank, name)][0]
-            print 'Bank = ', bank, 'of type', type(bank)
-            peak_pos_name_dict[bank].append((peak_pos, name))
+            # sort group list in reverse order and add to dictionary for this bank
+            group_pos_list.sort(reverse=True)
+            group_pos_dict[bank] = group_pos_list
+        # END-FOR (bank)
 
-        # For each bank, sort the peaks by position
-        for bank in peak_pos_name_dict.keys():
-            peak_pos_name_dict[bank].sort(reverse=True)
+        # Init writing
+        w_buf = ''
 
         # Write
         for bank in self._bankNumberList:
-            raise NotImplementedError('TODO/NOW ASAP Different data structure now!')
-            # it will be changed to 3 for loops: bank, group and ...
-
-            # ... there should be sorting on group order with 1 peak position from low to high!
-
             # NOTE: the following codes are good, and will be kept!
-            wbuf += '$ bank, name, number of peak, position, width\n'
-            for i_pos in xrange(len(peak_pos_name_dict[bank])):
-                # get all necessary value
-                peak_pos = peak_pos_name_dict[bank][i_pos][0]
-                peak_name = peak_pos_name_dict[bank][i_pos][1]
-                width = self._peakDict[(bank, peak_name)][1]
-                overlapped_list = self._peakDict[(bank, peak_name)][2]
-                num_peaks = 1
-                if isinstance(overlapped_list, list):
-                    num_peaks += len(overlapped_list)
+            w_buf += '$ bank, name, number of peak, position, width\n'
 
-                # write bank name and peak name
-                wbuf += '%d\t%s\t%d\t' % (bank, peak_name, num_peaks)
-                # write peak name
-                peak_pos_str = format_significant_4(peak_pos)
-                wbuf += '%s\t' % peak_pos_str
+            # loop over each group from high-D to low-D
+            for g_tup in group_pos_dict[bank]:
+                # get group ID
+                group_id = g_tup[1]
 
-                # write peak width and possible overlapped peaks' positions
-                if isinstance(overlapped_list, list):
-                    for temp_pos in overlapped_list:
-                        temp_pos_str = format_significant_4(temp_pos)
-                        wbuf += '%s\t' % temp_pos_str
+                # sort peaks in reverse order
+                peak_info_list = self._peakDict[bank][group_id]
+                peak_info_list.sort(reverse=True)
 
-                wbuf += '%.3f\n' % width
-            # END-FOR
-        # END-FOR
+                # get a list peak of peak positions
+                overlapped_peaks = list()
+                for peak_tup in peak_info_list:
+                    overlapped_peaks.append(peak_tup[1])
+                num_peaks = len(overlapped_peaks)
+
+                # write peak to file
+                for peak_tup in peak_info_list:
+                    # get all necessary value
+                    peak_name = peak_tup[0]
+                    peak_pos = peak_tup[1]
+                    peak_width = peak_tup[2]
+
+                    # write bank name and peak name
+                    w_buf += '%d\t%s\t%d\t' % (bank, peak_name, num_peaks)
+
+                    # write this peak
+                    peak_pos_str = format_significant_4(peak_pos)
+                    w_buf += '%s\t' % peak_pos_str
+
+                    # write other peaks
+                    if num_peaks > 1:
+                        other_peaks = overlapped_peaks[:]
+                        other_peaks.pop(overlapped_peaks.index(peak_pos))
+                        for p_pos in other_peaks:
+                            temp_pos_str = format_significant_4(p_pos)
+                            w_buf += '%s\t' % temp_pos_str
+                    # END-IF
+
+                    # write peak width
+                    w_buf += '%.3f\n' % peak_width
+                # END-FOR (peak-tup)
+            # END-FOR (group)
+        # END-FOR (bank)
 
         try:
             out_file = open(peak_file, 'w')
-            out_file.write(wbuf)
+            out_file.write(w_buf)
             out_file.close()
         except IOError, err:
             raise IOError('Unable to write to file %s due to %s.' % (peak_file, str(err)))

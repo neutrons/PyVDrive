@@ -371,7 +371,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         Guarantees:
             Return a dictionary containing peak centre in d-dpacing and its range
         :param peak_index:
-        :return: a list as bank, name, peak position, width, a list of positions of other overlapped peak positions
+        :return: a list as bank, name, peak position, width, group ID (int)
         """
         # Check requirements
         assert isinstance(peak_index, int)
@@ -385,21 +385,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
 
         # Get overlapped peaks' positions
         group = self.get_cell_value(peak_index, 5)
-        overlap_pos_list = list()
-        if group >= 0:
-            for i_row in xrange(self.rowCount()):
-                # skip this peak
-                if i_row == peak_index:
-                    continue
-                # get group
-                group_i = self.get_cell_value(i_row, 5)
-                if group_i == group:
-                    peak_pos_i = self.get_cell_value(i_row, 2)
-                    overlap_pos_list.append(group_i)
-            # END-FOR (i_row)
-        # END-IF
 
-        return [bank, name, position, width, overlap_pos_list]
+        return [bank, name, position, width, group]
 
     def get_selected_peaks(self):
         """ Purpose: get selected peaks' positions
