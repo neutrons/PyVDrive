@@ -358,6 +358,16 @@
               </item>
              </widget>
             </item>
+            <item row="0" column="7">
+             <widget class="QPushButton" name="pushButton">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save multple runs to a column file with artibrary unit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Save</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -374,7 +384,7 @@
      <x>0</x>
      <y>0</y>
      <width>1114</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
