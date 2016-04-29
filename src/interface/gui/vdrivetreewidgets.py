@@ -192,7 +192,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
     def mouseDoubleClickEvent(self, e):
         """ Override event handling method
         """
-        status, current_run = self.get_current_run()
+        status, current_run = self.get_current_run(allow_str=True)
 
         if self._mainWindow is not None:
             print '[INFO] Load and plot data with key = %s.' % str(current_run)
