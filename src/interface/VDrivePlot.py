@@ -28,6 +28,7 @@ import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
+import configwindow
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
@@ -85,11 +86,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_remove_runs_from_reduction)
         self.connect(self.ui.pushButton_sortSelectedRuns, QtCore.SIGNAL('clicked()'),
                      self.do_sort_selected_runs)
+        self.connect(self.ui.pushButton_reduceRuns, QtCore.SIGNAL('clicked()'),
+                     self.do_to_reduction_stage)
 
         self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_chop_run_state_change)
-        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
-                     self.pop_manual_picker)
 
         # Column 3
         # Tab-1
@@ -98,6 +99,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_load_time_seg_file)
         self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
                      self.do_slice_data_by_time)
+        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
+                     self.pop_manual_picker)
 
         # sub-tab-2
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
@@ -136,14 +139,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_save_session)
+                     self.menu_save_project)
         self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
                      self.menu_save_session_as)
         self.connect(self.ui.actionOpen_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_session)
-
+                     self.menu_load_project)
+        self.connect(self.ui.actionAuto_Saved, QtCore.SIGNAL('triggered()'),
+                     self.menu_load_auto)
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
                      self.evt_quit)
+
+        self.connect(self.ui.actionOpen_Configuration, QtCore.SIGNAL('triggered()'),
+                     self.menu_config)
 
         # Group widgets
         self._groupedSnapViewList = list()
@@ -151,8 +158,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Sub windows
         # controls to the sub windows
-        self._openSubWindows = []
-        self._manualPikerWindow = None
+        self._myChildWindows = []
+        self._logPickerWindow = None
+        self._peakPickerWindow = None
         self._snapViewWindow = None
 
         # Snap view related variables and data structures
@@ -298,6 +306,41 @@ class VdriveMainWindow(QtGui.QMainWindow):
         GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
         # switch the tab to 'VIEW'
         self.ui.tabWidget_reduceData.setCurrentIndex(2)
+
+        return
+
+    def do_to_reduction_stage(self):
+        """ Advance to data-reduction stage from run-selection stage
+        :return:
+        """
+        # get runs to be reduced
+        selected_row_list = self.ui.tableWidget_selectedRuns.get_selected_rows()
+        if len(selected_row_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'No run is selected.')
+            return
+        else:
+            run_number_list = list()
+            for i_row in selected_row_list:
+                row_number = self.ui.tableWidget_selectedRuns.get_cell_value(i_row, 0)
+                run_number_list.append(row_number)
+
+        # check status
+        if self.ui.checkBox_chopRun.isChecked():
+            # advance to 'chop'-tab
+            self.ui.tabWidget_reduceData.setCurrentIndex(0)
+
+            # set up current run to chop
+            current_run_number = run_number_list[0]
+            self.ui.comboBox_chopTabRunList.clear()
+            for run_number in run_number_list:
+                self.ui.comboBox_chopTabRunList.addItem('%d' % run_number)
+
+            # set up current run and run list in chop-tab
+            self._myWorkflow.load_log_only(current_run_number)
+
+        else:
+            # advance to 'bin'-tab
+            self.ui.tabWidget_reduceData.setCurrentIndex(1)
 
         return
 
@@ -457,7 +500,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             if self._currSlicerLogName == '__manual__':
                 raise NotImplementedError('ASAP')
             else:
-                # save splitters from log
+                # save_to_buffer splitters from log
                 status, err_msg = self._myWorkflow.save_splitter_workspace(
                     self._currLogRunNumber, self._currSlicerLogName, out_file_name)
                 if status is False:
@@ -734,6 +777,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
         self._peakPickerWindow.set_controller(self._myWorkflow)
         self._peakPickerWindow.show()
+        self._myChildWindows.append(self._peakPickerWindow)
 
         return
 
@@ -803,7 +847,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Get the default file path
         log_path = self._myWorkflow.get_data_root_directory()
 
-        # If
+        # Set up a more detailed file path to load log file according to selected run
+        # from the project tree
+        # TODO! this is very bad!
         status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
         if status is True:
             run_number = ret_obj
@@ -976,10 +1022,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Quit application without saving
         :return:
         """
+        # TODO/NEXT - Save the session automatically before leaving
         self.save_settings()
+        # and ... ...
 
-        # FIXME - Save the session automatically before leaving
+        print '[DB-BAT] Close Application!'
+
+        for child_window in self._myChildWindows:
+            child_window.close()
+
         self.close()
+
+        return
 
     def get_sample_log_value(self, log_name, relative=False):
         """
@@ -1046,15 +1100,25 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return log_name_list
 
-    def menu_save_session(self):
+    def menu_save_project(self):
         """
         Save session called from menu
         :return:
         """
         if self._savedSessionFileName is None:
-            self._savedSessionFileName = str(
-                QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
-                                                  'XML files (*.xml);; All files (*.*)'))
+            # save to configuration directory
+            # get default path, make it if does not exist
+            default_path = os.path.expanduser('~/.vdrive')
+            if os.path.exists(default_path) is False:
+                os.mkdir(default_path)
+
+            # get the default name
+            session_file_name = os.path.join(default_path, 'auto_save.xml')
+            self._savedSessionFileName = session_file_name
+
+            #self._savedSessionFileName = str(
+            #    QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
+            #                                      'XML files (*.xml);; All files (*.*)'))
 
         self._myWorkflow.save_session(self._savedSessionFileName)
 
@@ -1073,7 +1137,46 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def menu_load_session(self):
+    def menu_load_auto(self):
+        """ Load auto-saved project
+        :return:
+        """
+        default_path = os.path.expanduser('~/.vdrive')
+        session_file_name = os.path.join(default_path, 'auto_save.xml')
+        assert os.path.exists(session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
+
+        self.load_project(session_file_name)
+
+        return
+
+    def load_project(self, project_file_name):
+        """
+
+        :param project_file_name:
+        :return:
+        """
+        # Load
+        status, input_file_name = self._myWorkflow.load_session(project_file_name)
+        if status is False:
+            GuiUtility.pop_dialog_error('Unable to load session from %s' % input_file_name)
+
+        # Set input file to default session back up file
+        self._savedSessionFileName = input_file_name
+
+        # Set up tree
+        # FIXME - Consider to refactor these to a method with do_add_runs_by_ipts
+        ipts_dict = self._myWorkflow.get_project_runs()
+        for ipts_number in sorted(ipts_dict.keys()):
+            self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, ipts_dict[ipts_number])
+            # FIXME - Need to figure out how to deal with this
+            home_dir = '/SNS/VULCAN'
+            curr_dir = os.path.join(home_dir, 'IPTS-%d' % ipts_number)
+            self.ui.treeView_runFiles.set_root_path(home_dir)
+            self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return
+
+    def menu_load_project(self):
         """
         Load session from file
         :return:
@@ -1088,6 +1191,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             return
 
         # Load
+        # FIXME/NOW - consider to replace the following by method load_project!
         status, input_file_name = self._myWorkflow.load_session(input_file_name)
         if status is False:
             GuiUtility.pop_dialog_error('Unable to load session from %s' % input_file_name)
@@ -1108,14 +1212,26 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
+    def menu_config(self):
+        """ Open configuration menu
+        :return:
+        """
+        self._configWindow = configwindow.ConfigWindow(self)
+
+        self._configWindow.set_controller(self._myWorkflow)
+
+        self._configWindow.show()
+
+        return
+
     def pop_manual_picker(self):
         """
         Pop out manual picker window
         :return:
         """
         # Start
-        if isinstance(self._manualPikerWindow, LogPicker.WindowLogPicker):
-            self._manualPikerWindow.show()
+        if isinstance(self._logPickerWindow, LogPicker.WindowLogPicker):
+            self._logPickerWindow.show()
         else:
             # Get selected run number from sidebar tree view
             status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
@@ -1127,13 +1243,13 @@ class VdriveMainWindow(QtGui.QMainWindow):
                     run_number = None
             else:
                 run_number = None
-            self._manualPikerWindow = LogPicker.WindowLogPicker(self, run_number)
+            self._logPickerWindow = LogPicker.WindowLogPicker(self, run_number)
 
         # Set up tree view for runs
-        self._manualPikerWindow.setup()
+        self._logPickerWindow.setup()
 
         # Show
-        self._manualPikerWindow.show()
+        self._logPickerWindow.show()
 
         return
 

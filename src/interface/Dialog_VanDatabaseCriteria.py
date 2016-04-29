@@ -217,7 +217,7 @@ class MyVanadiumDatabaseCriterialDialog(QtGui.QMainWindow):
     def doSaveQuit(self):
         """ Save the choice and quit
         """
-        # save and close
+        # save_to_buffer and close
         returnlist = []
         numrows = self.ui.tableWidgetTable1.rowCount()
         print "Number of rows = ", numrows

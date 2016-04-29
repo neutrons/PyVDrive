@@ -126,13 +126,13 @@ class IndicatorManager(object):
     def add_vertical_indicator(self, x, y_min, y_max, color):
         """
         Add a vertical indicator to data structure moving horizontally
-        :return: indicator ID
+        :return: indicator ID as an integer
         """
         # Get ID
-        this_id = str(self._autoLineID)
+        this_id = self._autoLineID
         self._autoLineID += 1
 
-        #
+        # form vec x and vec y
         vec_x = np.array([x, x])
         vec_y = np.array([y_min, y_max])
 
@@ -142,19 +142,19 @@ class IndicatorManager(object):
 
         return this_id
 
-    def get_canvas_line_index(self, my_id):
+    def get_canvas_line_index(self, indicator_id):
         """
-
-        :param my_id:
+        Get a line's ID (on canvas) from an indicator ID
+        :param indicator_id:
         :return:
         """
-        assert isinstance(my_id, str)
+        assert isinstance(indicator_id, int)
 
-        if my_id not in self._canvasLineKeyDict:
+        if indicator_id not in self._canvasLineKeyDict:
             raise RuntimeError('Indicator ID %s cannot be found. Current keys are %s.' % (
-                my_id, str(sorted(self._canvasLineKeyDict.keys()))
+                indicator_id, str(sorted(self._canvasLineKeyDict.keys()))
             ))
-        return self._canvasLineKeyDict[my_id]
+        return self._canvasLineKeyDict[indicator_id]
 
     def get_line_type(self, my_id):
         """
@@ -235,13 +235,13 @@ class IndicatorManager(object):
         """
         return sorted(self._lineManager.keys())
 
-    def get_marker(self):
+    @staticmethod
+    def get_marker():
         """
         Get the marker a line
-        :param line_id:
         :return:
         """
-        return 'o'
+        return '.'
 
     def get_next_color(self):
         """
@@ -378,6 +378,19 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def add_arrow(self, start_x, start_y, stop_x, stop_y):
+        """
+
+        :param start_x:
+        :param start_y:
+        :param stop_x:
+        :param stop_y:
+        :return:
+        """
+        self._myCanvas.add_arrow(start_x, start_y, stop_x, stop_y)
+
+        return
+
     def add_line_set(self, vec_set, color, marker, line_style, line_width):
         """ Add a set of line and manage together
         :param vec_set:
@@ -495,12 +508,13 @@ class MplGraphicsView(QtGui.QWidget):
 
         return my_id
 
-    def add_vertical_indicator(self, x=None, color=None):
+    def add_vertical_indicator(self, x=None, color=None, style=None, line_width=1):
         """
         Add a vertical indicator line
         Guarantees: an indicator is plot and its ID is returned
         :param x: None as the automatic mode using default from middle of canvas
         :param color: None as the automatic mode using default
+        :param style:
         :return: indicator ID
         """
         # For indicator line's position
@@ -518,14 +532,19 @@ class MplGraphicsView(QtGui.QWidget):
         else:
             assert isinstance(color, str)
 
+        # style
+        if style is None:
+            style = self._myIndicatorsManager.get_line_style()
+
         # Form
         my_id = self._myIndicatorsManager.add_vertical_indicator(x, y_min, y_max, color)
         vec_x, vec_y = self._myIndicatorsManager.get_data(my_id)
 
         canvas_line_index = self._myCanvas.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
-                                                       color=color, marker=self._myIndicatorsManager.get_marker(),
-                                                       line_style=self._myIndicatorsManager.get_line_style(),
-                                                       line_width=1)
+                                                       color=color,
+                                                       marker=self._myIndicatorsManager.get_marker(),
+                                                       line_style=style,
+                                                       line_width=line_width)
 
         self._myIndicatorsManager.set_canvas_line_index(my_id, canvas_line_index)
 
@@ -730,6 +749,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def get_indicator_position(self, indicator_key):
         """ Get position (x or y) of the indicator
+        :param indicator_key
         :return: a tuple.  (0) horizontal (x, x); (1) vertical (y, y); (2) 2-way (x, y)
         """
         # Get indicator's type
@@ -866,6 +886,21 @@ class Qt4MplCanvas(FigureCanvas):
 
         # legend and color bar
         self._colorBar = None
+
+        return
+
+    def add_arrow(self, start_x, start_y, stop_x, stop_y):
+        """
+        0, 0, 0.5, 0.5, head_width=0.05, head_length=0.1, fc='k', ec='k')
+        :return:
+        """
+        head_width = 0.05
+        head_length = 0.1
+        fc = 'k'
+        ec = 'k'
+
+        self.axes.arrrow(start_x, start_y, stop_x, stop_y, head_width,
+                         head_length, fc, ec)
 
         return
 
@@ -1179,7 +1214,7 @@ class Qt4MplCanvas(FigureCanvas):
         debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
         debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (
             str(plot_key), plot_key in self._lineDict)
-        print debug_info
+        # print debug_info
 
         if plot_key in self._lineDict:
             self.axes.lines.remove(self._lineDict[plot_key])
@@ -1196,6 +1231,9 @@ class Qt4MplCanvas(FigureCanvas):
         """
         """
         line = self._lineDict[ikey]
+        if line is None:
+            print '[ERROR] Line (key = %d) is None. Unable to update' % ikey
+            return
 
         if vecx is not None and vecy is not None:
             line.set_xdata(vecx)

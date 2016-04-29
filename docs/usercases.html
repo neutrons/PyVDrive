@@ -341,7 +341,39 @@ ul.auto-toc {
 <div class="document" id="descrption">
 <h1 class="title">Descrption</h1>
 
-<p>This is the document recording all the use cases.</p>
+<p>This is the document recording all the use cases.
+It serves as both the guideline of software development
+and examples for users.</p>
+<div class="section" id="use-case-simple-data-reduction">
+<h1>Use case: Simple data reduction</h1>
+<p>Simple data reduction</p>
+<blockquote>
+<ol class="arabic simple">
+<li>User clicks button <em>Select IPTS folders</em>.  In the pop-up window, user selects an IPTS (<em>16053</em>) and a range of run numbers;</li>
+<li><strong>V-drive</strong> checks and loads runs under IPTS to the project files tree (left most column);</li>
+<li>User selects one or multiple runs from the project tree, add them to the reduction list;</li>
+<li>In tab <em>VBIN</em>, user sets up the bin size and other reduction parameters;</li>
+<li>User clicks the <em>BIN DATA</em> button;</li>
+<li><strong>V-drive</strong> reduces the selected runs;</li>
+<li>User may launch the <em>general plot</em> window to view the reduced data;</li>
+<li>User clicks the <em>Save</em> in the menu <em>File</em> to save the reduction result;</li>
+</ol>
+</blockquote>
+</div>
+<div class="section" id="use-case-single-peak-picking">
+<h1>Use case: Single peak picking</h1>
+<p>PyVdrive provides the functionality to let user to pick up single peaks from reduced diffraction data
+and thus generate input files for single peak fitting by GSAS.</p>
+<blockquote>
+<ol class="arabic simple">
+<li>User obtains reduced diffraction data either via steps described in use case <em>simple data reduction</em> or by loading a previously saved project;</li>
+<li>In tab <em>???</em>, user launches the peak picking window;</li>
+<li>User may input the lattice parameters;</li>
+<li>User can either click button <em>Peak Finding</em>. If lattice parameters are given, then the peak finding will be based on the calculated peak positions from lattice parameters; otherwise, peak finding will be based on a special algorithm;</li>
+<li>... ...</li>
+</ol>
+</blockquote>
+</div>
 <div class="section" id="use-case-determine-slicing-strategy">
 <h1>Use case: Determine slicing strategy</h1>
 <ol class="arabic simple">

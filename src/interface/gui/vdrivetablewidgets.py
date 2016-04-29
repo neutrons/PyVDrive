@@ -1,18 +1,17 @@
-#from PyQt4 import QtGui
-import ndav_widgets.NTableWidget as NT
+import ndav_widgets.NTableWidget as NdavTable
 
 Data_Slicer_Table_Setup = [('Start', 'float'),
                            ('Stop', 'float'),
                            ('', 'checkbox')]
 
 
-class DataSlicerSegmentTable(NT.NTableWidget):
+class DataSlicerSegmentTable(NdavTable.NTableWidget):
     """
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         return
 
@@ -128,12 +127,10 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, i_stop_time, time_segments[0][1])
         self.update_cell_value(row_number, i_stop_time, time_segments[0][1])
 
-        # Insert the rest
+        # Insert the rest by inserting rows and set values
         for index in xrange(1, len(time_segments)):
-            print '[DB-HUGE] Insert a row @ %d. Total number of rows = %d' % (row_number+1, self.rowCount())
             self.insertRow(row_number+1)
         for index in xrange(1, len(time_segments)):
-            print '[DB-HUGE] Set cell value for row %d: ' % (row_number+index) , time_segments[index][0], time_segments[index][1]
             self.set_value_cell(row_number+index, i_start_time, time_segments[index][0])
             self.set_value_cell(row_number+index, i_stop_time, time_segments[index][1])
             self.set_value_cell(row_number+index, i_select, False)
@@ -191,14 +188,14 @@ class DataSlicerSegmentTable(NT.NTableWidget):
         return
 
 
-class PeakParameterTable(NT.NTableWidget):
+class PeakParameterTable(NdavTable.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters
     """
     PeakTableSetup = [('Bank', 'int'),
                       ('Name', 'string'),
                       ('Centre', 'float'),
-                      ('Width', 'float'),
+                      ('Range', 'float'),   # range of the single peak or overlapped peaks
                       ('HKLs', 'string'),
                       ('Group', 'int'),
                       ('Select', 'checkbox')]
@@ -214,7 +211,7 @@ class PeakParameterTable(NT.NTableWidget):
         :param parent:
         :return:
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         self._buffer = dict()
         # group ID for overlapped peaks
@@ -222,7 +219,7 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
-    def add_peak(self, bank, name, centre, width, overlapped_peak_pos_list):
+    def add_peak(self, bank, name, centre, width, group_id):
         """ Append a peak to the table
         Purpose:
             Append a new peak to the table
@@ -232,22 +229,21 @@ class PeakParameterTable(NT.NTableWidget):
             A row is append
         :param centre:
         :param bank: bank number
+        :param name: peak name
         :param width: peak width
         :param overlapped_peak_pos_list:
         :return:
         """
         # Check requirements
-        assert isinstance(centre, float)
+        assert isinstance(centre, float), 'Peak center %s must be a float but not %s.' % (str(centre),
+                                                                                          str(type(centre)))
         assert isinstance(bank, int)
         assert isinstance(width, float)
         assert isinstance(name, str)
+        assert isinstance(group_id, int), 'Group ID must be an integer.'
         assert width > 0
 
         # Get new index
-        # new_index = self.rowCount()
-        group_id = -1
-        if len(overlapped_peak_pos_list) >= 2:
-            group_id = N
         status, message = self.append_row([bank, name, centre, width, name, group_id, False])
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
@@ -261,10 +257,12 @@ class PeakParameterTable(NT.NTableWidget):
         Requirements:
             Peak centre must be in d-spacing.  And it is within the peak range
         Guarantees:
-            A row is append
-        :param centre:
+            A row is append in the buffer
         :param bank: bank number
+        :param name: peak name
+        :param centre:
         :param width: peak width
+        :param overlapped_peak_pos_list: list of overlapped peaks' positions
         :return:
         """
         # Check requirements
@@ -310,14 +308,16 @@ class PeakParameterTable(NT.NTableWidget):
 
         return
 
-    def get_buffered_peaks(self, excluded_bank_id_list):
+    def get_buffered_peaks(self, excluded_banks):
         """
         Return the buffered peaks
-        :param excluded_bank_id_list
-        :return: a dictionary of a list of peaks (in 5-element list)
+        :param excluded_banks: bank ID that will be excluded
+        :return: a dictionary of a list of peaks (in 5-element list): bank, name, center, width, group
         """
+        # TODO/NOW - check and doc
+
         # Check
-        assert isinstance(excluded_bank_id_list, list)
+        assert isinstance(excluded_banks, list)
 
         # Get bank IDs
         bank_id_list = sorted(self._buffer.keys())
@@ -325,7 +325,7 @@ class PeakParameterTable(NT.NTableWidget):
         for bank_id in bank_id_list:
 
             # skip the bank IDs to be excluded
-            if bank_id in excluded_bank_id_list:
+            if bank_id in excluded_banks:
                 continue
 
             # transform the peaks
@@ -341,38 +341,11 @@ class PeakParameterTable(NT.NTableWidget):
                 peak_width = peak_row[3]
                 peak_group = peak_row[5]
 
-                peak_i = [bank, peak_name, peak_centre, peak_width, [], peak_group]
+                peak_i = [bank, peak_name, peak_centre, peak_width, peak_group]
                 peak_list.append(peak_i)
-            # END-FOR
 
-            # check group for overlapped peaks: use index in peak list as the reference to centre
-            overlapped_peaks_group = dict()
-            for i_peak in xrange(len(peak_list)):
-                peak_i = peak_list[i_peak]
-                if peak_i[-1] >= 0:
-                    group_i = peak_i[-1]
-                    if group_i not in overlapped_peaks_group:
-                        overlapped_peaks_group[group_i] = list()
-                    overlapped_peaks_group[group_i].append(peak_i[2])
+                print 'Appending peak %d: %s' % (len(peak_list)-1, str(peak_i))
             # END-FOR
-
-            # set up the overlapped peak right!
-            group_num_list = sorted(overlapped_peaks_group.keys())
-            for i_peak in xrange(len(peak_list)):
-                peak_i = peak_list[i_peak]
-                curr_group = peak_i[-1]
-                if curr_group in group_num_list:
-                    # it has overlapped peak
-                    for over_peak_index in overlapped_peaks_group[curr_group]:
-                        if over_peak_index != i_peak:
-                            over_peak_pos = peak_list[over_peak_index][2]
-                            peak_i[-2].append(over_peak_pos)
-                        # END-IF (different peak)
-                    # END-FOR (loop over overlapped peaks)
-                # END-IF (peak has overlapped peaks)
-                # get rid of last element
-                peak_i.pop()
-            # END-FOR (all peaks)
 
             # add to dictionary
             bank_peak_dict[bank_id] = peak_list
@@ -386,6 +359,7 @@ class PeakParameterTable(NT.NTableWidget):
         :return:
         """
         self._currGroupID += 1
+
         return self._currGroupID
 
     def get_peak(self, peak_index):
@@ -397,7 +371,7 @@ class PeakParameterTable(NT.NTableWidget):
         Guarantees:
             Return a dictionary containing peak centre in d-dpacing and its range
         :param peak_index:
-        :return: a list as bank, name, peak position, width, a list of positions of other overlapped peak positions
+        :return: a list as bank, name, peak position, width, group ID (int)
         """
         # Check requirements
         assert isinstance(peak_index, int)
@@ -411,23 +385,10 @@ class PeakParameterTable(NT.NTableWidget):
 
         # Get overlapped peaks' positions
         group = self.get_cell_value(peak_index, 5)
-        overlap_pos_list = list()
-        if group >= 0:
-            for i_row in xrange(len(self.rowCount())):
-                # skip this peak
-                if i_row == peak_index:
-                    continue
-                # get group
-                group_i = self.get_cell_value(i_row, 5)
-                if group_i == group:
-                    peak_pos_i = self.get_cell_value(i_row, 2)
-                    overlap_pos_list.append(group_i)
-            # END-FOR (i_row)
-        # END-IF
 
-        return [bank, name, position, width, overlap_pos_list]
+        return [bank, name, position, width, group]
 
-    def get_selected_peaks_position(self):
+    def get_selected_peaks(self):
         """ Purpose: get selected peaks' positions
         Requirements: At least 1 peak must be selected
         Guarantees:
@@ -437,16 +398,21 @@ class PeakParameterTable(NT.NTableWidget):
         row_number_list = self.get_selected_rows()
         assert len(row_number_list) > 0, 'At least one peak must be selected.'
 
+        # FIXME - Made this more flexible for column index
         pos_col_index = 2
+        width_col_index = 3
+
         peak_pos_list = list()
         for i_row in row_number_list:
             peak_pos = self.get_cell_value(i_row, pos_col_index)
-            peak_pos_list.append(peak_pos)
+            peak_width = self.get_cell_value(i_row, width_col_index)
+            peak_pos_list.append((peak_pos, peak_width))
 
         return peak_pos_list
 
-    def save(self, bank_id):
-        """ Save table
+    def save_to_buffer(self, bank_id):
+        """ Save table to buffer
+        :param bank_id:
         :return:
         """
         self._buffer[bank_id] = list()
@@ -455,7 +421,7 @@ class PeakParameterTable(NT.NTableWidget):
         for i_row in xrange(num_rows):
             row_i = self.get_row_value(i_row)
             self._buffer[bank_id].append(row_i)
-            # print 'row %d' % i_row, row_i, type(row_i)
+            print 'row %d' % i_row, row_i, type(row_i)
 
         return
 
@@ -495,14 +461,14 @@ TimeSegment_TableSetup = [('Start', 'float'),
                           ('Destination', 'int')]
 
 
-class TimeSegmentsTable(NT.NTableWidget):
+class TimeSegmentsTable(NdavTable.NTableWidget):
     """
     Table for show time segments for data splitting
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
         self._currRowNumber = 0
 
@@ -534,13 +500,13 @@ Run_Selection_Table_Setup = [('Run Number', 'int'),
                              ('', 'checkbox')]
 
 
-class VdriveRunTableWidget(NT.NTableWidget):
+class VdriveRunTableWidget(NdavTable.NTableWidget):
     """
     """
     def __init__(self, parent):
         """
         """
-        NT.NTableWidget.__init__(self, parent)
+        NdavTable.NTableWidget.__init__(self, parent)
 
     def append_runs(self, run_list):
         """
@@ -568,8 +534,8 @@ class VdriveRunTableWidget(NT.NTableWidget):
         return run_number_list
 
     def get_rows_by_run(self, run_list):
-        """
-
+        """ Get row number/index for specified run numbers
+        :param run_list: list of run numbers
         :return:
         """
         assert isinstance(run_list, list)
@@ -600,4 +566,3 @@ class VdriveRunTableWidget(NT.NTableWidget):
         self.setColumnWidth(1, 25)
 
         return
-

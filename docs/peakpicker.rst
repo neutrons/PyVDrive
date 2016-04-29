@@ -64,6 +64,27 @@ Here are some operations that will be supported.
 - Select the peak range and/or peak width.
 
 
+Adding peaks (1)
+++++++++++++++++
+
+ - User enters *Quick-Peak-Adding* mode
+ - User clicks mouse's left button to add a peak and its boundary with default width;
+ - User may move the mouse in the vicinity area of peak center (indicator)
+   - cursor changes to *drag and move* mode
+   - user presses and holds mouse's left button;
+   - user moves the mouse keeping button pressed;
+   - peak indicator and its boundaries lines move along with the cursor;
+   - user releases the mouse button
+ - User may move the mouse in the vicinity of peak boundaries's indactors
+   - cursor changes to to *SplitHCursor*;
+   - user presses and holds mouse's left button;
+   - user moves the mouse with button being pressed;
+   - peak's boundaries lines expand or shink with the cursor;
+   - user releases the mouse button to finish the action;
+ - User may move the mouse out the vinicity of any peak and continue to select another peak
+ - User may move the mouse to the vicinity of any peak, press the right button of the mouse to delete the peak
+ - User leaves the *Quick-peak-adding* mode to add all the selected peaks to table
+
 Output 1: Peak file
 +++++++++++++++++++
 

@@ -75,7 +75,6 @@ class VDProject(object):
         """ Set to all runs' reduction flags to be False
         :return:
         """
-        # TODO/NOW:  doc
         for run_number in self._sampleRunReductionFlagDict.keys():
             self._sampleRunReductionFlagDict[run_number] = False
 
@@ -104,26 +103,22 @@ class VDProject(object):
 
         return
 
-    def get_filepath(self, run_number):
+    def get_file_path(self, run_number):
         """ Get file path
-        Purpose:
-
-        Requirements:
-
-        Guarantees:
-
+        Purpose: Get the file path from run number
+        Requirements: run number is non-negative integer and it has been loaded to Project
+        Guarantees: the file path is given
         :param run_number:
         :return:
         """
-        # TODO/NOW/Doc
-        assert isinstance(run_number, int)
+        assert isinstance(run_number, int) and run_number >= 0
 
         if run_number in self._dataFileDict:
-            filepath = self._dataFileDict[run_number][0]
+            file_path = self._dataFileDict[run_number][0]
         else:
             raise RuntimeError('Run %d does not exist in this project.' % run_number)
 
-        return filepath
+        return file_path
 
     def getBaseDataPath(self):
         """ Get the base data path of the project
@@ -151,18 +146,16 @@ class VDProject(object):
 
     def get_number_data_files(self):
         """
-
+        Get the number/amount of the data files that have been set to the project.
         :return:
         """
-        # TODO -Doc
         return len(self._dataFileDict)
 
     def get_number_reduction_runs(self):
         """
-
+        Get the number/amount of the runs that have been reduced.
         :return:
         """
-        # TODO - DOC
         num_to_reduce = 0
         print '[DB-BAT] ', self._sampleRunReductionFlagDict
         print
@@ -180,26 +173,25 @@ class VDProject(object):
         return self._reductionManager.get_reduced_runs()
 
     def get_reduced_data(self, run_number, unit):
-        """ Get reduced data of a run
+        """ Get data (x, y and e) of a reduced run in the specified unit
         Purpose: Get reduced data including all spectra
-        Requirements:
-        Guarantees:
+        Requirements: run number is a valid integer; unit is a string for supported unit
+        Guarantees: all data of the reduced run will be returned
         :param run_number:
-        :param unit:
+        :param unit: target unit for the output X vector.  If unit is None, then no request
         :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW: Doc!
-        """
+        # check
+        assert isinstance(run_number, int), 'Input run number must be an integer.'
+        assert unit is None or isinstance(unit, str)
 
-        Arguments:
-         - unit :: target unit for the output X vector.  If unit is None, then no request
-
-        Return ::
-        """
+        # get reduced workspace name
         reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)
 
+        # get data
         data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
-        assert isinstance(data_set_dict, dict), 'bla bla...'
+        assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
+                                                'but not %s.' % str(type(data_set_dict))
 
         return data_set_dict
 
@@ -213,12 +205,13 @@ class VDProject(object):
 
     def get_reduced_run_information(self, run_number):
         """
-        Purpose: ...
-        Requirements: ...
+        Purpose: Get the reduced run's information including list of banks
+        Requirements: run number is an integer
         :param run_number:
         :return: a list of integers as bank ID. reduction history...
         """
-        # TODO/NOW/1st: Doc and assertion
+        # Check
+        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
         run_ws_name = self._reductionManager.get_reduced_workspace(run_number)
@@ -318,10 +311,10 @@ class VDProject(object):
             if self.has_run(run_number) is False:
                 # no run
                 raise RuntimeError('Run %d cannot be found.' % run_number)
-            elif archivemanager.check_read_access(self.get_filepath(run_number)) is False:
+            elif archivemanager.check_read_access(self.get_file_path(run_number)) is False:
                 # file does not exist
                 raise RuntimeError('Run %d with file path %s cannot be found.' % (run_number,
-                                                                                  self.get_filepath(run_number)))
+                                                                                  self.get_file_path(run_number)))
             else:
                 # mark runs to reduce
                 self._sampleRunReductionFlagDict[run_number] = True
@@ -533,7 +526,7 @@ class VDProject(object):
 
     def set_focus_calibration_file(self, focus_cal_file):
         """
-        TODO/DOC/NOW
+        Set the time-focus calibration to reduction manager.
         :param focus_cal_file:
         :return:
         """
@@ -542,8 +535,9 @@ class VDProject(object):
         return
 
     def set_reduction_flag(self, run_number, flag):
-        """ Turn on the reduction flag for a file of this project
-        TODO/FIXME/NOW - Doc/Fill in
+        """ Set the  reduction flag for a file in SAMPLE run dictionary of this project
+        Requirements: run number is non-negative integer and flag is boolean.
+        Guarantees:
         :param run_number:
         :param flag: reduction flag
         :return:
@@ -565,28 +559,34 @@ class VDProject(object):
 
     def set_reduction_parameters(self, parameter_dict):
         """
-        TODO/DOC/NOW
+        Purpose: set up the parameters to reduce run
         Requirements:
-        - reduction mamager is available
+        - reduction manager is available
+        - input is a dictionary, key=parameter name, value=parameter value
         :param parameter_dict:
         :return:
         """
         # Check requirements
-        print 'Fill me'
+        assert self._reductionManager is not None
+        assert isinstance(parameter_dict, dict)
 
         self._reductionManager.set_parameters(parameter_dict)
 
         return
 
-    def setBaseDataPath(self, datadir):
+    def set_base_data_path(self, data_dir):
         """ Set base data path such as /SNS/VULCAN/
         to locate the data via run number and IPTS
+        Requirements:
+        1. input is an existing file directory
+        :param data_dir: base data directory. for example, /SNS/VULCAN/
+        :return: None
         """
-        if isinstance(datadir, str) is True: 
-            self._baseDataPath = datadir
-
+        if isinstance(data_dir, str) is True:
+            assert os.path.exists(data_dir)
+            self._baseDataPath = data_dir
         else:
-            raise NotImplementedError("Unable to set base data path with unsupported format %s." % (str(type(datadir))))
+            raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
 
         return
 
@@ -741,7 +741,7 @@ class DeprecatedReductionProject(VDProject):
         # FIXME - _calibfiledatadict will be set up only before reduction
         # self._calibfiledatadict.pop(vanfilename)
 
-        return (True, "")
+        return True, ""
 
     def getDataFilePairs(self):
         """ Get to know 
@@ -751,32 +751,6 @@ class DeprecatedReductionProject(VDProject):
             pairlist.append( (datafile, self._datacalibfiledict[datafile]) )
 
         return pairlist
-        
-    def getProcessedVanadium(self, run):
-        """          vandatalist, history = project.
-        """
-        runbasename = os.path.basename(run)
-
-        returndict = None
-        if self._myRunPdrDict.has_key(runbasename):
-            runpdr = self._myRunPdrDict[runbasename]
-            ws = runpdr.get_processed_vanadium()
-            
-            if ws is not None:
-                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
-
-                returndict = {}
-                for iws in xrange(ws.getNumberHistograms()):
-                    vecx = ws.readX(iws)[:]
-                    vecy = ws.readY(iws)[:]
-                    print type(vecx), type(vecy)
-                    returndict[iws] = (vecx, vecy)
-                    print "[DB Vanadium] iws = %d, vecx = "%(iws), str(vecx)
-                # ENDFOR
-            # ENDIF
-        # ENDIF
-        
-        return (returndict, "Blabla;blabla")
 
     def getTempSmoothedVanadium(self, run):
         """
@@ -789,7 +763,7 @@ class DeprecatedReductionProject(VDProject):
             ws = runpdr.get_smoothed_vanadium()
             
             if ws is not None:
-                ws = mantidapi.ConvertToPointData(InputWorkspace=ws)
+                ws = ConvertToPointData(InputWorkspace=ws)
 
                 returndict = {}
                 for iws in xrange(ws.getNumberHistograms()):
@@ -800,8 +774,7 @@ class DeprecatedReductionProject(VDProject):
             # ENDIF
         # ENDIF
         
-        return (returndict)
-
+        return returndict
 
     def getVanadiumRecordFile(self):
         """

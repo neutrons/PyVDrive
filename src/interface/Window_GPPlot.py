@@ -23,8 +23,9 @@ except AttributeError:
         
 import ui_GPPlot
 
+
 class Window_GPPlot(QMainWindow):
-    """ Class for general-puposed plot window
+    """ Class for general-purposed plot window
     """
     # class
     def __init__(self, parent=None):
@@ -49,7 +50,7 @@ class Window_GPPlot(QMainWindow):
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                 self.doPlotRunSelected)
         self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
-                self.doPlotAllRuns)
+                     self.do_plot_all_runs)
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                 self.doNormByCurrent)
@@ -114,14 +115,12 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
-    def doPlotAllRuns(self):
+    def do_plot_all_runs(self):
         """ Plot all runs in a fill plot style
         """
-        print '------------------------  PLOTTING (2D) ------------------------------'
         # Get list of all reduced data
-        runlist = self._myParent.getWorkflowObj().getReducedRuns(self._myProjectName)
-        print "[DB] Number of reduced runs = %d" % (len(runlist))
+        run_number_list = self._myParent.getWorkflowObj().getReducedRuns(self._myProjectName)
+        print "[DB] Number of reduced runs = %d" % (len(run_number_list))
 
         # Convert the workspaces to 2D vector
         vecylist = []
@@ -135,7 +134,7 @@ class Window_GPPlot(QMainWindow):
         sizesame = True
         prevsize = -1
 
-        for runno in sorted(runlist):
+        for runno in sorted(run_number_list):
             # put y values to list for constructing 2D array
             # TODO : Remove vecx, vecy = self._myControl.getVectorToPlot(expno, scanno)
             reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, runno)

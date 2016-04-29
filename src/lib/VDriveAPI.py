@@ -10,10 +10,11 @@ import os
 import datetime
 
 import VDProject as vp
-import archivemanager as futil
-import SampleLogHelper as logHelper
-import vdrivehelper as vdrivehelper
-import mantid_helper as mantid_helper
+from analysisproject import AnalysisProject
+import archivemanager
+import SampleLogHelper
+import vdrivehelper
+import mantid_helper
 import io_peak_file
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
@@ -52,15 +53,36 @@ class VDriveAPI(object):
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
         self._myProject = vp.VDProject('New Project')
-        self._myArchiveManager = futil.DataArchiveManager(self._myInstrument)
-        self._mySlicingManager = logHelper.SampleLogManager()
+        self._myAnalysisProject = AnalysisProject('New Analysis Project')
+        self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
+        self._mySlicingManager = SampleLogHelper.SampleLogManager()
 
-        # default working directory to current directory. if it is not writable, then use /tmp/
+        # default working directory to current directory.
+        #  if it is not writable, then use /tmp/
         self._myWorkDir = os.getcwd()
         if os.access(self._myWorkDir, os.W_OK) is False:
             self._myWorkDir = '/tmp/'
+        self._rootDataDir = '/SNS/VULCAN/'
+        # relative data directory to IPTS data directory for binned GSAS data
+        self._relativeBinnedDir = 'binned/'
+        # IPTS configuration: key = IPTS number (int), value = list as [raw data dir, binned data dir]
+        self._iptsConfigDict = dict()
 
         return
+
+    @staticmethod
+    def _get_default_session_file(mkdir_dir=False):
+        """
+        Get the default session file name and with full path
+        :return:
+        """
+        session_path = os.path.expanduser('~/.vdrive/')
+        if mkdir_dir is True and os.path.exists(session_path) is False:
+            os.mkdir(session_path)
+
+        session_file_name = os.path.join(session_path, 'vdrive_session.dat')
+
+        return session_file_name
 
     def add_runs(self, run_tup_list, ipts_number):
         """
@@ -254,7 +276,7 @@ class VDriveAPI(object):
                 width = peak_i[3]
                 overlapped_list = peak_i[4]
                 peak_file_manager.add_peak(bank=bank, name=peak_name, position=centre,
-                                           width=width, overlapped_peaks_pos=overlapped_list)
+                                           width=width, group_id=overlapped_list)
             # END-FOR(peak_i)
         # END-FOR (bank)
 
@@ -262,6 +284,54 @@ class VDriveAPI(object):
         peak_file_manager.export_peaks(out_file_name)
 
         return
+
+    def find_peaks(self, data_key, run_number, bank_number, x_range,
+                   auto_find, profile='Gaussian',
+                   peak_positions=None, hkl_list=None):
+        """
+        Find peaks in a given diffraction pattern
+        Requirements:
+         - by run number, a workspace containing the reduced run must be found
+         - either auto (mode) is on or peak positions are given;
+         - peak profile must be Gaussian and blabla
+        :param run_number:
+        :param bank_number:
+        :param x_range:
+        :param peak_positions:
+        :param hkl_list:
+        :param profile:
+        :param auto_find:
+        :return: list of tuples for peak information as (peak center, height, width)
+        """
+        # TODO/NOW - Make more logic!
+
+        if isinstance(run_number, int) is False:
+            print '[DB...BAT] To find_peaks(), run number %s is not integer.' % str(run_number)
+
+        # Check
+        # ... ... assert isinstance(run_number, int)
+        assert isinstance(bank_number, int)
+        assert isinstance(x_range, tuple) and len(x_range) == 2
+        assert isinstance(profile, str)
+        assert isinstance(peak_positions, list) or peak_positions is None
+
+        if isinstance(peak_positions, list) and auto_find:
+            raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+        if peak_positions is None and auto_find is False:
+            raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
+
+        # Get workspace from
+        data_ws_name = self._myAnalysisProject.get_workspace_name(data_key)
+
+        if auto_find:
+            # find peaks in an automatic way
+            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
+        else:
+            # ... ...
+            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
+                                                      hkl_list, profile)
+
+        return peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
         """
@@ -340,13 +410,13 @@ class VDriveAPI(object):
 
         # FIXME - Need to pass value change direction
         self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-                                                        min_time=start_time, max_time=end_time,
-                                                        relative_time=True,
-                                                        min_log_value=min_log_value,
-                                                        max_log_value=max_log_value,
-                                                        log_value_interval=log_value_step,
-                                                        value_change_direction='Both',
-                                                        tag=tag)
+                                                             min_time=start_time, max_time=end_time,
+                                                             relative_time=True,
+                                                             min_log_value=min_log_value,
+                                                             max_log_value=max_log_value,
+                                                             log_value_interval=log_value_step,
+                                                             value_change_direction='Both',
+                                                             tag=tag)
 
         return
 
@@ -371,42 +441,66 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_data(self, run_number, target_unit):
+    def get_reduced_data(self, run_id, target_unit):
         """ Get reduced data
-        Purpose:
-        Requirements:
+        Purpose: Get all data from a reduced run, either from run number or data key
+        Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_number:
+        :param run_id: it is a run number or data key
         :param target_unit:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/NOW - Doc 1st
-        assert isinstance(run_number, int), 'blabla'
-        assert isinstance(target_unit, str), 'blabla'
+        # Check
+        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
+                                                                   'but not %s.' % str(type(run_id))
 
-        try:
+        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
+
+        if isinstance(run_id, int):
+            # case as run number
+            run_number = run_id
             data_set = self._myProject.get_reduced_data(run_number, target_unit)
-            assert isinstance(data_set, dict), 'bla bla bla... ...'
-        except RuntimeError as e:
-            return False, str(e)
+        else:
+            # case as dat key
+            data_key = run_id
+            print '[DB-BAT] VDriveAPI... get data of data key', data_key, 'of type', type(run_id)
+            status, ret_obj = self._myAnalysisProject.get_data(data_key=data_key)
+            if status is False:
+                return False, ret_obj
+            data_set = ret_obj
+        # END-IF
+
+        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
 
         return True, data_set
 
-    def get_reduced_run_info(self, run_number):
+    def get_reduced_run_info(self, run_number, data_key=None):
         """
         Purpose: get information of a reduced run
-        Requirements: ... ...
+        Requirements: either run number is specified as a valid integer or data key is given;
         Guarantees: ... ...
         :param run_number:
+        :param data_key:
         :return: list of bank ID
         """
-        # TODO/NOW/1st: doc and etc.
-        assert isinstance(run_number, int), 'blabla'
+        if isinstance(run_number, int):
+            # given run number
+            try:
+                info = self._myProject.get_reduced_run_information(run_number)
+            except AssertionError as e:
+                return False, str(e)
 
-        try:
-            info = self._myProject.get_reduced_run_information(run_number)
-        except AssertionError as e:
-            return False, str(e)
+        elif run_number is None and isinstance(data_key, str):
+            # given data key
+            assert len(data_key) > 0, 'bla bla'
+            try:
+                info = self._myAnalysisProject.get_data_information(data_key)
+            except AssertionError as e:
+                return False, str(e)
+
+        else:
+            # unsupported case
+            raise AssertionError('run number %s and data key %s is not supported.' % (str(run_number), str(data_key)))
 
         return True, info
 
@@ -422,6 +516,29 @@ class VDriveAPI(object):
         :return:
         """
         return self._myWorkDir
+
+    def get_binned_data_directory(self, ipts_number=None, run_number_list=None):
+        """ Get the directory for the binned data
+        :param ipts_number:
+        :return:
+        """
+        # TODO/NOW - Doc & check
+        if ipts_number is None:
+            if run_number_list is None:
+                ipts_number = None
+            else:
+                ipts_number = self.get_run_info(run_number_list[0])
+
+        if ipts_number is None:
+            if len(self._iptsConfigDict) == 0:
+                binned_dir = os.getcwd()
+            else:
+                ipts0 = self._iptsConfigDict.keys()[0]
+                binned_dir = self._iptsConfigDict[ipts0][1]
+        else:
+            binned_dir = self._iptsConfigDict[ipts_number][1]
+
+        return binned_dir
 
     def get_data_root_directory(self):
         """ Get root data directory such as /SNS/VULCAN
@@ -468,6 +585,26 @@ class VDriveAPI(object):
 
         return file_name
 
+    def get_ipts_config(self, ipts=None):
+        """
+
+        :param ipts:
+        :return:
+        """
+        # TODO/NOW - Doc
+
+        print '[DB-BAT] IPTS config dict = ', self._iptsConfigDict
+
+        if ipts is None:
+            if len(self._iptsConfigDict) == 0:
+                return [None, None]
+            else:
+                ipts = self._iptsConfigDict.keys()[0]
+                return self._iptsConfigDict[ipts]
+        # END-IF
+
+        return self._iptsConfigDict[ipts]
+
     def get_ipts_info(self, ipts, begin_run=None, end_run=None):
         """
         Get runs and their information for a certain IPTS
@@ -501,7 +638,7 @@ class VDriveAPI(object):
         :return: 2-tuple: integer as IPTS number; 0 as unable to find
         """
         # FIXME - It is broken!
-        return futil.get_ipts_number_from_dir(ipts_dir)
+        return archivemanager.get_ipts_number_from_dir(ipts_dir)
 
     def get_run_info(self, run_number):
         """ Get a run's information
@@ -608,17 +745,52 @@ class VDriveAPI(object):
 
         return peak_list
 
-    def load_session(self, in_file_name):
+    def load_diffraction_file(self, file_name, file_type):
+        """ Load reduced diffraction file to analysis project
+        Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
+        :param file_type:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(file_name, str), 'blabla'
+        assert isinstance(file_type, str), 'blabla'
+
+        # Load
+        if file_type.lower() == 'gsas':
+            # load
+            data_key = self._myAnalysisProject.load_data(data_file_name=file_name, data_type=file_type)
+            """
+            gss_ws_name = get_standard_ws_name(file_name, False)
+            mantid_helper.load_gsas_file(file_name, gss_ws_name)
+            """
+        else:
+            raise RuntimeError('Unable to support %s file.' % file_type)
+
+        # data_key = os.path.basename(file_name)
+
+        print '[DB-BAT] Load %s and reference it by %s.' % (file_name, data_key)
+
+        return data_key
+
+    def load_session(self, in_file_name=None):
         """ Load session from saved file
         Load session from a session file
         :param in_file_name:
         :return: 2-tuple: (boolean, object)
         """
         # Check requirements
-        assert isinstance(in_file_name, str)
+        assert isinstance(in_file_name, str) or in_file_name is None
+
+        # get default session file if is not given
+        if in_file_name is None:
+            in_file_name = self._get_default_session_file()
+            if os.path.exists(in_file_name) is False:
+                return False, 'Unable to locate default session file %s.' % in_file_name
+
+        # check session file
         assert len(in_file_name) > 0
 
-        status, save_dict = futil.load_from_xml(in_file_name)
+        status, save_dict = archivemanager.load_from_xml(in_file_name)
         if status is False:
             error_message = save_dict
             return status, error_message
@@ -631,6 +803,13 @@ class VDriveAPI(object):
         # archive root directory and working directory
         self._myArchiveManager.root_directory = save_dict['myRootDataDir']
         self._myWorkDir = save_dict['myWorkDir']
+
+        # ipts dir
+        # TODO/NOW - more work!
+        ipts_number = int(save_dict['IPTSConfig'])
+        if ipts_number > 0:
+            bin_dir = save_dict['IPTSGSSDir']
+            self._iptsConfigDict[ipts_number] = ['', bin_dir]
 
         # load vdrive project to _myProject
         self._myProject.load_session_from_dict(save_dict['myProject'])
@@ -665,8 +844,6 @@ class VDriveAPI(object):
         # END-IF (nom_by_vanadium)
 
         # Reduce runs
-        status, ret_obj = self._myProject.reduce_runs()
-        # FIXME/TODO/SOON/NOW Remove the previous line!
         try:
             status, ret_obj = self._myProject.reduce_runs()
         except AssertionError as re:
@@ -692,51 +869,87 @@ class VDriveAPI(object):
 
     def set_reduction_flag(self, file_flag_list, clear_flags):
         """ Turn on the flag to reduce for files in the list
-        TODO/FIXME/NOW Doc and Fill-in
-
+        Requirements: input a list of data files with reduction flag
+        Guarantees: the reduction flag is set properly on the file
+        Note: this is a complicated version of set_runs_to_reduce
         :param file_flag_list: list of tuples as "base" file name and boolean flag
         :param clear_flags: clear reduction previously-set reduction flags
         :return:
         """
-        # FIXME - This has the same functionality as method set_runs_to_reduce()
         # Check requirements
-        assert isinstance(file_flag_list, list), 'bla bla ...'
+        assert isinstance(file_flag_list, list), 'Input file/flag must be a list ' \
+                                                 'but not %s.' % str(type(file_flag_list))
         assert isinstance(clear_flags, bool)
 
         # Clear
         if clear_flags is True:
             self._myProject.clear_reduction_flags()
 
-        # Set flags
-        num_flags_set = 0
-        err_msg = ''
+        # Create a list of runs to reduce
+        run_number_list = list()
         for run_number, reduction_flag in file_flag_list:
-            print '[DB] Set reduction flag for run %d with flag %s.' % (run_number, str(reduction_flag))
-            try:
-                self._myProject.set_reduction_flag(run_number=run_number, flag=reduction_flag)
-                num_flags_set += 1
-            except AssertionError as e:
-                err_msg += 'Unable to set flag to run %d due to %s\n' % (run_number, str(e))
+            if reduction_flag:
+                run_number_list.append(run_number)
+            # END-IF
         # END-FOR
 
-        # Return with error
-        if err_msg != '':
-            return False, '%d of %d runs cannot be set to reduce due to %s. ' % (
-                len(file_flag_list)-num_flags_set, len(file_flag_list), err_msg
-            )
+        status, err_msg = self.set_runs_to_reduce(run_number_list)
 
-        return True, ''
+        return status, err_msg
 
-    def save_session(self, out_file_name):
+    def set_runs_to_reduce(self, run_numbers):
+        """ Set runs for reduction
+        Purpose:
+            Mark the runs to be reduced;
+        Requirements:
+            Run numbers given should be already loaded
+        Guarantees:
+            All raw data file should be accessible
+        :param run_numbers:
+        :return: 2-tuple (boolean, string) for status and error message
+        """
+        # Check requirements
+        assert isinstance(run_numbers, list)
+        assert self._myProject is not None
+
+        # Pass the run number list to VDriveProject
+        return_status = True
+        error_message = ''
+        try:
+            self._myProject.mark_runs_to_reduce(run_numbers)
+        except RuntimeError as re:
+            return_status = False
+            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
+
+        return return_status, error_message
+
+    def save_session(self, out_file_name=None):
         """ Save current session
-        :param out_file_name:
+        :param out_file_name: target file name to save session. If left None, a default will be created
         :return:
         """
+        # check
+        if out_file_name is None:
+            out_file_name = self._get_default_session_file(mkdir_dir=True)
+        else:
+            assert isinstance(out_file_name, str)
+
         # Create a dictionary for current set up
         save_dict = dict()
         save_dict['myInstrumentName'] = self._myInstrument
         save_dict['myRootDataDir'] = self._myArchiveManager.root_directory
         save_dict['myWorkDir'] = self._myWorkDir
+
+        # IPTS configuration
+        # TODO/NOW - More data to be saved
+        if len(self._iptsConfigDict) > 0:
+            curr_ipts = self._iptsConfigDict.keys()[0]
+            binned_dir = self._iptsConfigDict[curr_ipts][1]
+            save_dict['IPTSConfig'] = curr_ipts
+            save_dict['IPTSGSSDir'] = binned_dir
+        else:
+            save_dict['IPTSConfig'] = -1
+
         save_dict['myProject'] = self._myProject.save_session(out_file_name=None)
 
         # Out file name
@@ -744,7 +957,7 @@ class VDriveAPI(object):
             out_file_name = os.path.join(self._myWorkDir, out_file_name)
             print '[INFO] Session file is saved to working directory as %s.' % out_file_name
 
-        futil.save_to_xml(save_dict, out_file_name)
+        archivemanager.save_to_xml(save_dict, out_file_name)
 
         return True, out_file_name
 
@@ -783,7 +996,7 @@ class VDriveAPI(object):
                 i_target += 1
             else:
                 tmp_target = '%s' % str(time_seg[2])
-            tmp_seg = logHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
+            tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
             segment_list.append(tmp_seg)
         # END-IF
 
@@ -799,20 +1012,26 @@ class VDriveAPI(object):
         # END-IF
 
         # Write to file
-        logHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
+        SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
 
         return
 
     def slice_data(self, run_number, sample_log_name=None, by_time=False):
-        """ TODO - DOC
+        """ Slice data (corresponding to a run) by either log value or time.
+        Requirements: slicer/splitters has already been set up for this run.
+        Guarantees:
+        :param run_number: run number
+        :param sample_log_name:
+        :param by_time:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # Check
+        # Check. Must either by sample log or by time
         if sample_log_name is not None and by_time is True:
             return False, 'It is not allowed to specify both sample log name and time!'
         elif sample_log_name is None and by_time is False:
             return False, 'it is not allowed to specify neither sample log nor time!'
 
+        # Get and check slicers/splitters
         if by_time is True:
             # Slice data by time
             status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
@@ -836,6 +1055,7 @@ class VDriveAPI(object):
             # slicer is a tuple for names of splitter workspace and information workspace
             # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
 
+        # Slice/split data
         status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
                                                      sample_log_name.replace('.', '-'))
 
@@ -878,6 +1098,21 @@ class VDriveAPI(object):
         self._myArchiveManager.set_ipts_number(ipts_number)
 
         return True, ''
+
+    def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
+        """
+        Set configuration for a particular IPTS
+        :param ipts_number:
+        :param data_dir:
+        :param binned_data_dir:
+        :return:
+        """
+        # TODO/NOW - check validity
+
+        # ... ...
+        self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
+
+        return
 
     def set_reduction_parameters(self, parameter_dict):
         """ Set parameters used for reducing powder event data
@@ -923,32 +1158,6 @@ class VDriveAPI(object):
 
         return
 
-    def set_runs_to_reduce(self, run_numbers):
-        """ Set runs for reduction
-        Purpose:
-            Mark the runs to be reduced;
-        Requirements:
-            Run numbers given should be already loaded
-        Guarantees:
-            All raw data file should be accessible
-        :param run_numbers:
-        :return: 2-tuple (boolean, string) for status and error message
-        """
-        # Check requirements
-        assert isinstance(run_numbers, list)
-        assert self._myProject is not None
-
-        # Pass the run number list to VDriveProject
-        return_status = True
-        error_message = ''
-        try:
-            self._myProject.mark_runs_to_reduce(run_numbers)
-        except RuntimeError as re:
-            return_status = False
-            error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
-
-        return return_status, error_message
-
     def set_slicer_helper(self, nxs_file_name, run_number):
         """
         Initialize the event slicing helper object
@@ -959,7 +1168,7 @@ class VDriveAPI(object):
         if run_number is not None:
             assert isinstance(run_number, int)
         else:
-            run_number = futil.getIptsRunFromFileName(nxs_file_name)[1]
+            run_number = archivemanager.getIptsRunFromFileName(nxs_file_name)[1]
 
         status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
 
@@ -1101,6 +1310,9 @@ def get_standard_ws_name(file_name, meta_only):
     :return:
     """
     ws_name = os.path.basename(file_name).split('.')[0]
+    file_type = os.path.basename(file_name).split('.')[1]
+    if file_type.lower() == 'gsa' or file_type.lower() == 'gda':
+        ws_name += '_gda'
 
     if meta_only is True:
         ws_name += '_Meta'
@@ -1114,7 +1326,7 @@ def parse_time_segment_file(file_name):
     :param file_name:
     :return:
     """
-    status, ret_obj = logHelper.parse_time_segments(file_name)
+    status, ret_obj = SampleLogHelper.parse_time_segments(file_name)
 
     return status, ret_obj
 

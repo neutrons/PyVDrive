@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1505</width>
-    <height>1014</height>
+    <width>1451</width>
+    <height>801</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -423,6 +423,19 @@
                </widget>
               </widget>
              </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_reduceRuns">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Reduce</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -454,7 +467,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>3</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="tab_12">
              <attribute name="title">
@@ -464,51 +477,89 @@
               <item row="0" column="0">
                <layout class="QVBoxLayout" name="verticalLayout_31">
                 <item>
+                 <widget class="QGroupBox" name="groupBox_22">
+                  <property name="title">
+                   <string>Run In Process</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_24">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_runInChop">
+                     <property name="text">
+                      <string>(Current Run)</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="2">
+                    <widget class="QComboBox" name="comboBox_chopTabRunList">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <spacer name="horizontalSpacer_14">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Preferred</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QGroupBox" name="groupBox_2">
                   <property name="title">
                    <string>Chop Options</string>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_27">
-                   <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_25">
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_chopNeutronOnly">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not synchronize with log data (loadframe, DAQ, and etc.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>Just chop neutron data</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_chopContinueRun">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j, k and respect the real time. &lt;/p&gt;&lt;p&gt;without this option: the reuslt will be &lt;/p&gt;&lt;p&gt;i/file1, i/file2, ..., j/file1, j/file2, ... &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;with this option, the result will be&lt;/p&gt;&lt;p&gt;i/file1, i/file2, ...., i/fileN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>Chop continously over runs</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_chopBinLater">
-                       <property name="text">
-                        <string>Bin data after chopping</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="checkBox_chopConnectRuns">
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j and k, and remove the time lag between any consecutive runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>Connect runs</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
+                  <layout class="QGridLayout" name="gridLayout_12">
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="checkBox_chopNeutronOnly">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not synchronize with log data (loadframe, DAQ, and etc.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string>Just chop neutron data</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QCheckBox" name="checkBox_chopContinueRun">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j, k and respect the real time. &lt;/p&gt;&lt;p&gt;without this option: the reuslt will be &lt;/p&gt;&lt;p&gt;i/file1, i/file2, ..., j/file1, j/file2, ... &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;with this option, the result will be&lt;/p&gt;&lt;p&gt;i/file1, i/file2, ...., i/fileN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string>Chop continously over runs</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="0">
+                    <widget class="QCheckBox" name="checkBox_chopBinLater">
+                     <property name="text">
+                      <string>Bin data after chopping</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="0">
+                    <widget class="QCheckBox" name="checkBox_chopConnectRuns">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop runs i, j and k, and remove the time lag between any consecutive runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string>Connect runs</string>
+                     </property>
+                    </widget>
                    </item>
                   </layout>
                  </widget>
@@ -519,7 +570,7 @@
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>1</number>
+                   <number>0</number>
                   </property>
                   <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
@@ -694,22 +745,6 @@
                        </size>
                       </property>
                      </spacer>
-                    </item>
-                    <item>
-                     <widget class="QPushButton" name="pushButton_chopData">
-                      <property name="font">
-                       <font>
-                        <weight>75</weight>
-                        <bold>true</bold>
-                       </font>
-                      </property>
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                      </property>
-                      <property name="text">
-                       <string>Chop Data</string>
-                      </property>
-                     </widget>
                     </item>
                    </layout>
                   </widget>
@@ -993,6 +1028,22 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="pushButton_chopData">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Chop Data</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -2030,12 +2081,13 @@
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1505</width>
+     <width>1451</width>
      <height>25</height>
     </rect>
    </property>
@@ -2043,10 +2095,18 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_Project"/>
+    <widget class="QMenu" name="menuRecent_Projects">
+     <property name="title">
+      <string>Recent Projects</string>
+     </property>
+     <addaction name="actionAuto_Saved"/>
+    </widget>
     <addaction name="actionNewProject"/>
+    <addaction name="actionOpen_Project"/>
     <addaction name="actionSave_Project"/>
     <addaction name="actionSave_Project_As"/>
+    <addaction name="separator"/>
+    <addaction name="menuRecent_Projects"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -2072,7 +2132,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionConfiguration_2"/>
    </widget>
    <widget class="QMenu" name="menuRuns">
     <property name="title">
@@ -2082,13 +2141,19 @@
     <addaction name="actionDelete_Runs_By_IPTS"/>
     <addaction name="actionDelete_Run"/>
    </widget>
+   <widget class="QMenu" name="menuConfiguration">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="actionOpen_Configuration"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuRuns"/>
+   <addaction name="menuConfiguration"/>
    <addaction name="menuAbout"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNewProject">
    <property name="text">
     <string>New Project</string>
@@ -2141,7 +2206,7 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionConfiguration_2">
+  <action name="action_openConfigWindow">
    <property name="text">
     <string>Configuration</string>
    </property>
@@ -2159,6 +2224,19 @@
   <action name="actionDelete_Run">
    <property name="text">
     <string>Delete Run</string>
+   </property>
+  </action>
+  <action name="actionOpen_Configuration">
+   <property name="text">
+    <string>Open Configuration</string>
+   </property>
+  </action>
+  <action name="actionAuto_Saved">
+   <property name="text">
+    <string>Auto Saved</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+G</string>
    </property>
   </action>
  </widget>
