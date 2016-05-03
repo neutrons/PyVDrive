@@ -383,8 +383,6 @@ class VDProject(object):
          - normByVanadium :: flag to normalize by vanadium
 
         :return:
-
-
         """
         # Load time focusing calibration: there is no need to load time focus calibration
         try:

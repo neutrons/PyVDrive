@@ -831,8 +831,16 @@
      <string>About</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuLog_Filter">
+    <property name="title">
+     <string>Log Filter</string>
+    </property>
+    <addaction name="actionAll"/>
+    <addaction name="actionLoad_Fram"/>
+   </widget>
    <addaction name="menuTest"/>
    <addaction name="menuAbout"/>
+   <addaction name="menuLog_Filter"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExit">
@@ -843,17 +851,33 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
+  <action name="actionAll">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>All</string>
+   </property>
+  </action>
+  <action name="actionLoad_Fram">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Load Fram</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>MplGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mplgraphicsview.h</header>
-  </customwidget>
   <customwidget>
    <class>VdriveRunManagerTree</class>
    <extends>QTreeView</extends>
    <header>vdrivetreewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MplGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview.h</header>
   </customwidget>
   <customwidget>
    <class>DataSlicerSegmentTable</class>

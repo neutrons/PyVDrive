@@ -342,6 +342,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
             # advance to 'bin'-tab
             self.ui.tabWidget_reduceData.setCurrentIndex(1)
 
+        # TODO/NOW/40 - Add a flg or some signal on GUI to notify user that
+        #               it is ready to bin data or chop data
+
         return
 
     def do_update_selected_runs(self):
@@ -794,8 +797,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.
         :return:
         """
-        # TODO/NEXT/NOW
-        raise NotImplementedError('ASAP')
+        # TODO/NOW/40 - Implement
+        # Default directory for smoothed vanadium: /SNS/IPTS-????/shared/Instrument/
+        # Load GSAS file and find the binning and data range information
 
         # Get calibration file
         if os.path.exists(self._calibCriteriaFile) is False:
@@ -806,9 +810,13 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 return
 
         # Launch second dialog to select the criteria from table
+        # TODO/NOW/40: suggest to call this setup in menu (self.ui.actionAuto_Vanadium)
+        # default directory for log file /SNS/VULCAN/shared/CalibrationFile/Instrument/Standard/Vanadium/VRecord.txt
         import ui.Dialog_SetupVanCalibrationRules as vanSetup
         setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
         setupdialog.exec_()
+
+        raise NotImplementedError('Test 1107')
 
         return
 

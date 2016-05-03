@@ -2146,6 +2146,7 @@
      <string>Configuration</string>
     </property>
     <addaction name="actionOpen_Configuration"/>
+    <addaction name="actionAuto_Vanadium"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -2237,6 +2238,11 @@
    </property>
    <property name="shortcut">
     <string>Alt+G</string>
+   </property>
+  </action>
+  <action name="actionAuto_Vanadium">
+   <property name="text">
+    <string>Auto Vanadium</string>
    </property>
   </action>
  </widget>
