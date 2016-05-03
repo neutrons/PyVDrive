@@ -336,7 +336,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 self.ui.comboBox_chopTabRunList.addItem('%d' % run_number)
 
             # set up current run and run list in chop-tab
-            self._myWorkflow.load_log_only(current_run_number)
+            # self._myWorkflow.load_log_only(current_run_number)
 
         else:
             # advance to 'bin'-tab

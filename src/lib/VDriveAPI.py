@@ -1169,7 +1169,7 @@ class VDriveAPI(object):
             assert isinstance(run_number, int)
         else:
             # FIXME/TODO/NOW/40 : find getIptsRunFromFileName()
-            run_number = archivemanager.getIptsRunFromFileName(nxs_file_name)[1]
+            run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
 
         status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
 

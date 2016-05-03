@@ -265,7 +265,7 @@ class MyReductionWindow(QWidget):
         # Set up table
         execstatus, errmsg, datafilepairlist = self._myParent._myWorkflow.getDataFiles(projname)
         for dpair in datafilepairlist:
-            ipts, run = futil.getIptsRunFromFileName(dpair[0])
+            ipts, run = futil.get_ipts_run_from_file_name(dpair[0])
             self._myFinalSelectionDialog.appendRow(-1, run, None, True)
 
         self._myFinalSelectionDialog.show()

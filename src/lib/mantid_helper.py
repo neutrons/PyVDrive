@@ -658,6 +658,8 @@ def mtd_convert_units(ws_name, target_unit):
         target_unit = 'dSpacing'
     elif target_unit.lower() == 'tof':
         target_unit = 'TOF'
+    elif target_unit.lower() == 'q':
+        target_unit = 'MomentumTransfer'
     
     # Convert to Histogram, convert unit (must work on histogram) and convert back to point data
     if is_histogram is False:

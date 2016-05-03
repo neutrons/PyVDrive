@@ -542,7 +542,7 @@ class VDrivePlot(QtGui.QMainWindow):
             # override
             doreduce = False
             if selectedlist is not None: 
-                ipts, runnumber = futil.getIptsRunFromFileName(datafname)
+                ipts, runnumber = futil.get_ipts_run_from_file_name(datafname)
                 print "check run %d in file %s within list %s." % (runnumber, datafname, str(selectedlist))
                 if runnumber in selectedlist:
                     doreduce = True

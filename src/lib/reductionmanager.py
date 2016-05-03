@@ -800,11 +800,11 @@ class ReductionManager(object):
         :return:
         """
         if self._myGroupWorkspaceName is not None:
-            mantid_helper.DeleteWorkspace(Workspace=self._myGroupWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myGroupWorkspaceName)
         if self._myOffsetWorkspaceName is not None:
-            mantid_helper.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
         if self._myMaskWorkspaceName is not None:
-            mantid_helper.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
 
         return
 
