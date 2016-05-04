@@ -46,7 +46,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit_no_save)
         self.connect(self.ui.pushButton_saveReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_quit_with_save)
+                     self.do_save_quit)
         self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_run)
         self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
@@ -62,6 +62,9 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_set_log_options)
         self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled()'),
                      self.do_set_log_options)
+
+        self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
+                     self.load_log_names)
 
         # Add slicer picker
         self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
@@ -85,7 +88,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
                      self.do_highlite_selected)
         self.connect(self.ui.pushButton_processSegments, QtCore.SIGNAL('clicked()'),
-                     self.do_slice_segments)
+                     self.do_split_segments)
 
         # Canvas
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
@@ -136,12 +139,19 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def _init_widgets_setup(self):
         """
-
+        Initialize widgets
         :return:
         """
+        # slice segments table
         self.ui.tableWidget_segments.setup()
-
+        # ipts-run selection tree
         self.ui.treeView_iptsRun.set_main_window(self)
+        # about plotting
+        self.ui.checkBox_autoResize.setChecked(True)
+        # options to create slicing segments
+        self.ui.radioButton_noExpand.setChecked(True)
+
+        return
 
     def do_select_time_segments(self):
         """
@@ -207,30 +217,41 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_slice_segments(self):
+    def do_split_segments(self):
         """
-        Split a certain number of time segment into smaller segments either
-        by time or by log value
+        Save a certain number of time segment from table tableWidget_segments
         :return:
         """
+        raise NotImplementedError('Need more consideration!')
+
         # Name of the sample log
         log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+        print ('[DB...BAT] Log name %s vs current log name %s: %s' % (log_name, self._currLogName,
+                                                                      str(log_name == self._currLogName)))
 
-        # Collect selected time segments
+        # collect selected time segments
         source_time_segments, row_number_list = \
             self.ui.tableWidget_segments.get_selected_time_segments(True)
 
-        # Split option
+        # check options for further splitting slicer option
+        by_log_value = False
+        by_time = False
         if self.ui.radioButton_logValueStep.isChecked():
             # By log value
-            by_time = False
+            by_log_value = True
             step_value = GuiUtility.parse_float(self.ui.lineEdit_logValueStep)
-        else:
+        elif self.ui.radioButton_timeStep.isChecked():
             # By time
             by_time = True
             step_value = GuiUtility.parse_float(self.ui.lineEdit_timeStep)
+        else:
+            # no future slicing
+            step_value = None
 
-        # FIXME - Not implemented in API yet
+        # pass the segments to API to generate slicers
+        self._myParent.get_workflow().generate_data_slicer(
+            self._currRunNumber, source_time_segments, by_log_value, by_time, step_value)
+
         # Run GenerateEventFilters
         num_segments = len(source_time_segments)
         index_list = range(num_segments)
@@ -278,20 +299,18 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Get sample logs
         try:
-            sample_log_names = self._myParent.load_sample_run(run_number, True)
+            log_name_with_size = True
+            self._logNameList = self._myParent.load_sample_run(run_number, log_name_with_size)
+            self._logNameList.sort()
         except RuntimeError as err:
-            GuiUtility.pop_dialog_error('Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
+            GuiUtility.pop_dialog_error(self,
+                                        'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
 
-        # Set up
-        self.ui.comboBox_logNames.clear()
-        for log_name in sorted(sample_log_names):
-            # self.ui.comboBox_logNames.addItem(QtCore.QString(log_name))
-            self.ui.comboBox_logNames.addItem(str(log_name))
-        self._currentLogIndex = 0
-        self._logNameList = sample_log_names[:]
+        # Load log names to combo box _logNames
+        self.load_log_names()
 
-        # Set
+        # plot the first log
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
@@ -299,6 +318,33 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Update class variables
         self._currRunNumber = run_number
         self._currLogName = log_name
+
+        return
+
+    def load_log_names(self):
+        """
+        Load log names to combo box comboBox_logNames
+        :return:
+        """
+        # get configuration
+        hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
+
+        # clear box
+        self.ui.comboBox_logNames.clear()
+
+        # add sample logs to combo box
+        for log_name in self._logNameList:
+            # check whether to add
+            if hide_1value_log and log_name.count('(') > 0:
+                log_size = int(log_name.split('(')[1].split(')')[0])
+                if log_size == 1:
+                    continue
+            # add log
+            self.ui.comboBox_logNames.addItem(str(log_name))
+        # END-FOR
+
+        # set current index
+        self._currentLogIndex = 0
 
         return
 
@@ -456,18 +502,33 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_quit_with_save(self):
+    def do_save_quit(self):
         """ Save selected segment and quit
         :return:
         """
         # Get splitters
-        split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
+        try:
+            split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
+        except RuntimeError as e:
+            GuiUtility.pop_dialog_error(self, str(e))
+            return
+
+        # pop a dialog for the name of the slicer
+        slicer_name, status = QtGui.QInputDialog.getText(self, 'Input Slicer Name', 'Enter slicer name:')
+        # return if not given
+        if status is False:
+            return
+        else:
+            slicer_name = str(slicer_name)
+            print '[DB...BAT] Slicer name: ', slicer_name
 
         # Call parent method
         if self._myParent is not None:
-            self._myParent.get_workflow().gen_data_slice_manual(
-                run_number=self._currRunNumber, relative_time=True,
-                time_segments_list=split_tup_list)
+            self._myParent.get_workflow().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                                relative_time=True,
+                                                                time_segment_list=split_tup_list,
+                                                                slice_tag=slicer_name)
+        # END-IF
 
         # Close
         self.close()
@@ -807,6 +868,32 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
+
+        if self.ui.checkBox_autoResize.isChecked():
+            self.resize_canvas_auto(vec_x, vec_y)
+
+        return
+
+    def resize_canvas_auto(self, vec_x, vec_y):
+        """ Automatically resize canvas
+        :return:
+        """
+        # TODO/NOW/40 - Doc and check
+
+        print '[DB...BAT] Type (vec_x) = ', type(vec_x)
+
+        # TODO/NOW/40 - Resize vecX
+
+        # Resize Y
+        min_y = min(vec_y)
+        max_y = max(vec_y)
+        d_y = max_y - min_y
+
+        y_lower_limit = min_y - d_y * 0.1
+        y_upper_limit = max_y + d_y * 0.1
+
+        # Set
+        self.ui.graphicsView_main.setXYLimit(xmin=None, xmax=None, ymin=y_lower_limit, ymax=y_upper_limit)
 
         return
 

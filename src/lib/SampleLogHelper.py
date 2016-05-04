@@ -315,10 +315,12 @@ class SampleLogManager(object):
 
         return True, ret_obj
 
-    def generate_events_filter_manual(self, run_number, split_list, tag):
+    def generate_events_filter_manual(self, run_number, split_list, relative_time, tag):
         """ Generate a split workspace with arbitrary input time
         :param run_number:
         :param split_list:
+        :param relative_time:
+        :param tag: 2-tuple : boolean, ???? (...)/string (error message)
         :return:
         """
         # Check
@@ -600,7 +602,7 @@ class SampleLogManager(object):
         nxs_name, run_number, ws_name, splitter_dict = self._prevSessionDict[nxs_base_name]
 
         # Check workspace existence
-        if mtd.has_workspace(ws_name) is False:
+        if mtd.workspace_does_exist(ws_name) is False:
             return False, 'Log workspace %s does not exist.' % ws_name
 
         # Retrieve

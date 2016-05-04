@@ -333,14 +333,18 @@ class VDriveAPI(object):
 
         return peak_info_list
 
-    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
-        """
+    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
+        """ generate event slicer for data manually
         :param run_number:
         :param relative_time:
         :param time_segment_list:
+        :param slice_tag:
         :return:
         """
-        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list,relative_time)
+        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list, relative_time,
+                                                             slice_tag)
+
+        return
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
@@ -1168,7 +1172,6 @@ class VDriveAPI(object):
         if run_number is not None:
             assert isinstance(run_number, int)
         else:
-            # FIXME/TODO/NOW/40 : find getIptsRunFromFileName()
             run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
 
         status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)

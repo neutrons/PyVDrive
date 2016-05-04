@@ -85,14 +85,15 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def get_cell_value(self, row_index, col_index):
+    def get_cell_value(self, row_index, col_index, allow_blank=False):
         """
         Purpose: Get cell value
         Requirements: row index and column index are integer and within range.
         Guarantees: the cell value with correct type is returned
         :param row_index:
         :param col_index:
-        :return:
+        :param allow_blank:
+        :return: int/float/string or None if allow_blank
         """
         # check
         assert isinstance(row_index, int)
@@ -115,10 +116,20 @@ class NTableWidget(QtGui.QTableWidget):
             assert isinstance(item_i_j, QtGui.QTableWidgetItem)
 
             return_value = str(item_i_j.text())
+
+            # check empty input
             if cell_data_type == 'int':
-                return_value = int(return_value)
+                if len(return_value) == 0 and allow_blank:
+                    return_value = None
+                else:
+                    return_value = int(return_value)
             elif cell_data_type == 'float' or cell_data_type == 'double':
-                return_value = float(return_value)
+                if len(return_value) == 0 and allow_blank:
+                    return_value = None
+                else:
+                    return_value = float(return_value)
+            # END-IF-ELSE (cell_data_type)
+        # END-IF-ELSE (cell_type)
 
         return return_value
 
