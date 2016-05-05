@@ -876,13 +876,23 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def resize_canvas_auto(self, vec_x, vec_y):
         """ Automatically resize canvas
+        :param vec_x: vector of X-axis value
+        :param vec_y: vector of Y-axis value
         :return:
         """
-        # TODO/NOW/40 - Doc and check
+        # check
+        assert isinstance(vec_x, numpy.ndarray), 'vector X must be a numpy ndarray but not %s.' \
+                                                 '' % str(type(vec_x))
+        assert isinstance(vec_y, numpy.ndarray), 'vector Y must be a numpy ndarray but not %s.' \
+                                                 '' % str(type(vec_y))
 
-        print '[DB...BAT] Type (vec_x) = ', type(vec_x)
+        # resize X
+        min_x = min(vec_x)
+        max_x = max(vec_x)
+        d_x = max_x - min_x
 
-        # TODO/NOW/40 - Resize vecX
+        x_lower_limit = min_x - d_x * 0.05
+        x_upper_limit = max_x + d_x * 0.05
 
         # Resize Y
         min_y = min(vec_y)
@@ -893,7 +903,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         y_upper_limit = max_y + d_y * 0.1
 
         # Set
-        self.ui.graphicsView_main.setXYLimit(xmin=None, xmax=None, ymin=y_lower_limit, ymax=y_upper_limit)
+        self.ui.graphicsView_main.setXYLimit(xmin=x_lower_limit, xmax=x_upper_limit,
+                                             ymin=y_lower_limit, ymax=y_upper_limit)
 
         return
 

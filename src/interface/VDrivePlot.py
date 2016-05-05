@@ -73,7 +73,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Column 2
         # about vanadium calibration
         self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration)
+                     self.do_load_vanadium_calibration)
         self.connect(self.ui.pushButton_showCalDetails, QtCore.SIGNAL('clicked()'),
                      self.do_show_calibration_map)
 
@@ -341,9 +341,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
         else:
             # advance to 'bin'-tab
             self.ui.tabWidget_reduceData.setCurrentIndex(1)
-
-        # TODO/NOW/40 - Add a flg or some signal on GUI to notify user that
-        #               it is ready to bin data or chop data
 
         return
 
@@ -784,39 +781,39 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_load_calibration(self):
+    def do_load_vanadium_calibration(self):
         """
         Purpose:
-            Select and check vanadium calibration file for the current runs
+            Select and load vanadium calibration GSAS file for the current runs
         Requirements:
             Some runs are light-loaded to project
+            The GSAS file must be a time focused vanadium run with proper range, bin size and
+            number of spectra.
         Guarantee:
-            Load calibration...
-
-        Nomenclature:
-        1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.
+            GSAS file is loaded and inspected.
         :return:
         """
-        # TODO/NOW/40 - Implement
-        # Default directory for smoothed vanadium: /SNS/IPTS-????/shared/Instrument/
-        # Load GSAS file and find the binning and data range information
+        # user specify the smoothed vanadium file
+        # get default directory for smoothed vanadium: /SNS/IPTS-????/shared/Instrument/
+        default_van_dir = '/SNS/IPTS-%d/shared/Instrument' % self._currIPTS
 
-        # Get calibration file
-        if os.path.exists(self._calibCriteriaFile) is False:
-            self._calibCriteriaFile = str(
-                QtGui.QFileDialog.getOpenFileName(self, 'Get Vanadium Criteria', '/SNS/VULCAN/')
-            )
-            if self._calibCriteriaFile is None or len(self._calibCriteriaFile) == 0:
-                return
+        # get calibration file
+        file_types = 'GSAS (*.gsa);;All (*.*)'
+        smooth_van_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Get smoothed vanadium GSAS',
+                                                                default_van_dir, file_types))
 
-        # Launch second dialog to select the criteria from table
-        # TODO/NOW/40: suggest to call this setup in menu (self.ui.actionAuto_Vanadium)
-        # default directory for log file /SNS/VULCAN/shared/CalibrationFile/Instrument/Standard/Vanadium/VRecord.txt
-        import ui.Dialog_SetupVanCalibrationRules as vanSetup
-        setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
-        setupdialog.exec_()
+        # return if cancel
+        if len(smooth_van_file) == 0:
+            return
 
-        raise NotImplementedError('Test 1107')
+        # load vanadium file
+        van_key = self._myWorkflow.load_smoothed_vanadium(smooth_van_file)
+
+        # get information
+        van_info = self._myWorkflow.get_vanadium_info(van_key)
+
+        # write vanadium information in somethere
+        # ... write vanadium ...
 
         return
 
@@ -1154,6 +1151,29 @@ class VdriveMainWindow(QtGui.QMainWindow):
         assert os.path.exists(session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
 
         self.load_project(session_file_name)
+
+        return
+
+    def menu_setup_auto_vanadium_file(self):
+        """
+        TODO/NOW/later... Implement!
+        # TODO/NOW/40: suggest to call this setup in menu (self.ui.actionAuto_Vanadium)
+        :return:
+        """
+
+        #if os.path.exists(self._calibCriteriaFile) is False:
+        #    self._calibCriteriaFile = str(
+        #        QtGui.QFileDialog.getOpenFileName(self, 'Get Vanadium Criteria', '/SNS/VULCAN/')
+        #    )
+        #    if self._calibCriteriaFile is None or len(self._calibCriteriaFile) == 0:
+        #        return
+
+        # Launch second dialog to select the criteria from table
+
+        # default directory for log file /SNS/VULCAN/shared/CalibrationFile/Instrument/Standard/Vanadium/VRecord.txt
+        import ui.Dialog_SetupVanCalibrationRules as vanSetup
+        setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
+        setupdialog.exec_()
 
         return
 

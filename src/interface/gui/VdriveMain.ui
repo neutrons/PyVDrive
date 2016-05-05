@@ -432,7 +432,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>Reduce</string>
+                <string>Ready for Reduction</string>
                </property>
               </widget>
              </item>
@@ -467,7 +467,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>1</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="tab_12">
              <attribute name="title">
@@ -570,7 +570,7 @@
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enabled if 'By picked segments' is selected&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="currentIndex">
-                   <number>0</number>
+                   <number>1</number>
                   </property>
                   <widget class="QWidget" name="tab_chop">
                    <attribute name="title">
@@ -1027,23 +1027,23 @@
                   </widget>
                  </widget>
                 </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_chopData">
+                  <property name="font">
+                   <font>
+                    <weight>75</weight>
+                    <bold>true</bold>
+                   </font>
+                  </property>
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>Chop Data</string>
+                  </property>
+                 </widget>
+                </item>
                </layout>
-              </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="pushButton_chopData">
-                <property name="font">
-                 <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Chop Data</string>
-                </property>
-               </widget>
               </item>
              </layout>
             </widget>
@@ -2088,7 +2088,7 @@
      <x>0</x>
      <y>0</y>
      <width>1451</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
