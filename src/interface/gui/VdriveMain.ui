@@ -432,7 +432,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>Ready for Reduction</string>
+                <string>Reduce</string>
                </property>
               </widget>
              </item>
@@ -771,16 +771,6 @@
                         </property>
                        </spacer>
                       </item>
-                      <item row="5" column="0">
-                       <widget class="QLabel" name="label_activeSlicer">
-                        <property name="text">
-                         <string/>
-                        </property>
-                        <property name="alignment">
-                         <set>Qt::AlignJustify|Qt::AlignVCenter</set>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="0">
                        <layout class="QHBoxLayout" name="horizontalLayout_25">
                         <item>
@@ -922,7 +912,7 @@
                         </layout>
                        </widget>
                       </item>
-                      <item row="6" column="0">
+                      <item row="5" column="0">
                        <widget class="QPushButton" name="pushButton_saveSlicer">
                         <property name="font">
                          <font>
@@ -992,7 +982,20 @@
                         </layout>
                        </widget>
                       </item>
-                      <item row="9" column="0">
+                      <item row="7" column="0">
+                       <spacer name="verticalSpacer_7">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item row="8" column="0">
                        <widget class="QPushButton" name="pushButton_chopDataSingleSet">
                         <property name="font">
                          <font>
@@ -1008,42 +1011,29 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="8" column="0">
-                       <spacer name="verticalSpacer_7">
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>20</width>
-                          <height>40</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
                      </layout>
                     </item>
                    </layout>
                   </widget>
                  </widget>
                 </item>
-                <item>
-                 <widget class="QPushButton" name="pushButton_chopData">
-                  <property name="font">
-                   <font>
-                    <weight>75</weight>
-                    <bold>true</bold>
-                   </font>
-                  </property>
-                  <property name="toolTip">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                  </property>
-                  <property name="text">
-                   <string>Chop Data</string>
-                  </property>
-                 </widget>
-                </item>
                </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="pushButton_chopData">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;Chop data by time segments. &lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work on several selected event data files if the time segments are defined in relative time;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:400;&quot;&gt;* It can work only one one data file if the time segments are defined in absolute time;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Chop Data</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -2088,7 +2078,7 @@
      <x>0</x>
      <y>0</y>
      <width>1451</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

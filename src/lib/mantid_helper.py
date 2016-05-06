@@ -1,5 +1,6 @@
 import sys
 import os
+import math
 import numpy
 
 # Import mantid directory
@@ -255,7 +256,8 @@ def get_sample_log_names(src_workspace):
     return name_list
 
 
-def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative):
+def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative,
+                         max_size):
     """
     Get sample log value
     :param src_workspace:
@@ -298,6 +300,33 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     if len(vec_times) == 0:
         print 'Start = ', start_time, 'Stop = ', stop_time
         raise NotImplementedError('DB Stop')
+
+    # merge and average data
+    raw_size = len(vec_times)
+    if max_size is not None and max_size * 1.5 < raw_size:
+        num_pixels = int(math.ceil(float(raw_size)/max_size))
+        new_size = raw_size/num_pixels
+        residue = raw_size%num_pixels
+
+        new_vec_times = vec_times[::num_pixels]
+        new_vec_value = vec_times[::num_pixels]
+        if residue > 0:
+            new_vec_times = new_vec_times[:-1]
+            new_vec_value = new_vec_value[:-1]
+
+        for index in range(1, num_pixels):
+            temp_vec_times = vec_times[index::num_pixels]
+            temp_vec_value = vec_value[index::num_pixels]
+            if len(temp_vec_times) == new_size:
+                new_vec_value += temp_vec_value
+            else:
+                new_vec_value += temp_vec_value[:-1]
+        # END-FOR
+
+        vec_times = new_vec_times
+        vec_value = new_vec_value
+
+    # END-IF
 
     return vec_times, vec_value
 

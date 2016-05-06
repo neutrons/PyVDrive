@@ -68,7 +68,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_by_ipts)
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_read_sample_log_file)
+                     self.do_load_sample_log)
 
         # Column 2
         # about vanadium calibration
@@ -135,7 +135,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                      self.ui.comboBox_g51, self.ui.comboBox_g61]
         for combo_box in self._group_left_box_list:
             self.connect(combo_box, QtCore.SIGNAL('currentIndexChanged(int)'),
-                         self.do_change_log_snap_view)
+                         self.event_change_log_snap_view)
+        self._logSnapViewLock = False
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
@@ -749,23 +750,33 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_change_log_snap_view(self):
+    def event_change_log_snap_view(self):
         """
         Event handling if user chooses to plot another log in snap view
         :return:
         """
+        # If snap view is locked, then return without any change
+        if self._logSnapViewLock:
+            return
+
         num_skip_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
 
         for i in xrange(len(self._group_left_box_list)):
             curr_index = int(self._group_left_box_list[i].currentIndex())
+
+            # skip if it is not set!
             if curr_index < 0:
-                # skip if it is not set!
                 continue
-            if curr_index != self._group_left_box_values[i]:
-                self._group_left_box_values[i] = curr_index
-                print '[DB] Left box No. %d log index is changed to %d' % (i, curr_index)
-                SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
-                break
+
+            # skip if there is no change
+            if curr_index == self._group_left_box_values[i]:
+                return
+
+            # apply change to status record
+            self._group_left_box_values[i] = curr_index
+            # plot
+            SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
+        # END-FOR
 
         return
 
@@ -844,46 +855,48 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_read_sample_log_file(self):
+    def do_load_sample_log(self):
         """ Load nexus file for plotting sample log.
         The file should be selected from runs in the tree
         :return:
         """
-        # Get the default file path
-        log_path = self._myWorkflow.get_data_root_directory()
-
         # Set up a more detailed file path to load log file according to selected run
         # from the project tree
-        # TODO! this is very bad!
-        status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
-        if status is True:
-            run_number = ret_obj
-            status, ret_obj = self._myWorkflow.get_run_info(run_number)
-            if status is True:
-                # run is located in workflow controller
-                run_file_name, ipts_number = ret_obj
-                if run_file_name.startswith('/SNS/'):
-                    # data is from data server: redirect to IPTS-???/0/.. directory
-                    ipts_number = ipts_number
-                    log_path = os.path.join('/SNS/VULCAN/',
-                                                  'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
-                else:
-                    # local data file
-                    log_path = os.path.dirname(run_file_name)
-            else:
-                GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
-            self._currLogRunNumber = run_number
+        # run number first
+        run_str = str(self.ui.comboBox_chopTabRunList.currentText())
+        if run_str.isdigit():
+            run_number = int(run_str)
         else:
+            GuiUtility.pop_dialog_error(self, 'Run number %s selected in combo-box is not integer.' % run_str)
+            return
+
+        # find default directory
+        status, ret_obj = self._myWorkflow.get_run_info(run_number)
+        if not status:
             GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+            return
+
+        # run is located in workflow controller
+        run_file_name, ipts_number = ret_obj
+        if run_file_name.startswith('/SNS/'):
+            # data is from data server: redirect to IPTS-???/0/.. directory
+            log_path = os.path.join('/SNS/VULCAN/',
+                                    'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
+        else:
+            # local data file
+            log_path = os.path.dirname(run_file_name)
         # END-IF
 
+        self._currLogRunNumber = run_number
+
         # Dialog to get the file name
-        file_filter = "NXS (*.nxs);;All files (*.*)"
+        file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
         log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
                                                               log_path, file_filter))
 
         # Load log
         log_name_list = self.load_sample_run(log_file_name, smart=True)
+        log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
@@ -892,7 +905,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         else:
             num_sec_skipped = None
 
-        # Set up and plot all 6 widgets groups
+        # Set up and plot all 6 widgets groups. Need to lock the event handler for 6 combo boxes first
+        self._logSnapViewLock = True
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
@@ -901,14 +915,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
 
-            # get log value
-            # log_name = log_name_list[i]
-            # vec_times, vec_log_value = self.get_sample_log_value(log_name)
-
-            # plot log value
-            # log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
-
+            log_widget.plot_sample_log(num_sec_skipped)
         # END-FOR
+        self._logSnapViewLock = False
 
         # Record sample log file
         self._lastSampleLogFileName = log_file_name
@@ -1040,11 +1049,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def get_sample_log_value(self, log_name, relative=False):
+    def get_sample_log_value(self, log_name, num_sec_skipped, relative=False):
         """
         Get sample log vaue
         :param log_name:
-        :return: 2-tuple as (numpy.1darray, numpy.1darray)
+        :param num_sec_skipped:
+        :return: 2-tuple as (numpy.ndarray, numpy.ndarray)
         """
         status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
         if status is False:

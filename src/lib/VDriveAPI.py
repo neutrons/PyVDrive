@@ -720,10 +720,11 @@ class VDriveAPI(object):
         assert isinstance(log_name, str)
         try:
             vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
-                                                                     sample_log_name=log_name,
-                                                                     start_time=start_time,
-                                                                     stop_time=stop_time,
-                                                                     relative=relative)
+                                                                          sample_log_name=log_name,
+                                                                          start_time=start_time,
+                                                                          stop_time=stop_time,
+                                                                          relative=relative,
+                                                                          max_size=1000)
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 
