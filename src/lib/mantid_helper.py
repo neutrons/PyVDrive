@@ -301,19 +301,24 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
         print 'Start = ', start_time, 'Stop = ', stop_time
         raise NotImplementedError('DB Stop')
 
-    # merge and average data
+    # merge and average data (???)
     raw_size = len(vec_times)
     if max_size is not None and max_size * 1.5 < raw_size:
+        print '[DB...BAT] Sample log name: %s. Original size = %d.' % (sample_log_name, raw_size)
         num_pixels = int(math.ceil(float(raw_size)/max_size))
-        new_size = raw_size/num_pixels
-        residue = raw_size%num_pixels
+        new_size = raw_size / num_pixels
+        residue = raw_size % num_pixels
 
+        print '[DB...BAT] Number of pixels: %d' % num_pixels
         new_vec_times = vec_times[::num_pixels]
-        new_vec_value = vec_times[::num_pixels]
+        new_vec_value = vec_value[::num_pixels]
+
+        print '[DB...BAT] New number of pixels: %d' % len(new_vec_times), new_vec_value
         if residue > 0:
             new_vec_times = new_vec_times[:-1]
             new_vec_value = new_vec_value[:-1]
 
+        """ Disabled due to test
         for index in range(1, num_pixels):
             temp_vec_times = vec_times[index::num_pixels]
             temp_vec_value = vec_value[index::num_pixels]
@@ -322,6 +327,7 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
             else:
                 new_vec_value += temp_vec_value[:-1]
         # END-FOR
+        """
 
         vec_times = new_vec_times
         vec_value = new_vec_value

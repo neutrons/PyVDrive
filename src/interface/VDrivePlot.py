@@ -1056,6 +1056,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :param num_sec_skipped:
         :return: 2-tuple as (numpy.ndarray, numpy.ndarray)
         """
+        # FIXME/TODO/NOW!
         status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)

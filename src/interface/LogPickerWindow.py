@@ -864,7 +864,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param sample_log_name:
         :return:
         """
-        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name, relative=True)
+        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name, num_sec_skipped=1, relative=True)
 
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
