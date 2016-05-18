@@ -150,6 +150,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.checkBox_autoResize.setChecked(True)
         # options to create slicing segments
         self.ui.radioButton_noExpand.setChecked(True)
+        # set up the check boxes
+        self.ui.checkBox_hideSingleValueLog.setChecked(True)
 
         return
 
