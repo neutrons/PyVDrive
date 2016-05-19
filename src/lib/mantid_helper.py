@@ -102,9 +102,6 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     # TODO/NOW/40 - complete this!
 
 
-
-
-
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                   min_time, max_time,
                                   log_name, min_log_value, max_log_value, log_value_interval,
@@ -256,83 +253,39 @@ def get_sample_log_names(src_workspace):
     return name_list
 
 
-def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative,
-                         max_size):
+def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative):
     """
     Get sample log value
     :param src_workspace:
     :param sample_log_name:
     :return: 2-tuple.  vector of epoch time in unit of second. vector of log value
     """
-    # Get property
-    run = src_workspace.getRun()
-    this_property = run.getProperty(sample_log_name)
-    assert isinstance(this_property, mantid.kernel.FloatTimeSeriesProperty)
+    # Check
+    # assert workspace_does_exist(src_workspace)
+    assert isinstance(sample_log_name, str)
 
-    # Get vectors
-    vec_time_raw = this_property.times
-    vec_times = numpy.ndarray(shape=(len(vec_time_raw), ), dtype='float')
-    for i in xrange(len(vec_time_raw)):
-        vec_times[i] = vec_time_raw[i].totalNanoseconds()*1.0E-9
-
-    vec_value = this_property.value
-
-    # Relative time?
-    if relative is True:
-        run_start_time = run.startTime().totalNanoseconds()*1.0E-9
-        vec_times -= run_start_time
-
-    # Get partial data
-    get_partial = False
-    start_index = 0
-    stop_index = len(vec_times)
+    # Form args
+    args = dict()
     if start_time is not None:
-        assert isinstance(start_time, float)
-        start_index = numpy.searchsorted(vec_times, start_time)
-        get_partial = True
+        args['StartTime'] = start_time
     if stop_time is not None:
-        stop_index = numpy.searchsorted(vec_times, stop_time)
-        get_partial = True
-    if get_partial:
-        vec_times = vec_times[start_index:stop_index]
-        vec_value = vec_value[start_index:stop_index]
+        args['StopTime'] = stop_time
 
-    if len(vec_times) == 0:
-        print 'Start = ', start_time, 'Stop = ', stop_time
-        raise NotImplementedError('DB Stop')
+    # Call
+    temp_out_ws_name = str(src_workspace) + '_' + sample_log_name
+    mantidapi.ExportTimeSeriesLog(InputWorkspace=src_workspace,
+                                  OutputWorkspace=temp_out_ws_name,
+                                  LogName=sample_log_name,
+                                  UnitOfTime='Seconds',
+                                  OutputAbsoluteTime=not relative,
+                                  IsEventWorkspace=False,
+                                  **args)
 
-    # merge and average data (???)
-    raw_size = len(vec_times)
-    if max_size is not None and max_size * 1.5 < raw_size:
-        print '[DB...BAT] Sample log name: %s. Original size = %d.' % (sample_log_name, raw_size)
-        num_pixels = int(math.ceil(float(raw_size)/max_size))
-        new_size = raw_size / num_pixels
-        residue = raw_size % num_pixels
+    out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
 
-        print '[DB...BAT] Number of pixels: %d' % num_pixels
-        new_vec_times = vec_times[::num_pixels]
-        new_vec_value = vec_value[::num_pixels]
-
-        print '[DB...BAT] New number of pixels: %d' % len(new_vec_times), new_vec_value
-        if residue > 0:
-            new_vec_times = new_vec_times[:-1]
-            new_vec_value = new_vec_value[:-1]
-
-        """ Disabled due to test
-        for index in range(1, num_pixels):
-            temp_vec_times = vec_times[index::num_pixels]
-            temp_vec_value = vec_value[index::num_pixels]
-            if len(temp_vec_times) == new_size:
-                new_vec_value += temp_vec_value
-            else:
-                new_vec_value += temp_vec_value[:-1]
-        # END-FOR
-        """
-
-        vec_times = new_vec_times
-        vec_value = new_vec_value
-
-    # END-IF
+    # FIXME: find out the difference!
+    vec_times = out_ws.readX(0)[:]
+    vec_value = out_ws.readY(0)[:]
 
     return vec_times, vec_value
 

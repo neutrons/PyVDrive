@@ -1049,14 +1049,19 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def get_sample_log_value(self, log_name, num_sec_skipped, relative=False):
+    def get_sample_log_value(self, log_name, resolution, number_resolution, time_resolution, relative=False):
         """
-        Get sample log vaue
+        Get sample log value
         :param log_name:
-        :param num_sec_skipped:
         :return: 2-tuple as (numpy.ndarray, numpy.ndarray)
         """
-        # FIXME/TODO/NOW!
+        # check input arguments
+        assert isinstance(resolution, int) or isinstance(resolution, float)
+        assert (number_resolution and not time_resolution) or (not number_resolution and time_resolution)
+
+        # TODO/NOW/FIXME/40 - Need to apply resolution to get_sample_log_values()
+        #                     and consider to store the raw data!
+
         status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)

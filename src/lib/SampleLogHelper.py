@@ -416,12 +416,21 @@ class SampleLogManager(object):
         # Get property
         print '[DB-Trace-Bug Helper 2] run number = ', run_number, 'sample log name = ', sample_log_name,
         print 'start time  = ', start_time
-        return mtd.get_sample_log_value(src_workspace=self._currWorkspace,
-                                        sample_log_name=sample_log_name,
-                                        start_time=start_time,
-                                        stop_time=stop_time,
-                                        relative=relative,
-                                        max_size=max_size)
+
+        vec_times, vec_value = mtd.get_sample_log_value(src_workspace=self._currWorkspace,
+                                                        sample_log_name=sample_log_name,
+                                                        start_time=start_time,
+                                                        stop_time=stop_time,
+                                                        relative=relative)
+
+        # get samples from the complete data
+        if max_size * 2 < len(vec_times):
+            skip = len(vec_times)/max_size - 1
+            vec_times = vec_times[::skip]
+            vec_value = vec_value[::skip]
+
+        return vec_times, vec_value
+
 
     def get_slicer_by_id(self, run_number, slicer_tag, relative_time=True):
         """ Get slicer by slicer ID

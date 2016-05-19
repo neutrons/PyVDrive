@@ -56,9 +56,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_log_file)
 
-        self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled()'),
+        self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled()'),
+        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
 
         self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
@@ -95,10 +95,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_resize_canvas)
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
-        self.connect(self.ui.radioButton_useMaxPointResolution, QtCore.SIGNAL('toggled()'),
-                     self.evt_change_resolution_type)
-        self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled()'),
-                     self.evt_change_resolution_type)
+
+        self.ui.radioButton_useMaxPointResolution.toggled.connect(self.evt_use_max_point_resolution)
+        self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
+                     self.evt_use_time_resolution)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -107,9 +107,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                         self.on_mouse_release_event)
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
-
-        # Set up widgets
-        self._init_widgets_setup()
 
         # Initial setup
         if init_run is not None:
@@ -135,6 +132,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Highlighted lines list
         self._myHighLightedLineList = list()
 
+        # Set up widgets
+        self._init_widgets_setup()
+
         return
 
     def _init_widgets_setup(self):
@@ -157,8 +157,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useLogFile.setChecked(False)
 
         # resolution
-        self.ui.radioButton_useMaxPointResolution(True)
-        self.ui.radioButton_useTimeResolution(False)
+        self.ui.radioButton_useMaxPointResolution.setChecked(True)
+        self.ui.radioButton_useTimeResolution.setChecked(False)
 
         self.ui.lineEdit_resolutionMaxPoints.setText('4000')
         self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
@@ -569,6 +569,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Resize canvas
         :return:
         """
+        # TODO/FIXME/NOW:  This is wrong! Need to re-plot the image according to the resolution
+
         # Current setup
         curr_min_x, curr_max_x = self.ui.graphicsView_main.getXLimit()
         curr_min_y, curr_max_y = self.ui.graphicsView_main.getYLimit()
@@ -622,17 +624,27 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def evt_change_resolution_type(self):
+    def evt_use_max_point_resolution(self):
         """
         event handling for changing resolution type
         :return:
         """
-        if self.ui.radioButton_useMaxPointResolution.isChecked():
-            self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
-            self.ui.lineEdit_timeResolution.setEnabled(False)
-        else:
-            self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
-            self.ui.lineEdit_timeResolution.setEnabled(True)
+        self.ui.radioButton_useMaxPointResolution.setChecked(True)
+        self.ui.radioButton_useTimeResolution.setChecked(False)
+        self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+        self.ui.lineEdit_timeResolution.setEnabled(False)
+
+        return
+
+    def evt_use_time_resolution(self):
+        """
+        # TODO/NOW: Doc!
+        :return:
+        """
+        self.ui.radioButton_useTimeResolution.setChecked(True)
+        self.ui.radioButton_useMaxPointResolution.setChecked(False)
+        self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
+        self.ui.lineEdit_timeResolution.setEnabled(True)
 
         return
 
