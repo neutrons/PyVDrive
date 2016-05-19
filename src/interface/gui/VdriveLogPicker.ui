@@ -64,7 +64,7 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QRadioButton" name="radioButton_useGenericDAQ">
+            <widget class="QRadioButton" name="radioButton_useNexus">
              <property name="font">
               <font>
                <pointsize>11</pointsize>
@@ -206,7 +206,7 @@
                <item>
                 <widget class="QLineEdit" name="lineEdit_logFileName">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -240,7 +240,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Read file</string>
+                  <string>Read</string>
                  </property>
                 </widget>
                </item>
@@ -262,16 +262,29 @@
                </property>
               </spacer>
              </item>
-             <item row="1" column="1">
-              <widget class="QComboBox" name="comboBox">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-              </widget>
-             </item>
             </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_loadedFileList">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -670,6 +683,20 @@
         </item>
         <item>
          <layout class="QGridLayout" name="gridLayout_7">
+          <item row="2" column="7">
+           <widget class="QLineEdit" name="lineEdit_resolutionMaxPoints">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum number of data points allowed on the canvas.&lt;/p&gt;&lt;p&gt;The time resolution is calculated from the maximum number of data points and time range of the log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Log Range</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="3">
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <item>
@@ -720,29 +747,26 @@
           <item row="2" column="2">
            <widget class="QLineEdit" name="lineEdit_maxY"/>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Log Range</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="6">
-           <widget class="QRadioButton" name="radioButton">
+           <widget class="QRadioButton" name="radioButton_useTimeResolution">
             <property name="text">
              <string>Time</string>
             </property>
            </widget>
           </item>
           <item row="2" column="6">
-           <widget class="QRadioButton" name="radioButton_2">
+           <widget class="QRadioButton" name="radioButton_useMaxPointResolution">
             <property name="text">
              <string>Max Points</string>
             </property>
            </widget>
           </item>
           <item row="0" column="7">
-           <widget class="QLineEdit" name="lineEdit"/>
+           <widget class="QLineEdit" name="lineEdit_timeResolution">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Time resolution in unit of second&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
           </item>
           <item row="0" column="4">
            <spacer name="horizontalSpacer_4">
@@ -756,6 +780,13 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item row="0" column="8">
+           <widget class="QPushButton" name="pushButton_doPlotSample">
+            <property name="text">
+             <string>Plot</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -835,7 +866,7 @@
      <x>0</x>
      <y>0</y>
      <width>1492</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">

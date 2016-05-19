@@ -56,9 +56,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_log_file)
 
-        self.connect(self.ui.radioButton_useGenericDAQ, QtCore.SIGNAL('toggled()'),
-                     self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLoadFrame, QtCore.SIGNAL('toggled()'),
+        self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled()'),
                      self.do_set_log_options)
         self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled()'),
                      self.do_set_log_options)
@@ -91,11 +89,16 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_split_segments)
 
         # Canvas
+        self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
+                     self.evt_plot_sample_log)
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
                      self.do_resize_canvas)
-
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
+        self.connect(self.ui.radioButton_useMaxPointResolution, QtCore.SIGNAL('toggled()'),
+                     self.evt_change_resolution_type)
+        self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled()'),
+                     self.evt_change_resolution_type)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -105,10 +108,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
 
+        # Set up widgets
+        self._init_widgets_setup()
+
         # Initial setup
-        self.ui.radioButton_useGenericDAQ.setChecked(True)
-        self.ui.radioButton_useLoadFrame.setChecked(False)
-        self.ui.radioButton_useLogFile.setChecked(False)
         if init_run is not None:
             assert isinstance(init_run, int)
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
@@ -124,9 +127,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Picker management
         self._myPickerIDList = list()
-
-        # Set up widgets
-        self._init_widgets_setup()
 
         # Experiment-related variables
         self._currRunNumber = None
@@ -152,6 +152,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_noExpand.setChecked(True)
         # set up the check boxes
         self.ui.checkBox_hideSingleValueLog.setChecked(True)
+        # radio buttons
+        self.ui.radioButton_useNexus.setChecked(True)
+        self.ui.radioButton_useLogFile.setChecked(False)
+
+        # resolution
+        self.ui.radioButton_useMaxPointResolution(True)
+        self.ui.radioButton_useTimeResolution(False)
+
+        self.ui.lineEdit_resolutionMaxPoints.setText('4000')
+        self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+        self.ui.lineEdit_timeResolution.setText('1')
+        self.ui.lineEdit_timeResolution.setEnabled(False)
 
         return
 
@@ -594,17 +606,47 @@ class WindowLogPicker(QtGui.QMainWindow):
         Get the different options for set log
         :return:
         """
+        if self.ui.radioButton_useNexus.isChecked():
+            # enable to load run from Nexus/standard Vulcan run
+            self.ui.pushButton_loadRunSampleLog.setEnabled(True)
+            self.ui.pushButton_readLogFile.setEnabled(False)
 
+        elif self.ui.radioButton_useLogFile.isChecked():
+            # enable to load Vulcan sample environment log file
+            self.ui.pushButton_loadRunSampleLog.setEnabled(False)
+            self.ui.pushButton_readLogFile.setEnabled(True)
+
+        else:
+            # false set up
+            raise RuntimeError('Error setup to have both radio button (Nexus/log file) disabled.')
+
+        return
+
+    def evt_change_resolution_type(self):
+        """
+        event handling for changing resolution type
+        :return:
+        """
+        if self.ui.radioButton_useMaxPointResolution.isChecked():
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+            self.ui.lineEdit_timeResolution.setEnabled(False)
+        else:
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
+            self.ui.lineEdit_timeResolution.setEnabled(True)
+
+        return
 
     def evt_plot_sample_log(self):
         """
         Plot sample log
         :return:
         """
+        # get current log name
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
 
+        # plot
         self.plot_sample_log(log_name)
 
         return
@@ -861,16 +903,37 @@ class WindowLogPicker(QtGui.QMainWindow):
         return
 
     def plot_sample_log(self, sample_log_name):
-        """
-
+        """ Purpose: plot sample log
+        Requirement:
+        1. sample log name is valid;
+        2. resolution is set up (time or maximum number of points)
+        Guarantee: canvas is replot
         :param sample_log_name:
         :return:
         """
-        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name, num_sec_skipped=1, relative=True)
+        # get resolution
+        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
+        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
+        if use_time_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
+        elif use_num_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
+        else:
+            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+            return
 
+        # get data from log
+        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
+                                                           resolution=resolution,
+                                                           number_resolution=use_num_res,
+                                                           time_resolution=use_time_res,
+                                                           relative=True)
+
+        # plot
         self.ui.graphicsView_main.clear_all_lines()
         self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
 
+        # resize
         if self.ui.checkBox_autoResize.isChecked():
             self.resize_canvas_auto(vec_x, vec_y)
 
