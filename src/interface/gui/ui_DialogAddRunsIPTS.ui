@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>627</width>
-    <height>350</height>
+    <width>613</width>
+    <height>411</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -122,6 +122,9 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="comboBox_existingIPTS"/>
+        </item>
        </layout>
       </item>
      </layout>
@@ -135,8 +138,11 @@
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="5">
-         <spacer name="horizontalSpacer_5">
+        <item row="0" column="4">
+         <widget class="QDateEdit" name="dateEdit_begin"/>
+        </item>
+        <item row="1" column="2">
+         <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -147,6 +153,68 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="0" column="0">
+         <widget class="QRadioButton" name="radioButton_filterByDate">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="7">
+         <widget class="QDateEdit" name="dateEdit_end"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QRadioButton" name="radioButton_filterByRun">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLabel" name="label_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>From</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Runs</string>
+          </property>
+         </widget>
         </item>
         <item row="0" column="6">
          <widget class="QLabel" name="label_2">
@@ -198,6 +266,19 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="5">
+         <spacer name="horizontalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
         <item row="1" column="6">
          <widget class="QLabel" name="label_6">
           <property name="sizePolicy">
@@ -223,14 +304,14 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="4">
+         <widget class="QLineEdit" name="lineEdit_begin"/>
+        </item>
         <item row="1" column="7">
          <widget class="QLineEdit" name="lineEdit_end"/>
         </item>
-        <item row="0" column="7">
-         <widget class="QDateEdit" name="dateEdit_end"/>
-        </item>
-        <item row="0" column="5">
-         <spacer name="horizontalSpacer_4">
+        <item row="1" column="5">
+         <spacer name="horizontalSpacer_5">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -241,9 +322,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item row="1" column="4">
-         <widget class="QLineEdit" name="lineEdit_begin"/>
         </item>
         <item row="0" column="1">
          <widget class="QLabel" name="label_3">
@@ -252,78 +330,23 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="2">
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+        <item row="2" column="4">
+         <widget class="QCheckBox" name="checkBox_fromFirstRun">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, then the first run is from the first run of this IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="1" column="1">
-         <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Runs</string>
+           <string>begin</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="3">
-         <widget class="QLabel" name="label_5">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>50</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>50</width>
-            <height>16777215</height>
-           </size>
+        <item row="2" column="7">
+         <widget class="QCheckBox" name="checkBox_toLastRun">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, then the last run to add will be the last run in this IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
-           <string>From</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="0" column="4">
-         <widget class="QDateEdit" name="dateEdit_begin"/>
-        </item>
-        <item row="0" column="0">
-         <widget class="QRadioButton" name="radioButton_filterByDate">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QRadioButton" name="radioButton_filterByRun">
-          <property name="text">
-           <string/>
+           <string>end</string>
           </property>
          </widget>
         </item>
@@ -352,16 +375,16 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_cancel_2">
+       <widget class="QPushButton" name="pushButton_AddRuns">
         <property name="text">
-         <string>Cancel</string>
+         <string>Add</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_OK_2">
+       <widget class="QPushButton" name="pushButton_return">
         <property name="text">
-         <string>OK</string>
+         <string>Return</string>
         </property>
        </widget>
       </item>
