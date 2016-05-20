@@ -723,8 +723,8 @@ class VDriveAPI(object):
                                                                           sample_log_name=log_name,
                                                                           start_time=start_time,
                                                                           stop_time=stop_time,
-                                                                          relative=relative,
-                                                                          max_size=1000)
+                                                                          relative=relative)
+
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 

@@ -96,9 +96,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
 
-        self.ui.radioButton_useMaxPointResolution.toggled.connect(self.evt_use_max_point_resolution)
+        self.ui.radioButton_useMaxPointResolution.toggled.connect(self.evt_change_resolution_type)
         self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_use_time_resolution)
+                     self.evt_change_resolution_type)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -116,6 +116,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Class variables
         self._currentLogIndex = 0
         self._logNameList = list()
+        self._sampleLogDict = dict()
 
         self._currentPickerID = None
         self._myPickerMode = OUT_PICKER
@@ -164,6 +165,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
         self.ui.lineEdit_timeResolution.setText('1')
         self.ui.lineEdit_timeResolution.setEnabled(False)
+
+        # group radio buttons
+        self.ui.resolution_group = QtGui.QButtonGroup(self)
+        self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
+        self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
 
         return
 
@@ -316,6 +322,11 @@ class WindowLogPicker(QtGui.QMainWindow):
             log_name_with_size = True
             self._logNameList = self._myParent.load_sample_run(run_number, log_name_with_size)
             self._logNameList.sort()
+
+            # Update class variables, add a new entry to sample log value holder
+            self._currRunNumber = run_number
+            self._sampleLogDict[self._currRunNumber] = dict()
+
         except RuntimeError as err:
             GuiUtility.pop_dialog_error(self,
                                         'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
@@ -328,9 +339,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
-
-        # Update class variables
-        self._currRunNumber = run_number
         self._currLogName = log_name
 
         return
@@ -569,31 +577,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Resize canvas
         :return:
         """
-        # TODO/FIXME/NOW:  This is wrong! Need to re-plot the image according to the resolution
-
-        # Current setup
-        curr_min_x, curr_max_x = self.ui.graphicsView_main.getXLimit()
-        curr_min_y, curr_max_y = self.ui.graphicsView_main.getYLimit()
-
-        # Future setup
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        if new_min_x is None:
-            new_min_x = curr_min_x
-
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
-        if new_max_x is None:
-            new_max_x = curr_max_x
-
-        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
-        if new_min_y is None:
-            new_min_y = curr_min_y
-
-        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
-        if new_max_y is None:
-            new_max_y = curr_max_x
-
-        # Resize
-        self.ui.graphicsView_main.setXYLimit(new_min_x, new_max_x, new_min_y, new_max_y)
+        self.plot_sample_log(self._currLogName)
 
         return
 
@@ -624,27 +608,18 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def evt_use_max_point_resolution(self):
+    def evt_change_resolution_type(self):
         """
         event handling for changing resolution type
         :return:
         """
-        self.ui.radioButton_useMaxPointResolution.setChecked(True)
-        self.ui.radioButton_useTimeResolution.setChecked(False)
-        self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
-        self.ui.lineEdit_timeResolution.setEnabled(False)
+        if self.ui.radioButton_useTimeResolution.isChecked():
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
+            self.ui.lineEdit_timeResolution.setEnabled(True)
 
-        return
-
-    def evt_use_time_resolution(self):
-        """
-        # TODO/NOW: Doc!
-        :return:
-        """
-        self.ui.radioButton_useTimeResolution.setChecked(True)
-        self.ui.radioButton_useMaxPointResolution.setChecked(False)
-        self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
-        self.ui.lineEdit_timeResolution.setEnabled(True)
+        else:
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+            self.ui.lineEdit_timeResolution.setEnabled(False)
 
         return
 
@@ -934,56 +909,101 @@ class WindowLogPicker(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
             return
 
-        # get data from log
-        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
-                                                           resolution=resolution,
-                                                           number_resolution=use_num_res,
-                                                           time_resolution=use_time_res,
-                                                           relative=True)
+        # get the sample log data
+        if sample_log_name in self._sampleLogDict[self._currRunNumber]:
+            # get sample log value from previous stored
+            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][sample_log_name]
+        else:
+            # get sample log data from driver
+            vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
+                                                               relative=True)
+            self._sampleLogDict[self._currRunNumber][sample_log_name] = vec_x, vec_y
+
+        # get range of the data
+        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+
+        # adjust the resolution
+        plot_x, plot_y = process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                      new_min_x, new_max_x)
 
         # plot
         self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
+        the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
+        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label)
 
-        # resize
-        if self.ui.checkBox_autoResize.isChecked():
-            self.resize_canvas_auto(vec_x, vec_y)
+        # resize canvas
+        range_x = plot_x[-1] - plot_x[0]
+        new_min_x = (plot_x[0] - range_x * 0.05) if new_min_x is None else new_min_x
+        new_max_x = (plot_x[-1] + range_x * 0.05) if new_max_x is None else new_max_x
 
-        return
+        range_y = max(plot_y) - min(plot_y)
+        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
+        if new_min_y is None:
+            new_min_y = min(plot_y) - 0.05 * range_y
+        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
+        if new_max_y is None:
+            new_max_y = max(plot_y) + 0.05 * range_y
 
-    def resize_canvas_auto(self, vec_x, vec_y):
-        """ Automatically resize canvas
-        :param vec_x: vector of X-axis value
-        :param vec_y: vector of Y-axis value
-        :return:
-        """
-        # check
-        assert isinstance(vec_x, numpy.ndarray), 'vector X must be a numpy ndarray but not %s.' \
-                                                 '' % str(type(vec_x))
-        assert isinstance(vec_y, numpy.ndarray), 'vector Y must be a numpy ndarray but not %s.' \
-                                                 '' % str(type(vec_y))
-
-        # resize X
-        min_x = min(vec_x)
-        max_x = max(vec_x)
-        d_x = max_x - min_x
-
-        x_lower_limit = min_x - d_x * 0.05
-        x_upper_limit = max_x + d_x * 0.05
-
-        # Resize Y
-        min_y = min(vec_y)
-        max_y = max(vec_y)
-        d_y = max_y - min_y
-
-        y_lower_limit = min_y - d_y * 0.1
-        y_upper_limit = max_y + d_y * 0.1
-
-        # Set
-        self.ui.graphicsView_main.setXYLimit(xmin=x_lower_limit, xmax=x_upper_limit,
-                                             ymin=y_lower_limit, ymax=y_upper_limit)
+        self.ui.graphicsView_main.setXYLimit(xmin=new_min_x, xmax=new_max_x,
+                                             ymin=new_min_y, ymax=new_max_y)
 
         return
+
+
+def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
+                 min_x, max_x):
+    """
+    re-process the original to plot on canvas smartly
+    :param vec_x: vector of time in unit of seconds
+    :param vec_y:
+    :param use_number_resolution:
+    :param use_time_resolution:
+    :param resolution: time resolution (per second) or maximum number points allowed on canvas
+    :param min_x:
+    :param max_x:
+    :return:
+    """
+    # check
+    assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
+    assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
+    assert (use_number_resolution and not use_time_resolution) or (not use_number_resolution and use_time_resolution)
+
+    # range
+    if min_x is None:
+        min_x = vec_x[0]
+    else:
+        min_x = max(vec_x[0], min_x)
+
+    if max_x is None:
+        max_x = vec_x[-1]
+    else:
+        max_x = min(vec_x[-1], max_x)
+
+    index_array = numpy.searchsorted(vec_x, [min_x-1.E-20, max_x+1.E-20])
+    i_start = index_array[0]
+    i_stop = index_array[1]
+
+    # define skip points
+    if use_time_resolution:
+        # time resolution
+        num_target_pt = int((max_x - min_x+0.)/resolution)
+    else:
+        # maximum number
+        num_target_pt = int(resolution)
+
+    num_raw_points = i_stop - i_start
+    if num_raw_points < num_target_pt * 2:
+        pt_skip = 1
+    else:
+        pt_skip = int(num_raw_points/num_target_pt)
+
+    plot_x = vec_x[i_start:i_stop:pt_skip]
+    plot_y = vec_y[i_start:i_stop:pt_skip]
+
+    # print 'Input vec_x = ', vec_x, 'vec_y = ', vec_y, i_start, i_stop, pt_skip, len(plot_x)
+
+    return plot_x, plot_y
 
 
 def testmain(argv):

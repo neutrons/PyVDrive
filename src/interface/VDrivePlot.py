@@ -1049,20 +1049,26 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def get_sample_log_value(self, log_name, resolution, number_resolution, time_resolution, relative=False):
+    def get_sample_log_value(self, log_name, time_range=None, relative=False):
         """
         Get sample log value
         :param log_name:
+        :param time_range:
+        :param relative:
         :return: 2-tuple as (numpy.ndarray, numpy.ndarray)
         """
-        # check input arguments
-        assert isinstance(resolution, int) or isinstance(resolution, float)
-        assert (number_resolution and not time_resolution) or (not number_resolution and time_resolution)
+        # check
+        if time_range is None:
+            start_time = None
+            stop_time = None
+        else:
+            assert len(time_range) == 2
+            start_time = time_range[0]
+            stop_time = time_range[1]
+            assert start_time < stop_time
 
-        # TODO/NOW/FIXME/40 - Need to apply resolution to get_sample_log_values()
-        #                     and consider to store the raw data!
-
-        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
+        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, start_time, stop_time,
+                                                                 relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)
 

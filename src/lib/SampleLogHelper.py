@@ -397,8 +397,7 @@ class SampleLogManager(object):
 
         return True, ret_list
 
-    def get_sample_data(self, run_number, sample_log_name, start_time, stop_time, relative,
-                        max_size=None):
+    def get_sample_data(self, run_number, sample_log_name, start_time, stop_time, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
         # run_number, log_name, start_time, stop_time, relative
@@ -423,14 +422,7 @@ class SampleLogManager(object):
                                                         stop_time=stop_time,
                                                         relative=relative)
 
-        # get samples from the complete data
-        if max_size * 2 < len(vec_times):
-            skip = len(vec_times)/max_size - 1
-            vec_times = vec_times[::skip]
-            vec_value = vec_value[::skip]
-
         return vec_times, vec_value
-
 
     def get_slicer_by_id(self, run_number, slicer_tag, relative_time=True):
         """ Get slicer by slicer ID

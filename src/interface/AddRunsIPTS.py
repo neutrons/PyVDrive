@@ -114,7 +114,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
     def do_change_data_access_mode(self):
         """
-        Toggle between 2 approaches to get ITPS directory: from ITPS number of directory
+        Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
         :return:
         """
         if self.ui.radioButton_useNumber.isChecked() is True:

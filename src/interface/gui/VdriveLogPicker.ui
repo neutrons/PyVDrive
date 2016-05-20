@@ -682,7 +682,7 @@
          <widget class="MplGraphicsView" name="graphicsView_main"/>
         </item>
         <item>
-         <layout class="QGridLayout" name="gridLayout_7">
+         <layout class="QGridLayout" name="gridLayout_logFigureControl">
           <item row="2" column="7">
            <widget class="QLineEdit" name="lineEdit_resolutionMaxPoints">
             <property name="toolTip">
@@ -866,7 +866,7 @@
      <x>0</x>
      <y>0</y>
      <width>1492</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">
