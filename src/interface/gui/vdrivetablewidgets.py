@@ -171,6 +171,79 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         return
 
 
+class MTSFormatTable(NdavTable.NTableWidget):
+    """ An extended class for users to set up the format of the MTS log file
+    """
+    MTSTableSetup = [('Row', 'int'),
+                     ('Content', 'string'),
+                     ('Comment', 'checkbox'),
+                     ('Header', 'checkbox'),
+                     ('Unit', 'checkbox'),
+                     ('Data', 'checkbox')]
+
+    def __init__(self, parent):
+        """ Initialization
+        :param parent:
+        :return:
+        """
+        NdavTable.NTableWidget.__init__(self, parent)
+
+        # set up class variables
+        self._colIndexRow = -1
+        self._colIndexComment = -1
+        self._colIndexHeader = -1
+        self._colIndexUnit = -1
+        self._colIndexData = -1
+
+        return
+
+    def retrieve_format_dict(self):
+        """
+        Parse and retrieve log file format set up
+        :return: tuple (boolean, dictionary with set up information)
+        """
+        num_rows = self.rowCount()
+        comment_rows = list()
+        header_rows = list()
+        unit_rows = list()
+        data_rows = list()
+
+        for i_row in range(num_rows):
+            # for each row, read all checked box
+            num_true_counts = 0
+            # get row number
+            row_number = self.get_cell_value(i_row, self._colIndexRow)
+            # is comment?
+            if self.get_cell_value(i_row, self._colIndexComment):
+                comment_rows.append(row_number)
+                num_true_counts += 1
+            if self.get_cell_value(i_row, self._colIndexHeader):
+                header_rows.append(row_number)
+                num_true_counts += 1
+            if ...
+
+
+    def setup(self):
+        """
+        Init setup
+        :return:
+        """
+        self.init_setup(MTSFormatTable.MTSTableSetup)
+
+        # set up column indexes
+        self._colIndexRow = self.MTSTableSetup.index(('Row', 'int'))
+        self._colIndexComment = self.MTSTableSetup.index(('Comment', 'checkbox'))
+        self._colIndexHeader = self.MTSTableSetup.index(('Header', 'checkbox'))
+        self._colIndexUnit = self.MTSTableSetup.index(('Unit', 'checkbox'))
+        self._colIndexData = self.MTSTableSetup.index(('Data', 'checkbox'))
+
+        # set up column width
+        self.setColumnWidth(0, 10)
+        self.setColumnWidth(1, 80)
+
+        return
+
+
 class PeakParameterTable(NdavTable.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters

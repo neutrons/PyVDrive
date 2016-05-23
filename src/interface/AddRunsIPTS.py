@@ -53,22 +53,23 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_iptsInfo, QtCore.SIGNAL('clicked()'),
                      self.do_list_ipts_info)
 
-        QtCore.QObject.connect(self.ui.pushButton_OK_2, QtCore.SIGNAL('clicked()'),
-                               self.do_save_quit)
+        QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
+                               self.do_add_runs)
 
-        QtCore.QObject.connect(self.ui.pushButton_cancel_2, QtCore.SIGNAL('clicked()'),
-                               self.do_reject_quit)
+        QtCore.QObject.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
+                               self.do_quit_app)
 
         self.connect(self.ui.checkBox_skipScan, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_skip_scan_data)
 
-        # Disable some unused widget until 'browse' or 'set' is pushed.
+        # init set up by experience
+        self.ui.checkBox_skipScan.setCheckable(True)
         self.ui.pushButton_iptsInfo.setDisabled(True)
         self.ui.dateEdit_begin.setDisabled(True)
         self.ui.dateEdit_end.setDisabled(True)
         self.ui.lineEdit_begin.setDisabled(True)
         self.ui.lineEdit_end.setDisabled(True)
-        self.ui.pushButton_OK_2.setDisabled(True)
+        self.ui.pushButton_AddRuns.setDisabled(True)
 
         # Init setup for starting date and run
         self._beginDate = '01/01/2000'
@@ -88,6 +89,49 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._homeDir = os.path.expanduser('~')
 
         self._skipScanData = False
+
+        return
+
+    def add_runs_by_date(self):
+        """
+
+        :return:
+        """
+
+        return
+
+    def add_runs_by_number(self, from_first_run, to_last_run):
+        """
+        Call the method in parent class to add runs
+        :param from_first_run:
+        :param to_last_run:
+        :return:
+        """
+        # check
+        if self._myParent is None:
+            return
+
+        # default run number case
+        if self._beginRunNumber is None and from_first_run:
+            # use default first run
+            raise NotImplementedError('ASAP')
+        elif self._endRunNumber is None and to_last_run:
+            # use default last run in IPTS folder
+            raise NotImplementedError('ASAP')
+        elif self._beginRunNumber is None and self._endRunNumber is None:
+            # neither is given.  not allowed
+            gutil.pop_dialog_error(self, 'Neither start run nor end run is given in the case that neither'
+                                         'first run nor last run in the IPTS folder is selected.')
+            return
+
+        # set for 1 run number case
+        if self._beginRunNumber is None:
+            self._beginRunNumber = self._endRunNumber
+        elif self._endRunNumber is None:
+            self._endRunNumber = self._beginRunNumber
+
+        # call parent
+        self._myParent.add_runs_by_numbers(self._iptsNumber, self._beginRunNumber, self._endRunNumber)
 
         return
 
@@ -186,7 +230,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.dateEdit_end.setEnabled(True)
         self.ui.lineEdit_begin.setEnabled(True)
         self.ui.lineEdit_end.setEnabled(True)
-        self.ui.pushButton_OK_2.setEnabled(True)
+        self.ui.pushButton_AddRuns.setEnabled(True)
 
         return
 
@@ -222,14 +266,22 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Enable widgets for next step
         self.ui.pushButton_iptsInfo.setEnabled(True)
-        # self.ui.dateEdit_begin.setEnabled(True)
-        # self.ui.dateEdit_end.setEnabled(True)
+        if self.ui.checkBox_skipScan.isChecked():
+            self.ui.radioButton_filterByRun.setEnabled(True)
+            self.ui.radioButton_filterByRun.setChecked(True)
+            self.ui.lineEdit_begin.setEnabled(True)
+            self.ui.lineEdit_end.setEnabled(True)
+        else:
+            self.ui.radioButton_filterByDate.setEnabled(True)
+            self.ui.radioButton_filterByDate.setChecked(True)
+            # self.ui.dateEdit_begin.setEnabled(True)
+            # self.ui.dateEdit_end.setEnabled(True)
 
         return
 
-    def do_save_quit(self):
+    def do_add_runs(self):
         """
-        Quit with accepting user's setup
+        Add runs to parent (but not quit)
         :return:
         """
         # Check whether it is fine to leave with 'OK'
@@ -238,35 +290,45 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                                    'Use Cancel instead of OK.')
             return
 
-        if self.ui.dateEdit_begin.isEnabled():
+        if self.ui.radioButton_filterByDate.isChecked():
+            # add runs by date and time
+            assert self.ui.dateEdit_begin.isEnabled() and self.ui.dateEdit_end.isEnabled()
+
             begin_date = self.ui.dateEdit_begin.date()
             assert(isinstance(begin_date, QtCore.QDate))
             self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
-        else:
-            self._beginDate = None
 
-        if self.ui.dateEdit_end.isEnabled():
             end_date = self.ui.dateEdit_end.date()
             assert(isinstance(end_date, QtCore.QDate))
             self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+
+            self.add_runs_by_date()
+
+        elif self.ui.radioButton_filterByRun.isChecked():
+            # add runs by run number
+            begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
+            if begin_run is not None:
+                self._beginRunNumber = begin_run
+
+            from_start = self.ui.checkBox_fromFirstRun.isChecked()
+
+            end_run = gutil.parse_integer(self.ui.lineEdit_end)
+            if end_run is not None:
+                self._endRunNumber = end_run
+
+            till_end = self.ui.checkBox_toLastRun.isChecked()
+
+            # call parent algorithm
+            if self._myParent is not None and self._iptsNumber is not None:
+                self._myParent.add_runs_by_numbers(from_start, till_end)
+
         else:
-            self._endDate = None
-
-        begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
-        if begin_run is not None:
-            self._beginRunNumber = begin_run
-
-        end_run = gutil.parse_integer(self.ui.lineEdit_end)
-        if end_run is not None:
-            self._endRunNumber = end_run
-
-        # Quit
-        self.quit = True
-        self.close()
+            # exception case
+            raise RuntimeError('Neither filter by time nor filter by run number is selected.')
 
         return
 
-    def do_reject_quit(self):
+    def do_quit_app(self):
         """ Quit and abort the operation
         """
         self.quit = True
@@ -289,14 +351,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             self.ui.lineEdit_end.setEnabled(True)
             self.ui.dateEdit_begin.setEnabled(False)
             self.ui.dateEdit_end.setEnabled(False)
-            self.ui.pushButton_OK_2.setEnabled(True)
+            self.ui.pushButton_AddRuns.setEnabled(True)
         else:
             # enforce to scan the archive
             self.ui.lineEdit_begin.setEnabled(False)
             self.ui.lineEdit_end.setEnabled(False)
             self.ui.dateEdit_begin.setEnabled(False)
             self.ui.dateEdit_end.setEnabled(False)
-            self.ui.pushButton_OK_2.setEnabled(False)
+            self.ui.pushButton_AddRuns.setEnabled(False)
 
         return
 

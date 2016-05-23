@@ -589,24 +589,23 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_add_runs_by_ipts(self):
-        """ import runs by IPTS number or directory
-        Purpose: Import runs from archive according to IPTS or specified data directory
-        Guarantees: launch a window and get user inputs from the dialog
-        :return: None
+    def add_runs(self, ipts_dir, ipts_number, data_scan_skipped, filter_by_date, begin_date, end_date,
+                 filter_by_run,
+                 begin_run, end_run):
         """
-        # Launch window
-        child_window = dlgrun.AddRunsByIPTSDialog(self)
-        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
-        r = child_window.exec_()
+
+        :return:
+        """
+        # check
+        if filter_by_date == filter_by_run:
+            GuiUtility.pop_dialog_error(self, 'Either filter by date or filter by run must be true!')
+            return False
 
         # Return due to 'cancel'
-        ipts_dir = child_window.get_ipts_dir()
         if ipts_dir is None:
-            return
+            return False
 
         # Get IPTS from dialog and set to archive
-        ipts_number = child_window.get_ipts_number()
         if ipts_number is None:
             status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
             if status is False:
@@ -617,13 +616,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 ipts_number = ret_obj
         self._myWorkflow.set_ipts(ipts_number)
 
-        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
-        print '[DB-BAT] Dialog gives out %s, %s, %s, %s' % (str(begin_date), str(end_date),
-                                                            str(begin_run), str(end_run))
-        in_archive = child_window.scan_data_skipped()
-
         # Get a list of runs including run numbers and data file paths.
-        if in_archive:
+        if data_scan_skipped:
             status, ret_obj = self._myWorkflow.get_ipts_info(ipts_number, begin_run, end_run)
         else:
             status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
@@ -633,46 +627,31 @@ class VdriveMainWindow(QtGui.QMainWindow):
             # Pop error
             error_message = ret_obj
             GuiUtility.pop_dialog_error(self, error_message)
-            return
+            return False
 
-        # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
-        # raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
-        # Filter by time if it is specified
-        if begin_date is not None and end_date is not None:
+        # Find of range of runs from
+        if filter_by_date:
             # Filter runs by date
+            if begin_date is None or end_date is None:
+                GuiUtility.pop_dialog_error(self, 'Both begin date and end date must be given!')
+                return False
+
             status, ret_obj = VdriveAPI.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                         include_end_date=True)
+                                                            include_end_date=True)
             if status is True:
                 run_tup_list = ret_obj
             else:
                 #  pop error
                 error_message = ret_obj
                 GuiUtility.pop_dialog_error(self, error_message)
-                return
-        elif begin_date is not None or end_date is not None:
-            # Unsupported scenario
-            raise RuntimeError('Unable to handle the case that only begin date or end date is specified.')
+                return False
+        # END-IF
 
         # Add runs to workflow
         status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
         if status is False:
             GuiUtility.pop_dialog_error(self, error_message)
-            return
-
-        # Filter runs by run
-        """
-        status, ret_obj = vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
-        if status is False:
-            guiutil.pop_dialog_error(ret_obj)
-            return
-        else:
-            run_tup_list = ret_obj
-
-        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
-        if status is False:
-            guiutil.pop_dialog_error(self, error_message)
-            return
-        """
+            return False
 
         # Set to tree
         if ipts_number == 0:
@@ -687,6 +666,20 @@ class VdriveMainWindow(QtGui.QMainWindow):
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return True
+
+    def do_add_runs_by_ipts(self):
+        """ import runs by IPTS number or directory
+        Purpose: Import runs from archive according to IPTS or specified data directory
+        Guarantees: launch a window and get user inputs from the dialog
+        :return: None
+        """
+        # Launch window
+        child_window = dlgrun.AddRunsByIPTSDialog(self)
+        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
+        r = child_window.exec_()
+        print '[DB] exec returns %s.' % str(r)
 
         return
 
