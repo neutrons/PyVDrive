@@ -305,10 +305,18 @@
          </widget>
         </item>
         <item row="1" column="4">
-         <widget class="QLineEdit" name="lineEdit_begin"/>
+         <widget class="QLineEdit" name="lineEdit_begin">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If left empty, then the beginning run number will be the first run in the IPTS data directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
         </item>
         <item row="1" column="7">
-         <widget class="QLineEdit" name="lineEdit_end"/>
+         <widget class="QLineEdit" name="lineEdit_end">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;There are two cases if this value is left bank.&lt;/p&gt;&lt;p&gt;1. If checkbox 'to last run' is checked, then end of run numbers to add is the last run in the IPTS directory;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;2. Otherwise, only 1 run (the beginning one) is added.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
         </item>
         <item row="1" column="5">
          <spacer name="horizontalSpacer_5">
@@ -330,23 +338,18 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="4">
-         <widget class="QCheckBox" name="checkBox_fromFirstRun">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, then the first run is from the first run of this IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>begin</string>
-          </property>
-         </widget>
-        </item>
         <item row="2" column="7">
          <widget class="QCheckBox" name="checkBox_toLastRun">
+          <property name="font">
+           <font>
+            <italic>true</italic>
+           </font>
+          </property>
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, then the last run to add will be the last run in this IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
-           <string>end</string>
+           <string>to last run</string>
           </property>
          </widget>
         </item>

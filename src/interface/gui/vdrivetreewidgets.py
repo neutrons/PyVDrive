@@ -268,6 +268,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
             else:
                 raise RuntimeError('Item in run number list is neither integer nor tuple but %s!' % str(type(item)))
             child_value = '%d' % run_number
+            print 'Main leaf value = ', main_leaf_value
             self.add_child_main_item(main_leaf_value, child_value)
 
         return

@@ -220,8 +220,26 @@ class MTSFormatTable(NdavTable.NTableWidget):
             if self.get_cell_value(i_row, self._colIndexHeader):
                 header_rows.append(row_number)
                 num_true_counts += 1
-            if ...
+            if self.get_cell_value(i_row, self._colIndexUnit):
+                unit_rows.append(row_number)
+                num_true_counts += 1
+            if self.get_cell_value(i_row, self._colIndexData):
+                data_rows.append(row_number)
+                num_true_counts += 1
+            # check that there is 1 and only 1 shall be checked
+            if num_true_counts == 0:
+                return False, 'Row %d: No checkbox is checked' % row_number
+            elif num_true_counts > 1:
+                return False, 'Row %d: Too many checkboxes are checked' % row_number
+        # END-FOR (i_row)
 
+        # for dictionary
+        format_dict = {'comment': comment_rows,
+                       'header': header_rows[0],
+                       'unit': unit_rows[0],
+                       'data': data_rows}
+
+        return True, format_dict
 
     def setup(self):
         """
@@ -238,8 +256,8 @@ class MTSFormatTable(NdavTable.NTableWidget):
         self._colIndexData = self.MTSTableSetup.index(('Data', 'checkbox'))
 
         # set up column width
-        self.setColumnWidth(0, 10)
-        self.setColumnWidth(1, 80)
+        self.setColumnWidth(0, 100)
+        self.setColumnWidth(1, 800)
 
         return
 

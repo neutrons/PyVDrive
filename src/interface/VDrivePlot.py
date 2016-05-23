@@ -179,6 +179,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         self._calibCriteriaFile = ''
 
+        # some historical data storage
+        self._addedIPTSNumber = None
+
         # Load settings
         self.load_settings()
 
@@ -589,85 +592,30 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def add_runs(self, ipts_dir, ipts_number, data_scan_skipped, filter_by_date, begin_date, end_date,
-                 filter_by_run,
-                 begin_run, end_run):
+    def add_runs_trees(self, ipts_number, ipts_dir, run_tuple_list):
         """
-
-        :return:
+        Add runs to VDrivePlot main GUI
+        :param run_tuple_list:
+        :return: 2-tuple: boolean, string (error message)
         """
-        # check
-        if filter_by_date == filter_by_run:
-            GuiUtility.pop_dialog_error(self, 'Either filter by date or filter by run must be true!')
-            return False
-
-        # Return due to 'cancel'
-        if ipts_dir is None:
-            return False
-
-        # Get IPTS from dialog and set to archive
-        if ipts_number is None:
-            status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
-            if status is False:
-                message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
-                GuiUtility.pop_dialog_error(self, message)
-                ipts_number = 0
-            else:
-                ipts_number = ret_obj
-        self._myWorkflow.set_ipts(ipts_number)
-
-        # Get a list of runs including run numbers and data file paths.
-        if data_scan_skipped:
-            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_number, begin_run, end_run)
-        else:
-            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            # Pop error
-            error_message = ret_obj
-            GuiUtility.pop_dialog_error(self, error_message)
-            return False
-
-        # Find of range of runs from
-        if filter_by_date:
-            # Filter runs by date
-            if begin_date is None or end_date is None:
-                GuiUtility.pop_dialog_error(self, 'Both begin date and end date must be given!')
-                return False
-
-            status, ret_obj = VdriveAPI.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                            include_end_date=True)
-            if status is True:
-                run_tup_list = ret_obj
-            else:
-                #  pop error
-                error_message = ret_obj
-                GuiUtility.pop_dialog_error(self, error_message)
-                return False
-        # END-IF
-
-        # Add runs to workflow
-        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
-        if status is False:
-            GuiUtility.pop_dialog_error(self, error_message)
-            return False
+        # check validity
+        # TODO/NOW : check and doc!
 
         # Set to tree
         if ipts_number == 0:
             ipts_number = os.path.basename(ipts_dir)
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tup_list)
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tuple_list)
 
         # Set to file tree directory
         if ipts_number > 0:
             home_dir = '/SNS/VULCAN'
         else:
-            home_dir = os.path.expanduser('~')
+            home_dir = os.path.expanduser(ipts_dir)
         curr_dir = ipts_dir
         self.ui.treeView_runFiles.set_root_path(home_dir)
         self.ui.treeView_runFiles.set_current_path(curr_dir)
 
-        return True
+        return True, ''
 
     def do_add_runs_by_ipts(self):
         """ import runs by IPTS number or directory
@@ -677,9 +625,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """
         # Launch window
         child_window = dlgrun.AddRunsByIPTSDialog(self)
+
+        # init set up
+        if self._addedIPTSNumber is not None:
+            child_window.set_ipts_number(self._addedIPTSNumber)
+
         child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
         r = child_window.exec_()
-        print '[DB] exec returns %s.' % str(r)
+
+        # set the close one
+        self._addedIPTSNumber = child_window.get_ipts_number()
 
         return
 

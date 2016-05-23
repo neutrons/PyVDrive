@@ -617,6 +617,9 @@ class VDriveAPI(object):
                       under an IPTS
                       Begin run and end run are optional to define the range of runs
         Guarantees: the runs' information including creation time and file path will be returned
+
+        Note: if IPTS is the number, then it is in QUICK-mode
+
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """

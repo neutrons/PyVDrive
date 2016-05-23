@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -21,6 +24,9 @@
        <string>Browse file</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEdit_mtsFileName"/>
+       </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
@@ -28,8 +34,12 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="lineEdit_mtsFileName"/>
+       <item row="1" column="2">
+        <widget class="QRadioButton" name="radioButton_browseArchive">
+         <property name="text">
+          <string>Archive</string>
+         </property>
+        </widget>
        </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="pushButton_browseLoadFile">
@@ -38,6 +48,13 @@
          </property>
          <property name="text">
           <string>Load</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QRadioButton" name="radioButton_browseLocal">
+         <property name="text">
+          <string>Local</string>
          </property>
         </widget>
        </item>
@@ -51,7 +68,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
-        <widget class="QTableWidget" name="tableWidget_preview"/>
+        <widget class="MTSFormatTable" name="tableWidget_preview"/>
        </item>
        <item row="1" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -129,7 +146,7 @@
      <x>0</x>
      <y>0</y>
      <width>736</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -147,6 +164,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MTSFormatTable</class>
+   <extends>QTableWidget</extends>
+   <header>vdrivetablewidgets.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

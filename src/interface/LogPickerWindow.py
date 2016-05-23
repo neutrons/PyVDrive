@@ -15,6 +15,7 @@ except AttributeError:
 
 import gui.GuiUtility as GuiUtility
 import gui.VdriveLogPicker as VdriveLogPicker
+import LoadMTSLogWindow
 
 
 OUT_PICKER = 0
@@ -559,17 +560,11 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_read_log_file(self):
         """
-
+        Purpose: read MTS log file
         :return:
         """
-        # Pop dialog for log file
-        working_dir = self._myParent.get_workflow().get_working_dir()
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
-                                                              working_dir))
-
-        # Parse log file
-        # TODO/FIXME - Need a sample file from Ke
-        self._myParent.get_workflow().parse_vulcan_log_file(log_file_name)
+        self.load_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
+        self.load_window.show()
 
         return
 
@@ -632,6 +627,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
+        self._currLogName = log_name
 
         # plot
         self.plot_sample_log(log_name)
@@ -930,7 +926,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # plot
         self.ui.graphicsView_main.clear_all_lines()
         the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
-        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label)
+        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label,
+                                              marker='.', color='blue')
 
         # resize canvas
         range_x = plot_x[-1] - plot_x[0]

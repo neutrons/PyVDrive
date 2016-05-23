@@ -40,9 +40,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # Set event handler
         self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_change_data_access_mode)
+                     self.evt_change_data_access_mode)
         self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_change_data_access_mode)
+                     self.evt_change_data_access_mode)
 
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
                                self.do_browse_ipts_folder)
@@ -62,8 +62,13 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.connect(self.ui.checkBox_skipScan, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_skip_scan_data)
 
+        self.connect(self.ui.radioButton_filterByRun, QtCore.SIGNAL('toggled(bool)'),
+                     self.evt_change_filter_mode)
+        self.connect(self.ui.radioButton_filterByDate, QtCore.SIGNAL('toggled(bool'),
+                     self.evt_change_filter_mode)
+
         # init set up by experience
-        self.ui.checkBox_skipScan.setCheckable(True)
+        self.ui.checkBox_skipScan.setChecked(True)
         self.ui.pushButton_iptsInfo.setDisabled(True)
         self.ui.dateEdit_begin.setDisabled(True)
         self.ui.dateEdit_end.setDisabled(True)
@@ -88,55 +93,108 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._dataDir = '/SNS/VULCAN'
         self._homeDir = os.path.expanduser('~')
 
-        self._skipScanData = False
+        self._skipScanData = self.ui.checkBox_skipScan.isChecked()
 
         return
 
     def add_runs_by_date(self):
         """
-
+        Add runs by date of runs
         :return:
         """
+        # add runs by date and time
+        assert self.ui.dateEdit_begin.isEnabled() and self.ui.dateEdit_end.isEnabled()
 
-        return
+        # get workflow controller
+        workflow_controller = self._myParent.get_workflow()
 
-    def add_runs_by_number(self, from_first_run, to_last_run):
+        # get start date
+        begin_date = self.ui.dateEdit_begin.date()
+        assert(isinstance(begin_date, QtCore.QDate))
+        begin_date_str = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
+
+        # get end date
+        end_date = self.ui.dateEdit_end.date()
+        assert(isinstance(end_date, QtCore.QDate))
+        end_date_str = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
+
+        # get the complete list of run (tuples) as it is filtered by date
+        status, ret_obj = workflow_controller.get_ipts_info(self._iptsDir, None, None)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            error_message = ret_obj
+            gutil.pop_dialog_error(self, error_message)
+            return
+
+        # filter by date
+        status, ret_obj = general_util.filter_runs_by_date(run_tup_list, begin_date_str, end_date_str,
+                                                           include_end_date=True)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            #  pop error
+            error_message = ret_obj
+            gutil.pop_dialog_error(self, error_message)
+            return
+        # END-IF
+
+        return run_tup_list
+
+    def add_runs_by_number(self):
         """
         Call the method in parent class to add runs
-        :param from_first_run:
-        :param to_last_run:
         :return:
         """
-        # check
-        if self._myParent is None:
-            return
+        # get workflow
+        workflow_controller = self._myParent.get_workflow()
 
-        # default run number case
-        if self._beginRunNumber is None and from_first_run:
-            # use default first run
-            raise NotImplementedError('ASAP')
-        elif self._endRunNumber is None and to_last_run:
-            # use default last run in IPTS folder
-            raise NotImplementedError('ASAP')
-        elif self._beginRunNumber is None and self._endRunNumber is None:
-            # neither is given.  not allowed
-            gutil.pop_dialog_error(self, 'Neither start run nor end run is given in the case that neither'
-                                         'first run nor last run in the IPTS folder is selected.')
-            return
+        # get start run and end run
+        begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
+        end_run = gutil.parse_integer(self.ui.lineEdit_end)
 
-        # set for 1 run number case
-        if self._beginRunNumber is None:
-            self._beginRunNumber = self._endRunNumber
-        elif self._endRunNumber is None:
-            self._endRunNumber = self._beginRunNumber
+        # two ways to add date by run numbers
+        if self._skipScanData:
+            # easy to add run numbers
+            if begin_run is None:
+                gutil.pop_dialog_error(self, 'In skip scanning mode, first run must be given!')
+                return False
+            # if end run is not given, just add 1 run
+            if end_run is None:
+                end_run = begin_run
 
-        # call parent
-        self._myParent.add_runs_by_numbers(self._iptsNumber, self._beginRunNumber, self._endRunNumber)
+            # get run information in quick mode
+            assert isinstance(self._iptsNumber, int) and self._iptsNumber > 0, 'IPTS number must be verified ' \
+                                                                               'for quick-filter-run mode.'
+            ipts_run_dir = self._iptsNumber
 
-        return
+        elif end_run is None:
+            # set up the end run number
+            to_last_run = self.ui.checkBox_toLastRun.isChecked()
+            if begin_run is not None and to_last_run is False:
+                end_run = begin_run + 1
+
+            ipts_run_dir = self._iptsDir
+
+        else:
+            # other siutation
+            ipts_run_dir = self._iptsDir
+
+        # END-IF-ELSE
+
+        # get the complete list of run (tuples) as it is filtered by date
+        status, ret_obj = workflow_controller.get_ipts_info(ipts_run_dir, begin_run, end_run)
+        if status is True:
+            run_tup_list = ret_obj
+        else:
+            error_message = ret_obj
+            gutil.pop_dialog_error(self, error_message)
+            return False
+
+        return run_tup_list
 
     def do_browse_ipts_folder(self):
-        """ Browse IPTS directory
+        """ Browse IPTS directory if it is set up to use IPTS directory other than number
         :return:
         """
         if str(self.ui.lineEdit_iptsDir.text()).strip() != '':
@@ -148,15 +206,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.lineEdit_iptsDir.setText(ipts_dir)
         self._iptsDir = ipts_dir
         self._iptsDirFromDir = ipts_dir
+        self._iptsNumber = None
 
         # Enable next step
         self.ui.pushButton_iptsInfo.setEnabled(True)
-        # self.ui.dateEdit_begin.setEnabled(True)
-        # self.ui.dateEdit_end.setEnabled(True)
 
         return
 
-    def do_change_data_access_mode(self):
+    def evt_change_data_access_mode(self):
         """
         Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
         :return:
@@ -265,17 +322,11 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._iptsDirFromNumber = ipts_dir
 
         # Enable widgets for next step
+        self.ui.radioButton_filterByRun.setEnabled(True)
+        self.ui.radioButton_filterByDate.setEnabled(True)
         self.ui.pushButton_iptsInfo.setEnabled(True)
-        if self.ui.checkBox_skipScan.isChecked():
-            self.ui.radioButton_filterByRun.setEnabled(True)
-            self.ui.radioButton_filterByRun.setChecked(True)
-            self.ui.lineEdit_begin.setEnabled(True)
-            self.ui.lineEdit_end.setEnabled(True)
-        else:
-            self.ui.radioButton_filterByDate.setEnabled(True)
-            self.ui.radioButton_filterByDate.setChecked(True)
-            # self.ui.dateEdit_begin.setEnabled(True)
-            # self.ui.dateEdit_end.setEnabled(True)
+        self.ui.pushButton_AddRuns.setEnabled(True)
+        self.set_filter_mode(by_run_number=self.ui.checkBox_skipScan.isChecked())
 
         return
 
@@ -284,47 +335,53 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         Add runs to parent (but not quit)
         :return:
         """
+        # Access parent's workflow controller
+        workflow_controller = self._myParent.get_workflow()
+        assert workflow_controller is not None
+
         # Check whether it is fine to leave with 'OK'
         if self._iptsDir is None:
-            gutil.pop_dialog_error('IPTS or data directory has not been set up.'
+            # error message and return: data directory must be given!
+            gutil.pop_dialog_error(self, 'IPTS or data directory has not been set up.'
                                    'Use Cancel instead of OK.')
             return
 
+        elif self._iptsNumber is None:
+            # get the ipts number
+            status, ret_obj = workflow_controller.get_ipts_number_from_dir(self._iptsNumber)
+            if status is False:
+                message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
+                gutil.pop_dialog_error(self, message)
+                ipts_number = 0
+            else:
+                ipts_number = ret_obj
+            self._iptsNumber = ipts_number
+
+        # set IPTS number of controller
+        workflow_controller.set_ipts(self._iptsNumber)
+
         if self.ui.radioButton_filterByDate.isChecked():
-            # add runs by date and time
-            assert self.ui.dateEdit_begin.isEnabled() and self.ui.dateEdit_end.isEnabled()
-
-            begin_date = self.ui.dateEdit_begin.date()
-            assert(isinstance(begin_date, QtCore.QDate))
-            self._beginDate = '%02d/%02d/%02d' % (begin_date.month(), begin_date.day(), begin_date.year())
-
-            end_date = self.ui.dateEdit_end.date()
-            assert(isinstance(end_date, QtCore.QDate))
-            self._endDate = '%02d/%02d/%02d' % (end_date.month(), end_date.day(), end_date.year())
-
-            self.add_runs_by_date()
-
+            # add runs by date
+            run_tup_list = self.add_runs_by_date()
         elif self.ui.radioButton_filterByRun.isChecked():
-            # add runs by run number
-            begin_run = gutil.parse_integer(self.ui.lineEdit_begin)
-            if begin_run is not None:
-                self._beginRunNumber = begin_run
-
-            from_start = self.ui.checkBox_fromFirstRun.isChecked()
-
-            end_run = gutil.parse_integer(self.ui.lineEdit_end)
-            if end_run is not None:
-                self._endRunNumber = end_run
-
-            till_end = self.ui.checkBox_toLastRun.isChecked()
-
-            # call parent algorithm
-            if self._myParent is not None and self._iptsNumber is not None:
-                self._myParent.add_runs_by_numbers(from_start, till_end)
-
+            # add runs by run numbers
+            run_tup_list = self.add_runs_by_number()
         else:
-            # exception case
-            raise RuntimeError('Neither filter by time nor filter by run number is selected.')
+            # exception
+            raise RuntimeError('Neither radio button to filter by date or run number is selected.')
+
+        # return with error
+        if run_tup_list is False:
+            return
+
+        # add runs to workflow
+        status, error_message = workflow_controller.add_runs(run_tup_list, self._iptsNumber)
+        if status is False:
+            return False, error_message
+
+        status, err_msg = self._myParent.add_runs_trees(self._iptsNumber, self._iptsDir, run_tup_list)
+        if not status:
+            gutil.pop_dialog_error(self, error_message)
 
         return
 
@@ -336,6 +393,15 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
+    def evt_change_filter_mode(self):
+        """
+        change the data filtering mode
+        :return:
+        """
+        by_run = self.ui.radioButton_filterByRun.isChecked()
+
+        self.set_filter_mode(by_run_number=by_run)
+
     def evt_skip_scan_data(self):
         """
         Purpose: enable/disable the requirement to scan directory before add data!
@@ -344,21 +410,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # get new state
         self._skipScanData = self.ui.checkBox_skipScan.isChecked()
 
-        # 2 cases
-        if self._skipScanData:
-            # Set the widgets to be enabled for input run numbers' range
-            self.ui.lineEdit_begin.setEnabled(True)
-            self.ui.lineEdit_end.setEnabled(True)
-            self.ui.dateEdit_begin.setEnabled(False)
-            self.ui.dateEdit_end.setEnabled(False)
-            self.ui.pushButton_AddRuns.setEnabled(True)
-        else:
-            # enforce to scan the archive
-            self.ui.lineEdit_begin.setEnabled(False)
-            self.ui.lineEdit_end.setEnabled(False)
-            self.ui.dateEdit_begin.setEnabled(False)
-            self.ui.dateEdit_end.setEnabled(False)
-            self.ui.pushButton_AddRuns.setEnabled(False)
+        self.set_filter_mode(by_run_number=self._skipScanData)
 
         return
 
@@ -395,16 +447,43 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         """
         self._dataDir = root_dir
 
-    def scan_data_skipped(self):
+    def set_filter_mode(self, by_run_number):
         """
-        Return the status whether the data directory/archive that has been skipped
+        Set filter mode by run number or by date
+        :param by_run_number: otherwise, by date
         :return:
         """
-        return self._skipScanData
+        if by_run_number:
+            # set to filter by run number
+            self.ui.radioButton_filterByRun.setChecked(True)
+            self.ui.radioButton_filterByDate.setChecked(False)
+            self.ui.lineEdit_begin.setEnabled(True)
+            self.ui.lineEdit_end.setEnabled(True)
+            self.ui.dateEdit_begin.setEnabled(False)
+            self.ui.dateEdit_end.setEnabled(False)
+        else:
+            # set to filter by date
+            self.ui.radioButton_filterByRun.setChecked(False)
+            self.ui.radioButton_filterByDate.setChecked(True)
+            self.ui.lineEdit_begin.setEnabled(False)
+            self.ui.lineEdit_end.setEnabled(False)
+            self.ui.dateEdit_begin.setEnabled(True)
+            self.ui.dateEdit_end.setEnabled(True)
 
+        return
+
+    def set_ipts_number(self, ipts_number):
+        """
+        Set starting IPTS number
+        :param ipts_number:
+        :return:
+        """
+        self.ui.lineEdit_iptsNumber.setText(str(ipts_number))
+
+        return
 
 """ Test Main """
-if __name__=="__main__":
+if __name__ == "__main__":
     import sys
     app = QtGui.QApplication(sys.argv)
     myapp = AddRunsByIPTSDialog(None)
