@@ -35,6 +35,12 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # set up event handling for widgets
         self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
                      self.do_scan_file)
+        self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
+                     self.do_set_format)
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
+        self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
+                     self.do_load_return)
 
         return
 
@@ -49,6 +55,38 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # scan file
         self.scan_log_file(log_file_name)
+
+        return
+
+    def do_load_return(self):
+        """
+
+        :return:
+        """
+        self._doLoadData = True
+
+        self.close()
+
+    def do_set_format(self):
+        """
+
+        :return:
+        """
+        # TODO/NOW/
+
+        self._formatDict = blabla
+
+    def do_quit(self):
+        """
+
+        :return:
+        """
+        self.close()
+
+        # FIXME
+        self._logFileName = 'abcd1234.eft'
+        self._formatDict = {'a':1, 'b':2}
+        self._myParent.load_mts_log(self._logFileName, self._formatDict)
 
         return
 
@@ -70,9 +108,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             lines.append(mts_file.readline())
         mts_file.close()
 
-        for l in lines:
-            print l.strip()
-
-        # set up lines to table
+        # write the line to table
+        for row_number, line in enumerate(lines):
+            self.ui.tableWidget_preview.append_line(row_number, line.strip())
 
         return

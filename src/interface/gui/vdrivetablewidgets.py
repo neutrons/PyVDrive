@@ -197,6 +197,15 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         return
 
+    def append_line(self, row_number, mts_line):
+        """
+        Append a line in MTS log file
+        :param row_number:
+        :param mts_line:
+        :return:
+        """
+        self.append_row([row_number, mts_line, False, False, False, False])
+
     def retrieve_format_dict(self):
         """
         Parse and retrieve log file format set up

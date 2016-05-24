@@ -563,8 +563,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         Purpose: read MTS log file
         :return:
         """
-        self.load_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
-        self.load_window.show()
+        self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
+        self._mts_file_loader_window.show()
+
+        print 'check point 1'
 
         return
 
@@ -656,6 +658,16 @@ class WindowLogPicker(QtGui.QMainWindow):
         # END-IF-ELSE
 
         return
+
+    def load_mts_log(self, mts_file_name, format_dict):
+        """
+
+        :param mts_file_name:
+        :param format_dict:
+        :return:
+        """
+        print mts_file_name
+        print format_dict
 
     def locate_picker(self, x_pos, ratio=0.2):
         """ Locate a picker with the new x
