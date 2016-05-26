@@ -9,7 +9,7 @@ except AttributeError:
         return s
 
 import gui.ui_loadVulcanMTSLogFile as LoadUI
-
+import gui.GuiUtility as GUtil
 
 class LoadMTSLogFileWindow(QtGui.QMainWindow):
     """
@@ -42,6 +42,10 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
                      self.do_load_return)
 
+        # class variables
+        self._logFileName = None
+        self._formatDict = None
+
         return
 
     def do_scan_file(self):
@@ -50,11 +54,11 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """
         # Pop dialog for log file
         working_dir = os.getcwd()
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
-                                                              working_dir))
+        self._logFileName = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
+                                                                  working_dir))
 
         # scan file
-        self.scan_log_file(log_file_name)
+        self.scan_log_file(self._logFileName)
 
         return
 
@@ -63,18 +67,27 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         :return:
         """
-        self._doLoadData = True
+        # check
+        if self._logFileName is None or self._formatDict is None:
+            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not set!')
+            return
 
+        # close
         self.close()
+
+        # check
+        self._myParent.load_mts_log(self._logFileName, self._formatDict)
+
+        return
 
     def do_set_format(self):
         """
 
         :return:
         """
-        # TODO/NOW/
+        self._formatDict = self.ui.tableWidget_preview.retrieve_format_dict()
 
-        self._formatDict = blabla
+        return
 
     def do_quit(self):
         """
@@ -82,11 +95,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         self.close()
-
-        # FIXME
-        self._logFileName = 'abcd1234.eft'
-        self._formatDict = {'a':1, 'b':2}
-        self._myParent.load_mts_log(self._logFileName, self._formatDict)
 
         return
 

@@ -566,8 +566,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
         self._mts_file_loader_window.show()
 
-        print 'check point 1'
-
         return
 
     def do_resize_canvas(self):
@@ -666,8 +664,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param format_dict:
         :return:
         """
-        print mts_file_name
-        print format_dict
+        # import pandas
+        import pandas as pd
+
+        mts_logs = pd.read_csv(mts_file_name, skiprows=[0, 1, 2, 4])
+        log_name_list = mts_logs.keys()
+
+
 
     def locate_picker(self, x_pos, ratio=0.2):
         """ Locate a picker with the new x
