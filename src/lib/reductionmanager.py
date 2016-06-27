@@ -27,19 +27,19 @@
 import sys
 import os
 
+"""
 # FIXME : This is for local development only!
 homedir = os.path.expanduser('~')
 mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
 sys.path.append(mantidpath)
+"""
 
 import mantid_helper
-import mantid
-import mantid.simpleapi as mantidapi
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 DEBUGMODE = True
-DEBUGDIR = os.path.join(homedir, 'Temp')
+DEBUGDIR = os.path.join(os.path.expanduser('~'), 'Temp')
 
 
 class PowderReductionParameters(object):
@@ -650,7 +650,7 @@ class ReductionManager(object):
         reduced_ws_name = tracker.event_workspace_name
 
         # Convert unit
-        self.mtd_convert_units(reduced_ws_name, unit)
+        mantid_helper.mtd_convert_units(reduced_ws_name, unit)
 
         return reduced_ws_name
 
@@ -661,7 +661,8 @@ class ReductionManager(object):
         :return:
         """
         mantid_helper.mtd_align_and_focus(event_ws_name, self._reductionParameters,
-                                          self._myGroupWorkspaceName)
+                                          self._myGroupWorkspaceName, self._myOffsetWorkspaceName,
+                                          self._myCalibrationWorkspaceName)
 
         return True
 
@@ -704,7 +705,8 @@ class ReductionManager(object):
         # Filter bad pulses as an option
         # FIXME - Need to apply reduction-history here in the case that the workspace has been processed
         if self._reductionParameters.filter_bad_pulse is True:
-            self.mtd_filter_bad_pulses(event_ws_name)
+            self.mtd_filter_bad_pulses(event_ws_name, reduction_parameters, grouping_ws_name,
+                                       offset_ws_name)
             tracker.add_history(ReductionHistory.FilterBadPulse)
 
         # Align and focus
@@ -714,12 +716,12 @@ class ReductionManager(object):
 
         # Normalize by current as an option
         if self._reductionParameters.normalize_by_current:
-            self.mtd_normalize_by_current(event_ws_name)
+            mantid_helper.mtd_normalize_by_current(event_ws_name)
             tracker.add_history(ReductionHistory.NormaliseByCurrent)
 
         # Normalize/calibrate by vanadium
         if self._reductionParameters.calibrate_by_vanadium is True:
-            self.normalizeByVanadium(event_ws_name)
+            mantid_helper.normalizeByVanadium(event_ws_name)
             tracker.add_history(ReductionHistory.CalibratedByVanadium)
 
         tracker.is_reduced = True
@@ -798,11 +800,11 @@ class ReductionManager(object):
         :return:
         """
         if self._myGroupWorkspaceName is not None:
-            mantidapi.DeleteWorkspace(Workspace=self._myGroupWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myGroupWorkspaceName)
         if self._myOffsetWorkspaceName is not None:
-            mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
         if self._myMaskWorkspaceName is not None:
-            mantidapi.DeleteWorkspace(Workspace=self._myOffsetWorkspaceName)
+            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
 
         return
 
@@ -867,22 +869,20 @@ class ReductionManager(object):
         assert self._reductionParameters.focus_calibration_file is not None, 'Time focus file has not been setup.'
 
         # Load calibration file if it is not loaded
-        if self._myOffsetWorkspaceName is None:
-            mantidapi.LoadCalFile(InstrumentName=self._myInstrument,
-                                  CalFilename=self._reductionParameters.focus_calibration_file,
-                                  WorkspaceName=self._myInstrument,
-                                  MakeGroupingWorkspace=True,
-                                  MakeOffsetsWorkspace=True,
-                                  MakeMaskWorkspace=True)
+        if self._myOffsetWorkspaceName is None \
+                or mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName) is False:
+            status, ret_obj = mantid_helper.load_time_focus_file(self._myInstrument,
+                                                                    self._reductionParameters.focus_calibration_file,
+                                                                    self._myInstrument)
 
-            self._myOffsetWorkspaceName = '%s_offsets' % self._myInstrument
-            self._myGroupWorkspaceName = '%s_group' % self._myInstrument
-            self._myMaskWorkspaceName = '%s_mask' % self._myInstrument
-            self._myCalibrationWorkspaceName = '%s_cal' % self._myInstrument
+            # TODO/NOW/40 - Doc and clean
+            assert status, ret_obj
 
-        # Check
-        assert mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName), \
-            'Workspace %s cannot be found in AnalysisDataService.' % self._myOffsetWorkspaceName
+            file_names = ret_obj
+            self._myOffsetWorkspaceName = file_names[0]
+            self._myGroupWorkspaceName = file_names[1]
+            self._myMaskWorkspaceName = file_names[2]
+            self._myCalibrationWorkspaceName = file_names[3]
 
         return
 

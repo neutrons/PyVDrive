@@ -68,12 +68,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
                      self.do_add_runs_by_ipts)
         self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_read_sample_log_file)
+                     self.do_load_sample_log)
 
         # Column 2
         # about vanadium calibration
         self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration)
+                     self.do_load_vanadium_calibration)
         self.connect(self.ui.pushButton_showCalDetails, QtCore.SIGNAL('clicked()'),
                      self.do_show_calibration_map)
 
@@ -135,7 +135,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                      self.ui.comboBox_g51, self.ui.comboBox_g61]
         for combo_box in self._group_left_box_list:
             self.connect(combo_box, QtCore.SIGNAL('currentIndexChanged(int)'),
-                         self.do_change_log_snap_view)
+                         self.event_change_log_snap_view)
+        self._logSnapViewLock = False
 
         # Event handling for menu
         self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
@@ -177,6 +178,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._lastSampleLogFileName = ''
 
         self._calibCriteriaFile = ''
+
+        # some historical data storage
+        self._addedIPTSNumber = None
 
         # Load settings
         self.load_settings()
@@ -336,7 +340,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 self.ui.comboBox_chopTabRunList.addItem('%d' % run_number)
 
             # set up current run and run list in chop-tab
-            self._myWorkflow.load_log_only(current_run_number)
+            # self._myWorkflow.load_log_only(current_run_number)
 
         else:
             # advance to 'bin'-tab
@@ -588,6 +592,31 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
+    def add_runs_trees(self, ipts_number, ipts_dir, run_tuple_list):
+        """
+        Add runs to VDrivePlot main GUI
+        :param run_tuple_list:
+        :return: 2-tuple: boolean, string (error message)
+        """
+        # check validity
+        # TODO/NOW : check and doc!
+
+        # Set to tree
+        if ipts_number == 0:
+            ipts_number = os.path.basename(ipts_dir)
+        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tuple_list)
+
+        # Set to file tree directory
+        if ipts_number > 0:
+            home_dir = '/SNS/VULCAN'
+        else:
+            home_dir = os.path.expanduser(ipts_dir)
+        curr_dir = ipts_dir
+        self.ui.treeView_runFiles.set_root_path(home_dir)
+        self.ui.treeView_runFiles.set_current_path(curr_dir)
+
+        return True, ''
+
     def do_add_runs_by_ipts(self):
         """ import runs by IPTS number or directory
         Purpose: Import runs from archive according to IPTS or specified data directory
@@ -596,96 +625,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """
         # Launch window
         child_window = dlgrun.AddRunsByIPTSDialog(self)
+
+        # init set up
+        if self._addedIPTSNumber is not None:
+            child_window.set_ipts_number(self._addedIPTSNumber)
+
         child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
         r = child_window.exec_()
 
-        # Return due to 'cancel'
-        ipts_dir = child_window.get_ipts_dir()
-        if ipts_dir is None:
-            return
-
-        # Get IPTS from dialog and set to archive
-        ipts_number = child_window.get_ipts_number()
-        if ipts_number is None:
-            status, ret_obj = self._myWorkflow.get_ipts_number_from_dir(ipts_dir)
-            if status is False:
-                message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
-                GuiUtility.pop_dialog_error(self, message)
-                ipts_number = 0
-            else:
-                ipts_number = ret_obj
-        self._myWorkflow.set_ipts(ipts_number)
-
-        begin_date, end_date, begin_run, end_run = child_window.get_date_run_range()
-        print '[DB-BAT] Dialog gives out %s, %s, %s, %s' % (str(begin_date), str(end_date),
-                                                            str(begin_run), str(end_run))
-        in_archive = child_window.scan_data_skipped()
-
-        # Get a list of runs including run numbers and data file paths.
-        if in_archive:
-            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_number, begin_run, end_run)
-        else:
-            status, ret_obj = self._myWorkflow.get_ipts_info(ipts_dir, begin_run, end_run)
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            # Pop error
-            error_message = ret_obj
-            GuiUtility.pop_dialog_error(self, error_message)
-            return
-
-        # FIXME/TODO/1st - THIS SHOULD BE REFACTORED INTO VdriveAPI
-        # raise NotImplementedError('vdrive.filter_runs_by_date() won\'t work!')
-        # Filter by time if it is specified
-        if begin_date is not None and end_date is not None:
-            # Filter runs by date
-            status, ret_obj = VdriveAPI.filter_runs_by_date(run_tup_list, begin_date, end_date,
-                                                         include_end_date=True)
-            if status is True:
-                run_tup_list = ret_obj
-            else:
-                #  pop error
-                error_message = ret_obj
-                GuiUtility.pop_dialog_error(self, error_message)
-                return
-        elif begin_date is not None or end_date is not None:
-            # Unsupported scenario
-            raise RuntimeError('Unable to handle the case that only begin date or end date is specified.')
-
-        # Add runs to workflow
-        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
-        if status is False:
-            GuiUtility.pop_dialog_error(self, error_message)
-            return
-
-        # Filter runs by run
-        """
-        status, ret_obj = vdrive.filter_runs_by_run(run_tup_list, begin_run, end_run)
-        if status is False:
-            guiutil.pop_dialog_error(ret_obj)
-            return
-        else:
-            run_tup_list = ret_obj
-
-        status, error_message = self._myWorkflow.add_runs(run_tup_list, ipts_number)
-        if status is False:
-            guiutil.pop_dialog_error(self, error_message)
-            return
-        """
-
-        # Set to tree
-        if ipts_number == 0:
-            ipts_number = os.path.basename(ipts_dir)
-        self.ui.treeView_iptsRun.add_ipts_runs(ipts_number, run_tup_list)
-
-        # Set to file tree directory
-        if ipts_number > 0:
-            home_dir = '/SNS/VULCAN'
-        else:
-            home_dir = os.path.expanduser('~')
-        curr_dir = ipts_dir
-        self.ui.treeView_runFiles.set_root_path(home_dir)
-        self.ui.treeView_runFiles.set_current_path(curr_dir)
+        # set the close one
+        self._addedIPTSNumber = child_window.get_ipts_number()
 
         return
 
@@ -749,23 +698,33 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_change_log_snap_view(self):
+    def event_change_log_snap_view(self):
         """
         Event handling if user chooses to plot another log in snap view
         :return:
         """
+        # If snap view is locked, then return without any change
+        if self._logSnapViewLock:
+            return
+
         num_skip_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
 
         for i in xrange(len(self._group_left_box_list)):
             curr_index = int(self._group_left_box_list[i].currentIndex())
+
+            # skip if it is not set!
             if curr_index < 0:
-                # skip if it is not set!
                 continue
-            if curr_index != self._group_left_box_values[i]:
-                self._group_left_box_values[i] = curr_index
-                print '[DB] Left box No. %d log index is changed to %d' % (i, curr_index)
-                SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
-                break
+
+            # skip if there is no change
+            if curr_index == self._group_left_box_values[i]:
+                return
+
+            # apply change to status record
+            self._group_left_box_values[i] = curr_index
+            # plot
+            SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
+        # END-FOR
 
         return
 
@@ -781,34 +740,39 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_load_calibration(self):
+    def do_load_vanadium_calibration(self):
         """
         Purpose:
-            Select and check vanadium calibration file for the current runs
+            Select and load vanadium calibration GSAS file for the current runs
         Requirements:
             Some runs are light-loaded to project
+            The GSAS file must be a time focused vanadium run with proper range, bin size and
+            number of spectra.
         Guarantee:
-            Load calibration...
-
-        Nomenclature:
-        1. light-loaded: a run that is said to be loaded to project, but NOT loaded by Mantid.
+            GSAS file is loaded and inspected.
         :return:
         """
-        # TODO/NEXT/NOW
-        raise NotImplementedError('ASAP')
+        # user specify the smoothed vanadium file
+        # get default directory for smoothed vanadium: /SNS/IPTS-????/shared/Instrument/
+        default_van_dir = '/SNS/IPTS-%d/shared/Instrument' % self._currIPTS
 
-        # Get calibration file
-        if os.path.exists(self._calibCriteriaFile) is False:
-            self._calibCriteriaFile = str(
-                QtGui.QFileDialog.getOpenFileName(self, 'Get Vanadium Criteria', '/SNS/VULCAN/')
-            )
-            if self._calibCriteriaFile is None or len(self._calibCriteriaFile) == 0:
-                return
+        # get calibration file
+        file_types = 'GSAS (*.gsa);;All (*.*)'
+        smooth_van_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Get smoothed vanadium GSAS',
+                                                                default_van_dir, file_types))
 
-        # Launch second dialog to select the criteria from table
-        import ui.Dialog_SetupVanCalibrationRules as vanSetup
-        setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
-        setupdialog.exec_()
+        # return if cancel
+        if len(smooth_van_file) == 0:
+            return
+
+        # load vanadium file
+        van_key = self._myWorkflow.load_smoothed_vanadium(smooth_van_file)
+
+        # get information
+        van_info = self._myWorkflow.get_vanadium_info(van_key)
+
+        # write vanadium information in somethere
+        # ... write vanadium ...
 
         return
 
@@ -839,46 +803,48 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_read_sample_log_file(self):
+    def do_load_sample_log(self):
         """ Load nexus file for plotting sample log.
         The file should be selected from runs in the tree
         :return:
         """
-        # Get the default file path
-        log_path = self._myWorkflow.get_data_root_directory()
-
         # Set up a more detailed file path to load log file according to selected run
         # from the project tree
-        # TODO! this is very bad!
-        status, ret_obj = self.ui.treeView_iptsRun.get_current_run()
-        if status is True:
-            run_number = ret_obj
-            status, ret_obj = self._myWorkflow.get_run_info(run_number)
-            if status is True:
-                # run is located in workflow controller
-                run_file_name, ipts_number = ret_obj
-                if run_file_name.startswith('/SNS/'):
-                    # data is from data server: redirect to IPTS-???/0/.. directory
-                    ipts_number = ipts_number
-                    log_path = os.path.join('/SNS/VULCAN/',
-                                                  'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
-                else:
-                    # local data file
-                    log_path = os.path.dirname(run_file_name)
-            else:
-                GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
-            self._currLogRunNumber = run_number
+        # run number first
+        run_str = str(self.ui.comboBox_chopTabRunList.currentText())
+        if run_str.isdigit():
+            run_number = int(run_str)
         else:
+            GuiUtility.pop_dialog_error(self, 'Run number %s selected in combo-box is not integer.' % run_str)
+            return
+
+        # find default directory
+        status, ret_obj = self._myWorkflow.get_run_info(run_number)
+        if not status:
             GuiUtility.pop_dialog_error(self, 'Unable to get run from tree view: %s' % ret_obj)
+            return
+
+        # run is located in workflow controller
+        run_file_name, ipts_number = ret_obj
+        if run_file_name.startswith('/SNS/'):
+            # data is from data server: redirect to IPTS-???/0/.. directory
+            log_path = os.path.join('/SNS/VULCAN/',
+                                    'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
+        else:
+            # local data file
+            log_path = os.path.dirname(run_file_name)
         # END-IF
 
+        self._currLogRunNumber = run_number
+
         # Dialog to get the file name
-        file_filter = "NXS (*.nxs);;All files (*.*)"
+        file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
         log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
                                                               log_path, file_filter))
 
         # Load log
         log_name_list = self.load_sample_run(log_file_name, smart=True)
+        log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
         do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
@@ -887,7 +853,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         else:
             num_sec_skipped = None
 
-        # Set up and plot all 6 widgets groups
+        # Set up and plot all 6 widgets groups. Need to lock the event handler for 6 combo boxes first
+        self._logSnapViewLock = True
         for i in xrange(min(self._numSnapViews, len(log_name_list))):
             # create a log_widget from base snap view widgets and set up
             snap_widget = self._groupedSnapViewList[i]
@@ -896,14 +863,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
 
-            # get log value
-            # log_name = log_name_list[i]
-            # vec_times, vec_log_value = self.get_sample_log_value(log_name)
-
-            # plot log value
-            # log_widget.plot_data(vec_times, vec_log_value, do_skip, num_sec_skipped)
-
+            log_widget.plot_sample_log(num_sec_skipped)
         # END-FOR
+        self._logSnapViewLock = False
 
         # Record sample log file
         self._lastSampleLogFileName = log_file_name
@@ -1035,13 +997,26 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def get_sample_log_value(self, log_name, relative=False):
+    def get_sample_log_value(self, log_name, time_range=None, relative=False):
         """
-        Get sample log vaue
+        Get sample log value
         :param log_name:
-        :return: 2-tuple as (numpy.1darray, numpy.1darray)
+        :param time_range:
+        :param relative:
+        :return: 2-tuple as (numpy.ndarray, numpy.ndarray)
         """
-        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, relative=relative)
+        # check
+        if time_range is None:
+            start_time = None
+            stop_time = None
+        else:
+            assert len(time_range) == 2
+            start_time = time_range[0]
+            stop_time = time_range[1]
+            assert start_time < stop_time
+
+        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, start_time, stop_time,
+                                                                 relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)
 
@@ -1146,6 +1121,29 @@ class VdriveMainWindow(QtGui.QMainWindow):
         assert os.path.exists(session_file_name), 'Auto saved project file %s does not exist.' % session_file_name
 
         self.load_project(session_file_name)
+
+        return
+
+    def menu_setup_auto_vanadium_file(self):
+        """
+        TODO/NOW/later... Implement!
+        # TODO/NOW/40: suggest to call this setup in menu (self.ui.actionAuto_Vanadium)
+        :return:
+        """
+
+        #if os.path.exists(self._calibCriteriaFile) is False:
+        #    self._calibCriteriaFile = str(
+        #        QtGui.QFileDialog.getOpenFileName(self, 'Get Vanadium Criteria', '/SNS/VULCAN/')
+        #    )
+        #    if self._calibCriteriaFile is None or len(self._calibCriteriaFile) == 0:
+        #        return
+
+        # Launch second dialog to select the criteria from table
+
+        # default directory for log file /SNS/VULCAN/shared/CalibrationFile/Instrument/Standard/Vanadium/VRecord.txt
+        import ui.Dialog_SetupVanCalibrationRules as vanSetup
+        setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
+        setupdialog.exec_()
 
         return
 

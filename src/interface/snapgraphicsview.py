@@ -1,3 +1,4 @@
+import numpy as np
 from PyQt4 import QtGui
 from gui.mplgraphicsview import MplGraphicsView 
 
@@ -5,24 +6,24 @@ from gui.mplgraphicsview import MplGraphicsView
 class SnapGraphicsView(object):
     """ Snap graphics view in VDrivePlot (beta)
     """
-    def __init__(self, graphicview, combox1, combox2, radio_button):
+    def __init__(self, graphic_view_widget, combo_box1, combo_box2, radio_button):
         """
-        :param graphicview:
-        :param combox1:
-        :param combox2:
+        :param graphic_view_widget:
+        :param combo_box1:
+        :param combo_box2:
         :return:
         """
         # Check
-        if isinstance(graphicview, MplGraphicsView) is False:
-            raise NotImplementedError("Input is not a QGraphicsView instance, but %s" % str(type(graphicview)))
-        if isinstance(combox1, QtGui.QComboBox) is False:
+        if isinstance(graphic_view_widget, MplGraphicsView) is False:
+            raise NotImplementedError("Input is not a QGraphicsView instance, but %s" % str(type(graphic_view_widget)))
+        if isinstance(combo_box1, QtGui.QComboBox) is False:
             raise NotImplementedError("Input combo1 is not a QComboBox instance.")
-        if isinstance(combox2, QtGui.QComboBox) is False:
+        if isinstance(combo_box2, QtGui.QComboBox) is False:
             raise NotImplementedError('Input combo2 is not a QComboBox instance.')
 
-        self._graphicView = graphicview
-        self._comboBox1 = combox1
-        self._comboBox2 = combox2
+        self._graphicView = graphic_view_widget
+        self._comboBox1 = combo_box1
+        self._comboBox2 = combo_box2
         self._radioButton = radio_button
 
         return
@@ -142,19 +143,9 @@ class SampleLogView(object):
         # Get log name from
         log_name = self.get_log_name()
 
-        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name)
-        # FIXME / TODO - make relative time
-        vec_times -= vec_times[0]
-
-        do_skip = False
-        num_sec_skipped = None
-
-        """
-        if do_skip is True:
-            vec_plot_times, vec_plot_value = \
-                GuiUtility.skip_time(vec_times, vec_log_value, num_sec_skipped, 'second')
-        else:
-        """
+        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name, num_sec_skipped)
+        assert isinstance(vec_times, np.ndarray)
+        assert isinstance(vec_log_value, np.ndarray)
 
         self._snapGraphicsView.plot_data(vec_times, vec_log_value)
 

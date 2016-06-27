@@ -205,7 +205,7 @@ class DataArchiveManager(object):
 
             # get file information
             # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
-            ipts_number, run_number = vdrivehelper.getIptsRunFromFileName(file_name)
+            ipts_number, run_number = DataArchiveManager.get_ipts_run_from_file_name(file_name)
             create_time = os.path.getctime(full_path_name)
             modify_time = os.path.getmtime(full_path_name)
             if modify_time < create_time:
@@ -257,7 +257,7 @@ class DataArchiveManager(object):
 
             # get file information
             # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
-            ipts_number, run_number = vdrivehelper.getIptsRunFromFileName(file_name)
+            ipts_number, run_number = self.get_ipts_run_from_file_name(file_name)
             create_time = os.path.getctime(full_file_path)
             modify_time = os.path.getmtime(full_file_path)
             if modify_time < create_time:
@@ -268,6 +268,36 @@ class DataArchiveManager(object):
         # END-FOR
 
         return run_tup_list
+
+    @staticmethod
+    def get_ipts_run_from_file_name(nxs_file_name):
+        """
+        Get IPTS number from a standard SNS nexus file name
+        :param nxs_file_name:
+        :return: tuple as 2 integers, IPTS and run number
+        """
+        basename = os.path.basename(nxs_file_name)
+
+        # Get IPTS
+        if basename == nxs_file_name:
+            # not a full path
+            ipts = None
+        else:
+            # Format is /SNS/VULCAN/IPTS-????/0/NeXus/VULCAN_run...
+            try:
+                ipts = int(nxs_file_name.split('IPTS-')[1].split('/')[0])
+            except IndexError:
+                ipts = None
+
+        # Get run number
+        try:
+            runnumber = int(basename.split('_')[1])
+        except IndexError:
+            runnumber = None
+        except ValueError:
+            runnumber = None
+
+        return ipts, runnumber
 
     def search_experiment_runs_by_time(self, delta_days):
         """ Search files under IPTS and return with the runs created within a certain

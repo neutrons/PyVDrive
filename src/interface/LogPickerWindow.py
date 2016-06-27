@@ -15,6 +15,7 @@ except AttributeError:
 
 import gui.GuiUtility as GuiUtility
 import gui.VdriveLogPicker as VdriveLogPicker
+import LoadMTSLogWindow
 
 
 OUT_PICKER = 0
@@ -46,7 +47,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit_no_save)
         self.connect(self.ui.pushButton_saveReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_quit_with_save)
+                     self.do_save_quit)
         self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_run)
         self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
@@ -56,12 +57,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_read_log_file)
 
-        self.connect(self.ui.radioButton_useGenericDAQ, QtCore.SIGNAL('toggled()'),
+        self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLoadFrame, QtCore.SIGNAL('toggled()'),
+        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled()'),
-                     self.do_set_log_options)
+
+        self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
+                     self.load_log_names)
 
         # Add slicer picker
         self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
@@ -85,14 +87,19 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
                      self.do_highlite_selected)
         self.connect(self.ui.pushButton_processSegments, QtCore.SIGNAL('clicked()'),
-                     self.do_slice_segments)
+                     self.do_split_segments)
 
         # Canvas
+        self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
+                     self.evt_plot_sample_log)
         self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
                      self.do_resize_canvas)
-
         self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_plot_sample_log)
+
+        self.ui.radioButton_useMaxPointResolution.toggled.connect(self.evt_change_resolution_type)
+        self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
+                     self.evt_change_resolution_type)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -103,9 +110,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                         self.on_mouse_motion)
 
         # Initial setup
-        self.ui.radioButton_useGenericDAQ.setChecked(True)
-        self.ui.radioButton_useLoadFrame.setChecked(False)
-        self.ui.radioButton_useLogFile.setChecked(False)
         if init_run is not None:
             assert isinstance(init_run, int)
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
@@ -113,6 +117,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Class variables
         self._currentLogIndex = 0
         self._logNameList = list()
+        self._sampleLogDict = dict()
 
         self._currentPickerID = None
         self._myPickerMode = OUT_PICKER
@@ -122,9 +127,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Picker management
         self._myPickerIDList = list()
 
-        # Set up widgets
-        self._init_widgets_setup()
-
         # Experiment-related variables
         self._currRunNumber = None
         self._currLogName = None
@@ -132,16 +134,45 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Highlighted lines list
         self._myHighLightedLineList = list()
 
+        # Set up widgets
+        self._init_widgets_setup()
+
         return
 
     def _init_widgets_setup(self):
         """
-
+        Initialize widgets
         :return:
         """
+        # slice segments table
         self.ui.tableWidget_segments.setup()
-
+        # ipts-run selection tree
         self.ui.treeView_iptsRun.set_main_window(self)
+        # about plotting
+        self.ui.checkBox_autoResize.setChecked(True)
+        # options to create slicing segments
+        self.ui.radioButton_noExpand.setChecked(True)
+        # set up the check boxes
+        self.ui.checkBox_hideSingleValueLog.setChecked(True)
+        # radio buttons
+        self.ui.radioButton_useNexus.setChecked(True)
+        self.ui.radioButton_useLogFile.setChecked(False)
+
+        # resolution
+        self.ui.radioButton_useMaxPointResolution.setChecked(True)
+        self.ui.radioButton_useTimeResolution.setChecked(False)
+
+        self.ui.lineEdit_resolutionMaxPoints.setText('4000')
+        self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+        self.ui.lineEdit_timeResolution.setText('1')
+        self.ui.lineEdit_timeResolution.setEnabled(False)
+
+        # group radio buttons
+        self.ui.resolution_group = QtGui.QButtonGroup(self)
+        self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
+        self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
+
+        return
 
     def do_select_time_segments(self):
         """
@@ -207,30 +238,41 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_slice_segments(self):
+    def do_split_segments(self):
         """
-        Split a certain number of time segment into smaller segments either
-        by time or by log value
+        Save a certain number of time segment from table tableWidget_segments
         :return:
         """
+        raise NotImplementedError('Need more consideration!')
+
         # Name of the sample log
         log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
+        print ('[DB...BAT] Log name %s vs current log name %s: %s' % (log_name, self._currLogName,
+                                                                      str(log_name == self._currLogName)))
 
-        # Collect selected time segments
+        # collect selected time segments
         source_time_segments, row_number_list = \
             self.ui.tableWidget_segments.get_selected_time_segments(True)
 
-        # Split option
+        # check options for further splitting slicer option
+        by_log_value = False
+        by_time = False
         if self.ui.radioButton_logValueStep.isChecked():
             # By log value
-            by_time = False
+            by_log_value = True
             step_value = GuiUtility.parse_float(self.ui.lineEdit_logValueStep)
-        else:
+        elif self.ui.radioButton_timeStep.isChecked():
             # By time
             by_time = True
             step_value = GuiUtility.parse_float(self.ui.lineEdit_timeStep)
+        else:
+            # no future slicing
+            step_value = None
 
-        # FIXME - Not implemented in API yet
+        # pass the segments to API to generate slicers
+        self._myParent.get_workflow().generate_data_slicer(
+            self._currRunNumber, source_time_segments, by_log_value, by_time, step_value)
+
         # Run GenerateEventFilters
         num_segments = len(source_time_segments)
         index_list = range(num_segments)
@@ -278,27 +320,54 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Get sample logs
         try:
-            sample_log_names = self._myParent.load_sample_run(run_number, True)
+            log_name_with_size = True
+            self._logNameList = self._myParent.load_sample_run(run_number, log_name_with_size)
+            self._logNameList.sort()
+
+            # Update class variables, add a new entry to sample log value holder
+            self._currRunNumber = run_number
+            self._sampleLogDict[self._currRunNumber] = dict()
+
         except RuntimeError as err:
-            GuiUtility.pop_dialog_error('Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
+            GuiUtility.pop_dialog_error(self,
+                                        'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
 
-        # Set up
-        self.ui.comboBox_logNames.clear()
-        for log_name in sorted(sample_log_names):
-            # self.ui.comboBox_logNames.addItem(QtCore.QString(log_name))
-            self.ui.comboBox_logNames.addItem(str(log_name))
-        self._currentLogIndex = 0
-        self._logNameList = sample_log_names[:]
+        # Load log names to combo box _logNames
+        self.load_log_names()
 
-        # Set
+        # plot the first log
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
-
-        # Update class variables
-        self._currRunNumber = run_number
         self._currLogName = log_name
+
+        return
+
+    def load_log_names(self):
+        """
+        Load log names to combo box comboBox_logNames
+        :return:
+        """
+        # get configuration
+        hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
+
+        # clear box
+        self.ui.comboBox_logNames.clear()
+
+        # add sample logs to combo box
+        for log_name in self._logNameList:
+            # check whether to add
+            if hide_1value_log and log_name.count('(') > 0:
+                log_size = int(log_name.split('(')[1].split(')')[0])
+                if log_size == 1:
+                    continue
+            # add log
+            self.ui.comboBox_logNames.addItem(str(log_name))
+        # END-FOR
+
+        # set current index
+        self._currentLogIndex = 0
 
         return
 
@@ -456,18 +525,33 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_quit_with_save(self):
+    def do_save_quit(self):
         """ Save selected segment and quit
         :return:
         """
         # Get splitters
-        split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
+        try:
+            split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
+        except RuntimeError as e:
+            GuiUtility.pop_dialog_error(self, str(e))
+            return
+
+        # pop a dialog for the name of the slicer
+        slicer_name, status = QtGui.QInputDialog.getText(self, 'Input Slicer Name', 'Enter slicer name:')
+        # return if not given
+        if status is False:
+            return
+        else:
+            slicer_name = str(slicer_name)
+            print '[DB...BAT] Slicer name: ', slicer_name
 
         # Call parent method
         if self._myParent is not None:
-            self._myParent.get_workflow().gen_data_slice_manual(
-                run_number=self._currRunNumber, relative_time=True,
-                time_segments_list=split_tup_list)
+            self._myParent.get_workflow().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                                relative_time=True,
+                                                                time_segment_list=split_tup_list,
+                                                                slice_tag=slicer_name)
+        # END-IF
 
         # Close
         self.close()
@@ -476,17 +560,11 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_read_log_file(self):
         """
-
+        Purpose: read MTS log file
         :return:
         """
-        # Pop dialog for log file
-        working_dir = self._myParent.get_workflow().get_working_dir()
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
-                                                              working_dir))
-
-        # Parse log file
-        # TODO/FIXME - Need a sample file from Ke
-        self._myParent.get_workflow().parse_vulcan_log_file(log_file_name)
+        self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
+        self._mts_file_loader_window.show()
 
         return
 
@@ -494,29 +572,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Resize canvas
         :return:
         """
-        # Current setup
-        curr_min_x, curr_max_x = self.ui.graphicsView_main.getXLimit()
-        curr_min_y, curr_max_y = self.ui.graphicsView_main.getYLimit()
-
-        # Future setup
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        if new_min_x is None:
-            new_min_x = curr_min_x
-
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
-        if new_max_x is None:
-            new_max_x = curr_max_x
-
-        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
-        if new_min_y is None:
-            new_min_y = curr_min_y
-
-        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
-        if new_max_y is None:
-            new_max_y = curr_max_x
-
-        # Resize
-        self.ui.graphicsView_main.setXYLimit(new_min_x, new_max_x, new_min_y, new_max_y)
+        self.plot_sample_log(self._currLogName)
 
         return
 
@@ -531,17 +587,49 @@ class WindowLogPicker(QtGui.QMainWindow):
         Get the different options for set log
         :return:
         """
+        if self.ui.radioButton_useNexus.isChecked():
+            # enable to load run from Nexus/standard Vulcan run
+            self.ui.pushButton_loadRunSampleLog.setEnabled(True)
+            self.ui.pushButton_readLogFile.setEnabled(False)
 
+        elif self.ui.radioButton_useLogFile.isChecked():
+            # enable to load Vulcan sample environment log file
+            self.ui.pushButton_loadRunSampleLog.setEnabled(False)
+            self.ui.pushButton_readLogFile.setEnabled(True)
+
+        else:
+            # false set up
+            raise RuntimeError('Error setup to have both radio button (Nexus/log file) disabled.')
+
+        return
+
+    def evt_change_resolution_type(self):
+        """
+        event handling for changing resolution type
+        :return:
+        """
+        if self.ui.radioButton_useTimeResolution.isChecked():
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(False)
+            self.ui.lineEdit_timeResolution.setEnabled(True)
+
+        else:
+            self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
+            self.ui.lineEdit_timeResolution.setEnabled(False)
+
+        return
 
     def evt_plot_sample_log(self):
         """
         Plot sample log
         :return:
         """
+        # get current log name
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
+        self._currLogName = log_name
 
+        # plot
         self.plot_sample_log(log_name)
 
         return
@@ -568,6 +656,21 @@ class WindowLogPicker(QtGui.QMainWindow):
         # END-IF-ELSE
 
         return
+
+    def load_mts_log(self, mts_file_name, format_dict):
+        """
+
+        :param mts_file_name:
+        :param format_dict:
+        :return:
+        """
+        # import pandas
+        import pandas as pd
+
+        mts_logs = pd.read_csv(mts_file_name, skiprows=[0, 1, 2, 4])
+        log_name_list = mts_logs.keys()
+
+
 
     def locate_picker(self, x_pos, ratio=0.2):
         """ Locate a picker with the new x
@@ -798,17 +901,121 @@ class WindowLogPicker(QtGui.QMainWindow):
         return
 
     def plot_sample_log(self, sample_log_name):
-        """
-
+        """ Purpose: plot sample log
+        Requirement:
+        1. sample log name is valid;
+        2. resolution is set up (time or maximum number of points)
+        Guarantee: canvas is replot
         :param sample_log_name:
         :return:
         """
-        vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name, relative=True)
+        # get resolution
+        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
+        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
+        if use_time_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
+        elif use_num_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
+        else:
+            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+            return
 
+        # get the sample log data
+        if sample_log_name in self._sampleLogDict[self._currRunNumber]:
+            # get sample log value from previous stored
+            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][sample_log_name]
+        else:
+            # get sample log data from driver
+            vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
+                                                               relative=True)
+            self._sampleLogDict[self._currRunNumber][sample_log_name] = vec_x, vec_y
+
+        # get range of the data
+        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+
+        # adjust the resolution
+        plot_x, plot_y = process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                      new_min_x, new_max_x)
+
+        # plot
         self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=sample_log_name)
+        the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
+        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label,
+                                              marker='.', color='blue')
+
+        # resize canvas
+        range_x = plot_x[-1] - plot_x[0]
+        new_min_x = (plot_x[0] - range_x * 0.05) if new_min_x is None else new_min_x
+        new_max_x = (plot_x[-1] + range_x * 0.05) if new_max_x is None else new_max_x
+
+        range_y = max(plot_y) - min(plot_y)
+        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
+        if new_min_y is None:
+            new_min_y = min(plot_y) - 0.05 * range_y
+        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
+        if new_max_y is None:
+            new_max_y = max(plot_y) + 0.05 * range_y
+
+        self.ui.graphicsView_main.setXYLimit(xmin=new_min_x, xmax=new_max_x,
+                                             ymin=new_min_y, ymax=new_max_y)
 
         return
+
+
+def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
+                 min_x, max_x):
+    """
+    re-process the original to plot on canvas smartly
+    :param vec_x: vector of time in unit of seconds
+    :param vec_y:
+    :param use_number_resolution:
+    :param use_time_resolution:
+    :param resolution: time resolution (per second) or maximum number points allowed on canvas
+    :param min_x:
+    :param max_x:
+    :return:
+    """
+    # check
+    assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
+    assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
+    assert (use_number_resolution and not use_time_resolution) or (not use_number_resolution and use_time_resolution)
+
+    # range
+    if min_x is None:
+        min_x = vec_x[0]
+    else:
+        min_x = max(vec_x[0], min_x)
+
+    if max_x is None:
+        max_x = vec_x[-1]
+    else:
+        max_x = min(vec_x[-1], max_x)
+
+    index_array = numpy.searchsorted(vec_x, [min_x-1.E-20, max_x+1.E-20])
+    i_start = index_array[0]
+    i_stop = index_array[1]
+
+    # define skip points
+    if use_time_resolution:
+        # time resolution
+        num_target_pt = int((max_x - min_x+0.)/resolution)
+    else:
+        # maximum number
+        num_target_pt = int(resolution)
+
+    num_raw_points = i_stop - i_start
+    if num_raw_points < num_target_pt * 2:
+        pt_skip = 1
+    else:
+        pt_skip = int(num_raw_points/num_target_pt)
+
+    plot_x = vec_x[i_start:i_stop:pt_skip]
+    plot_y = vec_y[i_start:i_stop:pt_skip]
+
+    # print 'Input vec_x = ', vec_x, 'vec_y = ', vec_y, i_start, i_stop, pt_skip, len(plot_x)
+
+    return plot_x, plot_y
 
 
 def testmain(argv):

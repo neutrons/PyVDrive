@@ -333,14 +333,18 @@ class VDriveAPI(object):
 
         return peak_info_list
 
-    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list):
-        """
+    def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
+        """ generate event slicer for data manually
         :param run_number:
         :param relative_time:
         :param time_segment_list:
+        :param slice_tag:
         :return:
         """
-        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list,relative_time)
+        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list, relative_time,
+                                                             slice_tag)
+
+        return
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
@@ -613,6 +617,9 @@ class VDriveAPI(object):
                       under an IPTS
                       Begin run and end run are optional to define the range of runs
         Guarantees: the runs' information including creation time and file path will be returned
+
+        Note: if IPTS is the number, then it is in QUICK-mode
+
         :param ipts: integer or string as ipts number or ipts directory respectively
         :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
         """
@@ -716,10 +723,11 @@ class VDriveAPI(object):
         assert isinstance(log_name, str)
         try:
             vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
-                                                                     sample_log_name=log_name,
-                                                                     start_time=start_time,
-                                                                     stop_time=stop_time,
-                                                                     relative=relative)
+                                                                          sample_log_name=log_name,
+                                                                          start_time=start_time,
+                                                                          stop_time=stop_time,
+                                                                          relative=relative)
+
         except RuntimeError as e:
             return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
 
@@ -1168,7 +1176,7 @@ class VDriveAPI(object):
         if run_number is not None:
             assert isinstance(run_number, int)
         else:
-            run_number = archivemanager.getIptsRunFromFileName(nxs_file_name)[1]
+            run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
 
         status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
 

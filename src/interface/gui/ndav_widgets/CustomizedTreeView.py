@@ -272,7 +272,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         assert(isinstance(append, bool))
 
         parent_value = str(parent_item.text())
-        if self._leafDict.has_key(parent_value) is False:
+        if parent_value not in self._leafDict:
             raise RuntimeError('No parent leaf with key value %s' % parent_value)
         elif child_item_value in self._leafDict[parent_value]:
             raise RuntimeError('Child item %s has existed in parent %s. '

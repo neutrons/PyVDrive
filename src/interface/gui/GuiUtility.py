@@ -176,6 +176,34 @@ def skip_time(vec_times, vec_value, num_sec_skip, time_unit):
     return numpy.array(out_vec_times), numpy.array(out_vec_value)
 
 
+def sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True):
+    """ Sort the sample logs by size if the log name contains the size of the log
+    with the option to ignore the single-value log
+    :param log_name_list:
+    :param reverse:
+    :param ignore_1_value:
+    :return: sorted log_name_list
+    """
+    # get a new list for sorting
+    sort_list = list()
+    for log_name in log_name_list:
+        # split log size information
+        log_size = int(log_name.split('(')[1].split(')')[0])
+        # ignore single-value log
+        if ignore_1_value and log_size <= 1:
+            continue
+        sort_list.append((log_size, log_name))
+    # END-FOR
+
+    # sort
+    sort_list.sort(reverse=reverse)
+
+    # create output
+    return_list = [log_name for log_size, log_name in sort_list]
+
+    return return_list
+
+
 def setTextToQTableCell(table, irow, icol, text):
     """ Set up a regular text cell in a QTableWidget
 
