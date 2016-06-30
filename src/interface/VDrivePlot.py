@@ -1,12 +1,15 @@
 #!/usr/bin/python
 __author__ = 'wzz'
 
+
 # import utility modules
 import sys
 import os
 
+#if DEBUG: 
+#    from gui.mantidipythonwidget import MantidIPythonWidget
+
 # import PyQt modules
-from gui.mantidipythonwidget import MantidIPythonWidget
 from PyQt4 import QtGui, QtCore
 
 # include this try/except block to remap QString needed when using IPython
@@ -30,7 +33,9 @@ import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 import configwindow
-import workspaceviewer
+import config
+if config.DEBUG: 
+    import workspaceviewer
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
