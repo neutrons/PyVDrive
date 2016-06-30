@@ -315,26 +315,31 @@ class SampleLogManager(object):
 
         return True, ret_obj
 
-    def generate_events_filter_manual(self, run_number, split_list, relative_time, tag):
+    def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
         :param run_number:
         :param split_list:
         :param relative_time:
-        :param tag: 2-tuple : boolean, ???? (...)/string (error message)
+        :param splitter_tag: 2-tuple : split workspace, information workspace OR None
+                boolean, ???? (...)/string (error message)
         :return:
         """
         # Check
         if self._currRunNumber != run_number:
             return False, 'It is not supported to use stored run number for generate_events_filter_manual.'
         # Determine tag
-        if tag is None:
-            tag = get_standard_manual_tag(run_number)
+        if splitter_tag is None:
+            splitter_tag = get_standard_manual_tag(run_number)
+
+        # check
+        assert isinstance(splitter_tag, str), 'Splitter tag must be a string but not %s.' \
+                                              '' % str(type(splitter_tag))
 
         # Check split list
         assert isinstance(split_list, list)
 
         # Generate split workspace
-        status, ret_obj = mtd.generate_event_filters_arbitrary(split_list, tag)
+        status, ret_obj = mtd.generate_event_filters_arbitrary(split_list, relative_time=True, tag=splitter_tag)
         if status is False:
             err_msg = ret_obj
             return False, err_msg

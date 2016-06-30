@@ -790,22 +790,19 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QCheckBox" name="checkBox_logSkipSec">
+                         <widget class="QLabel" name="label_7">
                           <property name="font">
                            <font>
                             <pointsize>9</pointsize>
                            </font>
                           </property>
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolution for plotting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
                           <property name="text">
-                           <string>skip every</string>
+                           <string>Max. Resolution</string>
                           </property>
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLineEdit" name="lineEdit_numSecLogSkip">
+                         <widget class="QLineEdit" name="lineEdit_maxSnapResolution">
                           <property name="font">
                            <font>
                             <pointsize>9</pointsize>
@@ -821,7 +818,7 @@
                            </font>
                           </property>
                           <property name="text">
-                           <string>sec</string>
+                           <string>Pt</string>
                           </property>
                          </widget>
                         </item>
@@ -2122,6 +2119,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionWorkspaces"/>
    </widget>
    <widget class="QMenu" name="menuRuns">
     <property name="title">
@@ -2233,6 +2231,11 @@
   <action name="actionAuto_Vanadium">
    <property name="text">
     <string>Auto Vanadium</string>
+   </property>
+  </action>
+  <action name="actionWorkspaces">
+   <property name="text">
+    <string>Workspaces</string>
    </property>
   </action>
  </widget>

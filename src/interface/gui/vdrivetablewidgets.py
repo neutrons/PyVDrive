@@ -6,6 +6,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
     """
     TableSetupList = [('Start', 'float'),
                       ('Stop', 'float'),
+                      ('Target', 'int'),
                       ('', 'checkbox')]
 
     def __init__(self, parent):
@@ -14,9 +15,10 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         NdavTable.NTableWidget.__init__(self, parent)
 
         # Initialize some variables
-        self.indexColStart = -1
-        self.indexColStop = -1
-        self.indexColSelect = -1
+        self._colIndexStart = -1
+        self._colIndexStop = -1
+        self._colIndexTargetWS = -1
+        self._colIndexSelect = -1
 
         return
 
@@ -26,7 +28,8 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         :param time_stamp:
         :return:
         """
-        row_value_list = [time_stamp, '', False]
+        num_rows = self.rowCount()
+        row_value_list = [time_stamp, '', num_rows, False]
         self.append_row(row_value_list)
 
         return
@@ -39,8 +42,8 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         # fill the stop time by next row's start time
         for ir in xrange(num_rows-1):
-            stop_time = self.get_cell_value(ir + 1, self.indexColStart)
-            self.set_value_cell(ir, self.indexColStop, stop_time)
+            stop_time = self.get_cell_value(ir + 1, self._colIndexStart)
+            self.set_value_cell(ir, self._colIndexStop, stop_time)
 
         return
 
@@ -64,24 +67,25 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         """
         Get all splitters that are selected
         Note: splitters are relative time to run_start in unit of second
-        :return: a list of 2-tuple as start time and stop time relative to run start
+        :return: a list of 3-tuple as start time, stop time relative to run start
         """
         split_tup_list = list()
 
         num_rows = self.rowCount()
         for ir in xrange(num_rows):
-            selected = self.get_cell_value(ir, self.indexColSelect)
+            selected = self.get_cell_value(ir, self._colIndexSelect)
             if not selected:
                 continue
 
             # get start and stop time
-            start_time = self.get_cell_value(ir, self.indexColStart)
-            stop_time = self.get_cell_value(ir, self.indexColStop, allow_blank=True)
+            start_time = self.get_cell_value(ir, self._colIndexStart)
+            stop_time = self.get_cell_value(ir, self._colIndexStop, allow_blank=True)
+            ws_index = self.get_cell_value(ir, self._colIndexTargetWS)
 
             if stop_time is None and ir != num_rows-1:
                 raise RuntimeError('Stop time cannot be empty beside last row.')
 
-            split_tup_list.append((start_time, stop_time))
+            split_tup_list.append((start_time, stop_time, ws_index))
         # END-FOR
 
         return split_tup_list
@@ -102,18 +106,18 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
             return False, 'Input row number %d is out of range [0, %d).' % (row_number, num_rows)
 
         # Replace original row
-        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self.indexColStart, time_segments[0][0])
-        self.update_cell_value(row_number, self.indexColStart, time_segments[0][0])
-        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self.indexColStop, time_segments[0][1])
-        self.update_cell_value(row_number, self.indexColStop, time_segments[0][1])
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self._colIndexStart, time_segments[0][0])
+        self.update_cell_value(row_number, self._colIndexStart, time_segments[0][0])
+        print '[DB-HUGE] Update cell @ %d, %d with value %f.' % (row_number, self._colIndexStop, time_segments[0][1])
+        self.update_cell_value(row_number, self._colIndexStop, time_segments[0][1])
 
         # Insert the rest by inserting rows and set values
         for index in xrange(1, len(time_segments)):
             self.insertRow(row_number+1)
         for index in xrange(1, len(time_segments)):
-            self.set_value_cell(row_number+index, self.indexColStart, time_segments[index][0])
-            self.set_value_cell(row_number+index, self.indexColStop, time_segments[index][1])
-            self.set_value_cell(row_number+index, self.indexColSelect, False)
+            self.set_value_cell(row_number + index, self._colIndexStart, time_segments[index][0])
+            self.set_value_cell(row_number + index, self._colIndexStop, time_segments[index][1])
+            self.set_value_cell(row_number + index, self._colIndexSelect, False)
 
         return True, ''
 
@@ -127,7 +131,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         assert (row_index >= 0) and (row_index < self.rowCount())
         assert isinstance(flag, bool)
 
-        self.update_cell_value(row_index, self.indexColSelect, flag)
+        self.update_cell_value(row_index, self._colIndexSelect, flag)
 
         return
 
@@ -144,9 +148,10 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         self.setColumnWidth(2, 25)
 
         # Set up the column index for start, stop and select
-        self.indexColStart = self.TableSetupList.index(('Start', 'float'))
-        self.indexColStop = self.TableSetupList.index(('Stop', 'float'))
-        self.indexColSelect = self.TableSetupList.index(('', 'checkbox'))
+        self._colIndexStart = self.TableSetupList.index(('Start', 'float'))
+        self._colIndexStop = self.TableSetupList.index(('Stop', 'float'))
+        self._colIndexTargetWS = self.TableSetupList.index(('Target', 'int'))
+        self._colIndexSelect = self.TableSetupList.index(('', 'checkbox'))
 
         return
 
@@ -157,7 +162,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         num_rows = self.rowCount()
         start_time_list = list()
         for i_row in xrange(num_rows):
-            start_time = self.get_cell_value(i_row, self.indexColStart)
+            start_time = self.get_cell_value(i_row, self._colIndexStart)
             start_time_list.append(start_time)
         # END-FOR(i_row)
 
@@ -166,7 +171,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         # Update the sorted list to table
         for i_row in xrange(num_rows):
-            self.update_cell_value(i_row, self.indexColStart, start_time_list[i_row])
+            self.update_cell_value(i_row, self._colIndexStart, start_time_list[i_row])
 
         return
 
