@@ -3,9 +3,11 @@
 # General-purposed plotting window
 #
 ########################################################################
+
+from mantidipythonwidget import MantidIPythonWidget
 from PyQt4 import QtCore, QtGui
 
-import gui.GuiUtility as GuiUtility
+import GuiUtility as GuiUtility
 
 
 try:
@@ -14,10 +16,10 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_WorkspacesView
+import ui_WorkspacesView
 
 
-class WorkspacesView(QtGui.QMainWindow):
+class WorkspaceViewer(QtGui.QWidget):
     """ Class for general-purposed plot window
     """
     # class
@@ -25,14 +27,14 @@ class WorkspacesView(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        QtGui.QWidget.__init__(self)
 
         # Parent & others
         self._myParent = parent
         self._myController = None
 
         # set up UI
-        self.ui = gui.ui_WorkspacesView.Ui_Form()
+        self.ui = ui_WorkspacesView.Ui_Form()
         self.ui.setupUi(self)
 
         return
