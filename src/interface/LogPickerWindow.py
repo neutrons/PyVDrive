@@ -46,8 +46,8 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_select_ipts)
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_quit_no_save)
-        self.connect(self.ui.pushButton_saveReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_save_quit)
+        self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
+                     self.do_save_time_segments)
         self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_run)
         self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
@@ -525,8 +525,8 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_save_quit(self):
-        """ Save selected segment and quit
+    def do_save_time_segments(self):
+        """ Save selected segment
         :return:
         """
         # Get splitters
@@ -552,9 +552,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                                 time_segment_list=split_tup_list,
                                                                 slice_tag=slicer_name)
         # END-IF
-
-        # Close
-        self.close()
 
         return
 

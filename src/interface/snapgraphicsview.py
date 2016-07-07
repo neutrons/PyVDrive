@@ -135,15 +135,25 @@ class SampleLogView(object):
 
         return log_name
 
-    def plot_sample_log(self, num_sec_skipped):
+    def plot_sample_log(self, max_resolution):
         """
-        :param num_skip_second:
+        :param max_resolution:
         :return:
         """
+        # check
+        assert isinstance(max_resolution, int) and max_resolution > 0
+
         # Get log name from
         log_name = self.get_log_name()
 
-        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name, num_sec_skipped)
+        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name=log_name)
+
+        if len(vec_times) > max_resolution:
+            skip = len(vec_times)/max_resolution
+            if skip > 1:
+                vec_times = vec_times[::skip]
+                vec_log_value = vec_log_value[::skip]
+
         assert isinstance(vec_times, np.ndarray)
         assert isinstance(vec_log_value, np.ndarray)
 

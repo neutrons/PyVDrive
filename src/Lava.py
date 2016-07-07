@@ -4,10 +4,13 @@
     Script used to start the VDrive reduction GUI from MantidPlot
 """
 import sys
-from PyQt4 import QtGui
 
-#vdrive_path = os.path.expanduser('~/Projects/PyVDrive/PyVDrive/src')
-#sys.path.append(vdrive_path)
+# a fix to iPython console
+import interface.config
+if interface.config.DEBUG: 
+    from interface.gui.mantidipythonwidget import MantidIPythonWidget
+
+from PyQt4 import QtGui
 
 from interface.VDrivePlot import VdriveMainWindow
 

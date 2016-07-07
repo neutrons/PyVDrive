@@ -1,9 +1,13 @@
 #!/usr/bin/python
 __author__ = 'wzz'
 
+
 # import utility modules
 import sys
 import os
+
+#if DEBUG: 
+#    from gui.mantidipythonwidget import MantidIPythonWidget
 
 # import PyQt modules
 from PyQt4 import QtGui, QtCore
@@ -29,6 +33,9 @@ import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 import configwindow
+import config
+if config.DEBUG: 
+    import workspaceviewer
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
@@ -153,6 +160,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.connect(self.ui.actionOpen_Configuration, QtCore.SIGNAL('triggered()'),
                      self.menu_config)
 
+        self.connect(self.ui.actionWorkspaces, QtCore.SIGNAL('triggered()'),
+                     self.menu_workspaces_view)
+
         # Group widgets
         self._groupedSnapViewList = list()
         self._setup_snap_view_groups(self._numSnapViews)
@@ -184,6 +194,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Load settings
         self.load_settings()
+
+        return
+
+    def menu_workspaces_view(self):
+        """
+        Launch workspace viewer
+        :return:
+        """
+        self.workspace_viewer = workspaceviewer.WorkspacesView(self)
+        self.workspace_viewer.show()
 
         return
 
@@ -563,8 +583,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.ui.radioButton_plotData1D.setChecked(True)
 
         # Plotting log
-        self.ui.checkBox_logSkipSec.setCheckState(QtCore.Qt.Checked)
-        self.ui.lineEdit_numSecLogSkip.setText('1')
+        self.ui.lineEdit_maxSnapResolution.setText('200')
 
         return
 
@@ -707,7 +726,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self._logSnapViewLock:
             return
 
-        num_skip_second = GuiUtility.parse_float(self.ui.lineEdit_numSecLogSkip)
+        snap_resolution = GuiUtility.parse_integer(self.ui.lineEdit_maxSnapResolution)
 
         for i in xrange(len(self._group_left_box_list)):
             curr_index = int(self._group_left_box_list[i].currentIndex())
@@ -723,7 +742,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             # apply change to status record
             self._group_left_box_values[i] = curr_index
             # plot
-            SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(num_skip_second)
+            SnapGView.SampleLogView(self._groupedSnapViewList[i], self).plot_sample_log(snap_resolution)
         # END-FOR
 
         return
@@ -847,11 +866,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
-        do_skip = self.ui.checkBox_logSkipSec.checkState() == QtCore.Qt.Checked
-        if do_skip is True:
-            num_sec_skipped = GuiUtility.parse_integer(self.ui.lineEdit_numSecLogSkip)
-        else:
-            num_sec_skipped = None
+        max_resolution = GuiUtility.parse_integer(self.ui.lineEdit_maxSnapResolution)
 
         # Set up and plot all 6 widgets groups. Need to lock the event handler for 6 combo boxes first
         self._logSnapViewLock = True
@@ -863,7 +878,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             log_widget.reset_log_names(log_name_list)
             log_widget.set_current_log_name(i)
 
-            log_widget.plot_sample_log(num_sec_skipped)
+            log_widget.plot_sample_log(max_resolution)
         # END-FOR
         self._logSnapViewLock = False
 

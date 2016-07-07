@@ -81,8 +81,10 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     """ Generate event filter (splitters workspace) by arbitrary time stamps
     :param split_list:
     :param relative_time:
-    :param tag:
-    :return: 2-tuple as splitter workspace's name and information (table) workspace's name
+    :param tag: string for tag name
+    :return: 2-tuple
+        1. status (boolean)
+        2. 2-tuple as splitter workspace's name and information (table) workspace's name
     """
     # check
     if relative_time is False:
@@ -91,16 +93,50 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     # check
     assert isinstance(split_list, list), 'split list should be a list but not a %s.' \
                                          '' % str(type(split_list))
-    assert isinstance(tag, str)
+    assert isinstance(tag, str), 'Split tag must be a string but not %s.' % str(type(tag))
+    assert len(tag) > 0, 'Split tag cannot be empty.'
 
     # create an empty workspace
     splitters_ws_name = tag
     info_ws_name = tag + '_Info'
 
-    # convert splitters to list
-    time_stamp_list = list()
-    # TODO/NOW/40 - complete this!
+    # create matrix workspace for splitter
+    time_list = list()
+    ws_list = list()
 
+    # convert tuple list to time list and ws index list
+    for index, split_tup in enumerate(split_list):
+        # get start time and stop time
+        start_time = split_tup[0]
+        stop_time = split_tup[1]
+        ws_index = split_tup[2]
+        print '[DB...BAT] stop time = ', stop_time
+
+        # append to list
+        if index == 0:
+            # add start time
+            time_list.append(start_time)
+        elif start_time > time_list[-1] + 1.0E-15:
+            # add gap
+            time_list.append(start_time)
+            ws_list.append(-1)
+        # add stop time
+        time_list.append(stop_time)
+        ws_list.append(ws_index)
+    # END-FOR
+
+    # convert list to numpy vector
+    time_vec = numpy.array(time_list)
+    ws_vec = numpy.array(ws_list)
+
+    # create workspace
+    mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle='relative',
+                              OutputWorkspace=splitters_ws_name)
+
+    # TODO/NOW
+    print '[NOT FINISHED YET!]'
+
+    return True, (splitters_ws_name, info_ws_name)
 
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                   min_time, max_time,

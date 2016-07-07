@@ -338,13 +338,13 @@ class VDriveAPI(object):
         :param run_number:
         :param relative_time:
         :param time_segment_list:
-        :param slice_tag:
+        :param slice_tag: string for slice tag name
         :return:
         """
-        self._mySlicingManager.generate_events_filter_manual(run_number, time_segment_list, relative_time,
-                                                             slice_tag)
+        status, ret_obj = self._mySlicingManager.generate_events_filter_manual(
+            run_number, time_segment_list, relative_time, slice_tag)
 
-        return
+        return status, ret_obj
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
         """
