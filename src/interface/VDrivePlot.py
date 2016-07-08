@@ -197,68 +197,61 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-  def menu_workspaces_view(self):
+    def menu_workspaces_view(self):
         """
         Launch workspace viewer
         :return:
         """
-        # TODO/NOW/ !!!
-        def setupUi(self, MainWindow):
-            MainWindow.setObjectName(_fromUtf8("MainWindow"))
-            MainWindow.resize(1005, 766)
-            self.centralwidget = QtGui.QWidget(MainWindow)
-            self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
-            self.gridLayout = QtGui.QGridLayout(self.centralwidget)
-            self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-            self.widget = WorkspaceViewer(self.centralwidget)
-            sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-            sizePolicy.setHorizontalStretch(0)
-            sizePolicy.setVerticalStretch(0)
-            sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
-            self.widget.setSizePolicy(sizePolicy)
-            self.widget.setObjectName(_fromUtf8("widget"))
-            self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
-            self.label = QtGui.QLabel(self.centralwidget)
-            self.label.setObjectName(_fromUtf8("label"))
-            self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-            MainWindow.setCentralWidget(self.centralwidget)
-            self.menubar = QtGui.QMenuBar(MainWindow)
-            self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
-            self.menubar.setObjectName(_fromUtf8("menubar"))
-            MainWindow.setMenuBar(self.menubar)
-            self.statusbar = QtGui.QStatusBar(MainWindow)
-            self.statusbar.setObjectName(_fromUtf8("statusbar"))
-            MainWindow.setStatusBar(self.statusbar)
-            self.toolBar = QtGui.QToolBar(MainWindow)
-            self.toolBar.setObjectName(_fromUtf8("toolBar"))
-            MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
-
-            self.retranslateUi(MainWindow)
-            QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-        def retranslateUi(self, MainWindow):
-            MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
-            self.label.setText(_translate("MainWindow", "Test", None))
-            self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar", None))
-
-        from workspaceviewer import WorkspaceViewer
-
-    class TestWindow(QtGui.QMainWindow):
-        """ Main GUI class for VDrive of the beta version
-        """
-
-        # initialize app
-        def __init__(self, parent=None):
-            """ Init
+        class WorkspacesView(QtGui.QMainWindow):
             """
-            # Setup main window
-            QtGui.QMainWindow.__init__(self, parent)
-            self.setWindowTitle('Test (Beta)')
-            self.ui = Ui_MainWindow()
-            self.ui.setupUi(self)
+            class
+            """
+            def __init__(self, parent=None):
+                """
+                Init
+                :param parent:
+                """
+                from gui.workspaceviewer import WorkspaceViewer
 
-    self.workspace_viewer = workspaceviewer.WorkspacesView(self)
-        self.workspace_viewer.show()
+                QtGui.QMainWindow.__init__(self)
+
+                # set up
+                self.setObjectName(_fromUtf8("MainWindow"))
+                self.resize(1005, 766)
+                self.centralwidget = QtGui.QWidget(self)
+                self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
+                self.gridLayout = QtGui.QGridLayout(self.centralwidget)
+                self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+                self.widget = WorkspaceViewer(self.centralwidget)
+                sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+                sizePolicy.setHorizontalStretch(0)
+                sizePolicy.setVerticalStretch(0)
+                sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+                self.widget.setSizePolicy(sizePolicy)
+                self.widget.setObjectName(_fromUtf8("widget"))
+                self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
+                self.label = QtGui.QLabel(self.centralwidget)
+                self.label.setObjectName(_fromUtf8("label"))
+                self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+                self.setCentralWidget(self.centralwidget)
+                self.menubar = QtGui.QMenuBar(self)
+                self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
+                self.menubar.setObjectName(_fromUtf8("menubar"))
+                self.setMenuBar(self.menubar)
+                self.statusbar = QtGui.QStatusBar(self)
+                self.statusbar.setObjectName(_fromUtf8("statusbar"))
+                self.setStatusBar(self.statusbar)
+                self.toolBar = QtGui.QToolBar(self)
+                self.toolBar.setObjectName(_fromUtf8("toolBar"))
+                self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
+
+                #self.retranslateUi(self)
+                QtCore.QMetaObject.connectSlotsByName(self)
+
+                return
+
+        self._workspaceView = WorkspacesView(self)
+        self._workspaceView.show()
 
         return
 

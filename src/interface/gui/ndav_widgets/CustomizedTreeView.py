@@ -23,10 +23,12 @@ class CustomizedTreeView(QtGui.QTreeView):
         self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
         # Set up model
+        """
         self._myNumCols = 1
         model = QtGui.QStandardItemModel()
         model.setColumnCount(self._myNumCols)
         self.setModel(model)
+        """
 
         # Set up tree
         # ... ... self.setDragEnabled(True)
@@ -60,8 +62,13 @@ class CustomizedTreeView(QtGui.QTreeView):
         :param header_list:
         :return:
         """
+        self._myNumCols = len(header_list)
+        model = QtGui.QStandardItemModel()
+        model.setColumnCount(self._myNumCols)
+        self.setModel(model)
+
         assert(isinstance(header_list, list))
-        assert(len(header_list) == self._myNumCols)
+        # assert(len(header_list) == self._myNumCols)
 
         # Set up header
         for i_col in xrange(self._myNumCols):

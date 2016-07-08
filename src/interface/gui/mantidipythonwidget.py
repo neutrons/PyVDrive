@@ -73,6 +73,7 @@ class MantidIPythonWidget(RichIPythonWidget):
         # Figure out the full path to the mantidplotrc.py file and then %run it
         from os import path
         mantidplotpath = path.split(path.dirname(__file__))[0] # It's the directory above this one
+        print '[....]  mantid plot path: ', mantidplotpath
         mantidplotrc = path.join(mantidplotpath, 'mantidplotrc.py')
         shell = kernel.shell
         shell.run_line_magic('run', mantidplotrc)
@@ -113,6 +114,14 @@ class MantidIPythonWidget(RichIPythonWidget):
             prev_workspace_names = set(mtd.getObjectNames())
         else:
             prev_workspace_names = None
+
+        # interpret command: command is in self.input_buffer
+        script = str(self.input_buffer).strip()
+
+        if self._mainApplication.is_reserved_command(script):
+            err_msg = self._mainApplication.execute(script)
+            # clear input buffer
+            self.input_buffer = 'print (%s)' % err_msg 
 
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
