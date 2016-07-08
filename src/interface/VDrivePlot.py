@@ -34,7 +34,7 @@ import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 import configwindow
 import config
-if config.DEBUG: 
+if config.DEBUG:
     import workspaceviewer
 
 """ import PyVDrive library """
@@ -202,8 +202,56 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Launch workspace viewer
         :return:
         """
-        self.workspace_viewer = workspaceviewer.WorkspacesView(self)
-        self.workspace_viewer.show()
+        class WorkspacesView(QtGui.QMainWindow):
+            """
+            class
+            """
+            def __init__(self, parent=None):
+                """
+                Init
+                :param parent:
+                """
+                from gui.workspaceviewer import WorkspaceViewer
+
+                QtGui.QMainWindow.__init__(self)
+
+                # set up
+                self.setObjectName(_fromUtf8("MainWindow"))
+                self.resize(1005, 766)
+                self.centralwidget = QtGui.QWidget(self)
+                self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
+                self.gridLayout = QtGui.QGridLayout(self.centralwidget)
+                self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+                self.widget = WorkspaceViewer(self.centralwidget)
+                sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+                sizePolicy.setHorizontalStretch(0)
+                sizePolicy.setVerticalStretch(0)
+                sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+                self.widget.setSizePolicy(sizePolicy)
+                self.widget.setObjectName(_fromUtf8("widget"))
+                self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
+                self.label = QtGui.QLabel(self.centralwidget)
+                self.label.setObjectName(_fromUtf8("label"))
+                self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+                self.setCentralWidget(self.centralwidget)
+                self.menubar = QtGui.QMenuBar(self)
+                self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
+                self.menubar.setObjectName(_fromUtf8("menubar"))
+                self.setMenuBar(self.menubar)
+                self.statusbar = QtGui.QStatusBar(self)
+                self.statusbar.setObjectName(_fromUtf8("statusbar"))
+                self.setStatusBar(self.statusbar)
+                self.toolBar = QtGui.QToolBar(self)
+                self.toolBar.setObjectName(_fromUtf8("toolBar"))
+                self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
+
+                #self.retranslateUi(self)
+                QtCore.QMetaObject.connectSlotsByName(self)
+
+                return
+
+        self._workspaceView = WorkspacesView(self)
+        self._workspaceView.show()
 
         return
 
