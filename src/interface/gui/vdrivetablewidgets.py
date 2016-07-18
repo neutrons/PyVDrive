@@ -181,10 +181,11 @@ class MTSFormatTable(NdavTable.NTableWidget):
     """
     MTSTableSetup = [('Row', 'int'),
                      ('Content', 'string'),
-                     ('Comment', 'checkbox'),
+                     ('Block Start', 'checkbox'),
                      ('Header', 'checkbox'),
                      ('Unit', 'checkbox'),
-                     ('Data', 'checkbox')]
+                     ('Data', 'checkbox'),
+                     ('Comment', 'checkbox')]
 
     def __init__(self, parent):
         """ Initialization
@@ -195,6 +196,7 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         # set up class variables
         self._colIndexRow = -1
+        self._colBlockStart = -1
         self._colIndexComment = -1
         self._colIndexHeader = -1
         self._colIndexUnit = -1

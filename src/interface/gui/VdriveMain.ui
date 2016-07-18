@@ -105,6 +105,9 @@
             <layout class="QVBoxLayout" name="verticalLayout_11">
              <item>
               <widget class="QRadioButton" name="radioButton_useLoadFrame">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>VULCAN loadframe</string>
                </property>
@@ -112,6 +115,9 @@
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_useGenericDaq">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Generic DAQ</string>
                </property>
@@ -119,6 +125,9 @@
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_useLogFiles">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>User Log files</string>
                </property>
@@ -128,6 +137,9 @@
               <layout class="QGridLayout" name="gridLayout">
                <item row="0" column="1">
                 <widget class="QPushButton" name="pushButton_5">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select user specified log file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
@@ -138,6 +150,9 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLineEdit" name="lineEdit_userLogFileName">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>

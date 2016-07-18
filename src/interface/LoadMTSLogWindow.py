@@ -1,5 +1,3 @@
-__author__ = 'wzz'
-
 import os
 from PyQt4 import QtGui, QtCore
 try:
@@ -10,6 +8,9 @@ except AttributeError:
 
 import gui.ui_loadVulcanMTSLogFile as LoadUI
 import gui.GuiUtility as GUtil
+
+__author__ = 'wzz'
+
 
 class LoadMTSLogFileWindow(QtGui.QMainWindow):
     """
@@ -41,6 +42,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                      self.do_quit)
         self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
                      self.do_load_return)
+        self.connect(self.ui.pushButton_scanInfo, QtCore.SIGNAL('clicked()'),
+                     self.do_sum_info)
 
         # class variables
         self._logFileName = None
@@ -53,7 +56,13 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         # Pop dialog for log file
-        working_dir = os.getcwd()
+        # TODO/NOW - make selection of data source (work_dir)
+        # radioButton_browseArchive, radioButton_browseLocal
+        if True:
+            working_dir = os.getcwd()
+        else:
+            working_dir = os.getcws()
+
         self._logFileName = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
                                                                   working_dir))
 
@@ -76,6 +85,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.close()
 
         # check
+        # TODO/NOW - send signal other than call!
         self._myParent.load_mts_log(self._logFileName, self._formatDict)
 
         return
@@ -97,6 +107,18 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.close()
 
         return
+
+    def do_sum_info(self):
+        """
+        Task list:
+        1. enable 'return' button
+        2. scan for summary including
+          a) number of blocks
+          b) size of each block
+          c) ... ...
+        :return:
+        """
+        raise NotImplementedError('ASAP TODO/NOW')
 
     def scan_log_file(self, file_name):
         """

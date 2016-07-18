@@ -560,6 +560,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         Purpose: read MTS log file
         :return:
         """
+        # TODO/NOW - doc and clean up!
         self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
         self._mts_file_loader_window.show()
 
@@ -661,6 +662,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param format_dict:
         :return:
         """
+        # TODO/NOW - use prototype to complete this method!
+
+
         # import pandas
         import pandas as pd
 
