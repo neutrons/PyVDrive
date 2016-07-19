@@ -16,11 +16,14 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
     """
     Pop-up dialog (window) to load an MTS log file with customized format and csv file alike.
     """
-    def __init__(self, parent):
+    def __init__(self, parent, ipts_number=None):
         """
         :param parent:
         :return:
         """
+        # check input
+        assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
+
         QtGui.QMainWindow.__init__(self)
 
         # set up parent
@@ -32,6 +35,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # more set up
         self.ui.tableWidget_preview.setup()
+        self.ui.radioButton_browseArchive.setChecked(True)
 
         # set up event handling for widgets
         self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
@@ -48,6 +52,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # class variables
         self._logFileName = None
         self._formatDict = None
+        self._iptsNumber = ipts_number
 
         return
 
@@ -55,13 +60,13 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """ Set and scan MTS file
         :return:
         """
-        # Pop dialog for log file
-        # TODO/NOW - make selection of data source (work_dir)
-        # radioButton_browseArchive, radioButton_browseLocal
-        if True:
-            working_dir = os.getcwd()
-        else:
+        # get default value
+        if self.ui.radioButton_browseArchive.isChecked():
+            working_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
+        elif self.ui.radioButton_browseLocal.isChecked():
             working_dir = os.getcws()
+        else:
+            raise RuntimeError('Programming error for neither radio buttons is selected.')
 
         self._logFileName = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
                                                                   working_dir))
@@ -118,7 +123,36 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
           c) ... ...
         :return:
         """
-        raise NotImplementedError('ASAP TODO/NOW')
+        # check
+        if self._logFileName is None:
+            GUtil.pop_dialog_error('MTS log file name has not been set.')
+            return
+
+        # open file
+        log_file = open(self._logFileName, 'r')
+        lines = log_file.readline()
+        log_file.close()
+
+        # find the start of the block
+        block_info_list = list()
+        for line_index, line in enumerate(lines):
+            if line.count(self._blockStartFlag) == 1:
+                block_info_list.append(line_index)
+        # END-FOR
+
+        # prepare the summary
+        sum_str = ''
+        sum_str += 'comments: \n'
+        for i_line in self._formatDict['comment']:
+            sum_str += '%-4d  %s\n' % (i_line, lines[i_line])
+        for block_index, i_line in enumerate(block_info_list):
+            sum_str += 'block %d\n' % block_index
+            for sub_count in range(4):
+                sum_str += '%-4d  %s\n' % (i_line, lines[i_line + sub_count])
+
+        GUtil.pop_dialog_information(sum_str)
+
+        return
 
     def scan_log_file(self, file_name):
         """
@@ -141,5 +175,18 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # write the line to table
         for row_number, line in enumerate(lines):
             self.ui.tableWidget_preview.append_line(row_number, line.strip())
+
+        return
+
+    def set_ipts_number(self, ipts_number):
+        """
+        Set IPTS number
+        :param ipts_number:
+        :return:
+        """
+        # check
+        assert isinstance(ipts_number, int) and ipts_number > 0
+
+        self._iptsNumber = ipts_number
 
         return

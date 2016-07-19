@@ -28,7 +28,7 @@ class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
-    def __init__(self, parent=None, init_run=None):
+    def __init__(self, parent=None, ipts_number=None, init_run=None):
         """ Init
         """
         # call base
@@ -109,10 +109,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
 
+        self._mts_file_loader_window = None
+
         # Initial setup
         if init_run is not None:
             assert isinstance(init_run, int)
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
+            self._iptsNumber = ipts_number
 
         # Class variables
         self._currentLogIndex = 0
@@ -557,10 +560,9 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_read_log_file(self):
         """
-        Purpose: read MTS log file
+        Purpose: read MTS log file by launching an MTS log file parsing window
         :return:
         """
-        # TODO/NOW - doc and clean up!
         self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
         self._mts_file_loader_window.show()
 

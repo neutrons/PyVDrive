@@ -1304,7 +1304,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
                     run_number = None
             else:
                 run_number = None
-            self._logPickerWindow = LogPicker.WindowLogPicker(self, run_number)
+            if run_number is not None:
+                ipts_number = self._myWorkflow.get_ipts_from_run(run_number)
+            self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
 
         # Set up tree view for runs
         self._logPickerWindow.setup()

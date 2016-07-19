@@ -404,8 +404,6 @@ class PeakParameterTable(NdavTable.NTableWidget):
         :param excluded_banks: bank ID that will be excluded
         :return: a dictionary of a list of peaks (in 5-element list): bank, name, center, width, group
         """
-        # TODO/NOW - check and doc
-
         # Check
         assert isinstance(excluded_banks, list)
 
