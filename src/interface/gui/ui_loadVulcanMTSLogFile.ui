@@ -28,16 +28,22 @@
         <widget class="MTSFormatTable" name="tableWidget_preview"/>
        </item>
        <item row="1" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Lines in preview</string>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="3">
+          <spacer name="horizontalSpacer_5">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
-         <item>
-          <widget class="QLineEdit" name="lineEdit_numRowsInPreview">
+         <item row="0" column="5">
+          <widget class="QLineEdit" name="lineEdit_runNumber">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -46,7 +52,14 @@
            </property>
           </widget>
          </item>
-         <item>
+         <item row="0" column="4">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Run  Number</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="7">
           <spacer name="horizontalSpacer_2">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -59,14 +72,14 @@
            </property>
           </spacer>
          </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_formatSet">
+         <item row="0" column="6">
+          <widget class="QPushButton" name="pushButton_checkTime">
            <property name="text">
-            <string>Set Format</string>
+            <string>Check Time</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="0" column="2">
           <widget class="QPushButton" name="pushButton_scanInfo">
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Scan the file for summary&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -75,6 +88,26 @@
             <string>Scan </string>
            </property>
           </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QPushButton" name="pushButton_formatSet">
+           <property name="text">
+            <string>Set Format</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <spacer name="horizontalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
@@ -87,13 +120,56 @@
        <string>Browse file</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="lineEdit_mtsFileName"/>
+       <item row="0" column="5">
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Preferred</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
        </item>
        <item row="0" column="4">
         <widget class="QRadioButton" name="radioButton_browseLocal">
          <property name="text">
           <string>Local</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QRadioButton" name="radioButton_browseArchive">
+         <property name="text">
+          <string>Archive</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="10">
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Preferred</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="6">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Lines in preview</string>
          </property>
         </widget>
        </item>
@@ -110,32 +186,22 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Browse file and load&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Load</string>
+          <string>Preview</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="3">
-        <widget class="QRadioButton" name="radioButton_browseArchive">
-         <property name="text">
-          <string>Archive</string>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEdit_mtsFileName"/>
+       </item>
+       <item row="0" column="7">
+        <widget class="QLineEdit" name="lineEdit_numRowsInPreview">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
         </widget>
-       </item>
-       <item row="0" column="5">
-        <spacer name="horizontalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Preferred</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
@@ -191,7 +257,7 @@
      <x>0</x>
      <y>0</y>
      <width>1369</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

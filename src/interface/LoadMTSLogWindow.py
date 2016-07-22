@@ -48,6 +48,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                      self.do_load_return)
         self.connect(self.ui.pushButton_scanInfo, QtCore.SIGNAL('clicked()'),
                      self.do_sum_info)
+        self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
+                     self.do_check_time)
 
         # class variables
         self._logFileName = None
@@ -64,7 +66,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         if self.ui.radioButton_browseArchive.isChecked():
             working_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
         elif self.ui.radioButton_browseLocal.isChecked():
-            working_dir = os.getcws()
+            working_dir = os.getcwd()
         else:
             raise RuntimeError('Programming error for neither radio buttons is selected.')
 
@@ -75,6 +77,20 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.scan_log_file(self._logFileName)
 
         return
+
+    def do_check_time(self):
+        """ Check the time in the log to be compatible to the run number related
+        :return:
+        """
+        # check whether the scan has been done for the time
+        blabla
+
+        # get the run start and run stop time of the
+        run_start_time = blabla
+        run_stop_time = blabla
+
+        # get the start and stop time
+
 
     def do_load_return(self):
         """
@@ -129,16 +145,19 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             return
 
         # open file
-        log_file = open(self._logFileName, 'r')
-        lines = log_file.readline()
-        log_file.close()
-
-        # find the start of the block
         block_info_list = list()
-        for line_index, line in enumerate(lines):
-            if line.count(self._blockStartFlag) == 1:
-                block_info_list.append(line_index)
-        # END-FOR
+        block_lines_dict = dict()
+        num_line_to_record = 4
+
+        block_key =
+        with open(self._logFileName, 'r') as log_file:
+            for line_number, line in enumerate(log_file):
+                if self._blockStartFlag in line:
+                    block_info_list.append(line_number)
+                    block_key =
+                # END-IF
+            # END-FOR
+        # END-WITH
 
         # prepare the summary
         sum_str = ''
@@ -156,7 +175,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
     def scan_log_file(self, file_name):
         """
-
+        Scan log file for the
         :param file_name:
         :return:
         """
