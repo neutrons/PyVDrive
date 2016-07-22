@@ -149,12 +149,12 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         block_lines_dict = dict()
         num_line_to_record = 4
 
-        block_key =
+        block_key = self._blockKey
         with open(self._logFileName, 'r') as log_file:
             for line_number, line in enumerate(log_file):
                 if self._blockStartFlag in line:
                     block_info_list.append(line_number)
-                    block_key =
+                    block_key = blabla
                 # END-IF
             # END-FOR
         # END-WITH
