@@ -101,6 +101,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
                      self.evt_change_resolution_type)
 
+        self.connect(self.ui.pushButton_prevPartialLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_prev_log_frame)
+        self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_next_log_frame)
+
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
                                                         self.on_mouse_press_event)
@@ -174,6 +179,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.resolution_group = QtGui.QButtonGroup(self)
         self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
         self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
+
+        self.ui.log_pick_method_group = QtGui.QButtonGroup(self)
+        self.ui.log_pick_method_group.addButton(self.ui.radioButto_autoSlicer, 0)
+        self.ui.log_pick_method_group.addButton(self.ui.radioButton_manualSlicer, 1)
+
+        # combo box
+        self.ui.comboBox_logFrameUnit.clear()
+        self.ui.comboBox_logFrameUnit.addItems(['seconds', 'points'])
 
         return
 
@@ -309,6 +322,31 @@ class WindowLogPicker(QtGui.QMainWindow):
         # END-FOR (i)
 
         return
+
+    def do_load_next_log_frame(self):
+        """
+        Load the next frame of the on-shwoing sample log
+        :return:
+        """
+        # ISSUE-48
+
+    def do_load_prev_log_frame(self):
+        """
+        Load the previous frame of the on-showing sample log
+        :return:
+        """
+        # ISSUE-48
+
+    def load_partial_sample_log(self, begin_value, end_value, unit):
+        """
+
+        :param begin_value:
+        :param end_value:
+        :param unit:
+        :return:
+        """
+        # ISSUE-48
+
 
     def do_load_run(self):
         """

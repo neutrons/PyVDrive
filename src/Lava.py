@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 #pylint: disable=invalid-name
 """
     Script used to start the VDrive reduction GUI from MantidPlot

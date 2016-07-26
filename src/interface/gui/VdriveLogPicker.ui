@@ -345,11 +345,24 @@
          <string>Slicer Setup</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="lineEdit"/>
+         <item row="6" column="0">
+          <spacer name="verticalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
          </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEdit_2"/>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineEdit_minLogValue"/>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="lineEdit_maxLogValue"/>
          </item>
          <item row="1" column="0">
           <widget class="QLabel" name="label_5">
@@ -358,7 +371,17 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="lineEdit_logValueStep_2"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Maxium Value</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
           <widget class="QPushButton" name="pushButton">
            <property name="text">
             <string>Dry Run</string>
@@ -366,9 +389,19 @@
           </widget>
          </item>
          <item row="2" column="0">
-          <widget class="QLabel" name="label_6">
+          <widget class="QLabel" name="label_8">
            <property name="text">
-            <string>Maxium Value</string>
+            <string>Step</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QComboBox" name="comboBox_filterDirection"/>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_9">
+           <property name="text">
+            <string>Direction</string>
            </property>
           </widget>
          </item>
@@ -386,7 +419,19 @@
          <string>Manual Slicer Picker</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_4">
-         <item row="1" column="0">
+         <item row="4" column="1">
+          <widget class="QPushButton" name="pushButton_abortPicker">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Abort</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
           <widget class="QPushButton" name="pushButton_addPicker">
            <property name="font">
             <font>
@@ -401,49 +446,7 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
-          <widget class="QPushButton" name="pushButton_selectPicker">
-           <property name="font">
-            <font>
-             <pointsize>11</pointsize>
-            </font>
-           </property>
-           <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter&lt;span style=&quot; font-weight:600;&quot;&gt; select-picker&lt;/span&gt; mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="text">
-            <string>Select Picker</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QPushButton" name="pushButton_abortPicker">
-           <property name="font">
-            <font>
-             <pointsize>11</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Abort</string>
-           </property>
-          </widget>
-         </item>
          <item row="3" column="0">
-          <widget class="QPushButton" name="pushButton_processPickers">
-           <property name="font">
-            <font>
-             <pointsize>11</pointsize>
-            </font>
-           </property>
-           <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sort and selected pickers and complete the selection&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="text">
-            <string>Process</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
           <widget class="QPushButton" name="pushButton_setPicker">
            <property name="font">
             <font>
@@ -458,7 +461,7 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="3" column="1">
           <widget class="QPushButton" name="pushButton_deletePicker">
            <property name="font">
             <font>
@@ -467,6 +470,36 @@
            </property>
            <property name="text">
             <string>Delete</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButton_selectPicker">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter&lt;span style=&quot; font-weight:600;&quot;&gt; select-picker&lt;/span&gt; mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Select Picker</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QPushButton" name="pushButton_processPickers">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sort and selected pickers and complete the selection&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Process</string>
            </property>
           </widget>
          </item>
@@ -829,21 +862,31 @@
          </widget>
         </item>
         <item row="0" column="0">
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pushButton_prevPartialLog">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pan to previous N seconds/data points&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
            <string>&lt;- Prev</string>
           </property>
          </widget>
         </item>
         <item row="0" column="8">
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="pushButton_nextPartialLog">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pan to next N seconds/data points&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
            <string>Next -&gt;</string>
           </property>
          </widget>
         </item>
         <item row="0" column="2">
-         <widget class="QLineEdit" name="lineEdit_3"/>
+         <widget class="QLineEdit" name="lineEdit_logFramSize">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Either number of seconds of sample log to show&lt;/p&gt;&lt;p&gt;or number of data  points in the sample log to show&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
         </item>
         <item row="0" column="1">
          <widget class="QLabel" name="label_7">
@@ -853,7 +896,7 @@
          </widget>
         </item>
         <item row="0" column="3">
-         <widget class="QComboBox" name="comboBox">
+         <widget class="QComboBox" name="comboBox_logFrameUnit">
           <item>
            <property name="text">
             <string>seconds</string>
@@ -975,7 +1018,7 @@
      <x>0</x>
      <y>0</y>
      <width>1550</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">

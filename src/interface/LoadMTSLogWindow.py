@@ -144,42 +144,64 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             GUtil.pop_dialog_error('MTS log file name has not been set.')
             return
 
-        # open file
-        block_info_list = list()
+        assert self._blockStartFlag is not None, 'Block start flag is not set up yet.'
+        assert self._sizeBlockHeaders > 0, 'Block header size is not defined.'
+
+        # set up summary parameters
         block_lines_dict = dict()
         num_line_to_record = 4
 
-        block_key = self._blockKey
+        # open file and search block starter
+        block_key = None
+        num_lines_recorded = 0
+        block_line_list = None
         with open(self._logFileName, 'r') as log_file:
             for line_number, line in enumerate(log_file):
-                if self._blockStartFlag in line:
-                    block_info_list.append(line_number)
-                    block_key = blabla
+                if block_key is not None:
+                    # in a recording stage
+                    block_line_list.append(line)
+                    num_lines_recorded += 1
+                    # check quit condition
+                    if num_lines_recorded == num_line_to_record:
+                        block_key = None
+                        num_lines_recorded = 0
+
+                elif self._blockStartFlag in line:
+                    # not in recording stage but it is a start of a block
+                    block_line_list = list()
+                    block_lines_dict[line_number] = block_line_list
+                    block_key = line_number
+                    num_lines_recorded += 1
                 # END-IF
             # END-FOR
         # END-WITH
 
         # prepare the summary
         sum_str = ''
-        sum_str += 'comments: \n'
-        for i_line in self._formatDict['comment']:
-            sum_str += '%-4d  %s\n' % (i_line, lines[i_line])
-        for block_index, i_line in enumerate(block_info_list):
+        # sum_str += 'comments: \n'
+        # for i_line in self._formatDict['comment']:
+        #    sum_str += '%-4d  %s\n' % (i_line, lines[i_line])
+        for block_index, block_start_line_number in enumerate(block_lines_dict.keys()):
             sum_str += 'block %d\n' % block_index
-            for sub_count in range(4):
-                sum_str += '%-4d  %s\n' % (i_line, lines[i_line + sub_count])
+            for index, line in enumerate(block_lines_dict[block_start_line_number]):
+                sum_str += '%-4d  %s\n' % (index+block_start_line_number,
+                                           line)
+            # END-FOR
 
         GUtil.pop_dialog_information(sum_str)
 
-        return
+        return block_lines_dict.keys()
 
     def scan_log_file(self, file_name):
         """
-        Scan log file for the
+        Scan log file for the blocks with 'Data Acquisition'
         :param file_name:
         :return:
         """
-        # TODO/NOW - Doc and check
+        # check
+        assert isinstance(file_name, str) and os.path.exists(file_name), \
+            'File name %s is either not a string (but a %s) or does not exist.' % (str(file_name),
+                                                                                   str(type(file_name)))
 
         # FIXME/TODO/NOW - pass in
         num_lines = 10
