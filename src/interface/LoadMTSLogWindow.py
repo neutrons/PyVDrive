@@ -55,6 +55,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._logFileName = None
         self._formatDict = None
         self._iptsNumber = ipts_number
+        self._dataDir = None
 
         return
 
@@ -64,14 +65,32 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """
         # get default value
         if self.ui.radioButton_browseArchive.isChecked():
-            working_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
+            # default from archive
+            if self._iptsNumber is None:
+                ipts_number_str = str(self.ui.lineEdit_ipts.text()).strip()
+                if len(ipts_number_str) > 0:
+                    ipts_number = int(ipts_number_str)
+            else:
+                ipts_number = self._iptsNumber
+
+            if isinstance(ipts_number, int):
+                working_dir = '/SNS/VULCAN/IPTS-%d/shared/' % ipts_number
+            else:
+                working_dir = '/SNS/VULCAN/'
         elif self.ui.radioButton_browseLocal.isChecked():
-            working_dir = os.getcwd()
+            if self._dataDir is None:
+                working_dir = os.getcwd()
+            else:
+                working_dir = self._dataDir
         else:
             raise RuntimeError('Programming error for neither radio buttons is selected.')
 
-        self._logFileName = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File',
-                                                                  working_dir))
+        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File', working_dir))
+        if log_file_name is None or len(log_file_name) == 0:
+            return
+        else:
+            self._logFileName = log_file_name
+            self.ui.lineEdit_mtsFileName.setText(self._logFileName)
 
         # scan file
         self.scan_log_file(self._logFileName)
@@ -211,6 +230,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         lines = list()
         for i_line in range(num_lines):
             lines.append(mts_file.readline())
+            print lines[-1]
         mts_file.close()
 
         # write the line to table
