@@ -180,7 +180,7 @@ class MTSFormatTable(NdavTable.NTableWidget):
     """ An extended class for users to set up the format of the MTS log file
     """
     MTSTableSetup = [('Row', 'int'),
-                     ('Content', 'string'),
+                     ('Content', 'str'),
                      ('Block Start', 'checkbox'),
                      ('Header', 'checkbox'),
                      ('Unit', 'checkbox'),
@@ -196,6 +196,7 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         # set up class variables
         self._colIndexRow = -1
+        self._colIndexContent = -1
         self._colBlockStart = -1
         self._colIndexComment = -1
         self._colIndexHeader = -1
@@ -211,15 +212,22 @@ class MTSFormatTable(NdavTable.NTableWidget):
         :param mts_line:
         :return:
         """
-        self.append_row([row_number, mts_line, False, False, False, False])
+        status, ret_msg = self.append_row([row_number, mts_line, False, False, False, False, False])
+        assert status, ret_msg
+
+        return
 
     def retrieve_format_dict(self):
         """
         Parse and retrieve log file format set up
+        What is in the returned dictionary?
+         - key: 'blockstart', 'header', 'unit', 'comment', 'data'
+         - value: 2-tuple (row number, row content) or list of 2-tuple
         :return: tuple (boolean, dictionary with set up information)
         """
         num_rows = self.rowCount()
         comment_rows = list()
+        block_start_rows = list()
         header_rows = list()
         unit_rows = list()
         data_rows = list()
@@ -228,8 +236,13 @@ class MTSFormatTable(NdavTable.NTableWidget):
             # for each row, read all checked box
             num_true_counts = 0
             # get row number
+            print '[DB...BAT] Parsing row %d', i_row
             row_number = self.get_cell_value(i_row, self._colIndexRow)
-            # is comment?
+            # is comments
+            # use if but not if-else in order to prevent user selects more than 1 checkbox
+            if self.get_cell_value(i_row, self._colBlockStart):
+                block_start_rows.append(row_number)
+                num_true_counts += 1
             if self.get_cell_value(i_row, self._colIndexComment):
                 comment_rows.append(row_number)
                 num_true_counts += 1
@@ -242,6 +255,7 @@ class MTSFormatTable(NdavTable.NTableWidget):
             if self.get_cell_value(i_row, self._colIndexData):
                 data_rows.append(row_number)
                 num_true_counts += 1
+
             # check that there is 1 and only 1 shall be checked
             if num_true_counts == 0:
                 return False, 'Row %d: No checkbox is checked' % row_number
@@ -249,8 +263,17 @@ class MTSFormatTable(NdavTable.NTableWidget):
                 return False, 'Row %d: Too many checkboxes are checked' % row_number
         # END-FOR (i_row)
 
+        # check something are very important
+        assert len(block_start_rows) == 1, 'There must be 1 and only 1 line for block start. ' \
+                                           'Now %d.' % len(block_start_rows)
+        assert len(header_rows) == 1, 'There must be 1 and only 1 line for header. ' \
+                                      'Now %d.' % len(header_rows)
+        assert len(unit_rows) == 1, 'There must be 1 and only 1 line for line for unit. ' \
+                                    'Now %d.' % len(unit_rows)
+
         # for dictionary
         format_dict = {'comment': comment_rows,
+                       'blockstart': block_start_rows[0],
                        'header': header_rows[0],
                        'unit': unit_rows[0],
                        'data': data_rows}
@@ -266,7 +289,9 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         # set up column indexes
         self._colIndexRow = self.MTSTableSetup.index(('Row', 'int'))
+        self._colIndexContent = self.MTSTableSetup.index(('Content', 'str'))
         self._colIndexComment = self.MTSTableSetup.index(('Comment', 'checkbox'))
+        self._colBlockStart = self.MTSTableSetup.index(('Block Start', 'checkbox'))
         self._colIndexHeader = self.MTSTableSetup.index(('Header', 'checkbox'))
         self._colIndexUnit = self.MTSTableSetup.index(('Unit', 'checkbox'))
         self._colIndexData = self.MTSTableSetup.index(('Data', 'checkbox'))
@@ -283,10 +308,10 @@ class PeakParameterTable(NdavTable.NTableWidget):
     A customized table to hold diffraction peaks with the parameters
     """
     PeakTableSetup = [('Bank', 'int'),
-                      ('Name', 'string'),
+                      ('Name', 'str'),
                       ('Centre', 'float'),
                       ('Range', 'float'),   # range of the single peak or overlapped peaks
-                      ('HKLs', 'string'),
+                      ('HKLs', 'str'),
                       ('Group', 'int'),
                       ('Select', 'checkbox')]
 
