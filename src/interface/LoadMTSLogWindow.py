@@ -16,15 +16,22 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
     """
     Pop-up dialog (window) to load an MTS log file with customized format and csv file alike.
     """
+
+    mySignal = QtCore.pyqtSignal(int)
+
     def __init__(self, parent, ipts_number=None):
         """
         :param parent:
         :return:
         """
+        # GUI window
+        QtGui.QMainWindow.__init__(self)
+
         # check input
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
 
-        QtGui.QMainWindow.__init__(self)
+        # signal
+        self.mySignal.connect(parent.signal_read_mts_log)  # connect to the updateTextEdit slot defined in app1.py
 
         # set up parent
         self._myParent = parent
@@ -49,8 +56,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                      self.do_quit)
         self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
                      self.do_load_return)
-        self.connect(self.ui.pushButton_scanInfo, QtCore.SIGNAL('clicked()'),
-                     self.do_sum_info)
         self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
                      self.do_check_time)
 
@@ -66,7 +71,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._comments = ''
 
         # summary
-        self._blockLineDict = dict()
+        self._summaryDict = None
 
         return
 
@@ -105,7 +110,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             self.ui.lineEdit_mtsFileName.setText(self._logFileName)
 
         # scan file
-        self.scan_log_file(self._logFileName)
+        self.peek_log_file(self._logFileName)
 
         return
 
@@ -122,7 +127,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             run_number = int(run_number_str)
 
         # get the run number
-        
 
 
         # get the run start and run stop time of the
@@ -131,15 +135,14 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # get the start and stop time
 
-
     def do_load_return(self):
         """
-
+        Return from the MTS peek-scan window
         :return:
         """
         # check
-        if self._logFileName is None or self._formatDict is None:
-            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not set!')
+        if self._logFileName is None or self._summaryDict is None:
+            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
             return
 
         # close
@@ -147,15 +150,23 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # check
         # TODO/NOW - send signal other than call!
-        self._myParent.load_mts_log(self._logFileName, self._formatDict)
+        self.mySignal.emit(1)
+        # FIXME - remove load_mts_log()
+        # self._myParent.load_mts_log(self._logFileName, self._summaryDict)
 
         return
 
     def do_set_format(self):
         """
-
+        0. set format
+        1. enable 'return' button
+        2. scan for summary including
+          a) number of blocks
+          b) size of each block
+          c) ... ...
         :return:
         """
+        # TODO/NOW/ - clean the codes and ...
         status, ret_obj = self.ui.tableWidget_preview.retrieve_format_dict()
 
         # check
@@ -168,6 +179,28 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # parse
         self.set_format(format_dict)
 
+        # check
+        if self._logFileName is None:
+            GUtil.pop_dialog_error('MTS log file name has not been set.')
+            return
+
+        assert self._blockStartFlag is not None, 'Block start is not set up yet'
+
+        # scan file
+        self._summaryDict = self.scan_log_file(self._logFileName, self._blockStartFlag)
+
+        # form scan information
+        sum_str = ''
+        for block_key in sorted(self._summaryDict.keys()):
+            sum_str += 'Block %d\n' % block_key
+            for line in self._summaryDict[block_key]:
+                sum_str += '\t%s\n' % line
+            # END-FOR
+        # END-FOR
+
+        # set to summary view
+        self.ui.plainTextEdit_summaryView.setPlainText(sum_str)
+
         return
 
     def do_quit(self):
@@ -179,7 +212,15 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         return
 
-    def do_sum_info(self):
+    def get_log_file(self):
+        """
+
+        :return:
+        """
+        return self._logFileName
+
+    @staticmethod
+    def scan_log_file(log_file_name, block_start_flag):
         """
         Task list:
         1. enable 'return' button
@@ -190,60 +231,68 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         # check
-        if self._logFileName is None:
-            GUtil.pop_dialog_error('MTS log file name has not been set.')
-            return
+        # TODO/NOW/ - Fill this! doc and check
+        # ...
+        # ...
 
-        assert self._blockStartFlag is not None, 'Block start is not set up yet'
+        sum_dict = dict()
 
         # set up summary parameters
-        num_line_to_record = 4
+        buffer_size = 6
+        buffer_lines = list()
 
         # open file and search block starter
         block_key = None
+        last_block_key = None
         num_lines_recorded = 0
-        block_line_list = None
-        with open(self._logFileName, 'r') as log_file:
+
+        with open(log_file_name, 'r') as log_file:
             for line_number, line in enumerate(log_file):
+                # parse the line
                 line = line.strip()
 
+                # fill buffer
+                buffer_lines.append(line)
+                if len(buffer_lines) > buffer_size:
+                    buffer_lines.pop(0)
+
+                # check the line
                 if block_key is not None:
                     # in a recording stage
-                    block_line_list.append(line)
                     num_lines_recorded += 1
                     # check quit condition
-                    if num_lines_recorded == num_line_to_record:
+                    if num_lines_recorded == buffer_size:
+                        # finished recording job
+                        # record
+                        sum_dict[block_key] = buffer_lines[:]
+                        # reset block key
+                        last_block_key = block_key
                         block_key = None
                         num_lines_recorded = 0
 
-                elif self._blockStartFlag in line:
+                elif line.startswith(block_start_flag):
                     # not in recording stage but it is a start of a block
-                    block_line_list = [line.strip]
-                    self._blockLineDict[line_number] = block_line_list
                     block_key = line_number
-                    num_lines_recorded += 1
-                # END-IF
-            # END-FOR
+                    num_lines_recorded = 1
+                    if last_block_key is not None:
+                        sum_dict[last_block_key].extend(buffer_lines[:-1])
+                        # END-IF
+                        # END-FOR
         # END-WITH
 
-        # prepare the summary
-        sum_str = ''
-        # sum_str += 'comments: \n'
-        sum_str += '    %s\n\n' % self._comments
-        for block_index, block_start_line_number in enumerate(self._blockLineDict.keys()):
-            sum_str += 'block %d\n' % block_index
-            for index, line in enumerate(self._blockLineDict[block_start_line_number]):
-                sum_str += '%-10d: %s\n' % (index+block_start_line_number,
-                                            line.strip())
-            sum_str += '\n'
-            # END-FOR
+        # list lines
+        if block_key is None:
+            block_key = last_block_key
+            if block_key is None:
+                raise ValueError
+        if block_key in sum_dict:
+            sum_dict[block_key].extend(buffer_lines[:])
+        else:
+            sum_dict[block_key] = buffer_lines[:]
 
-        # set to summary view
-        self.ui.plainTextEdit_summaryView.setPlainText(sum_str)
+        return sum_dict
 
-        return
-
-    def scan_log_file(self, file_name):
+    def peek_log_file(self, file_name):
         """
         Scan log file for the blocks with 'Data Acquisition'
         :param file_name:
@@ -254,7 +303,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             'File name %s is either not a string (but a %s) or does not exist.' % (str(file_name),
                                                                                    str(type(file_name)))
 
-        # FIXME/TODO/NOW - pass in
+        # get number of lines to peek
         num_lines = int(self.ui.lineEdit_numRowsInPreview.text())
         assert 0 < num_lines < 10000, 'Number of lines to preview cannot be 0 or too large!'
 

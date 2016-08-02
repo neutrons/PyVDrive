@@ -941,6 +941,14 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    # Add slots for
+    @QtCore.pyqtSlot(int)
+    def signal_read_mts_log(self, val):
+        # signal capable of passing an integer value back
+        prepend="App"+str(val)+": " #create an app identifier based upon the returned integer
+        print prepend
+        print self._mts_file_loader_window.get_log_file()
+
     def plot_sample_log(self, sample_log_name):
         """ Purpose: plot sample log
         Requirement:
