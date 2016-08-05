@@ -8,6 +8,7 @@
 #####
 import os
 import datetime
+import pandas as pd
 
 import VDProject as vp
 from analysisproject import AnalysisProject
@@ -67,6 +68,8 @@ class VDriveAPI(object):
         self._relativeBinnedDir = 'binned/'
         # IPTS configuration: key = IPTS number (int), value = list as [raw data dir, binned data dir]
         self._iptsConfigDict = dict()
+        # MTS file log
+        self._mtsLogDict = dict()
 
         return
 
@@ -930,6 +933,70 @@ class VDriveAPI(object):
             error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
 
         return return_status, error_message
+
+    def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, num_points):
+        """
+        Read (partially) MTS file
+        :return:
+        """
+        # check existence of file
+        assert isinstance(log_file_name, str)
+        assert os.path.exists(log_file_name)
+
+        # get format information
+        assert isinstance(format_dict, dict), 'format_dict must be a dictionary but not %s.' \
+                                              '' % str(type(format_dict))
+        assert isinstance(block_index, int)
+        assert block_index in format_dict, 'Format dictionary does not have key %d. Current keys are ' \
+                                           '%s.' % (block_index, str(format_dict.keys()))
+        header = format_dict['header']
+        data_line_number = format_dict[block_index]['dataline']
+        block_size = format_dict[block_index]['size']
+        if num_points is None:
+            num_points = block_size
+        else:
+            num_points = min(num_points, block_size)
+
+        # update the data line number if loaded partially
+        data_line_number += start_point_index
+
+        # load file
+        mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
+                                 name=header, nrows=num_points)
+
+        self._mtsLogDict[log_file_name] = mts_series
+
+        return
+
+    def get_mts_log_data(self, log_file_name, header_list):
+        """
+        Get MTS log data from loaded MTS log (may partially)
+        :param log_file_name: key to find out log file
+        :param header_list: column to return
+        :return:
+        """
+        # check
+        try:
+            assert isinstance(log_file_name, str), 'Log file %s must be a string but not %s.' \
+                                                   '' % (str(log_file_name), str(type(log_file_name)))
+            assert log_file_name in self._mtsLogDict, 'Log file %s has not been loaded. Current loaded are' \
+                                                      '%s.' % (log_file_name, str(self._mtsLogDict.keys()))
+            assert isinstance(header_list, list), 'Header list must a list'
+            for name in header_list:
+                assert name in self._mtsLogDict[log_file_name], 'Header %s is not in Pandas series, which ' \
+                                                                'current has headers as %s.' % \
+                                                                (name, self._mtsLogDict[log_file_name].header)
+
+        except AssertionError as err:
+            raise RuntimeError('Unable to get MTS log file:\n%s' % str(err))
+
+        # form the return by converting to numpy array
+        return_dict = dict()
+        for name in header_list:
+            log_array = self._mtsLogDict[log_file_name][name].values
+            return_dict[name] = log_array
+
+        return return_dict
 
     def save_session(self, out_file_name=None):
         """ Save current session

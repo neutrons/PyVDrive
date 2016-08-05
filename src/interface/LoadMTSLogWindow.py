@@ -17,7 +17,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
     Pop-up dialog (window) to load an MTS log file with customized format and csv file alike.
     """
 
-    mySignal = QtCore.pyqtSignal(int)
+    mtsLogReturnSignal = QtCore.pyqtSignal(int)
 
     def __init__(self, parent, ipts_number=None):
         """
@@ -31,7 +31,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
 
         # signal
-        self.mySignal.connect(parent.signal_read_mts_log)  # connect to the updateTextEdit slot defined in app1.py
+        self.mtsLogReturnSignal.connect(parent.signal_read_mts_log)  # connect to the updateTextEdit slot defined in app1.py
 
         # set up parent
         self._myParent = parent
@@ -145,12 +145,12 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
             return
 
-        # close
+        # send signal
+        self.mtsLogReturnSignal.emit(1)
+
+        # close window
         self.close()
 
-        # check
-        # TODO/NOW - send signal other than call!
-        self.mySignal.emit(1)
         # FIXME - remove load_mts_log()
         # self._myParent.load_mts_log(self._logFileName, self._summaryDict)
 

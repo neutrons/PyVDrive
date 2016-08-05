@@ -2,25 +2,32 @@
 # Utility methods for VULCAN
 ####
 import os
+import pandas as pd
 
 
-def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
-    """ Add a list of run numbers and check whether they are valid or not.
+def get_vulcan_record(ipts_number, auto):
     """
-    errmsg = ""
-    
-    # build the name according to the convention
-    run = int(runnumber)
-    relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run, run)
-    nxsfilename = os.path.join(basepath, relpathname)
-    
-    # check existence of file
-    if os.path.isfile(nxsfilename) is False:
-        good = False
-        errmsg =  "Run %d does not exist in IPTS %d.  NeXus file cannot be found at %s. " % (run, ipts, nxsfilename)
-        return (False, errmsg)
-    
-    return (True, nxsfilename)
+    Get ITPS number
+    :param ipts_number:
+    :param auto: auto record or legacy VULCAN record
+    :return: vulcan record file or False for non-exiting file
+    """
+    # check
+    assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+                                         '' % (str(ipts_number), str(type(ipts_number)))
+    assert isinstance(auto, bool)
+
+    # get vulcan file
+    if auto:
+        record_file_name = '/SNS/VULCAN/IPTS-%d/shared/AutoRecord.txt' % ipts_number
+    else:
+        record_file_name = '/SNS/VULCAN/IPTS-%d/shared/Record.txt' % ipts_number
+
+    if not os.path.exists(record_file_name):
+        return False
+
+    return record_file_name
+
 
 def getLogsList(vandbfile):
     """ Get the log list from vanadium database file (van record.txt)
@@ -83,7 +90,52 @@ def getLogsList(vandbfile):
     # ENDFOR
 
     return (titlelist, examples)
-    
+
+
+def load_vulcan_record(record_file_name):
+    """
+    Load VULCAN's record file, auto record or
+    :param record_file_name:
+    :return:
+    """
+    # check
+    assert isinstance(record_file_name, str)
+    assert os.path.exists(record_file_name)
+
+    # use pandas to load the file
+    record_data = pd.read_csv(record_file_name, header=0)
+
+    return record_data
+
+
+def search_vulcan_runs(record_data, start_time, end_time):
+    """
+    Search runs from Pandas data loaded from record file according to time.
+    :param record_data:
+    :param start_time:
+    :param end_time:
+    :return:
+    """
+
+
+def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
+    """ Add a list of run numbers and check whether they are valid or not.
+    """
+    errmsg = ""
+
+    # build the name according to the convention
+    run = int(runnumber)
+    relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run, run)
+    nxsfilename = os.path.join(basepath, relpathname)
+
+    # check existence of file
+    if os.path.isfile(nxsfilename) is False:
+        good = False
+        errmsg = "Run %d does not exist in IPTS %d.  NeXus file cannot be found at %s. " % (run, ipts, nxsfilename)
+        return (False, errmsg)
+
+    return (True, nxsfilename)
+
 
 class AutoVanadiumCalibrationLocator(object):
     """ Class to locate calibration file automatically

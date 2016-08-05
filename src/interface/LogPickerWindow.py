@@ -5,6 +5,7 @@
 ########################################################################
 import sys
 import numpy
+
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -55,7 +56,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_next_log)
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_read_log_file)
+                     self.do_scan_log_file)
+        self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_mts_log)
 
         self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
@@ -114,7 +117,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
 
-        self._mts_file_loader_window = None
+        self._mtsFileLoaderWindow = None
 
         # Initial setup
         if init_run is not None:
@@ -596,13 +599,13 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_read_log_file(self):
+    def do_scan_log_file(self):
         """
         Purpose: read MTS log file by launching an MTS log file parsing window
         :return:
         """
-        self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
-        self._mts_file_loader_window.show()
+        self._mtsFileLoaderWindow = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
+        self._mtsFileLoaderWindow.show()
 
         return
 
@@ -695,20 +698,22 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def load_mts_log(self, mts_file_name, format_dict):
-        """
+    def do_load_mts_log(self):
+        """ Load MTS log file
 
-        :param mts_file_name:
-        :param format_dict:
         :return:
         """
-        # TODO/NOW - use prototype to complete this method!
+        # get file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+        block_nun = int(self.ui.comboBox_blockList.currentText())
 
+        # get important parameters to load MTS log
+        assert mts_log_file in self._mtsInfoDict, 'MTS log file %s has not been scanned.' %mts_log_file
+        param_form_dict = self._mtsInfoDict[mts_log_file]
 
-        # import pandas
-        import pandas as pd
+        # load
+        self._myParent.get_workflow().read_mts_log(mts_log_file, param_form_dict, block_nun)
 
-        mts_logs = pd.read_csv(mts_file_name, skiprows=[0, 1, 2, 4])
         log_name_list = mts_logs.keys()
 
 
@@ -944,10 +949,24 @@ class WindowLogPicker(QtGui.QMainWindow):
     # Add slots for
     @QtCore.pyqtSlot(int)
     def signal_read_mts_log(self, val):
-        # signal capable of passing an integer value back
-        prepend="App"+str(val)+": " #create an app identifier based upon the returned integer
-        print prepend
-        print self._mts_file_loader_window.get_log_file()
+        """
+        Handle signal from MTS log file window
+        :param val:
+        :return:
+        """
+        # check signal
+        if val != 1:
+            raise RuntimeError('Expecting signal value to be 1 but not %d.' % val)
+
+        assert self._mtsFileLoaderWindow is not None, 'MTS file loader window is None, i.e.,' \
+                                                      'it has not been launched.'
+
+        # get data from window
+        mts_log_file_name = self._mtsFileLoaderWindow.get_log_file()
+        mts_log_format = self._mtsFileLoaderWindow.get_log_format()
+        blabla('More informatin will be required here.')
+
+        return
 
     def plot_sample_log(self, sample_log_name):
         """ Purpose: plot sample log
