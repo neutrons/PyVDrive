@@ -62,6 +62,25 @@ class VdriveCommandProcessor(object):
 
         return status, err_msg
 
+    def _process_chop(self, args):
+        """
+        VDRIVE CHOP
+        Example: CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
+        :param args:
+        :return:
+        """
+        arg_dict = dict()
+        for arg in args:
+            terms = arg.split('=')
+            if len(terms) < 2:
+                return False, 'argument "%s" is not valid.' % arg
+            key_word = terms[0]
+            value = int(terms[1])
+            arg_dict[key_word] = value
+        # END-FOR
+
+        return True, ''
+
     def _process_reduce(self, args):
         """
         Process the reduction command
