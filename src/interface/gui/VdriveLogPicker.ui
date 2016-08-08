@@ -899,7 +899,7 @@
          </widget>
         </item>
         <item row="0" column="2">
-         <widget class="QLineEdit" name="lineEdit_logFramSize">
+         <widget class="QLineEdit" name="lineEdit_logFrameSize">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Either number of seconds of sample log to show&lt;/p&gt;&lt;p&gt;or number of data  points in the sample log to show&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -1035,7 +1035,7 @@
      <x>0</x>
      <y>0</y>
      <width>1550</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">

@@ -119,11 +119,11 @@ class MantidIPythonWidget(RichIPythonWidget):
         # interpret command: command is in self.input_buffer
         script = str(self.input_buffer).strip()
 
-        # TODO/NOW/ISSUE 48: Add VDRIVE command support from this level and up!
+        # main application is workspace viewer
         if self._mainApplication.is_reserved_command(script):
             err_msg = self._mainApplication.execute(script)
             # clear input buffer
-            self.input_buffer = 'print (%s)' % err_msg 
+            self.input_buffer = 'print (%s)' % err_msg
 
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 

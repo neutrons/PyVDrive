@@ -173,7 +173,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useMaxPointResolution.setChecked(True)
         self.ui.radioButton_useTimeResolution.setChecked(False)
 
-        self.ui.lineEdit_resolutionMaxPoints.setText('4000')
+        self.ui.lineEdit_resolutionMaxPoints.setText('10000')
         self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
         self.ui.lineEdit_timeResolution.setText('1')
         self.ui.lineEdit_timeResolution.setEnabled(False)
@@ -189,7 +189,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # combo box
         self.ui.comboBox_logFrameUnit.clear()
-        self.ui.comboBox_logFrameUnit.addItems(['seconds', 'points'])
+        self.ui.comboBox_logFrameUnit.addItems(['points', 'seconds'])
+        self.ui.comboBox_logFrameUnit.setCurrentIndex(0)
+        # initial value for number of points on
+        self.ui.lineEdit_logFrameSize.setText('5000')
 
         return
 
@@ -331,25 +334,30 @@ class WindowLogPicker(QtGui.QMainWindow):
         Load the next frame of the on-shwoing sample log
         :return:
         """
-        # ISSUE-48
+        # TODO/NOW/ISSUE-48
+
+        self._currentBlockIndex
+        self._currentStartPoint
+        self._currentStopPoint
+
+        self._myParent.get_workflow.read_mts_log()
+
+        self.plot_sample_log()
 
     def do_load_prev_log_frame(self):
         """
         Load the previous frame of the on-showing sample log
         :return:
         """
-        # ISSUE-48
+        # TODO/NOW/ISSUE-48
 
-    def load_partial_sample_log(self, begin_value, end_value, unit):
-        """
+        self._currentBlockIndex
+        self._currentStartPoint
+        self._currentStopPoint
 
-        :param begin_value:
-        :param end_value:
-        :param unit:
-        :return:
-        """
-        # ISSUE-48
+        self._myParent.get_workflow.read_mts_log()
 
+        self.plot_sample_log()
 
     def do_load_run(self):
         """
@@ -708,7 +716,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         block_nun = int(self.ui.comboBox_blockList.currentText())
 
         # get important parameters to load MTS log
-        assert mts_log_file in self._mtsInfoDict, 'MTS log file %s has not been scanned.' %mts_log_file
+        assert mts_log_file in self._mtsInfoDict, 'MTS log file %s has not been scanned.' % mts_log_file
         param_form_dict = self._mtsInfoDict[mts_log_file]
 
         # load
@@ -964,7 +972,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         # get data from window
         mts_log_file_name = self._mtsFileLoaderWindow.get_log_file()
         mts_log_format = self._mtsFileLoaderWindow.get_log_format()
-        blabla('More informatin will be required here.')
+
+        # set up the GUI
+        self.ui.lineEdit_logFileName.setText(mts_log_file_name)
+        self.ui.comboBox_blockList.clear()
+        self.ui.comboBox_blockList.addItems(mts_log_format['block'].keys())
 
         return
 

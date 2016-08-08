@@ -1,13 +1,7 @@
 #!/usr/bin/python
-__author__ = 'wzz'
-
-
 # import utility modules
 import sys
 import os
-
-#if DEBUG: 
-#    from gui.mantidipythonwidget import MantidIPythonWidget
 
 # import PyQt modules
 from PyQt4 import QtGui, QtCore
@@ -32,6 +26,7 @@ import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
+from vcommand_processor import VdriveCommandProcessor
 import configwindow
 import config
 if config.DEBUG:
@@ -39,6 +34,8 @@ if config.DEBUG:
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
+
+__author__ = 'wzz'
 
 # Define enumerate
 ACTIVE_SLICER_TIME = 0
@@ -173,6 +170,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._logPickerWindow = None
         self._peakPickerWindow = None
         self._snapViewWindow = None
+        self._workspaceView = None
 
         # Snap view related variables and data structures
         self._currentSnapViewIndex = -1
@@ -195,7 +193,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Load settings
         self.load_settings()
 
+        # VDRIVE command
+        self._vdriveCommandProcessor = VdriveCommandProcessor(self._myWorkflow)
+
         return
+
+    def closeEvent(self, QCloseEvent):
+        """
+        Connect close by 'X' to proper quit handler
+        :param QCloseEvent:
+        :return:
+        """
+        self.evt_quit()
 
     def menu_workspaces_view(self):
         """
@@ -222,7 +231,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
                 self.gridLayout = QtGui.QGridLayout(self.centralwidget)
                 self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-                self.widget = WorkspaceViewer(self.centralwidget)
+                self.widget = WorkspaceViewer(self)
                 sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
                 sizePolicy.setHorizontalStretch(0)
                 sizePolicy.setVerticalStretch(0)
@@ -251,7 +260,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 return
 
         self._workspaceView = WorkspacesView(self)
+        self._workspaceView.widget.set_main_window(self)
         self._workspaceView.show()
+
+        self._myChildWindows.append(self._workspaceView)
 
         return
 
@@ -259,7 +271,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
     def save_settings(self):
         settings = QtCore.QSettings()
         settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
-
 
     def load_settings(self):
         settings = QtCore.QSettings()
@@ -1060,6 +1071,15 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
+    def execute_command(self, command):
+        """
+
+        :param command:
+        :return:
+        """
+        # TODO/NOW/ISSUE 48+: doc and implement!
+        print 'IPython consolde command: ', command
+
     def get_sample_log_value(self, log_name, time_range=None, relative=False):
         """
         Get sample log value
@@ -1093,6 +1113,13 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return:
         """
         return self._myWorkflow.get_project_runs()
+
+    def get_reserved_commands(self):
+        """
+        Get reserved commands from VDrive command processor
+        :return:
+        """
+        return self._vdriveCommandProcessor.get_vdrive_commands()
 
     def get_workflow(self):
         """
@@ -1309,6 +1336,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             else:
                 ipts_number = None
             self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
+            self._myChildWindows.append(self._logPickerWindow)
 
         # Set up tree view for runs
         self._logPickerWindow.setup()

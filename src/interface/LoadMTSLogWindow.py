@@ -65,6 +65,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._dataDir = None
 
         # format
+        self._logFormatDict = dict()  # keys: block (dictionary of block index and start/stop line number)
         self._blockStartFlag = None
         self._unitList = None
         self._headerList = None
@@ -219,6 +220,17 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """
         return self._logFileName
 
+    def get_log_format(self):
+        """
+        Get the format of the log file
+        :return:
+        """
+
+        # TODO/FIXME/FAKE/ISSUE 48
+        self._logFormatDict['block'] = {1: (10, 9990), 2: (10000, 20000), 3: (199999, 3000000)}
+
+        return self._logFormatDict
+
     @staticmethod
     def scan_log_file(log_file_name, block_start_flag):
         """
@@ -245,6 +257,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         block_key = None
         last_block_key = None
         num_lines_recorded = 0
+
+        # TODO/NOW/ISSUE 48: set up self._logFormatDict as well
 
         with open(log_file_name, 'r') as log_file:
             for line_number, line in enumerate(log_file):

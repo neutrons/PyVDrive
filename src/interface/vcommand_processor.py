@@ -22,9 +22,16 @@ class VdriveCommandProcessor(object):
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))
 
         # set up the commands
-        self._commandList = ['CHOP', 'REDUCE', 'VDRIVE']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE']
 
         return
+
+    def get_vdrive_commands(self):
+        """
+        Get list of the commands of VDRIVE
+        :return:
+        """
+        return self._commandList[:]
 
     def process_commands(self, command_str):
         """
