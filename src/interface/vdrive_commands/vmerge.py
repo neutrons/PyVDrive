@@ -47,9 +47,37 @@ class VdriveMerge(VDriveCommandProcessor):
         # check input
         assert os.path.exists(run_file), 'RUNFILE %s cannot be found or accessed.' % run_file
 
-        # import
+        # import run-merge file
         run_file = file.open(run_file, 'r')
         lines = run_file.readlines()
         run_file.close()
 
-        # run_merge_list
+        # parse run-merge file
+        merge_run_dict = dict()
+        for line in lines:
+            line = line.strip()
+            
+            # skip if empty line or command line
+            if len(line) == 0:
+                return
+            elif line[0] == '#':
+                return
+
+            # set up
+            run_str_list = line.split()
+
+            target_run_number = None
+            for index, run_str in enumerate(run_str_list):
+                run_number = int(run_str)
+                if index == 0:
+                    # create a new item (i.e., node) in the return dictionary
+                    target_run_number = run_number
+                    merge_run_dict[target_run_number] = list()
+
+                assert target_run_number is not None
+                merge_run_dict[target_run_number].append(run_number)
+            # END-FOR (term)
+        # END-FOR (line)
+
+        return merge_run_dict
+

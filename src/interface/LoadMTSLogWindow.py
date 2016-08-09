@@ -31,7 +31,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
 
         # signal
-        self.mtsLogReturnSignal.connect(parent.signal_read_mts_log)  # connect to the updateTextEdit slot defined in app1.py
+        self.mtsLogReturnSignal.connect(parent.signal_scanned_mts_log)  # connect to the updateTextEdit slot defined in app1.py
 
         # set up parent
         self._myParent = parent
@@ -158,7 +158,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         return
 
     def do_set_format(self):
-        """
+        """ Set the MTS log's format and set to a dictionary
         0. set format
         1. enable 'return' button
         2. scan for summary including
@@ -167,7 +167,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
           c) ... ...
         :return:
         """
-        # TODO/NOW/ - clean the codes and ...
+        # get the format dictionary from preview table
         status, ret_obj = self.ui.tableWidget_preview.retrieve_format_dict()
 
         # check
@@ -225,29 +225,30 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         Get the format of the log file
         :return:
         """
+        # check whether the log format has been set up
+        pass
 
-        # TODO/FIXME/FAKE/ISSUE 48
-        self._logFormatDict['block'] = {1: (10, 9990), 2: (10000, 20000), 3: (199999, 3000000)}
+        # return
 
         return self._logFormatDict
 
-    @staticmethod
-    def scan_log_file(log_file_name, block_start_flag):
-        """
-        Task list:
-        1. enable 'return' button
-        2. scan for summary including
+    def scan_log_file(self, log_file_name, block_start_flag):
+        """ Scan whole log file and set up the log dictionary and a summary dictionary for viewing
+        Example of log format dictionary:
+          self._logFormatDict['block'] = {1: (10, 9990), 2: (10000, 20000), 3: (199999, 3000000)}
+        Task list: scan for summary including
           a) number of blocks
           b) size of each block
           c) ... ...
         :return:
         """
         # check
-        # TODO/NOW/ - Fill this! doc and check
-        # ...
-        # ...
+        assert isinstance(log_file_name, str), 'Log file name must be a string.'
+        assert isinstance(block_start_flag, str) and len(block_start_flag) > 0
 
+        # create summary dictionaries
         sum_dict = dict()
+        self._logFormatDict['block'] = dict()
 
         # set up summary parameters
         buffer_size = 6
@@ -257,13 +258,13 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         block_key = None
         last_block_key = None
         num_lines_recorded = 0
-
-        # TODO/NOW/ISSUE 48: set up self._logFormatDict as well
+        last_line_number = -1
 
         with open(log_file_name, 'r') as log_file:
             for line_number, line in enumerate(log_file):
                 # parse the line
                 line = line.strip()
+                last_line_number = line_number
 
                 # fill buffer
                 buffer_lines.append(line)
@@ -287,11 +288,20 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                 elif line.startswith(block_start_flag):
                     # not in recording stage but it is a start of a block
                     block_key = line_number
+
                     num_lines_recorded = 1
                     if last_block_key is not None:
                         sum_dict[last_block_key].extend(buffer_lines[:-1])
-                        # END-IF
-                        # END-FOR
+
+                        # increase block index
+
+                    # END-IF
+
+                else:
+                    # no operation
+                    pass
+                # END-IF-ELSE (line_number)
+            # END-FOR
         # END-WITH
 
         # list lines
@@ -303,6 +313,17 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             sum_dict[block_key].extend(buffer_lines[:])
         else:
             sum_dict[block_key] = buffer_lines[:]
+
+        # get format dictionary from summary dictionary
+        block_key_list = sum_dict.keys()
+        assert len(block_key_list) > 0, 'No block is found in the MTS log file %s.' % log_file_name
+        for block_index, start_line_number in enumerate(block_key_list):
+            self._logFormatDict['block'][block_index] = [start_line_number]
+            if block_index > 0:
+                self._logFormatDict['block'][block_index-1].append(start_line_number-1)
+            # END-IF
+        # END-FOR
+        self._logFormatDict['block'][len(block_key_list)-1].append(last_line_number)
 
         return sum_dict
 
@@ -337,7 +358,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
     def set_format(self, format_dict):
         """
-        Set up all the format
+        Set up the format and store the result to _blockStartFlag, _headerList, _unitList and _comment
         :param format_dict:
         :return:
         """

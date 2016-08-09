@@ -59,6 +59,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_scan_log_file)
         self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_mts_log)
+        self.connect(self.ui.comboBox_blockList, QtCore.SIGNAL('indexChanged(int)'),
+                     self.do_load_mts_log)
+        self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
+                     self.evt_re_plot_mts_log)
 
         self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
@@ -141,6 +145,16 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Experiment-related variables
         self._currRunNumber = None
         self._currLogName = None
+
+        self._currentBlockIndex = None
+        self._currentFrameUnit = None
+        self._currentStartPoint = None
+        self._currentStopPoint = None
+        self._averagePointsPerSecond = None
+        self._blockIndex = None
+
+        # MTS log format dictionary.  key is file name, value is the format dictionary
+        self._mtsLogFormat = dict()
 
         # Highlighted lines list
         self._myHighLightedLineList = list()
@@ -329,35 +343,71 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def check_get_partial_log_info(self):
+        """
+
+        :return: number of points to skip
+        """
+        # block
+        block_index = int(self.ui.comboBox_blockList.currentText())
+        assert block_index == self._currentBlockIndex, 'Block index on GUI is diffrerent from the stored value.'
+
+        # unit
+        unit = str(self.ui.comboBox_logFrameUnit.currentText())
+        assert unit == self._currentFrameUnit
+
+        # get increment value
+        if unit == 'points':
+            delta = int(self.ui.lineEdit_logFrameSize.text())
+        elif unit == 'seconds':
+            delta = float(self.ui.lineEdit_logFrameSize.text())
+        else:
+            raise AttributeError('Frame unit %s is not supported.' % unit)
+
+        # get stop point
+        if self._currentFrameUnit == 'seconds':
+            # convert delta (second) to delta (points)
+            delta_points = int(delta/self._avgFrameStep)
+            assert delta_points >= 1
+        else:
+            # use the original value
+            delta_points = delta
+
+        return delta_points
+
     def do_load_next_log_frame(self):
         """
         Load the next frame of the on-shwoing sample log
         :return:
         """
-        # TODO/NOW/ISSUE-48
+        # get parameters & check
+        delta_points = self.check_get_partial_log_info()
 
-        self._currentBlockIndex
-        self._currentStartPoint
-        self._currentStopPoint
+        # reset the start and stop points
+        self._currentStartPoint = self._currentStopPoint
+        self._currentStopPoint += delta_points
 
-        self._myParent.get_workflow.read_mts_log()
+        # load
+        self.load_plot_mts_log()
 
-        self.plot_sample_log()
+        return
 
     def do_load_prev_log_frame(self):
         """
         Load the previous frame of the on-showing sample log
         :return:
         """
-        # TODO/NOW/ISSUE-48
+        # get parameters & check
+        delta_points = self.check_get_partial_log_info()
 
-        self._currentBlockIndex
-        self._currentStartPoint
-        self._currentStopPoint
+        # reset the start and stop points
+        self._currentStopPoint = self._currentStartPoint
+        self._currentStartPoint = max(0, self._currentStartPoint-delta_points)
 
-        self._myParent.get_workflow.read_mts_log()
+        # load and plot
+        self.load_plot_mts_log()
 
-        self.plot_sample_log()
+        return
 
     def do_load_run(self):
         """
@@ -420,6 +470,23 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # set current index
         self._currentLogIndex = 0
+
+        return
+
+    def load_plot_mts_log(self):
+        """
+        Load and plot MTS log.  The log loaded and plot may the only a part of the complete log
+        :return:
+        """
+        # get the file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+
+        # load MTS log file
+        mtd_data_set = self._myParent.get_workflow().read_mts_file(mts_log_file, self._mtsLogFormat[mts_log_file],
+                                                                   self._currentStartPoint, self._currentStopPoint)
+
+        # plot
+        self.ui.graphicsView_main.plot_mts_log(mtd_data_set)
 
         return
 
@@ -711,20 +778,30 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         :return:
         """
-        # get file
+        # get file and match
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
-        block_nun = int(self.ui.comboBox_blockList.currentText())
+        assert mts_log_file in self._mtsLogFormat, 'MTS log format has not key for log file %s. Current keys are' \
+                                                   '%s.' % (mts_log_file, str(self._mtsLogFormat.keys()))
 
-        # get important parameters to load MTS log
-        assert mts_log_file in self._mtsInfoDict, 'MTS log file %s has not been scanned.' % mts_log_file
-        param_form_dict = self._mtsInfoDict[mts_log_file]
+        # block ID and set up average step size
+        block_index = int(self.ui.comboBox_blockList.currentText())
+        duration = self._mtsLogFormat['block'][block_index][1] - self._mtsLogFormat['block'][block_index][0]
+        num_points = self._mtsLogFormat['size'][block_index]
+        self._averagePointsPerSecond = int(duration / num_points)
+        assert self._averagePointsPerSecond > 1
+
+        # get delta points
+        delta_points = self.check_get_partial_log_info()
+
+        # set up start and stop
+        self._currentStartPoint = 0
+        self._currentStopPoint = self._currentStartPoint + delta_points
+        self._blockIndex = block_index
 
         # load
-        self._myParent.get_workflow().read_mts_log(mts_log_file, param_form_dict, block_nun)
+        self.load_plot_mts_log()
 
-        log_name_list = mts_logs.keys()
-
-
+        return
 
     def locate_picker(self, x_pos, ratio=0.2):
         """ Locate a picker with the new x
@@ -956,9 +1033,9 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     # Add slots for
     @QtCore.pyqtSlot(int)
-    def signal_read_mts_log(self, val):
+    def signal_scanned_mts_log(self, val):
         """
-        Handle signal from MTS log file window
+        Handle signal from MTS log file window to notify that scanning MTS log file is finished.
         :param val:
         :return:
         """
@@ -972,6 +1049,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # get data from window
         mts_log_file_name = self._mtsFileLoaderWindow.get_log_file()
         mts_log_format = self._mtsFileLoaderWindow.get_log_format()
+        self._mtsLogFormat[mts_log_file_name] = mts_log_format
 
         # set up the GUI
         self.ui.lineEdit_logFileName.setText(mts_log_file_name)

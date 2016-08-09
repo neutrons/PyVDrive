@@ -878,6 +878,22 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def setup_merge(self, ipts_number, merge_run_dict):
+        """
+        Set up merge information
+        :param ipts_number:
+        :param merge_run_dict:
+        :return:
+        """
+        # check inputs
+        assert isinstance(ipts_number, int) and ipts_number > 0, 'IPTS number must be a positive integer.'
+        assert isinstance(merge_run_dict, dict)
+
+        # set up
+        self._mergeSetupDict[ipts_number] = merge_run_dict
+
+        return
+
     def set_reduction_flag(self, file_flag_list, clear_flags):
         """ Turn on the flag to reduce for files in the list
         Requirements: input a list of data files with reduction flag
