@@ -750,6 +750,13 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def evt_re_plot_mts_log(self):
+        """
+        MTS log set up parameters are changed. Re-plot!
+        :return:
+        """
+        # TODO/NOW/ISSUE-48: Implement!
+
     def highlite_picker(self, picker_id, flag, color='red'):
         """
         Highlight (by changing color) of the picker selected
@@ -785,8 +792,11 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # block ID and set up average step size
         block_index = int(self.ui.comboBox_blockList.currentText())
-        duration = self._mtsLogFormat['block'][block_index][1] - self._mtsLogFormat['block'][block_index][0]
-        num_points = self._mtsLogFormat['size'][block_index]
+
+        # get this dictionary
+        mts_log_dict = self._mtsLogFormat[mts_log_file]
+        duration = mts_log_dict['block'][block_index][1] - mts_log_dict['block'][block_index][0]
+        num_points = mts_log_dict['size'][block_index]
         self._averagePointsPerSecond = int(duration / num_points)
         assert self._averagePointsPerSecond > 1
 
@@ -1054,7 +1064,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # set up the GUI
         self.ui.lineEdit_logFileName.setText(mts_log_file_name)
         self.ui.comboBox_blockList.clear()
-        self.ui.comboBox_blockList.addItems(mts_log_format['block'].keys())
+        for block_index in mts_log_format['block'].keys():
+            self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
 

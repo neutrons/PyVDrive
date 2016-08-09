@@ -769,14 +769,21 @@
        </layout>
       </item>
       <item>
-       <widget class="MplGraphicsView" name="graphicsView_main"/>
+       <widget class="QLabel" name="label_logFileLoadInfo">
+        <property name="text">
+         <string>Log loading information</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="LogGraphicsView" name="graphicsView_main"/>
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_logFigureControl">
         <item row="1" column="3">
          <widget class="QPushButton" name="pushButton_resizeCanvas">
           <property name="text">
-           <string>Resize</string>
+           <string>Set</string>
           </property>
          </widget>
         </item>
@@ -1104,14 +1111,14 @@
    <header>vdrivetreewidgets.h</header>
   </customwidget>
   <customwidget>
-   <class>MplGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header>mplgraphicsview.h</header>
-  </customwidget>
-  <customwidget>
    <class>DataSlicerSegmentTable</class>
    <extends>QTableWidget</extends>
    <header>vdrivetablewidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>LogGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>samplelogview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

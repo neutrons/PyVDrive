@@ -31,7 +31,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
 
         # signal
-        self.mtsLogReturnSignal.connect(parent.signal_scanned_mts_log)  # connect to the updateTextEdit slot defined in app1.py
+        self.mtsLogReturnSignal.connect(parent.signal_scanned_mts_log)
 
         # set up parent
         self._myParent = parent
@@ -40,24 +40,29 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.ui = LoadUI.Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # more set up
-        self.ui.tableWidget_preview.setup()
-        self.ui.radioButton_browseArchive.setChecked(True)
-
-        # init widgets
-        self.ui.lineEdit_numRowsInPreview.setText('20')
+        # initialize values of widgets
+        self._init_widgets()
 
         # set up event handling for widgets
         self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
-                     self.do_scan_file)
+                     self.do_peek_log_file)
         self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
-                     self.do_set_format)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_load_return)
+                     self.do_set_init_format)
+        self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
+                     self.do_correct_blocks)
+
         self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
                      self.do_check_time)
+
+        self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
+                     self.do_accept_return)
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
+
+        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+                     self.do_quit)
+        self.connect(self.ui.actionReset, QtCore.SIGNAL('triggered()'),
+                     self.do_reset_gui)
 
         # class variables
         self._logFileName = None
@@ -76,7 +81,69 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         return
 
-    def do_scan_file(self):
+    def _init_widgets(self):
+        """
+        Initialize widgets' value
+        :return:
+        """
+
+        # more set up
+        self.ui.tableWidget_preview.setup()
+        self.ui.radioButton_browseArchive.setChecked(True)
+
+        # init widgets
+        self.ui.lineEdit_numRowsInPreview.setText('20')
+
+    def do_accept_return(self):
+        """
+        Return from the MTS peek-scan window
+        :return:
+        """
+        # check
+        if self._logFileName is None or self._summaryDict is None:
+            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
+            return
+
+        # send signal
+        self.mtsLogReturnSignal.emit(1)
+
+        # close window
+        self.close()
+
+        # FIXME - remove load_mts_log()
+        # self._myParent.load_mts_log(self._logFileName, self._summaryDict)
+
+        return
+
+    def do_check_time(self):
+        """ Check the time in the log to be compatible to the run number related
+        :return:
+        """
+        # get run number
+        run_number_str = str(self.ui.lineEdit_runNumber.text()).strip()
+        if not run_number_str.isdigit():
+            GUtil.pop_dialog_error(self, 'Run number is not set up right.')
+            return
+        else:
+            run_number = int(run_number_str)
+
+        # get the run number
+        # get the run start and run stop time of the
+        run_start_time = blabla
+        run_stop_time = blabla
+
+        # get the start and stop time
+
+    def do_correct_blocks(self):
+        """
+        Correct the line set up of blocks from previously (maybe) wrong guess
+        :return:
+        """
+        # TODO/NOW/ISSUE-48: Implement ASAP
+
+        return
+
+    def do_peek_log_file(self):
         """ Set and scan MTS file
         :return:
         """
@@ -115,49 +182,25 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         return
 
-    def do_check_time(self):
-        """ Check the time in the log to be compatible to the run number related
+    def do_quit(self):
+        """
+
         :return:
         """
-        # get run number
-        run_number_str = str(self.ui.lineEdit_runNumber.text()).strip()
-        if not run_number_str.isdigit():
-            GUtil.pop_dialog_error(self, 'Run number is not set up right.')
-            return
-        else:
-            run_number = int(run_number_str)
-
-        # get the run number
-
-
-        # get the run start and run stop time of the
-        run_start_time = blabla
-        run_stop_time = blabla
-
-        # get the start and stop time
-
-    def do_load_return(self):
-        """
-        Return from the MTS peek-scan window
-        :return:
-        """
-        # check
-        if self._logFileName is None or self._summaryDict is None:
-            GUtil.pop_dialog_error(self, 'MTS log file is not given AND/OR log file format is not scanned!')
-            return
-
-        # send signal
-        self.mtsLogReturnSignal.emit(1)
-
-        # close window
         self.close()
-
-        # FIXME - remove load_mts_log()
-        # self._myParent.load_mts_log(self._logFileName, self._summaryDict)
 
         return
 
-    def do_set_format(self):
+    def do_reset_gui(self):
+        """
+        Clear everything to reset the GUI
+        :return:
+        """
+        # TODO/NOW/ISSUE-48: ASAP
+
+        return
+
+    def do_set_init_format(self):
         """ Set the MTS log's format and set to a dictionary
         0. set format
         1. enable 'return' button
@@ -202,14 +245,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # set to summary view
         self.ui.plainTextEdit_summaryView.setPlainText(sum_str)
 
-        return
-
-    def do_quit(self):
-        """
-
-        :return:
-        """
-        self.close()
+        # TODO/NOW/ISSUE-48: clear the table and reset the summary dictionary to the table with proper check up the
 
         return
 
@@ -227,10 +263,42 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """
         # check whether the log format has been set up
         pass
+        # TODO/FIXME/ISSUE-48
+        # check key: block
+        # check key: size
 
         # return
 
         return self._logFormatDict
+
+    def peek_log_file(self, file_name):
+        """
+        Scan log file for the blocks with 'Data Acquisition'
+        :param file_name:
+        :return:
+        """
+        # check
+        assert isinstance(file_name, str) and os.path.exists(file_name), \
+            'File name %s is either not a string (but a %s) or does not exist.' % (str(file_name),
+                                                                                   str(type(file_name)))
+
+        # get number of lines to peek
+        num_lines = int(self.ui.lineEdit_numRowsInPreview.text())
+        assert 0 < num_lines < 10000, 'Number of lines to preview cannot be 0 or too large!'
+
+        # open file
+        mts_file = open(file_name, 'r')
+        lines = list()
+        for i_line in range(num_lines):
+            lines.append(mts_file.readline())
+            print lines[-1]
+        mts_file.close()
+
+        # write the line to table
+        for row_number, line in enumerate(lines):
+            self.ui.tableWidget_preview.append_line(row_number, line.strip())
+
+        return
 
     def scan_log_file(self, log_file_name, block_start_flag):
         """ Scan whole log file and set up the log dictionary and a summary dictionary for viewing
@@ -326,35 +394,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._logFormatDict['block'][len(block_key_list)-1].append(last_line_number)
 
         return sum_dict
-
-    def peek_log_file(self, file_name):
-        """
-        Scan log file for the blocks with 'Data Acquisition'
-        :param file_name:
-        :return:
-        """
-        # check
-        assert isinstance(file_name, str) and os.path.exists(file_name), \
-            'File name %s is either not a string (but a %s) or does not exist.' % (str(file_name),
-                                                                                   str(type(file_name)))
-
-        # get number of lines to peek
-        num_lines = int(self.ui.lineEdit_numRowsInPreview.text())
-        assert 0 < num_lines < 10000, 'Number of lines to preview cannot be 0 or too large!'
-
-        # open file
-        mts_file = open(file_name, 'r')
-        lines = list()
-        for i_line in range(num_lines):
-            lines.append(mts_file.readline())
-            print lines[-1]
-        mts_file.close()
-
-        # write the line to table
-        for row_number, line in enumerate(lines):
-            self.ui.tableWidget_preview.append_line(row_number, line.strip())
-
-        return
 
     def set_format(self, format_dict):
         """
