@@ -141,6 +141,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         """
         # TODO/NOW/ISSUE-48: Implement ASAP
 
+        # get the summary dictionary
+
         return
 
     def do_peek_log_file(self):
@@ -233,9 +235,12 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # scan file
         self._summaryDict = self.scan_log_file(self._logFileName, self._blockStartFlag)
 
+        # process scanned information
+        block_key_list = sorted(self._summaryDict.keys())
+
         # form scan information
         sum_str = ''
-        for block_key in sorted(self._summaryDict.keys()):
+        for block_key in block_key_list:
             sum_str += 'Block %d\n' % block_key
             for line in self._summaryDict[block_key]:
                 sum_str += '\t%s\n' % line
@@ -245,8 +250,16 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # set to summary view
         self.ui.plainTextEdit_summaryView.setPlainText(sum_str)
 
-        # TODO/NOW/ISSUE-48: clear the table and reset the summary dictionary to the table with proper check up the
-
+        # clear the table and reset the summary dictionary to the table with proper check up the
+        self.ui.tableWidget_preview.remove_all_rows()
+        for block_key in block_key_list:
+            start_line_number = int(block_key)
+            for line_index, line in enumerate(self._summaryDict[block_key]):
+                row_number = start_line_number + line_index
+                self.ui.tableWidget_preview.append_line(row_number=row_number, mts_line=line)
+                # TODO/NOW/ISSUE-48: Figure out how to define the function of the line, i.e., header, block start, unit or data
+                xxx
+                xxx
         return
 
     def get_log_file(self):
