@@ -257,10 +257,74 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             for line_index, line in enumerate(self._summaryDict[block_key]):
                 row_number = start_line_number + line_index
                 self.ui.tableWidget_preview.append_line(row_number=row_number, mts_line=line)
-                # TODO/NOW/ISSUE-48: Figure out how to define the function of the line, i.e., header, block start, unit or data
-                xxx
-                xxx
+                table_row_number = self.ui.tableWidget_preview.rowCount()-1
+
+                # define the function of the line, i.e., header, block start, unit or data
+                if line.startswith(self._blockStartFlag):
+                    # this is a block start
+                    self.ui.tableWidget_preview.set_block_start(table_row_number, True)
+                elif line.startswith(self._headerList[0]):
+                    # this is a header
+                    self.ui.tableWidget_preview.set_header_line(table_row_number, True)
+                elif line.startswith(self._unitList[0]):
+                    # this is a unit line
+                    self.ui.tableWidget_preview.set_unit_line(table_row_number, True)
+                else:
+                    # this is a data line or empty line
+                    self.ui.tableWidget_preview.set_data_line(table_row_number, True)
+            # END-FOR (block)
+        # END-FOR (block)
+
         return
+
+    def reset_log_format(self):
+        """
+        Reset log information
+        :return:
+        """
+        # dictionary to return
+        self._logFormatDict.clear()
+        self._logFormatDict['block'] = dict()  # block start information
+        self._logFormatDict['header'] = dict() # header item list
+        self._logFormatDict['unit'] = dict()   # unit item list
+        self._logFormatDict['data'] = dict()   # data range (list with 2 items)
+
+        # check whether the log format has been set up
+        row_number = self.ui.tableWidget_preview.rowCount()
+
+        block_index = -1
+        for i_row in range(row_number):
+            if self.ui.tableWidget_preview.is_block_header(i_row):
+                # block header
+                block_index += 1
+                self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(i_row)
+                self._logFormatDict['data'][block_index] = list()
+
+                # set an end of the previous block
+                if block_index == 0:
+                    continue
+                line_number = self.ui.tableWidget_preview.get_log_line_number(i_row)
+                assert (block_index-1) in self._logFormatDict['data']
+                assert len(self._logFormatDict['data'][block_index-1]) == 1
+                self._logFormatDict['data'][block_index-1].append(line_number-1)
+
+            elif self.ui.tableWidget_preview.is_header(i_row):
+                # header line
+                header_line = self.ui.tableWidget_preview.get_content(i_row)
+                self._logFormatDict['header'][block_index] = header_line.split()
+            elif self.ui.tableWidget_preview.is_unit(i_row):
+                # unit line
+                unit_line = self.ui.tableWidget_preview.get_content(i_row)
+                self._logFormatDict['unit'][block_index] = unit_line.split()
+            elif self.ui.tableWidget_preview.is_data(i_row) and len(self._logFormatDict['data'][block_index]) == 0:
+                line_number = self.ui.tableWidget_preview.get_log_line_number(i_row)
+                self._logFormatDict['data'][block_index ].append(line_number)
+        # END-FOR
+
+        self._logFormatDict['data'][block_index].append(self._logFileSize)
+
+        return
+
 
     def get_log_file(self):
         """
@@ -271,16 +335,10 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
     def get_log_format(self):
         """
-        Get the format of the log file
+        Get the format of the log file and other information.
+        This is a complete information dictionary forthe log file
         :return:
         """
-        # check whether the log format has been set up
-        pass
-        # TODO/FIXME/ISSUE-48
-        # check key: block
-        # check key: size
-
-        # return
 
         return self._logFormatDict
 

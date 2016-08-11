@@ -280,6 +280,94 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         return True, format_dict
 
+    def set_block_start(self, row_index, status):
+        """
+        Set this row as block starter
+        :param row_index:
+        :param status:
+        :return:
+        """
+        # check
+        assert isinstance(status, bool)
+
+        # uncheck all type
+        self._uncheck_all(row_index)
+
+        # set value
+        self.update_cell_value(row_index, self._colBlockStart, status)
+
+        return
+
+    def set_header_line(self, row_index, status):
+        """
+        Set this row as header
+        :param row_index:
+        :param status:
+        :return:
+        """
+        # check
+        assert isinstance(status, bool)
+
+        # uncheck all type
+        self._uncheck_all(row_index)
+
+        # set value
+        self.update_cell_value(row_index, self._colIndexHeader, status)
+
+        return
+
+    def set_unit_line(self, row_index, status):
+        """
+        Sett this row as unit line
+        :param row_index:
+        :param status:
+        :return:
+        """
+        # check
+        assert isinstance(status, bool)
+
+        # uncheck all type
+        self._uncheck_all(row_index)
+
+        # set value
+        self.update_cell_value(row_index, self._colIndexUnit, status)
+
+        return
+
+    def set_data_line(self, row_index, status):
+        """
+        Set this row as data line
+        :param row_index:
+        :param status:
+        :return:
+        """
+        # check
+        assert isinstance(status, bool)
+
+        # uncheck all type
+        self._uncheck_all(row_index)
+
+        # set value
+        self.update_cell_value(row_index, self._colIndexData, status)
+
+        return
+
+    def _uncheck_all(self, row_index):
+        """
+        Uncheck all type boxes
+        :return:
+        """
+        assert isinstance(row_index, int), 'Row number/index must be an integer'
+        assert 0 <= row_index < self.rowCount(), 'Row number/index is out of range.'
+
+        self.update_cell_value(row_index, self._colBlockStart, False)
+        self.update_cell_value(row_index, self._colIndexComment, False)
+        self.update_cell_value(row_index, self._colIndexHeader, False)
+        self.update_cell_value(row_index, self._colIndexData, False)
+        self.update_cell_value(row_index, self._colIndexUnit, False)
+
+        return
+
     def setup(self):
         """
         Init setup
