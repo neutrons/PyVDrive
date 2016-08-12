@@ -217,6 +217,54 @@ class MTSFormatTable(NdavTable.NTableWidget):
 
         return
 
+    def get_content(self, row_index):
+        """
+        Get the line content of a row presented
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colIndexContent)
+
+    def get_log_line_number(self, row_index):
+        """
+        Get the line number of the presented content in the log file
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colIndexRow)
+
+    def is_block_start(self, row_index):
+        """
+        Is the start line of a block?
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colBlockStart)
+
+    def is_header(self, row_index):
+        """
+        Is it a header line?
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colIndexHeader)
+
+    def is_unit(self, row_index):
+        """
+        Is it a unit line?
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colIndexUnit)
+
+    def is_data(self, row_index):
+        """
+        Is it a data line?
+        :param row_index:
+        :return:
+        """
+        return self.get_cell_value(row_index, self._colIndexData)
+
     def retrieve_format_dict(self):
         """
         Parse and retrieve log file format set up

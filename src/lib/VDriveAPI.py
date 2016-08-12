@@ -950,11 +950,13 @@ class VDriveAPI(object):
 
         return return_status, error_message
 
-    def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, num_points):
+    def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
         Read (partially) MTS file
         :return:
         """
+        print '[DB...BAT] Read MTS Block %d, Start Point = %d, End Point = %d' % (block_index, start_point_index, end_point_index)
+
         # check existence of file
         assert isinstance(log_file_name, str)
         assert os.path.exists(log_file_name)
@@ -963,26 +965,24 @@ class VDriveAPI(object):
         assert isinstance(format_dict, dict), 'format_dict must be a dictionary but not %s.' \
                                               '' % str(type(format_dict))
         assert isinstance(block_index, int)
-        assert block_index in format_dict, 'Format dictionary does not have key %d. Current keys are ' \
-                                           '%s.' % (block_index, str(format_dict.keys()))
-        header = format_dict['header']
-        data_line_number = format_dict[block_index]['dataline']
-        block_size = format_dict[block_index]['size']
-        if num_points is None:
-            num_points = block_size
-        else:
-            num_points = min(num_points, block_size)
+        assert block_index in format_dict['data'], \
+            'Format dictionary does not have block key %d. Current keys are %s.' \
+            '' % (block_index, str(format_dict['data'].keys()))
 
-        # update the data line number if loaded partially
-        data_line_number += start_point_index
+        # get format parameters
+        header = format_dict['header'][block_index]
+        block_start_line = format_dict['data'][block_index][0]
+
+        data_line_number = block_start_line + start_point_index
+        num_points = end_point_index - start_point_index + 1
 
         # load file
         mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
-                                 name=header, nrows=num_points)
+                                 names=header, nrows=num_points)
 
         self._mtsLogDict[log_file_name] = mts_series
 
-        return
+        return mts_series
 
     def get_mts_log_data(self, log_file_name, header_list):
         """

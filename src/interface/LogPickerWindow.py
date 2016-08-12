@@ -42,6 +42,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui = VdriveLogPicker.Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # Set up widgets
+        self._init_widgets_setup()
+
         # Defining widget handling methods
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
                      self.do_select_ipts)
@@ -147,7 +150,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._currLogName = None
 
         self._currentBlockIndex = None
-        self._currentFrameUnit = None
+        self._currentFrameUnit = str(self.ui.comboBox_logFrameUnit.currentText())
         self._currentStartPoint = None
         self._currentStopPoint = None
         self._averagePointsPerSecond = None
@@ -159,8 +162,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Highlighted lines list
         self._myHighLightedLineList = list()
 
-        # Set up widgets
-        self._init_widgets_setup()
 
         return
 
@@ -350,11 +351,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # block
         block_index = int(self.ui.comboBox_blockList.currentText())
-        assert block_index == self._currentBlockIndex, 'Block index on GUI is diffrerent from the stored value.'
+        assert self._currentBlockIndex is None or block_index == self._currentBlockIndex, \
+            'Block index on GUI is diffrerent from the stored value.'
 
         # unit
         unit = str(self.ui.comboBox_logFrameUnit.currentText())
-        assert unit == self._currentFrameUnit
+        assert unit == self._currentFrameUnit, 'target unit %s is not same as current frame unit %s.' \
+                                               '' % (unit, self._currentFrameUnit)
 
         # get increment value
         if unit == 'points':
@@ -482,11 +485,20 @@ class WindowLogPicker(QtGui.QMainWindow):
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
 
         # load MTS log file
-        mtd_data_set = self._myParent.get_workflow().read_mts_file(mts_log_file, self._mtsLogFormat[mts_log_file],
-                                                                   self._currentStartPoint, self._currentStopPoint)
+        mtd_data_set = self._myParent.get_workflow().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
+                                                                  self._blockIndex,
+                                                                  self._currentStartPoint, self._currentStopPoint)
 
-        # plot
-        self.ui.graphicsView_main.plot_mts_log(mtd_data_set)
+        # get the log name
+        log_names = mtd_data_set.keys()
+        self.ui.comboBox_logNames.clear()
+        for log_name in sorted(log_names):
+            self.ui.comboBox_logNames.addItem(log_name)
+        self.ui.comboBox_logNames.setCurrentIndex(0)
+        curr_log_name = str(self.ui.comboBox_logNames.currentText())
+
+        # plot a numpy series
+        self.ui.graphicsView_main.plot_mts_log(mtd_data_set, log_name=curr_log_name)
 
         return
 
@@ -795,10 +807,14 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # get this dictionary
         mts_log_dict = self._mtsLogFormat[mts_log_file]
-        duration = mts_log_dict['block'][block_index][1] - mts_log_dict['block'][block_index][0]
-        num_points = mts_log_dict['size'][block_index]
-        self._averagePointsPerSecond = int(duration / num_points)
-        assert self._averagePointsPerSecond > 1
+
+        print '[DB...BAT] mts log dict: ', mts_log_dict
+
+        duration = mts_log_dict['duration'][block_index][1] - mts_log_dict['duration'][block_index][0]
+        num_points = mts_log_dict['data'][block_index][1] - mts_log_dict['data'][block_index][0]
+        self._averagePointsPerSecond = int(num_points / duration)
+        assert self._averagePointsPerSecond > 1, 'Number of data points per seconds %d must be large than 0.' \
+                                                 '' % self._averagePointsPerSecond
 
         # get delta points
         delta_points = self.check_get_partial_log_info()
@@ -1068,123 +1084,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
-
-    def plot_sample_log(self, sample_log_name):
-        """ Purpose: plot sample log
-        Requirement:
-        1. sample log name is valid;
-        2. resolution is set up (time or maximum number of points)
-        Guarantee: canvas is replot
-        :param sample_log_name:
-        :return:
-        """
-        # get resolution
-        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
-        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
-        if use_time_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
-        elif use_num_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
-        else:
-            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
-            return
-
-        # get the sample log data
-        if sample_log_name in self._sampleLogDict[self._currRunNumber]:
-            # get sample log value from previous stored
-            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][sample_log_name]
-        else:
-            # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
-                                                               relative=True)
-            self._sampleLogDict[self._currRunNumber][sample_log_name] = vec_x, vec_y
-
-        # get range of the data
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
-
-        # adjust the resolution
-        plot_x, plot_y = process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
-                                      new_min_x, new_max_x)
-
-        # plot
-        self.ui.graphicsView_main.clear_all_lines()
-        the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
-        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label,
-                                              marker='.', color='blue')
-
-        # resize canvas
-        range_x = plot_x[-1] - plot_x[0]
-        new_min_x = (plot_x[0] - range_x * 0.05) if new_min_x is None else new_min_x
-        new_max_x = (plot_x[-1] + range_x * 0.05) if new_max_x is None else new_max_x
-
-        range_y = max(plot_y) - min(plot_y)
-        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
-        if new_min_y is None:
-            new_min_y = min(plot_y) - 0.05 * range_y
-        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
-        if new_max_y is None:
-            new_max_y = max(plot_y) + 0.05 * range_y
-
-        self.ui.graphicsView_main.setXYLimit(xmin=new_min_x, xmax=new_max_x,
-                                             ymin=new_min_y, ymax=new_max_y)
-
-        return
-
-
-def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
-                 min_x, max_x):
-    """
-    re-process the original to plot on canvas smartly
-    :param vec_x: vector of time in unit of seconds
-    :param vec_y:
-    :param use_number_resolution:
-    :param use_time_resolution:
-    :param resolution: time resolution (per second) or maximum number points allowed on canvas
-    :param min_x:
-    :param max_x:
-    :return:
-    """
-    # check
-    assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
-    assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
-    assert (use_number_resolution and not use_time_resolution) or (not use_number_resolution and use_time_resolution)
-
-    # range
-    if min_x is None:
-        min_x = vec_x[0]
-    else:
-        min_x = max(vec_x[0], min_x)
-
-    if max_x is None:
-        max_x = vec_x[-1]
-    else:
-        max_x = min(vec_x[-1], max_x)
-
-    index_array = numpy.searchsorted(vec_x, [min_x-1.E-20, max_x+1.E-20])
-    i_start = index_array[0]
-    i_stop = index_array[1]
-
-    # define skip points
-    if use_time_resolution:
-        # time resolution
-        num_target_pt = int((max_x - min_x+0.)/resolution)
-    else:
-        # maximum number
-        num_target_pt = int(resolution)
-
-    num_raw_points = i_stop - i_start
-    if num_raw_points < num_target_pt * 2:
-        pt_skip = 1
-    else:
-        pt_skip = int(num_raw_points/num_target_pt)
-
-    plot_x = vec_x[i_start:i_stop:pt_skip]
-    plot_y = vec_y[i_start:i_stop:pt_skip]
-
-    # print 'Input vec_x = ', vec_x, 'vec_y = ', vec_y, i_start, i_stop, pt_skip, len(plot_x)
-
-    return plot_x, plot_y
 
 
 def testmain(argv):

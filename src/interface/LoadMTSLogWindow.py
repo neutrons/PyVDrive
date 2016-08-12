@@ -68,6 +68,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._logFileName = None
         self._iptsNumber = ipts_number
         self._dataDir = None
+        self._logFileSize = 0
 
         # format
         self._logFormatDict = dict()  # keys: block (dictionary of block index and start/stop line number)
@@ -139,9 +140,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         Correct the line set up of blocks from previously (maybe) wrong guess
         :return:
         """
-        # TODO/NOW/ISSUE-48: Implement ASAP
-
-        # get the summary dictionary
+        self.reset_log_format()
 
         return
 
@@ -242,8 +241,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         sum_str = ''
         for block_key in block_key_list:
             sum_str += 'Block %d\n' % block_key
-            for line in self._summaryDict[block_key]:
-                sum_str += '\t%s\n' % line
+            for line_number, line in self._summaryDict[block_key]:
+                sum_str += '\t%d: %s\n' % (line_number, line)
             # END-FOR
         # END-FOR
 
@@ -254,7 +253,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self.ui.tableWidget_preview.remove_all_rows()
         for block_key in block_key_list:
             start_line_number = int(block_key)
-            for line_index, line in enumerate(self._summaryDict[block_key]):
+            for line_index, line in self._summaryDict[block_key]:
                 row_number = start_line_number + line_index
                 self.ui.tableWidget_preview.append_line(row_number=row_number, mts_line=line)
                 table_row_number = self.ui.tableWidget_preview.rowCount()-1
@@ -275,6 +274,9 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             # END-FOR (block)
         # END-FOR (block)
 
+        # assume the previous setup is correct.  reset log format
+        self.reset_log_format()
+
         return
 
     def reset_log_format(self):
@@ -288,43 +290,63 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._logFormatDict['header'] = dict() # header item list
         self._logFormatDict['unit'] = dict()   # unit item list
         self._logFormatDict['data'] = dict()   # data range (list with 2 items)
+        self._logFormatDict['duration'] = dict()
 
         # check whether the log format has been set up
         row_number = self.ui.tableWidget_preview.rowCount()
 
         block_index = -1
+        block_data_start_line = None
+        block_data_stop_line = None
         for i_row in range(row_number):
-            if self.ui.tableWidget_preview.is_block_header(i_row):
-                # block header
+            # read the line content anyway
+            # UNIT LINE IS AN EXCEPTION ... TODO/FIXME
+            if not self.ui.tableWidget_preview.is_unit(i_row):
+                log_line = self.ui.tableWidget_preview.get_content(i_row)
+                if len(log_line) == 0:
+                    continue
+            else:
+                log_line = ''
+            # END-IF-ELSE
+
+            if self.ui.tableWidget_preview.is_block_start(i_row):
+                # block header. set block index and start the new list
                 block_index += 1
                 self._logFormatDict['block'][block_index] = self.ui.tableWidget_preview.get_content(i_row)
-                self._logFormatDict['data'][block_index] = list()
-
-                # set an end of the previous block
-                if block_index == 0:
-                    continue
-                line_number = self.ui.tableWidget_preview.get_log_line_number(i_row)
-                assert (block_index-1) in self._logFormatDict['data']
-                assert len(self._logFormatDict['data'][block_index-1]) == 1
-                self._logFormatDict['data'][block_index-1].append(line_number-1)
+                self._logFormatDict['data'][block_index] = None
+                self._logFormatDict['duration'][block_index] = None
 
             elif self.ui.tableWidget_preview.is_header(i_row):
                 # header line
-                header_line = self.ui.tableWidget_preview.get_content(i_row)
-                self._logFormatDict['header'][block_index] = header_line.split()
+                header_line = log_line
+                # FIXME/TODO/ : use tab is a convention, but ... not a safe way to do so!
+                self._logFormatDict['header'][block_index] = header_line.split('\t')
+
             elif self.ui.tableWidget_preview.is_unit(i_row):
                 # unit line
-                unit_line = self.ui.tableWidget_preview.get_content(i_row)
-                self._logFormatDict['unit'][block_index] = unit_line.split()
-            elif self.ui.tableWidget_preview.is_data(i_row) and len(self._logFormatDict['data'][block_index]) == 0:
+                # FIXME - need to deal with unicode
+                # unit_line = self.ui.tableWidget_preview.get_content(i_row)
                 line_number = self.ui.tableWidget_preview.get_log_line_number(i_row)
-                self._logFormatDict['data'][block_index ].append(line_number)
+                self._logFormatDict['unit'][block_index] = line_number
+
+            elif self.ui.tableWidget_preview.is_data(i_row):
+                # data line
+                data = log_line
+                time = float(data.split()[0])
+                line_number = self.ui.tableWidget_preview.get_log_line_number(i_row)
+                if self._logFormatDict['data'][block_index] is None:
+                    # value is None, i.e., not initialized
+                    self._logFormatDict['data'][block_index] = [line_number, -1]
+                    self._logFormatDict['duration'][block_index] = [time, -1]
+                else:
+                    # update the ending block
+                    self._logFormatDict['data'][block_index][1] = line_number
+                    self._logFormatDict['duration'][block_index][1] = time
+                # END-IF
+            # END-IF-ELSE (row type)
         # END-FOR
 
-        self._logFormatDict['data'][block_index].append(self._logFileSize)
-
         return
-
 
     def get_log_file(self):
         """
@@ -406,7 +428,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                 last_line_number = line_number
 
                 # fill buffer
-                buffer_lines.append(line)
+                buffer_lines.append((line_number, line))
                 if len(buffer_lines) > buffer_size:
                     buffer_lines.pop(0)
 
@@ -431,8 +453,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                     num_lines_recorded = 1
                     if last_block_key is not None:
                         sum_dict[last_block_key].extend(buffer_lines[:-1])
-
-                        # increase block index
 
                     # END-IF
 
@@ -463,6 +483,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             # END-IF
         # END-FOR
         self._logFormatDict['block'][len(block_key_list)-1].append(last_line_number)
+
+        self._logFileSize = last_line_number + 1
 
         return sum_dict
 
