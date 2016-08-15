@@ -1,6 +1,4 @@
 import GuiUtility as GuiUtility
-
-from PyQt4 import QtGui, QtCore
 import mplgraphicsview
 
 

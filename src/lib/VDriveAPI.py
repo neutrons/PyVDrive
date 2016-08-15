@@ -977,8 +977,10 @@ class VDriveAPI(object):
         num_points = end_point_index - start_point_index + 1
 
         # load file
+        # TODO/FIXME - sep is fixed to \t now.  It might not be a good approach
         mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
-                                 names=header, nrows=num_points)
+                                 names=header, nrows=num_points,
+                                 sep='\t')
 
         self._mtsLogDict[log_file_name] = mts_series
 
