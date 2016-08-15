@@ -1,10 +1,12 @@
+import procss_vcommand
+
 # VDRIVEBIN, i.e., VBIN
 # 
 # Example:
 # cmd = VBIN(conroller, args)
 # cmd.run()
 
-class VBin(object):
+class VBin(procss_vcommand.VDriveCommandProcessor):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
@@ -12,22 +14,15 @@ class VBin(object):
             'BinFoler', 'Mytofbmax', 'Mytobmin']
 
     def __init__(self, controller, command_args):
+        """ Initialization
         """
-        """
-        assert isinstance(controller, VdriveAPI)
-        assert isinstance(command_args, dict)
-
-        # set controller
-        self._controller = controller
-
-        # set arguments
-        self._commandArgList = command_args
+        procss_vcommand.VDriveCommandProcessor.__init__(self, controller, command_args)
 
         return
 
-    def exec(self):
+    def exec_cmd(self):
         """
-        Execute command
+        Execute command: override
         """
         # check whether the any non-supported args
         input_args = self._commandArgList.keys()
@@ -76,23 +71,13 @@ class VBin(object):
         else:
             tof_max = None
 
-        # run
-        for run_number in range(run_start, run_end+1):
-            self._controller.set_bin_parameters(self._iptsNumber, run=run_number,
-                    bin_size, fullprof, vanadium_run=van_run)
+        # set the runs
+        run_info_list = self._controller.get_runs(start_run=run_start, end_run=run_end)
+        self._controller.add_runs(run_info_list)
+
+        # reduce
+        self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))
 
         return
 
-
-
-    def set_ipts(self):
-        """
-        Set IPTS
-        """ 
-        # TODO/FIXME - promote to base class
-        self._iptsNumber = int(self._commandArgList['IPTS'])
-
-        assert 0 < self._iptsNumber, 'IPTS number %d is an invalid integer.' % self._iptsNumber
-
-        return
 

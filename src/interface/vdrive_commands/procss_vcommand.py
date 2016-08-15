@@ -1,3 +1,5 @@
+import PyVDrive.lib.VDriveAPI as VdriveAPI
+
 """
 Base class for VDRIVE command processors
 """
@@ -7,11 +9,18 @@ class VDriveCommandProcessor(object):
     """
     Base class to process VDRIVE commands
     """
+    SupportedArgs = []
+
     def __init__(self, controller, command_args):
         """
+        Initialization
+        :param controller: VDrive controller class
+        :param command_args:
         """
-        assert isinstance(controller, VdriveAPI)
-        assert isinstance(command_args, dict)
+        assert isinstance(controller, VdriveAPI.VDriveAPI), 'Controller must be a VdriveAPI.VDriveAPI' \
+                                                            'instance but not %s.' % controller.__class__.__name__
+        assert isinstance(command_args, dict), 'Argument commands dictionary cannot be a %s.' \
+                                               '' % str(type(command_args))
 
         # set controller
         self._controller = controller
@@ -19,12 +28,15 @@ class VDriveCommandProcessor(object):
         # set arguments
         self._commandArgList = command_args
 
+        # other command variables
+        self._iptsNumber = None
+
         return
 
-    def exec(self):
+    def exec_cmd(self):
+        """ Execute VDRIVE command
         """
-        """
-        raise NotImplementedError('This method must be override')
+        raise NotImplementedError('Method exec_cmd must be override')
 
     def check_command_arguments(self, supported_arg_list):
         """ Check whether the command arguments are valid
@@ -35,3 +47,24 @@ class VDriveCommandProcessor(object):
             if arg_key not in supported_arg_list:
                 raise KeyError('VBIN argument %s is not recognized.' % arg_key)
         # END-FOF
+
+        return
+
+    def set_ipts(self):
+        """
+        Set IPTS
+        """
+        # check setup
+        try:
+            self._iptsNumber = int(self._commandArgList['IPTS'])
+        except KeyError as key_err:
+            raise RuntimeError('IPTS is not given in the command arguments.')
+
+        # check validity
+        assert 0 < self._iptsNumber, 'IPTS number %d is an invalid integer.' % self._iptsNumber
+
+        # set
+        self._controller.set_ipts(self._iptsNumber)
+
+        return
+
