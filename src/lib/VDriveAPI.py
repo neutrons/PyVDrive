@@ -70,7 +70,7 @@ class VDriveAPI(object):
         self._iptsConfigDict = dict()
         # MTS file log
         self._mtsLogDict = dict()
-
+        self._currentMTSLogFileName = None
         return
 
     @staticmethod
@@ -950,13 +950,55 @@ class VDriveAPI(object):
 
         return return_status, error_message
 
+    def get_mts_log_data(self, log_file_name, header_list):
+        """
+        Get MTS log data from loaded MTS log (may partially)
+        :param log_file_name: key to find out log file
+        :param header_list: column to return
+        :return: dictionary: key is column name given in header_list, value: 1D numpy array
+        """
+        # get default
+        if log_file_name is None:
+            log_file_name = self._currentMTSLogFileName
+
+        # check
+        assert isinstance(log_file_name, str), 'get_mts_log_data(): Log file %s must be a string but not %s.' \
+                                               '' % (str(log_file_name), str(type(log_file_name)))
+        assert log_file_name in self._mtsLogDict, 'Log file %s has not been loaded. Current loaded are' \
+                                                  '%s.' % (log_file_name, str(self._mtsLogDict.keys()))
+        assert isinstance(header_list, list), 'Header list must a list'
+        for name in header_list:
+            assert name in self._mtsLogDict[log_file_name], 'Header %s is not in Pandas series, which ' \
+                                                            'current has headers as %s.' % \
+                                                            (name, self._mtsLogDict[log_file_name].keys())
+
+        # form the return by converting to numpy array
+        return_dict = dict()
+        for name in header_list:
+            log_array = self._mtsLogDict[log_file_name][name].values
+            return_dict[name] = log_array
+
+        return return_dict
+
+    def get_mts_log_headers(self, log_file_name):
+        """
+        Get the headers of the loaded MTS log file
+        :param log_file_name:
+        :return:
+        """
+        # check
+        assert isinstance(log_file_name, str), 'blabla'
+        if log_file_name not in self._mtsLogDict:
+            raise KeyError('Log file %s has not been loaded. Loaded files are %s.'
+                           '' % (log_file_name, str(self._mtsLogDict.keys())))
+
+        return self._mtsLogDict[log_file_name].keys()
+
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
         Read (partially) MTS file
         :return:
         """
-        print '[DB...BAT] Read MTS Block %d, Start Point = %d, End Point = %d' % (block_index, start_point_index, end_point_index)
-
         # check existence of file
         assert isinstance(log_file_name, str)
         assert os.path.exists(log_file_name)
@@ -972,12 +1014,19 @@ class VDriveAPI(object):
         # get format parameters
         header = format_dict['header'][block_index]
         block_start_line = format_dict['data'][block_index][0]
+        block_end_line = format_dict['data'][block_index][1]
 
         data_line_number = block_start_line + start_point_index
-        num_points = end_point_index - start_point_index + 1
+        num_points = min(end_point_index - start_point_index, block_end_line - data_line_number)
+
+        print '[DB.,,,,..BAT] Read MTS Block %d, Start Point = %d, End Point = %d: block : %d, %d ' % (
+            block_index, start_point_index, end_point_index, block_start_line, block_end_line),
+        print 'read from line %d with number of points = %d' % (data_line_number, num_points)
 
         # load file
         # TODO/FIXME - sep is fixed to \t now.  It might not be a good approach
+        print '[DB...BAT] File name = ', log_file_name, 'Skip = ', data_line_number, 'Names: ', header,
+        print 'Number of points = ', num_points
         mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
                                  names=header, nrows=num_points,
                                  sep='\t')
@@ -986,54 +1035,6 @@ class VDriveAPI(object):
         self._currentMTSLogFileName = log_file_name
 
         return
-
-    def get_mts_log(self, log_file_name):
-        """
-        Get MTS log data set (in Pandas DataFrame)
-        :param log_file_name:
-        :return:
-        """
-        # get default
-        if log_file_name is None:
-            log_file_name = self._currentMTSLogFileName
-
-        # check
-        if log_file_name not in self._mtsLogDict:
-            raise KeyError('Log file %s has not been loaded. Loaded files are %s.' % (str(log_file_name),
-                                                                                      str(self._mtsLogDict.keys())))
-
-        # retrieve value and return
-        return self._mtsLogDict[log_file_name]
-
-    def get_mts_log_data(self, log_file_name, header_list):
-        """
-        Get MTS log data from loaded MTS log (may partially)
-        :param log_file_name: key to find out log file
-        :param header_list: column to return
-        :return:
-        """
-        # check
-        try:
-            assert isinstance(log_file_name, str), 'Log file %s must be a string but not %s.' \
-                                                   '' % (str(log_file_name), str(type(log_file_name)))
-            assert log_file_name in self._mtsLogDict, 'Log file %s has not been loaded. Current loaded are' \
-                                                      '%s.' % (log_file_name, str(self._mtsLogDict.keys()))
-            assert isinstance(header_list, list), 'Header list must a list'
-            for name in header_list:
-                assert name in self._mtsLogDict[log_file_name], 'Header %s is not in Pandas series, which ' \
-                                                                'current has headers as %s.' % \
-                                                                (name, self._mtsLogDict[log_file_name].header)
-
-        except AssertionError as err:
-            raise RuntimeError('Unable to get MTS log file:\n%s' % str(err))
-
-        # form the return by converting to numpy array
-        return_dict = dict()
-        for name in header_list:
-            log_array = self._mtsLogDict[log_file_name][name].values
-            return_dict[name] = log_array
-
-        return return_dict
 
     def save_session(self, out_file_name=None):
         """ Save current session

@@ -766,6 +766,18 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_overlay">
+          <property name="font">
+           <font>
+            <pointsize>8</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>overlay</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>

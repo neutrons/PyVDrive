@@ -19,9 +19,12 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # register dictionaries
         self._sizeRegister = dict()
 
+        # extra title message
+        self._titleMessage = ''
+
         return
 
-    def plot_sample_log(self, vec_x, vec_y, sample_log_name):
+    def plot_sample_log(self, vec_x, vec_y, sample_log_name, extra_message=None):
         """ Purpose: plot sample log
 
         Guarantee: canvas is replot
@@ -30,9 +33,28 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param sample_log_name:
         :return:
         """
-        the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
-        plot_id = self.ui.graphicsView_main.add_plot_1d(vec_x, vec_y, label=the_label,
-                                              marker='.', color='blue')
+        # check
+        assert isinstance(vec_x, np.ndarray), 'VecX must be a numpy array but not %s.' \
+                                              '' % vec_x.__class__.__name__
+        assert isinstance(vec_y, np.ndarray), 'VecY must be a numpy array but not %s.' \
+                                              '' % vec_y.__class__.__name__
+        assert isinstance(sample_log_name, str)
+
+        # reset title message
+        if extra_message is not None:
+            self._titleMessage = extra_message
+
+        # set label
+        try:
+            the_label = '%s Y (%f, %f): %s' % (sample_log_name, min(vec_y), max(vec_y),
+                                               self._titleMessage)
+        except TypeError as type_err:
+            err_msg = 'Unable to generate log with %s and %s: %s' % (
+                str(min(vec_y)), str(max(vec_y)), str(type_err))
+            raise TypeError(err_msg)
+
+        # add plot and register
+        plot_id = self.add_plot_1d(vec_x, vec_y, label=the_label, marker='.', color='blue')
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
         # auto resize
@@ -94,8 +116,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # END-IF-ELSE()
 
         # resize canvas
-        self.ui.graphicsView_main.setXYLimit(xmin=canvas_x_min, xmax=canvas_x_max,
-                                             ymin=canvas_y_min, ymax=canvas_y_max)
+        self.setXYLimit(xmin=canvas_x_min, xmax=canvas_x_max, ymin=canvas_y_min, ymax=canvas_y_max)
 
         return
 

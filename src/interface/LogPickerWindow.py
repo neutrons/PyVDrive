@@ -146,6 +146,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._myPickerIDList = list()
 
         # Experiment-related variables
+        self._currLogType = None
         self._currRunNumber = None
         self._currLogName = None
 
@@ -162,6 +163,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Highlighted lines list
         self._myHighLightedLineList = list()
 
+        # Mutex/Lock, multiple threading
+        self._mutexLockLogNameComboBox = False
 
         return
 
@@ -380,7 +383,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def do_load_next_log_frame(self):
         """
-        Load the next frame of the on-shwoing sample log
+        Load the next frame of the on-show sample log
         :return:
         """
         # get parameters & check
@@ -446,6 +449,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_sample_log(log_name)
         self._currLogName = log_name
+        self._currLogType = 'nexus'
 
         return
 
@@ -456,6 +460,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # get configuration
         hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
+
+        # lock event response
+        self._mutexLockLogNameComboBox = True
 
         # clear box
         self.ui.comboBox_logNames.clear()
@@ -474,6 +481,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # set current index
         self._currentLogIndex = 0
 
+        # release
+        self._mutexLockLogNameComboBox = False
+
         return
 
     def load_plot_mts_log(self, reset_canvas):
@@ -489,15 +499,17 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._myParent.get_workflow().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
                                                    self._blockIndex,
                                                    self._currentStartPoint, self._currentStopPoint)
-        mts_data_set = self._myParent.get_workflow.get_mts_log_data(mts_log_file)
 
         # get the log name
-        log_names = sorted(mts_data_set.keys())
+        log_names = sorted(self._myParent.get_workflow().get_mts_log_headers(mts_log_file))
         assert isinstance(log_names, list)
         # move Time to last position
         if 'Time' in log_names:
             log_names.remove('Time')
             log_names.append('Time')
+
+        # lock
+        self._mutexLockLogNameComboBox = True
 
         self.ui.comboBox_logNames.clear()
         for log_name in log_names:
@@ -506,8 +518,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.comboBox_logNames.setCurrentIndex(0)
         curr_log_name = str(self.ui.comboBox_logNames.currentText())
 
+        # unlock
+        self._mutexLockLogNameComboBox = False
+
         # plot
-        self.plot_mts_log(curr_log_name, reset_canvas)
+        extra_message = 'Total data points = %d' % (
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][1] -
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][0])
+        self.plot_mts_log(curr_log_name, reset_canvas, extra_message)
 
         return
 
@@ -535,7 +553,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         sample_log_name = self._logNameList[next_index]
 
         # Plot
-        self.plot_sample_log(sample_log_name)
+        if self._currLogType == 'nexus':
+            self.plot_nexus_log(log_name=sample_log_name)
+        else:
+            self.plot_mts_log(log_name=sample_log_name,
+                              reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         # Change status if plotting is successful
         self._currentLogIndex = next_index
@@ -760,18 +782,26 @@ class WindowLogPicker(QtGui.QMainWindow):
         Plot sample log
         :return:
         """
+        # check mutex
+        if self._mutexLockLogNameComboBox:
+            return
+
         # get current log name
         log_name = str(self.ui.comboBox_logNames.currentText())
-        log_name = log_name.replace(' ', '').split('(')[0]
+        if self._currLogType == 'nexus':
+            log_name = log_name.replace(' ', '').split('(')[0]
+
+        # set class variables
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
         self._currLogName = log_name
 
         # plot
         if self._currLogType == 'nexus':
+            # nexus log
             self.plot_nexus_log(log_name)
         else:
             # external MTS log file
-            self.plot_mts_log(log_name)
+            self.plot_mts_log(log_name, reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         return
 
@@ -785,21 +815,26 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def plot_mts_log(self, log_name, reset_canvas):
+    def plot_mts_log(self, log_name, reset_canvas, extra_message=None):
         """
 
         :param log_name:
+        :param reset_canvas:
+        :param extra_message:
         :return:
         """
         # check
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
                                           '' % (str(log_name), str(type(log_name)))
 
-        mts_data_set = self._myParent.get_workflow.get_mts_log_data(mts_log_file=None)
+        mts_data_set = self._myParent.get_workflow().get_mts_log_data(log_file_name=None,
+                                                                      header_list=['Time', log_name])
         # plot a numpy series'
         try:
-            vec_x = mts_data_set['Time'].values
-            vec_y = mts_data_set[log_name].values
+            vec_x = mts_data_set['Time']
+            vec_y = mts_data_set[log_name]
+            assert isinstance(vec_x, numpy.ndarray)
+            assert isinstance(vec_y, numpy.ndarray)
         except KeyError as key_err:
             raise RuntimeError('Log name %s does not exist (%s).' % (log_name, str(key_err)))
 
@@ -808,7 +843,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name)
+        self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name, extra_message)
 
         return
 
@@ -856,7 +891,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name)
+        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '')
 
         return
 
@@ -973,6 +1008,8 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # load
         self.load_plot_mts_log(reset_canvas=True)
+
+        self._currLogType = 'mts'
 
         return
 
