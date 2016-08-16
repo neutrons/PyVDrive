@@ -983,8 +983,27 @@ class VDriveAPI(object):
                                  sep='\t')
 
         self._mtsLogDict[log_file_name] = mts_series
+        self._currentMTSLogFileName = log_file_name
 
-        return mts_series
+        return
+
+    def get_mts_log(self, log_file_name):
+        """
+        Get MTS log data set (in Pandas DataFrame)
+        :param log_file_name:
+        :return:
+        """
+        # get default
+        if log_file_name is None:
+            log_file_name = self._currentMTSLogFileName
+
+        # check
+        if log_file_name not in self._mtsLogDict:
+            raise KeyError('Log file %s has not been loaded. Loaded files are %s.' % (str(log_file_name),
+                                                                                      str(self._mtsLogDict.keys())))
+
+        # retrieve value and return
+        return self._mtsLogDict[log_file_name]
 
     def get_mts_log_data(self, log_file_name, header_list):
         """

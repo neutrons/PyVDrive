@@ -111,9 +111,6 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         # close window
         self.close()
 
-        # FIXME - remove load_mts_log()
-        # self._myParent.load_mts_log(self._logFileName, self._summaryDict)
-
         return
 
     def do_check_time(self):
