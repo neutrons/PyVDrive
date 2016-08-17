@@ -251,7 +251,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         for block_key in block_key_list:
             start_line_number = int(block_key)
             for line_index, line in self._summaryDict[block_key]:
-                row_number = start_line_number + line_index
+                row_number = line_index
                 self.ui.tableWidget_preview.append_line(row_number=row_number, mts_line=line)
                 table_row_number = self.ui.tableWidget_preview.rowCount()-1
 
@@ -342,6 +342,13 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                 # END-IF
             # END-IF-ELSE (row type)
         # END-FOR
+
+        # debug output for debugging
+        for field in self._logFormatDict:
+            for block_index in self._logFormatDict[field]:
+                print '%s: block %s : %s' % (str(field), str(block_index), str(self._logFormatDict[field][block_index]))
+            print
+        # FIXMe: DELETE THE SECTION
 
         return
 
