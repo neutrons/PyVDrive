@@ -152,6 +152,9 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                 ipts_number_str = str(self.ui.lineEdit_ipts.text()).strip()
                 if len(ipts_number_str) > 0:
                     ipts_number = int(ipts_number_str)
+                else:
+                    GUtil.pop_dialog_error(self, 'IPTS number is not given! Unable to locate archive.')
+                    return
             else:
                 ipts_number = self._iptsNumber
 

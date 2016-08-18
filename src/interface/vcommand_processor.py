@@ -33,17 +33,34 @@ class VdriveCommandProcessor(object):
         """
         return self._commandList[:]
 
-    def process_commands(self, command_str):
+    def process_commands(self, command, command_args):
         """
         Process commands string
-        :param command_str:
+        :param command:
+        :param command_args: arguments of a command
         :return:
         """
-        # check input requirements
-        assert isinstance(command_str, str), 'Command %s must be a string but not %s.' \
-                                             '' % (str(command_str),
-                                                   str(type(command_str)))
+        # check command (type, whether it is supported)
+        assert isinstance(command, str), 'Command %s must be a string but not %s.' \
+                                         '' % (str(command),  str(type(command)))
 
+        if command not in self._commandList:
+            return False, 'Command %s is not in supported command list, which includes %s' \
+                          '' % str(self._commandList)
+
+        # command body
+        assert isinstance(command_args, list)
+
+        # parse command arguments to dictionary
+        arg_dict = dict()
+        for index, term in enumerate(command_args):
+            items = term.split('=', 1)
+            if len(items) != 2:
+                return False, 'Command %s %d-th term "%s" is not valid.' % (command, index,
+                                                                            term)
+
+
+        ... ...
         # parse
         command_str = command_str.strip()
         if len(command_str) == 0:

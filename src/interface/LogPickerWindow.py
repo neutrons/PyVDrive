@@ -823,6 +823,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param extra_message:
         :return:
         """
+        # TODO/FIXME - extra message should go to label...
+        self.ui.label_logFileLoadInfo.setText(extra_message)
+
         # check
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
                                           '' % (str(log_name), str(type(log_name)))
@@ -843,6 +846,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
+        # TODO/FIXME/NOW : remove extra message
         self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name, extra_message)
 
         return

@@ -76,7 +76,14 @@ class WorkspaceViewer(QtGui.QWidget):
             err_msg = None
 
         else:
-            err_msg = self._myMainWindow.execute_command(script)
+            status, err_msg = self._myMainWindow.execute_command(script)
+            if status:
+                err_msg = 'VDRIVE command %s is executed successfully. %s.' \
+                          '' % (command, err_msg)
+            else:
+                err_msg = 'VDRIVE command %s failed due to %s.' % (
+                    command, err_msg
+                )
 
         return err_msg
 
@@ -110,7 +117,10 @@ class WorkspaceViewer(QtGui.QWidget):
             # plot workspace
             for i_term in range(1, len(terms)):
                 ws_name = terms[i_term]
-                self.ui.graphicsView_general.plot_workspace(ws_name)
+                try:
+                    self.ui.graphicsView_general.plot_workspace(ws_name)
+                except KeyError as key_err:
+                    return str(key_err)
 
         return ''
 
