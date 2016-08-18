@@ -24,7 +24,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def plot_sample_log(self, vec_x, vec_y, sample_log_name, extra_message=None):
+    def plot_sample_log(self, vec_x, vec_y, sample_log_name):
         """ Purpose: plot sample log
 
         Guarantee: canvas is replot
@@ -40,14 +40,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                                               '' % vec_y.__class__.__name__
         assert isinstance(sample_log_name, str)
 
-        # reset title message
-        if extra_message is not None:
-            self._titleMessage = extra_message
-
         # set label
         try:
-            the_label = '%s Y (%f, %f): %s' % (sample_log_name, min(vec_y), max(vec_y),
-                                               self._titleMessage)
+            the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
         except TypeError as type_err:
             err_msg = 'Unable to generate log with %s and %s: %s' % (
                 str(min(vec_y)), str(max(vec_y)), str(type_err))

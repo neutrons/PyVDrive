@@ -201,10 +201,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
         self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
 
-        self.ui.log_pick_method_group = QtGui.QButtonGroup(self)
-        self.ui.log_pick_method_group.addButton(self.ui.radioButto_autoSlicer, 0)
-        self.ui.log_pick_method_group.addButton(self.ui.radioButton_manualSlicer, 1)
-
         # combo box
         self.ui.comboBox_logFrameUnit.clear()
         self.ui.comboBox_logFrameUnit.addItems(['points', 'seconds'])
@@ -347,15 +343,15 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def check_get_partial_log_info(self):
+    def get_data_size_to_load(self):
         """
-
-        :return: number of points to skip
+        read the frame size with unit.  convert to the
+        :return: number of points to load
         """
         # block
         block_index = int(self.ui.comboBox_blockList.currentText())
         assert self._currentBlockIndex is None or block_index == self._currentBlockIndex, \
-            'Block index on GUI is diffrerent from the stored value.'
+            'Block index on GUI is different from the stored value.'
 
         # unit
         unit = str(self.ui.comboBox_logFrameUnit.currentText())
@@ -387,11 +383,37 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # get parameters & check
-        delta_points = self.check_get_partial_log_info()
+        delta_points = self.get_data_size_to_load()
+        if delta_points <= 0:
+            # no point to load
+            print '[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points
+
+        # get the file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+        format_dict = self._mtsLogFormat[mts_log_file]
 
         # reset the start and stop points
-        self._currentStartPoint = self._currentStopPoint
-        self._currentStopPoint += delta_points
+        prev_end_point = self._currentStopPoint
+
+        if self._currentStopPoint + delta_points > format_dict['data'][self._blockIndex][1]:
+            # the next frame is not a complete frame
+            stop_point = format_dict['data'][self._blockIndex][1]
+            if stop_point == self._currentStopPoint:
+                # already at the last frame. no operation is needed.
+                # TODO - a better message is required.
+                orig_text = str(self.ui.label_logFileLoadInfo.text())
+                self.ui.label_logFileLoadInfo.setText(orig_text + '  [End]')
+                return
+            else:
+                self._currentStopPoint = stop_point
+            # END-IF
+        else:
+            # next frame is still a complete frame
+            self._currentStopPoint += delta_points
+        # END-IF
+
+        # reset starting
+        self._currentStartPoint = prev_end_point
 
         # load
         self.load_plot_mts_log(reset_canvas=True)
@@ -404,7 +426,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         # get parameters & check
-        delta_points = self.check_get_partial_log_info()
+        delta_points = self.get_data_size_to_load()
 
         # reset the start and stop points
         self._currentStopPoint = self._currentStartPoint
@@ -731,7 +753,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Resize canvas
         :return:
         """
-        self.plot_sample_log(self._currLogName)
+        if self._currLogType == 'nexus':
+            self.plot_nexus_log(self._currLogName)
+        else:
+            self.plot_mts_log(self._currLogName, reset_canvas=True)
 
         return
 
@@ -823,8 +848,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         :param extra_message:
         :return:
         """
-        # TODO/FIXME - extra message should go to label...
-        self.ui.label_logFileLoadInfo.setText(extra_message)
+        # set extra message to label
+        if extra_message is not None:
+            self.ui.label_logFileLoadInfo.setText(extra_message)
 
         # check
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
@@ -846,8 +872,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        # TODO/FIXME/NOW : remove extra message
-        self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name, extra_message)
+        self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name)
 
         return
 
@@ -1003,7 +1028,7 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                  '' % self._averagePointsPerSecond
 
         # get delta points
-        delta_points = self.check_get_partial_log_info()
+        delta_points = self.get_data_size_to_load()
 
         # set up start and stop
         self._currentStartPoint = 0
@@ -1170,7 +1195,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         new_y = event.ydata
 
         # Outside of canvas, no response
-        if new_x is None or new_y is None:
+        if (new_x is None) or (new_y is None):
             return
 
         # Calculate the relative displacement

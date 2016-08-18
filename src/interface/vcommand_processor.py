@@ -59,8 +59,8 @@ class VdriveCommandProcessor(object):
                 return False, 'Command %s %d-th term "%s" is not valid.' % (command, index,
                                                                             term)
 
-
-        ... ...
+        # TODO/FIXME/NOW - Point to continue
+        raise NotImplementedError('Continue from here!!!')
         # parse
         command_str = command_str.strip()
         if len(command_str) == 0:
