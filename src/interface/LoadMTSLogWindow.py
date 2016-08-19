@@ -50,6 +50,8 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
                      self.do_set_init_format)
         self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
                      self.do_correct_blocks)
+        self.connect(self.ui.pushButton_setExpTime, QtCore.SIGNAL('clicked()'),
+                     self.do_set_exp_time)
 
         self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
                      self.do_check_time)
@@ -198,6 +200,20 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         # TODO/NOW/ISSUE-48: ASAP
+
+        return
+
+    def do_set_exp_time(self):
+        """
+        Set up experimental time
+        :return:
+        """
+        import gui.dialogwidgets as cdw
+
+        # app = QtGui.QApplication([])
+        date, time, ok = cdw.DateDialog.getDateTime()
+        print("{} {} {}".format(date, time, ok))
+        # app.exec_()
 
         return
 

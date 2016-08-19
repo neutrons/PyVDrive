@@ -90,7 +90,7 @@ CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
     2000sampleenv_chopped_start(mean or end).txt.
 4. loadframe=1: furnace=1, or generic=1, when using VULCAN standard sample environment DAQ
     for the furnaces or others. For a customized sample environment file name,
-    use SampleEnv=‘your sample file name.txt' (the customized sample environment file is stored in
+    use SampleEnv='your sample file name.txt' (the customized sample environment file is stored in
     /SNS/VULCAN/IPTS-1000/shared/logs).
 5. If no sample environment is chosen or justchop=1 keyword is selected,
     no sample environment data synchronization will be executed.

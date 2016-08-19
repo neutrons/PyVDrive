@@ -29,7 +29,27 @@
        </item>
        <item row="1" column="0">
         <layout class="QGridLayout" name="gridLayout_4">
-         <item row="0" column="6">
+         <item row="0" column="5">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Run  Number</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer_5">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="7">
           <widget class="QPushButton" name="pushButton_checkTime">
            <property name="minimumSize">
             <size>
@@ -55,7 +75,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="5">
+         <item row="0" column="6">
           <widget class="QLineEdit" name="lineEdit_runNumber">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -64,26 +84,6 @@
             </sizepolicy>
            </property>
           </widget>
-         </item>
-         <item row="0" column="4">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Run  Number</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
-          <spacer name="horizontalSpacer_5">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
          <item row="0" column="1">
           <spacer name="horizontalSpacer_6">
@@ -111,6 +111,22 @@
            </property>
            <property name="text">
             <string>Set Blocks</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QPushButton" name="pushButton_setExpTime">
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check and set experiment time for each block&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Set Time</string>
            </property>
           </widget>
          </item>

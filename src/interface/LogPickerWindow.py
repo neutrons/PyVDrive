@@ -87,6 +87,12 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
 
+        self.connect(self.ui.radioButton_autoSlicer, QtCore.SIGNAL('toggled (bool)'),
+                     self.evt_switch_slicer_method)
+        self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
+                     self.evt_switch_slicer_method)
+        self._mutexLockSwitchSliceMethod = False
+
         # Slicer table
         self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
                      self.do_select_time_segments)
@@ -187,6 +193,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useNexus.setChecked(True)
         self.ui.radioButton_useLogFile.setChecked(False)
 
+        # type of slicer picker
+        self.ui.radioButton_autoSlicer.setChecked(True)
+        self.ui.radioButton_manualSlicer.setChecked(False)
+        self._set_main_slice_method()
+        for item in ['Both', 'Increase', 'Decrease']:
+            self.ui.comboBox_logChangeDirection.addItem(item)
+
         # resolution
         self.ui.radioButton_useMaxPointResolution.setChecked(True)
         self.ui.radioButton_useTimeResolution.setChecked(False)
@@ -207,6 +220,24 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.comboBox_logFrameUnit.setCurrentIndex(0)
         # initial value for number of points on
         self.ui.lineEdit_logFrameSize.setText('5000')
+
+        return
+
+    def _set_main_slice_method(self):
+        """
+        Set the main slicer method, manual or auto
+        :return:
+        """
+        # TODO/NOW - check 2 checkbox cannot be True or False simultaneously
+        print '[DB] DO SOMETHING'
+
+        # enable to disable
+        if self.ui.radioButton_autoSlicer.isChecked():
+            self.ui.groupBox_sliceSetupAuto.setEnabled(True)
+            self.ui.groupBox_slicerSetupManual.setEnabled(False)
+        else:
+            self.ui.groupBox_sliceSetupAuto.setEnabled(False)
+            self.ui.groupBox_slicerSetupManual.setEnabled(True)
 
         return
 
@@ -799,6 +830,28 @@ class WindowLogPicker(QtGui.QMainWindow):
         else:
             self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
             self.ui.lineEdit_timeResolution.setEnabled(False)
+
+        return
+
+    def evt_switch_slicer_method(self):
+        """
+
+        :return:
+        """
+        # TODO/NOW: DOC
+
+        if self._mutexLockSwitchSliceMethod:
+            return
+
+        # Lock
+        self._mutexLockSwitchSliceMethod = True
+
+        # Only 1 situation requires
+
+        self._set_main_slice_method()
+
+        # Unlock
+        self._mutexLockSwitchSliceMethod = False
 
         return
 
