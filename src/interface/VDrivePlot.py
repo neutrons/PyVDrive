@@ -1062,8 +1062,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.save_settings()
         # and ... ...
 
-        print '[DB-BAT] Close Application!'
-
         for child_window in self._myChildWindows:
             child_window.close()
 
@@ -1071,14 +1069,25 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def execute_command(self, command):
+    def execute_command(self, vdrive_command):
         """
-
-        :param command:
+        Execute a Vdrive command
+        No exception is expected to be raised from this method
+        :param vdrive_command: a command (including all the arguments)
         :return:
         """
-        # TODO/NOW/ISSUE 48+: doc and implement!
-        print 'IPython consolde command: ', command
+        print '[DB...BAT] IPython console command: ', vdrive_command
+
+        # check
+        assert isinstance(vdrive_command, str), 'VDRIVE command must be a string but not.' \
+                                                '' % str(type(vdrive_command))
+
+        # split
+        command_script = vdrive_command.split(',')
+        command = command_script[0]
+        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script)
+
+        return status, err_msg
 
     def get_sample_log_value(self, log_name, time_range=None, relative=False):
         """

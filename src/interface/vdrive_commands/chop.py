@@ -21,7 +21,10 @@ class VdriveChop(VDriveCommandProcessor):
         return
 
     def exec_cmd(self):
-        """ Execute input command (override)
+        """
+        Execute input command (override)
+        statu
+        :return: 2-tuple, status, error message
         """
         # parse arguments
         self.set_ipts()
@@ -72,6 +75,8 @@ class VdriveChop(VDriveCommandProcessor):
                 self._controller.export_gsas_files(registry=reduce_id, output_dir=output_dir)
             # END-IF
         # END-FOR
+
+        self.reduceSignal.emit(command_args)
 
         return
 

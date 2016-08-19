@@ -4,6 +4,10 @@ This module contains a class to handle standard VDRIVE commands
 # from PyQt4 import QtCore
 from PyQt4.QtCore import pyqtSignal
 
+import vdrive_commands.chop
+import vdrive_commands.vbin
+import vdrive_commands.vmerge
+
 
 class VdriveCommandProcessor(object):
     """
@@ -51,78 +55,64 @@ class VdriveCommandProcessor(object):
         # command body
         assert isinstance(command_args, list)
 
+        # process special command VDRIVE (for help)
+        if command == 'VDRIVE':
+            status, err_msg = self._process_vdrive(command_args)
+            return status, err_msg
+
+        # process regular VDRIVE command
         # parse command arguments to dictionary
         arg_dict = dict()
         for index, term in enumerate(command_args):
             items = term.split('=', 1)
-            if len(items) != 2:
+            if len(items) == 2:
+                arg_dict[items[0]] = items[1]
+            else:
                 return False, 'Command %s %d-th term "%s" is not valid.' % (command, index,
                                                                             term)
+            # END-IF
+        # END-FOR
 
-        # TODO/FIXME/NOW - Point to continue
-        raise NotImplementedError('Continue from here!!!')
-        # parse
-        command_str = command_str.strip()
-        if len(command_str) == 0:
-            # return with empty string input
-            return True
-
-        command_terms = command_str.split()
-        v_command = command_terms[0]
-
-        # return with wrong command
-        if v_command not in self._commandList:
-            err_msg = 'Command %s is not a supported VDRIVE command. ' \
-                      'Type VDRIVE --HELP' % v_command
-            return False, err_msg
-
-        # check command parameters valid or not
-        if v_command == 'VDRIVE':
-            status, err_msg = self._process_vdrive(v_command[1:])
-        elif v_command == 'REDUCE':
-            status, err_msg = self._process_reduce(v_command[1:])
+        # call the specific command class builder
+        if command == 'CHOP':
+            status, err_msg = self._process_chop(arg_dict)
+        elif command == 'VBIN':
+            status, err_msg = self._process_vbin(arg_dict)
+        elif command == 'MERGE':
+            status, err_msg = self._process_merge(arg_dict)
         else:
-            raise NotImplementedError('Impossible situation!')
+            raise RuntimeError('Impossible situation!')
 
         return status, err_msg
 
-    def _process_chop(self, args):
+    def _process_chop(self, arg_dict):
         """
         VDRIVE CHOP
         Example: CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
-        :param args:
+        :param arg_dict:
         :return:
         """
-        arg_dict = dict()
-        for arg in args:
-            terms = arg.split('=')
-            if len(terms) < 2:
-                return False, 'argument "%s" is not valid.' % arg
-            key_word = terms[0]
-            value = int(terms[1])
-            arg_dict[key_word] = value
-        # END-FOR
+        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
 
-        return True, ''
+        processor = vdrive_commands.chop.VdriveChop(self._myParent.get_controller(), arg_dict)
 
-    def _process_reduce(self, args):
+        status, err_msg = processor.exec_cmd()
+
+        return status, err_msg
+
+    def _process_vbin(self, arg_dict):
         """
-        Process the reduction command
-        :param args:
-        :return:
-        """
-        if len(args) == 0:
-            message = 'VREDUCTION input: ... ... ...'
-            return True, message
+         VBIN
+         :param arg_dict:
+         :return:
+         """
+        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
 
-        # parse argument
-        try:
-            a = 1
-            b = 2
-            command_args = [a, b]
-            self.reduceSignal.emit(command_args)
-        except IndexError:
-            error_msg = '...'
+        processor = vdrive_commands.vbin(self._myParent.get_controller(), arg_dict)
+
+        status, err_msg = processor.exec_cmd()
+
+        return status, err_msg
 
     def _process_vdrive(self, args):
         """
