@@ -137,6 +137,8 @@ class WindowLogPicker(QtGui.QMainWindow):
             assert isinstance(init_run, int)
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
             self._iptsNumber = ipts_number
+        else:
+            self._iptsNumber = None
 
         # Class variables
         self._currentLogIndex = 0
@@ -290,7 +292,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         for i in xrange(len(source_time_segments)):
             time_segment = source_time_segments[i]
-            status, ret_obj = self._myParent.get_workflow().get_sample_log_values(
+            status, ret_obj = self._myParent.get_controller().get_sample_log_values(
                 self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
             if status is False:
                 GuiUtility.pop_dialog_error(self, ret_obj)
@@ -337,7 +339,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             step_value = None
 
         # pass the segments to API to generate slicers
-        self._myParent.get_workflow().generate_data_slicer(
+        self._myParent.get_controller().generate_data_slicer(
             self._currRunNumber, source_time_segments, by_log_value, by_time, step_value)
 
         # Run GenerateEventFilters
@@ -348,21 +350,21 @@ class WindowLogPicker(QtGui.QMainWindow):
             slicer_tag = 'TempSlicerRun%dSeg%d' % (self._currRunNumber, i)
             time_segment = source_time_segments[i]
             if by_time is True:
-                self._myParent.get_workflow().gen_data_slicer_by_time(
+                self._myParent.get_controller().gen_data_slicer_by_time(
                     self._currRunNumber, start_time=time_segment[0], end_time=time_segment[1],
                     time_step=step_value, tag=slicer_tag)
             else:
-                self._myParent.get_workflow.gen_data_slicer_sample_log(
+                self._myParent.get_controller.gen_data_slicer_sample_log(
                     self._currRunNumber, log_name, time_segment[0], time_segment[1],
                     log_value_step=step_value, tag=slicer_tag)
 
             # Get time segments, i.e., slicer
-            status, ret_obj = self._myParent.get_workflow().get_event_slicer(
+            status, ret_obj = self._myParent.get_controller().get_event_slicer(
                 run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
                 relative_time=True)
             print '[DB-BAR] Returned object: ', ret_obj
 
-            self._myParent.get_workflow().clean_memory(self._currRunNumber, slicer_tag)
+            self._myParent.get_controller().clean_memory(self._currRunNumber, slicer_tag)
 
             if status is False:
                 err_msg = ret_obj
@@ -549,12 +551,12 @@ class WindowLogPicker(QtGui.QMainWindow):
         mts_log_file = str(self.ui.lineEdit_logFileName.text())
 
         # load MTS log file
-        self._myParent.get_workflow().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
-                                                   self._blockIndex,
-                                                   self._currentStartPoint, self._currentStopPoint)
+        self._myParent.get_controller().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
+                                                     self._blockIndex,
+                                                     self._currentStartPoint, self._currentStopPoint)
 
         # get the log name
-        log_names = sorted(self._myParent.get_workflow().get_mts_log_headers(mts_log_file))
+        log_names = sorted(self._myParent.get_controller().get_mts_log_headers(mts_log_file))
         assert isinstance(log_names, list)
         # move Time to last position
         if 'Time' in log_names:
@@ -762,10 +764,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Call parent method
         if self._myParent is not None:
-            self._myParent.get_workflow().gen_data_slice_manual(run_number=self._currRunNumber,
-                                                                relative_time=True,
-                                                                time_segment_list=split_tup_list,
-                                                                slice_tag=slicer_name)
+            self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                                  relative_time=True,
+                                                                  time_segment_list=split_tup_list,
+                                                                  slice_tag=slicer_name)
         # END-IF
 
         return
@@ -795,7 +797,25 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         :return:
         """
-        # TODO
+        import AddRunsIPTS as IptsDialog
+
+        # Launch window
+        child_window = IptsDialog.AddRunsByIPTSDialog(self)
+
+        # init set up
+        if self._iptsNumber is not None:
+            child_window.set_ipts_number(self._addedIPTSNumber)
+
+        child_window.set_data_root_dir(self._myParent.get_controller().get_data_root_directory())
+        r = child_window.exec_()
+
+        # set the close one
+        ipts_run_number = child_window.get_ipts_number()
+
+        print ipts_run_number
+        print type(ipts_run_number)
+
+        return
 
     def do_set_log_options(self):
         """
@@ -909,8 +929,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
                                           '' % (str(log_name), str(type(log_name)))
 
-        mts_data_set = self._myParent.get_workflow().get_mts_log_data(log_file_name=None,
-                                                                      header_list=['Time', log_name])
+        mts_data_set = self._myParent.get_controller().get_mts_log_data(log_file_name=None,
+                                                                        header_list=['Time', log_name])
         # plot a numpy series'
         try:
             vec_x = mts_data_set['Time']

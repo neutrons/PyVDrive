@@ -1156,6 +1156,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionShow_Run_Information"/>
    </widget>
    <addaction name="menuTest"/>
    <addaction name="menuAbout"/>
@@ -1190,6 +1191,11 @@
   <action name="actionWorkspaces">
    <property name="text">
     <string>Workspaces</string>
+   </property>
+  </action>
+  <action name="actionShow_Run_Information">
+   <property name="text">
+    <string>Show Run Information</string>
    </property>
   </action>
  </widget>

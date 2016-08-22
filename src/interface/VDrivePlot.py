@@ -1130,9 +1130,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """
         return self._vdriveCommandProcessor.get_vdrive_commands()
 
-    def get_workflow(self):
+    def get_controller(self):
         """
-        Get workflow instance
+        Get workflow controller instance
         :return:
         """
         return self._myWorkflow

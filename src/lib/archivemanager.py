@@ -52,6 +52,9 @@ class DataArchiveManager(object):
         # ipts root data directory such as /SNS/VULCAN/IPTS-1234/
         self._iptsRootDir = None
 
+        # data storage
+        self._infoDict = dict()
+
         # Debug mode
         self.__DEBUG__ = False
 
@@ -136,7 +139,7 @@ class DataArchiveManager(object):
 
         return time_file_list
 
-    def get_experiment_run_info(self, ipts_number=None, start_run=None, end_run=None):
+    def get_experiment_run_info(self, archive_key, start_run=None, end_run=None):
         """ Get runs' information of an IPTS
         Purpose:
             Get data path information for all runs of an IPTS number
@@ -144,35 +147,29 @@ class DataArchiveManager(object):
             A valid IPTS-number is set before
         Guarantees:
             Experimental run information including run number, creation time and full file path will be returned
-        :param ipts_number: IPTS number to match the current IPTS number
+
+        :param archive_key:
         :param start_run:
-        :param end_run
-        :return: list of 3-tuples as run number,
+        :param end_run:
+        :param sort_by:
+        :return:
         """
-        # Check requirements
-        assert self._iptsNo is not None, 'No valid IPTS number has been assigned to ArchiveManager.'
-        assert isinstance(ipts_number, int) or ipts_number is None
-        if ipts_number is not None:
-            # check whether given IPTS number matches the previously set up one.
-            assert ipts_number == self._iptsNo, 'Input IPTS number %d does not match the ' \
-                                                'current IPTS number %d.' % (ipts_number, self._iptsNo)
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert archive_key in self._infoDict, 'Archive key %s does not exist in archiving dictionary,' \
+                                              'which has keys %s.' % (str(archive_key), str(self._infoDict.keys()))
 
-        # Get run
-        if start_run is None or end_run is None:
-            print '[DB-BAT] Get full list from a directory.'
-            run_tup_list = self.get_experiment_run_info_from_directory(self._iptsDataDir)
+        # Get run information
+        if start_run is None and end_run is None:
+            run_dict_list = self._infoDict[archive_key][:]
         else:
-            print '[DB-BAT] Get partial list with given run number.'
-            run_tup_list = self.get_experiment_run_info_from_archive(self._iptsDataDir, start_run, end_run)
+            run_dict_list = self.get_partial_run_info(archive_key, start_run, end_run)
+        # END-IF
 
-        assert(isinstance(run_tup_list, list))
-        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsDataDir)
-        print
+        return run_dict_list
 
-        return run_tup_list
-
-    @staticmethod
-    def get_experiment_run_info_from_directory(directory):
+    def scan_experiment_run_info(self, ipts_dir):
         """ Get information of standard SNS event NeXus files in a given directory.
         Purpose:
             Get full path of all SNS event NeXus files from a directory
@@ -187,35 +184,42 @@ class DataArchiveManager(object):
 
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
-        :param directory:
-        :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
+        :param ipts_dir:
+        :return: key to the dictionary
         """
-        # Get home directory for IPTS
-        assert os.path.exists(directory), 'IPTS directory %s cannot be found.' % directory
+        # check validity of inputs
+        assert isinstance(ipts_dir, str) and os.path.exists(ipts_dir), \
+            'IPTS directory %s (%s) cannot be found.' % (str(ipts_dir), str(type(ipts_dir)))
 
         # List all files
-        all_file_list = os.listdir(directory)
+        all_file_list = os.listdir(ipts_dir)
         run_tup_list = []
         for file_name in all_file_list:
             # skip non-event Nexus file
             if file_name.endswith('_event.nxs') is False:
                 continue
             else:
-                full_path_name = os.path.join(directory, file_name)
+                full_path_name = os.path.join(ipts_dir, file_name)
 
             # get file information
-            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
             ipts_number, run_number = DataArchiveManager.get_ipts_run_from_file_name(file_name)
+
+            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
             create_time = os.path.getctime(full_path_name)
             modify_time = os.path.getmtime(full_path_name)
             if modify_time < create_time:
                 create_time = modify_time
 
             # add to list for return
-            run_tup_list.append((run_number, create_time, full_path_name))
+            run_tup_list.append({'run': run_number,
+                                 'ipts': ipts_number,
+                                 'file': full_path_name,
+                                 'time': create_time})
         # END-FOR
 
-        return run_tup_list
+        self._infoDict[ipts_dir] = run_tup_list
+
+        return ipts_dir
 
     def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
         """ Get information of standard SNS event NeXus files in a given directory.

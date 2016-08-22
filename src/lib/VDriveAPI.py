@@ -612,43 +612,47 @@ class VDriveAPI(object):
 
         return self._iptsConfigDict[ipts]
 
-    def get_ipts_info(self, ipts, begin_run=None, end_run=None):
+    def scan_ipts_archive(self, ipts_dir):
         """
-        Get runs and their information for a certain IPTS
-        Purpose: Get the runs' information of an IPTS
-        Requirements: IPTS is either an integer as a valid IPTS number of a directory containing all runs
-                      under an IPTS
-                      Begin run and end run are optional to define the range of runs
-        Guarantees: the runs' information including creation time and file path will be returned
-
-        Note: if IPTS is the number, then it is in QUICK-mode
-
-        :param ipts: integer or string as ipts number or ipts directory respectively
-        :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
-        """
-        try:
-            if isinstance(ipts, int):
-                print '[DB-BAT] Get experimental information from archive.'
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts, begin_run, end_run)
-            elif isinstance(ipts, str):
-                ipts_dir = ipts
-                print '[DB-BAT] Get experimental information from directory %s.' % ipts_dir
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
-            else:
-                return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
-        except RuntimeError as e:
-            return False, str(e)
-
-        return True, run_tuple_list
-
-    def get_ipts_number_from_dir(self, ipts_dir):
-        """ Guess IPTS number from directory
-        The routine is that there should be some called /'IPTS-????'/
+        Scan IPTS archive
         :param ipts_dir:
-        :return: 2-tuple: integer as IPTS number; 0 as unable to find
+        :return: str as key to locate the loaded IPTS information from API/data archive
         """
-        # FIXME - It is broken!
-        return archivemanager.get_ipts_number_from_dir(ipts_dir)
+        status = False
+
+        try:
+            archive_key = self._myArchiveManager.scan_experiment_run_info(ipts_dir)
+
+            status = True
+            ret_obj = archive_key
+        except AssertionError as ass_err:
+            ret_obj = str(ass_err)
+
+        return status, ret_obj
+
+    def get_ipts_run_range(self, archive_key):
+        """
+        Get range of run in IPTS
+        :param archive_key:
+        :return: 2-tuples of 2-tuple
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key must be a string.'
+
+        # get run-dict list
+        run_info_list = self._myArchiveManager.get_experiment_run_info(archive_key)
+
+        # sort by run number
+        run_time_list = list()
+        for run_dict in run_info_list:
+            run_number = run_dict['run']
+            run_time = run_dict['time']
+            run_time_list.append((run_number, run_time))
+        # END-IF
+        run_time_list.sort()
+
+        # return
+        return run_time_list[0], run_time_list[-1]
 
     def get_run_info(self, run_number):
         """ Get a run's information
