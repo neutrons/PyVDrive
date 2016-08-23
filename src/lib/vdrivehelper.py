@@ -13,16 +13,21 @@ import time
 def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
                      time_pattern='%H:%M:%S'):
     """ Convert a time in string format to epoch time
-    :param m_date: input date
-    :param m_time: input time
+    Be aware that using module time, the resolution is second only
+    :param m_date: input date (string)
+    :param m_time: input time (string)
     :param date_pattern: format for date
     :param time_pattern: format for time
     :return: integer as total seconds from 1990.01.01
     """
+    # check inputs
+    assert isinstance(m_date, str)
+    assert isinstance(m_time, str)
+
     # Form datetime and pattern
     date_time = '%s %s' % (m_date, m_time)
 
-    # pattern
+    # pattern for AM or PM
     pattern = '%s %s' % (date_pattern, time_pattern)
     if m_time.lower().endswith('m'):
         # ends with am or pm
@@ -41,12 +46,13 @@ def convert_to_strtime_from_epoch(epoch_time):
     """
 
     :param epoch_time:
-    :return:
+    :return: string
     """
     date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time))
     # such as : '2015-08-01 00:00:00'
 
     return date_time
+
 
 def parse_time(date_time_str):
     """
