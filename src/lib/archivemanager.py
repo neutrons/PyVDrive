@@ -6,6 +6,7 @@ import time
 import pickle
 
 import vdrivehelper
+import vulcan_util
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
@@ -220,6 +221,36 @@ class DataArchiveManager(object):
         self._infoDict[ipts_dir] = run_tup_list
 
         return ipts_dir
+
+    def scan_vulcan_record(self, record_file_path):
+        """
+        Scan a VULCAN record file
+        :param record_file_path:
+        :return: key to a dictionary
+        """
+        # read the file
+        record_file_set = vulcan_util.import_vulcan_log(record_file_path)
+
+        # export the pandas log to a list of dictionary
+        run_dict_list = list()
+        num_runs = len(record_file_set)
+        for i_run in range(num_runs):
+            run_number = int(record_file_set['RUN'][0])
+            ipts_str = str(record_file_set['IPTS'][0])
+            ipts_number = int(ipts_str.split('-')[-1])
+            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_events.nxs' % (ipts_str, run_number, run_number)
+            exp_time_str = str(record_file_set['StartTime'][0])
+            exp_time = vdrivehelper.parse_time(exp_time_str)
+
+            run_dict_list.append({'run': run_number,
+                                  'ipts': ipts_number,
+                                  'file': full_file_path,
+                                  'time': exp_time})
+        # END-FOR
+
+        self._infoDict[record_file_path] = run_dict_list
+
+        return record_file_path
 
     def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
         """ Get information of standard SNS event NeXus files in a given directory.

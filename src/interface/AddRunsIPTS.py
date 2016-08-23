@@ -283,7 +283,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         elif self.ui.radioButton_scanLogFile.isChecked():
             # scan the log file
             self._skipScanData = False
-            self.scan_log()
+            self.scan_record_file()
 
         else:
             # scan the HD
@@ -465,21 +465,24 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return True
 
-    def scan_log(self):
+    def scan_record_file(self):
         """
         Scan log
         :return:
         """
-        # get log file
-        log_base_name = str(self.ui.comboBox_logFilesNames.currentText())
-        if len(log_base_name) == 0:
-            gutil.pop_dialog_error(self, 'No log file is found!')
-            return
-        else:
-            log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
+        # get log file: the higher priority is the log file name that is browsed
+        log_file_path = str(self.ui.lineEdit_logFilePath.text())
+        if len(log_file_path.strip()) == 0:
+            # second priority to load from combo box
+            log_base_name = str(self.ui.comboBox_logFilesNames.currentText())
+            if len(log_base_name) == 0:
+                gutil.pop_dialog_error(self, 'No log file is found!')
+                return
+            else:
+                log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
 
         # scan
-        self._myParent.get_controller().scan_log_file(log_file_path)
+        self._myParent.get_controller().scan_vulcan_record(log_file_path)
         status, ret_obj = self._myParent.get_controller().get_ipts_info()
 
         # Error in retrieving

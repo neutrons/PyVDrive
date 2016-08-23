@@ -21,7 +21,12 @@ def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
     """
     # Form datetime and pattern
     date_time = '%s %s' % (m_date, m_time)
+
+    # pattern
     pattern = '%s %s' % (date_pattern, time_pattern)
+    if m_time.lower().endswith('m'):
+        # ends with am or pm
+        pattern += ' %p'
 
     # Convert to epoch
     try:
@@ -43,6 +48,42 @@ def convert_to_strtime_from_epoch(epoch_time):
 
     return date_time
 
+def parse_time(date_time_str):
+    """
+    This is a smart way to guess time format
+    example: 2016-04-27 09:19:50.094796666-EDT
+    :param date_time_str:
+    :return:
+    """
+    # check input
+    assert isinstance(date_time_str, str), 'Input time %s must be a string but not a %s.' \
+                                           '' % (str(date_time_str), type(date_time_str))
+
+    # split time and date
+    terms = date_time_str.strip().split()
+    assert len(terms) > 1, 'Date time %s cannot be split.' % date_time_str
+
+    if terms[0].count(':') == 0:
+        # first part is time
+        date_str = terms[0]
+        time_str = date_time_str.split(date_str)[-1].strip()
+    else:
+        date_str = terms[-1]
+        time_str = date_time_str.split(date_str)[0].strip()
+
+    # auto parse date
+    # try to parse date
+    if date_str.count('-') > 0:
+        sep = '-'
+    elif date_str.count('/') > 0:
+        sep = '/'
+
+    try:
+        blabla
+    except ValueError:
+        blabla
+
+    return
 
 def setGPDateTime(epochtime):
     """ Reset epoch time to standard end time

@@ -92,20 +92,25 @@ def getLogsList(vandbfile):
     return (titlelist, examples)
 
 
-def load_vulcan_record(record_file_name):
+def import_vulcan_log(log_file_name):
     """
-    Load VULCAN's record file, auto record or
-    :param record_file_name:
-    :return:
+    Import VULCAN's standard log file in CSV format
+    :param log_file_name:
+    :return: pandas pandas.core.frame.DataFrame
     """
     # check
-    assert isinstance(record_file_name, str)
-    assert os.path.exists(record_file_name)
-
+    assert isinstance(log_file_name, str), 'Log file name %s must be a string but not of type %s.' \
+                                           '' % (str(log_file_name), type(log_file_name))
+    assert os.path.exists(log_file_name, str), 'Log file %s does not exist.' % log_file_name
     # use pandas to load the file
-    record_data = pd.read_csv(record_file_name, header=0)
 
-    return record_data
+    # import
+    log_set = pd.read_csv(log_file_name, sep='\t', header=0)
+
+    # check
+    assert len(log_set) > 1, 'Separation is not tab for VULCAN record file %s.' % log_file_name
+
+    return log_set
 
 
 def search_vulcan_runs(record_data, start_time, end_time):

@@ -630,6 +630,23 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
+    def scan_vulcan_record(self, log_file_path):
+        """
+        Scan a standard VULCAN record/log file
+        :param log_file_path:
+        :return:
+        """
+        status = False
+
+        try:
+            archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
+            status = True
+            ret_obj = archive_key
+        except AssertionError as ass_err:
+            ret_obj = str(ass_err)
+
+        return status, ret_obj
+
     def get_ipts_run_range(self, archive_key):
         """
         Get range of run in IPTS
