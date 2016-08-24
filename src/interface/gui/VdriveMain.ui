@@ -478,15 +478,28 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="font">
+             <font>
+              <pointsize>12</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>2</number>
             </property>
-            <widget class="QWidget" name="tab_12">
+            <property name="iconSize">
+             <size>
+              <width>14</width>
+              <height>16</height>
+             </size>
+            </property>
+            <widget class="QWidget" name="tab_chop">
              <attribute name="title">
-              <string>CHOP</string>
+              <string>Chop</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_17">
               <item row="0" column="0">
@@ -1049,9 +1062,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_13">
+            <widget class="QWidget" name="tab_vbin">
              <attribute name="title">
-              <string>VBIN</string>
+              <string>Bin</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_9">
               <item row="0" column="0">
@@ -1408,9 +1421,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_14">
+            <widget class="QWidget" name="tab_view">
              <attribute name="title">
-              <string>VIEW</string>
+              <string>View</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_11">
               <item row="2" column="0">
@@ -1775,9 +1788,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_11">
+            <widget class="QWidget" name="tab_vgsas">
              <attribute name="title">
-              <string>V-GSAS</string>
+              <string>GSAS</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_15">
               <item>
@@ -2090,7 +2103,7 @@
      <x>0</x>
      <y>0</y>
      <width>1451</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

@@ -708,7 +708,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self._addedIPTSNumber is not None:
             child_window.set_ipts_number(self._addedIPTSNumber)
 
-        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
+        data_root_dir = self._myWorkflow.get_data_root_directory(throw=False)
+        child_window.set_data_root_dir(data_root_dir)
         r = child_window.exec_()
 
         # set the close one

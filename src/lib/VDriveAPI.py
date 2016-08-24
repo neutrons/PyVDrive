@@ -547,11 +547,20 @@ class VDriveAPI(object):
 
         return binned_dir
 
-    def get_data_root_directory(self):
+    def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN
-        :return: data root directory, such as /SNS/VULCAN
+        :return: data root directory, such as /SNS/VULCAN/ or None if throw is False
         """
-        return self._myArchiveManager.root_directory
+        try:
+            root_dir = self._myArchiveManager.root_directory
+        except AssertionError as ass_err:
+            if throw:
+                raise ass_err
+            else:
+                root_dir = None
+            # END-IF-ELSE
+
+        return root_dir
 
     def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """

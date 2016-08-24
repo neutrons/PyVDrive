@@ -84,8 +84,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._iptsDirFromNumber = ''
         self._iptsDirFromDir = ''
 
-        self._dataDir = '/SNS/VULCAN'
+        self._dataDir = None
         self._homeDir = os.path.expanduser('~')
+        self._isArchiveAccessible = False
 
         self._skipScanData = False
 
@@ -311,8 +312,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._iptsNumber = ipts_number
 
         # Get and check IPTS directory
-        # Check
-        assert self._dataDir is not None, 'Data directory is not set up.'
+        if self._dataDir is None:
+            gutil.pop_dialog_error(self, 'Data directory is not set up!')
+            return
 
         # build IPTS directory and check
         ipts_dir = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
