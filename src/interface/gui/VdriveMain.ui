@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1451</width>
-    <height>801</height>
+    <width>1395</width>
+    <height>760</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -480,7 +480,7 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>12</pointsize>
+              <pointsize>10</pointsize>
               <weight>50</weight>
               <bold>false</bold>
              </font>
@@ -489,7 +489,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>0</number>
             </property>
             <property name="iconSize">
              <size>
@@ -780,164 +780,226 @@
                    <attribute name="title">
                     <string>Log Value</string>
                    </attribute>
-                   <layout class="QGridLayout" name="gridLayout_4">
-                    <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_3">
-                      <item row="4" column="0">
-                       <spacer name="verticalSpacer_8">
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeType">
-                         <enum>QSizePolicy::Preferred</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>20</width>
-                          <height>40</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                      <item row="0" column="0">
-                       <layout class="QHBoxLayout" name="horizontalLayout_25">
-                        <item>
-                         <widget class="QPushButton" name="pushButton_readSampleLogFile">
-                          <property name="font">
-                           <font>
-                            <weight>75</weight>
-                            <bold>true</bold>
-                           </font>
-                          </property>
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tip: Select the run that you want to plot from the left-most data-tree. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="text">
-                           <string>Read Sample Log</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_7">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                          <property name="text">
-                           <string>Max. Resolution</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLineEdit" name="lineEdit_maxSnapResolution">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_18">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                          <property name="text">
-                           <string>Pt</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item row="2" column="0">
-                       <widget class="QGroupBox" name="groupBox_14">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="title">
-                         <string>Slice by log value</string>
-                        </property>
-                        <layout class="QGridLayout" name="gridLayout_6">
-                         <item row="1" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot4">
-                           <property name="text">
-                            <string>Plot 4</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot5">
-                           <property name="text">
-                            <string>Plot 5</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot6">
-                           <property name="text">
-                            <string>Plot 6</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot1">
-                           <property name="text">
-                            <string>Plot 1</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot2">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="text">
-                            <string>Plot 2</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot3">
-                           <property name="text">
-                            <string>Plot 3</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="2">
-                          <widget class="QPushButton" name="pushButton_applyLog">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="minimumSize">
-                            <size>
-                             <width>80</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>Apply</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                      <item row="5" column="0">
+                   <layout class="QVBoxLayout" name="verticalLayout_6">
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_8">
+                      <property name="title">
+                       <string>Import Sample Log</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_3">
+                       <item row="0" column="0" colspan="2">
+                        <widget class="QPushButton" name="pushButton_readSampleLogFile">
+                         <property name="font">
+                          <font>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tip: Select the run that you want to plot from the left-most data-tree. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Read Sample Log</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_7">
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Max. Resolution</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QLineEdit" name="lineEdit_maxSnapResolution">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="2">
+                        <widget class="QLabel" name="label_18">
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Pt</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_14">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <property name="title">
+                       <string>Slice by log value</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_6">
+                       <item row="1" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot4">
+                         <property name="text">
+                          <string>Plot 4</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot5">
+                         <property name="text">
+                          <string>Plot 5</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot6">
+                         <property name="text">
+                          <string>Plot 6</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot1">
+                         <property name="text">
+                          <string>Plot 1</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot2">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="text">
+                          <string>Plot 2</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot3">
+                         <property name="text">
+                          <string>Plot 3</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QPushButton" name="pushButton_applyLog">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>80</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Apply</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_23">
+                      <property name="title">
+                       <string>Slice by picking manually</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_18">
+                       <item row="0" column="0">
+                        <widget class="QPushButton" name="pushButton_manualPicker">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Lauch Manual Picker</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QPushButton" name="pushButton_applyManual">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>80</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment of all 6 snap views.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. Identify the active picker (time, simple log value, or manual);&lt;/p&gt;&lt;p&gt;2. If the active one is time, then do nothing;&lt;/p&gt;&lt;p&gt;3. Apply the slicer boundaries to each snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Apply</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <spacer name="horizontalSpacer_11">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>40</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="verticalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_25">
+                      <item>
                        <widget class="QPushButton" name="pushButton_saveSlicer">
                         <property name="font">
                          <font>
@@ -953,74 +1015,23 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="3" column="0">
-                       <widget class="QGroupBox" name="groupBox_8">
-                        <property name="title">
-                         <string>Slice by picking manually</string>
-                        </property>
-                        <layout class="QGridLayout" name="gridLayout_18">
-                         <item row="0" column="0">
-                          <widget class="QPushButton" name="pushButton_manualPicker">
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Lauch Manual Picker</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="2">
-                          <widget class="QPushButton" name="pushButton_applyManual">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="minimumSize">
-                            <size>
-                             <width>80</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment of all 6 snap views.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. Identify the active picker (time, simple log value, or manual);&lt;/p&gt;&lt;p&gt;2. If the active one is time, then do nothing;&lt;/p&gt;&lt;p&gt;3. Apply the slicer boundaries to each snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Apply</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <spacer name="horizontalSpacer_11">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                      <item row="7" column="0">
-                       <spacer name="verticalSpacer_7">
+                      <item>
+                       <spacer name="horizontalSpacer_15">
                         <property name="orientation">
-                         <enum>Qt::Vertical</enum>
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Preferred</enum>
                         </property>
                         <property name="sizeHint" stdset="0">
                          <size>
-                          <width>20</width>
-                          <height>40</height>
+                          <width>40</width>
+                          <height>20</height>
                          </size>
                         </property>
                        </spacer>
                       </item>
-                      <item row="8" column="0">
+                      <item>
                        <widget class="QPushButton" name="pushButton_chopDataSingleSet">
                         <property name="font">
                          <font>
@@ -2102,8 +2113,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1451</width>
-     <height>22</height>
+     <width>1395</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
