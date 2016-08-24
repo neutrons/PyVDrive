@@ -1,13 +1,27 @@
-__author__ = 'wzz'
-
 import os
 import time
+import pytz
+from dateutil.parser import parse
+
+__author__ = 'wzz'
+
 
 #
 # static methods for general purpose
 #
 
 # Methods to process time
+def convert_to_epoch1(date_time):
+    """
+    """
+    print (type(date_time))
+    # convert to time.struct_time
+    converted = date_time.timetuple()
+    print (converted)
+
+    epoch_time = time.mktime(converted)
+
+    return epoch_time
 
 
 def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
@@ -54,12 +68,25 @@ def convert_to_strtime_from_epoch(epoch_time):
     return date_time
 
 
-def parse_time(date_time_str):
+def convert_to_utc(local_time):
+    """
+    """
+    # check whether it is a local time, i.e., with time zone information
+
+    # conver to UTC time
+    utc_time = local_time.astimezone(pytz.utc)
+    print (utc_time, type(utc_time))
+
+    return utc_time
+
+
+def parse_time(date_time_str, local_est=True):
     """
     This is a smart way to guess time format
     example: 2016-04-27 09:19:50.094796666-EDT
     :param date_time_str:
-    :return:
+    :param local_est: local time zone is EST
+    :return: datetime.datetime instance
     """
     # check input
     assert isinstance(date_time_str, str), 'Input time %s must be a string but not a %s.' \
@@ -69,6 +96,7 @@ def parse_time(date_time_str):
     terms = date_time_str.strip().split()
     assert len(terms) > 1, 'Date time %s cannot be split.' % date_time_str
 
+    # time string must have : inside
     if terms[0].count(':') == 0:
         # first part is time
         date_str = terms[0]
@@ -77,19 +105,41 @@ def parse_time(date_time_str):
         date_str = terms[-1]
         time_str = date_time_str.split(date_str)[0].strip()
 
-    # auto parse date
-    # try to parse date
-    if date_str.count('-') > 0:
-        sep = '-'
-    elif date_str.count('/') > 0:
-        sep = '/'
+    # time zone?
+    if time_str.count('-') > 0:
+        # case for -EDT or -EST
+        time_terms = time_str.split('-')
+        time_str = time_terms[0]
+        tz_str = time_terms[1]
+    else:
+        tz_str = None
 
+    # parse date time to naive time
     try:
-        blabla
-    except ValueError:
-        blabla
+        date_time_str = '%s %s' % (date_str, time_str)
+        date_time = parse(date_time_str)
+    except ValueError as val_err:
+        raise RuntimeError('Unable to convert %s to datetime instance due to %s.' % str(val_err))
 
-    return
+    # set time zone
+    if tz_str is None and local_est:
+        time_zone = pytz.timezone('US/Eastern')
+    elif tz_str is not None:
+        if tz_str == 'EDT' or tz_str == 'EST':
+            time_zone = pytz.timezone('US/Eastern')
+        else:
+            raise RuntimeError('Time zone flag %s is not supported.' % tz_str)
+    else:
+        time_zone = pytz.utc
+
+    # add time zone to the naive time to be aware
+    date_time = time_zone.localize(date_time)
+
+    fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+    print(date_time.strftime(fmt))
+
+    return date_time
+
 
 def setGPDateTime(epochtime):
     """ Reset epoch time to standard end time
@@ -160,6 +210,16 @@ def get_ipts_number_from_dir(ipts_dir):
         return False, 'After IPTS-, %s is not an integer' % ipts_number_str
 
     return True, ipts_number
+
+
+if __name__ == '__main__':
+    time_str1 = '2016-04-27 09:19:50.094796666-EDT'
+    time_1 = parse_time(time_str1)
+    print time_1, type(time_1)
+
+    time_str2 = '4/27/2016 12:29:25 PM'
+    time_2 = parse_time(time_str2, local_est=True)
+    print time_2, type(time_2)
 
 
 #def getIptsRunFromFileName(nxsfilename):
