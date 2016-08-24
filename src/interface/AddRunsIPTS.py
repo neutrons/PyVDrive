@@ -50,7 +50,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                      self.evt_change_data_access_mode)
 
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
-                               self.do_browse_ipts_folder)
+                               self.do_browse_data_directory)
         QtCore.QObject.connect(self.ui.pushButton_verify, QtCore.SIGNAL('clicked()'),
                                self.do_set_ipts_number)
 
@@ -230,23 +230,28 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return run_tup_list
 
-    def do_browse_ipts_folder(self):
-        """ Browse IPTS directory if it is set up to use IPTS directory other than number
+    def do_browse_data_directory(self):
+        """ Browse data directory if it is set up to use IPTS directory other than number
         :return:
         """
+        # get the data directory from text line or from default
         if str(self.ui.lineEdit_iptsDir.text()).strip() != '':
-            home_dir = str(self.ui.lineEdit_iptsDir.text()).strip()
+            # from IPTS Directory
+            default_dir = str(self.ui.lineEdit_iptsDir.text()).strip()
         else:
-            home_dir = self._homeDir
-        ipts_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory',
-                                                              home_dir))
-        self.ui.lineEdit_iptsDir.setText(ipts_dir)
-        self._iptsDir = ipts_dir
-        self._iptsDirFromDir = ipts_dir
+            # from default
+            default_dir = self._homeDir
+
+        # user-specified data directory
+        data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory',
+                                                              default_dir))
+        self.ui.lineEdit_iptsDir.setText(data_dir)
+        self._iptsDir = data_dir
+        self._iptsDirFromDir = data_dir
         self._iptsNumber = None
 
         # Enable next step
-        self.ui.pushButton_iptsInfo.setEnabled(True)
+        self.ui.groupBox_scanIptsInfo.setEnabled(True)
 
         return
 
@@ -469,7 +474,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
     def scan_record_file(self):
         """
-        Scan log
+        Scan record log file
         :return:
         """
         # get log file: the higher priority is the log file name that is browsed
@@ -483,23 +488,28 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             else:
                 log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
 
-        # scan
-        self._myParent.get_controller().scan_vulcan_record(log_file_path)
-        status, ret_obj = self._myParent.get_controller().get_ipts_info()
+        # scan record file
+        try:
+            status, ret_obj = self._myParent.get_controller().scan_vulcan_record(log_file_path)
+        except AssertionError as ass_err:
+            gutil.pop_dialog_error(self, 'Unable to load record file %s due to %s.'
+                                         '' % (log_file_path, str(ass_err)))
+            return
 
-        # Error in retrieving
-        if status is False:
+        if status:
+            record_key = ret_obj
+            start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
+            run_info_list = [start_run, end_run]
+        else:
+            # error in retrieving
             error_message = ret_obj
             gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
                 log_file_path, error_message))
             self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
             return
 
-        # get list
-        run_tup_list = ret_obj
-
         # set up information to GUI
-        self.set_retrieved_information(run_tup_list)
+        self.set_retrieved_information(run_info_list)
 
         return
 
@@ -522,10 +532,10 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         first_run_time = run_tup_list[0][1]
         last_run_time = run_tup_list[-1][1]
 
-        date_begin = gutil.convert_to_qdate_epoch(first_run_time)
+        date_begin = gutil.convert_to_qdate(first_run_time)
         self.ui.dateEdit_begin.setDate(date_begin)
 
-        date_end = gutil.convert_to_qdate_epoch(last_run_time)
+        date_end = gutil.convert_to_qdate(last_run_time)
         self.ui.dateEdit_end.setDate(date_end)
 
         self.ui.label_loadingStatus.setText('IPTS directory %s: Run %d - %d.'

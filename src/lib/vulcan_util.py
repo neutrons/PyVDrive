@@ -89,7 +89,7 @@ def getLogsList(vandbfile):
         break
     # ENDFOR
 
-    return (titlelist, examples)
+    return titlelist, examples
 
 
 def import_vulcan_log(log_file_name):
@@ -101,7 +101,7 @@ def import_vulcan_log(log_file_name):
     # check
     assert isinstance(log_file_name, str), 'Log file name %s must be a string but not of type %s.' \
                                            '' % (str(log_file_name), type(log_file_name))
-    assert os.path.exists(log_file_name, str), 'Log file %s does not exist.' % log_file_name
+    assert os.path.exists(log_file_name), 'Log file %s does not exist.' % log_file_name
     # use pandas to load the file
 
     # import
