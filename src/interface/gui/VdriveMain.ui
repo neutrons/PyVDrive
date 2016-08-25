@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1395</width>
-    <height>760</height>
+    <width>1451</width>
+    <height>816</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,6 +71,11 @@
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
              <widget class="QPushButton" name="pushButton_loadCalFile">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+               </font>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select vanadium calibration runs/files;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;if it is selected without aborting, then the line edit to its right will be disabled;&lt;/p&gt;&lt;p&gt;Default is the instrument folder belonged to IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -81,6 +86,11 @@
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_showCalDetails">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+               </font>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -92,7 +102,14 @@
            </layout>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_calibBriefView"/>
+           <widget class="QLineEdit" name="lineEdit_calibBriefView">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QGroupBox" name="groupBox">
@@ -220,6 +237,11 @@
                  <width>360</width>
                  <height>16777215</height>
                 </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>11</pointsize>
+                </font>
                </property>
                <property name="currentIndex">
                 <number>1</number>
@@ -376,6 +398,9 @@
                      <property name="orientation">
                       <enum>Qt::Horizontal</enum>
                      </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Preferred</enum>
+                     </property>
                      <property name="sizeHint" stdset="0">
                       <size>
                        <width>40</width>
@@ -397,7 +422,14 @@
                   </layout>
                  </item>
                  <item>
-                  <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
+                  <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <layout class="QGridLayout" name="gridLayout_25">
@@ -2113,8 +2145,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1395</width>
-     <height>25</height>
+     <width>1451</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
