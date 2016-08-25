@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1451</width>
-    <height>816</height>
+    <width>1413</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,11 +71,6 @@
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
              <widget class="QPushButton" name="pushButton_loadCalFile">
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select vanadium calibration runs/files;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;if it is selected without aborting, then the line edit to its right will be disabled;&lt;/p&gt;&lt;p&gt;Default is the instrument folder belonged to IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -86,11 +81,6 @@
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_showCalDetails">
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -102,14 +92,7 @@
            </layout>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_calibBriefView">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
+           <widget class="QLineEdit" name="lineEdit_calibBriefView"/>
           </item>
           <item>
            <widget class="QGroupBox" name="groupBox">
@@ -237,11 +220,6 @@
                  <width>360</width>
                  <height>16777215</height>
                 </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>11</pointsize>
-                </font>
                </property>
                <property name="currentIndex">
                 <number>1</number>
@@ -398,9 +376,6 @@
                      <property name="orientation">
                       <enum>Qt::Horizontal</enum>
                      </property>
-                     <property name="sizeType">
-                      <enum>QSizePolicy::Preferred</enum>
-                     </property>
                      <property name="sizeHint" stdset="0">
                       <size>
                        <width>40</width>
@@ -422,14 +397,7 @@
                   </layout>
                  </item>
                  <item>
-                  <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                  </widget>
+                  <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
                  </item>
                  <item>
                   <layout class="QGridLayout" name="gridLayout_25">
@@ -1973,160 +1941,146 @@
           </item>
          </layout>
         </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QPlainTextEdit" name="plainTextEdit_LogInfo">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>10</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="1">
-     <layout class="QGridLayout" name="gridLayout_7">
-      <item row="6" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_33">
         <item>
-         <widget class="QComboBox" name="comboBox_g51"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g52"/>
-        </item>
-       </layout>
-      </item>
-      <item row="1" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView1">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
-      </item>
-      <item row="4" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QComboBox" name="comboBox_g31">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
+         <widget class="QDockWidget" name="dockWidget">
+          <widget class="QWidget" name="dockWidgetContents">
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="2" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_31">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g21"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g22"/>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView2">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView3">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
+              </item>
+              <item row="4" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_32">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g41"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g42"/>
+                </item>
+               </layout>
+              </item>
+              <item row="6" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_34">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g61"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g62"/>
+                </item>
+               </layout>
+              </item>
+              <item row="5" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+              </item>
+              <item row="4" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g31">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g32"/>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView4">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_33">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g51"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g52"/>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g11"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g12">
+                  <item>
+                   <property name="text">
+                    <string>Absolute Time</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Relative Time</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView1">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g32"/>
-        </item>
        </layout>
-      </item>
-      <item row="1" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView2">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView3">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <item>
-         <widget class="QComboBox" name="comboBox_g11"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g12">
-          <item>
-           <property name="text">
-            <string>Absolute Time</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Relative Time</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_31">
-        <item>
-         <widget class="QComboBox" name="comboBox_g21"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g22"/>
-        </item>
-       </layout>
-      </item>
-      <item row="4" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_32">
-        <item>
-         <widget class="QComboBox" name="comboBox_g41"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g42"/>
-        </item>
-       </layout>
-      </item>
-      <item row="6" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_34">
-        <item>
-         <widget class="QComboBox" name="comboBox_g61"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g62"/>
-        </item>
-       </layout>
-      </item>
-      <item row="5" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
-      </item>
-      <item row="3" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView4">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
       </item>
      </layout>
     </item>
@@ -2145,8 +2099,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1451</width>
-     <height>22</height>
+     <width>1413</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

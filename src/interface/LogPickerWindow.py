@@ -1334,7 +1334,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Set up from parent main window
         :return:
         """
-        ipts_run_dict = self._myParent.get_ipts_runs()
+        ipts_run_dict = self._myParent.get_archived_runs()
 
         # Set to tree
         for ipts in ipts_run_dict.keys():

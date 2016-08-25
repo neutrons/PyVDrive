@@ -88,6 +88,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._homeDir = os.path.expanduser('~')
         self._isArchiveAccessible = False
 
+        # key to access IPTS from archive
+        self._archiveKey = None
+
         self._skipScanData = False
 
         return
@@ -178,7 +181,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return run_tup_list
 
-    def add_runs_by_number(self):
+    def get_runs_by_number(self):
         """
         Call the method in parent class to add runs
         :return:
@@ -204,23 +207,17 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             assert isinstance(self._iptsNumber, int) and self._iptsNumber > 0, 'IPTS number must be verified ' \
                                                                                'for quick-filter-run mode.'
             ipts_run_dir = self._iptsNumber
-
-        elif end_run is None:
-            # set up the end run number
-            to_last_run = self.ui.checkBox_toLastRun.isChecked()
-            if begin_run is not None and to_last_run is False:
-                end_run = begin_run + 1
-
-            ipts_run_dir = self._iptsDir
+            status, ret_obj = workflow_controller.scan_ipts_runs(ipts_run_dir, begin_run, end_run)
 
         else:
-            # other siutation
-            ipts_run_dir = self._iptsDir
+            # it is impossible to have an empty end run because the non-skip option always specifies one
+            assert end_run is not None and begin_run is not None, 'Begin run and end run must be given ' \
+                                                                  'in non-skip-scan case.'
 
+            status, ret_obj = workflow_controller.get_archived_runs(self._archiveKey, begin_run, end_run)
         # END-IF-ELSE
 
         # get the complete list of run (tuples) as it is filtered by date
-        status, ret_obj = workflow_controller.get_ipts_info(ipts_run_dir, begin_run, end_run)
         if status is True:
             run_tup_list = ret_obj
         else:
@@ -385,7 +382,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             run_tup_list = self.add_runs_by_date()
         elif self.ui.radioButton_filterByRun.isChecked():
             # add runs by run numbers
-            run_tup_list = self.add_runs_by_number()
+            run_tup_list = self.get_runs_by_number()
         else:
             # exception
             raise RuntimeError('Neither radio button to filter by date or run number is selected.')
@@ -470,12 +467,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # set information to GUI
         self.set_retrieved_information(run_info_list)
 
+        self._archiveKey = ipts_key
+
         return True
 
     def scan_record_file(self):
         """
         Scan record log file
-        :return:
+        :return: boolean
         """
         # get log file: the higher priority is the log file name that is browsed
         log_file_path = str(self.ui.lineEdit_logFilePath.text())
@@ -484,7 +483,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             log_base_name = str(self.ui.comboBox_logFilesNames.currentText())
             if len(log_base_name) == 0:
                 gutil.pop_dialog_error(self, 'No log file is found!')
-                return
+                return False
             else:
                 log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
 
@@ -494,7 +493,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         except AssertionError as ass_err:
             gutil.pop_dialog_error(self, 'Unable to load record file %s due to %s.'
                                          '' % (log_file_path, str(ass_err)))
-            return
+            return False
 
         if status:
             record_key = ret_obj
@@ -506,12 +505,12 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
                 log_file_path, error_message))
             self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
-            return
+            return False
 
         # set up information to GUI
         self.set_retrieved_information(run_info_list)
 
-        return
+        return True
 
     def set_retrieved_information(self, run_tup_list):
         """
@@ -519,11 +518,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :param run_tup_list: sorted run tuple list
         :return:
         """
-        assert (isinstance(run_tup_list, list))
+        assert (isinstance(run_tup_list, list)) and len(run_tup_list) > 0
+
+        if len(run_tup_list) == 1:
+            gutil.pop_dialog_information(self, 'Only 1 run is given!')
 
         # set up run information
         first_run = run_tup_list[0][0]
         last_run = run_tup_list[-1][0]
+
+        print '[DB...BAT] First run = ', first_run, 'Last run = ', last_run
 
         self.ui.lineEdit_begin.setText(str(first_run))
         self.ui.lineEdit_end.setText(str(last_run))

@@ -153,7 +153,7 @@ class DataArchiveManager(object):
         :param start_run:
         :param end_run:
         :param sort_by:
-        :return:
+        :return: list of dictionary
         """
         # check
         assert isinstance(archive_key, str), 'Archive key %s must be a string but not %s.' \
@@ -169,6 +169,27 @@ class DataArchiveManager(object):
         # END-IF
 
         return run_dict_list
+
+    def get_partial_run_info(self, archive_key, start_run, end_run):
+        """
+
+        :param archive_key:
+        :param start_run:
+        :param end_run:
+        :return:
+        """
+        # TODO/NOW/DOC
+
+        # check
+        # TODO/NOW - check
+        # blabla
+
+        partial_list = []
+        for run_dict in self._infoDict[archive_key]:
+            if start_run <= run_dict['run'] <= end_run:
+                partial_list.append(run_dict)
+
+        return partial_list
 
     def scan_experiment_run_info(self, ipts_dir):
         """ Get information of standard SNS event NeXus files in a given directory.
@@ -235,11 +256,11 @@ class DataArchiveManager(object):
         run_dict_list = list()
         num_runs = len(record_file_set)
         for i_run in range(num_runs):
-            run_number = int(record_file_set['RUN'][0])
-            ipts_str = str(record_file_set['IPTS'][0])
+            run_number = int(record_file_set['RUN'][i_run])
+            ipts_str = str(record_file_set['IPTS'][i_run])
             ipts_number = int(ipts_str.split('-')[-1])
             full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_events.nxs' % (ipts_str, run_number, run_number)
-            exp_time_str = str(record_file_set['StartTime'][0])
+            exp_time_str = str(record_file_set['StartTime'][i_run])
             exp_time = vdrivehelper.parse_time(exp_time_str)
 
             run_dict_list.append({'run': run_number,

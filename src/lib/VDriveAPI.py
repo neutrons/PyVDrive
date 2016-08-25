@@ -656,6 +656,28 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
+    def get_archived_runs(self, archive_key, begin_run, end_run):
+        """
+        Get runs from archived data
+        :param archive_key:
+        :param begin_run:
+        :param end_run:
+        :return:
+        """
+        # check input
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, begin_run, end_run)
+
+        if len(run_info_dict_list) > 0:
+            status = True
+            ret_obj = run_info_dict_list
+        else:
+            status = False
+            ret_obj = 'No run is selected .... ' # TODO/NOW - Make it complete
+
+        return status, ret_obj
+
     def get_ipts_run_range(self, archive_key):
         """
         Get range of run in IPTS
@@ -676,6 +698,8 @@ class VDriveAPI(object):
             run_time_list.append((run_number, run_time))
         # END-IF
         run_time_list.sort()
+
+        print '[DB....BAT] Run-Time List: Size = ', len(run_time_list)
 
         # return
         return run_time_list[0], run_time_list[-1]
