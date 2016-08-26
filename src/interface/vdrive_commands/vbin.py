@@ -73,7 +73,7 @@ class VBin(procss_vcommand.VDriveCommandProcessor):
 
         # set the runs
         run_info_list = self._controller.get_runs(start_run=run_start, end_run=run_end)
-        self._controller.add_runs(run_info_list)
+        self._controller.add_runs_to_project(run_info_list)
 
         # reduce
         self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))

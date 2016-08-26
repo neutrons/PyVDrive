@@ -39,7 +39,7 @@ class VdriveMerge(VDriveCommandProcessor):
         run_info_list = self._controller.get_runs(run_number_list=to_merge_runs)
 
         # reduce
-        self._controller.add_runs(run_info_list, self._iptsNumber)
+        self._controller.add_runs_to_project(run_info_list, self._iptsNumber)
         reduce_id = self._controller.reduce_data_set(merge=True)
         self._controller.export_gsas_file(registry=reduce_id, output_dir=dir_2_save)
 

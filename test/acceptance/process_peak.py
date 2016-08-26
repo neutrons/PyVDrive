@@ -73,7 +73,7 @@ def reduce_silicon(step):
     assert_equals(status, True)
     assert_equals(len(filter_run_tup_list), 1)
 
-    status, error_message = work_flow.add_runs(run_tup_list, ipts_number)
+    status, error_message = work_flow.add_runs_to_project(run_tup_list, ipts_number)
     assert_true(status)
 
     # Set reduction parameters

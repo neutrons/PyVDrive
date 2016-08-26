@@ -87,16 +87,27 @@ class VDriveAPI(object):
 
         return session_file_name
 
-    def add_runs(self, run_tup_list, ipts_number):
+    def add_runs_to_project(self, run_info_list):
         """
         Add runs under an IPTS dir to project
-        :param run_tup_list: list of 3-tuple as (1) run number, (2)
+        :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
         :return:
         """
-        assert(isinstance(run_tup_list, list))
-        for tup in run_tup_list:
-            assert(isinstance(tup, tuple))
-            run_number, epoch_time, file_name = tup
+        # check  input
+        assert isinstance(run_info_list, list), 'Input run-tuple list must be instance of list but not %s.' \
+                                               '' % type(run_info_list)
+        # add each run to project
+        for run_info in run_info_list:
+            # check type
+            assert isinstance(run_info, dict), 'Run information must be an instance of dictionary but not %s.' \
+                                          '' % type(run_info)
+
+            # get information and add run
+            run_number = run_info['run']
+            file_name = run_info['file']
+            create_time = run_info['time']
+            ipts_number = run_info['ipts']
+
             self._myProject.add_run(run_number, file_name, ipts_number)
 
         return True, ''
@@ -524,25 +535,37 @@ class VDriveAPI(object):
         """
         return self._myWorkDir
 
-    def get_binned_data_directory(self, ipts_number=None, run_number_list=None):
-        """ Get the directory for the binned data
+    def get_binned_data_directory(self, ipts_number=None, run_info_list=None):
+        """ Get the directory for the binned data.
         :param ipts_number:
+        :param run_info_list: a list of run information in format of dictionary
         :return:
         """
-        # TODO/NOW - Doc & check
+        # check inputs
+        assert ipts_number is None or isinstance(ipts_number, int), \
+            'IPTS number %s must either be None or an integer but not %s.' % (str(ipts_number), type(ipts_number))
+
+        # if IPTS number is not given, set IPTS number from run information list
         if ipts_number is None:
-            if run_number_list is None:
+            if run_info_list is None:
                 ipts_number = None
             else:
-                ipts_number = self.get_run_info(run_number_list[0])
+                assert isinstance(run_info_list, list) and len(run_info_list) > 0, \
+                    'Run information list must be a list but not %s.' % type(run_info_list)
+                assert isinstance(run_info_list[0], tuple), \
+                    'run information is an unexpected %s.' % type(run_info_list[0])
+                ipts_number = self.get_run_info(run_info_list[0])
 
+        # set up binned directory
         if ipts_number is None:
+            # if IPTS number is still not given, use either current working directory or from configuration
             if len(self._iptsConfigDict) == 0:
                 binned_dir = os.getcwd()
             else:
                 ipts0 = self._iptsConfigDict.keys()[0]
                 binned_dir = self._iptsConfigDict[ipts0][1]
         else:
+            # from configuration dictionary using key as ipts number
             binned_dir = self._iptsConfigDict[ipts_number][1]
 
         return binned_dir
@@ -590,6 +613,18 @@ class VDriveAPI(object):
             time_segment_list = ret_obj
 
         return True, time_segment_list
+
+    def get_ipts_number_from_dir(self, dir_name):
+        """
+        Parse IPTS number from a directory path if it is a standard VULCAN archive directory
+        :param dir_name: path to the directory
+        :return: (boolean, ipts number/error message)
+        """
+        # check inputs
+        assert isinstance(dir_name, str), 'Directory name %s must be a string but not of type %s.' \
+                                          '' % (str(dir_name), type(dir_name))
+
+        return vdrivehelper.get_ipts_number_from_dir(dir_name)
 
     def get_file_by_run(self, run_number):
         """ Get data file path by run number

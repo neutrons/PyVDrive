@@ -57,6 +57,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # group 2: get IPTS information
         self.connect(self.ui.pushButton_proceedInfo, QtCore.SIGNAL('clicked()'),
                      self.do_retrieve_information)
+        self.connect(self.ui.pushButton_browseLogFile, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_record_file)
 
         # group 3: add runs
         QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
@@ -252,23 +254,27 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-    def evt_change_data_access_mode(self):
+    def do_browse_record_file(self):
         """
-        Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
+        Browse user record file and add the line edit for user specified VULCAN record file
         :return:
         """
-        if self.ui.radioButton_useNumber.isChecked() is True:
-            self.ui.lineEdit_iptsNumber.setEnabled(True)
-            self.ui.pushButton_verify.setEnabled(True)
-            self.ui.lineEdit_iptsDir.setDisabled(True)
-            self.ui.pushButton_browse.setDisabled(True)
-            self._iptsDir = self._iptsDirFromNumber
+        # open file
+        if self._dataDir is not None:
+            default_dir = self._dataDir
         else:
-            self.ui.lineEdit_iptsNumber.setEnabled(False)
-            self.ui.pushButton_verify.setEnabled(False)
-            self.ui.lineEdit_iptsDir.setDisabled(False)
-            self.ui.pushButton_browse.setDisabled(False)
-            self._iptsDir = self._iptsDirFromDir
+            default_dir = os.getcwd()
+
+        file_filter = 'Text Files (*.txt);;Data Files (*.dat);;All Files (*.*)'
+
+        record_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'VULCAN record file', default_dir,
+                                                                 file_filter))
+        if record_file_name is None or len(record_file_name) == 0:
+            # user cancels operation
+            pass
+        else:
+            # set
+            self.ui.lineEdit_logFilePath.setText(record_file_name)
 
         return
 
@@ -360,7 +366,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         if self._iptsDir is None:
             # error message and return: data directory must be given!
             gutil.pop_dialog_error(self, 'IPTS or data directory has not been set up.'
-                                   'Use Cancel instead of OK.')
+                                   'Unable to add runs.')
             return
 
         elif self._iptsNumber is None:
@@ -392,7 +398,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             return
 
         # add runs to workflow
-        status, error_message = workflow_controller.add_runs(run_tup_list, self._iptsNumber)
+        status, error_message = workflow_controller.add_runs_to_project(run_tup_list, self._iptsNumber)
         if status is False:
             return False, error_message
 
@@ -418,6 +424,26 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         by_run = self.ui.radioButton_filterByRun.isChecked()
 
         self.set_filter_mode(by_run_number=by_run)
+
+    def evt_change_data_access_mode(self):
+        """
+        Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
+        :return:
+        """
+        if self.ui.radioButton_useNumber.isChecked() is True:
+            self.ui.lineEdit_iptsNumber.setEnabled(True)
+            self.ui.pushButton_verify.setEnabled(True)
+            self.ui.lineEdit_iptsDir.setDisabled(True)
+            self.ui.pushButton_browse.setDisabled(True)
+            self._iptsDir = self._iptsDirFromNumber
+        else:
+            self.ui.lineEdit_iptsNumber.setEnabled(False)
+            self.ui.pushButton_verify.setEnabled(False)
+            self.ui.lineEdit_iptsDir.setDisabled(False)
+            self.ui.pushButton_browse.setDisabled(False)
+            self._iptsDir = self._iptsDirFromDir
+
+        return
 
     def get_date_run_range(self):
         """

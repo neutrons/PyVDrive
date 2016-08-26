@@ -172,19 +172,21 @@ class DataArchiveManager(object):
 
     def get_partial_run_info(self, archive_key, start_run, end_run):
         """
-
+        Get a subset of runs (with all information) by specified range of run numbers
         :param archive_key:
         :param start_run:
         :param end_run:
         :return:
         """
-        # TODO/NOW/DOC
-
         # check
-        # TODO/NOW - check
-        # blabla
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %d.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert isinstance(start_run, int) and isinstance(end_run, int) and start_run <= end_run, \
+            'start run %s (%s vs int) must be less or equal to end run %s (%d vs int).' \
+            '' % (str(start_run), type(start_run), str(end_run), type(end_run))
 
-        partial_list = []
+        # get partial list
+        partial_list = list()
         for run_dict in self._infoDict[archive_key]:
             if start_run <= run_dict['run'] <= end_run:
                 partial_list.append(run_dict)
