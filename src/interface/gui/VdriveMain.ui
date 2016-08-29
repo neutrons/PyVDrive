@@ -447,7 +447,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>Reduce</string>
+                <string>Ready to Reduce</string>
                </property>
               </widget>
              </item>
@@ -489,7 +489,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
             <property name="iconSize">
              <size>
@@ -1087,7 +1087,10 @@
                   </property>
                   <layout class="QGridLayout" name="gridLayout_19">
                    <item row="1" column="0">
-                    <widget class="QGroupBox" name="groupBox_7">
+                    <widget class="QGroupBox" name="groupBox_binOverPixels">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
                      <property name="title">
                       <string>Combining Pixels</string>
                      </property>

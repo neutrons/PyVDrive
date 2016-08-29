@@ -376,6 +376,13 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def get_controller(self):
+        """
+        Get the workflow controller
+        :return:
+        """
+        return self._myParent.get_controller()
+
     def get_data_size_to_load(self):
         """
         read the frame size with unit.  convert to the
@@ -502,7 +509,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # plot the first log
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
-        self.plot_sample_log(log_name)
+        self.plot_nexus_log(log_name)
         self._currLogName = log_name
         self._currLogType = 'nexus'
 
@@ -993,7 +1000,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.graphicsView_main.reset()
 
         # plot
-        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name, '')
+        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name)
 
         return
 
@@ -1334,12 +1341,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Set up from parent main window
         :return:
         """
-        ipts_run_dict = self._myParent.get_archived_runs()
-
-        # Set to tree
-        for ipts in ipts_run_dict.keys():
-            run_list = ipts_run_dict[ipts]
-            self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
+        # TODO/FIXME/NOW - How to make this work?
+        # ipts_run_dict = self._myParent.get_archived_runs()
+        #
+        # # Set to tree
+        # for ipts in ipts_run_dict.keys():
+        #     run_list = ipts_run_dict[ipts]
+        #     self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
 
         return
 

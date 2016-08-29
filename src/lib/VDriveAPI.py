@@ -91,13 +91,14 @@ class VDriveAPI(object):
         """
         Add runs under an IPTS dir to project
         :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
+        :param ipts_number:
         :return:
         """
         # check  input
         assert isinstance(run_info_list, list), 'Input run-tuple list must be instance of list but not %s.' \
                                                '' % type(run_info_list)
         # add each run to project
-        for run_info in run_info_list:
+        for index, run_info in enumerate(run_info_list):
             # check type
             assert isinstance(run_info, dict), 'Run information must be an instance of dictionary but not %s.' \
                                           '' % type(run_info)
@@ -105,7 +106,6 @@ class VDriveAPI(object):
             # get information and add run
             run_number = run_info['run']
             file_name = run_info['file']
-            create_time = run_info['time']
             ipts_number = run_info['ipts']
 
             self._myProject.add_run(run_number, file_name, ipts_number)
@@ -738,6 +738,14 @@ class VDriveAPI(object):
 
         # return
         return run_time_list[0], run_time_list[-1]
+
+    def get_ipts_from_run(self, run_number):
+        """
+        Get IPTS number from run number (only archive)
+        :param run_number:
+        :return:
+        """
+        return self._myArchiveManager.get_ipts_number(run_number=run_number, throw=False)
 
     def get_run_info(self, run_number):
         """ Get a run's information

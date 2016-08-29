@@ -1341,10 +1341,15 @@ class VdriveMainWindow(QtGui.QMainWindow):
                     run_number = None
             else:
                 run_number = None
+
+            # get IPTS from archive
             if run_number is not None:
+                # current IPTS number
                 ipts_number = self._myWorkflow.get_ipts_from_run(run_number)
             else:
                 ipts_number = None
+
+            # create the log processing window
             self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
             self._myChildWindows.append(self._logPickerWindow)
 

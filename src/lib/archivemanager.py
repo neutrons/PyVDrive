@@ -13,7 +13,7 @@ SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
 
 
 class DataArchiveManager(object):
-    """ Helper class to find data and etc in the archive of an SNS instrument
+    """ Class to manage data files, especially data files in the archive of an SNS instrument
     """
     def __init__(self, instrument):
         """ Initialize including set instrument
@@ -54,7 +54,8 @@ class DataArchiveManager(object):
         self._iptsRootDir = None
 
         # data storage
-        self._infoDict = dict()
+        self._infoDict = dict()     # key: archive ID
+        self._runInfoDict = dict()  # key: run number
 
         # Debug mode
         self.__DEBUG__ = False
@@ -261,7 +262,7 @@ class DataArchiveManager(object):
             run_number = int(record_file_set['RUN'][i_run])
             ipts_str = str(record_file_set['IPTS'][i_run])
             ipts_number = int(ipts_str.split('-')[-1])
-            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_events.nxs' % (ipts_str, run_number, run_number)
+            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
             exp_time_str = str(record_file_set['StartTime'][i_run])
             exp_time = vdrivehelper.parse_time(exp_time_str)
 
@@ -356,6 +357,24 @@ class DataArchiveManager(object):
             runnumber = None
 
         return ipts, runnumber
+
+    def get_ipts_number(self, run_number, throw):
+        """
+
+        :param run_number:
+        :param throw:
+        :return:
+        """
+        # TODO/NOW: check + doc!
+
+        if run_number in self._runInfoDict:
+            ipts_number = self._runInfoDict[run_number]['ipts']
+        elif not throw:
+            ipts_number = None
+        else:
+            raise RuntimeError('Blabla')
+
+        return ipts_number
 
     def search_experiment_runs_by_time(self, delta_days):
         """ Search files under IPTS and return with the runs created within a certain
@@ -506,8 +525,6 @@ class DataArchiveManager(object):
 ################################################################################
 # External Methods
 ################################################################################
-
-
 def check_read_access(file_name):
     """ Check whether it is possible to access a file
     :param file_name:
@@ -537,6 +554,7 @@ def load_from_xml(xml_file_name):
 
     return True, save_dict
 
+
 def save_to_xml(save_dict, xml_file_name):
     """
     Save a dictionary to an XML file
@@ -558,76 +576,3 @@ def save_to_xml(save_dict, xml_file_name):
     output.close()
 
     return
-
-
-def testmain():
-    """
-    """
-    mhelper = DataArchiveManager('vulcan')
-    mhelper.set_data_root_path('/SNS/')
-    try:
-        mhelper.set_ipts_number(12240)
-    except AssertionError as e:
-        print "IPTS 12240 does not exist due to %s." % str(e)
-        sys.exit(1)
-
-    filenames = mhelper.search_experiment_runs_by_time()
-    timelist = mhelper.get_files_time_information(filenames)
-    mhelper.rollBack(timelist[0][0])
-
-    timeformat = "%Y-%m-%d %H:%M:%S"
-
-    time1 = time.strptime("2015-02-06 19:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-
-    time1 = time.strptime("2015-02-06 12:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-    
-    time1 = time.strptime("2015-02-08 12:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-    
-    time1 = time.strptime("2015-02-09 07:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-
-
-def utilmain(argv):
-    """ Get a list of runs under an IPTS    
-    """
-    mhelper = DataArchiveManager('vulcan')
-    mhelper.set_data_root_path('/SNS/')
-    try:
-        mhelper.set_ipts_number(10076)
-    except AssertionError as e:
-        print "IPTS 12240 does not exist due to %s" % str(e)
-        sys.exit(1)
-
-    timefilenamelistlist = mhelper.search_experiment_runs_by_time(100000)
-
-    # suppose only 1 item in list
-    timefilenamelist = sorted(timefilenamelistlist[0])
-
-    wbuf = ""
-    for timefilename in timefilenamelist:
-        wbuf += "%s\n" % (timefilename[1])
-
-    ofile = open("List10076.txt", "w")
-    ofile.write(wbuf)
-    ofile.close()
-
-
-
-
-if __name__ == "__main__":
-    """ Testing
-    """
-    import sys
-
-    utilmain(sys.argv)

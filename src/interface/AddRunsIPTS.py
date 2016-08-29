@@ -522,7 +522,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             return False
 
         if status:
+            # set record key as current archive key and get the range of the run
             record_key = ret_obj
+            self._archiveKey = record_key
             start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
             run_info_list = [start_run, end_run]
         else:
