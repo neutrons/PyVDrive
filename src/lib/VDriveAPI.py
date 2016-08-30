@@ -709,9 +709,36 @@ class VDriveAPI(object):
             ret_obj = run_info_dict_list
         else:
             status = False
-            ret_obj = 'No run is selected .... ' # TODO/NOW - Make it complete
+            ret_obj = 'No run is selected from %d to %d' % (begin_run, end_run)
 
         return status, ret_obj
+
+    def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
+        """
+        Get the local runs (data file)
+        :param archive_key:
+        :param local_dir:
+        :param begin_run:
+        :param end_run:
+        :param standard_sns_file:
+        :return:
+        """
+        print '[DB...BAT] Archive key = ', archive_key
+
+        # call archive mananger
+        run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
+                                                                       standard_sns_file)
+
+        if len(run_info_dict_list) > 0:
+            status = True
+            ret_obj = run_info_dict_list
+        else:
+            status = False
+            ret_obj = 'No valid data file is found in directory %s from run %d to run %d.' % (local_dir,
+                                                                                              begin_run,
+                                                                                              end_run)
+
+        return
 
     def get_ipts_run_range(self, archive_key):
         """
@@ -1302,8 +1329,9 @@ class VDriveAPI(object):
         :return:
         """
         # Requirements
-        assert isinstance(ipts_number, int)
-        assert ipts_number > 0
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+                                             '' % (str(ipts_number), type(ipts_number))
+        assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
 
         self._myArchiveManager.set_ipts_number(ipts_number)
 
@@ -1317,9 +1345,16 @@ class VDriveAPI(object):
         :param binned_data_dir:
         :return:
         """
-        # TODO/NOW - check validity
+        # check
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+                                             '' % (str(ipts_number), type(ipts_number))
+        assert isinstance(data_dir, str) and os.path.exists(data_dir), \
+            'Data directory %s of type (%s) must be a string and exists.' % (str(data_dir), type(data_dir))
+        assert isinstance(binned_data_dir, str) and os.path.exists(binned_data_dir), \
+            'Binned data directory %s of type (%s) must be a string and exists.' % (str(binned_data_dir),
+                                                                                    type(binned_data_dir))
 
-        # ... ...
+        # set up the configuration as a 2-item list
         self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
 
         return

@@ -52,6 +52,8 @@ class DataArchiveManager(object):
         self._iptsDataDir = None
         # ipts root data directory such as /SNS/VULCAN/IPTS-1234/
         self._iptsRootDir = None
+        # flag to see whether data are stored in local computer
+        self._localData = False
 
         # data storage
         self._infoDict = dict()     # key: archive ID
@@ -328,6 +330,31 @@ class DataArchiveManager(object):
 
         return run_tup_list
 
+    def get_local_run_info(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
+        """
+        Get the file information for data files stored in local directory
+        :param archive_key:
+        :param local_dir:
+        :param begin_run:
+        :param end_run:
+        :param standard_sns_file:
+        :return: run_info_dict_list
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert isinstance(local_dir, str) and os.path.exists(local_dir), \
+            'Local data directory %s (of type %s) must be a string and exist.' % (str(local_dir), type(local_dir))
+        assert isinstance(begin_run, int) and isinstance(end_run, int) and begin_run < end_run
+
+        # Info dictionary contains a list of dictionary
+        # FIXME/TODO/now - IS THERE ANY EASY/EFFICIENT WAY TO FIND OUT RUN INFORMATION BY RUN NUMBER?
+        print '[DB...BAT] : Archived information! ', self._infoDict[archive_key]
+
+        for run_number in range(begin_run, end_run):
+            # TODO/NOW/FIXME - continue from here!
+            pass
+
     @staticmethod
     def get_ipts_run_from_file_name(nxs_file_name):
         """
@@ -478,12 +505,24 @@ class DataArchiveManager(object):
 
         # Set
         self._iptsNo = ipts
-        self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts)
-        self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
 
-        # Check
-        assert os.path.exists(self._iptsRootDir), 'IPTS root directory %s does not exist.' % self._iptsRootDir
-        assert os.path.exists(self._iptsDataDir), 'IPTS data directory %s does not exist.' % self._iptsDataDir
+        # special case (local directory)
+        if ipts == 0:
+            # case for local data
+            self._localData = True
+            self._iptsRootDir = None
+            self._iptsDataDir = None
+        else:
+            # case for archive data with IPTS information
+            self._localData = False
+            self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts)
+            self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
+
+            # Check
+            assert os.path.exists(self._iptsRootDir), 'IPTS root directory %s does not exist.' \
+                                                      '' % self._iptsRootDir
+            assert os.path.exists(self._iptsDataDir), 'IPTS data directory %s does not exist.' \
+                                                      '' % self._iptsDataDir
 
         return
 

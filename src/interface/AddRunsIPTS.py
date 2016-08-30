@@ -216,7 +216,15 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             assert end_run is not None and begin_run is not None, 'Begin run and end run must be given ' \
                                                                   'in non-skip-scan case.'
 
-            status, ret_obj = workflow_controller.get_archived_runs(self._archiveKey, begin_run, end_run)
+            if self._iptsNumber >  0:
+                # valid archiving system
+                status, ret_obj = workflow_controller.get_archived_runs(self._archiveKey, begin_run,
+                                                                        end_run)
+            else:
+                # add local data files
+                print '[DB...BAT] data directory:', self._dataDir, 'IPTS dir:', self._iptsDir
+                status, ret_obj = workflow_controller.get_local_runs(self._archiveKey, self._iptsDir,
+                                                                     begin_run, end_run, standard_sns_file=True)
         # END-IF-ELSE
 
         # get the complete list of run (tuples) as it is filtered by date
@@ -262,6 +270,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         # open file
         if self._dataDir is not None:
             default_dir = self._dataDir
+        elif self._iptsDir is not None:
+            default_dir = self._iptsDir
         else:
             default_dir = os.getcwd()
 
@@ -370,8 +380,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             return
 
         elif self._iptsNumber is None:
-            # get the ipts number
-            status, ret_obj = workflow_controller.get_ipts_number_from_dir(self._iptsNumber)
+            # get the ipts number for IPTS directory
+            status, ret_obj = workflow_controller.get_ipts_number_from_dir(self._iptsDir)
             if status is False:
                 message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
                 gutil.pop_dialog_error(self, message)
