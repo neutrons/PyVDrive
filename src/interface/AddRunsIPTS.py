@@ -379,20 +379,24 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                                    'Unable to add runs.')
             return
 
-        elif self._iptsNumber is None:
+        # try to get the IPTS from IPTS directory
+        if self._iptsNumber is None:
             # get the ipts number for IPTS directory
             status, ret_obj = workflow_controller.get_ipts_number_from_dir(self._iptsDir)
             if status is False:
+                # use IPTS = 0 for no-IPTS
                 message = 'Unable to get IPTS number due to %s. Using user directory.' % ret_obj
                 gutil.pop_dialog_error(self, message)
-                ipts_number = 0
+                self._iptsNumber = 0
             else:
-                ipts_number = ret_obj
-            self._iptsNumber = ipts_number
+                # good IPTS
+                self._iptsNumber = ret_obj
+        # END-IF-ELSE
 
         # set IPTS number of controller
         workflow_controller.set_ipts(self._iptsNumber)
 
+        # get the list of runs by run number of date
         if self.ui.radioButton_filterByDate.isChecked():
             # add runs by date
             run_tup_list = self.add_runs_by_date()
@@ -405,10 +409,11 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         # return with error
         if run_tup_list is False:
+            gutil.pop_dialog_error(self, 'Unable to get runs with information.')
             return
 
         # add runs to workflow
-        status, error_message = workflow_controller.add_runs_to_project(run_tup_list, self._iptsNumber)
+        status, error_message = workflow_controller.add_runs_to_project(run_tup_list)
         if status is False:
             return False, error_message
 

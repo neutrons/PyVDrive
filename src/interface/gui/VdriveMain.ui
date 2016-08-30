@@ -447,7 +447,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>Ready to Reduce</string>
+                <string>Ready for Reduction</string>
                </property>
               </widget>
              </item>

@@ -332,63 +332,15 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self.ui.checkBox_chopRun.isChecked():
             raise NotImplementedError('Binning data with option to chop will be solved later!')
 
-        # Collect information for reduction
-        # binning parameter
-        if self.ui.radioButton_binStandard.isChecked():
-            # default
-            bin_par = None
-        elif self.ui.radioButton_binCustomized.isChecked():
-            # customized bin parameters
-            bin_width = GuiUtility.parse_float(self.ui.lineEdit_binWidth)
-            min_tof = GuiUtility.parse_float(self.ui.lineEdit_binMinTOF)
-            max_tof = GuiUtility.parse_float(self.ui.lineEdit_binMaxTOF)
-            bin_par = (min_tof, bin_width, max_tof)
+        import VDrivePlotDataBinning as BinHelper
+        status, error_message = BinHelper.do_bin_data(self.ui, self._myWorkflow)
+        if status:
+            # Show message to notify user that the reduction is complete
+            GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
+            # switch the tab to 'VIEW'
+            self.ui.tabWidget_reduceData.setCurrentIndex(2)
         else:
-            # violate requirements
-            GuiUtility.pop_dialog_error(self, '')
-            return
-
-        # bin over pixel
-        if self.ui.checkBox_overPixel.isChecked():
-            # binning pixel
-            bin_pixel_direction = ''
-            if self.ui.radioButton_binVerticalPixels.isChecked():
-                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeVertical)
-                bin_pixel_direction = 'vertical'
-            elif self.ui.radioButton_binHorizontalPixels.isChecked():
-                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
-                bin_pixel_direction = 'horizontal'
-            else:
-                GuiUtility.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
-                return
-            raise NotImplementedError('Will be implemented in #32.')
-        # END-IF-ELSE
-
-        # Other parameters
-        do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
-        do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
-        do_substract_special_pattern = self.ui.checkBox_reduceSubstractSpecialPattern.isChecked()
-        do_write_fullprof = self.ui.checkBox_outFullprof.isChecked()
-        do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
-
-        # Reduce data
-        # retrieve the runs to reduce
-        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
-        if len(run_number_list) == 0:
-            GuiUtility.pop_dialog_error(self, 'No run is selected in run number table.')
-        status, error_message = self._myWorkflow.set_runs_to_reduce(run_numbers=run_number_list)
-        if status is False:
             GuiUtility.pop_dialog_error(self, error_message)
-
-        status, ret_obj = self._myWorkflow.reduce_data_set()
-        if status is False:
-            error_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, error_msg)
-
-        # Show message to notify user that the reduction is complete
-        GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
-        # switch the tab to 'VIEW'
-        self.ui.tabWidget_reduceData.setCurrentIndex(2)
 
         return
 

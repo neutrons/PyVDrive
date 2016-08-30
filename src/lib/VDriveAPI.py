@@ -951,7 +951,7 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, norm_by_vanadium=False):
+    def reduce_data_set(self, norm_by_vanadium=False, bin_size=None):
         """ Reduce a set of data
         Purpose:
             Reduce a set of event data
