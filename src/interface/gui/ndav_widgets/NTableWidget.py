@@ -354,6 +354,8 @@ class NTableWidget(QtGui.QTableWidget):
         :return:
         """
         # Check
+        assert not isinstance(value, bool), 'Boolean is not accepted for set_value_cell()'
+
         if row < 0 or row >= self.rowCount() or col < 0 or col >= self.columnCount():
             raise IndexError('Input row number or column number is out of range.')
 

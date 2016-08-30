@@ -19,6 +19,7 @@ from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 #from qtconsole.rich_ipython_widget import RichIPythonWidget
 from IPython.qt.inprocess import QtInProcessKernelManager
 #import qtconsole.inprocess
+#from qtconsole.inprocess import QtInProcessKernelManager
 
 from mantid.api import AnalysisDataService as mtd
 
@@ -118,10 +119,11 @@ class MantidIPythonWidget(RichIPythonWidget):
         # interpret command: command is in self.input_buffer
         script = str(self.input_buffer).strip()
 
+        # main application is workspace viewer
         if self._mainApplication.is_reserved_command(script):
             err_msg = self._mainApplication.execute(script)
             # clear input buffer
-            self.input_buffer = 'print (%s)' % err_msg 
+            self.input_buffer = 'print (%s)' % err_msg
 
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 

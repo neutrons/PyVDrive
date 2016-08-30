@@ -9,11 +9,11 @@ import sys
 import interface.config
 if interface.config.DEBUG: 
     from interface.gui.mantidipythonwidget import MantidIPythonWidget
+    pass
 
 from PyQt4 import QtGui
 
 from interface.VDrivePlot import VdriveMainWindow
-
 
 def lava_app():
     if QtGui.QApplication.instance():

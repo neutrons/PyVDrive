@@ -5,6 +5,7 @@
 ########################################################################
 import sys
 import numpy
+
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -28,7 +29,7 @@ class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
-    def __init__(self, parent=None, init_run=None):
+    def __init__(self, parent=None, ipts_number=None, init_run=None):
         """ Init
         """
         # call base
@@ -40,6 +41,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # set up UI
         self.ui = VdriveLogPicker.Ui_MainWindow()
         self.ui.setupUi(self)
+
+        # Set up widgets
+        self._init_widgets_setup()
 
         # Defining widget handling methods
         self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
@@ -55,7 +59,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_next_log)
         self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_read_log_file)
+                     self.do_scan_log_file)
+        self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_mts_log)
+        self.connect(self.ui.comboBox_blockList, QtCore.SIGNAL('indexChanged(int)'),
+                     self.do_load_mts_log)
+        self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
+                     self.evt_re_plot_mts_log)
 
         self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
                      self.do_set_log_options)
@@ -76,6 +86,12 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_enter_select_picker_mode)
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
+
+        self.connect(self.ui.radioButton_autoSlicer, QtCore.SIGNAL('toggled (bool)'),
+                     self.evt_switch_slicer_method)
+        self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
+                     self.evt_switch_slicer_method)
+        self._mutexLockSwitchSliceMethod = False
 
         # Slicer table
         self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
@@ -101,6 +117,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
                      self.evt_change_resolution_type)
 
+        self.connect(self.ui.pushButton_prevPartialLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_prev_log_frame)
+        self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
+                     self.do_load_next_log_frame)
+
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
                                                         self.on_mouse_press_event)
@@ -109,10 +130,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
                                                         self.on_mouse_motion)
 
+        self._mtsFileLoaderWindow = None
+
         # Initial setup
         if init_run is not None:
             assert isinstance(init_run, int)
             self.ui.lineEdit_runNumber.setText('%d' % init_run)
+            self._iptsNumber = ipts_number
+        else:
+            self._iptsNumber = None
 
         # Class variables
         self._currentLogIndex = 0
@@ -128,14 +154,25 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._myPickerIDList = list()
 
         # Experiment-related variables
+        self._currLogType = None
         self._currRunNumber = None
         self._currLogName = None
+
+        self._currentBlockIndex = None
+        self._currentFrameUnit = str(self.ui.comboBox_logFrameUnit.currentText())
+        self._currentStartPoint = None
+        self._currentStopPoint = None
+        self._averagePointsPerSecond = None
+        self._blockIndex = None
+
+        # MTS log format dictionary.  key is file name, value is the format dictionary
+        self._mtsLogFormat = dict()
 
         # Highlighted lines list
         self._myHighLightedLineList = list()
 
-        # Set up widgets
-        self._init_widgets_setup()
+        # Mutex/Lock, multiple threading
+        self._mutexLockLogNameComboBox = False
 
         return
 
@@ -158,11 +195,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useNexus.setChecked(True)
         self.ui.radioButton_useLogFile.setChecked(False)
 
+        # type of slicer picker
+        self.ui.radioButton_autoSlicer.setChecked(True)
+        self.ui.radioButton_manualSlicer.setChecked(False)
+        self._set_main_slice_method()
+        for item in ['Both', 'Increase', 'Decrease']:
+            self.ui.comboBox_logChangeDirection.addItem(item)
+
         # resolution
         self.ui.radioButton_useMaxPointResolution.setChecked(True)
         self.ui.radioButton_useTimeResolution.setChecked(False)
 
-        self.ui.lineEdit_resolutionMaxPoints.setText('4000')
+        self.ui.lineEdit_resolutionMaxPoints.setText('10000')
         self.ui.lineEdit_resolutionMaxPoints.setEnabled(True)
         self.ui.lineEdit_timeResolution.setText('1')
         self.ui.lineEdit_timeResolution.setEnabled(False)
@@ -171,6 +215,31 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.resolution_group = QtGui.QButtonGroup(self)
         self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
         self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
+
+        # combo box
+        self.ui.comboBox_logFrameUnit.clear()
+        self.ui.comboBox_logFrameUnit.addItems(['points', 'seconds'])
+        self.ui.comboBox_logFrameUnit.setCurrentIndex(0)
+        # initial value for number of points on
+        self.ui.lineEdit_logFrameSize.setText('5000')
+
+        return
+
+    def _set_main_slice_method(self):
+        """
+        Set the main slicer method, manual or auto
+        :return:
+        """
+        # TODO/NOW - check 2 checkbox cannot be True or False simultaneously
+        print '[DB] DO SOMETHING'
+
+        # enable to disable
+        if self.ui.radioButton_autoSlicer.isChecked():
+            self.ui.groupBox_sliceSetupAuto.setEnabled(True)
+            self.ui.groupBox_slicerSetupManual.setEnabled(False)
+        else:
+            self.ui.groupBox_sliceSetupAuto.setEnabled(False)
+            self.ui.groupBox_slicerSetupManual.setEnabled(True)
 
         return
 
@@ -223,7 +292,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         for i in xrange(len(source_time_segments)):
             time_segment = source_time_segments[i]
-            status, ret_obj = self._myParent.get_workflow().get_sample_log_values(
+            status, ret_obj = self._myParent.get_controller().get_sample_log_values(
                 self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
             if status is False:
                 GuiUtility.pop_dialog_error(self, ret_obj)
@@ -270,7 +339,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             step_value = None
 
         # pass the segments to API to generate slicers
-        self._myParent.get_workflow().generate_data_slicer(
+        self._myParent.get_controller().generate_data_slicer(
             self._currRunNumber, source_time_segments, by_log_value, by_time, step_value)
 
         # Run GenerateEventFilters
@@ -281,21 +350,21 @@ class WindowLogPicker(QtGui.QMainWindow):
             slicer_tag = 'TempSlicerRun%dSeg%d' % (self._currRunNumber, i)
             time_segment = source_time_segments[i]
             if by_time is True:
-                self._myParent.get_workflow().gen_data_slicer_by_time(
+                self._myParent.get_controller().gen_data_slicer_by_time(
                     self._currRunNumber, start_time=time_segment[0], end_time=time_segment[1],
                     time_step=step_value, tag=slicer_tag)
             else:
-                self._myParent.get_workflow.gen_data_slicer_sample_log(
+                self._myParent.get_controller.gen_data_slicer_sample_log(
                     self._currRunNumber, log_name, time_segment[0], time_segment[1],
                     log_value_step=step_value, tag=slicer_tag)
 
             # Get time segments, i.e., slicer
-            status, ret_obj = self._myParent.get_workflow().get_event_slicer(
+            status, ret_obj = self._myParent.get_controller().get_event_slicer(
                 run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
                 relative_time=True)
             print '[DB-BAR] Returned object: ', ret_obj
 
-            self._myParent.get_workflow().clean_memory(self._currRunNumber, slicer_tag)
+            self._myParent.get_controller().clean_memory(self._currRunNumber, slicer_tag)
 
             if status is False:
                 err_msg = ret_obj
@@ -304,6 +373,107 @@ class WindowLogPicker(QtGui.QMainWindow):
                 sub_segments = ret_obj
                 self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
         # END-FOR (i)
+
+        return
+
+    def get_controller(self):
+        """
+        Get the workflow controller
+        :return:
+        """
+        return self._myParent.get_controller()
+
+    def get_data_size_to_load(self):
+        """
+        read the frame size with unit.  convert to the
+        :return: number of points to load
+        """
+        # block
+        block_index = int(self.ui.comboBox_blockList.currentText())
+        assert self._currentBlockIndex is None or block_index == self._currentBlockIndex, \
+            'Block index on GUI is different from the stored value.'
+
+        # unit
+        unit = str(self.ui.comboBox_logFrameUnit.currentText())
+        assert unit == self._currentFrameUnit, 'target unit %s is not same as current frame unit %s.' \
+                                               '' % (unit, self._currentFrameUnit)
+
+        # get increment value
+        if unit == 'points':
+            delta = int(self.ui.lineEdit_logFrameSize.text())
+        elif unit == 'seconds':
+            delta = float(self.ui.lineEdit_logFrameSize.text())
+        else:
+            raise AttributeError('Frame unit %s is not supported.' % unit)
+
+        # get stop point
+        if self._currentFrameUnit == 'seconds':
+            # convert delta (second) to delta (points)
+            delta_points = int(delta/self._avgFrameStep)
+            assert delta_points >= 1
+        else:
+            # use the original value
+            delta_points = delta
+
+        return delta_points
+
+    def do_load_next_log_frame(self):
+        """
+        Load the next frame of the on-show sample log
+        :return:
+        """
+        # get parameters & check
+        delta_points = self.get_data_size_to_load()
+        if delta_points <= 0:
+            # no point to load
+            print '[DB INFO] calculated delta-points = %d < 0. No loading' % delta_points
+
+        # get the file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+        format_dict = self._mtsLogFormat[mts_log_file]
+
+        # reset the start and stop points
+        prev_end_point = self._currentStopPoint
+
+        if self._currentStopPoint + delta_points > format_dict['data'][self._blockIndex][1]:
+            # the next frame is not a complete frame
+            stop_point = format_dict['data'][self._blockIndex][1]
+            if stop_point == self._currentStopPoint:
+                # already at the last frame. no operation is needed.
+                # TODO - a better message is required.
+                orig_text = str(self.ui.label_logFileLoadInfo.text())
+                self.ui.label_logFileLoadInfo.setText(orig_text + '  [End]')
+                return
+            else:
+                self._currentStopPoint = stop_point
+            # END-IF
+        else:
+            # next frame is still a complete frame
+            self._currentStopPoint += delta_points
+        # END-IF
+
+        # reset starting
+        self._currentStartPoint = prev_end_point
+
+        # load
+        self.load_plot_mts_log(reset_canvas=True)
+
+        return
+
+    def do_load_prev_log_frame(self):
+        """
+        Load the previous frame of the on-showing sample log
+        :return:
+        """
+        # get parameters & check
+        delta_points = self.get_data_size_to_load()
+
+        # reset the start and stop points
+        self._currentStopPoint = self._currentStartPoint
+        self._currentStartPoint = max(0, self._currentStartPoint-delta_points)
+
+        # load and plot
+        self.load_plot_mts_log(reset_canvas=True)
 
         return
 
@@ -339,8 +509,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # plot the first log
         log_name = str(self.ui.comboBox_logNames.currentText())
         log_name = log_name.replace(' ', '').split('(')[0]
-        self.plot_sample_log(log_name)
+        self.plot_nexus_log(log_name)
         self._currLogName = log_name
+        self._currLogType = 'nexus'
 
         return
 
@@ -351,6 +522,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # get configuration
         hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
+
+        # lock event response
+        self._mutexLockLogNameComboBox = True
 
         # clear box
         self.ui.comboBox_logNames.clear()
@@ -368,6 +542,52 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # set current index
         self._currentLogIndex = 0
+
+        # release
+        self._mutexLockLogNameComboBox = False
+
+        return
+
+    def load_plot_mts_log(self, reset_canvas):
+        """
+        Load and plot MTS log.  The log loaded and plot may the only a part of the complete log
+        :param reset_canvas: if true, then reset canvas
+        :return:
+        """
+        # get the file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+
+        # load MTS log file
+        self._myParent.get_controller().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
+                                                     self._blockIndex,
+                                                     self._currentStartPoint, self._currentStopPoint)
+
+        # get the log name
+        log_names = sorted(self._myParent.get_controller().get_mts_log_headers(mts_log_file))
+        assert isinstance(log_names, list)
+        # move Time to last position
+        if 'Time' in log_names:
+            log_names.remove('Time')
+            log_names.append('Time')
+
+        # lock
+        self._mutexLockLogNameComboBox = True
+
+        self.ui.comboBox_logNames.clear()
+        for log_name in log_names:
+            self.ui.comboBox_logNames.addItem(log_name)
+
+        self.ui.comboBox_logNames.setCurrentIndex(0)
+        curr_log_name = str(self.ui.comboBox_logNames.currentText())
+
+        # unlock
+        self._mutexLockLogNameComboBox = False
+
+        # plot
+        extra_message = 'Total data points = %d' % (
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][1] -
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][0])
+        self.plot_mts_log(curr_log_name, reset_canvas, extra_message)
 
         return
 
@@ -395,7 +615,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         sample_log_name = self._logNameList[next_index]
 
         # Plot
-        self.plot_sample_log(sample_log_name)
+        if self._currLogType == 'nexus':
+            self.plot_nexus_log(log_name=sample_log_name)
+        else:
+            self.plot_mts_log(log_name=sample_log_name,
+                              reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         # Change status if plotting is successful
         self._currentLogIndex = next_index
@@ -547,21 +771,21 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Call parent method
         if self._myParent is not None:
-            self._myParent.get_workflow().gen_data_slice_manual(run_number=self._currRunNumber,
-                                                                relative_time=True,
-                                                                time_segment_list=split_tup_list,
-                                                                slice_tag=slicer_name)
+            self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                                  relative_time=True,
+                                                                  time_segment_list=split_tup_list,
+                                                                  slice_tag=slicer_name)
         # END-IF
 
         return
 
-    def do_read_log_file(self):
+    def do_scan_log_file(self):
         """
-        Purpose: read MTS log file
+        Purpose: read MTS log file by launching an MTS log file parsing window
         :return:
         """
-        self._mts_file_loader_window = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
-        self._mts_file_loader_window.show()
+        self._mtsFileLoaderWindow = LoadMTSLogWindow.LoadMTSLogFileWindow(self)
+        self._mtsFileLoaderWindow.show()
 
         return
 
@@ -569,7 +793,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Resize canvas
         :return:
         """
-        self.plot_sample_log(self._currLogName)
+        if self._currLogType == 'nexus':
+            self.plot_nexus_log(self._currLogName)
+        else:
+            self.plot_mts_log(self._currLogName, reset_canvas=True)
 
         return
 
@@ -577,7 +804,25 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         :return:
         """
-        # TODO
+        import AddRunsIPTS as IptsDialog
+
+        # Launch window
+        child_window = IptsDialog.AddRunsByIPTSDialog(self)
+
+        # init set up
+        if self._iptsNumber is not None:
+            child_window.set_ipts_number(self._addedIPTSNumber)
+
+        child_window.set_data_root_dir(self._myParent.get_controller().get_data_root_directory())
+        r = child_window.exec_()
+
+        # set the close one
+        ipts_run_number = child_window.get_ipts_number()
+
+        print ipts_run_number
+        print type(ipts_run_number)
+
+        return
 
     def do_set_log_options(self):
         """
@@ -615,23 +860,207 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def evt_switch_slicer_method(self):
+        """
+
+        :return:
+        """
+        # TODO/NOW: DOC
+
+        if self._mutexLockSwitchSliceMethod:
+            return
+
+        # Lock
+        self._mutexLockSwitchSliceMethod = True
+
+        # Only 1 situation requires
+
+        self._set_main_slice_method()
+
+        # Unlock
+        self._mutexLockSwitchSliceMethod = False
+
+        return
+
     def evt_plot_sample_log(self):
         """
         Plot sample log
         :return:
         """
+        # check mutex
+        if self._mutexLockLogNameComboBox:
+            return
+
         # get current log name
         log_name = str(self.ui.comboBox_logNames.currentText())
-        log_name = log_name.replace(' ', '').split('(')[0]
+        if self._currLogType == 'nexus':
+            log_name = log_name.replace(' ', '').split('(')[0]
+
+        # set class variables
         self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
         self._currLogName = log_name
 
         # plot
-        self.plot_sample_log(log_name)
+        if self._currLogType == 'nexus':
+            # nexus log
+            self.plot_nexus_log(log_name)
+        else:
+            # external MTS log file
+            self.plot_mts_log(log_name, reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         return
 
-    def highlite_picker(self, picker_id, flag, color='red'):
+    def evt_re_plot_mts_log(self):
+        """
+        MTS log set up parameters are changed. Re-plot!
+        :return:
+        """
+        # get new set up as it is about to load different logs, then it is better to reload
+        self.do_load_mts_log()
+
+        return
+
+    def plot_mts_log(self, log_name, reset_canvas, extra_message=None):
+        """
+
+        :param log_name:
+        :param reset_canvas:
+        :param extra_message:
+        :return:
+        """
+        # set extra message to label
+        if extra_message is not None:
+            self.ui.label_logFileLoadInfo.setText(extra_message)
+
+        # check
+        assert isinstance(log_name, str), 'Log name %s must be a string but not %s.' \
+                                          '' % (str(log_name), str(type(log_name)))
+
+        mts_data_set = self._myParent.get_controller().get_mts_log_data(log_file_name=None,
+                                                                        header_list=['Time', log_name])
+        # plot a numpy series'
+        try:
+            vec_x = mts_data_set['Time']
+            vec_y = mts_data_set[log_name]
+            assert isinstance(vec_x, numpy.ndarray)
+            assert isinstance(vec_y, numpy.ndarray)
+        except KeyError as key_err:
+            raise RuntimeError('Log name %s does not exist (%s).' % (log_name, str(key_err)))
+
+        # clear if overlay
+        if reset_canvas or self.ui.checkBox_overlay.isChecked() is False:
+            self.ui.graphicsView_main.reset()
+
+        # plot
+        self.ui.graphicsView_main.plot_sample_log(vec_x, vec_y, log_name)
+
+        return
+
+    def plot_nexus_log(self, log_name):
+        """
+        Plot log from NEXUX file
+        Requirement:
+        1. sample log name is valid;
+        2. resolution is set up (time or maximum number of points)
+        :param log_name:
+        :return:
+        """
+        # get resolution
+        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
+        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
+        if use_time_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
+        elif use_num_res:
+            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
+        else:
+            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
+            return
+
+        # get the sample log data
+        if log_name in self._sampleLogDict[self._currRunNumber]:
+            # get sample log value from previous stored
+            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
+        else:
+            # get sample log data from driver
+            vec_x, vec_y = self._myParent.get_sample_log_value(log_name, relative=True)
+            self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
+        # END-IF
+
+        # get range of the data
+        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
+        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+
+        # adjust the resolution
+        plot_x, plot_y = self.process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
+                                           new_min_x, new_max_x)
+
+        # overlay?
+        if self.ui.checkBox_overlay.isChecked() is False:
+            # clear all previous lines
+            self.ui.graphicsView_main.reset()
+
+        # plot
+        self.ui.graphicsView_main.plot_sample_log(plot_x, plot_y, log_name)
+
+        return
+
+    @staticmethod
+    def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
+                     min_x, max_x):
+        """
+        re-process the original to plot on canvas smartly
+        :param vec_x: vector of time in unit of seconds
+        :param vec_y:
+        :param use_number_resolution:
+        :param use_time_resolution:
+        :param resolution: time resolution (per second) or maximum number points allowed on canvas
+        :param min_x:
+        :param max_x:
+        :return:
+        """
+        # check
+        assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
+        assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
+        assert (use_number_resolution and not use_time_resolution) or (
+        not use_number_resolution and use_time_resolution)
+
+        # range
+        if min_x is None:
+            min_x = vec_x[0]
+        else:
+            min_x = max(vec_x[0], min_x)
+
+        if max_x is None:
+            max_x = vec_x[-1]
+        else:
+            max_x = min(vec_x[-1], max_x)
+
+        index_array = numpy.searchsorted(vec_x, [min_x - 1.E-20, max_x + 1.E-20])
+        i_start = index_array[0]
+        i_stop = index_array[1]
+
+        # define skip points
+        if use_time_resolution:
+            # time resolution
+            num_target_pt = int((max_x - min_x + 0.) / resolution)
+        else:
+            # maximum number
+            num_target_pt = int(resolution)
+
+        num_raw_points = i_stop - i_start
+        if num_raw_points < num_target_pt * 2:
+            pt_skip = 1
+        else:
+            pt_skip = int(num_raw_points / num_target_pt)
+
+        plot_x = vec_x[i_start:i_stop:pt_skip]
+        plot_y = vec_y[i_start:i_stop:pt_skip]
+
+        # print 'Input vec_x = ', vec_x, 'vec_y = ', vec_y, i_start, i_stop, pt_skip, len(plot_x)
+
+        return plot_x, plot_y
+
+    def highlight_picker(self, picker_id, flag, color='red'):
         """
         Highlight (by changing color) of the picker selected
         :param picker_id:
@@ -654,20 +1083,44 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def load_mts_log(self, mts_file_name, format_dict):
-        """
+    def do_load_mts_log(self):
+        """ Load MTS log file
 
-        :param mts_file_name:
-        :param format_dict:
         :return:
         """
-        # import pandas
-        import pandas as pd
+        # get file and match
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+        assert mts_log_file in self._mtsLogFormat, 'MTS log format has not key for log file %s. Current keys are' \
+                                                   '%s.' % (mts_log_file, str(self._mtsLogFormat.keys()))
 
-        mts_logs = pd.read_csv(mts_file_name, skiprows=[0, 1, 2, 4])
-        log_name_list = mts_logs.keys()
+        # block ID and set up average step size
+        block_index = int(self.ui.comboBox_blockList.currentText())
 
+        # get this dictionary
+        mts_log_dict = self._mtsLogFormat[mts_log_file]
 
+        print '[DB...BAT] mts log dict: ', mts_log_dict
+
+        duration = mts_log_dict['duration'][block_index][1] - mts_log_dict['duration'][block_index][0]
+        num_points = mts_log_dict['data'][block_index][1] - mts_log_dict['data'][block_index][0]
+        self._averagePointsPerSecond = int(num_points / duration)
+        assert self._averagePointsPerSecond > 1, 'Number of data points per seconds %d must be large than 0.' \
+                                                 '' % self._averagePointsPerSecond
+
+        # get delta points
+        delta_points = self.get_data_size_to_load()
+
+        # set up start and stop
+        self._currentStartPoint = 0
+        self._currentStopPoint = self._currentStartPoint + delta_points
+        self._blockIndex = block_index
+
+        # load
+        self.load_plot_mts_log(reset_canvas=True)
+
+        self._currLogType = 'mts'
+
+        return
 
     def locate_picker(self, x_pos, ratio=0.2):
         """ Locate a picker with the new x
@@ -822,7 +1275,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         new_y = event.ydata
 
         # Outside of canvas, no response
-        if new_x is None or new_y is None:
+        if (new_x is None) or (new_y is None):
             return
 
         # Calculate the relative displacement
@@ -864,10 +1317,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                     pass
                     # print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
                 """
-                self.highlite_picker(picker_id=None, flag=False)
+                self.highlight_picker(picker_id=None, flag=False)
                 if 0 <= picker_list_index < len(self._myPickerIDList):
                     picker_id = self._myPickerIDList[picker_list_index]
-                    self.highlite_picker(picker_id, True)
+                    self.highlight_picker(picker_id, True)
             # END-IF
 
         # END-IF (PickerMode)
@@ -888,131 +1341,43 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Set up from parent main window
         :return:
         """
-        ipts_run_dict = self._myParent.get_ipts_runs()
-
-        # Set to tree
-        for ipts in ipts_run_dict.keys():
-            run_list = ipts_run_dict[ipts]
-            self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
+        # TODO/FIXME/NOW - How to make this work?
+        # ipts_run_dict = self._myParent.get_archived_runs()
+        #
+        # # Set to tree
+        # for ipts in ipts_run_dict.keys():
+        #     run_list = ipts_run_dict[ipts]
+        #     self.ui.treeView_iptsRun.add_ipts_runs(ipts, run_list)
 
         return
 
-    def plot_sample_log(self, sample_log_name):
-        """ Purpose: plot sample log
-        Requirement:
-        1. sample log name is valid;
-        2. resolution is set up (time or maximum number of points)
-        Guarantee: canvas is replot
-        :param sample_log_name:
+    # Add slots for
+    @QtCore.pyqtSlot(int)
+    def signal_scanned_mts_log(self, val):
+        """
+        Handle signal from MTS log file window to notify that scanning MTS log file is finished.
+        :param val:
         :return:
         """
-        # get resolution
-        use_time_res = self.ui.radioButton_useTimeResolution.isChecked()
-        use_num_res = self.ui.radioButton_useMaxPointResolution.isChecked()
-        if use_time_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_timeResolution)
-        elif use_num_res:
-            resolution = GuiUtility.parse_float(self.ui.lineEdit_resolutionMaxPoints)
-        else:
-            GuiUtility.pop_dialog_error(self, 'Either time or number resolution should be selected.')
-            return
+        # check signal
+        if val != 1:
+            raise RuntimeError('Expecting signal value to be 1 but not %d.' % val)
 
-        # get the sample log data
-        if sample_log_name in self._sampleLogDict[self._currRunNumber]:
-            # get sample log value from previous stored
-            vec_x, vec_y = self._sampleLogDict[self._currRunNumber][sample_log_name]
-        else:
-            # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(sample_log_name,
-                                                               relative=True)
-            self._sampleLogDict[self._currRunNumber][sample_log_name] = vec_x, vec_y
+        assert self._mtsFileLoaderWindow is not None, 'MTS file loader window is None, i.e.,' \
+                                                      'it has not been launched.'
 
-        # get range of the data
-        new_min_x = GuiUtility.parse_float(self.ui.lineEdit_minX)
-        new_max_x = GuiUtility.parse_float(self.ui.lineEdit_maxX)
+        # get data from window
+        mts_log_file_name = self._mtsFileLoaderWindow.get_log_file()
+        mts_log_format = self._mtsFileLoaderWindow.get_log_format()
+        self._mtsLogFormat[mts_log_file_name] = mts_log_format
 
-        # adjust the resolution
-        plot_x, plot_y = process_data(vec_x, vec_y, use_num_res, use_time_res, resolution,
-                                      new_min_x, new_max_x)
-
-        # plot
-        self.ui.graphicsView_main.clear_all_lines()
-        the_label = '%s Y (%f, %f)' % (sample_log_name, min(vec_y), max(vec_y))
-        self.ui.graphicsView_main.add_plot_1d(plot_x, plot_y, label=the_label,
-                                              marker='.', color='blue')
-
-        # resize canvas
-        range_x = plot_x[-1] - plot_x[0]
-        new_min_x = (plot_x[0] - range_x * 0.05) if new_min_x is None else new_min_x
-        new_max_x = (plot_x[-1] + range_x * 0.05) if new_max_x is None else new_max_x
-
-        range_y = max(plot_y) - min(plot_y)
-        new_min_y = GuiUtility.parse_float(self.ui.lineEdit_minY)
-        if new_min_y is None:
-            new_min_y = min(plot_y) - 0.05 * range_y
-        new_max_y = GuiUtility.parse_float(self.ui.lineEdit_maxY)
-        if new_max_y is None:
-            new_max_y = max(plot_y) + 0.05 * range_y
-
-        self.ui.graphicsView_main.setXYLimit(xmin=new_min_x, xmax=new_max_x,
-                                             ymin=new_min_y, ymax=new_max_y)
+        # set up the GUI
+        self.ui.lineEdit_logFileName.setText(mts_log_file_name)
+        self.ui.comboBox_blockList.clear()
+        for block_index in mts_log_format['block'].keys():
+            self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
-
-
-def process_data(vec_x, vec_y, use_number_resolution, use_time_resolution, resolution,
-                 min_x, max_x):
-    """
-    re-process the original to plot on canvas smartly
-    :param vec_x: vector of time in unit of seconds
-    :param vec_y:
-    :param use_number_resolution:
-    :param use_time_resolution:
-    :param resolution: time resolution (per second) or maximum number points allowed on canvas
-    :param min_x:
-    :param max_x:
-    :return:
-    """
-    # check
-    assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
-    assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
-    assert (use_number_resolution and not use_time_resolution) or (not use_number_resolution and use_time_resolution)
-
-    # range
-    if min_x is None:
-        min_x = vec_x[0]
-    else:
-        min_x = max(vec_x[0], min_x)
-
-    if max_x is None:
-        max_x = vec_x[-1]
-    else:
-        max_x = min(vec_x[-1], max_x)
-
-    index_array = numpy.searchsorted(vec_x, [min_x-1.E-20, max_x+1.E-20])
-    i_start = index_array[0]
-    i_stop = index_array[1]
-
-    # define skip points
-    if use_time_resolution:
-        # time resolution
-        num_target_pt = int((max_x - min_x+0.)/resolution)
-    else:
-        # maximum number
-        num_target_pt = int(resolution)
-
-    num_raw_points = i_stop - i_start
-    if num_raw_points < num_target_pt * 2:
-        pt_skip = 1
-    else:
-        pt_skip = int(num_raw_points/num_target_pt)
-
-    plot_x = vec_x[i_start:i_stop:pt_skip]
-    plot_y = vec_y[i_start:i_stop:pt_skip]
-
-    # print 'Input vec_x = ', vec_x, 'vec_y = ', vec_y, i_start, i_stop, pt_skip, len(plot_x)
-
-    return plot_x, plot_y
 
 
 def testmain(argv):

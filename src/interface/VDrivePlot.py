@@ -1,13 +1,7 @@
 #!/usr/bin/python
-__author__ = 'wzz'
-
-
 # import utility modules
 import sys
 import os
-
-#if DEBUG: 
-#    from gui.mantidipythonwidget import MantidIPythonWidget
 
 # import PyQt modules
 from PyQt4 import QtGui, QtCore
@@ -32,6 +26,7 @@ import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
+from vcommand_processor import VdriveCommandProcessor
 import configwindow
 import config
 if config.DEBUG:
@@ -39,6 +34,8 @@ if config.DEBUG:
 
 """ import PyVDrive library """
 import PyVDrive.lib.VDriveAPI as VdriveAPI
+
+__author__ = 'wzz'
 
 # Define enumerate
 ACTIVE_SLICER_TIME = 0
@@ -173,6 +170,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._logPickerWindow = None
         self._peakPickerWindow = None
         self._snapViewWindow = None
+        self._workspaceView = None
 
         # Snap view related variables and data structures
         self._currentSnapViewIndex = -1
@@ -195,7 +193,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Load settings
         self.load_settings()
 
+        # VDRIVE command
+        self._vdriveCommandProcessor = VdriveCommandProcessor(self._myWorkflow)
+
         return
+
+    def closeEvent(self, QCloseEvent):
+        """
+        Connect close by 'X' to proper quit handler
+        :param QCloseEvent:
+        :return:
+        """
+        self.evt_quit()
 
     def menu_workspaces_view(self):
         """
@@ -222,7 +231,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
                 self.gridLayout = QtGui.QGridLayout(self.centralwidget)
                 self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-                self.widget = WorkspaceViewer(self.centralwidget)
+                self.widget = WorkspaceViewer(self)
                 sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
                 sizePolicy.setHorizontalStretch(0)
                 sizePolicy.setVerticalStretch(0)
@@ -251,7 +260,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 return
 
         self._workspaceView = WorkspacesView(self)
+        self._workspaceView.widget.set_main_window(self)
         self._workspaceView.show()
+
+        self._myChildWindows.append(self._workspaceView)
 
         return
 
@@ -259,7 +271,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
     def save_settings(self):
         settings = QtCore.QSettings()
         settings.setValue('test01', str(self.ui.lineEdit_userLogFileName.text()))
-
 
     def load_settings(self):
         settings = QtCore.QSettings()
@@ -321,63 +332,15 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self.ui.checkBox_chopRun.isChecked():
             raise NotImplementedError('Binning data with option to chop will be solved later!')
 
-        # Collect information for reduction
-        # binning parameter
-        if self.ui.radioButton_binStandard.isChecked():
-            # default
-            bin_par = None
-        elif self.ui.radioButton_binCustomized.isChecked():
-            # customized bin parameters
-            bin_width = GuiUtility.parse_float(self.ui.lineEdit_binWidth)
-            min_tof = GuiUtility.parse_float(self.ui.lineEdit_binMinTOF)
-            max_tof = GuiUtility.parse_float(self.ui.lineEdit_binMaxTOF)
-            bin_par = (min_tof, bin_width, max_tof)
+        import VDrivePlotDataBinning as BinHelper
+        status, error_message = BinHelper.do_bin_data(self.ui, self._myWorkflow)
+        if status:
+            # Show message to notify user that the reduction is complete
+            GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
+            # switch the tab to 'VIEW'
+            self.ui.tabWidget_reduceData.setCurrentIndex(2)
         else:
-            # violate requirements
-            GuiUtility.pop_dialog_error(self, '')
-            return
-
-        # bin over pixel
-        if self.ui.checkBox_overPixel.isChecked():
-            # binning pixel
-            bin_pixel_direction = ''
-            if self.ui.radioButton_binVerticalPixels.isChecked():
-                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeVertical)
-                bin_pixel_direction = 'vertical'
-            elif self.ui.radioButton_binHorizontalPixels.isChecked():
-                bin_pixel_size = GuiUtility.parse_integer(self.ui.lineEdit_pixelSizeHorizontal)
-                bin_pixel_direction = 'horizontal'
-            else:
-                GuiUtility.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
-                return
-            raise NotImplementedError('Will be implemented in #32.')
-        # END-IF-ELSE
-
-        # Other parameters
-        do_subtract_bkgd = self.ui.checkBox_reduceSubtractBackground.isChecked()
-        do_normalize_by_vanadium = self.ui.checkBox_reduceNormalizedByVanadium.isChecked()
-        do_substract_special_pattern = self.ui.checkBox_reduceSubstractSpecialPattern.isChecked()
-        do_write_fullprof = self.ui.checkBox_outFullprof.isChecked()
-        do_write_gsas = self.ui.checkBox_outGSAS.isChecked()
-
-        # Reduce data
-        # retrieve the runs to reduce
-        run_number_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
-        if len(run_number_list) == 0:
-            GuiUtility.pop_dialog_error(self, 'No run is selected in run number table.')
-        status, error_message = self._myWorkflow.set_runs_to_reduce(run_numbers=run_number_list)
-        if status is False:
             GuiUtility.pop_dialog_error(self, error_message)
-
-        status, ret_obj = self._myWorkflow.reduce_data_set()
-        if status is False:
-            error_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, error_msg)
-
-        # Show message to notify user that the reduction is complete
-        GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
-        # switch the tab to 'VIEW'
-        self.ui.tabWidget_reduceData.setCurrentIndex(2)
 
         return
 
@@ -697,7 +660,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self._addedIPTSNumber is not None:
             child_window.set_ipts_number(self._addedIPTSNumber)
 
-        child_window.set_data_root_dir(self._myWorkflow.get_data_root_directory())
+        data_root_dir = self._myWorkflow.get_data_root_directory(throw=False)
+        child_window.set_data_root_dir(data_root_dir)
         r = child_window.exec_()
 
         # set the close one
@@ -1051,14 +1015,32 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.save_settings()
         # and ... ...
 
-        print '[DB-BAT] Close Application!'
-
         for child_window in self._myChildWindows:
             child_window.close()
 
         self.close()
 
         return
+
+    def execute_command(self, vdrive_command):
+        """
+        Execute a Vdrive command
+        No exception is expected to be raised from this method
+        :param vdrive_command: a command (including all the arguments)
+        :return:
+        """
+        print '[DB...BAT] IPython console command: ', vdrive_command
+
+        # check
+        assert isinstance(vdrive_command, str), 'VDRIVE command must be a string but not.' \
+                                                '' % str(type(vdrive_command))
+
+        # split
+        command_script = vdrive_command.split(',')
+        command = command_script[0]
+        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script)
+
+        return status, err_msg
 
     def get_sample_log_value(self, log_name, time_range=None, relative=False):
         """
@@ -1094,9 +1076,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """
         return self._myWorkflow.get_project_runs()
 
-    def get_workflow(self):
+    def get_reserved_commands(self):
         """
-        Get workflow instance
+        Get reserved commands from VDrive command processor
+        :return:
+        """
+        return self._vdriveCommandProcessor.get_vdrive_commands()
+
+    def get_controller(self):
+        """
+        Get workflow controller instance
         :return:
         """
         return self._myWorkflow
@@ -1304,7 +1293,17 @@ class VdriveMainWindow(QtGui.QMainWindow):
                     run_number = None
             else:
                 run_number = None
-            self._logPickerWindow = LogPicker.WindowLogPicker(self, run_number)
+
+            # get IPTS from archive
+            if run_number is not None:
+                # current IPTS number
+                ipts_number = self._myWorkflow.get_ipts_from_run(run_number)
+            else:
+                ipts_number = None
+
+            # create the log processing window
+            self._logPickerWindow = LogPicker.WindowLogPicker(self, ipts_number, run_number)
+            self._myChildWindows.append(self._logPickerWindow)
 
         # Set up tree view for runs
         self._logPickerWindow.setup()

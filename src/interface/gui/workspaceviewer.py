@@ -33,7 +33,7 @@ class WorkspaceViewer(QtGui.QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
-    Reserved_Command = ['plot', 'refresh']
+    Reserved_Command_List = ['plot', 'refresh', 'exit']
 
     def __init__(self, parent=None):
         """ Init
@@ -42,8 +42,8 @@ class WorkspaceViewer(QtGui.QWidget):
         QtGui.QWidget.__init__(self)
 
         # Parent & others
+        self._myMainWindow = None
         self._myParent = parent
-        self._myController = None
 
         # set up UI
         self.ui = Ui_Form()
@@ -70,8 +70,20 @@ class WorkspaceViewer(QtGui.QWidget):
         elif command == 'refresh':
             err_msg = self.refresh_workspaces()
 
+        elif command == 'exit':
+            self._myParent.close()
+            # self.close()
+            err_msg = None
+
         else:
-            raise RuntimeError('Wrong in coding!')
+            status, err_msg = self._myMainWindow.execute_command(script)
+            if status:
+                err_msg = 'VDRIVE command %s is executed successfully. %s.' \
+                          '' % (command, err_msg)
+            else:
+                err_msg = 'VDRIVE command %s failed due to %s.' % (
+                    command, err_msg
+                )
 
         return err_msg
 
@@ -83,7 +95,7 @@ class WorkspaceViewer(QtGui.QWidget):
         """
         command = script.strip().split()[0]
 
-        return command in self.Reserved_Command
+        return command in self.Reserved_Command_List
 
     def plot(self, script):
         """
@@ -105,7 +117,10 @@ class WorkspaceViewer(QtGui.QWidget):
             # plot workspace
             for i_term in range(1, len(terms)):
                 ws_name = terms[i_term]
-                self.ui.graphicsView_general.plot_workspace(ws_name)
+                try:
+                    self.ui.graphicsView_general.plot_workspace(ws_name)
+                except KeyError as key_err:
+                    return str(key_err)
 
         return ''
 
@@ -132,6 +147,26 @@ class WorkspaceViewer(QtGui.QWidget):
         # END-FOR
 
         return error_message
+
+    def set_main_window(self, main_window):
+        """
+        Set up the main window which generates this window
+        :param main_window:
+        :return:
+        """
+        # check
+        assert main_window is not None
+        try:
+            main_window.get_reserved_commands
+        except AttributeError as att_err:
+            raise AttributeError('Parent window does not have required method get_reserved_command')
+
+        # set
+        self._myMainWindow = main_window
+
+        self.Reserved_Command_List.extend(main_window.get_reserved_commands())
+
+        return
 
 
 class PlotControlTreeWidget(baseTree.CustomizedTreeView):

@@ -6,13 +6,14 @@ import time
 import pickle
 
 import vdrivehelper
+import vulcan_util
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
 
 
 class DataArchiveManager(object):
-    """ Helper class to find data and etc in the archive of an SNS instrument
+    """ Class to manage data files, especially data files in the archive of an SNS instrument
     """
     def __init__(self, instrument):
         """ Initialize including set instrument
@@ -51,6 +52,12 @@ class DataArchiveManager(object):
         self._iptsDataDir = None
         # ipts root data directory such as /SNS/VULCAN/IPTS-1234/
         self._iptsRootDir = None
+        # flag to see whether data are stored in local computer
+        self._localData = False
+
+        # data storage
+        self._infoDict = dict()     # key: archive ID
+        self._runInfoDict = dict()  # key: run number
 
         # Debug mode
         self.__DEBUG__ = False
@@ -136,7 +143,7 @@ class DataArchiveManager(object):
 
         return time_file_list
 
-    def get_experiment_run_info(self, ipts_number=None, start_run=None, end_run=None):
+    def get_experiment_run_info(self, archive_key, start_run=None, end_run=None):
         """ Get runs' information of an IPTS
         Purpose:
             Get data path information for all runs of an IPTS number
@@ -144,35 +151,52 @@ class DataArchiveManager(object):
             A valid IPTS-number is set before
         Guarantees:
             Experimental run information including run number, creation time and full file path will be returned
-        :param ipts_number: IPTS number to match the current IPTS number
+
+        :param archive_key:
         :param start_run:
-        :param end_run
-        :return: list of 3-tuples as run number,
+        :param end_run:
+        :param sort_by:
+        :return: list of dictionary
         """
-        # Check requirements
-        assert self._iptsNo is not None, 'No valid IPTS number has been assigned to ArchiveManager.'
-        assert isinstance(ipts_number, int) or ipts_number is None
-        if ipts_number is not None:
-            # check whether given IPTS number matches the previously set up one.
-            assert ipts_number == self._iptsNo, 'Input IPTS number %d does not match the ' \
-                                                'current IPTS number %d.' % (ipts_number, self._iptsNo)
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert archive_key in self._infoDict, 'Archive key %s does not exist in archiving dictionary,' \
+                                              'which has keys %s.' % (str(archive_key), str(self._infoDict.keys()))
 
-        # Get run
-        if start_run is None or end_run is None:
-            print '[DB-BAT] Get full list from a directory.'
-            run_tup_list = self.get_experiment_run_info_from_directory(self._iptsDataDir)
+        # Get run information
+        if start_run is None and end_run is None:
+            run_dict_list = self._infoDict[archive_key][:]
         else:
-            print '[DB-BAT] Get partial list with given run number.'
-            run_tup_list = self.get_experiment_run_info_from_archive(self._iptsDataDir, start_run, end_run)
+            run_dict_list = self.get_partial_run_info(archive_key, start_run, end_run)
+        # END-IF
 
-        assert(isinstance(run_tup_list, list))
-        print '[DB] Get %d runs from directory %s.' % (len(run_tup_list), self._iptsDataDir)
-        print
+        return run_dict_list
 
-        return run_tup_list
+    def get_partial_run_info(self, archive_key, start_run, end_run):
+        """
+        Get a subset of runs (with all information) by specified range of run numbers
+        :param archive_key:
+        :param start_run:
+        :param end_run:
+        :return:
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %d.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert isinstance(start_run, int) and isinstance(end_run, int) and start_run <= end_run, \
+            'start run %s (%s vs int) must be less or equal to end run %s (%d vs int).' \
+            '' % (str(start_run), type(start_run), str(end_run), type(end_run))
 
-    @staticmethod
-    def get_experiment_run_info_from_directory(directory):
+        # get partial list
+        partial_list = list()
+        for run_dict in self._infoDict[archive_key]:
+            if start_run <= run_dict['run'] <= end_run:
+                partial_list.append(run_dict)
+
+        return partial_list
+
+    def scan_experiment_run_info(self, ipts_dir):
         """ Get information of standard SNS event NeXus files in a given directory.
         Purpose:
             Get full path of all SNS event NeXus files from a directory
@@ -187,35 +211,72 @@ class DataArchiveManager(object):
 
         :exception: RuntimeError for non-existing IPTS
         :rtype: list
-        :param directory:
-        :return: list of 3-tuples (integer as run number, time as creation time, string as full path)
+        :param ipts_dir:
+        :return: key to the dictionary
         """
-        # Get home directory for IPTS
-        assert os.path.exists(directory), 'IPTS directory %s cannot be found.' % directory
+        # check validity of inputs
+        assert isinstance(ipts_dir, str) and os.path.exists(ipts_dir), \
+            'IPTS directory %s (%s) cannot be found.' % (str(ipts_dir), str(type(ipts_dir)))
 
         # List all files
-        all_file_list = os.listdir(directory)
+        all_file_list = os.listdir(ipts_dir)
         run_tup_list = []
         for file_name in all_file_list:
             # skip non-event Nexus file
             if file_name.endswith('_event.nxs') is False:
                 continue
             else:
-                full_path_name = os.path.join(directory, file_name)
+                full_path_name = os.path.join(ipts_dir, file_name)
 
             # get file information
-            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
             ipts_number, run_number = DataArchiveManager.get_ipts_run_from_file_name(file_name)
+
+            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
             create_time = os.path.getctime(full_path_name)
             modify_time = os.path.getmtime(full_path_name)
             if modify_time < create_time:
                 create_time = modify_time
 
             # add to list for return
-            run_tup_list.append((run_number, create_time, full_path_name))
+            run_tup_list.append({'run': run_number,
+                                 'ipts': ipts_number,
+                                 'file': full_path_name,
+                                 'time': create_time})
         # END-FOR
 
-        return run_tup_list
+        self._infoDict[ipts_dir] = run_tup_list
+
+        return ipts_dir
+
+    def scan_vulcan_record(self, record_file_path):
+        """
+        Scan a VULCAN record file
+        :param record_file_path:
+        :return: key to a dictionary
+        """
+        # read the file
+        record_file_set = vulcan_util.import_vulcan_log(record_file_path)
+
+        # export the pandas log to a list of dictionary
+        run_dict_list = list()
+        num_runs = len(record_file_set)
+        for i_run in range(num_runs):
+            run_number = int(record_file_set['RUN'][i_run])
+            ipts_str = str(record_file_set['IPTS'][i_run])
+            ipts_number = int(ipts_str.split('-')[-1])
+            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
+            exp_time_str = str(record_file_set['StartTime'][i_run])
+            exp_time = vdrivehelper.parse_time(exp_time_str)
+
+            run_dict_list.append({'run': run_number,
+                                  'ipts': ipts_number,
+                                  'file': full_file_path,
+                                  'time': exp_time})
+        # END-FOR
+
+        self._infoDict[record_file_path] = run_dict_list
+
+        return record_file_path
 
     def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
         """ Get information of standard SNS event NeXus files in a given directory.
@@ -269,6 +330,31 @@ class DataArchiveManager(object):
 
         return run_tup_list
 
+    def get_local_run_info(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
+        """
+        Get the file information for data files stored in local directory
+        :param archive_key:
+        :param local_dir:
+        :param begin_run:
+        :param end_run:
+        :param standard_sns_file:
+        :return: run_info_dict_list
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert isinstance(local_dir, str) and os.path.exists(local_dir), \
+            'Local data directory %s (of type %s) must be a string and exist.' % (str(local_dir), type(local_dir))
+        assert isinstance(begin_run, int) and isinstance(end_run, int) and begin_run < end_run
+
+        # Info dictionary contains a list of dictionary
+        # FIXME/TODO/now - IS THERE ANY EASY/EFFICIENT WAY TO FIND OUT RUN INFORMATION BY RUN NUMBER?
+        print '[DB...BAT] : Archived information! ', self._infoDict[archive_key]
+
+        for run_number in range(begin_run, end_run):
+            # TODO/NOW/FIXME - continue from here!
+            pass
+
     @staticmethod
     def get_ipts_run_from_file_name(nxs_file_name):
         """
@@ -298,6 +384,24 @@ class DataArchiveManager(object):
             runnumber = None
 
         return ipts, runnumber
+
+    def get_ipts_number(self, run_number, throw):
+        """
+
+        :param run_number:
+        :param throw:
+        :return:
+        """
+        # TODO/NOW: check + doc!
+
+        if run_number in self._runInfoDict:
+            ipts_number = self._runInfoDict[run_number]['ipts']
+        elif not throw:
+            ipts_number = None
+        else:
+            raise RuntimeError('Blabla')
+
+        return ipts_number
 
     def search_experiment_runs_by_time(self, delta_days):
         """ Search files under IPTS and return with the runs created within a certain
@@ -401,12 +505,24 @@ class DataArchiveManager(object):
 
         # Set
         self._iptsNo = ipts
-        self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts)
-        self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
 
-        # Check
-        assert os.path.exists(self._iptsRootDir), 'IPTS root directory %s does not exist.' % self._iptsRootDir
-        assert os.path.exists(self._iptsDataDir), 'IPTS data directory %s does not exist.' % self._iptsDataDir
+        # special case (local directory)
+        if ipts == 0:
+            # case for local data
+            self._localData = True
+            self._iptsRootDir = None
+            self._iptsDataDir = None
+        else:
+            # case for archive data with IPTS information
+            self._localData = False
+            self._iptsRootDir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts)
+            self._iptsDataDir = os.path.join(self._iptsRootDir, 'data')
+
+            # Check
+            assert os.path.exists(self._iptsRootDir), 'IPTS root directory %s does not exist.' \
+                                                      '' % self._iptsRootDir
+            assert os.path.exists(self._iptsDataDir), 'IPTS data directory %s does not exist.' \
+                                                      '' % self._iptsDataDir
 
         return
 
@@ -448,8 +564,6 @@ class DataArchiveManager(object):
 ################################################################################
 # External Methods
 ################################################################################
-
-
 def check_read_access(file_name):
     """ Check whether it is possible to access a file
     :param file_name:
@@ -479,6 +593,7 @@ def load_from_xml(xml_file_name):
 
     return True, save_dict
 
+
 def save_to_xml(save_dict, xml_file_name):
     """
     Save a dictionary to an XML file
@@ -500,76 +615,3 @@ def save_to_xml(save_dict, xml_file_name):
     output.close()
 
     return
-
-
-def testmain():
-    """
-    """
-    mhelper = DataArchiveManager('vulcan')
-    mhelper.set_data_root_path('/SNS/')
-    try:
-        mhelper.set_ipts_number(12240)
-    except AssertionError as e:
-        print "IPTS 12240 does not exist due to %s." % str(e)
-        sys.exit(1)
-
-    filenames = mhelper.search_experiment_runs_by_time()
-    timelist = mhelper.get_files_time_information(filenames)
-    mhelper.rollBack(timelist[0][0])
-
-    timeformat = "%Y-%m-%d %H:%M:%S"
-
-    time1 = time.strptime("2015-02-06 19:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-
-    time1 = time.strptime("2015-02-06 12:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-    
-    time1 = time.strptime("2015-02-08 12:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-    
-    time1 = time.strptime("2015-02-09 07:31:24", timeformat)
-    print time1
-    setGPDateTime(time.mktime(time1))
-    print
-
-
-def utilmain(argv):
-    """ Get a list of runs under an IPTS    
-    """
-    mhelper = DataArchiveManager('vulcan')
-    mhelper.set_data_root_path('/SNS/')
-    try:
-        mhelper.set_ipts_number(10076)
-    except AssertionError as e:
-        print "IPTS 12240 does not exist due to %s" % str(e)
-        sys.exit(1)
-
-    timefilenamelistlist = mhelper.search_experiment_runs_by_time(100000)
-
-    # suppose only 1 item in list
-    timefilenamelist = sorted(timefilenamelistlist[0])
-
-    wbuf = ""
-    for timefilename in timefilenamelist:
-        wbuf += "%s\n" % (timefilename[1])
-
-    ofile = open("List10076.txt", "w")
-    ofile.write(wbuf)
-    ofile.close()
-
-
-
-
-if __name__ == "__main__":
-    """ Testing
-    """
-    import sys
-
-    utilmain(sys.argv)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1451</width>
-    <height>801</height>
+    <width>1413</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -105,6 +105,9 @@
             <layout class="QVBoxLayout" name="verticalLayout_11">
              <item>
               <widget class="QRadioButton" name="radioButton_useLoadFrame">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>VULCAN loadframe</string>
                </property>
@@ -112,6 +115,9 @@
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_useGenericDaq">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>Generic DAQ</string>
                </property>
@@ -119,6 +125,9 @@
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_useLogFiles">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>User Log files</string>
                </property>
@@ -128,6 +137,9 @@
               <layout class="QGridLayout" name="gridLayout">
                <item row="0" column="1">
                 <widget class="QPushButton" name="pushButton_5">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select user specified log file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
@@ -138,6 +150,9 @@
                </item>
                <item row="1" column="1">
                 <widget class="QLineEdit" name="lineEdit_userLogFileName">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -432,7 +447,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>Reduce</string>
+                <string>Ready for Reduction</string>
                </property>
               </widget>
              </item>
@@ -463,15 +478,28 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
-            <widget class="QWidget" name="tab_12">
+            <property name="iconSize">
+             <size>
+              <width>14</width>
+              <height>16</height>
+             </size>
+            </property>
+            <widget class="QWidget" name="tab_chop">
              <attribute name="title">
-              <string>CHOP</string>
+              <string>Chop</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_17">
               <item row="0" column="0">
@@ -752,164 +780,226 @@
                    <attribute name="title">
                     <string>Log Value</string>
                    </attribute>
-                   <layout class="QGridLayout" name="gridLayout_4">
-                    <item row="0" column="0">
-                     <layout class="QGridLayout" name="gridLayout_3">
-                      <item row="4" column="0">
-                       <spacer name="verticalSpacer_8">
-                        <property name="orientation">
-                         <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeType">
-                         <enum>QSizePolicy::Preferred</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>20</width>
-                          <height>40</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                      <item row="0" column="0">
-                       <layout class="QHBoxLayout" name="horizontalLayout_25">
-                        <item>
-                         <widget class="QPushButton" name="pushButton_readSampleLogFile">
-                          <property name="font">
-                           <font>
-                            <weight>75</weight>
-                            <bold>true</bold>
-                           </font>
-                          </property>
-                          <property name="toolTip">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tip: Select the run that you want to plot from the left-most data-tree. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="text">
-                           <string>Read Sample Log</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_7">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                          <property name="text">
-                           <string>Max. Resolution</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLineEdit" name="lineEdit_maxSnapResolution">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_18">
-                          <property name="font">
-                           <font>
-                            <pointsize>9</pointsize>
-                           </font>
-                          </property>
-                          <property name="text">
-                           <string>Pt</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </item>
-                      <item row="2" column="0">
-                       <widget class="QGroupBox" name="groupBox_14">
-                        <property name="sizePolicy">
-                         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                          <horstretch>0</horstretch>
-                          <verstretch>0</verstretch>
-                         </sizepolicy>
-                        </property>
-                        <property name="toolTip">
-                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                        </property>
-                        <property name="title">
-                         <string>Slice by log value</string>
-                        </property>
-                        <layout class="QGridLayout" name="gridLayout_6">
-                         <item row="1" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot4">
-                           <property name="text">
-                            <string>Plot 4</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot5">
-                           <property name="text">
-                            <string>Plot 5</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="2" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot6">
-                           <property name="text">
-                            <string>Plot 6</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot1">
-                           <property name="text">
-                            <string>Plot 1</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QRadioButton" name="radioButton_plot2">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="text">
-                            <string>Plot 2</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QRadioButton" name="radioButton_plot3">
-                           <property name="text">
-                            <string>Plot 3</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="2">
-                          <widget class="QPushButton" name="pushButton_applyLog">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="minimumSize">
-                            <size>
-                             <width>80</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="text">
-                            <string>Apply</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                      <item row="5" column="0">
+                   <layout class="QVBoxLayout" name="verticalLayout_6">
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_8">
+                      <property name="title">
+                       <string>Import Sample Log</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_3">
+                       <item row="0" column="0" colspan="2">
+                        <widget class="QPushButton" name="pushButton_readSampleLogFile">
+                         <property name="font">
+                          <font>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tip: Select the run that you want to plot from the left-most data-tree. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;After loading sample log file (NeXus sample logs), plot the first 6 sample logs in the right graphs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Read Sample Log</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_7">
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Max. Resolution</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QLineEdit" name="lineEdit_maxSnapResolution">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="2">
+                        <widget class="QLabel" name="label_18">
+                         <property name="font">
+                          <font>
+                           <pointsize>9</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Pt</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_14">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="toolTip">
+                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only 1 of the plot can be selected to set up the event filtering. &lt;/p&gt;&lt;p&gt;For example, user can set up both slicing strategy by looking at stress and temperature, which are shown in plot1 and plot2.  Then he decides to use the slicing plan with plot1/stress.  So he select 'plot 1' and continue. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      </property>
+                      <property name="title">
+                       <string>Slice by log value</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_6">
+                       <item row="1" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot4">
+                         <property name="text">
+                          <string>Plot 4</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot5">
+                         <property name="text">
+                          <string>Plot 5</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="2" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot6">
+                         <property name="text">
+                          <string>Plot 6</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot1">
+                         <property name="text">
+                          <string>Plot 1</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QRadioButton" name="radioButton_plot2">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="text">
+                          <string>Plot 2</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QRadioButton" name="radioButton_plot3">
+                         <property name="text">
+                          <string>Plot 3</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QPushButton" name="pushButton_applyLog">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>80</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Apply</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QGroupBox" name="groupBox_23">
+                      <property name="title">
+                       <string>Slice by picking manually</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_18">
+                       <item row="0" column="0">
+                        <widget class="QPushButton" name="pushButton_manualPicker">
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Lauch Manual Picker</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QPushButton" name="pushButton_applyManual">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>80</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="toolTip">
+                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment of all 6 snap views.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. Identify the active picker (time, simple log value, or manual);&lt;/p&gt;&lt;p&gt;2. If the active one is time, then do nothing;&lt;/p&gt;&lt;p&gt;3. Apply the slicer boundaries to each snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                         </property>
+                         <property name="text">
+                          <string>Apply</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <spacer name="horizontalSpacer_11">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>40</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="verticalSpacer_7">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_25">
+                      <item>
                        <widget class="QPushButton" name="pushButton_saveSlicer">
                         <property name="font">
                          <font>
@@ -925,74 +1015,23 @@
                         </property>
                        </widget>
                       </item>
-                      <item row="3" column="0">
-                       <widget class="QGroupBox" name="groupBox_8">
-                        <property name="title">
-                         <string>Slice by picking manually</string>
-                        </property>
-                        <layout class="QGridLayout" name="gridLayout_18">
-                         <item row="0" column="0">
-                          <widget class="QPushButton" name="pushButton_manualPicker">
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pop up 'Log Picker'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Lauch Manual Picker</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="2">
-                          <widget class="QPushButton" name="pushButton_applyManual">
-                           <property name="sizePolicy">
-                            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                             <horstretch>0</horstretch>
-                             <verstretch>0</verstretch>
-                            </sizepolicy>
-                           </property>
-                           <property name="minimumSize">
-                            <size>
-                             <width>80</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <property name="toolTip">
-                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Indicate the boundary of each segment of all 6 snap views.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Developer:&lt;/p&gt;&lt;p&gt;1. Identify the active picker (time, simple log value, or manual);&lt;/p&gt;&lt;p&gt;2. If the active one is time, then do nothing;&lt;/p&gt;&lt;p&gt;3. Apply the slicer boundaries to each snap view;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                           </property>
-                           <property name="text">
-                            <string>Apply</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <spacer name="horizontalSpacer_11">
-                           <property name="orientation">
-                            <enum>Qt::Horizontal</enum>
-                           </property>
-                           <property name="sizeHint" stdset="0">
-                            <size>
-                             <width>40</width>
-                             <height>20</height>
-                            </size>
-                           </property>
-                          </spacer>
-                         </item>
-                        </layout>
-                       </widget>
-                      </item>
-                      <item row="7" column="0">
-                       <spacer name="verticalSpacer_7">
+                      <item>
+                       <spacer name="horizontalSpacer_15">
                         <property name="orientation">
-                         <enum>Qt::Vertical</enum>
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Preferred</enum>
                         </property>
                         <property name="sizeHint" stdset="0">
                          <size>
-                          <width>20</width>
-                          <height>40</height>
+                          <width>40</width>
+                          <height>20</height>
                          </size>
                         </property>
                        </spacer>
                       </item>
-                      <item row="8" column="0">
+                      <item>
                        <widget class="QPushButton" name="pushButton_chopDataSingleSet">
                         <property name="font">
                          <font>
@@ -1034,9 +1073,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_13">
+            <widget class="QWidget" name="tab_vbin">
              <attribute name="title">
-              <string>VBIN</string>
+              <string>Bin</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_9">
               <item row="0" column="0">
@@ -1048,7 +1087,10 @@
                   </property>
                   <layout class="QGridLayout" name="gridLayout_19">
                    <item row="1" column="0">
-                    <widget class="QGroupBox" name="groupBox_7">
+                    <widget class="QGroupBox" name="groupBox_binOverPixels">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
                      <property name="title">
                       <string>Combining Pixels</string>
                      </property>
@@ -1393,9 +1435,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_14">
+            <widget class="QWidget" name="tab_view">
              <attribute name="title">
-              <string>VIEW</string>
+              <string>View</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_11">
               <item row="2" column="0">
@@ -1760,9 +1802,9 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_11">
+            <widget class="QWidget" name="tab_vgsas">
              <attribute name="title">
-              <string>V-GSAS</string>
+              <string>GSAS</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_15">
               <item>
@@ -1902,160 +1944,146 @@
           </item>
          </layout>
         </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QPlainTextEdit" name="plainTextEdit_LogInfo">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>10</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>30</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="1">
-     <layout class="QGridLayout" name="gridLayout_7">
-      <item row="6" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_33">
         <item>
-         <widget class="QComboBox" name="comboBox_g51"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g52"/>
-        </item>
-       </layout>
-      </item>
-      <item row="1" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView1">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
-      </item>
-      <item row="4" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QComboBox" name="comboBox_g31">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
+         <widget class="QDockWidget" name="dockWidget">
+          <widget class="QWidget" name="dockWidgetContents">
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="2" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_31">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g21"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g22"/>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView2">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView3">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
+              </item>
+              <item row="4" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_32">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g41"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g42"/>
+                </item>
+               </layout>
+              </item>
+              <item row="6" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_34">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g61"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g62"/>
+                </item>
+               </layout>
+              </item>
+              <item row="5" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+              </item>
+              <item row="4" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g31">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Y-axis: selection for sample log&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g32"/>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="1">
+               <widget class="MplGraphicsView" name="graphicsView_snapView4">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_33">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g51"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g52"/>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <item>
+                 <widget class="QComboBox" name="comboBox_g11"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBox_g12">
+                  <item>
+                   <property name="text">
+                    <string>Absolute Time</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Relative Time</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="MplGraphicsView" name="graphicsView_snapView1">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g32"/>
-        </item>
        </layout>
-      </item>
-      <item row="1" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView2">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView3">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <item>
-         <widget class="QComboBox" name="comboBox_g11"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g12">
-          <item>
-           <property name="text">
-            <string>Absolute Time</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Relative Time</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_31">
-        <item>
-         <widget class="QComboBox" name="comboBox_g21"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g22"/>
-        </item>
-       </layout>
-      </item>
-      <item row="4" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_32">
-        <item>
-         <widget class="QComboBox" name="comboBox_g41"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g42"/>
-        </item>
-       </layout>
-      </item>
-      <item row="6" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_34">
-        <item>
-         <widget class="QComboBox" name="comboBox_g61"/>
-        </item>
-        <item>
-         <widget class="QComboBox" name="comboBox_g62"/>
-        </item>
-       </layout>
-      </item>
-      <item row="5" column="0">
-       <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
-      </item>
-      <item row="3" column="1">
-       <widget class="MplGraphicsView" name="graphicsView_snapView4">
-        <property name="minimumSize">
-         <size>
-          <width>250</width>
-          <height>0</height>
-         </size>
-        </property>
-       </widget>
       </item>
      </layout>
     </item>
@@ -2074,7 +2102,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1451</width>
+     <width>1413</width>
      <height>25</height>
     </rect>
    </property>
@@ -2236,6 +2264,9 @@
   <action name="actionWorkspaces">
    <property name="text">
     <string>Workspaces</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
    </property>
   </action>
  </widget>

@@ -1,4 +1,5 @@
 import time
+import datetime
 import numpy
 from PyQt4 import QtGui, QtCore
 
@@ -53,18 +54,62 @@ def convert_time_vector_to_relative(vec_times):
     return vec_rel_time
 
 
-def convert_to_qdate_epoch(epoch_time):
+def convert_to_qdate(date_time):
+    """
+    Convert date time to QtCore.QDate
+    :param date_time:
+    :return:
+    """
+    if isinstance(date_time, float):
+        # assume it is an epoch time
+        q_date = convert_to_qdate_epoch(date_time)
+
+    elif isinstance(date_time, datetime.datetime):
+        # input time is datetime.datetime
+        q_date = convert_to_qdate_datetime(date_time)
+
+    else:
+        raise RuntimeError('Date time of %s type is not supported to convert to QDate.'
+                           '' % date_time.__class__.__name__)
+
+    return q_date
+
+
+def convert_to_qdate_datetime(date_time):
     """
 
+    :param date_time:
+    :return:
+    """
+    # TODO/NOW/Doc
+
+    # check
+    assert isinstance(date_time, datetime.datetime), 'blabla'
+
+    # convert
+    year = date_time.year
+    month = date_time.month
+    day = date_time.day
+
+    m_date = QtCore.QDate(year, month, day)
+
+    return m_date
+
+
+def convert_to_qdate_epoch(epoch_time):
+    """
+    Convert epoch time to PyQt4.QtCore.QDate
     :param epoch_time:
     :return:
     """
-    assert(isinstance(epoch_time, float))
+    assert isinstance(epoch_time, float), 'Method convert_to_qdate_epoch() takes epoch_time %s ' \
+                                          'in format of float but not %s.' % (str(epoch_time),
+                                                                              type(epoch_time))
 
     # Use time.struct_time
     m_time = time.gmtime(epoch_time)
     year = m_time.tm_year
-    month =  m_time.tm_mon
+    month = m_time.tm_mon
     day = m_time.tm_mday
 
     m_date = QtCore.QDate(year, month, day)

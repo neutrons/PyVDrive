@@ -512,19 +512,10 @@ class VDrivePlot(QtGui.QMainWindow):
         return
 
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Methods to get information from Main GUI 
     # Implemented for child-windows/dialogs
-    #---------------------------------------------------------------------------
-    def getLogText(self):
-        """ 
-        """
-        # TODO - ASAP
-        self._myLogList = []
-
-        return "IMPLEMENT ASAP"
-
-
+    # ---------------------------------------------------------------------------
     def getReductionList(self, selectedlist=None):
         """ Get the data to reduce from reduction table
 

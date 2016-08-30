@@ -8,6 +8,7 @@
 #####
 import os
 import datetime
+import pandas as pd
 
 import VDProject as vp
 from analysisproject import AnalysisProject
@@ -67,7 +68,9 @@ class VDriveAPI(object):
         self._relativeBinnedDir = 'binned/'
         # IPTS configuration: key = IPTS number (int), value = list as [raw data dir, binned data dir]
         self._iptsConfigDict = dict()
-
+        # MTS file log
+        self._mtsLogDict = dict()
+        self._currentMTSLogFileName = None
         return
 
     @staticmethod
@@ -84,16 +87,27 @@ class VDriveAPI(object):
 
         return session_file_name
 
-    def add_runs(self, run_tup_list, ipts_number):
+    def add_runs_to_project(self, run_info_list):
         """
         Add runs under an IPTS dir to project
-        :param run_tup_list: list of 3-tuple as (1) run number, (2)
+        :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
+        :param ipts_number:
         :return:
         """
-        assert(isinstance(run_tup_list, list))
-        for tup in run_tup_list:
-            assert(isinstance(tup, tuple))
-            run_number, epoch_time, file_name = tup
+        # check  input
+        assert isinstance(run_info_list, list), 'Input run-tuple list must be instance of list but not %s.' \
+                                               '' % type(run_info_list)
+        # add each run to project
+        for index, run_info in enumerate(run_info_list):
+            # check type
+            assert isinstance(run_info, dict), 'Run information must be an instance of dictionary but not %s.' \
+                                          '' % type(run_info)
+
+            # get information and add run
+            run_number = run_info['run']
+            file_name = run_info['file']
+            ipts_number = run_info['ipts']
+
             self._myProject.add_run(run_number, file_name, ipts_number)
 
         return True, ''
@@ -521,34 +535,55 @@ class VDriveAPI(object):
         """
         return self._myWorkDir
 
-    def get_binned_data_directory(self, ipts_number=None, run_number_list=None):
-        """ Get the directory for the binned data
+    def get_binned_data_directory(self, ipts_number=None, run_info_list=None):
+        """ Get the directory for the binned data.
         :param ipts_number:
+        :param run_info_list: a list of run information in format of dictionary
         :return:
         """
-        # TODO/NOW - Doc & check
+        # check inputs
+        assert ipts_number is None or isinstance(ipts_number, int), \
+            'IPTS number %s must either be None or an integer but not %s.' % (str(ipts_number), type(ipts_number))
+
+        # if IPTS number is not given, set IPTS number from run information list
         if ipts_number is None:
-            if run_number_list is None:
+            if run_info_list is None:
                 ipts_number = None
             else:
-                ipts_number = self.get_run_info(run_number_list[0])
+                assert isinstance(run_info_list, list) and len(run_info_list) > 0, \
+                    'Run information list must be a list but not %s.' % type(run_info_list)
+                assert isinstance(run_info_list[0], tuple), \
+                    'run information is an unexpected %s.' % type(run_info_list[0])
+                ipts_number = self.get_run_info(run_info_list[0])
 
+        # set up binned directory
         if ipts_number is None:
+            # if IPTS number is still not given, use either current working directory or from configuration
             if len(self._iptsConfigDict) == 0:
                 binned_dir = os.getcwd()
             else:
                 ipts0 = self._iptsConfigDict.keys()[0]
                 binned_dir = self._iptsConfigDict[ipts0][1]
         else:
+            # from configuration dictionary using key as ipts number
             binned_dir = self._iptsConfigDict[ipts_number][1]
 
         return binned_dir
 
-    def get_data_root_directory(self):
+    def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN
-        :return: data root directory, such as /SNS/VULCAN
+        :return: data root directory, such as /SNS/VULCAN/ or None if throw is False
         """
-        return self._myArchiveManager.root_directory
+        try:
+            root_dir = self._myArchiveManager.root_directory
+        except AssertionError as ass_err:
+            if throw:
+                raise ass_err
+            else:
+                root_dir = None
+            # END-IF-ELSE
+
+        return root_dir
 
     def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
@@ -578,6 +613,18 @@ class VDriveAPI(object):
             time_segment_list = ret_obj
 
         return True, time_segment_list
+
+    def get_ipts_number_from_dir(self, dir_name):
+        """
+        Parse IPTS number from a directory path if it is a standard VULCAN archive directory
+        :param dir_name: path to the directory
+        :return: (boolean, ipts number/error message)
+        """
+        # check inputs
+        assert isinstance(dir_name, str), 'Directory name %s must be a string but not of type %s.' \
+                                          '' % (str(dir_name), type(dir_name))
+
+        return vdrivehelper.get_ipts_number_from_dir(dir_name)
 
     def get_file_by_run(self, run_number):
         """ Get data file path by run number
@@ -609,43 +656,123 @@ class VDriveAPI(object):
 
         return self._iptsConfigDict[ipts]
 
-    def get_ipts_info(self, ipts, begin_run=None, end_run=None):
+    def scan_ipts_archive(self, ipts_dir):
         """
-        Get runs and their information for a certain IPTS
-        Purpose: Get the runs' information of an IPTS
-        Requirements: IPTS is either an integer as a valid IPTS number of a directory containing all runs
-                      under an IPTS
-                      Begin run and end run are optional to define the range of runs
-        Guarantees: the runs' information including creation time and file path will be returned
-
-        Note: if IPTS is the number, then it is in QUICK-mode
-
-        :param ipts: integer or string as ipts number or ipts directory respectively
-        :return: list of 3-tuple: int (run), time (file creation time) and string (full path of run file)
-        """
-        try:
-            if isinstance(ipts, int):
-                print '[DB-BAT] Get experimental information from archive.'
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info(ipts, begin_run, end_run)
-            elif isinstance(ipts, str):
-                ipts_dir = ipts
-                print '[DB-BAT] Get experimental information from directory %s.' % ipts_dir
-                run_tuple_list = self._myArchiveManager.get_experiment_run_info_from_directory(ipts_dir)
-            else:
-                return False, 'IPTS %s is not IPTS number of IPTS directory.' % str(ipts)
-        except RuntimeError as e:
-            return False, str(e)
-
-        return True, run_tuple_list
-
-    def get_ipts_number_from_dir(self, ipts_dir):
-        """ Guess IPTS number from directory
-        The routine is that there should be some called /'IPTS-????'/
+        Scan IPTS archive
         :param ipts_dir:
-        :return: 2-tuple: integer as IPTS number; 0 as unable to find
+        :return: str as key to locate the loaded IPTS information from API/data archive
         """
-        # FIXME - It is broken!
-        return archivemanager.get_ipts_number_from_dir(ipts_dir)
+        status = False
+
+        try:
+            archive_key = self._myArchiveManager.scan_experiment_run_info(ipts_dir)
+
+            status = True
+            ret_obj = archive_key
+        except AssertionError as ass_err:
+            ret_obj = str(ass_err)
+
+        return status, ret_obj
+
+    def scan_vulcan_record(self, log_file_path):
+        """
+        Scan a standard VULCAN record/log file
+        :param log_file_path:
+        :return:
+        """
+        status = False
+
+        try:
+            archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
+            status = True
+            ret_obj = archive_key
+        except AssertionError as ass_err:
+            ret_obj = str(ass_err)
+
+        return status, ret_obj
+
+    def get_archived_runs(self, archive_key, begin_run, end_run):
+        """
+        Get runs from archived data
+        :param archive_key:
+        :param begin_run:
+        :param end_run:
+        :return:
+        """
+        # check input
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
+                                             '' % (str(archive_key), type(archive_key))
+        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, begin_run, end_run)
+
+        if len(run_info_dict_list) > 0:
+            status = True
+            ret_obj = run_info_dict_list
+        else:
+            status = False
+            ret_obj = 'No run is selected from %d to %d' % (begin_run, end_run)
+
+        return status, ret_obj
+
+    def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
+        """
+        Get the local runs (data file)
+        :param archive_key:
+        :param local_dir:
+        :param begin_run:
+        :param end_run:
+        :param standard_sns_file:
+        :return:
+        """
+        print '[DB...BAT] Archive key = ', archive_key
+
+        # call archive mananger
+        run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
+                                                                       standard_sns_file)
+
+        if len(run_info_dict_list) > 0:
+            status = True
+            ret_obj = run_info_dict_list
+        else:
+            status = False
+            ret_obj = 'No valid data file is found in directory %s from run %d to run %d.' % (local_dir,
+                                                                                              begin_run,
+                                                                                              end_run)
+
+        return
+
+    def get_ipts_run_range(self, archive_key):
+        """
+        Get range of run in IPTS
+        :param archive_key:
+        :return: 2-tuples of 2-tuple
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key must be a string.'
+
+        # get run-dict list
+        run_info_list = self._myArchiveManager.get_experiment_run_info(archive_key)
+
+        # sort by run number
+        run_time_list = list()
+        for run_dict in run_info_list:
+            run_number = run_dict['run']
+            run_time = run_dict['time']
+            run_time_list.append((run_number, run_time))
+        # END-IF
+        run_time_list.sort()
+
+        print '[DB....BAT] Run-Time List: Size = ', len(run_time_list)
+
+        # return
+        return run_time_list[0], run_time_list[-1]
+
+    def get_ipts_from_run(self, run_number):
+        """
+        Get IPTS number from run number (only archive)
+        :param run_number:
+        :return:
+        """
+        return self._myArchiveManager.get_ipts_number(run_number=run_number, throw=False)
 
     def get_run_info(self, run_number):
         """ Get a run's information
@@ -824,7 +951,7 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, norm_by_vanadium=False):
+    def reduce_data_set(self, norm_by_vanadium=False, bin_size=None):
         """ Reduce a set of data
         Purpose:
             Reduce a set of event data
@@ -874,6 +1001,22 @@ class VDriveAPI(object):
         self._myArchiveManager.set_data_root_path(root_dir)
 
         return True, ''
+
+    def setup_merge(self, ipts_number, merge_run_dict):
+        """
+        Set up merge information
+        :param ipts_number:
+        :param merge_run_dict:
+        :return:
+        """
+        # check inputs
+        assert isinstance(ipts_number, int) and ipts_number > 0, 'IPTS number must be a positive integer.'
+        assert isinstance(merge_run_dict, dict)
+
+        # set up
+        self._mergeSetupDict[ipts_number] = merge_run_dict
+
+        return
 
     def set_reduction_flag(self, file_flag_list, clear_flags):
         """ Turn on the flag to reduce for files in the list
@@ -930,6 +1073,92 @@ class VDriveAPI(object):
             error_message = 'Unable to set runs %s to reduce due to %s.' % (str(run_numbers), str(re))
 
         return return_status, error_message
+
+    def get_mts_log_data(self, log_file_name, header_list):
+        """
+        Get MTS log data from loaded MTS log (may partially)
+        :param log_file_name: key to find out log file
+        :param header_list: column to return
+        :return: dictionary: key is column name given in header_list, value: 1D numpy array
+        """
+        # get default
+        if log_file_name is None:
+            log_file_name = self._currentMTSLogFileName
+
+        # check
+        assert isinstance(log_file_name, str), 'get_mts_log_data(): Log file %s must be a string but not %s.' \
+                                               '' % (str(log_file_name), str(type(log_file_name)))
+        assert log_file_name in self._mtsLogDict, 'Log file %s has not been loaded. Current loaded are' \
+                                                  '%s.' % (log_file_name, str(self._mtsLogDict.keys()))
+        assert isinstance(header_list, list), 'Header list must a list'
+        for name in header_list:
+            assert name in self._mtsLogDict[log_file_name], 'Header %s is not in Pandas series, which ' \
+                                                            'current has headers as %s.' % \
+                                                            (name, self._mtsLogDict[log_file_name].keys())
+
+        # form the return by converting to numpy array
+        return_dict = dict()
+        for name in header_list:
+            log_array = self._mtsLogDict[log_file_name][name].values
+            return_dict[name] = log_array
+
+        return return_dict
+
+    def get_mts_log_headers(self, log_file_name):
+        """
+        Get the headers of the loaded MTS log file
+        :param log_file_name:
+        :return:
+        """
+        # check
+        assert isinstance(log_file_name, str), 'blabla'
+        if log_file_name not in self._mtsLogDict:
+            raise KeyError('Log file %s has not been loaded. Loaded files are %s.'
+                           '' % (log_file_name, str(self._mtsLogDict.keys())))
+
+        return self._mtsLogDict[log_file_name].keys()
+
+    def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
+        """
+        Read (partially) MTS file
+        :return:
+        """
+        # check existence of file
+        assert isinstance(log_file_name, str)
+        assert os.path.exists(log_file_name)
+
+        # get format information
+        assert isinstance(format_dict, dict), 'format_dict must be a dictionary but not %s.' \
+                                              '' % str(type(format_dict))
+        assert isinstance(block_index, int)
+        assert block_index in format_dict['data'], \
+            'Format dictionary does not have block key %d. Current keys are %s.' \
+            '' % (block_index, str(format_dict['data'].keys()))
+
+        # get format parameters
+        header = format_dict['header'][block_index]
+        block_start_line = format_dict['data'][block_index][0]
+        block_end_line = format_dict['data'][block_index][1]
+
+        data_line_number = block_start_line + start_point_index
+        num_points = min(end_point_index - start_point_index, block_end_line - data_line_number)
+
+        print '[DB.,,,,..BAT] Read MTS Block %d, Start Point = %d, End Point = %d: block : %d, %d ' % (
+            block_index, start_point_index, end_point_index, block_start_line, block_end_line),
+        print 'read from line %d with number of points = %d' % (data_line_number, num_points)
+
+        # load file
+        # TODO/FIXME - sep is fixed to \t now.  It might not be a good approach
+        print '[DB...BAT] File name = ', log_file_name, 'Skip = ', data_line_number, 'Names: ', header,
+        print 'Number of points = ', num_points
+        mts_series = pd.read_csv(log_file_name, skiprows=data_line_number,
+                                 names=header, nrows=num_points,
+                                 sep='\t')
+
+        self._mtsLogDict[log_file_name] = mts_series
+        self._currentMTSLogFileName = log_file_name
+
+        return
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1100,8 +1329,9 @@ class VDriveAPI(object):
         :return:
         """
         # Requirements
-        assert isinstance(ipts_number, int)
-        assert ipts_number > 0
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+                                             '' % (str(ipts_number), type(ipts_number))
+        assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
 
         self._myArchiveManager.set_ipts_number(ipts_number)
 
@@ -1115,9 +1345,16 @@ class VDriveAPI(object):
         :param binned_data_dir:
         :return:
         """
-        # TODO/NOW - check validity
+        # check
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+                                             '' % (str(ipts_number), type(ipts_number))
+        assert isinstance(data_dir, str) and os.path.exists(data_dir), \
+            'Data directory %s of type (%s) must be a string and exists.' % (str(data_dir), type(data_dir))
+        assert isinstance(binned_data_dir, str) and os.path.exists(binned_data_dir), \
+            'Binned data directory %s of type (%s) must be a string and exists.' % (str(binned_data_dir),
+                                                                                    type(binned_data_dir))
 
-        # ... ...
+        # set up the configuration as a 2-item list
         self._iptsConfigDict[ipts_number] = [data_dir, binned_data_dir]
 
         return

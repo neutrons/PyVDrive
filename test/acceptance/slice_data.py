@@ -156,7 +156,7 @@ def set_ipts_runs(step):
     status, error_message = wk_flow.clear_runs()
     assert_equals(status, True)
 
-    status, error_message = wk_flow.add_runs(run_tup_list, ipts_number)
+    status, error_message = wk_flow.add_runs_to_project(run_tup_list, ipts_number)
     assert_equals(status, True)
     assert_equals(2, wk_flow.get_number_runs())
 
