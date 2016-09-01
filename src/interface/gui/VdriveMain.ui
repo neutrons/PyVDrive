@@ -2266,7 +2266,7 @@
     <string>Workspaces</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+I</string>
+    <string>Shift+W</string>
    </property>
   </action>
  </widget>

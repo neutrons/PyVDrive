@@ -6,6 +6,7 @@ import procss_vcommand
 # cmd = VBIN(conroller, args)
 # cmd.run()
 
+
 class VBin(procss_vcommand.VDriveCommandProcessor):
     """
     """
@@ -79,5 +80,13 @@ class VBin(procss_vcommand.VDriveCommandProcessor):
         self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))
 
         return
+
+    @staticmethod
+    def get_help():
+        """
+
+        :return:
+        """
+        return 'VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099'
 
 

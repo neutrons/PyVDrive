@@ -25,6 +25,8 @@ class VdriveCommandProcessor(object):
         if controller.__class__.__name__ != 'VDriveAPI':
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))
 
+        self._myController = controller
+
         # set up the commands
         self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE']
 
@@ -41,7 +43,7 @@ class VdriveCommandProcessor(object):
         """
         Process commands string
         :param command:
-        :param command_args: arguments of a command
+        :param command_args: arguments of a command, excluding command
         :return:
         """
         # check command (type, whether it is supported)
@@ -50,7 +52,7 @@ class VdriveCommandProcessor(object):
 
         if command not in self._commandList:
             return False, 'Command %s is not in supported command list, which includes %s' \
-                          '' % str(self._commandList)
+                          '' % (str(self._commandList), str(self._commandList))
 
         # command body
         assert isinstance(command_args, list)
@@ -68,8 +70,8 @@ class VdriveCommandProcessor(object):
             if len(items) == 2:
                 arg_dict[items[0]] = items[1]
             else:
-                return False, 'Command %s %d-th term "%s" is not valid.' % (command, index,
-                                                                            term)
+                return False, 'Command %s %d-th term \"%s\" is not valid.' % (command, index,
+                                                                              term)
             # END-IF
         # END-FOR
 
@@ -106,13 +108,18 @@ class VdriveCommandProcessor(object):
          :param arg_dict:
          :return:
          """
-        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
+        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
 
-        processor = vdrive_commands.vbin(self._myParent.get_controller(), arg_dict)
+        print '[DB...] Process VBIN command: %s' % str(arg_dict)
+        processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
 
-        status, err_msg = processor.exec_cmd()
+        if len(arg_dict) == 0:
+            message = processor.get_help()
+            status = True
+        else:
+            status, message = processor.exec_cmd()
 
-        return status, err_msg
+        return status, message
 
     def _process_vdrive(self, args):
         """

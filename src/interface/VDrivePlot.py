@@ -220,7 +220,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 Init
                 :param parent:
                 """
-                from gui.workspaceviewer import WorkspaceViewer
+                from gui.workspaceviewwidget import WorkspaceViewWidget
 
                 QtGui.QMainWindow.__init__(self)
 
@@ -231,7 +231,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
                 self.gridLayout = QtGui.QGridLayout(self.centralwidget)
                 self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-                self.widget = WorkspaceViewer(self)
+                self.widget = WorkspaceViewWidget(self)
                 sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
                 sizePolicy.setHorizontalStretch(0)
                 sizePolicy.setVerticalStretch(0)
@@ -1029,8 +1029,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :param vdrive_command: a command (including all the arguments)
         :return:
         """
-        print '[DB...BAT] IPython console command: ', vdrive_command
-
         # check
         assert isinstance(vdrive_command, str), 'VDRIVE command must be a string but not.' \
                                                 '' % str(type(vdrive_command))
@@ -1038,7 +1036,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # split
         command_script = vdrive_command.split(',')
         command = command_script[0]
-        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script)
+        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])
 
         return status, err_msg
 

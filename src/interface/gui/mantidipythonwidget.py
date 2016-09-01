@@ -110,7 +110,7 @@ class MantidIPythonWidget(RichIPythonWidget):
         -------
 
         """
-        # record previous information
+        # record previous information: commened out for more test
         if self._mainApplication is not None:
             prev_workspace_names = set(mtd.getObjectNames())
         else:
@@ -120,12 +120,20 @@ class MantidIPythonWidget(RichIPythonWidget):
         script = str(self.input_buffer).strip()
 
         # main application is workspace viewer
+        is_reserved = False
+        print '[DB...] Now test reserved command for %s' % script
         if self._mainApplication.is_reserved_command(script):
-            err_msg = self._mainApplication.execute(script)
-            # clear input buffer
-            self.input_buffer = 'print (%s)' % err_msg
+            is_reserved = True
+            exec_message = self._mainApplication.execute_reserved_command(script)
+            source = '\"Run: %s\"' % script
+        else:
+            exec_message = None
 
+        # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
+
+        if is_reserved:
+            self._append_plain_text('\n%s\n' % exec_message)
 
         if self._mainApplication is not None:
             post_workspace_names = set(mtd.getObjectNames())
