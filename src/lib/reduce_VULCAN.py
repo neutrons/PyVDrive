@@ -37,12 +37,13 @@
 # * 16.02.08
 #   1. In 'auto' mode, the AutoRecord file will be written to .../logs/ and then
 #      copied to .../autoreduce/
+# * 16.09.01
+#   1. Refactor the code
 #
 ################################################################################
 
 import sys
 import getopt
-import os
 import stat
 import shutil
 import xml.etree.ElementTree as ET
@@ -54,6 +55,7 @@ sys.path.append("/opt/mantidnightly/bin")
 #sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
 #sys.path.append('/Users/wzz/Mantid/Code/debug/bin')
 
+import mantid.simpleapi
 from mantid.simpleapi import *
 import mantid
 
@@ -64,102 +66,130 @@ characterfilename = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Bank
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
 
+MTS_Header_List = [
+    ("TimeStamp", ""),
+    ("Time [sec]", ""),
+    ("MPTIndex", "loadframe.MPTIndex"),
+    ("X", "X"),
+    ("Y", "Y"),
+    ("Z", "Z"),
+    ("O", "OMEGA"),
+    ("HROT", "HROT"),
+    ("VROT", "VROT"),
+    ("MTSDisplacement", "loadframe.displacement"),
+    ("MTSForce", "loadframe.force"),
+    ("MTSStrain", "loadframe.strain"),
+    ("MTSStress", "loadframe.stress"),
+    ("MTSAngle", "loadframe.rot_angle"),
+    ("MTSTorque", "loadframe.torque"),
+    ("MTSLaser", "loadframe.laser"),
+    ("MTSlaserstrain", "loadframe.laserstrain"),
+    ("MTSDisplaceoffset", "loadframe.x_offset"),
+    ("MTSAngleceoffset", "loadframe.rot_offset"),
+    ("MTS1", "loadframe.furnace1"),
+    ("MTS2", "loadframe.furnace2"),
+    ("MTS3", "loadframe.extTC3"),
+    ("MTS4", "loadframe.extTC4"),
+    ("MTSHighTempStrain", "loadframe.strain_hightemp"),
+    ("FurnaceT", "furnace.temp1"),
+    ("FurnaceOT", "furnace.temp2"),
+    ("FurnacePower", "furnace.power"),
+    ("VacT", "partlow1.temp"),
+    ("VacOT", "partlow2.temp"),
+    ('EuroTherm1Powder', 'eurotherm1.power'),
+    ('EuroTherm1SP', 'eurotherm1.sp'),
+    ('EuroTherm1Temp', 'eurotherm1.temp'),
+    ('EuroTherm2Powder', 'eurotherm2.power'),
+    ('EuroTherm2SP', 'eurotherm2.sp'),
+    ('EuroTherm2Temp', 'eurotherm2.temp')]
+
+
+
 
 class ReductionSetup(object):
     """
-
+    Class to contain reduction setup parameters
     """
     def __init__(self):
         """
 
         """
-        self.mode = None
-        self.event_file_abs_path = None
-        self.outputDir = None
-        self.recordFileName = None
-        self.record2FileName = None
-        self.gsasDir = None
-        self.gsas2Dir = None
-        self.logDir = None
+        self._mode = None
         self.dryRun = False
+
+        self._eventFileFullPath = None
+
+        self._outputDirectory = None
+
+        self._mainRecordFileName = None
+        self._2ndRecordFileName = None
+
+        self._mainGSASFileName = None
+        self._2ndGSASFileName = None
+
+        self._sampleLogDirectory = None
+
+        return
+
+    def get_event_file(self):
+        """
+        Get event file's pull path
+        :return:
+        """
+        return self._eventFileFullPath
+
+    def get_mode(self):
+        """
+        get mode
+        :return:
+        """
+        return self._mode
+
+    def get_output_dir(self):
+        """
+        get directory for output
+        :return:
+        """
+        return self._outputDirectory
+
+    def set_event_file(self, event_file_path):
+        """
+        set full path of event file
+        :param event_file_path:
+        :return:
+        """
+        assert isinstance(event_file_path, str), 'Event file must be a string but not %s.' % type(event_file_path)
+        assert os.path.exists(event_file_path), 'Event file %s does not exist.' % event_file_path
+
+        self._eventFileFullPath = event_file_path
+
+        return
+
+    def set_mode(self, mode):
+        """
+        set reduction mode
+        :param mode:
+        :return:
+        """
+        self._mode = mode
+
+    def set_output_dir(self, dir_path):
+        """
+        set output directory
+        :param dir_path:
+        :return:
+        """
+        assert isinstance(dir_path, str), 'Output directory must be a string but not %s.' % type(dir_path)
+        # TODO/FIXME/NOW - need to find out a way to check whether the directory is writable
+
+        self._outputDirectory = dir_path
 
         return
 
 
-def change_output_directory(original_directory, user_specified_dir=None):
-    """ Purpose:
-      Change the output direction from
-      * .../autoreduce/ to .../logs/
-      * .../autoreduce/ to .../<user_specified>
-    :param original_directory: if it is not ends with /autoreduce/, then the target directory will be the same,
-            while if the directory does not exist, the method will create ethe directory.
-    :param user_specified_dir: if it is not specified, change to .../logs/ as default
-    """
-    # Check validity
-    assert isinstance(original_directory, str)
-
-    # Change path from ..../autoreduce/ to .../logs/
-    if original_directory.endswith("/"):
-        original_directory = os.path.split(original_directory)[0]
-    parent_dir, last_sub_dir = os.path.split(original_directory)
-
-    if last_sub_dir == "autoreduce":
-        # original directory ends with 'autoreduce'
-        if user_specified_dir is None:
-            # from .../autoreduce/ to .../logs/
-            new_output_dir = os.path.join(parent_dir, "logs")
-        else:
-            # from .../autoreduce/ to .../<user_specified>/
-            new_output_dir = os.path.join(parent_dir, user_specified_dir)
-        print "Log file will be written to directory %s. " % new_output_dir
-    else:
-        # non-auto reduction mode.
-        new_output_dir = original_directory
-        print "Log file will be written to the original directory %s. " % new_output_dir
-
-    # Create path
-    if os.path.exists(new_output_dir) is False:
-        # create
-        os.mkdir(new_output_dir)
-
-    return new_output_dir
 
 
-def exportFurnaceLog(logwsname, outputDir, runNumber):
-    """ Export the furnace log
-    """
-    # Make a new name
-    isnewfilename = False
-    maxattempts = 10
-    numattempts = 0
-    logfilename = ''
-    while isnewfilename is False and numattempts < maxattempts:
-        if numattempts == 0:
-            logfilename = os.path.join(outputDir, "furnace%d.txt" % (runNumber))
-        else:
-            logfilename = os.path.join(outputDir, "furnace%d_%d.txt" % (runNumber, numattempts))
 
-        if os.path.isfile(logfilename) is False:
-            isnewfilename = True
-        else:
-            numattempts += 1
-    # END- WHILE
-
-    # Raise exception
-    if isnewfilename is False:
-        raise NotImplementedError("Unable to find an unused log file name for run %d. " % (runNumber))
-    else:
-        print "Log file will be written to %s. " % logfilename
-
-    try:
-        ExportSampleLogsToCSVFile(InputWorkspace=logwsname,
-                                  OutputFilename=logfilename,
-                                  SampleLogNames=["furnace.temp1", "furnace.temp2", "furnace.power"],
-                                  TimeZone=TIMEZONE2)
-    except RuntimeError as run_err:
-        raise RuntimeError('Unable to export sample log to %s due to %s.' % (logfilename, str(run_err)))
-
-    return
 
 
 def exportGenericDAQLog(logwsname, outputDir, ipts, runNumber):
@@ -225,104 +255,6 @@ def exportGenericDAQLog(logwsname, outputDir, ipts, runNumber):
                                   Header =headstr)
     except RuntimeError:
         print "Error in exporting Generic DAQ log for run %s. " % (str(runNumber))
-
-    return
-
-
-def exportMTSLog(logwsname, outputDir, ipts, run_number):
-    """ Export MTS log
-    List of MTS Log:
-        X       Y       Z       O       HROT     VROT
-        MTSDisplacement MTSForce        MTSStrain       MTSStress      MTSAngle
-        MTSTorque       MTSLaser        MTSlaserstrain  MTSDisplaceoffset       MTSAngleceoffset
-        MTST1   MTST2   MTST3   MTST4   FurnaceT
-        FurnaceOT       FurnacePower    VacT    VacOT
-    """
-    # Organzied by dictionary
-    vulcanheaderlist = list()
-    vulcanheaderlist.append( ("TimeStamp"           , "")       )
-    vulcanheaderlist.append( ("Time [sec]"          , "")       )
-    vulcanheaderlist.append( ("MPTIndex"            , "loadframe.MPTIndex")     )
-    vulcanheaderlist.append( ("X"                   , "X")      )
-    vulcanheaderlist.append( ("Y"                   , "Y")      )
-    vulcanheaderlist.append( ("Z"                   , "Z")      )
-    vulcanheaderlist.append( ("O"                   , "OMEGA")  )
-    vulcanheaderlist.append( ("HROT"                , "HROT")   )
-    vulcanheaderlist.append( ("VROT"                , "VROT")   )
-    vulcanheaderlist.append( ("MTSDisplacement"     , "loadframe.displacement") )
-    vulcanheaderlist.append( ("MTSForce"            , "loadframe.force")        )
-    vulcanheaderlist.append( ("MTSStrain"           , "loadframe.strain")       )
-    vulcanheaderlist.append( ("MTSStress"           , "loadframe.stress")       )
-    vulcanheaderlist.append( ("MTSAngle"            , "loadframe.rot_angle")    )
-    vulcanheaderlist.append( ("MTSTorque"           , "loadframe.torque")       )
-    vulcanheaderlist.append( ("MTSLaser"            , "loadframe.laser")        )
-    vulcanheaderlist.append( ("MTSlaserstrain"      , "loadframe.laserstrain")  )
-    vulcanheaderlist.append( ("MTSDisplaceoffset"   , "loadframe.x_offset")     )
-    vulcanheaderlist.append( ("MTSAngleceoffset"    , "loadframe.rot_offset")   )
-    vulcanheaderlist.append( ("MTS1"                , "loadframe.furnace1") )
-    vulcanheaderlist.append( ("MTS2"                , "loadframe.furnace2") )
-    vulcanheaderlist.append( ("MTS3"                , "loadframe.extTC3") )
-    vulcanheaderlist.append( ("MTS4"                , "loadframe.extTC4") )
-    vulcanheaderlist.append( ("MTSHighTempStrain"   , "loadframe.strain_hightemp") )
-    vulcanheaderlist.append( ("FurnaceT"            , "furnace.temp1") )
-    vulcanheaderlist.append( ("FurnaceOT"           , "furnace.temp2") )
-    vulcanheaderlist.append( ("FurnacePower"        , "furnace.power") )
-    vulcanheaderlist.append( ("VacT"                , "partlow1.temp") )
-    vulcanheaderlist.append( ("VacOT"               , "partlow2.temp") )
-    vulcanheaderlist.append( ('EuroTherm1Powder'    , 'eurotherm1.power') )
-    vulcanheaderlist.append( ('EuroTherm1SP'        , 'eurotherm1.sp') )
-    vulcanheaderlist.append( ('EuroTherm1Temp'      , 'eurotherm1.temp') )
-    vulcanheaderlist.append( ('EuroTherm2Powder'    , 'eurotherm2.power') )
-    vulcanheaderlist.append( ('EuroTherm2SP'        , 'eurotherm2.sp') )
-    vulcanheaderlist.append( ('EuroTherm2Temp'      , 'eurotherm2.temp') )
-
-    # Format to lists for input
-    samplelognames = []
-    header = []
-    for i in xrange(len(vulcanheaderlist)):
-        title = vulcanheaderlist[i][0]
-        logname = vulcanheaderlist[i][1]
-
-        header.append(title)
-        if len(logname) > 0:
-            samplelognames.append(logname)
-
-    headstr = ""
-    for title in header:
-        headstr += "%s\t" % (title)
-
-    # Make a new name
-    isnewfilename = False
-    maxattempts = 10
-    numattempts = 0
-    outputfilename = ''
-    while isnewfilename is False and numattempts < maxattempts:
-        if numattempts == 0:
-            outputfilename = "IPTS-%d-MTSLoadFrame-%d.txt" % (ipts, run_number)
-        else:
-            outputfilename = "IPTS-%d-MTSLoadFrame-%d_%d.txt" % (ipts, run_number, numattempts)
-        outputfilename = os.path.join(outputDir, outputfilename)
-        if os.path.isfile(outputfilename) is False:
-            isnewfilename = True
-        else:
-            numattempts += 1
-    # ENDWHILE
-    assert len(outputfilename) > 0
-
-    # Raise exception
-    if isnewfilename is False:
-        raise NotImplementedError("Unable to find an unused log file name for run %d. " % run_number)
-    else:
-        print "Log file will be written to %s. " % outputfilename
-
-    ExportSampleLogsToCSVFile(
-        InputWorkspace=logwsname,
-        OutputFilename=outputfilename,
-        SampleLogNames=samplelognames,
-        WriteHeaderFile=True,
-        TimeZone=TIMEZONE2,
-        Header=headstr)
-
 
     return
 
@@ -919,6 +851,194 @@ class ReduceVulcanData(object):
 
         return
 
+    @staticmethod
+    def change_output_directory(original_directory, user_specified_dir=None):
+        """ Purpose:
+          Change the output direction from
+          * .../autoreduce/ to .../logs/
+          * .../autoreduce/ to .../<user_specified>
+        :param original_directory: if it is not ends with /autoreduce/, then the target directory will be the same,
+                while if the directory does not exist, the method will create ethe directory.
+        :param user_specified_dir: if it is not specified, change to .../logs/ as default
+        """
+        # Check validity
+        assert isinstance(original_directory, str)
+
+        # Change path from ..../autoreduce/ to .../logs/
+        if original_directory.endswith("/"):
+            original_directory = os.path.split(original_directory)[0]
+        parent_dir, last_sub_dir = os.path.split(original_directory)
+
+        if last_sub_dir == "autoreduce":
+            # original directory ends with 'autoreduce'
+            if user_specified_dir is None:
+                # from .../autoreduce/ to .../logs/
+                new_output_dir = os.path.join(parent_dir, "logs")
+            else:
+                # from .../autoreduce/ to .../<user_specified>/
+                new_output_dir = os.path.join(parent_dir, user_specified_dir)
+            print "Log file will be written to directory %s. " % new_output_dir
+        else:
+            # non-auto reduction mode.
+            new_output_dir = original_directory
+            print "Log file will be written to the original directory %s. " % new_output_dir
+
+        # Create path
+        if os.path.exists(new_output_dir) is False:
+            # create
+            os.mkdir(new_output_dir)
+
+        return new_output_dir
+
+    @staticmethod
+    def dry_run(reduction_setup):
+        """
+        Dry run to verify the output
+        :param reduction_setup:
+        :return:
+        """
+        # check
+        assert isinstance(reduction_setup, ReductionSetup), 'Input type is wrong!'
+
+        # Output result in case it is a dry-run
+        print "Input NeXus file    : %s" % reduction_setup.get_event_file()
+        print "Output directory    : %s" % reduction_setup.get_output_dir()
+        print "Log directory       : %s" % reduction_setup.get_sample_log_directory()  # logDir
+        print "GSAS  directory     : %s;  If it is None, no GSAS will be written." % str(reduction_setup.gsasDir)
+        print "GSAS2 directory     : %s" % str(reduction_setup.gsas2Dir)
+        print "Record file name    : %s" % str(reduction_setup.recordFileName)
+        print "Record(2) file name : %s" % str(reduction_setup.record2FileName)
+        print "1D plot file name   : %s" % reduction_setup.pngfilename
+
+        return False
+
+    @staticmethod
+    def exportFurnaceLog(log_ws_name, output_directory, run_number):
+        """
+        Export the furnace log.
+        1. File name: furnace
+        :param log_ws_name:
+        :param output_directory:
+        :param run_number:
+        :return:
+        """
+        # check inputs
+        assert isinstance(log_ws_name, str), 'Log workspace name must be a string'
+        assert AnalysisDataService.doesExist(log_ws_name), 'Log workspace %s does not exist in data service.' \
+                                                           '' % log_ws_name
+        assert isinstance(output_directory, str), 'Output directory must be a string.'
+        assert os.path.exists(output_directory) and os.path.isdir(output_directory), \
+            'Output directory must be an existing directory.'
+        assert isinstance(run_number, int), 'Run number must be an integer.'
+
+        # Make a new name
+        is_new_file = False
+        max_attempts = 10
+        out_file_name = ''
+
+        # find out whether the furnace file is a new file or an old one.
+        num_attempts = 0
+        while is_new_file is False and num_attempts < max_attempts:
+            if num_attempts == 0:
+                out_file_name = os.path.join(output_directory, "furnace%d.txt" % (run_number))
+            else:
+                out_file_name = os.path.join(output_directory, "furnace%d_%d.txt" % (run_number, num_attempts))
+
+            if os.path.isfile(out_file_name) is False:
+                is_new_file = True
+            else:
+                num_attempts += 1
+        # END- WHILE
+
+        # Raise exception
+        if is_new_file is False:
+            raise NotImplementedError("Unable to find an unused log file name for run %d. " % (run_number))
+        else:
+            print "Log file will be written to %s. " % out_file_name
+
+        try:
+            ExportSampleLogsToCSVFile(InputWorkspace=log_ws_name,
+                                      OutputFilename=out_file_name,
+                                      SampleLogNames=["furnace.temp1", "furnace.temp2", "furnace.power"],
+                                      TimeZone=TIMEZONE2)
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to export sample log to %s due to %s.' % (out_file_name, str(run_err)))
+
+        return
+
+
+    def exportMTSLog(self, logwsname, outputDir, ipts, run_number):
+        """ Export MTS log
+        List of MTS Log:
+            X       Y       Z       O       HROT     VROT
+            MTSDisplacement MTSForce        MTSStrain       MTSStress      MTSAngle
+            MTSTorque       MTSLaser        MTSlaserstrain  MTSDisplaceoffset       MTSAngleceoffset
+            MTST1   MTST2   MTST3   MTST4   FurnaceT
+            FurnaceOT       FurnacePower    VacT    VacOT
+        """
+        # Format to lists for input
+        samplelognames = []
+        header = []
+        for i in xrange(len(MTS_Header_List)):
+            title = MTS_Header_List[i][0]
+            log_name = MTS_Header_List[i][1]
+
+            header.append(title)
+            if len(log_name) > 0:
+                samplelognames.append(log_name)
+
+        headstr = ""
+        for title in header:
+            headstr += "%s\t" % (title)
+
+        # Make a new name
+        self.generate_csv_log(blba)
+
+        return
+
+    def generate_csv_log(self, log_ws_name, log_file_base_name, log_file_posfix, output_dir, sample_log_names, header):
+        """
+
+        :param log_ws_name:
+        :param log_file_base_name:
+        :param log_file_posfix:
+        :param output_dir
+        :param sample_log_names:
+        :return:
+        """
+        # Make a new name by avoiding deleting the existing one.
+        is_new_file = False
+        max_attempts = 10
+        log_file_name = ''
+
+        num_attempts = 0
+        while is_new_file is False and num_attempts < max_attempts:
+            if num_attempts == 0:
+                log_file_name = '%s.%s' % (log_file_base_name, log_file_posfix)
+            else:
+                log_file_name = "'%s_%d.%s" % (log_file_name, num_attempts, log_file_posfix)
+            log_file_name = os.path.join(output_dir, log_file_name)
+            if os.path.isfile(log_file_name) is False:
+                is_new_file = True
+            else:
+                num_attempts += 1
+        # ENDWHILE
+        assert len(log_file_name) > 0
+
+        # Raise exception
+        if is_new_file is False:
+            raise RuntimeError("Unable to find an unused log file name %s. " % log_file_base_name)
+
+        ExportSampleLogsToCSVFile(
+            InputWorkspace=log_ws_name,
+            OutputFilename=log_file_name,
+            SampleLogNames=sample_log_names,
+            WriteHeaderFile=True,
+            TimeZone=TIMEZONE2,
+            Header=header)
+
+        return log_file_name
+
     def generate_experiment_records(self):
         """
 
@@ -967,22 +1087,24 @@ class ReduceVulcanData(object):
         if self._setup.gsasDir is None:
             return
 
-             # SNSPowderReduction
-            gsasfilename = saveGSASFile(ipts, runNumber, gsasDir)
+        # SNSPowderReduction
+        gsas_file_name = self.reduce_powder_diffraction_data(self._setup.ipts, self._setup.runNumber, self._setup.gsasDir)
 
-            # 2nd copy for Ke if it IS NOT an alignment run
-            if is_alignment_run is False:
-                duplicate_gsas_file(gsasfilename, gsas2Dir)
+        # 2nd copy for Ke if it IS NOT an alignment run
+        if is_alignment_run is False:
+            self.duplicate_gsas_file(gsas_file_name, gsas2Dir)
 
-            try:
-                SavePlot1D(InputWorkspace="Proto2Bank", OutputFilename=pngfilename, YLabel='Intensity')
-            except ValueError as err:
-                print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
-            except RuntimeError as err:
-                print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
-                # ENDIF
+        try:
+            api.SavePlot1D(InputWorkspace="Proto2Bank", OutputFilename=pngfilename, YLabel='Intensity')
+        except ValueError as err:
+            print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
+        except RuntimeError as err:
+            print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
+        # ENDIF
 
-    def saveGSASFile(ipts, runnumber, outputdir):
+        return
+
+    def reduce_powder_diffraction_data(ipts, runnumber, outputdir):
         """ Save for Nexus file
         """
         import os
@@ -1077,19 +1199,19 @@ def parse_argv(opts, args, argv):
         reduction_setup.mode = "auto"
 
         # set up event file path and output directory
-        reduction_setup.event_file_abs_path = argv[0]
-        reduction_setup.outputDir = argv[1]
+        reduction_setup._eventFileFullPath = argv[0]
+        reduction_setup._outputDirectory = argv[1]
 
         # set up log directory, record files and etc.
-        reduction_setup.logDir = change_output_directory(reduction_setup.outputDir)
+        reduction_setup._sampleLogDirectory = change_output_directory(reduction_setup._outputDirectory)
 
-        reduction_setup.recordFileName = os.path.join(reduction_setup.outputDir, "AutoRecord.txt")
-        reduction_setup.copy2Dir = change_output_directory(reduction_setup.outputDir, "")
-        reduction_setup.record2FileName = os.path.join(reduction_setup.copy2Dir, "AutoRecord.txt")
+        reduction_setup._mainRecordFileName = os.path.join(reduction_setup._outputDirectory, "AutoRecord.txt")
+        reduction_setup.copy2Dir = change_output_directory(reduction_setup._outputDirectory, "")
+        reduction_setup._2ndRecordFileName = os.path.join(reduction_setup.copy2Dir, "AutoRecord.txt")
 
         # output GSAS directory
-        reduction_setup.gsasDir = change_output_directory(reduction_setup.outputDir, "autoreduce/binned")
-        reduction_setup.gsas2Dir = change_output_directory(reduction_setup.outputDir, "binned_data")
+        reduction_setup._mainGSASFileName = change_output_directory(reduction_setup._outputDirectory, "autoreduce/binned")
+        reduction_setup._2ndGSASFileName = change_output_directory(reduction_setup._outputDirectory, "binned_data")
 
     else:
         # manual reduction mode
@@ -1102,25 +1224,25 @@ def parse_argv(opts, args, argv):
                 return False
             elif opt in ("-i", "--ifile"):
                 # Input NeXus file
-                reduction_setup.event_file_abs_path = arg
+                reduction_setup._eventFileFullPath = arg
             elif opt in ("-o", "--ofile"):
                 # Output directory
-                reduction_setup.outputDir = arg
+                reduction_setup._outputDirectory = arg
             elif opt in ("-l", "--log") and arg != '0':
                 # Log file
-                reduction_setup.logDir = arg
+                reduction_setup._sampleLogDirectory = arg
             elif opt in ("-g", "--gsas") and arg != '0':
                 # GSAS file
-                reduction_setup.gsasDir = arg
+                reduction_setup._mainGSASFileName = arg
             elif opt in ("-G", "--gsas2") and arg != '0':
                 # GSAS file of 2nd copy
-                reduction_setup.gsas2Dir = arg
+                reduction_setup._2ndGSASFileName = arg
             elif opt in ("-r", "--record") and arg != '0':
                 # AutoReduce.txt
-                reduction_setup.recordFileName = arg
+                reduction_setup._mainRecordFileName = arg
             elif opt in ("-R", "--record2") and arg != '0':
                 # AutoReduce.txt in 2nd directory as a backup
-                reduction_setup.record2FileName = arg
+                reduction_setup._2ndRecordFileName = arg
             elif opt in ("-d", "--dryrun"):
                 # Dry run
                 reduction_setup.dryRun = True
@@ -1129,7 +1251,7 @@ def parse_argv(opts, args, argv):
     # END-IF-ELSE (len(opt)==0)
 
     # Check requirements
-    if reduction_setup.event_file_abs_path is None or reduction_setup.outputDir is None:
+    if reduction_setup._eventFileFullPath is None or reduction_setup._outputDirectory is None:
         print "Input event Nexus file and output directory must be given!"
         return False
 
@@ -1176,23 +1298,6 @@ def configure_reduction_setup(reduction_setup):
     return reduction_setup
 
 
-def dry_run(reduction_setup):
-    """
-
-    :param reduction_setup:
-    :return:
-    """
-    # Output result in case it is a dry-run
-    print "Input NeXus file    : %s" % reduction_setup.event_file_abs_path
-    print "Output directory    : %s" % reduction_setup.outputDir
-    print "Log directory       : %s" % str(reduction_setup.logDir)
-    print "GSAS  directory     : %s;  If it is None, no GSAS will be written." % str(reduction_setup.gsasDir)
-    print "GSAS2 directory     : %s" % str(reduction_setup.gsas2Dir)
-    print "Record file name    : %s" % str(reduction_setup.recordFileName)
-    print "Record(2) file name : %s" % str(reduction_setup.record2FileName)
-    print "1D plot file name   : %s" % reduction_setup.pngfilename
-
-    return False
 
 
 def main(argv):
@@ -1267,7 +1372,7 @@ def main(argv):
     # # Reduce to GSAS file
     # if gsasDir is not None:
     #     # SNSPowderReduction
-    #     gsasfilename = saveGSASFile(ipts, runNumber, gsasDir)
+    #     gsasfilename = reduce_powder_diffraction_data(ipts, runNumber, gsasDir)
     #
     #     # 2nd copy for Ke if it IS NOT an alignment run
     #     if is_alignment_run is False:
