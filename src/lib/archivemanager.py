@@ -64,6 +64,7 @@ class DataArchiveManager(object):
 
         return
 
+    # Properties
     @property
     def root_directory(self):
         """ Root archive directory
@@ -102,6 +103,7 @@ class DataArchiveManager(object):
 
         return
 
+    # Methods
     def get_files_time_information(self, file_name_list):
         """ Get files' information
         Purpose:
@@ -195,88 +197,6 @@ class DataArchiveManager(object):
                 partial_list.append(run_dict)
 
         return partial_list
-
-    def scan_experiment_run_info(self, ipts_dir):
-        """ Get information of standard SNS event NeXus files in a given directory.
-        Purpose:
-            Get full path of all SNS event NeXus files from a directory
-        Requirements:
-            Given directory does exist
-        Guarantees:
-            Experimental run information including run number, creation time and full file path will be returned
-        Note:
-            Data archiving might put wrong time stamps on the event NeXus files.  For example,
-            the creation time sometime is later than modified time.  In this case,
-            return the earliest time between creation time and modified time.
-
-        :exception: RuntimeError for non-existing IPTS
-        :rtype: list
-        :param ipts_dir:
-        :return: key to the dictionary
-        """
-        # check validity of inputs
-        assert isinstance(ipts_dir, str) and os.path.exists(ipts_dir), \
-            'IPTS directory %s (%s) cannot be found.' % (str(ipts_dir), str(type(ipts_dir)))
-
-        # List all files
-        all_file_list = os.listdir(ipts_dir)
-        run_tup_list = []
-        for file_name in all_file_list:
-            # skip non-event Nexus file
-            if file_name.endswith('_event.nxs') is False:
-                continue
-            else:
-                full_path_name = os.path.join(ipts_dir, file_name)
-
-            # get file information
-            ipts_number, run_number = DataArchiveManager.get_ipts_run_from_file_name(file_name)
-
-            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
-            create_time = os.path.getctime(full_path_name)
-            modify_time = os.path.getmtime(full_path_name)
-            if modify_time < create_time:
-                create_time = modify_time
-
-            # add to list for return
-            run_tup_list.append({'run': run_number,
-                                 'ipts': ipts_number,
-                                 'file': full_path_name,
-                                 'time': create_time})
-        # END-FOR
-
-        self._infoDict[ipts_dir] = run_tup_list
-
-        return ipts_dir
-
-    def scan_vulcan_record(self, record_file_path):
-        """
-        Scan a VULCAN record file
-        :param record_file_path:
-        :return: key to a dictionary
-        """
-        # read the file
-        record_file_set = vulcan_util.import_vulcan_log(record_file_path)
-
-        # export the pandas log to a list of dictionary
-        run_dict_list = list()
-        num_runs = len(record_file_set)
-        for i_run in range(num_runs):
-            run_number = int(record_file_set['RUN'][i_run])
-            ipts_str = str(record_file_set['IPTS'][i_run])
-            ipts_number = int(ipts_str.split('-')[-1])
-            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
-            exp_time_str = str(record_file_set['StartTime'][i_run])
-            exp_time = vdrivehelper.parse_time(exp_time_str)
-
-            run_dict_list.append({'run': run_number,
-                                  'ipts': ipts_number,
-                                  'file': full_file_path,
-                                  'time': exp_time})
-        # END-FOR
-
-        self._infoDict[record_file_path] = run_dict_list
-
-        return record_file_path
 
     def get_experiment_run_info_from_archive(self, directory, start_run, end_run):
         """ Get information of standard SNS event NeXus files in a given directory.
@@ -402,6 +322,125 @@ class DataArchiveManager(object):
             raise RuntimeError('Blabla')
 
         return ipts_number
+
+    def scan_archive(self, ipts_number, start_run, end_run):
+        """
+        Scan VULCAN archive
+        :param ipts_number:
+        :param start_run:
+        :param end_run:
+        :return:
+        """
+        # TODO/NOW - check inputs
+        pass
+
+        # form IPTS
+        ipts_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts_number)
+        assert os.path.exists(ipts_dir), 'IPTS dir wrong... blabla'
+
+        # archive key:
+        archive_key = 'IPTS-%d-%d-%d' % (ipts_number, start_run, end_run)
+        self._infoDict[archive_key] = list()
+        err_msg = ''
+
+        # locate file
+        for run_number in range(start_run, end_run+1):
+            # form file
+            nexus_file_name = os.path.join(ipts_dir, 'data/VULCAN_%d_event.nxs' % run_number)
+            if os.path.exists(nexus_file_name):
+                run_info = {'run': run_number,
+                            'ipts': ipts_number,
+                            'file': nexus_file_name,
+                            'time': None}
+                self._infoDict[archive_key].append(run_info)
+            else:
+                err_msg += 'Run %d does not exist in IPTS %s\n' % (run_number, ipts_number)
+            # END-IF
+        # END-FOR
+
+        return archive_key, err_msg
+
+    def scan_experiment_run_info(self, ipts_dir):
+        """ Get information of standard SNS event NeXus files in a given directory.
+        Purpose:
+            Get full path of all SNS event NeXus files from a directory
+        Requirements:
+            Given directory does exist
+        Guarantees:
+            Experimental run information including run number, creation time and full file path will be returned
+        Note:
+            Data archiving might put wrong time stamps on the event NeXus files.  For example,
+            the creation time sometime is later than modified time.  In this case,
+            return the earliest time between creation time and modified time.
+
+        :exception: RuntimeError for non-existing IPTS
+        :rtype: list
+        :param ipts_dir:
+        :return: key to the dictionary
+        """
+        # check validity of inputs
+        assert isinstance(ipts_dir, str) and os.path.exists(ipts_dir), \
+            'IPTS directory %s (%s) cannot be found.' % (str(ipts_dir), str(type(ipts_dir)))
+
+        # List all files
+        all_file_list = os.listdir(ipts_dir)
+        run_tup_list = []
+        for file_name in all_file_list:
+            # skip non-event Nexus file
+            if file_name.endswith('_event.nxs') is False:
+                continue
+            else:
+                full_path_name = os.path.join(ipts_dir, file_name)
+
+            # get file information
+            ipts_number, run_number = DataArchiveManager.get_ipts_run_from_file_name(file_name)
+
+            # NOTE: This is a fix to bad /SNS/ file system in case the last modified time is earlier than creation time
+            create_time = os.path.getctime(full_path_name)
+            modify_time = os.path.getmtime(full_path_name)
+            if modify_time < create_time:
+                create_time = modify_time
+
+            # add to list for return
+            run_tup_list.append({'run': run_number,
+                                 'ipts': ipts_number,
+                                 'file': full_path_name,
+                                 'time': create_time})
+        # END-FOR
+
+        self._infoDict[ipts_dir] = run_tup_list
+
+        return ipts_dir
+
+    def scan_vulcan_record(self, record_file_path):
+        """
+        Scan a VULCAN record file
+        :param record_file_path:
+        :return: key to a dictionary
+        """
+        # read the file
+        record_file_set = vulcan_util.import_vulcan_log(record_file_path)
+
+        # export the pandas log to a list of dictionary
+        run_dict_list = list()
+        num_runs = len(record_file_set)
+        for i_run in range(num_runs):
+            run_number = int(record_file_set['RUN'][i_run])
+            ipts_str = str(record_file_set['IPTS'][i_run])
+            ipts_number = int(ipts_str.split('-')[-1])
+            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
+            exp_time_str = str(record_file_set['StartTime'][i_run])
+            exp_time = vdrivehelper.parse_time(exp_time_str)
+
+            run_dict_list.append({'run': run_number,
+                                  'ipts': ipts_number,
+                                  'file': full_file_path,
+                                  'time': exp_time})
+        # END-FOR
+
+        self._infoDict[record_file_path] = run_dict_list
+
+        return record_file_path
 
     def search_experiment_runs_by_time(self, delta_days):
         """ Search files under IPTS and return with the runs created within a certain

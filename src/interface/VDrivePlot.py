@@ -226,7 +226,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
                 # set up
                 self.setObjectName(_fromUtf8("MainWindow"))
-                self.resize(1005, 766)
+                self.resize(1280, 1024)
                 self.centralwidget = QtGui.QWidget(self)
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
                 self.gridLayout = QtGui.QGridLayout(self.centralwidget)
@@ -1034,6 +1034,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                                 '' % str(type(vdrive_command))
 
         # split
+        # need to strip the space around command
+        vdrive_command = vdrive_command.replace(' ', '')
+
+        # split the command from arguments
         command_script = vdrive_command.split(',')
         command = command_script[0]
         status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])

@@ -138,6 +138,7 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
 
     return True, (splitters_ws_name, info_ws_name)
 
+
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                   min_time, max_time,
                                   log_name, min_log_value, max_log_value, log_value_interval,

@@ -278,6 +278,7 @@ class SampleLogManager(object):
         :param min_time:
         :param max_time:
         :param time_interval:
+        :param tag:
         :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
         """
         # Check

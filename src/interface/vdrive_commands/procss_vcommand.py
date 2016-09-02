@@ -5,7 +5,7 @@ Base class for VDRIVE command processors
 """
 
 
-class VDriveCommandProcessor(object):
+class VDriveCommand(object):
     """
     Base class to process VDRIVE commands
     """
@@ -21,6 +21,9 @@ class VDriveCommandProcessor(object):
                                                             'instance but not %s.' % controller.__class__.__name__
         assert isinstance(command_args, dict), 'Argument commands dictionary cannot be a %s.' \
                                                '' % str(type(command_args))
+
+        # my name
+        self._commandName = 'VDRIVE (base)'
 
         # set controller
         self._controller = controller
@@ -45,10 +48,18 @@ class VDriveCommandProcessor(object):
         input_args = self._commandArgList.keys()
         for arg_key in input_args:
             if arg_key not in supported_arg_list:
-                raise KeyError('VBIN argument %s is not recognized.' % arg_key)
+                raise KeyError('Command %s\'s argument "%s" is not recognized. Supported '
+                               'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list)))
         # END-FOF
 
         return
+
+    def get_help(self):
+        """
+        Get help message
+        :return:
+        """
+        return 'Invalid to call base class'
 
     def set_ipts(self):
         """

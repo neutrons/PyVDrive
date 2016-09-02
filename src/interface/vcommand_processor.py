@@ -7,6 +7,7 @@ from PyQt4.QtCore import pyqtSignal
 import vdrive_commands.chop
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
+import vdrive_commands.procss_vcommand
 
 
 class VdriveCommandProcessor(object):
@@ -94,13 +95,9 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
+        processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
 
-        processor = vdrive_commands.chop.VdriveChop(self._myParent.get_controller(), arg_dict)
-
-        status, err_msg = processor.exec_cmd()
-
-        return status, err_msg
+        return self._process_command(processor, arg_dict)
 
     def _process_vbin(self, arg_dict):
         """
@@ -108,16 +105,27 @@ class VdriveCommandProcessor(object):
          :param arg_dict:
          :return:
          """
-        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
-
-        print '[DB...] Process VBIN command: %s' % str(arg_dict)
         processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
 
+        return self._process_command(processor, arg_dict)
+
+    @staticmethod
+    def _process_command(command_processor, arg_dict):
+        """
+
+        :param command_processor:
+        :param arg_dict:
+        :return:
+        """
+        assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
+            'not command processor but ...'
+        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
+
         if len(arg_dict) == 0:
-            message = processor.get_help()
+            message = command_processor.get_help()
             status = True
         else:
-            status, message = processor.exec_cmd()
+            status, message = command_processor.exec_cmd()
 
         return status, message
 

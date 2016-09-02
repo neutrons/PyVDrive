@@ -87,6 +87,22 @@ class VDriveAPI(object):
 
         return session_file_name
 
+    # Definition of properties
+    @property
+    def project(self):
+        """
+        Get reduction project
+        :return:
+        """
+        return self._myProject
+
+    @property
+    def archive_manager(self):
+        """ Get the access to archiving manager
+        """
+        return self._myArchiveManager
+
+    # Definition of algorithms
     def add_runs_to_project(self, run_info_list):
         """
         Add runs under an IPTS dir to project
@@ -96,7 +112,7 @@ class VDriveAPI(object):
         """
         # check  input
         assert isinstance(run_info_list, list), 'Input run-tuple list must be instance of list but not %s.' \
-                                               '' % type(run_info_list)
+                                                '' % type(run_info_list)
         # add each run to project
         for index, run_info in enumerate(run_info_list):
             # check type
@@ -218,18 +234,6 @@ class VDriveAPI(object):
         """
         if slicer_tag is not None:
             self._mySlicingManager.clean_workspace(run_number, slicer_tag)
-
-    def clear_runs(self):
-        """
-        Clear all runs in the VProject. 
-        :return:
-        """
-        try:
-            self._myProject.clear_runs()
-        except TypeError as e:
-            return False, str(e)
-
-        return True, ''
 
     def export_gsas_file(self, run_number, gsas_file_name):
         """
@@ -803,6 +807,7 @@ class VDriveAPI(object):
         :return:
         """
         run_list = self._myProject.get_runs()
+        print '[DB...BAT] run_list: ', run_list
 
         # Determine index of start run and end run
         try:

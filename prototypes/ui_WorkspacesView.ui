@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1175</width>
-    <height>868</height>
+    <width>1495</width>
+    <height>940</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -57,7 +57,6 @@
     <widget class="MantidIPythonWidget" name="widget_ipython" native="true"/>
    </item>
   </layout>
-  <zorder>tableWidget_segments</zorder>
   <zorder>widget_ipython</zorder>
   <zorder>groupBox</zorder>
  </widget>
