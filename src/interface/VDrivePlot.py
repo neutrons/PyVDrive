@@ -226,7 +226,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
                 # set up
                 self.setObjectName(_fromUtf8("MainWindow"))
-                self.resize(1280, 1024)
+                self.resize(1600, 1200)
                 self.centralwidget = QtGui.QWidget(self)
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
                 self.gridLayout = QtGui.QGridLayout(self.centralwidget)
