@@ -929,37 +929,39 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get new bank
         new_bank = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # check for non-plotting case
         if new_bank == self._currentBankNumber:
             # same bank as before. no need to do anything
-            print '[DB] Newly selected bank %d is same as current bank %d.' % (new_bank, self._currentBankNumber)
+            self.statusBar().showMessage('Newly selected bank %d is same as current bank %d.'
+                                         '' % (new_bank, self._currentBankNumber))
             return
         if self._isDataLoaded is False:
             # it is about to load new data, plotting will be called explicitly. no need to re-plot her
-            print '[DB] Data is in loading stage. Change to bank %d won\'t have any effect.' % new_bank
+            self.statusBar().showMessage('Data is in loading stage. Change to bank %d won\'t have any effect.'
+                                         '' % new_bank)
             return
 
         # Save the current peaks to memory and back up to disk
         self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
 
-        # Clear table and canvas
-        self.ui.tableWidget_peakParameter.remove_all_rows()
-        self.ui.graphicsView_main.reset()
-
-        # Re-plot
-        # vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
-        new_spec = new_bank - 1
-        vec_x = self._currentDataSet[new_spec][0]
-        vec_y = self._currentDataSet[new_spec][1]
-        self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
-
+        # set the current ones to new bank
+        self._currentBankNumber = new_bank
         # take care of the run number
         if self._currentRunNumber is None:
             self._currentRunNumber = str(self.ui.comboBox_runNumber.currentText())
 
-        self._currentBankNumber = new_bank
-        self.ui.label_diffractionMessage.setText('Run %s Bank %d' % (
-            str(self._currentRunNumber), self._currentBankNumber))
+        # Clear table and canvas
+        self.ui.tableWidget_peakParameter.remove_all_rows()
+        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.clear_all_lines()
+
+        # Re-plot
+        title = 'Run %s Bank %d' % (str(self._currentRunNumber), self._currentBankNumber)
+        new_spec = new_bank - 1
+        vec_x = self._currentDataSet[new_spec][0]
+        vec_y = self._currentDataSet[new_spec][1]
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title)
 
         return
 
@@ -1111,10 +1113,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # self.ui.comboBox_runNumber.clear()
         if run_number is None:
             self.ui.comboBox_runNumber.addItem(str(data_key))
-            self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
+            title_message = 'File %s Bank %d' % (data_key, 1)
+            # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
             self.ui.comboBox_runNumber.addItem(str(run_number))
-            self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+            title_message = 'Run %d Bank %d' % (run_number, 1)
+            # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
         if run_number is None:
@@ -1132,7 +1136,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         vec_x = data_bank_1[0]
         vec_y = data_bank_1[1]
         self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title_message)
 
         # Set up class variables
         self._currentRunNumber = run_number
@@ -1166,25 +1170,25 @@ class PeakPickerWindow(QtGui.QMainWindow):
         if self._peakPickerMode == PeakPickerMode.Normal:
             # enter normal mode to quick-pick mode (for single peak)
             self._peakPickerMode = PeakPickerMode.QuickPick
-            self.ui.pushButton_peakPickerMode.setText('Select Multi-Peaks')
+            self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak Mode')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=True, multi_mode=False)
-            self.ui.label_peakSelectionMode.setText('Single-Peak Selection Mode')
+            self.ui.graphicsView_main.canvas().set_title('Single-Peak Selection', color='blue')
             self.ui.pushButton_addPeaks.setEnabled(False)
 
         elif self._peakPickerMode == PeakPickerMode.QuickPick:
             # enter multiple peaks-pick mode from quick mode
             self._peakPickerMode = PeakPickerMode.MultiPeakPick
-            self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection')
+            self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection Mode')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=False, multi_mode=True)
-            self.ui.label_peakSelectionMode.setText('Multiple-Peaks Selection Mode')
+            self.ui.graphicsView_main.canvas().set_title('Multiple-Peaks Selection', color='red')
             self.ui.pushButton_addPeaks.setEnabled(False)
 
         else:
             # non-selection mode
             self._peakPickerMode = PeakPickerMode.Normal
-            self.ui.pushButton_peakPickerMode.setText('Select Single-Peaks')
+            self.ui.pushButton_peakPickerMode.setText('Enter Single-Peak Mode')
             self.ui.graphicsView_main.set_peak_selection_mode(False, False)
-            self.ui.label_peakSelectionMode.setText('')
+            self.ui.graphicsView_main.canvas().set_title('Not In Peak Selection Mode', color='gray')
             self.ui.pushButton_addPeaks.setEnabled(True)
 
         return

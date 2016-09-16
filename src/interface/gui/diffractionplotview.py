@@ -1087,7 +1087,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def plot_diffraction_pattern(self, vec_x, vec_y, key=None):
+    def plot_diffraction_pattern(self, vec_x, vec_y, title=None, key=None):
         """
         Plot a diffraction pattern on canvas
         :param vec_x: 1d array or list for X
@@ -1098,7 +1098,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert len(vec_x) == len(vec_y), 'vector of x and y have different size!'
 
         # Plot
-        pattern_key = self.add_plot_1d(vec_x, vec_y, color='black', marker='.')
+        if title is None:
+            title = ''
+
+        pattern_key = self.add_plot_1d(vec_x, vec_y, label=title, color='black', marker='.')
 
         # Record the data for future usage
         if key is not None:

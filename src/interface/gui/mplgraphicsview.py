@@ -946,9 +946,9 @@ class Qt4MplCanvas(FigureCanvas):
 
         # color must be RGBA (4-tuple)
         if plot_error is False:
-            r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, linestyle=line_style,
-                               label=label, linewidth=line_width)
             # return: list of matplotlib.lines.Line2D object
+            r = self.axes.plot(vec_x, vec_y, color=color, marker=marker, markersize=1, linestyle=line_style,
+                               label=label, linewidth=line_width)
         else:
             r = self.axes.errorbar(vec_x, vec_y, yerr=y_err, color=color, marker=marker, linestyle=line_style,
                                    label=label, linewidth=line_width)
@@ -1030,7 +1030,6 @@ class Qt4MplCanvas(FigureCanvas):
         self.draw()
 
         return line_key
-
 
     def addPlot2D(self, array2d, xmin, xmax, ymin, ymax, holdprev, yticklabels=None):
         """ Add a 2D plot
@@ -1195,6 +1194,20 @@ class Qt4MplCanvas(FigureCanvas):
         self.axes.set_ylim(ylims)
 
         # try draw
+        self.draw()
+
+        return
+
+    def set_title(self, title, color):
+        """
+
+        :param title:
+        :return:
+        """
+        # TODO/NOW - doc & etc
+
+        self.axes.set_title(title, loc='center', color=color)
+
         self.draw()
 
         return
