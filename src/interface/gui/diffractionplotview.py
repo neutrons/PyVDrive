@@ -1183,6 +1183,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param plot:
         :return:
         """
+        # TODO/NOW*NOW
         # check requirements
 
         # order the peaks in reverse order
@@ -1194,6 +1195,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # add peak groups and peak
 
         # plot
+        for peak_info in peak_info_list:
+            # get value
+            peak_center = peak_info[0]
+            peak_width = peak_info[2]
+
+            # add peak group indicator
+            group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
+            self.add_peak(peak_center, group_id=group_id)
 
         return
 

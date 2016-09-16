@@ -525,26 +525,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def initialize(self, controller):
-        """
-        Purpose:
-            Set up controller instance
-        Requires:
-            It is not initialised before
-        Guarantees:
-            All function call to do with controller will work
-        :param controller:
-        :return:
-        """
-        # Check requirements
-        assert self._myController is None, 'Workflow controller has been already set up.'
-        assert isinstance(controller, vdapi.VDriveAPI)
-
-        # Set up
-        self._myController = controller
-
-        return
-
     def do_add_picked_peaks(self):
         """ Add the picked up peaks in canvas
         :return:
@@ -731,7 +711,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController
+        assert self._myController is not None, 'Controller must be set up.'
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
         min_d = GuiUtility.parse_float(self.ui.lineEdit_xMin)
