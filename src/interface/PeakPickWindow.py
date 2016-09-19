@@ -534,9 +534,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # get number of groups
         num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
+
+        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
+
         for i_grp in xrange(num_groups):
             # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
+
+            # skip if group is not editable (in show-only mode)
+            if not group.is_editable():
+                continue
+
             peak_name = ''
             width = group.right_boundary - group.left_boundary
 
@@ -568,6 +576,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
             # make the group quit the edit mode
             self.ui.graphicsView_main.edit_group(group_id, False)
+
+
+            # quit peak editting mode
+            # group.quit_peak
 
         # END-FOR
 
@@ -646,6 +658,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
             peak_pos = peak_info_tup[0]
             peak_width = peak_info_tup[1]
             self.ui.graphicsView_main.plot_peak_indicator(peak_pos)
+        # END-FOR
+        print '[DB...BAT] Current peak indicators on canvas:', self.ui.graphicsView_main._shownPeakIDList
 
         return
 
@@ -817,21 +831,32 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: the table is switched to editable or non-editable mode
         :return:
         """
-        # get selected row
-        row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows(True)
-        if len(row_number_list) == 0:
-            GuiUtility.pop_dialog_information(self, 'No row is selected to edit!')
+        # get selected columns
+        column_number_list = self.ui.tableWidget_peakParameter.get_selected_columns()
 
-        # set to editable
-        # FIXME - can we make this more flexible?
-        col_index = 1
-        for row_number in row_number_list:
-            item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
-
-            # FIXME/TODO/NOW - Implement this to NTableWidget
-            item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
-            self.ui.tableWidget_peakParameter.editItem(item_i)
+        num_rows = self.ui.tableWidget_peakParameter.rowCount()
+        for row_number in range(num_rows):
+            for col_index in column_number_list:
+                item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
+                item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
+                # self.ui.tableWidget_peakParameter.editItem(item_i)
         # END-FOR
+
+        # get selected row
+        # row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows(True)
+        # if len(row_number_list) == 0:
+        #     GuiUtility.pop_dialog_information(self, 'No row is selected to edit!')
+
+        # # set to editable
+        # # FIXME - can we make this more flexible?
+        # col_index = 1
+        # for row_number in row_number_list:
+        #     item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
+
+        #     # FIXME/TODO/NOW - Implement this to NTableWidget
+        #     item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
+        #     self.ui.tableWidget_peakParameter.editItem(item_i)
+        # # END-FOR
 
         # is_editable = self.ui.tableWidget_peakParameter.is_editable()
         # self.ui.tableWidget_peakParameter.set_editable(is_editable)
@@ -863,7 +888,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: Highlight all peaks' indicators
         :return:
         """
-        self.ui.remove_picked_peaks_indicators()
+        self.ui.graphicsView_main.remove_picked_peaks_indicators()
 
         return
 

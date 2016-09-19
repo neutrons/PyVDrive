@@ -833,6 +833,9 @@ class GroupedPeaksInfo(object):
         self._rightX = right_x
     
         self._peakPosIDList = list()  # a list of 2-tuple as peak position and indicator ID
+
+        # mode controller: only in edit mode allows the moving of boundary of peak center
+        self._inEditMode = True
     
         return
     
@@ -1009,6 +1012,9 @@ class GroupedPeaksInfo(object):
             '(%d).' % (num_peaks, len(self._peakPosIDList))
 
         # set up
+        self._inEditMode = True
+
+        # set up
         self._leftID = left_bound_id
         self._rightID = right_bound_id
         for i_peak in xrange(num_peaks):
@@ -1016,6 +1022,11 @@ class GroupedPeaksInfo(object):
             self._peakPosIDList[i_peak] = (peak_pos, peak_id_list[i_peak])
 
         return
+    
+    def is_editable(self):
+        """
+        """
+        return self._inEditMode
 
     def quit_edit_mode(self):
         """ Quit edit mode, i.e., the indicator lines are removed from canvas.
@@ -1036,6 +1047,8 @@ class GroupedPeaksInfo(object):
             peak_pos = self._peakPosIDList[i_peak][0]
             self._peakPosIDList[i_peak] = (peak_pos, -1)
         # END-FOR
+
+        self._inEditMode = False
 
         return
 

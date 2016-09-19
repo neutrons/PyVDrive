@@ -71,6 +71,18 @@ class IndicatorManager(object):
 
         return
 
+    def delete(self, indicator_id):
+        """
+        Delete indicator
+        """
+        # TODO/NOW: NEW
+
+        del self._lineManager[indicator_id]
+        del self._canvasLineKeyDict[indicator_id]
+        del self._indicatorTypeDict[indicator_id]
+
+        return
+
     def add_2way_indicator(self, x, x_min, x_max, y, y_min, y_max, color):
         """
 
@@ -671,6 +683,7 @@ class MplGraphicsView(QtGui.QWidget):
         #
         plot_id = self._myIndicatorsManager.get_canvas_line_index(indicator_key)
         self._myCanvas.remove_plot_1d(plot_id)
+        self._myIndicatorsManager.delete(indicator_key)
 
         return
 
@@ -1222,7 +1235,7 @@ class Qt4MplCanvas(FigureCanvas):
 
         # Get all lines in list
         lines = self.axes.lines
-        assert isinstance(lines, list)
+        assert isinstance(lines, list), 'Lines must be list'
 
         debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
         debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (

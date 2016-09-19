@@ -59,7 +59,7 @@ class GSASPeakFileManager(object):
         """
         # Check requirements
         assert isinstance(bank, int), 'Bank number must be an integer but not %s.' % str(type(bank))
-        assert isinstance(position, float), 'Peak position must be a float but not %s.' % str(type(position))
+        assert isinstance(position, float), 'Peak position %s must be a float but not %s.' % (str(position), type(position))
         assert position > 0., 'Peak position must be greater than 0, but given %f.' % position
         assert isinstance(width, float), 'Peak width must be a string but not %s.' % str(type(width))
         assert width > 0., 'Peak width must be greater than 0 but not %f.' % width

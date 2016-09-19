@@ -183,8 +183,24 @@ class NTableWidget(QtGui.QTableWidget):
 
         return ret_list
 
+
+    def get_selected_columns(self):
+        """
+        Get selected columns with mouse actions
+        
+        NOTE: QModelIndexList QItemSelectionModel::selectedColumns
+        """
+        col_indexes = self.selectionModel().selectedColumns()
+        col_number_list = list()
+        for index in sorted(col_indexes):
+            # print('Column ', index, 'of type', type(index), 'is selected')
+            col_number_list.append(index.column())
+
+        return col_number_list
+
+
     def get_selected_rows(self, status=True):
-        """ Get the rows whose status is same as given status
+        """ Get the rows whose status is same as given status with checkbox
         Requirements: given status must be a boolean
         Guarantees: a list of row indexes are constructed for those rows that meet the requirement.
         :param status:

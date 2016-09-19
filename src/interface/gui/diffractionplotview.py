@@ -76,6 +76,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._currIndicatorType = -1
         self._currGroupID = -1
 
+        # peak indictor managerment
+        self._shownPeakIDList = list()  # list of indicator IDs for peaks show on canvas
+
         """
         self._boundaryRightEdge = -0.
         self._boundaryLeftEdge = -0.
@@ -267,14 +270,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             if peak_tup[1] == center_id:
                 return peak_tup
 
-        for peak_tup in self._pickedPeakList:
+        for peak_tup in self._shownPeakIDList:
             if peak_tup[1] == center_id:
                 return peak_tup
 
         return None
 
     def plot_peak_indicator(self, peak_pos):
-        """ Add a peak's indicators (center, left and right boundaries)
+        """ Add a peak's indicator, i.e., center only
         Requirements:
             Peak position must be given in current range
         Guarantees:
@@ -292,10 +295,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                                               '(%f, %f)' % (peak_pos, left_x, right_x)
 
         # Add indicator
-        indicator_key = self.add_vertical_indicator(peak_pos, 'red')
+        indicator_id = self.add_vertical_indicator(peak_pos, 'red')
 
         # Add peak to data structure for mananging
-        self._pickedPeakList.append(indicator_key)
+        self._shownPeakIDList.append(indicator_id)
 
         return
 
@@ -412,6 +415,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # get the group
         pk_group = self._myPeakGroupManager.get_group(group_id)
         assert isinstance(pk_group, peaksmanager.GroupedPeaksInfo)
+
+        # debug output
+        print '[DB...BAT] removing peak group: ', str(pk_group)
 
         # get all the indicator IDs from peak group and remove from canvas
         self.remove_indicator(pk_group.left_boundary_id)
@@ -1159,7 +1165,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # remove indicators from canvas
-        for peak_indicator_id in self._pickedPeakList:
+        for peak_indicator_id in self._shownPeakIDList:
             self.remove_indicator(peak_indicator_id)
 
         # clear the inPickPeakList
