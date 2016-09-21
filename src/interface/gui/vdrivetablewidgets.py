@@ -577,7 +577,6 @@ class PeakParameterTable(NdavTable.NTableWidget):
         bank_id_list = sorted(self._buffer.keys())
         bank_peak_dict = dict()
         for bank_id in bank_id_list:
-
             # skip the bank IDs to be excluded
             if bank_id in excluded_banks:
                 continue
@@ -596,6 +595,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
                 peak_group = peak_row[5]
 
                 peak_i = [bank, peak_name, peak_centre, peak_width, peak_group]
+                print '[DB...BAT] Buffered peak: ', peak_i
                 peak_list.append(peak_i)
 
                 print 'Appending peak %d: %s' % (len(peak_list)-1, str(peak_i))

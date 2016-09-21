@@ -576,12 +576,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
             # make the group quit the edit mode
             self.ui.graphicsView_main.edit_group(group_id, False)
-
-
-            # quit peak editting mode
-            # group.quit_peak
-
         # END-FOR
+
+        # quit peak editing mode
+        self._inEditMode = False
+        # TODO/NOW - this is a dirty solution.  need to have it solved by edit_group(...)
+        self.ui.graphicsView_main._inEditGroupList = list()
 
         return
 
@@ -888,7 +888,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Purpose: Highlight all peaks' indicators
         :return:
         """
-        self.ui.graphicsView_main.remove_picked_peaks_indicators()
+        self.ui.graphicsView_main.remove_show_only_peaks()
 
         return
 
@@ -980,6 +980,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.tableWidget_peakParameter.remove_all_rows()
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
+
+        # TODO/NOW - Need to make the table to add the buffered peaks back
+        pass
 
         # Re-plot
         title = 'Run %s Bank %d' % (str(self._currentRunNumber), self._currentBankNumber)

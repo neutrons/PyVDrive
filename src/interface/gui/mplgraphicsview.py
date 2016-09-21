@@ -4,12 +4,13 @@ import numpy as np
 
 from PyQt4 import QtGui
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
+import matplotlib
 from matplotlib.figure import Figure
 import matplotlib.image
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
-MplLineStyles = ['-' , '--' , '-.' , ':' , 'None' , ' ' , '']
+MplLineStyles = ['-', '--', '-.', ':', 'None', ' ', '']
 MplLineMarkers = [
     ". (point         )",
     "* (star          )",
@@ -208,8 +209,6 @@ class IndicatorManager(object):
 
         for line_key in self._lineManager.keys():
 
-            print '[MplGraph DB] Exam indicator key %s' % str(self._lineManager[line_key])
-
             if x is not None and y is not None:
                 # 2 way
                 raise NotImplementedError('ASAP')
@@ -233,7 +232,6 @@ class IndicatorManager(object):
         :return:
         """
         if line_id is not None:
-            print '[DB] Get line style. ID = %s' % str(line_id)
             style = '--'
         else:
             style = '--'
@@ -824,13 +822,12 @@ class MplGraphicsView(QtGui.QWidget):
 
         return marker, color
 
-    def resetLineColorStyle(self):
+    def reset_line_color_marker_index(self):
         """ Reset the auto index for line's color and style
         """
         self._myLineMarkerColorIndex = 0
         return
 
-    # FIXME - Find out difference between setXYLimit() and setXYLimits()
     def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
         """ Set X-Y limit automatically
         """
@@ -841,18 +838,13 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
-    """ Permanently removed
-    def setXYLimits(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        return self._myCanvas.setXYLimit(xmin, xmax, ymin, ymax)
-    """
-
     def setAutoLineMarkerColorCombo(self):
+        """ Set the default/auto line marker/color combination list
         """
-        """
-        self._myLineMarkerColorList = []
+        self._myLineMarkerColorList = list()
         for marker in MplLineMarkers:
             for color in MplBasicColors:
-                self._myLineMarkerColorList.append( (marker, color) )
+                self._myLineMarkerColorList.append((marker, color))
 
         return
 
@@ -881,6 +873,7 @@ class Qt4MplCanvas(FigureCanvas):
 
         if True:
             self.axes = self.fig.add_subplot(111) # return: matplotlib.axes.AxesSubplot
+            self.fig.subplots_adjust(bottom=0.15)
             self.axes2 = None
         else:
             self.axes = self.fig.add_host_subplot(111)
@@ -949,6 +942,12 @@ class Qt4MplCanvas(FigureCanvas):
         # Hold previous data
         self.axes.hold(True)
 
+        # set x-axis and y-axis label
+        if x_label is not None:
+            self.axes.set_xlabel(x_label, fontsize=16)
+        if y_label is not None:
+            self.axes.set_ylabel(y_label, fontsize=16)
+
         # process inputs and defaults
         if color is None:
             color = (0, 1, 0, 1)
@@ -968,12 +967,6 @@ class Qt4MplCanvas(FigureCanvas):
 
         self.axes.set_aspect('auto')
 
-        # set x-axis and y-axis label
-        if x_label is not None:
-            self.axes.set_xlabel(x_label, fontsize=20)
-        if y_label is not None:
-            self.axes.set_ylabel(y_label, fontsize=20)
-
         # set/update legend
         self._setupLegend()
 
@@ -983,7 +976,10 @@ class Qt4MplCanvas(FigureCanvas):
             self._lineDict[line_key] = r[0]
             self._lineIndex += 1
         else:
-            print "Impoooooooooooooooosible!  Return from plot is a %d-tuple. " % (len(r))
+            msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(r), r)
+            for i_r in range(len(r)):
+                msg += 'r[%d] = %s\n' % (i_r, str(r[i_r]))
+            raise NotImplementedError(msg)
 
         # Flush/commit
         self.draw()
@@ -1157,12 +1153,12 @@ class Qt4MplCanvas(FigureCanvas):
             self.fig.clear()
             # Re-create subplot
             self.axes = self.fig.add_subplot(111)
+            self.fig.subplots_adjust(bottom=0.15)
 
         # flush/commit
         self._flush()
 
         return
-
 
     def getLastPlotIndexKey(self):
         """ Get the index/key of the last added line
@@ -1230,23 +1226,22 @@ class Qt4MplCanvas(FigureCanvas):
         :param plot_key:
         :return:
         """
-        # self._lineDict[ikey].remove()
-        debug_info = 'Remove line... '
-
         # Get all lines in list
         lines = self.axes.lines
         assert isinstance(lines, list), 'Lines must be list'
 
-        debug_info += 'Number of lines = %d, List: %s.\n' % (len(lines), str(lines))
-        debug_info += 'Line to remove: key = %s, Line Dict has key = %s' % (
-            str(plot_key), plot_key in self._lineDict)
-        # print debug_info
 
         if plot_key in self._lineDict:
-            self.axes.lines.remove(self._lineDict[plot_key])
+            try:
+                self.axes.lines.remove(self._lineDict[plot_key])
+            except RuntimeError as r_error:
+                error_message = 'Unable to remove to 1D line (ID=%d) due to %s.' % (plot_key, str(r_error))
+                raise RuntimeError(error_message)
             self._lineDict[plot_key] = None
         else:
             raise RuntimeError('Line with ID %s is not recorded.' % plot_key)
+
+        self.axes.legend()
 
         # Draw
         self.draw()
@@ -1307,26 +1302,26 @@ class Qt4MplCanvas(FigureCanvas):
         """ Get a list of line/marker color and marker style combination
         as default to add more and more line to plot
         """
-        combolist = []
-        nummarkers = len(MplLineMarkers)
-        numcolors = len(MplBasicColors)
+        combo_list = list()
+        num_markers = len(MplLineMarkers)
+        num_colors = len(MplBasicColors)
 
-        for i in xrange(nummarkers):
+        for i in xrange(num_markers):
             marker = MplLineMarkers[i]
-            for j in xrange(numcolors):
+            for j in xrange(num_colors):
                 color = MplBasicColors[j]
-                combolist.append( (marker, color) )
+                combo_list.append((marker, color))
             # ENDFOR (j)
         # ENDFOR(i)
 
-        return combolist
+        return combo_list
 
     def _flush(self):
         """ A dirty hack to flush the image
         """
         w, h = self.get_width_height()
-        self.resize(w+1,h)
-        self.resize(w,h)
+        self.resize(w+1, h)
+        self.resize(w, h)
 
         return
 

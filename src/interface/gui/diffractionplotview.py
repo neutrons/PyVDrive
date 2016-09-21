@@ -367,6 +367,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert isinstance(status, bool)
 
         # enter/enable or leave/disable edit mode
+        # FIXME/TODO/NOW - Need a better way to manage group/group-ID
         if status:
             # add all the indicators
             self._add_group_to_canvas(group_id)
@@ -374,6 +375,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         else:
             # remove all the indicators of this group
             self._remove_group_from_canvas(group_id)
+            # self._inEditGroupList.remove(group_id) : items are group but not group ID
 
         return
 
@@ -1160,16 +1162,17 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return True
 
-    def remove_picked_peaks_indicators(self):
-        """ Removed all the being-picked peaks' indicators stored in _pickedPeaksList
+    def remove_show_only_peaks(self):
+        """ Removed all the peaks' indicators that is for shown only
         :return:
         """
         # remove indicators from canvas
         for peak_indicator_id in self._shownPeakIDList:
             self.remove_indicator(peak_indicator_id)
+            self._shownPeakIDList.remove(peak_indicator_id)
 
         # clear the inPickPeakList
-        self._inEditGroupList = list()
+        assert len(self._inEditGroupList) == 0, 'It is supposed that there is no peak group in edit mode.'
 
         return
 

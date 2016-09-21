@@ -815,7 +815,6 @@
      </layout>
     </item>
    </layout>
-   <zorder>treeView_iptsRun</zorder>
    <zorder></zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -852,7 +851,7 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>352</width>
+     <width>391</width>
      <height>379</height>
     </size>
    </property>
@@ -860,29 +859,9 @@
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_6">
-    <layout class="QGridLayout" name="gridLayout_4">
-     <item row="2" column="0" colspan="2">
-      <widget class="PeakParameterTable" name="tableWidget_peakParameter">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Peak width is the fitting range for 2 peaks.&lt;/p&gt;&lt;p&gt;It will be picked up by xmin and xmax of the graph&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Nomenclature:&lt;/p&gt;&lt;p&gt;1. width (vdrive): peak fit range = 6 * FWHM&lt;/p&gt;&lt;p&gt;2. If there are more than 1 peak overlapped, then use 'number of peak to notify that the number of peak overlapped'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0" colspan="2">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="1" column="1">
-        <widget class="QPushButton" name="pushButton_hidePeaks">
-         <property name="text">
-          <string>Hide Peaks</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QPushButton" name="pushButton_readPeakFile">
          <property name="font">
@@ -895,7 +874,7 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
+       <item row="1" column="4">
         <widget class="QPushButton" name="pushButton_sortPeaks">
          <property name="maximumSize">
           <size>
@@ -911,7 +890,7 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="2" column="2">
         <widget class="QPushButton" name="pushButton_claimOverlappedPeaks">
          <property name="maximumSize">
           <size>
@@ -948,7 +927,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
+       <item row="0" column="2">
         <widget class="QPushButton" name="pushButton_save">
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -968,7 +947,30 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
+       <item row="0" column="5">
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Preferred</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="2">
+        <widget class="QPushButton" name="pushButton_hidePeaks">
+         <property name="text">
+          <string>Hide Peaks</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
         <widget class="QPushButton" name="pushButton_deletePeaks">
          <property name="maximumSize">
           <size>
@@ -984,7 +986,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="2">
+       <item row="0" column="4">
         <widget class="QPushButton" name="pushButton_editTableContents">
          <property name="maximumSize">
           <size>
@@ -997,28 +999,99 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="1">
+        <spacer name="horizontalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Preferred</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="3">
+        <spacer name="horizontalSpacer_6">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Preferred</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </item>
-     <item row="1" column="1">
-      <widget class="QCheckBox" name="checkBox_keepPeaksInTable">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Keep peaks in the peak table while importing peaks from peak ID file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Keep</string>
-       </property>
-      </widget>
+     <item>
+      <layout class="QGridLayout" name="gridLayout_7">
+       <item row="0" column="1">
+        <widget class="QCheckBox" name="checkBox_showAllBanksPeaks">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Show All Banks</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="checkBox_keepPeaksInTable">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Keep peaks in the peak table while importing peaks from peak ID file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>Keep Previous Peaks</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="checkBox_selectPeaks">
+         <property name="maximumSize">
+          <size>
+           <width>600</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>All Peaks</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
-     <item row="1" column="0">
-      <widget class="QCheckBox" name="checkBox_selectPeaks">
-       <property name="maximumSize">
-        <size>
-         <width>60</width>
-         <height>16777215</height>
-        </size>
+     <item>
+      <widget class="PeakParameterTable" name="tableWidget_peakParameter">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <property name="text">
-        <string/>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Peak width is the fitting range for 2 peaks.&lt;/p&gt;&lt;p&gt;It will be picked up by xmin and xmax of the graph&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;Nomenclature:&lt;/p&gt;&lt;p&gt;1. width (vdrive): peak fit range = 6 * FWHM&lt;/p&gt;&lt;p&gt;2. If there are more than 1 peak overlapped, then use 'number of peak to notify that the number of peak overlapped'&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
