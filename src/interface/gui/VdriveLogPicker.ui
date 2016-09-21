@@ -390,7 +390,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_2">
               <item>
-               <widget class="QRadioButton" name="radioButton_autoSlicer">
+               <widget class="QRadioButton" name="radioButton_timeSlicer">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
@@ -402,7 +402,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton">
+               <widget class="QRadioButton" name="radioButton_logValueSlicer">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
@@ -533,18 +533,6 @@
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QPushButton" name="pushButton_showSlicerSetup">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Show</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton">
                 <property name="font">
                  <font>
                   <pointsize>10</pointsize>
@@ -811,15 +799,19 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_cancel">
+         <widget class="QPushButton" name="pushButton_slicer">
           <property name="font">
            <font>
+            <pointsize>10</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
           </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop source NeXus file to multiple NeXus files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="text">
-           <string>Cancel</string>
+           <string>Chop</string>
           </property>
          </widget>
         </item>

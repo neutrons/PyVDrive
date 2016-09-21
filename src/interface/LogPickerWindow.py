@@ -87,7 +87,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
 
-        self.connect(self.ui.radioButton_autoSlicer, QtCore.SIGNAL('toggled (bool)'),
+        self.connect(self.ui.radioButton_timeSlicer, QtCore.SIGNAL('toggled (bool)'),
+                     self.evt_switch_slicer_method)
+        self.connect(self.ui.radioButton_logValueSlicer, QtCore.SIGNAL('toggled (bool)'),
                      self.evt_switch_slicer_method)
         self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
                      self.evt_switch_slicer_method)
@@ -196,7 +198,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_useLogFile.setChecked(False)
 
         # type of slicer picker
-        self.ui.radioButton_autoSlicer.setChecked(True)
+        self.ui.radioButton_timeSlicer.setChecked(True)
+        self.ui.radioButton_logValueSlicer.setChecked(False)
         self.ui.radioButton_manualSlicer.setChecked(False)
         self._set_main_slice_method()
         for item in ['Both', 'Increase', 'Decrease']:
@@ -230,14 +233,29 @@ class WindowLogPicker(QtGui.QMainWindow):
         Set the main slicer method, manual or auto
         :return:
         """
-        # TODO/NOW - check 2 checkbox cannot be True or False simultaneously
-        print '[DB] DO SOMETHING'
-
         # enable to disable
-        if self.ui.radioButton_autoSlicer.isChecked():
+        if self.ui.radioButton_timeSlicer.isChecked():
+            # time slicer
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
+
+            self.ui.lineEdit_minSlicerLogValue.setEnabled(False)
+            self.ui.lineEdit_slicerLogValueStep.setEnabled(True)
+            self.ui.lineEdit_maxSlicerLogValue.setEnabled(False)
+            self.ui.comboBox_logChangeDirection.setEnabled(False)
+
+        elif self.ui.radioButton_logValueSlicer.isChecked():
+            # log value slicer
+            self.ui.groupBox_sliceSetupAuto.setEnabled(True)
+            self.ui.groupBox_slicerSetupManual.setEnabled(False)
+
+            self.ui.lineEdit_minSlicerLogValue.setEnabled(True)
+            self.ui.lineEdit_slicerLogValueStep.setEnabled(True)
+            self.ui.lineEdit_maxSlicerLogValue.setEnabled(True)
+            self.ui.comboBox_logChangeDirection.setEnabled(True)
+
         else:
+            # manual slicer
             self.ui.groupBox_sliceSetupAuto.setEnabled(False)
             self.ui.groupBox_slicerSetupManual.setEnabled(True)
 
