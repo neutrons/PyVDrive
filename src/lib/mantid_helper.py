@@ -163,7 +163,6 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     :param log_value_change_direction:
     :return:
     """
-    print '[TRACE] Generate Filter By Log'
     # Check requirements
     assert isinstance(ws_name, str)
     src_ws = retrieve_workspace(ws_name)

@@ -26,6 +26,73 @@ UnitCellList = [('BCC', 'I m -3 m'),
                 ('Primitive', 'P m m m')]
 
 
+class PeakWidthSetupDialog(QtGui.QDialog):
+    """
+    Class for set up dialog
+    """
+    def __init__(self, parent):
+        """
+        Init ...
+        :return:
+        """
+        import gui.ui_PeakWidthSetup as widthSetupWindow
+
+        # Initialize
+        QtGui.QDialog.__init__(self, parent)
+
+        self.ui = widthSetupWindow.Ui_Dialog()
+        self.ui.setupUi(self)
+
+        # Define event handlers
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
+        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
+                     self.do_set_width)
+
+        # Class variables
+        self._peakWidth = None
+
+        return
+
+    def do_quit(self):
+        """
+        Return without doing anything
+        :return:
+        """
+        self.close()
+
+    def do_set_width(self):
+        """
+        Set peak width
+        :return:
+        """
+        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
+        if peak_width is None:
+            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
+            return
+        if peak_width <= 0.:
+            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
+            return
+
+        self._peakWidth = peak_width
+
+        # Close
+        self.close()
+
+        return
+
+    def get_peak_width(self):
+        """ Get peak width
+        Purpose: Get the stored peak width from the window object
+        Requirements: it must be set up
+        Guarantees: the peak width is given if it is set up
+        :return:
+        """
+        assert self._peakWidth
+
+        return self._peakWidth
+
+
 class PhaseWidgets(object):
     """
     A set of widgets to define a phase
@@ -261,79 +328,13 @@ class PhaseWidgets(object):
         return
 
 
-class PeakWidthSetupDialog(QtGui.QDialog):
-    """
-    Class for set up dialog
-    """
-    def __init__(self, parent):
-        """
-        Init ...
-        :return:
-        """
-        import gui.ui_PeakWidthSetup as widthSetupWindow
-
-        # Initialize
-        QtGui.QDialog.__init__(self, parent)
-
-        self.ui = widthSetupWindow.Ui_Dialog()
-        self.ui.setupUi(self)
-
-        # Define event handlers
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
-                     self.do_set_width)
-
-        # Class variables
-        self._peakWidth = None
-
-        return
-
-    def do_quit(self):
-        """
-        Return without doing anything
-        :return:
-        """
-        self.close()
-
-    def do_set_width(self):
-        """
-        Set peak width
-        :return:
-        """
-        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
-        if peak_width is None:
-            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
-            return
-        if peak_width <= 0.:
-            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
-            return
-
-        self._peakWidth = peak_width
-
-        # Close
-        self.close()
-
-        return
-
-    def get_peak_width(self):
-        """ Get peak width
-        Purpose: Get the stored peak width from the window object
-        Requirements: it must be set up
-        Guarantees: the peak width is given if it is set up
-        :return:
-        """
-        assert self._peakWidth
-
-        return self._peakWidth
-
-
 class PeakPickerMode(object):
     """ Enumerate
     """
-    Normal = 0
-    QuickPick = 1
+    NoPick = 0
+    SinglePeakPick = 1
     MultiPeakPick = 2
+    QuickMode = 3
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -442,7 +443,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._dataKeyList = list()
 
         # Peak selection mode
-        self._peakPickerMode = PeakPickerMode.Normal
+        self._peakPickerMode = PeakPickerMode.NoPick
         self._peakSelectionMode = ''
         self._indicatorIDList = None
         self._indicatorPositionList = None
@@ -1195,15 +1196,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """ Enter for leave peak picker mode
         :return:
         """
-        if self._peakPickerMode == PeakPickerMode.Normal:
+        if self._peakPickerMode == PeakPickerMode.NoPick:
             # enter normal mode to quick-pick mode (for single peak)
-            self._peakPickerMode = PeakPickerMode.QuickPick
+            self._peakPickerMode = PeakPickerMode.SinglePeakPick
             self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak Mode')
             self.ui.graphicsView_main.set_peak_selection_mode(single_mode=True, multi_mode=False)
             self.ui.graphicsView_main.canvas().set_title('Single-Peak Selection', color='blue')
             self.ui.pushButton_addPeaks.setEnabled(False)
 
-        elif self._peakPickerMode == PeakPickerMode.QuickPick:
+        elif self._peakPickerMode == PeakPickerMode.SinglePeakPick:
             # enter multiple peaks-pick mode from quick mode
             self._peakPickerMode = PeakPickerMode.MultiPeakPick
             self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection Mode')
@@ -1213,7 +1214,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         else:
             # non-selection mode
-            self._peakPickerMode = PeakPickerMode.Normal
+            self._peakPickerMode = PeakPickerMode.NoPick
             self.ui.pushButton_peakPickerMode.setText('Enter Single-Peak Mode')
             self.ui.graphicsView_main.set_peak_selection_mode(False, False)
             self.ui.graphicsView_main.canvas().set_title('Not In Peak Selection Mode', color='gray')

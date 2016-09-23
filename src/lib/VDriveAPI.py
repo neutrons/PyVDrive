@@ -16,6 +16,7 @@ import archivemanager
 import SampleLogHelper
 import vdrivehelper
 import mantid_helper
+import crystal_helper
 import io_peak_file
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
@@ -25,7 +26,7 @@ class VDriveAPI(object):
     """
     Class containing the methods to reduce and analyze VULCAN data.
     It is a pure python layer that does not consider GUI.
-    VDrivePlot is a GUI applicaton built upon this class
+    VDrivePlot is a GUI application built upon this class
     """
     def __init__(self, instrument_name):
         """
@@ -167,21 +168,21 @@ class VDriveAPI(object):
         # Convert phase type to
         phase_type = phase_type.split()[0]
         if phase_type == 'BCC':
-            phase_type = mantid_helper.UnitCell.BCC
+            phase_type = crystal_helper.UnitCell.BCC
         elif phase_type == 'FCC':
-            phase_type = mantid_helper.UnitCell.FCC
+            phase_type = crystal_helper.UnitCell.FCC
         elif phase_type == 'HCP':
-            phase_type = mantid_helper.UnitCell.HCP
+            phase_type = crystal_helper.UnitCell.HCP
         elif phase_type == 'Body-Center':
-            phase_type = mantid_helper.UnitCell.BC
+            phase_type = crystal_helper.UnitCell.BC
         elif phase_type == 'Face-Center':
-            phase_type = mantid_helper.UnitCell.FC
+            phase_type = crystal_helper.UnitCell.FC
         else:
             raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
 
         # Get reflections
-        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
-        reflections = mantid_helper.calculate_reflections(unit_cell, min_d, max_d)
+        unit_cell = crystal_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
+        reflections = crystal_helper.calculate_reflections(unit_cell, min_d, max_d)
 
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
