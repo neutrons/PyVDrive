@@ -1,6 +1,7 @@
-import os
+# Classes to process sample log and chopping
 
-import mantid_helper as mtd
+import os
+import mantid_helper
 
 
 FifteenYearsInSecond = 15*356*24*3600
@@ -91,9 +92,11 @@ class SampleLogManager(object):
         # Data structure for log data that is worked on now
         self._currNexusFilename = ''
         self._currRunNumber = None
-        self._currWorkspace = None
-        self._currWorkspaceName = ''
-        self._currentSplitterWS = None
+
+        self._currLogWorkspace = None
+        self._currLogWorkspaceName = ''
+
+        self._currSplitterWorkspace = None
         self._currLogNamesList = list()
         self._currSplittersDict = dict()  # key = sample log name, value = (split ws name, info ws name)
 
@@ -104,6 +107,10 @@ class SampleLogManager(object):
         self._runNxsNameMap = dict()
         # Some useful value
         self._runStartTimeDict = dict()
+
+        # pure log value setup (independent of NeXus file or workspace)
+        self._currentChopTime = None  # option: 'time', 'log', 'manual'
+        self._chopSetupDict = dict()
 
         return
 
@@ -148,25 +155,25 @@ class SampleLogManager(object):
         out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
 
         # Load sample logs
-        status, ret_obj = mtd.load_nexus(data_file_name=nxs_file_name,
-                                         output_ws_name=out_ws_name,
-                                         meta_data_only=True)
+        status, ret_obj = mantid_helper.load_nexus(data_file_name=nxs_file_name,
+                                                   output_ws_name=out_ws_name,
+                                                   meta_data_only=True)
 
         if status is False:
             return False, ret_obj
 
-        self._currWorkspace = ret_obj
-        self._currWorkspaceName = out_ws_name
+        self._currLogWorkspace = ret_obj
+        self._currLogWorkspaceName = out_ws_name
 
         # Set up log names list
         try:
-            self._currLogNamesList = mtd.get_sample_log_names(self._currWorkspace)
+            self._currLogNamesList = mantid_helper.get_sample_log_names(self._currLogWorkspace)
             assert isinstance(self._currLogNamesList, list)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTimeDict[nxs_base_name] = mtd.get_run_start(self._currWorkspace, unit='nanoseconds')
+        self._runStartTimeDict[nxs_base_name] = mantid_helper.get_run_start(self._currLogWorkspace, unit='nanoseconds')
 
         # Set up log list
         # self._logInfoList = mtd.get_sample_log_info(self._currWorkspace)
@@ -203,6 +210,75 @@ class SampleLogManager(object):
 
         return True, (split_ws, info_ws)
 
+    def chop_data(self, raw_file_name, slicer_type, output_directory):
+        """
+        chop data and save
+        :param raw_file_name:
+        :param slicer_type:
+        :param output_directory:
+        :return:
+        """
+        # check
+        # TODO/NOW - Do it!
+
+        # load data
+        # out_ws_name = os.path.basename(raw_file_name).split('.')[0]
+        base = os.path.basename(raw_file_name)
+        print '[DB]... raw file name: ', raw_file_name, 'base name:', base,
+        out_ws_name = os.path.splitext(base)[0]
+        print out_ws_name
+
+        mantid_helper.load_nexus(data_file_name=raw_file_name,
+                                 output_ws_name=out_ws_name,
+                                 meta_data_only=False)
+
+        # set up slicers
+        if slicer_type == 'time':
+            setup_dict = self._chopSetupDict['time']
+            # {'start': start_time, 'step': time_step, 'stop': stop_time}
+
+            # TODO/NOW - Need to find out a better name!
+            tag = 'time123'
+
+            # 2-tuple (boolean, objects): True/ws name tuple; False/error message
+            status, ret_obj = self.generate_events_filter_by_time(min_time=setup_dict['start'],
+                                                                  max_time=setup_dict['stop'],
+                                                                  time_interval=setup_dict['step'],
+                                                                  tag=tag,
+                                                                  ws_name=out_ws_name)
+            print '[DB...BAT] Returned from slicing setup:', status, ret_obj
+            if status:
+                chop_splitter_name, chop_info_name = ret_obj
+            else:
+                raise RuntimeError(ret_obj)
+
+        elif slicer_type == 'log':
+            raise NotImplementedError('ASAP')
+
+        else:
+            # manual
+            raise NotImplementedError('ASAP')
+
+        # chop data
+        base_name = os.path.join(output_directory, tag)
+        # return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
+        status, ret_obj = mantid_helper.split_event_data(raw_event_ws_name=out_ws_name,
+                                                         splitter_ws_name=chop_splitter_name,
+                                                         info_ws_name=chop_info_name,
+                                                         split_ws_base_name=base_name,
+                                                         tof_correction=False)
+        if status:
+            ws_name_list = ret_obj[0]
+        else:
+            raise RuntimeError(ret_obj)
+
+        # save
+        print '[DB...BAT] Wrokspaces to save: ', ws_name_list
+        for ws_name in ws_name_list:
+            mantid_helper.save_event_workspace(ws_name, out_file_name)
+
+        return
+
     def clean_workspace(self, run_number, slicer_tag):
         """
         Clean workspace
@@ -215,8 +291,8 @@ class SampleLogManager(object):
             return False, ret_obj
 
         slice_ws, info_ws = ret_obj
-        mtd.delete_workspace(slice_ws)
-        mtd.delete_workspace(info_ws)
+        mantid_helper.delete_workspace(slice_ws)
+        mantid_helper.delete_workspace(info_ws)
 
         return True, ''
 
@@ -258,12 +334,12 @@ class SampleLogManager(object):
             max_time = '%.15E' % max_time
 
         # create output workspace as a standard
-        splitter_ws_name = '%s_splitter_%s' % (self._currWorkspaceName, log_name)
-        info_ws_name = '%s_info_%s' % (self._currWorkspaceName, log_name)
+        splitter_ws_name = '%s_splitter_%s' % (self._currLogWorkspaceName, log_name)
+        info_ws_name = '%s_info_%s' % (self._currLogWorkspaceName, log_name)
 
-        mtd.generate_event_filters_by_log(self._currWorkspaceName, splitter_ws_name, info_ws_name,
-                                          min_time, max_time, log_name, min_log_value, max_log_value,
-                                          log_value_interval, value_change_direction)
+        mantid_helper.generate_event_filters_by_log(self._currLogWorkspaceName, splitter_ws_name, info_ws_name,
+                                                    min_time, max_time, log_name, min_log_value, max_log_value,
+                                                    log_value_interval, value_change_direction)
 
         # Store
         if tag is None:
@@ -272,35 +348,43 @@ class SampleLogManager(object):
 
         return
 
-    def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag):
+    def generate_events_filter_by_time(self,min_time, max_time, time_interval, tag,  ws_name=None):
         """
         Create splitters by time
+        :param ws_name
         :param min_time:
         :param max_time:
         :param time_interval:
         :param tag:
         :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
         """
+        # defaults to set up workspaces
+        if ws_name is None:
+            ws_name = self._currLogWorkspaceName
+
         # Check
         assert isinstance(min_time, float) or isinstance(min_time, None)
         assert isinstance(max_time, float) or isinstance(max_time, None)
         assert isinstance(time_interval, float) or (time_interval is None)
-        assert self._currWorkspace
+        # assert event_ws, 'Current log workspace cannot be zero'
         if min_time is None and max_time is None and time_interval is None:
             raise RuntimeError('Generate events filter by time must specify at least one of'
                                'min_time, max_time and time_interval')
+        assert isinstance(ws_name, str), 'Workspace name %s must be a string but not %s.' % (str(ws_name),
+                                                                                             type(ws_name))
 
         # Generate event filters
         if tag is None:
-            splitter_ws_name = '%s_splitter_TIME_' % self._currWorkspaceName
-            info_ws_name = '%s_info__TIME_' % self._currWorkspaceName
+            tag = '_TIME_'
+            splitter_ws_name = '%s_splitter_TIME_' % ws_name
+            info_ws_name = '%s_info__TIME_' % ws_name
         else:
             splitter_ws_name = tag
             info_ws_name = tag + '_info'
 
-        status, ret_obj = mtd.generate_event_filters_by_time(self._currWorkspaceName, splitter_ws_name, info_ws_name,
-                                                             min_time, max_time,
-                                                             time_interval, 'Seconds')
+        status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
+                                                                       min_time, max_time,
+                                                                       time_interval, 'Seconds')
 
         # Get result
         if status is False:
@@ -308,8 +392,6 @@ class SampleLogManager(object):
             return status, err_msg
 
         # Store
-        if tag is None:
-            tag = '_TIME_'
         # FIXME/NOW how splitter_ws_name is None!
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
         print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._currSplittersDict[tag]))
@@ -340,7 +422,7 @@ class SampleLogManager(object):
         assert isinstance(split_list, list)
 
         # Generate split workspace
-        status, ret_obj = mtd.generate_event_filters_arbitrary(split_list, relative_time=True, tag=splitter_tag)
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list, relative_time=True, tag=splitter_tag)
         if status is False:
             err_msg = ret_obj
             return False, err_msg
@@ -361,7 +443,7 @@ class SampleLogManager(object):
 
         # return current workspace if run number is current run number
         if run_number == self._currRunNumber:
-            return self._currWorkspace
+            return self._currLogWorkspace
 
         # run number (might) be in stored session
         if run_number not in self._prevSessionDict:
@@ -378,7 +460,7 @@ class SampleLogManager(object):
         :return:
         """
         # Check
-        if self._currWorkspace is None:
+        if self._currLogWorkspace is None:
             return False, 'Log helper has no data.'
 
         # Easy return
@@ -392,7 +474,7 @@ class SampleLogManager(object):
         single_value_list = list()
 
         for log_name in self._currLogNamesList:
-            log_size = self._currWorkspace.run().getProperty(log_name).size()
+            log_size = self._currLogWorkspace.run().getProperty(log_name).size()
             if log_size > 1:
                 ret_list.append('%s (%d)' % (log_name, log_size))
             else:
@@ -422,11 +504,11 @@ class SampleLogManager(object):
         print '[DB-Trace-Bug Helper 2] run number = ', run_number, 'sample log name = ', sample_log_name,
         print 'start time  = ', start_time
 
-        vec_times, vec_value = mtd.get_sample_log_value(src_workspace=self._currWorkspace,
-                                                        sample_log_name=sample_log_name,
-                                                        start_time=start_time,
-                                                        stop_time=stop_time,
-                                                        relative=relative)
+        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._currLogWorkspace,
+                                                                  sample_log_name=sample_log_name,
+                                                                  start_time=start_time,
+                                                                  stop_time=stop_time,
+                                                                  relative=relative)
 
         return vec_times, vec_value
 
@@ -455,7 +537,7 @@ class SampleLogManager(object):
             run_start_sec = 0
         print '[DB-BAR] run start tie in second = ', run_start_sec
 
-        segment_list = mtd.get_time_segments_from_splitters(split_ws_name, time_shift=run_start_sec, unit='Seconds')
+        segment_list = mantid_helper.get_time_segments_from_splitters(split_ws_name, time_shift=run_start_sec, unit='Seconds')
 
         return True, segment_list
 
@@ -567,18 +649,28 @@ class SampleLogManager(object):
         """
         assert 'Time' in self._currSplittersDict, 'No time slicer set up.'
 
-        self._currentSplitterWS = self._currSplittersDict['Time']
+        self._currSplitterWorkspace = self._currSplittersDict['Time']
 
         return
 
-    def set_current_slicer_manaul(self):
+    def set_current_slicer_manual(self):
         """
         Set up current splitter workspace/slicer to a previously setup slicer in manual mode.
         :return:
         """
         assert 'Manual' in self._currSplittersDict, 'No manually set up slicer found in splicers dictionary.'
 
-        self._currentSplitterWS = self._currSplittersDict['Manual']
+        self._currSplitterWorkspace = self._currSplittersDict['Manual']
+
+        return
+
+    def set_time_slicer(self, start_time, time_step, stop_time):
+        """
+
+        :return:
+        """
+        self._currentChopTime = 'time'
+        self._chopSetupDict['time'] = {'start': start_time, 'step': time_step, 'stop': stop_time}
 
         return
 
@@ -588,7 +680,7 @@ class SampleLogManager(object):
         """
         nxs_name = self._currNexusFilename
         run_number = self._currRunNumber
-        ws_name = self._currWorkspaceName
+        ws_name = self._currLogWorkspaceName
         splitter_dict = self._currSplittersDict.copy()
 
         dict_key = os.path.basename(nxs_name)
@@ -611,14 +703,14 @@ class SampleLogManager(object):
         nxs_name, run_number, ws_name, splitter_dict = self._prevSessionDict[nxs_base_name]
 
         # Check workspace existence
-        if mtd.workspace_does_exist(ws_name) is False:
+        if mantid_helper.workspace_does_exist(ws_name) is False:
             return False, 'Log workspace %s does not exist.' % ws_name
 
         # Retrieve
         self._currNexusFilename = nxs_name
         self._currRunNumber = run_number
-        self._currWorkspaceName = ws_name
-        self._currWorkspace = mtd.get_workspace(ws_name)
+        self._currLogWorkspaceName = ws_name
+        self._currLogWorkspace = mantid_helper.get_workspace(ws_name)
         self._currSplittersDict = splitter_dict
 
         return True, ''
@@ -639,7 +731,7 @@ class SampleLogManager(object):
         # Get splitters workspace
 
         splitter_ws_name = ret_obj[0]
-        splitter_ws = mtd.retrieve_workspace(splitter_ws_name)
+        splitter_ws = mantid_helper.retrieve_workspace(splitter_ws_name)
         if splitter_ws is None:
             raise NotImplementedError('It is not likely not to locate the splitters workspace.')
         log_ws = self.get_log_workspace(run_number)

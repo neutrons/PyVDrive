@@ -102,6 +102,14 @@ class VDriveAPI(object):
         """
         return self._myArchiveManager
 
+    @property
+    def chop_manager(self):
+        """
+        Return the reference of slicer/chop manager
+        :return:
+        """
+        return self._mySlicingManager
+
     # Definition of algorithms
     def add_runs_to_project(self, run_info_list):
         """
@@ -390,9 +398,9 @@ class VDriveAPI(object):
         self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
 
         status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
-                                                                           max_time=end_time,
-                                                                           time_interval=time_step,
-                                                                           tag=tag)
+                                                                                max_time=end_time,
+                                                                                time_interval=time_step,
+                                                                                tag=tag)
 
         return status, ret_obj
 
@@ -1439,7 +1447,7 @@ class VDriveAPI(object):
         elif splitter_src == 'time':
             self._mySlicingManager.set_current_slicer_time()
         elif splitter_src == 'manual':
-            self._mySlicingManager.set_current_slicer_manaul()
+            self._mySlicingManager.set_current_slicer_manual()
         else:
             raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
 

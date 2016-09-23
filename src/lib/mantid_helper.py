@@ -826,6 +826,18 @@ def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_fi
     return
 
 
+def save_event_workspace(event_ws_name, nxs_file_name):
+    """
+
+    :param event_ws_name:
+    :param nxs_file_name:
+    :return:
+    """
+    mantidapi.SaveNexus(InputWorkspace=event_ws_name, Filename=nxs_file_name)
+
+    return
+
+
 def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):
     """
     Split events in a workspace
@@ -856,8 +868,8 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws
                                       FilterByPulseTime=False,
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
-                                      # FIXME/TODO This should be fixed in Mantid. Upon that, this option will be true.
-                                      SplitSampleLogs=False
+                                      SplitSampleLogs=True,
+                                      OutputWorkspaceIndexedFrom1=True
                                       )
 
     try:
