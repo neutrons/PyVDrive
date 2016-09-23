@@ -1,0 +1,15 @@
+Test data: /SNS/VULCAN/IPTS-16235/shared/binned_data/109658
+
+1. Bug 1:
+
+[DB] Get d-range: 0.374920, 0.820338
+Traceback (most recent call last):
+  File "/SNS/users/wzz/Projects/PyVDrive/PyVDrive/src/interface/PeakPickWindow.py", line 760, in do_find_peaks
+    sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
+  File "/SNS/users/wzz/local/lib/python/site-packages/PyVDrive/lib/VDriveAPI.py", line 132, in calculate_peaks_position
+    phase_type = mantid_helper.UnitCell.BCC
+AttributeError: 'module' object has no attribute 'UnitCell'
+
+
+2. Bug 2:
+  output GSAS single peak fitting file.  The width should be a peak's FWHM, but not the range of the peak/peak group.  So it is about 4% of the d-space value.
