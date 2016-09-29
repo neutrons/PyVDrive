@@ -352,8 +352,20 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="pushButton_groupQuickPickPeaks">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Group Peaks</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox">
+           <widget class="QRadioButton" name="radioButton_pickModeQuick">
             <property name="font">
              <font>
               <pointsize>9</pointsize>
@@ -365,7 +377,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_2">
+           <widget class="QRadioButton" name="radioButton_pickModePower">
             <property name="font">
              <font>
               <pointsize>9</pointsize>
@@ -373,18 +385,6 @@
             </property>
             <property name="text">
              <string>Power Pick Mode</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="pushButton">
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Group Peaks</string>
             </property>
            </widget>
           </item>

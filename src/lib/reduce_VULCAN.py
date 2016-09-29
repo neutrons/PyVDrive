@@ -41,19 +41,17 @@
 #   1. Refactor the code
 #
 ################################################################################
-
-import sys
 import getopt
 import stat
 import shutil
 import xml.etree.ElementTree as ET
 
 
-sys.path.append("/opt/mantidnightly/bin")
-#sys.path.append('/opt/mantidunstable/bin/')
-#sys.path.append("/opt/Mantid/bin")
-#sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
-#sys.path.append('/Users/wzz/Mantid/Code/debug/bin')
+# sys.path.append("/opt/mantidnightly/bin")
+# sys.path.append('/opt/mantidunstable/bin/')
+# sys.path.append("/opt/Mantid/bin")
+# sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
+# sys.path.append('/Users/wzz/Mantid/Code/debug/bin')
 
 import mantid.simpleapi
 from mantid.simpleapi import *
@@ -102,8 +100,6 @@ MTS_Header_List = [
     ('EuroTherm2Powder', 'eurotherm2.power'),
     ('EuroTherm2SP', 'eurotherm2.sp'),
     ('EuroTherm2Temp', 'eurotherm2.temp')]
-
-
 
 
 class ReductionSetup(object):
@@ -187,7 +183,8 @@ class ReductionSetup(object):
         return
 
 
-
+    # TODO/NOW/FIXME - FROM HERE!
+    raise NotImplementedError('From HERE!')
 
 
 
