@@ -1169,6 +1169,7 @@ def print_main_help():
     Print help message
     :return:
     """
+    # FIXME/TODO/NOW - Make these string!
     print "%s -i <inputfile> -o <outputdirectory> ... ..." % (sys.argv[0])
     print "-i/ifile  : mandatory input NeXus file name. "
     print "-o/ofile  : mandatory directory for output files. "
@@ -1182,21 +1183,20 @@ def print_main_help():
     return
 
 
-def parse_argv(opts, args, argv):
-    """
-    Parse arguments and put to dictionary
+def parse_argv(opts, argv):
+    """ Parse arguments and put to dictionary
     :param opts:
-    :param args:
-    :return: reduction
+    :param argv
+    :return: 2-tuple : status (boolean) and ReductionSetup (or None)
     """
     # Initialize
     reduction_setup = ReductionSetup()
 
     # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
-    if len(argv) < 2:
+    if len(argv) == 0:
         print "Auto   reduction Inputs:   [1. File name with full length] [2. Output directory]"
         print "Manual reduction Inputs:   --help"
-        return False
+        return False, reduction_setup
 
     elif len(opts) == 0:
         # auto reduction mode (as default)
@@ -1255,26 +1255,34 @@ def parse_argv(opts, args, argv):
     # END-IF-ELSE (len(opt)==0)
 
     # Check requirements
-    if reduction_setup._eventFileFullPath is None or reduction_setup._outputDirectory is None:
-        print "Input event Nexus file and output directory must be given!"
-        return False
+    if reduction_setup.get_event_file() is None or reduction_setup.get_output_dir() is None:
+        print "Both input event Nexus file %s and output directory %s must be given!" % (
+            str(reduction_setup.get_event_file()), str(reduction_setup.get_output_dir()))
+        return False, reduction_setup
 
-    return reduction_setup
+    return True, reduction_setup
 
 
 def configure_reduction_setup(reduction_setup):
-    """ Obtain information from input file name and path
+    """ Obtain information from full path to input NeXus file including
+    1. base NeXus file name
+    2. directory to NeXus file
+    3. IPTS number
     :param reduction_setup:
     :return:
     """
+    # check type
+    assert isinstance(reduction_setup, ReductionSetup), 'Input object of type %s is not ReductionSetup.' \
+                                                        '' % reduction_setup.__class__.__name__
+
     # Check file's existence
-    if os.path.exists(reduction_setup.event_file_abs_path) is False:
+    if os.path.exists(reduction_setup.get_event_file()) is False:
         raise RuntimeError('NeXus file %s is not accessible or does not exist. '
-                           '' % reduction_setup.event_file_abs_path)
+                           '' % reduction_setup.get_event_file())
 
     # get event file name (base name) and directory for NeXus file
-    reduction_setup.eventFile = os.path.split(reduction_setup.event_file_abs_path)[-1]
-    reduction_setup.nexusDir = reduction_setup.event_file_abs_path.replace(reduction_setup.eventFile, '')
+    reduction_setup.eventFile = os.path.split(reduction_setup.get_event_file())[-1]
+    reduction_setup.nexusDir = reduction_setup.get_event_file().replace(reduction_setup.eventFile, '')
 
     # set the data file path in the search list
     data_search_path = mantid.config.getDataSearchDirs()
@@ -1283,8 +1291,8 @@ def configure_reduction_setup(reduction_setup):
 
     # parse the run number and IPTS
     run_number = int(reduction_setup.eventFile.split('_')[1])
-    if reduction_setup.event_file_abs_path.count("IPTS") == 1:
-        terms = reduction_setup.event_file_abs_path.split("/")
+    if reduction_setup.get_event_file().count("IPTS") == 1:
+        terms = reduction_setup.get_event_file().split("/")
         ipts_str = ''
         for t in terms:
             if t.count("IPTS") == 1:
@@ -1297,7 +1305,7 @@ def configure_reduction_setup(reduction_setup):
     reduction_setup.ipts_number = ipts
 
     # 1D plot file name
-    reduction_setup.pngfilename = os.path.join(reduction_setup.outputDir, 'VULCAN_'+str(run_number)+'.png')
+    reduction_setup.pngfilename = os.path.join(reduction_setup.get_output_dir(), 'VULCAN_'+str(run_number)+'.png')
 
     return reduction_setup
 
@@ -1325,8 +1333,8 @@ def main(argv):
     # parse arguments
     print '[DB...BAT] args = ', args, type(args), 'argv = ', argv, type(argv)
 
-    reduction_setup = parse_argv(opts, args, argv)
-    if status is False:
+    status, reduction_setup = parse_argv(opts, argv)
+    if not status:
         return
     # process
     reduction_setup = configure_reduction_setup(reduction_setup)
@@ -1334,16 +1342,22 @@ def main(argv):
     # create reducer
     reducer = ReduceVulcanData(reduction_setup)
 
-    # dry run
+    # execute
     if reduction_setup.dryRun:
-        dry_run(reduction_setup)
-        return
+        # dry run
+        reducer.dry_run(reduction_setup)
     else:
+        # real reduction
         reducer.execute()
 
     return
 
 
+# Command line
 if __name__ == "__main__":
     import sys
-    main(sys.argv[1:])
+    if len(sys.argv) == 1:
+        input_args = []
+    else:
+        input_args = sys.argv[1:]
+    main(input_args)
