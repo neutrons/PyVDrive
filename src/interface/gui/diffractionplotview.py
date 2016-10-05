@@ -12,24 +12,31 @@ import peaksmanager
 RESOLUTION = 0.005
 
 
+class PeakAdditionState(object):
+    """ Enumerate for peak adding mode
+    """
+    NonEdit = -1
+    NormalMode = 0
+    QuickMode = 1
+    MultiMode = 2
+    AutoMode = 3  # this is single peak add mode
+
+    @staticmethod
+    def is_valid_mode(mode):
+        """
+        Check whether a mode is value
+        :param mode:
+        :return:
+        """
+        return -1 <= mode <= 3
+
+
 class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
     """
     Class ... extends ...
     for specific needs of the graphics view for interactive plotting of diffraction patten,
     including peak and background
     """
-    class PeakAdditionMode:
-        """ Enumerate for peak adding mode
-        """
-        NormalMode = 0
-        QuickMode = 1
-        MultiMode = 2
-
-        def __init__(self):
-            """ Init
-            """
-            return
-
     def __init__(self, parent):
         """
         Purpose
@@ -39,14 +46,16 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
         # Define the class variable
-        # Peak selection mode
-        self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
+        # Peak selection mode: not-in-edit
+        self._myPeakSelectionMode = PeakAdditionState.NonEdit
         # Canvas moving mode
         self._inZoomMode = False
         # peak process status
 
         # Peaks-group manager
         self._myPeakGroupManager = peaksmanager.GroupedPeaksManager()
+        # single peaks collection used in auto-peak-finding mode
+        self._mySinglePeakDict = dict()
 
         # List of current peak groups in editing mode
         self._inEditGroupList = list()
@@ -64,7 +73,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._mouseY = 0
         self._mouseRelativeResolution = RESOLUTION  # 0.5% of the image
 
-        self._mousePressed = 0  # integer: 0 for no pressed, 1 for left button, 3 for right button
+        self._mouseButtonBeingPressed = 0  # integer: 0 for no pressed, 1 for left button, 3 for right button
         self._pressedX = 0      # position x as mouse is pressed
         self._pressedY = 0      # position y as mouse is pressed
 
@@ -76,8 +85,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._currIndicatorType = -1
         self._currGroupID = -1
 
-        # peak indictor managerment
+        # peak indicator management
         self._shownPeakIDList = list()  # list of indicator IDs for peaks show on canvas
+
+        # menum
+        self._menu = None
 
         """
         self._boundaryRightEdge = -0.
@@ -95,7 +107,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param pos_x:
         :return: boolean if successfully added
         """
-        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
+        if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            # auto (quick) pick up mode. just add the peak without the peak boundary
+            self.add_single_peak(peak_pos=pos_x)
+
+        elif self._myPeakSelectionMode == PeakAdditionState.NormalMode:
             # quick mode: add peak and peak range
             # propose new peak group and peak's positions
             new_peak_center = pos_x
@@ -196,6 +212,23 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._inEditGroupList.append(new_group)
 
         return new_grp_id
+
+    def add_single_peak(self, peak_pos):
+        """
+        Add a single peak without group
+        :param peak_pos:
+        :return:
+        """
+        # check
+        assert isinstance(peak_pos, float), 'blabla'
+
+        # add peak
+        peak_id = self.add_vertical_indicator(peak_pos, color='blue')
+
+        # record
+        self._mySinglePeakDict[peak_id] = peak_pos
+
+        return
 
     def _close_to_canvas_edge(self, x, y):
         """ Check whether the cursor (x, y) is very close to the edge of the canvas
@@ -486,11 +519,98 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return None
 
+    def highlight_peak(self, left_x, right_x):
+        """
+        Purpose:
+            Highlight a peak
+        Requirements:
+            Left_x and right_x are within data range;
+            Data is loaded on canvas
+        Guarantees:
+            Diffraction pattern between left_x and right_x is plot with different color
+        :param left_x:
+        :param right_x:
+        :return:
+        """
+        self.add_arrow(0.5, 5000, step)
+
+        # Check requirements
+        # assert len(self._vecX) > 1
+        # assert self._vecX[0] <= left_x < right_x <= self._vecX[-1]
+
+        # Get the sub data set of
+
+        return
+
+    def highlight_peak_nearby(self, curr_position):
+        """
+        check mouse cursor is near enough to a selected peak. if it is then highlight that peak.
+        if there is not any, then de-highlight all
+        :param curr_position:
+        :return:
+        """
+        # sort the peaks with position
+        if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            # case ... BLABAL  ISSUE 44
+            peak_tup_list = list()
+            for peak_id in self._mySinglePeakDict.keys():
+                peak_pos = self._mySinglePeakDict[peak_id]
+                peak_tup_list.append((peak_pos, peak_id))
+            # END-FOR
+            peak_tup_list.sort()
+
+        else:
+            # case ... BLABLA ISSUE 44
+            raise NotImplementedError('ASAP')
+
+        # find the nearby peak - FIXME/NOW issue 44: this is only a prototype
+        index = bisect.bisect_right(peak_tup_list, (curr_position, -1))
+        index = max(0, index)
+        index = min(index, len(peak_tup_list)-1)
+
+        # high light
+        peak_id = peak_tup_list[index][1]
+        self.update_indicator(peak_id, 'red')
+
+        return
+
+    def highlight_peak_indicator(self, indicator_index):
+        """
+        Purpose:
+            Highlight a peak's indicator
+        Requirements:
+            Indicator index is valid
+        Guarantees:
+            The indicator (line) is replotted with a thicker line
+        :param indicator_index:
+        :return:
+        """
+        # Check requirements
+        assert 0 <= indicator_index < len(self._inEditGroupList), \
+            'Indicator index %d is out of index range [0, %d).' % (indicator_index, len(self._inEditGroupList))
+
+        # Get indicator key
+        indicator_key = self._inEditGroupList[indicator_index][1]
+
+        # Re-plot
+        self.highlight_indictor(indicator_key)
+
+        return
+
     def on_mouse_motion(self, event):
         """
+        No operation under any of these situations
+        1. in zoom mode
+        2. in non-editing (non-peak-selection) mode
+        3. mouse cursor is out of canvas
+        4. movement from 'last position' is too small
         :param event:
         :return:
         """
+        # No operation if NOT in peak picking mode
+        if self._myPeakSelectionMode == PeakAdditionState.NonEdit:
+            return
+
         # Check current cursor position. Return if it is out of canvas
         if event.xdata is None or event.ydata is None:
             # restore cursor if it is necessary
@@ -500,8 +620,24 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._cursorType = 0
             return
 
+        # check zoom mode
+        if self._myToolBar.get_mode() != 0 and self._inZoomMode is False:
+            # just transit to the zoom mode and then
+            self._inZoomMode = True
+            self.setWindowTitle('Zoom mode! Unable to add peak!')
+            # useless: self._myCanvas.setWindowTitle('Zoom mode! Unable to add peak!')
+
+        elif self._myToolBar.get_mode() == 0 and self._inZoomMode is True:
+            # just transit out of the zoom mode
+            self._inZoomMode = False
+            # self._myCanvas.setWindowTitle('Add peak!')
+
+        if self._inZoomMode is True:
+            # in zoom mode. no response is required
+            return
+
         # Calculate current absolute resolution and determine whether the movement
-        # is smaller than resolution
+        #   is smaller than resolution
         x_min, x_max = self.getXLimit()
         resolution_x = (x_max - x_min) * self._mouseRelativeResolution
         y_min, y_max = self.getYLimit()
@@ -513,31 +649,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # movement is too small to require operation
             return
 
-        # No operation if NOT in peak picking mode
-        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
-            return
+        # Now it is the time to process
+        if self._mouseButtonBeingPressed == 0:
+            # mouse button is not pressed.
+            self.highlight_peak_nearby(event.xdata)
 
-        # check zoom mode
-        if self._myToolBar.get_mode() != 0 and self._inZoomMode is False:
-            # just transit to the zoom mode
-            self._inZoomMode = True
-            # useless: self._myCanvas.setWindowTitle('Zoom mode! Unable to add peak!')
-
-        elif self._myToolBar.get_mode() == 0 and self._inZoomMode is True:
-            # just transit out of the zoom mode
-            self._inZoomMode = False
-            # self._myCanvas.setWindowTitle('Add peak!')
-
-        else:
-            pass
-            # print 'No operation'
-
-        # No operation in zooming mode
-        if self._inZoomMode is True:
-            # in zoom mode. no response is required
-            return
-
-        elif self._mousePressed == 1:
+        elif self._mouseButtonBeingPressed == 1:
             # left mouse button is pressed and move
             # so move the peak, boundaries or group
             if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.QuickMode:
@@ -787,9 +904,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         # Update the mouse pressed up the status
         if event.button == 1:
-            self._mousePressed = 1
+            self._mouseButtonBeingPressed = 1
         elif event.button == 3:
-            self._mousePressed = 3
+            self._mouseButtonBeingPressed = 3
 
         self._pressedX = event.xdata
         self._pressedY = event.ydata
@@ -825,36 +942,68 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param event:
         :return:
         """
-        # no operation required for the non-edit mode
-        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.NormalMode:
-            return
-
         # no operation if event is outside of canvas
         if event.xdata is None or event.ydata is None:
             return
+        else:
+            self._eventX = event.xdata
 
-        # create a menu in the edit mode
-        self.menu = QtGui.QMenu(self)
+        # no operation required for the non-edit mode
+        if self._myPeakSelectionMode == PeakAdditionState.NonEdit:
+            # no action on non-edit mode
+            pass
 
-        self._eventX = event.xdata
+        elif self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            # automatic mode
+            self._menu = QtGui.QMenu(self)
 
-        # optionally add option to delete peak
-        if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
-            action2 = QtGui.QAction('Delete Peak', self)
-            action2.triggered.connect(self.menu_delete_peak_in_pick)
-            self.menu.addAction(action2)
+            # add actions
+            # FIXME/NOW/Issue 44: need a flag whether the cursor is on any peak now
+            action_del_peak = QtGui.QAction('Delete Peak', self)
+            action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
+            self._menu.addAction(action_del_peak)
 
-        # add item to delete peak group
-        action1 = QtGui.QAction('Delete Group', self)
-        action1.triggered.connect(self.menu_delete_group_in_pick)
-        self.menu.addAction(action1)
+            # add actions
+            # FIXME/NOW/ISSUE 44: need a flag whether the next boundary to add is left
+            action_add_left_bound = QtGui.QAction('Add left boundary', self)
 
-        action3 = QtGui.QAction('Show Info', self)
-        action3.triggered.connect(self.menu_show_info)
-        self.menu.addAction(action3)
+            action_add_right_bound = QtGui.QAction('Add right boundary', self)
 
-        # add other required actions
-        self.menu.popup(QtGui.QCursor.pos())
+            action_cancel = QtGui.QAction('Cancel boundary', self)
+
+            action_set = QtGui.QAction('Set boundary', self)
+
+            action_reset = QtGui.QAction('Reset grouping')
+
+            # pop
+            self._menu.popup(QtGui.QCursor.pos())
+
+        else:
+            # power mode
+            # create a menu in the edit mode
+            self._menu = QtGui.QMenu(self)
+
+            self._eventX = event.xdata
+
+            # optionally add option to delete peak
+            if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+                action2 = QtGui.QAction('Delete Peak', self)
+                action2.triggered.connect(self.menu_delete_peak_in_pick)
+                self._menu.addAction(action2)
+
+            # add item to delete peak group
+            action1 = QtGui.QAction('Delete Group', self)
+            action1.triggered.connect(self.menu_delete_group_in_pick)
+            self._menu.addAction(action1)
+
+            action3 = QtGui.QAction('Show Info', self)
+            action3.triggered.connect(self.menu_show_info)
+            self._menu.addAction(action3)
+
+            # add other required actions
+            self._menu.popup(QtGui.QCursor.pos())
+
+        # END-IF-ELSE
 
         return
 
@@ -865,8 +1014,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # set the mouse pressed status back
-        if self._mousePressed != 0:
-            self._mousePressed = 0
+        if self._mouseButtonBeingPressed != 0:
+            self._mouseButtonBeingPressed = 0
         else:
             print '[DB] Mouse is not pressed but released.'
 
@@ -967,68 +1116,18 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def set_peak_selection_mode(self, single_mode, multi_mode):
+    def set_peak_selection_mode(self, peak_selection_mode):
         """
         Set peak-selection mode
-        :param single_mode:
-        :param multi_mode:
+        :param peak_selection_mode:
         :return:
         """
-        # check
-        assert not (single_mode and multi_mode), 'Ambiguous selection mode'
+        # check inputs
+        assert isinstance(peak_selection_mode, int), 'Input peak selection mode must be an integer but not ' \
+                                                     '%s' % peak_selection_mode.__class__.__name__
+        assert PeakAdditionState.is_valid_mode(peak_selection_mode), 'Mode %d is not valid.' % peak_selection_mode
 
-        if single_mode is True:
-            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.QuickMode
-        elif multi_mode is True:
-            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.MultiMode
-        else:
-            self._myPeakSelectionMode = DiffractionPlotView.PeakAdditionMode.NormalMode
-
-        return
-
-    def highlight_peak(self, left_x, right_x):
-        """
-        Purpose:
-            Highlight a peak
-        Requirements:
-            Left_x and right_x are within data range;
-            Data is loaded on canvas
-        Guarantees:
-            Diffraction pattern between left_x and right_x is plot with different color
-        :param left_x:
-        :param right_x:
-        :return:
-        """
-        self.add_arrow(0.5, 5000, )
-
-        # Check requirements
-        # assert len(self._vecX) > 1
-        # assert self._vecX[0] <= left_x < right_x <= self._vecX[-1]
-
-        # Get the sub data set of
-
-        return
-
-    def highlight_peak_indicator(self, indicator_index):
-        """
-        Purpose:
-            Highlight a peak's indicator
-        Requirements:
-            Indicator index is valid
-        Guarantees:
-            The indicator (line) is replotted with a thicker line
-        :param indicator_index:
-        :return:
-        """
-        # Check requirements
-        assert 0 <= indicator_index < len(self._inEditGroupList), \
-            'Indicator index %d is out of index range [0, %d).' % (indicator_index, len(self._inEditGroupList))
-
-        # Get indicator key
-        indicator_key = self._inEditGroupList[indicator_index][1]
-
-        # Re-plot
-        self.highlight_indictor(indicator_key)
+        self._myPeakSelectionMode = peak_selection_mode
 
         return
 
@@ -1185,18 +1284,18 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def sort_n_add_peaks(self, peak_info_list, edit_mode=True, plot=True):
+    def sort_n_add_peaks(self, peak_info_list):
         """ Sort and add peaks to edit mode
         Requirements:
          1. peak info list: list of peak information tuple (centre, height, width, HKL)
         Guarantees:
          1. peaks will be sorted and grouped by considering overlapping range
         :param peak_info_list:
-        :param plot:
         :return:
         """
-        # TODO/NOW*NOW
+        # TODO/NOW*NOW ISSUE 44
         # check requirements
+        assert self._myPeakSelectionMode != PeakAdditionState.NonEdit, 'BlaBla'
 
         # order the peaks in reverse order
 
@@ -1210,11 +1309,19 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         for peak_info in peak_info_list:
             # get value
             peak_center = peak_info[0]
-            peak_width = peak_info[2]
 
-            # add peak group indicator
-            group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
-            self.add_peak(peak_center, group_id=group_id)
+            if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+                # auto mode. peak only
+                self.add_single_peak(peak_pos=peak_center)
+
+            else:
+                # power mode: peak and boundary
+                peak_width = peak_info[2]
+
+                # add peak group indicator
+                group_id = self.add_peak_group(peak_center - 2*peak_width, peak_center + 2*peak_width)
+                self.add_peak(peak_center, group_id=group_id)
+            # END-IF-ELSE
 
         return
 

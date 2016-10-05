@@ -160,6 +160,7 @@ VulcanSampleLogList = [("TimeStamp           ", ""),
                        ('EuroTherm2SP', 'eurotherm2.sp'),
                        ('EuroTherm2Temp', 'eurotherm2.temp')]
 
+
 MTS_Header_List = [
     ("TimeStamp", ""),
     ("Time [sec]", ""),
@@ -196,6 +197,7 @@ MTS_Header_List = [
     ('EuroTherm2Powder', 'eurotherm2.power'),
     ('EuroTherm2SP', 'eurotherm2.sp'),
     ('EuroTherm2Temp', 'eurotherm2.temp')]
+
 
 # Generic DAQ log output.  first: head title; second: unit
 Generic_DAQ_List = [("TimeStamp", ""),
@@ -243,12 +245,19 @@ class ReductionSetup(object):
         """
         return self._mode
 
-    def get_output_dir(self):
+    def get_reduced_data_dir(self):
         """
         get directory for output
         :return:
         """
         return self._outputDirectory
+
+    def get_vdrive_log_dir(self):
+        """
+        Get the directory for vdrive log files
+        :return:
+        """
+        return self._sampleLogDirectory
 
     def set_event_file(self, event_file_path):
         """
@@ -629,8 +638,8 @@ class ReduceVulcanData(object):
 
         # Output result in case it is a dry-run
         print "Input NeXus file    : %s" % reduction_setup.get_event_file()
-        print "Output directory    : %s" % reduction_setup.get_output_dir()
-        print "Log directory       : %s" % reduction_setup.get_sample_log_directory()  # logDir
+        print "Output directory    : %s" % reduction_setup.get_reduced_data_dir()
+        print "Log directory       : %s" % reduction_setup.get_vdrive_log_dir()  # logDir
         print "GSAS  directory     : %s;  If it is None, no GSAS will be written." % str(reduction_setup.gsasDir)
         print "GSAS2 directory     : %s" % str(reduction_setup.gsas2Dir)
         print "Record file name    : %s" % str(reduction_setup.recordFileName)
@@ -638,7 +647,6 @@ class ReduceVulcanData(object):
         print "1D plot file name   : %s" % reduction_setup.pngfilename
 
         return False
-
 
     def exportGenericDAQLog(self, log_ws_name, outputDir, ipts, run_number):
         """
@@ -1255,9 +1263,9 @@ def parse_argv(opts, argv):
     # END-IF-ELSE (len(opt)==0)
 
     # Check requirements
-    if reduction_setup.get_event_file() is None or reduction_setup.get_output_dir() is None:
+    if reduction_setup.get_event_file() is None or reduction_setup.get_reduced_data_dir() is None:
         print "Both input event Nexus file %s and output directory %s must be given!" % (
-            str(reduction_setup.get_event_file()), str(reduction_setup.get_output_dir()))
+            str(reduction_setup.get_event_file()), str(reduction_setup.get_reduced_data_dir()))
         return False, reduction_setup
 
     return True, reduction_setup
@@ -1305,7 +1313,7 @@ def configure_reduction_setup(reduction_setup):
     reduction_setup.ipts_number = ipts
 
     # 1D plot file name
-    reduction_setup.pngfilename = os.path.join(reduction_setup.get_output_dir(), 'VULCAN_'+str(run_number)+'.png')
+    reduction_setup.pngfilename = os.path.join(reduction_setup.get_reduced_data_dir(), 'VULCAN_' + str(run_number) + '.png')
 
     return reduction_setup
 
