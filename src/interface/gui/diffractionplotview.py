@@ -86,6 +86,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._currGroupID = -1
 
         # peak indicator management
+        self._highlightPeakID = -1  # Peak ID (indicator ID) of the current highlighted peak by mouse moving
         self._shownPeakIDList = list()  # list of indicator IDs for peaks show on canvas
 
         # menum
@@ -549,10 +550,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param curr_position:
         :return:
         """
+        # check
+        assert isinstance(curr_position, float), 'mouse cursor position must be a float number but not ' \
+                                                 'of type %s' % curr_position.__class__.__name__
+
         # sort the peaks with position
+        peak_tup_list = list()
         if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
-            # case ... BLABAL  ISSUE 44
-            peak_tup_list = list()
+            # automatic mode: collect the peaks from peak tuple list
             for peak_id in self._mySinglePeakDict.keys():
                 peak_pos = self._mySinglePeakDict[peak_id]
                 peak_tup_list.append((peak_pos, peak_id))
@@ -560,17 +565,61 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             peak_tup_list.sort()
 
         else:
-            # case ... BLABLA ISSUE 44
-            raise NotImplementedError('ASAP')
+            # power mode. collect the peak from peak group list
+            # FIXME/NOW/ISSUE 45 or late: need a better data structure for it
+            g_id_list = self._myPeakGroupManager.get_group_ids()
+            for g_id in g_id_list:
+                group = self._myPeakGroupManager.get_group(g_id)
+                raise NotImplementedError('ASAP')
+        # END-IF
 
-        # find the nearby peak - FIXME/NOW issue 44: this is only a prototype
+        # find the nearby peak
         index = bisect.bisect_right(peak_tup_list, (curr_position, -1))
         index = max(0, index)
         index = min(index, len(peak_tup_list)-1)
 
-        # high light
-        peak_id = peak_tup_list[index][1]
-        self.update_indicator(peak_id, 'red')
+        # use the dynamic resolution
+        resolution = curr_position * 0.01
+        peak_id = -1
+        if index == 0:
+            # near the leftmost peak
+            peak0_pos = peak_tup_list[index][0]
+            if abs(curr_position - peak0_pos) <= resolution:
+                peak_id = peak_tup_list[index][1]
+        elif index == len(peak_tup_list) - 1:
+            # near the rightmost peak
+            peak_right_pos = peak_tup_list[index][0]
+            if abs(curr_position - peak_right_pos) <= resolution:
+                peak_id = peak_tup_list[index][1]
+        else:
+            # in the middle
+            peak_right_pos = peak_tup_list[index][0]
+            peak_left_pos = peak_tup_list[index-1][0]
+            if abs(peak_right_pos - curr_position) <= resolution:
+                peak_id = index
+            elif abs(peak_left_pos - curr_position) <= resolution:
+                peak_id = index - 1
+        # END-IF
+
+        # update the color of the
+        if peak_id == self._highlightPeakID:
+            # no change
+            pass
+
+        elif peak_id == -1:
+            # move away from a peak: clean the original line
+            # note: self._highlightPeakID >= 0 must be TRUE according to case 1
+            self.update_indicator(self._highlightPeakID, 'blue')
+            self._highlightPeakID = -1
+
+        else:
+            # move toward a peak
+            self.update_indicator(peak_id, 'red')
+            # de-highlight the previously highlighted peak
+            if self._highlightPeakID >= 0:
+                self.update_indicator(self._highlightPeakID, 'blue')
+            self._highlightPeakID = peak_id
+        # END-IF-ELSE
 
         return
 
@@ -946,6 +995,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if event.xdata is None or event.ydata is None:
             return
         else:
+            # set up the eventX for the menu actions, which won't have access to event.xdata
             self._eventX = event.xdata
 
         # no operation required for the non-edit mode
@@ -954,26 +1004,37 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             pass
 
         elif self._myPeakSelectionMode == PeakAdditionState.AutoMode:
-            # automatic mode
+            # automatic mode to support actions including delete, add boundaries, undo boundaries
+            #  and reset group
             self._menu = QtGui.QMenu(self)
 
-            # add actions
-            # FIXME/NOW/Issue 44: need a flag whether the cursor is on any peak now
-            action_del_peak = QtGui.QAction('Delete Peak', self)
-            action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
-            self._menu.addAction(action_del_peak)
+            # add actions to delete peak
+            if self._highlightPeakID >= 0:
+                action_del_peak = QtGui.QAction('Delete Peak', self)
+                action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
+                self._menu.addAction(action_del_peak)
 
-            # add actions
-            # FIXME/NOW/ISSUE 44: need a flag whether the next boundary to add is left
-            action_add_left_bound = QtGui.QAction('Add left boundary', self)
+            # add actions to add group boundaries
+            if self._addedLeftBoundary:
+                # next boundary to add must be a right boundary
+                action_add_right_bound = QtGui.QAction('Add right boundary', self)
+                action_add_right_bound.triggered.connect(self.menu_add_right_group_boundary)
+                self._menu.addAction(action_add_right_bound)
+            else:
+                # next boundary to add must be a left boundary
+                action_add_left_bound = QtGui.QAction('Add left boundary', self)
+                action_add_left_bound.triggered.connect(self.menu_add_left_group_boundary)
+                self._menu.addAction(action_add_left_bound)
 
-            action_add_right_bound = QtGui.QAction('Add right boundary', self)
-
+            # add action to undo work to add boundary
             action_cancel = QtGui.QAction('Cancel boundary', self)
+            action_cancel.triggered.connect(self.menu_undo_boundary)
+            self._menu.addAction(action_cancel)
 
-            action_set = QtGui.QAction('Set boundary', self)
-
-            action_reset = QtGui.QAction('Reset grouping')
+            # add action to reset all the grouping effort
+            action_reset = QtGui.QAction('Reset grouping', self)
+            action_reset.triggered.connect(self.menu_reset_grouping)
+            self._menu.addAction(action_reset)
 
             # pop
             self._menu.popup(QtGui.QCursor.pos())
@@ -1002,7 +1063,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
             # add other required actions
             self._menu.popup(QtGui.QCursor.pos())
-
         # END-IF-ELSE
 
         return
@@ -1184,6 +1244,39 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    """
+
+
+
+    menu_reset_grouping
+    """
+
+    def menu_add_left_group_boundary(self):
+        """
+        add left boundary
+        :return:
+        """
+        # check
+        assert self._eventX is not None, 'Event dataX must be specified.'
+
+        # add a boundary
+        self.add_group_boundary(self._eventX, left=True)
+
+        return
+
+    def menu_add_right_group_boundary(self):
+        """
+        add right boundary
+        :return:
+        """
+        # check
+        assert self._eventX is not None, 'Event dataX must be specified.'
+
+        # add a boundary
+        self.add_group_boundary(self._eventX, left=False)
+
+        return
+
     def menu_show_info(self):
         """
 
@@ -1193,6 +1286,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         print '[DB] Current Item = %d of type %d in Group %d.' % (item_id, item_type, group_id)
 
         return
+
+    def menu_undo_boundary(self):
+        """
+        
+        :return:
+        """
 
     def plot_diffraction_pattern(self, vec_x, vec_y, title=None, key=None):
         """
