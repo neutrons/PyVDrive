@@ -1,15 +1,46 @@
-Test data: /SNS/VULCAN/IPTS-16235/shared/binned_data/109658
+Test data: any GSAS file
 
-1. Bug 1:
+Bug 1:  
 
-[DB] Get d-range: 0.374920, 0.820338
+Suggstion: add more checking output
+
 Traceback (most recent call last):
-  File "/SNS/users/wzz/Projects/PyVDrive/PyVDrive/src/interface/PeakPickWindow.py", line 760, in do_find_peaks
-    sub_list = self._myController.calculate_peaks_position(phase, min_d, max_d)
-  File "/SNS/users/wzz/local/lib/python/site-packages/PyVDrive/lib/VDriveAPI.py", line 132, in calculate_peaks_position
-    phase_type = mantid_helper.UnitCell.BCC
-AttributeError: 'module' object has no attribute 'UnitCell'
+  File "/usr/lib/python2.7/dist-packages/matplotlib/backends/backend_qt5.py", line 279, in mouseMoveEvent
+    FigureCanvasBase.motion_notify_event(self, x, y, guiEvent=event)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 1952, in motion_notify_event
+    self.callbacks.process(s, event)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/cbook.py", line 563, in process
+    proxy(*args, **kwargs)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/cbook.py", line 430, in __call__
+    return mtd(*args, **kwargs)
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/diffractionplotview.py", line 704, in on_mouse_motion
+    self.highlight_peak_nearby(event.xdata)
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/diffractionplotview.py", line 617, in highlight_peak_nearby
+    self.update_indicator(peak_id, 'red')
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/mplgraphicsview.py", line 740, in update_indicator
+    if self._myIndicatorsManager.get_line_type(i_key) < 2:
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/mplgraphicsview.py", line 178, in get_line_type
+    return self._indicatorTypeDict[my_id]
+KeyError: 0
+
+Bug 2:
+
+Suggestion: continue to add all methods
+
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/dist-packages/matplotlib/backends/backend_qt5.py", line 259, in mousePressEvent
+    guiEvent=event)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 1903, in button_press_event
+    self.callbacks.process(s, mouseevent)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/cbook.py", line 563, in process
+    proxy(*args, **kwargs)
+  File "/usr/lib/python2.7/dist-packages/matplotlib/cbook.py", line 430, in __call__
+    return mtd(*args, **kwargs)
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/diffractionplotview.py", line 984, in on_mouse_press_event
+    self._pop_menu(event)
+  File "/home/wzz/Projects/PyVDrive/src/interface/gui/diffractionplotview.py", line 1018, in _pop_menu
+    if self._addedLeftBoundary:
+AttributeError: 'DiffractionPlotView' object has no attribute '_addedLeftBoundary'
 
 
-2. Bug 2:
-  output GSAS single peak fitting file.  The width should be a peak's FWHM, but not the range of the peak/peak group.  So it is about 4% of the d-space value.
+
