@@ -45,6 +45,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
+        # parent
+        self._parentWindow = None
+
         # Define the class variable
         # Peak selection mode: not-in-edit
         self._myPeakSelectionMode = PeakAdditionState.NonEdit
@@ -85,11 +88,14 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._currIndicatorType = -1
         self._currGroupID = -1
 
+        # automatic peak selection
+        self._addedLeftBoundary = True  # flag to add a single boundary line as the left boundary
+
         # peak indicator management
         self._highlightPeakID = -1  # Peak ID (indicator ID) of the current highlighted peak by mouse moving
         self._shownPeakIDList = list()  # list of indicator IDs for peaks show on canvas
 
-        # menum
+        # menu
         self._menu = None
 
         """
@@ -1383,28 +1389,47 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def set_parent_window(self, parent_window):
+        """
+        Set a parent window (QMainWindow)
+        :param parent_window:
+        :return:
+        """
+        assert isinstance(parent_window, QtGui.QMainWindow), \
+            'Parent window must be a QMainWindow instance, but not an instance of %s.' \
+            '' % parent_window.__class__.__name__
+
+        self._parentWindow = parent_window
+
+        return
+
     def sort_n_add_peaks(self, peak_info_list):
-        """ Sort and add peaks to edit mode
+        """ Sort and add peaks including
+        use case 1: it is called by find_peaks() in automatic peak finding mode.
         Requirements:
          1. peak info list: list of peak information tuple (centre, height, width, HKL)
-        Guarantees:
-         1. peaks will be sorted and grouped by considering overlapping range
+        Guarantees (goal):
+         1. peaks will be sorted by positions;
+         x peaks will be added to peak table without group and peak range (for fitting);
+           -- this will be done in its main application!
+         3. peaks will be plotted to canvas
         :param peak_info_list:
         :return:
         """
-        # TODO/NOW*NOW ISSUE 44
         # check requirements
-        assert self._myPeakSelectionMode != PeakAdditionState.NonEdit, 'BlaBla'
+        assert self._myPeakSelectionMode != PeakAdditionState.NonEdit, 'Peak selection mode cannot be ' \
+                                                                       'in NonEdit mode.'
+
+        assert isinstance(peak_info_list, list), 'Peak information list must of type list but not ' \
+                                                 '%s.' % peak_info_list.__class__.__name__
+        if len(peak_info_list) == 0:
+            # return for an empty peak list
+            return
 
         # order the peaks in reverse order
+        peak_info_list.sort(reverse=True)
 
-        # create list of peak index with peak boundary
-
-        # merge the peaks with overlapped boundaries
-
-        # add peak groups and peak
-
-        # plot
+        # plot all the peaks
         for peak_info in peak_info_list:
             # get value
             peak_center = peak_info[0]
@@ -1423,4 +1448,16 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # END-IF-ELSE
 
         return
+
+    def get_ungrouped_peaks(self):
+        """
+        Get ungrouped peaks that are selected automatically
+        :return: a sorted list of tuples. each tuple contains peak position and peak ID
+        """
+        tuple_list = list()
+        for peak_id in self._mySinglePeakDict.keys():
+            peak_pos = self._mySinglePeakDict[peak_id]
+            tuple_list.append((peak_pos, peak_id))
+
+        return tuple_list
 

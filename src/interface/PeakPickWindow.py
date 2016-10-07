@@ -868,15 +868,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def do_group_auto_peaks(self):
         """
-
+        Group all the auto-selected peaks, which are not grouped and added yet, from canvas
+        by its position
         :return:
         """
-        # TODO/NOW - issue 44.  implement!
+        import PyVDrive.lib.peak_util as peak_util
+
         # get single peaks from canvas
-        blabla
+        raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
 
         # call controller method to set group boundary
-        self._myController.group_peaks(blabla)
+        peak_util.group_peaks(raw_peak_pos_list)
 
         #
 
