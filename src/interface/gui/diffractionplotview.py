@@ -337,11 +337,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # Add indicator
         indicator_id = self.add_vertical_indicator(peak_pos, 'red')
 
-        # Add peak to data structure for mananging
+        # Add peak to data structure for managing
         self._shownPeakIDList.append(indicator_id)
 
         return
-
 
     def clear_peak_by_position(self, peak_pos):
         """
@@ -560,6 +559,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert isinstance(curr_position, float), 'mouse cursor position must be a float number but not ' \
                                                  'of type %s' % curr_position.__class__.__name__
 
+        # return if there is no peak
+        if len(self._mySinglePeakDict) == 0:
+            return
+
         # sort the peaks with position
         peak_tup_list = list()
         if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
@@ -580,9 +583,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # END-IF
 
         # find the nearby peak
-        index = bisect.bisect_right(peak_tup_list, (curr_position, -1))
+        index = bisect.bisect_left(peak_tup_list, (curr_position, -1))
+        print '[DB...BAT] cursor @ ', curr_position, 'index = ', index, '  peak list: ', peak_tup_list
         index = max(0, index)
         index = min(index, len(peak_tup_list)-1)
+        print '[DB...BAT] process index = ', index
 
         # use the dynamic resolution
         resolution = curr_position * 0.01
@@ -599,12 +604,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 peak_id = peak_tup_list[index][1]
         else:
             # in the middle
-            peak_right_pos = peak_tup_list[index][0]
-            peak_left_pos = peak_tup_list[index-1][0]
+            peak_left_pos = peak_tup_list[index][0]
+            peak_right_pos = peak_tup_list[index+1][0]
             if abs(peak_right_pos - curr_position) <= resolution:
-                peak_id = index
+                peak_id = peak_tup_list[index + 1][1]
             elif abs(peak_left_pos - curr_position) <= resolution:
-                peak_id = index - 1
+                peak_id = peak_tup_list[index][1]
         # END-IF
 
         # update the color of the
@@ -1283,6 +1288,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def menu_reset_grouping(self):
+        """
+        reset the previously grouped peaks
+        :return:
+        """
+        # TODO/NOW/ISSUE44
+
     def menu_show_info(self):
         """
 
@@ -1298,6 +1310,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         
         :return:
         """
+        # TODO/NOW/Issue44
 
     def plot_diffraction_pattern(self, vec_x, vec_y, title=None, key=None):
         """
