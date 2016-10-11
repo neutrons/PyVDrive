@@ -233,7 +233,7 @@
            </widget>
           </item>
           <item row="0" column="4">
-           <widget class="QPushButton" name="pushButton_groupQuickPickPeaks">
+           <widget class="QPushButton" name="pushButton_groupAutoPickPeaks">
             <property name="font">
              <font>
               <pointsize>9</pointsize>
@@ -241,21 +241,6 @@
             </property>
             <property name="text">
              <string>Group Peaks</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="pushButton_peakPickerMode">
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-             </font>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter or leave peak picking mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enter Pick Mode</string>
             </property>
            </widget>
           </item>
@@ -411,6 +396,21 @@
             </property>
             <property name="text">
              <string>pick peak</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButton_peakPickerMode">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter or leave peak picking mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enter Pick Mode</string>
             </property>
            </widget>
           </item>

@@ -59,6 +59,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         self._myPeakGroupManager = peaksmanager.GroupedPeaksManager()
         # single peaks collection used in auto-peak-finding mode
         self._mySinglePeakDict = dict()
+        # peak information dictionary. value is a 2-tuple including its color and group ID
+        self._myPeakInfoDict = dict()
 
         # List of current peak groups in editing mode
         self._inEditGroupList = list()
@@ -538,6 +540,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param right_x:
         :return:
         """
+        self.set_in
+
         self.add_arrow(0.5, 5000, step)
 
         # Check requirements
@@ -584,32 +588,32 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # find the nearby peak
         index = bisect.bisect_left(peak_tup_list, (curr_position, -1))
-        print '[DB...BAT] cursor @ ', curr_position, 'index = ', index, '  peak list: ', peak_tup_list
+        # print '[DB...BAT] cursor @ ', curr_position, 'index = ', index, '  peak list: ', peak_tup_list
         index = max(0, index)
-        index = min(index, len(peak_tup_list)-1)
-        print '[DB...BAT] process index = ', index
 
         # use the dynamic resolution
         resolution = curr_position * 0.01
         peak_id = -1
         if index == 0:
-            # near the leftmost peak
+            # left to the left most peak. it must be the left most peak or not any peak
             peak0_pos = peak_tup_list[index][0]
             if abs(curr_position - peak0_pos) <= resolution:
                 peak_id = peak_tup_list[index][1]
-        elif index == len(peak_tup_list) - 1:
-            # near the rightmost peak
-            peak_right_pos = peak_tup_list[index][0]
+        elif index == len(peak_tup_list):
+            # right to the rightmost peak. it must be the right most peak or not amy peak
+            peak_right_pos = peak_tup_list[index-1][0]
             if abs(curr_position - peak_right_pos) <= resolution:
-                peak_id = peak_tup_list[index][1]
+                peak_id = peak_tup_list[index-1][1]
         else:
             # in the middle
-            peak_left_pos = peak_tup_list[index][0]
-            peak_right_pos = peak_tup_list[index+1][0]
+            peak_left_pos = peak_tup_list[index-1][0]
+            peak_right_pos = peak_tup_list[index][0]
+
             if abs(peak_right_pos - curr_position) <= resolution:
-                peak_id = peak_tup_list[index + 1][1]
-            elif abs(peak_left_pos - curr_position) <= resolution:
                 peak_id = peak_tup_list[index][1]
+            elif abs(peak_left_pos - curr_position) <= resolution:
+                peak_id = peak_tup_list[index-1][1]
+
         # END-IF
 
         # update the color of the
@@ -707,6 +711,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         abs_move_y = abs(event.ydata - self._mouseY)
         if abs_move_x < resolution_x and abs_move_y < resolution_y:
             # movement is too small to require operation
+            # print '[DB...BAT] returned due to small step.  prev: ', self._mouseX, ' current: ', event.xdata
             return
 
         # Now it is the time to process
@@ -1002,6 +1007,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param event:
         :return:
         """
+        # as menu is popped out, the mouse state on the canvas must be reset to 0
+        self._mouseButtonBeingPressed = 0
+
         # no operation if event is outside of canvas
         if event.xdata is None or event.ydata is None:
             return
@@ -1234,24 +1242,38 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # check
         assert self._eventX is not None
 
-        # find out the current position
-        curr_group_id = self._currGroupID
-        curr_item_id = self._currIndicatorID
-        curr_item_type = self._currIndicatorType
+        # delete peak in 2 different type
+        if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            # automatic peak selection
+            curr_peak_id = self._highlightPeakID
+            # reset highlight
+            self._highlightPeakID = -1
+            # remove
+            removed = self.remove_peak_indicator(curr_peak_id)
+            assert removed
 
-        print '[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
-                                                                                    curr_item_id,
-                                                                                    curr_item_type)
-        assert curr_item_type == 1, \
-            'Current item type must be equal 1 for peak but not %d.' % curr_item_type
+        elif self._myPeakSelectionMode == PeakAdditionState.QuickMode \
+                or self._myPeakSelectionMode == PeakAdditionState.MultiMode:
+            # manual peak selection
+            # find out the current position
+            curr_group_id = self._currGroupID
+            curr_peak_id = self._currIndicatorID
+            curr_item_type = self._currIndicatorType
+            print '[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
+                                                                                        curr_item_id,
+                                                                                        curr_item_type)
+            assert curr_item_type == 1, \
+                'Current item type must be equal 1 for peak but not %d.' % curr_item_type
 
+            # remove peak
+            removed = self.remove_peak_indicator(curr_peak_id)
+            # delete peak from peak group manager
+            removed = self._myPeakGroupManager.delete_peak(curr_group_id, curr_item_id)
+            assert removed
 
-        # delete peak on canvas
-        removed = self.remove_peak_indicator(curr_item_id)
-        assert removed
-
-        # delete peak from peak group manager
-        removed = self._myPeakGroupManager.delete_peak(curr_group_id, curr_item_id)
+        else:
+            # unsupported sitation
+            raise RuntimeError('Impossible to happen!')
 
         return
 
@@ -1371,7 +1393,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert isinstance(peak_indicator_index, int)
 
         # find and remove indicator from peak group manager
-        removable = self._myPeakGroupManager.delete_peak(peak_indicator_index)
+        if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            removable = True
+            # remove it from controller
+            del self._mySinglePeakDict[peak_indicator_index]
+        else:
+            removable = self._myPeakGroupManager.delete_peak(peak_indicator_index)
 
         # remove indicator on the canvas
         if removable:

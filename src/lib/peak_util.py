@@ -4,15 +4,20 @@
 HALF_PEAK_FIT_RANGE_FACTOR = 3.
 
 
-def calculate_vulcan_resolution(d):
+def calculate_vulcan_resolution(d, high_resolution=False):
     """
     calculate the resolution (i.e., peak's FWHM) of VULCAN.
     :param d:
+    :param high_resolution:
     :return:
     """
-    fwhm = d * 0.0003
+    if high_resolution:
+        fwhm = d * 0.0025
+    else:
+        fwhm = d * 0.0045
 
     return fwhm
+
 
 def group_peaks(peak_tuple_list):
     """
@@ -29,7 +34,9 @@ def group_peaks(peak_tuple_list):
 
     # starting group ID
     group_id = 1
-    peak_group = {group_id:list()}
+    peak_group = {group_id: list()}
+
+    print '[DB...BAT] Group peaks: ', peak_tuple_list
 
     # group peaks from the high-d
     right_peak_left_bound = None

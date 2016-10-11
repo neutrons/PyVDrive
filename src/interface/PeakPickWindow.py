@@ -16,6 +16,7 @@ except AttributeError:
 import gui.GuiUtility as GuiUtility
 import gui.VdrivePeakPicker as VdrivePeakPicker
 import gui.diffractionplotview as dv
+import PyVDrive.lib.peak_util as peak_util
 
 
 # List of supported unit cell
@@ -376,7 +377,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_add_picked_peaks)
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
-        self.connect(self.ui.pushButton_groupQuickPickPeaks, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_group_auto_peaks)
         self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
                      self.do_import_peaks_from_file)
@@ -872,15 +873,32 @@ class PeakPickerWindow(QtGui.QMainWindow):
         by its position
         :return:
         """
-        import PyVDrive.lib.peak_util as peak_util
-
         # get single peaks from canvas
         raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
+        print '[DB...BAT] Peak to group: ', raw_peak_pos_list
 
         # call controller method to set group boundary
-        peak_util.group_peaks(raw_peak_pos_list)
+        peak_group = peak_util.group_peaks(raw_peak_pos_list)
+        assert isinstance(peak_group, dict)
 
-        #
+        # reflect the grouped peak to GUI
+        group_color = 'blue'
+        for group_id in sorted(peak_group.keys()):
+            print 'Peak-Group %d: ', group_id
+
+            # high light data!!!
+            blabla ... from here!
+            # get
+            print 'Get XY data:', self.canvas().get_data(pattern_key)
+
+            # set to next color
+            if group_color == 'blue':
+                group_color = 'green'
+            else:
+                group_color = 'blue'
+        # END-FOR
+
+        return
 
     def do_hide_peaks(self):
         """
@@ -1030,7 +1048,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 self._peakPickerMode = PeakPickerMode.AutoMode
                 # button enable/disable
                 self.ui.pushButton_findPeaks.setEnabled(True)
-                self.ui.pushButton_groupQuickPickPeaks.setEnabled(True)
+                self.ui.pushButton_groupAutoPickPeaks.setEnabled(True)
                 self.ui.pushButton_peakPickerMode.setEnabled(False)
                 # set the graphics view
                 self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.AutoMode)
@@ -1040,7 +1058,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 self._peakPickerMode = PeakPickerMode.SinglePeakPick
                 # button select
                 self.ui.pushButton_findPeaks.setEnabled(False)
-                self.ui.pushButton_groupQuickPickPeaks.setEnabled(False)
+                self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
                 self.ui.pushButton_peakPickerMode.setEnabled(True)
                 # set the graphics view
                 self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NormalMode)
@@ -1054,7 +1072,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # disable all push buttons
             self.ui.pushButton_addPeaks.setEnabled(False)
             self.ui.pushButton_findPeaks.setEnabled(False)
-            self.ui.pushButton_groupQuickPickPeaks.setEnabled(False)
+            self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
             self.ui.pushButton_peakPickerMode.setEnabled(False)
 
         return
@@ -1747,26 +1765,25 @@ def retrieve_peak_positions(peak_tup_list):
 
     return peak_pos_list
 
-
-def main(argv):
-    """ Main method for testing purpose
-    """
-    import mocks.mockvdriveapi as mocks
-
-    parent = None
-    controller = mocks.MockVDriveAPI()
-
-    app = QtGui.QApplication(argv)
-
-    # my plot window app
-    myapp = PeakPickerWindow(parent)
-    myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
-    myapp.set_controller(controller)
-    myapp.show()
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
+# def main(argv):
+#     """ Main method for testing purpose
+#     """
+#     import mocks.mockvdriveapi as mocks
+#
+#     parent = None
+#     controller = mocks.MockVDriveAPI()
+#
+#     app = QtGui.QApplication(argv)
+#
+#     # my plot window app
+#     myapp = PeakPickerWindow(parent)
+#     myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
+#     myapp.set_controller(controller)
+#     myapp.show()
+#
+#     exit_code=app.exec_()
+#     sys.exit(exit_code)
+#
+#
+# if __name__ == "__main__":
+#     main(sys.argv)

@@ -1282,6 +1282,19 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
+    def get_data(self, line_id):
+        """
+        Get vecX and vecY
+        :param line_id:
+        :return:
+        """
+        line = self._lineDict[line_id]
+        if line is None:
+            print '[ERROR] Line (key = %d) is None. Unable to update' % line_id
+            return
+
+        return line.get_xdata(), line.get_ydata()
+
     def getLineStyleList(self):
         """
         """
