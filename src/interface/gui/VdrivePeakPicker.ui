@@ -220,6 +220,48 @@
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
          <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <item>
+             <widget class="QLabel" name="label_4">
+              <property name="maximumSize">
+               <size>
+                <width>60</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Bank</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_bankNumbers">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>40</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>60</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Bank numbers&lt;/p&gt;&lt;p&gt;It is a list of the available of bank numbers that are loaded.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
           <item row="1" column="1">
            <widget class="QRadioButton" name="radioButton_pickModePower">
             <property name="font">
@@ -228,11 +270,27 @@
              </font>
             </property>
             <property name="text">
-             <string>Power Pick Mode</string>
+             <string>Power Pick</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="4">
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_pickPeak">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+              <italic>true</italic>
+             </font>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>pick peak</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
            <widget class="QPushButton" name="pushButton_groupAutoPickPeaks">
             <property name="font">
              <font>
@@ -273,7 +331,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Quick Pick Mode</string>
+             <string>Auto Pick</string>
             </property>
            </widget>
           </item>
@@ -341,63 +399,18 @@
             </item>
            </layout>
           </item>
-          <item row="0" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_10">
-            <item>
-             <widget class="QLabel" name="label_4">
-              <property name="maximumSize">
-               <size>
-                <width>60</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Bank</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBox_bankNumbers">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>40</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>60</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Bank numbers&lt;/p&gt;&lt;p&gt;It is a list of the available of bank numbers that are loaded.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_pickPeak">
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-              <italic>true</italic>
-             </font>
+          <item row="0" column="6">
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
-            <property name="layoutDirection">
-             <enum>Qt::RightToLeft</enum>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
             </property>
-            <property name="text">
-             <string>pick peak</string>
-            </property>
-           </widget>
+           </spacer>
           </item>
           <item row="1" column="2">
            <widget class="QPushButton" name="pushButton_peakPickerMode">
@@ -414,30 +427,41 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="5">
+           <widget class="QPushButton" name="pushButton_addPeaksPower">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+              <strikeout>true</strikeout>
+             </font>
+            </property>
+            <property name="text">
+             <string>Add Peaks</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Preferred</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
          </layout>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_addPeaks">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add all peaks shown on figures&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Add Peaks</string>
-          </property>
-         </widget>
         </item>
        </layout>
       </item>

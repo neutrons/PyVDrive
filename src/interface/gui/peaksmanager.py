@@ -4,7 +4,6 @@ import bisect
 __author__ = 'wzz'
 
 
-
 TINY = 1.0E-9
 
 

@@ -17,6 +17,7 @@ import gui.GuiUtility as GuiUtility
 import gui.VdrivePeakPicker as VdrivePeakPicker
 import gui.diffractionplotview as dv
 import PyVDrive.lib.peak_util as peak_util
+import GroupPeakDialog
 
 
 # List of supported unit cell
@@ -352,6 +353,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # parent
         self._myParent = parent
 
+        # sub window
+        self._groupPeakDialog = None
+
         # set up UI
         self.ui = VdrivePeakPicker.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -373,8 +377,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_switch_peak_pick_mode)
 
-        self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_add_picked_peaks)
+        # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_picked_peaks)
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
         self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
@@ -518,6 +522,45 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak')
         self._peakPickerMode = PeakPickerMode.NoPick
         self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NonEdit)
+
+        return
+
+    def add_grouped_peaks(self):
+        """
+
+        :return:
+        """
+        # check
+        assert self._autoPeakGroup is not None
+
+        # get information
+        # get bank
+        bank = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # get number of groups
+        group_id_list = sorted(self._autoPeakGroup.get_group_ids())
+        num_groups = len(group_id_list)
+        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
+
+        # add peak to table
+        for group_id in group_id_list:
+
+            peak_name = ''
+
+            group_left_b, group_right_b = self._autoPeakGroup.get_fit_range(group_id)
+            width = group_right_b - group_left_b
+
+            peak_tup_list = self._autoPeakGroup.get_peaks(group_id)
+
+            for peak_tup in peak_tup_list:
+                peak_centre = peak_tup[1]
+
+                self.ui.tableWidget_peakParameter.add_peak(bank=bank, name=peak_name,
+                                                           centre=peak_centre,
+                                                           width=width,
+                                                           group_id=group_id)
+            # END-FOR
+        # END-FOR
 
         return
 
@@ -873,30 +916,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         by its position
         :return:
         """
-        # get single peaks from canvas
-        raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
-        print '[DB...BAT] Peak to group: ', raw_peak_pos_list
-
-        # call controller method to set group boundary
-        peak_group = peak_util.group_peaks(raw_peak_pos_list)
-        assert isinstance(peak_group, dict)
-
-        # reflect the grouped peak to GUI
-        group_color = 'blue'
-        for group_id in sorted(peak_group.keys()):
-            print 'Peak-Group %d: ', group_id
-
-            # high light data!!!
-            blabla ... from here!
-            # get
-            print 'Get XY data:', self.canvas().get_data(pattern_key)
-
-            # set to next color
-            if group_color == 'blue':
-                group_color = 'green'
-            else:
-                group_color = 'blue'
-        # END-FOR
+        self._groupPeakDialog = GroupPeakDialog.GroupPeakDialog(self)
+        self._groupPeakDialog.show()
 
         return
 
@@ -960,27 +981,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def evt_table_selection_changed(self):
-        """
-        Event handling as the selection of the row changed
-        :return:
-        """
-        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
-            self.ui.tableWidget_peakParameter.currentColumn()
-
-        """
-        print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
-        model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
-        print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
-
-        mode_index = model_selected_rows[0]
-        print mode_index.row
-        print mode_index.row()
-        print type(mode_index.row())
-        """
-
-        return
-
     def evt_switch_bank(self):
         """
         Save the current selected peaks to a temporary file and load a new bank
@@ -1038,7 +1038,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         if self.ui.checkBox_pickPeak.isChecked():
             # enter the edit mode
-            self.ui.pushButton_addPeaks.setEnabled(True)
+            # self.ui.pushButton_addPeaks.setEnabled(True)
             self.ui.radioButton_pickModeQuick.setEnabled(True)
             self.ui.radioButton_pickModePower.setEnabled(True)
 
@@ -1070,7 +1070,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.radioButton_pickModePower.setEnabled(False)
 
             # disable all push buttons
-            self.ui.pushButton_addPeaks.setEnabled(False)
+            # self.ui.pushButton_addPeaks.setEnabled(False)
             self.ui.pushButton_findPeaks.setEnabled(False)
             self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
             self.ui.pushButton_peakPickerMode.setEnabled(False)
@@ -1408,6 +1408,94 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         for i_phase in range(1, 4):
             self._phaseWidgetsGroupDict[i_phase].set_values(self._phaseDict[i_phase])
+
+        return
+
+    def evt_table_selection_changed(self):
+        """
+        Event handling as the selection of the row changed
+        :return:
+        """
+        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
+            self.ui.tableWidget_peakParameter.currentColumn()
+
+        """
+        print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
+        model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+        print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+
+        mode_index = model_selected_rows[0]
+        print mode_index.row
+        print mode_index.row()
+        print type(mode_index.row())
+        """
+
+        return
+
+    def clear_group_highlight(self):
+        """
+
+        :return:
+        """
+        self.ui.graphicsView_main.clear_highlight_data()
+
+        return
+
+    def group_peaks(self, resolution, num_fwhm):
+        """
+
+        :param resolution:
+        :param num_fwhm:
+        :return:
+        """
+        # get single peaks from canvas
+        raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
+        print '[DB...BAT] Peak to group: ', raw_peak_pos_list
+
+        # call controller method to set group boundary
+        peak_group = peak_util.group_peaks(raw_peak_pos_list)
+        assert isinstance(peak_group, peak_util.PeakGroupCollection)
+
+        self.clear_group_highlight()
+
+        # reflect the grouped peak to GUI
+        group_color = 'blue'
+        for group_id in sorted(peak_group.get_group_ids()):
+            # # get the peak positions
+            # peak_pos_list = list()
+            # for peak_id in peak_group[group_id]:
+            #     peak_pos = self.ui.graphicsView_main.get_indicator_position(peak_id)[0]
+            #     peak_pos_list.append(peak_pos)
+            # # END-FOR
+            #
+            # # sort
+            # peak_pos_list.sort()
+            #
+            # # get the range of the group
+            # left_range = peak_pos_list[0] - peak_pos_list[0] * resolution * num_fwhm
+            # right_range = peak_pos_list[-1] + peak_pos_list[-1] * resolution * num_fwhm
+
+            left_range, right_range = peak_group.get_fit_range(group_id)
+
+
+            # left_range = peak_pos_list[0] - \
+            #              peak_util.calculate_vulcan_resolution(peak_pos_list[0], high_resolution=False) * \
+            #              peak_util.HALF_PEAK_FIT_RANGE_FACTOR
+            # right_range = peak_pos_list[-1] + \
+            #               peak_util.calculate_vulcan_resolution(peak_pos_list[-1], high_resolution=False) * \
+            #               peak_util.HALF_PEAK_FIT_RANGE_FACTOR
+
+            self.ui.graphicsView_main.highlight_data(left_range, right_range, group_color)
+
+            # set to next color
+            if group_color == 'blue':
+                group_color = 'green'
+            else:
+                group_color = 'blue'
+        # END-FOR
+
+        # set the returned peak group to class variable for future
+        self._autoPeakGroup = peak_group
 
         return
 

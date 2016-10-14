@@ -48,6 +48,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # parent
         self._parentWindow = None
 
+        # Bragg diffraction pattern
+        self._lastPlotID = None  # plot ID for the diffraction pattern plotted last
+        self._highlightsPlotIDList = list()
+
         # Define the class variable
         # Peak selection mode: not-in-edit
         self._myPeakSelectionMode = PeakAdditionState.NonEdit
@@ -318,29 +322,16 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return None
 
-    def plot_peak_indicator(self, peak_pos):
-        """ Add a peak's indicator, i.e., center only
-        Requirements:
-            Peak position must be given in current range
-        Guarantees:
-            A dashed line is drawn vertically across the figure as an indicator
-        :param peak_pos:
-        :param peak_width:
-        :param in_pick:
+    def clear_highlight_data(self):
+        """
+        Clear the highlighted data
         :return:
         """
-        # Check
-        left_x, right_x = self.getXLimit()
-        assert isinstance(peak_pos, float), 'Input peak position must be a float'
-        assert peak_pos > 0.
-        assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
-                                              '(%f, %f)' % (peak_pos, left_x, right_x)
+        # remove lines from canvas
+        for hl_line_id in self._highlightsPlotIDList:
+            self.remove_line(hl_line_id)
 
-        # Add indicator
-        indicator_id = self.add_vertical_indicator(peak_pos, 'red')
-
-        # Add peak to data structure for managing
-        self._shownPeakIDList.append(indicator_id)
+        self._highlightsPlotIDList = list()
 
         return
 
@@ -527,10 +518,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return None
 
-    def highlight_peak(self, left_x, right_x):
+    def get_ungrouped_peaks(self):
         """
-        Purpose:
-            Highlight a peak
+        Get ungrouped peaks that are selected automatically
+        :return: a sorted list of tuples. each tuple contains peak position and peak ID
+        """
+        tuple_list = list()
+        for peak_id in self._mySinglePeakDict.keys():
+            peak_pos = self._mySinglePeakDict[peak_id]
+            tuple_list.append((peak_pos, peak_id))
+
+        return tuple_list
+
+    def highlight_data(self, left_x, right_x, color):
+        """
         Requirements:
             Left_x and right_x are within data range;
             Data is loaded on canvas
@@ -538,17 +539,23 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             Diffraction pattern between left_x and right_x is plot with different color
         :param left_x:
         :param right_x:
+        :param color:
         :return:
         """
-        self.set_in
+        # issue 44... check inputs
 
-        self.add_arrow(0.5, 5000, step)
+        #
+        vec_x, vec_y = self.canvas().get_data(self._lastPlotID)
 
-        # Check requirements
-        # assert len(self._vecX) > 1
-        # assert self._vecX[0] <= left_x < right_x <= self._vecX[-1]
+        left_index = bisect.bisect_right(vec_x, left_x)
+        right_index = bisect.bisect_right(vec_x, right_x)
+        # if right_index == len(vec_x):
+        #     right_index -= 1
 
-        # Get the sub data set of
+        line_id = self.add_plot_1d(vec_x[left_index:right_index], vec_y[left_index:right_index], color=color,
+                                   marker=None, line_width=2)
+
+        self._highlightsPlotIDList.append(line_id)
 
         return
 
@@ -718,6 +725,10 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if self._mouseButtonBeingPressed == 0:
             # mouse button is not pressed.
             self.highlight_peak_nearby(event.xdata)
+
+        elif self._myPeakSelectionMode == PeakAdditionState.AutoMode:
+            # auto peak selection mode does not support any peak moving so far
+            pass
 
         elif self._mouseButtonBeingPressed == 1:
             # left mouse button is pressed and move
@@ -1354,6 +1365,34 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         if key is not None:
             self._myPatternDict[key] = (vec_x, vec_y, pattern_key)
 
+        self._lastPlotID = pattern_key
+
+        return
+
+    def plot_peak_indicator(self, peak_pos):
+        """ Add a peak's indicator, i.e., center only
+        Requirements:
+            Peak position must be given in current range
+        Guarantees:
+            A dashed line is drawn vertically across the figure as an indicator
+        :param peak_pos:
+        :param peak_width:
+        :param in_pick:
+        :return:
+        """
+        # Check
+        left_x, right_x = self.getXLimit()
+        assert isinstance(peak_pos, float), 'Input peak position must be a float'
+        assert peak_pos > 0.
+        assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
+                                              '(%f, %f)' % (peak_pos, left_x, right_x)
+
+        # Add indicator
+        indicator_id = self.add_vertical_indicator(peak_pos, 'red')
+
+        # Add peak to data structure for managing
+        self._shownPeakIDList.append(indicator_id)
+
         return
 
     def remove_all_in_pick_peaks(self):
@@ -1426,6 +1465,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         """
         self.clear_all_lines()
         self._myPeakGroupManager.reset()
+        self._highlightsPlotIDList = list()
 
         return
 
@@ -1488,16 +1528,4 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # END-IF-ELSE
 
         return
-
-    def get_ungrouped_peaks(self):
-        """
-        Get ungrouped peaks that are selected automatically
-        :return: a sorted list of tuples. each tuple contains peak position and peak ID
-        """
-        tuple_list = list()
-        for peak_id in self._mySinglePeakDict.keys():
-            peak_pos = self._mySinglePeakDict[peak_id]
-            tuple_list.append((peak_pos, peak_id))
-
-        return tuple_list
 
