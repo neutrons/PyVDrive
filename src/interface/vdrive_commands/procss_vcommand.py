@@ -1,5 +1,7 @@
 # Set up path to PyVDrive
-import socket, sys
+import sys
+import os
+import socket
 # if it is on analysis computer...
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')

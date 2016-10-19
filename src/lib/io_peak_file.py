@@ -78,7 +78,7 @@ class GSASPeakFileManager(object):
         if name == '' or name is None:
             # automatic peak name
             peak_index = len(self._peakDict[bank][group_id]) + 1
-            name = 'Peak_B%dG%d_%d' % (bank, group_id, peak_index)
+            name = 'Peak-B%dG%d-%d' % (bank, group_id, peak_index)
 
         self._peakDict[bank][group_id].append((name, position, width))
 
