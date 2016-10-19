@@ -106,25 +106,25 @@ class PeakGroupCollection(object):
 HALF_PEAK_FIT_RANGE_FACTOR = 6.
 
 
-def calculate_vulcan_resolution(d, high_resolution=False):
+def calculate_vulcan_resolution(d, delta_d):
     """
     calculate the resolution (i.e., peak's FWHM) of VULCAN.
     :param d:
-    :param high_resolution:
+    :param delta_d:
     :return:
     """
-    if high_resolution:
-        fwhm = d * 0.0025
-    else:
-        fwhm = d * 0.0045
+    assert isinstance(delta_d, float) and delta_d > 0
+    fwhm = delta_d * d
 
     return fwhm
 
 
-def group_peaks(peak_tuple_list):
+def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     """
     put a series of peaks into peak group for GSAS refinement
     :param peak_tuple_list: a list of tuples. each tuple contain a float (peak position) and a integer (peak ID)
+    :param resolution:
+    :param fit_range_factor:
     :return: a dictionary. key is group ID. value is a list of peak ID
     """
     # print '[DB...BAT] Group peaks: ', peak_tuple_list
@@ -132,6 +132,8 @@ def group_peaks(peak_tuple_list):
     # check validity
     assert isinstance(peak_tuple_list, list), 'Input peak-tuple list must be a list but not %s.' \
                                               '' % peak_tuple_list.__class__.__name__
+    assert resolution, 'blabla'
+    assert fit_range_factor, 'blabla'
 
     # sort to reverse
     peak_tuple_list.sort(reverse=True)
@@ -149,8 +151,8 @@ def group_peaks(peak_tuple_list):
         # unpack tuple
         assert isinstance(peak_tuple, tuple)
         peak_pos, peak_id = peak_tuple
-        peak_fwhm = calculate_vulcan_resolution(peak_pos)
-        peak_fit_range = HALF_PEAK_FIT_RANGE_FACTOR * peak_fwhm
+        peak_fwhm = calculate_vulcan_resolution(peak_pos, delta_d=resolution)
+        peak_fit_range = fit_range_factor * peak_fwhm
 
         # check whether current peak can overlap to the right peak
         if index == 0:

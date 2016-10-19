@@ -473,6 +473,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Event handlers lock
         self._evtLockComboBankNumber = False
 
+        # group
+        self._autoPeakGroup = None
+
         return
 
     def _init_widgets_setup(self):
@@ -1443,7 +1446,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def group_peaks(self, resolution, num_fwhm):
         """
-
+        Group a list of peaks for fitting
         :param resolution:
         :param num_fwhm:
         :return:
@@ -1453,7 +1456,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         print '[DB...BAT] Peak to group: ', raw_peak_pos_list
 
         # call controller method to set group boundary
-        peak_group = peak_util.group_peaks(raw_peak_pos_list)
+        peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
         assert isinstance(peak_group, peak_util.PeakGroupCollection)
 
         self.clear_group_highlight()
@@ -1461,30 +1464,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # reflect the grouped peak to GUI
         group_color = 'blue'
         for group_id in sorted(peak_group.get_group_ids()):
-            # # get the peak positions
-            # peak_pos_list = list()
-            # for peak_id in peak_group[group_id]:
-            #     peak_pos = self.ui.graphicsView_main.get_indicator_position(peak_id)[0]
-            #     peak_pos_list.append(peak_pos)
-            # # END-FOR
-            #
-            # # sort
-            # peak_pos_list.sort()
-            #
-            # # get the range of the group
-            # left_range = peak_pos_list[0] - peak_pos_list[0] * resolution * num_fwhm
-            # right_range = peak_pos_list[-1] + peak_pos_list[-1] * resolution * num_fwhm
-
+            # get the group's fit range
             left_range, right_range = peak_group.get_fit_range(group_id)
-
-
-            # left_range = peak_pos_list[0] - \
-            #              peak_util.calculate_vulcan_resolution(peak_pos_list[0], high_resolution=False) * \
-            #              peak_util.HALF_PEAK_FIT_RANGE_FACTOR
-            # right_range = peak_pos_list[-1] + \
-            #               peak_util.calculate_vulcan_resolution(peak_pos_list[-1], high_resolution=False) * \
-            #               peak_util.HALF_PEAK_FIT_RANGE_FACTOR
-
+            # highlight the data
             self.ui.graphicsView_main.highlight_data(left_range, right_range, group_color)
 
             # set to next color
