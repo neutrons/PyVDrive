@@ -432,17 +432,19 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def update_cell_value(self, row, col, value):
+    def update_cell_value(self, row, col, value, significant_digits=7):
         """
         Update (NOT reset) the value of a cell
         :param row:
         :param col:
         :param value:
+        :param significant_digits: significant digit for float
         :return:
         """
         # Check
         assert isinstance(row, int) and 0 <= row < self.rowCount()
         assert isinstance(col, int) and 0 <= col < self.columnCount()
+        assert isinstance(significant_digits, int) and significant_digits > 0
 
         cell_item = self.item(row, col)
         cell_widget = self.cellWidget(row, col)
@@ -451,7 +453,11 @@ class NTableWidget(QtGui.QTableWidget):
             # TableWidgetItem
             assert isinstance(cell_item, QtGui.QTableWidgetItem)
             if isinstance(value, float):
-                cell_item.setText(_fromUtf8('%.7f' % value))
+                # apply significant digit dynamically
+                float_str = ('{0:.%dg}' % significant_digits).format(value)
+                cell_item.setText(_fromUtf8(float_str))
+                # cell_item.setText(_fromUtf8('%.7f' % value))
+                # ('{0:.%dg}'%(2)).format(d)
             else:
                 cell_item.setText(_fromUtf8(str(value)))
         elif cell_item is None and cell_widget is not None:
