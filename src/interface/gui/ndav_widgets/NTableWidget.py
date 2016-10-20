@@ -33,12 +33,14 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def append_row(self, row_value_list, type_list=None):
+    def append_row(self, row_value_list, type_list=None, num_decimal=7):
         """
 
         :param row_value_list:
         :return: 2-tuple as (boolean, message)
         """
+        # TODO/NOW/ISSUE/44 - clean up this method (doc and etc.)
+
         # Check input
         assert isinstance(row_value_list, list)
         if type_list is not None:
@@ -64,8 +66,15 @@ class NTableWidget(QtGui.QTableWidget):
                 self.set_check_box(row_number, i_col, row_value_list[i_col])
             else:
                 # regular items
+                item_value = row_value_list[i_col]
+                if isinstance(item_value, float):
+                    # value_str = ('{0:.%dg}' % num_decimal).format(item_value)   # significant
+                    value_str = ('{0:.%df}' % num_decimal).format(item_value)
+                else:
+                    value_str = str(item_value)
+
                 item = QtGui.QTableWidgetItem()
-                item.setText(_fromUtf8(str(row_value_list[i_col])))
+                item.setText(_fromUtf8(value_str))
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
                 # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
                 self.setItem(row_number, i_col, item)
@@ -454,7 +463,8 @@ class NTableWidget(QtGui.QTableWidget):
             assert isinstance(cell_item, QtGui.QTableWidgetItem)
             if isinstance(value, float):
                 # apply significant digit dynamically
-                float_str = ('{0:.%dg}' % significant_digits).format(value)
+                # use 'g' for significant float_str = ('{0:.%dg}' % significant_digits).format(value)
+                float_str = ('{0:.%df}' % significant_digits).format(value)  # decimal
                 cell_item.setText(_fromUtf8(float_str))
                 # cell_item.setText(_fromUtf8('%.7f' % value))
                 # ('{0:.%dg}'%(2)).format(d)

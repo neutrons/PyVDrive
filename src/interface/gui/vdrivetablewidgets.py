@@ -502,8 +502,14 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert isinstance(group_id, int), 'Group ID must be an integer.'
         assert width > 0
 
-        # Get new index
-        status, message = self.append_row([True, bank, name, centre, width, name, group_id])
+        # set default peak name
+        if len(name.strip()) == 0:
+            peak_index = self.rowCount() + 1
+            name = 'Peak%0d-B%d' % (peak_index, bank)
+
+        # add peak
+        status, message = self.append_row([True, bank, name, centre, width, name, group_id],
+                                          num_decimal=3)
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
 
