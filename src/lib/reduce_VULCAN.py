@@ -42,6 +42,7 @@
 #
 ################################################################################
 import getopt
+import os
 import stat
 import shutil
 import xml.etree.ElementTree as ET
@@ -53,8 +54,7 @@ import xml.etree.ElementTree as ET
 # sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
 # sys.path.append('/Users/wzz/Mantid/Code/debug/bin')
 
-import mantid.simpleapi
-from mantid.simpleapi import *
+import mantid.simpleapi as mantidsimple
 import mantid
 
 refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
@@ -212,8 +212,11 @@ class ReductionSetup(object):
     """
     def __init__(self):
         """
-
+        Initialization
         """
+        self._runNumber = None
+        self._iptsNumber = None
+
         self._mode = None
         self.dryRun = False
 
@@ -229,6 +232,8 @@ class ReductionSetup(object):
 
         self._sampleLogDirectory = None
 
+        self._pngFileName = None
+
         return
 
     def get_event_file(self):
@@ -238,6 +243,27 @@ class ReductionSetup(object):
         """
         return self._eventFileFullPath
 
+    def get_gsas_dir(self):
+        """
+        get output GSAS file name
+        :return:
+        """
+        return self._mainGSASFileName
+
+    def get_gsas_2nd_dir(self):
+        """
+        get secondary GSAS file name
+        :return:
+        """
+        return self._2ndGSASFileName
+
+    def get_ipts_number(self):
+        """
+        get IPTS number
+        :return:
+        """
+        return self._iptsNumber
+
     def get_mode(self):
         """
         get mode
@@ -245,12 +271,43 @@ class ReductionSetup(object):
         """
         return self._mode
 
+    def get_plot_file(self):
+        """
+        get the 1-D plot png file name to save the reduced data' plot
+        :return:
+        """
+        return self._pngFileName
+
+    def get_record_file(self):
+        """
+        get the (sample log) Record file name with full path
+        :return:
+        """
+        return self._mainRecordFileName
+
+    def get_record_2nd_file(self):
+        """
+        get the 2nd (sample log) record file name with full path
+        :return:
+        """
+        return self._2ndRecordFileName
+
     def get_reduced_data_dir(self):
         """
         get directory for output
         :return:
         """
         return self._outputDirectory
+
+    def get_run_number(self):
+        """
+        get run number
+        :return:
+        """
+        if self._runNumber is None:
+            raise RuntimeError('Run number is not set yet.')
+
+        return self._runNumber
 
     def get_vdrive_log_dir(self):
         """
@@ -272,6 +329,18 @@ class ReductionSetup(object):
 
         return
 
+    def set_ipts_number(self, ipts):
+        """
+        set IPTS number
+        :param ipts:
+        :return:
+        """
+        assert isinstance(ipts, int) and ipts >= 0
+
+        self._iptsNumber = ipts
+
+        return
+
     def set_mode(self, mode):
         """
         set reduction mode
@@ -286,10 +355,27 @@ class ReductionSetup(object):
         :param dir_path:
         :return:
         """
+        # check input's validity
         assert isinstance(dir_path, str), 'Output directory must be a string but not %s.' % type(dir_path)
-        # TODO/FIXME/NOW - need to find out a way to check whether the directory is writable
 
-        self._outputDirectory = dir_path
+        # check whether the directory is writable
+        if not os.access(dir_path, os.W_OK):
+            raise RuntimeError('Output data direcotry %s is not writable.' % dir_path)
+
+        else:
+            self._outputDirectory = dir_path
+
+        return
+
+    def set_run_number(self, run_number):
+        """
+        set run number
+        :param run_number:
+        :return:
+        """
+        assert isinstance(run_number, int), 'run number must be an integer.'
+
+        self._runNumber = run_number
 
         return
 
@@ -569,9 +655,6 @@ class PatchRecord:
 # ENDCLASS
 
 
-
-
-
 class ReduceVulcanData(object):
     """
     Class to reduce VULCAN data
@@ -583,7 +666,7 @@ class ReduceVulcanData(object):
         assert isinstance(reduce_setup, ReductionSetup), 'Reduction setup must be a ReductionSetup instance but not ' \
                                                          '%s.' % type(reduce_setup)
 
-        self._reductionSetup = ReductionSetup
+        self._reductionSetup = ReductionSetup()
 
         return
 
@@ -636,15 +719,21 @@ class ReduceVulcanData(object):
         # check
         assert isinstance(reduction_setup, ReductionSetup), 'Input type is wrong!'
 
+        dry_run_str = ''
+
         # Output result in case it is a dry-run
-        print "Input NeXus file    : %s" % reduction_setup.get_event_file()
-        print "Output directory    : %s" % reduction_setup.get_reduced_data_dir()
-        print "Log directory       : %s" % reduction_setup.get_vdrive_log_dir()  # logDir
-        print "GSAS  directory     : %s;  If it is None, no GSAS will be written." % str(reduction_setup.gsasDir)
-        print "GSAS2 directory     : %s" % str(reduction_setup.gsas2Dir)
-        print "Record file name    : %s" % str(reduction_setup.recordFileName)
-        print "Record(2) file name : %s" % str(reduction_setup.record2FileName)
-        print "1D plot file name   : %s" % reduction_setup.pngfilename
+        dry_run_str += "Input NeXus file    : %s\n" % reduction_setup.get_event_file()
+        dry_run_str += "Output directory    : %s\n" % reduction_setup.get_reduced_data_dir()
+        dry_run_str += "Log directory       : %s\n" % reduction_setup.get_vdrive_log_dir()  # logDir
+        dry_run_str += "GSAS  directory     : %s;  If it is None, no GSAS will be written." \
+                       "\n" % str(reduction_setup.get_gsas_dir())
+        if reduction_setup.get_gsas_dir() is not None:
+            dry_run_str += "GSAS2 directory     : %s\n" % str(reduction_setup.get_gsas_2nd_dir())
+        dry_run_str += "Record file name    : %s\n" % str(reduction_setup.get_record_file())
+        dry_run_str += "Record(2) file name : %s\n" % str(reduction_setup.get_record_2nd_file())
+        dry_run_str += "1D plot file name   : %s\n" % reduction_setup.get_plot_file()
+
+        print 'Dry run:\n%s' % dry_run_str
 
         return False
 
@@ -1050,21 +1139,41 @@ class ReduceVulcanData(object):
 
         return log_file_name
 
+    def load_data_file(self, reduce_to_gsas):
+        """
+        Load NeXus file. If reducing to GSAS is also required, then load the complete NeXus file. Otherwise,
+        load the sample log only
+        :param reduce_to_gsas:
+        :return:
+        """
+        if reduce_to_gsas:
+            ws_name = 'VULCAN_%d_event' % self._reductionSetup.get_run_number()
+        else:
+            ws_name = "VULCAN_%d_MetaDataOnly" % (self._reductionSetup.get_run_number())
+        try:
+            mantidsimple.Load(Filename=self._reductionSetup.get_event_file(),
+                              OutputWorkspace=ws_name,
+                              MetaDataOnly=not reduce_to_gsas,
+                              LoadLogs=True)
+        except RuntimeError as err:
+            raise RuntimeError('Unable to load NeXus file %s due to %s. ' % (self._reductionSetup.get_event_file(),
+                                                                             str(err)))
+
+        return
+
     def generate_experiment_records(self):
         """
 
         :return:
         """
         # check condition
+        if self._reductionSetup.get_record_file() is None and self._reductionSetup.get_record_2nd_file() is None:
+            return
+
         if self._reductionSetup.logDir is None and self._reductionSetup.recordFileName is None and self._reductionSetup.record2FileName is None:
             return
 
-        meta_ws_name = "VULCAN_%d_MetaDataOnly" % (runNumber)
-        try:
-            Load(Filename=event_file_abs_path, OutputWorkspace=meta_ws_name, MetaDataOnly=True, LoadLogs=True)
-        except RuntimeError as err:
-            print "Unable to load NeXus file %s. Error message: %s. " % (event_file_abs_path, str(err))
-            return
+
 
         # export sample log file for this run
         if logDir is not None:
@@ -1094,25 +1203,49 @@ class ReduceVulcanData(object):
 
         :return:
         """
-        # Reduce to GSAS file
-        if self._reductionSetup.gsasDir is None:
-            # operation if the GSAS directory is not set up.
-            return
+        # load the sample run
 
-        # SNSPowderReduction
-        gsas_file_name = self.reduce_powder_diffraction_data(self._reductionSetup.ipts, self._reductionSetup.runNumber, self._reductionSetup.gsasDir)
 
-        # 2nd copy for Ke if it IS NOT an alignment run
-        if is_alignment_run is False:
-            self.duplicate_gsas_file(gsas_file_name, gsas2Dir)
+        # export the sample log record file
+        if self._reductionSetup.get_record_file() is not None or self._reductionSetup.get_record_2nd_file() is not None:
+            self.export_experiment_records()
 
+        # write experiment files
+        if required:
+            self.exportFurnaceLog()
+            self.exportMTSLog()
+            self.exportVulcanSampleEnvLog()
+            self.exportGenericDAQLog()
+
+        # write GSAS
+        if self._reductionSetup.get_gsas_dir() is not None:
+            gsas_file_name = self.reduce_powder_diffraction_data(self._reductionSetup.ipts, self._reductionSetup.runNumber, self._reductionSetup.gsasDir)
+
+            # 2nd copy for Ke if it IS NOT an alignment run
+            if self._reductionSetup.is_alignment_run() is False:
+                self.duplicate_gsas_file(gsas_file_name, self._reductionSetup.get_gsas_2nd_dir())
+
+            # save the plot
+            self.export_1d_plot()
+        # END-IF
+
+        return
+
+    def export_1d_plot(self):
+        """
+        Export 1-D plot of the reduced powder pattern
+        :return:
+        """
         try:
-            api.SavePlot1D(InputWorkspace="Proto2Bank", OutputFilename=pngfilename, YLabel='Intensity')
+            mantidsimple.SavePlot1D(InputWorkspace="Proto2Bank", OutputFilename=self._reductionSetup.get_plot_file(),
+                                    YLabel='Intensity')
         except ValueError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
+            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
+                                                                            str(err))
         except RuntimeError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(runNumber), str(err))
-        # ENDIF
+            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
+                                                                            str(err))
+        # Try-Exception
 
         return
 
@@ -1310,10 +1443,12 @@ def configure_reduction_setup(reduction_setup):
         ipts = int(ipts_str.split("-")[1])
     else:
         ipts = 0
-    reduction_setup.ipts_number = ipts
+    reduction_setup.set_run_number(run_number)
+    reduction_setup.set_ipts_number(ipts)
 
     # 1D plot file name
-    reduction_setup.pngfilename = os.path.join(reduction_setup.get_reduced_data_dir(), 'VULCAN_' + str(run_number) + '.png')
+    plot_image_file_name = os.path.join(reduction_setup.get_reduced_data_dir(), 'VULCAN_' + str(run_number) + '.png')
+    reduction_setup.set_plot_file_name(plot_image_file_name)
 
     return reduction_setup
 

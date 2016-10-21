@@ -35,12 +35,12 @@ class NTableWidget(QtGui.QTableWidget):
 
     def append_row(self, row_value_list, type_list=None, num_decimal=7):
         """
-
+        append a row to the table
         :param row_value_list:
+        :param type_list:
+        :param num_decimal: number of decimal points for floating
         :return: 2-tuple as (boolean, message)
         """
-        # TODO/NOW/ISSUE/44 - clean up this method (doc and etc.)
-
         # Check input
         assert isinstance(row_value_list, list)
         if type_list is not None:
@@ -441,19 +441,19 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def update_cell_value(self, row, col, value, significant_digits=7):
+    def update_cell_value(self, row, col, value, number_decimal=7):
         """
         Update (NOT reset) the value of a cell
         :param row:
         :param col:
         :param value:
-        :param significant_digits: significant digit for float
+        :param number_decimal: significant digit for float
         :return:
         """
         # Check
         assert isinstance(row, int) and 0 <= row < self.rowCount()
         assert isinstance(col, int) and 0 <= col < self.columnCount()
-        assert isinstance(significant_digits, int) and significant_digits > 0
+        assert isinstance(number_decimal, int) and number_decimal > 0
 
         cell_item = self.item(row, col)
         cell_widget = self.cellWidget(row, col)
@@ -464,7 +464,7 @@ class NTableWidget(QtGui.QTableWidget):
             if isinstance(value, float):
                 # apply significant digit dynamically
                 # use 'g' for significant float_str = ('{0:.%dg}' % significant_digits).format(value)
-                float_str = ('{0:.%df}' % significant_digits).format(value)  # decimal
+                float_str = ('{0:.%df}' % number_decimal).format(value)  # decimal
                 cell_item.setText(_fromUtf8(float_str))
                 # cell_item.setText(_fromUtf8('%.7f' % value))
                 # ('{0:.%dg}'%(2)).format(d)
