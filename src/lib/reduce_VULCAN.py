@@ -217,8 +217,7 @@ class ReductionSetup(object):
         self._runNumber = None
         self._iptsNumber = None
 
-        self._mode = None
-        self.dryRun = False
+        self._isDryRun = False
 
         self._eventFileFullPath = None
 
@@ -235,6 +234,69 @@ class ReductionSetup(object):
         self._pngFileName = None
 
         return
+
+    @staticmethod
+    def change_output_directory(original_directory, user_specified_dir=None):
+        """ Purpose:
+          Change the output direction from
+          * .../autoreduce/ to .../logs/
+          * .../autoreduce/ to .../<user_specified>
+        :param original_directory: if it is not ends with /autoreduce/, then the target directory will be the same,
+                while if the directory does not exist, the method will create ethe directory.
+        :param user_specified_dir: if it is not specified, change to .../logs/ as default
+        """
+        # Check validity
+        assert isinstance(original_directory, str)
+
+        # Change path from ..../autoreduce/ to .../logs/
+        if original_directory.endswith("/"):
+            original_directory = os.path.split(original_directory)[0]
+        parent_dir, last_sub_dir = os.path.split(original_directory)
+
+        if last_sub_dir == "autoreduce":
+            # original directory ends with 'autoreduce'
+            if user_specified_dir is None:
+                # from .../autoreduce/ to .../logs/
+                new_output_dir = os.path.join(parent_dir, "logs")
+            else:
+                # from .../autoreduce/ to .../<user_specified>/
+                new_output_dir = os.path.join(parent_dir, user_specified_dir)
+            print "Log file will be written to directory %s. " % new_output_dir
+        else:
+            # non-auto reduction mode.
+            new_output_dir = original_directory
+            print "Log file will be written to the original directory %s. " % new_output_dir
+
+        # Create path
+        if os.path.exists(new_output_dir) is False:
+            # create
+            os.mkdir(new_output_dir)
+
+        return new_output_dir
+
+    def check_validity(self):
+        """
+
+        :return:
+        """
+        # TODO/NOW/ - Doc and more check
+
+        error_message = ''
+
+        # check whether the directory is writable
+        if not os.access(self._outputDirectory, os.W_OK):
+            error_message += 'Output data directory %s is not writable.\n' % self._outputDirectory
+
+        if os.path.exists(self._eventFileFullPath) is False:
+            error_message += 'NeXus file %s is not accessible or does not exist.' \
+                             '' % self._eventFileFullPath
+
+        if error_message == '':
+            status = True
+        else:
+            status = False
+
+        return status, error_message
 
     def get_event_file(self):
         """
@@ -263,13 +325,6 @@ class ReductionSetup(object):
         :return:
         """
         return self._iptsNumber
-
-    def get_mode(self):
-        """
-        get mode
-        :return:
-        """
-        return self._mode
 
     def get_plot_file(self):
         """
@@ -316,6 +371,83 @@ class ReductionSetup(object):
         """
         return self._sampleLogDirectory
 
+    def is_dry_run(self):
+        """
+        check if it is a dry run
+        :return:
+        """
+        return self._isDryRun
+
+    def process_configurations(self):
+        """ Obtain information from full path to input NeXus file including
+        1. base NeXus file name
+        2. directory to NeXus file
+        3. IPTS number
+
+        :return:
+        """
+        # TODO/NOW/ -- clean up!
+        # get event file name (base name) and directory for NeXus file
+        self.nexusDir, self._eventFileBase = os.path.split(self._eventFileFullPath)
+
+        # set the data file path in the search list
+        data_search_path = mantid.config.getDataSearchDirs()
+        data_search_path.append(self.nexusDir)
+        mantid.config.setDataSearchDirs(";".join(data_search_path))
+
+        # parse the run number and IPTS
+        run_number = int(self.eventFile.split('_')[1])
+        if reduction_setup.get_event_file().count("IPTS") == 1:
+            terms = reduction_setup.get_event_file().split("/")
+            ipts_str = ''
+            for t in terms:
+                if t.count("IPTS") == 1:
+                    ipts_str = t
+                    break
+            assert len(ipts_str) > 0, 'Impossible that IPTS string does not exist!'
+            ipts = int(ipts_str.split("-")[1])
+        else:
+            ipts = 0
+        reduction_setup.set_run_number(run_number)
+        reduction_setup.set_ipts_number(ipts)
+
+        # 1D plot file name
+        plot_image_file_name = os.path.join(reduction_setup.get_reduced_data_dir(),
+                                            'VULCAN_' + str(run_number) + '.png')
+        reduction_setup.set_plot_file_name(plot_image_file_name)
+
+        return
+
+    def set_defaults(self):
+        """
+        VULCAN standard
+        :return:
+        """
+        # sample log outputs (MTS, Generic, and etc)
+        self._sampleLogDirectory = self.change_output_directory(self._outputDirectory)
+
+        # record files
+        self._mainRecordFileName = os.path.join(self._outputDirectory, "AutoRecord.txt")
+        self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
+                                               "AutoRecord.txt")
+        # output GSAS directory
+        self._mainGSASFileName = self.change_output_directory(self._outputDirectory,
+                                                              "autoreduce/binned")
+        self._2ndGSASFileName = self.change_output_directory(self._outputDirectory,
+                                                             "binned_data")
+
+        return
+
+    def set_dry_run(self, status):
+        """
+
+        :param status:
+        :return:
+        """
+        # TODO/NOW/check/doc
+
+        self._isDryRun = status
+
     def set_event_file(self, event_file_path):
         """
         set full path of event file
@@ -341,14 +473,6 @@ class ReductionSetup(object):
 
         return
 
-    def set_mode(self, mode):
-        """
-        set reduction mode
-        :param mode:
-        :return:
-        """
-        self._mode = mode
-
     def set_output_dir(self, dir_path):
         """
         set output directory
@@ -358,12 +482,20 @@ class ReductionSetup(object):
         # check input's validity
         assert isinstance(dir_path, str), 'Output directory must be a string but not %s.' % type(dir_path)
 
-        # check whether the directory is writable
-        if not os.access(dir_path, os.W_OK):
-            raise RuntimeError('Output data direcotry %s is not writable.' % dir_path)
+        # set up
+        self._outputDirectory = dir_path
 
-        else:
-            self._outputDirectory = dir_path
+        return
+
+    def set_plot_file_name(self, plot_file_name):
+        """
+        ISSUE44 doc
+        :param plot_file_name:
+        :return:
+        """
+        assert isinstance(plot_file_name, str)
+
+        self._pngFileName = plot_file_name
 
         return
 
@@ -669,45 +801,6 @@ class ReduceVulcanData(object):
         self._reductionSetup = ReductionSetup()
 
         return
-
-    @staticmethod
-    def change_output_directory(original_directory, user_specified_dir=None):
-        """ Purpose:
-          Change the output direction from
-          * .../autoreduce/ to .../logs/
-          * .../autoreduce/ to .../<user_specified>
-        :param original_directory: if it is not ends with /autoreduce/, then the target directory will be the same,
-                while if the directory does not exist, the method will create ethe directory.
-        :param user_specified_dir: if it is not specified, change to .../logs/ as default
-        """
-        # Check validity
-        assert isinstance(original_directory, str)
-
-        # Change path from ..../autoreduce/ to .../logs/
-        if original_directory.endswith("/"):
-            original_directory = os.path.split(original_directory)[0]
-        parent_dir, last_sub_dir = os.path.split(original_directory)
-
-        if last_sub_dir == "autoreduce":
-            # original directory ends with 'autoreduce'
-            if user_specified_dir is None:
-                # from .../autoreduce/ to .../logs/
-                new_output_dir = os.path.join(parent_dir, "logs")
-            else:
-                # from .../autoreduce/ to .../<user_specified>/
-                new_output_dir = os.path.join(parent_dir, user_specified_dir)
-            print "Log file will be written to directory %s. " % new_output_dir
-        else:
-            # non-auto reduction mode.
-            new_output_dir = original_directory
-            print "Log file will be written to the original directory %s. " % new_output_dir
-
-        # Create path
-        if os.path.exists(new_output_dir) is False:
-            # create
-            os.mkdir(new_output_dir)
-
-        return new_output_dir
 
     @staticmethod
     def dry_run(reduction_setup):
@@ -1204,7 +1297,7 @@ class ReduceVulcanData(object):
         :return:
         """
         # load the sample run
-
+        self.load_data_file(self._reductionSetup.to_reduce_gsas)
 
         # export the sample log record file
         if self._reductionSetup.get_record_file() is not None or self._reductionSetup.get_record_2nd_file() is not None:
@@ -1287,170 +1380,131 @@ class ReduceVulcanData(object):
         return outfilename
 
 
-def process_inputs(argv):
+class MainUtility(object):
     """
-
-    :param argv:
-    :return: 2-tuple
+    Utility methods for main
     """
-    try:
-        opts, args = getopt.getopt(argv, "hdi:o:l:g:G:r:R:", ["help", "ifile=", "ofile=", "log=",
-                                                              "gsas=", "gsas2=", "record=", "record2=",
-                                                              "dryrun"])
-    except getopt.GetoptError:
-        print "Exception: %s" % (str(getopt.GetoptError))
-        print 'test.py -i <inputfile> -o <outputfile>'
-        return False, None
+    @staticmethod
+    def parse_argv(opts, argv):
+        """
+        Parse arguments and put to dictionary
+        :param opts:
+        :param argv:
+        :return: 2-tuple : status (boolean) and ReductionSetup (or None)
+        """
+        # Initialize
+        reduction_setup = ReductionSetup()
 
-    return True, (opts, args)
+        # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
+        if len(argv) == 0:
+            print "Auto   reduction Inputs:   [1. File name with full length] [2. Output directory]"
+            print "Manual reduction Inputs:   --help"
+            return False, reduction_setup
 
+        # test dry run
+        if len(opts) == 0:
+            # auto mode
+            reduction_setup.set_dry_run(False)
+            is_default_mode = True
+        elif len(opts) == 1 and opts[0][0] in ("-d", "--dryrun"):
+            # dry run for auto mode
+            reduction_setup.set_dry_run(True)
+            is_default_mode = True
+        else:
+            # manual mode
+            is_default_mode = False
+        # END-IF-ELSE
 
-def print_main_help():
-    """
-    Print help message
-    :return:
-    """
-    # FIXME/TODO/NOW - Make these string!
-    print "%s -i <inputfile> -o <outputdirectory> ... ..." % (sys.argv[0])
-    print "-i/ifile  : mandatory input NeXus file name. "
-    print "-o/ofile  : mandatory directory for output files. "
-    print "-l/log    : optional directory for sample log files. "
-    print "-g/gsas   : optional directory for GSAS file owned by owner. "
-    print "-G/gsas2  : optional directory to copy GSAS file to  with file mode 664."
-    print "-r/record : optional experiment record file name (writable only to auot reduction service)."
-    print "-R/record2: experiment record file (can be modified by manual reduction)."
-    print "-d/dry    : dry run to check output status, file names and directories."
+        # parse or set up as default
+        if is_default_mode:
+            # auto reduction mode (as default)
 
-    return
+            # set up event file path and output directory
+            reduction_setup.set_event_file(argv[0])
+            reduction_setup.set_output_dir(argv[1])
 
+            # set up log directory, record files and etc.
+            reduction_setup.set_defaults()
 
-def parse_argv(opts, argv):
-    """ Parse arguments and put to dictionary
-    :param opts:
-    :param argv
-    :return: 2-tuple : status (boolean) and ReductionSetup (or None)
-    """
-    # Initialize
-    reduction_setup = ReductionSetup()
+        else:
+            # manual reduction mode
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    # Help
+                    MainUtility.print_main_help()
+                    return False, None
+                elif opt in ("-i", "--ifile"):
+                    # Input NeXus file
+                    reduction_setup._eventFileFullPath = arg
+                elif opt in ("-o", "--ofile"):
+                    # Output directory
+                    reduction_setup._outputDirectory = arg
+                elif opt in ("-l", "--log") and arg != '0':
+                    # Log file
+                    reduction_setup._sampleLogDirectory = arg
+                elif opt in ("-g", "--gsas") and arg != '0':
+                    # GSAS file
+                    reduction_setup._mainGSASFileName = arg
+                elif opt in ("-G", "--gsas2") and arg != '0':
+                    # GSAS file of 2nd copy
+                    reduction_setup._2ndGSASFileName = arg
+                elif opt in ("-r", "--record") and arg != '0':
+                    # AutoReduce.txt
+                    reduction_setup._mainRecordFileName = arg
+                elif opt in ("-R", "--record2") and arg != '0':
+                    # AutoReduce.txt in 2nd directory as a backup
+                    reduction_setup._2ndRecordFileName = arg
+                elif opt in ("-d", "--dryrun"):
+                    # Dry run
+                    reduction_setup.set_dry_run(True)
+                    # END-IF-ELSE
+                    # END-FOR (opt)
+        # END-IF-ELSE (len(opt)==0)
 
-    # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
-    if len(argv) == 0:
-        print "Auto   reduction Inputs:   [1. File name with full length] [2. Output directory]"
-        print "Manual reduction Inputs:   --help"
-        return False, reduction_setup
+        # Check requirements
+        if reduction_setup.get_event_file() is None or reduction_setup.get_reduced_data_dir() is None:
+            print "Both input event Nexus file %s and output directory %s must be given!" % (
+                str(reduction_setup.get_event_file()), str(reduction_setup.get_reduced_data_dir()))
+            return False, reduction_setup
 
-    elif len(opts) == 0:
-        # auto reduction mode (as default)
-        reduction_setup.mode = "auto"
+        return True, reduction_setup
 
-        # set up event file path and output directory
-        reduction_setup._eventFileFullPath = argv[0]
-        reduction_setup._outputDirectory = argv[1]
+    @staticmethod
+    def print_main_help():
+        """
+        Print help message
+        :return:
+        """
+        # FIXME/TODO/NOW - Make these string!
+        print "%s -i <inputfile> -o <outputdirectory> ... ..." % (sys.argv[0])
+        print "-i/ifile  : mandatory input NeXus file name. "
+        print "-o/ofile  : mandatory directory for output files. "
+        print "-l/log    : optional directory for sample log files. "
+        print "-g/gsas   : optional directory for GSAS file owned by owner. "
+        print "-G/gsas2  : optional directory to copy GSAS file to  with file mode 664."
+        print "-r/record : optional experiment record file name (writable only to auot reduction service)."
+        print "-R/record2: experiment record file (can be modified by manual reduction)."
+        print "-d/dry    : dry run to check output status, file names and directories."
 
-        # set up log directory, record files and etc.
-        reduction_setup._sampleLogDirectory = change_output_directory(reduction_setup._outputDirectory)
+        return
 
-        reduction_setup._mainRecordFileName = os.path.join(reduction_setup._outputDirectory, "AutoRecord.txt")
-        reduction_setup.copy2Dir = change_output_directory(reduction_setup._outputDirectory, "")
-        reduction_setup._2ndRecordFileName = os.path.join(reduction_setup.copy2Dir, "AutoRecord.txt")
+    @staticmethod
+    def process_inputs(argv):
+        """
 
-        # output GSAS directory
-        reduction_setup._mainGSASFileName = change_output_directory(reduction_setup._outputDirectory, "autoreduce/binned")
-        reduction_setup._2ndGSASFileName = change_output_directory(reduction_setup._outputDirectory, "binned_data")
+        :param argv:
+        :return: 2-tuple
+        """
+        try:
+            opts, args = getopt.getopt(argv, "hdi:o:l:g:G:r:R:", ["help", "ifile=", "ofile=", "log=",
+                                                                  "gsas=", "gsas2=", "record=", "record2=",
+                                                                  "dryrun"])
+        except getopt.GetoptError:
+            print "Exception: %s" % (str(getopt.GetoptError))
+            print 'test.py -i <inputfile> -o <outputfile>'
+            return False, None
 
-    else:
-        # manual reduction mode
-        reduction_setup.mode = 'manual'
-
-        for opt, arg in opts:
-            if opt in ("-h", "--help"):
-                # Help
-                print_main_help()
-                return False
-            elif opt in ("-i", "--ifile"):
-                # Input NeXus file
-                reduction_setup._eventFileFullPath = arg
-            elif opt in ("-o", "--ofile"):
-                # Output directory
-                reduction_setup._outputDirectory = arg
-            elif opt in ("-l", "--log") and arg != '0':
-                # Log file
-                reduction_setup._sampleLogDirectory = arg
-            elif opt in ("-g", "--gsas") and arg != '0':
-                # GSAS file
-                reduction_setup._mainGSASFileName = arg
-            elif opt in ("-G", "--gsas2") and arg != '0':
-                # GSAS file of 2nd copy
-                reduction_setup._2ndGSASFileName = arg
-            elif opt in ("-r", "--record") and arg != '0':
-                # AutoReduce.txt
-                reduction_setup._mainRecordFileName = arg
-            elif opt in ("-R", "--record2") and arg != '0':
-                # AutoReduce.txt in 2nd directory as a backup
-                reduction_setup._2ndRecordFileName = arg
-            elif opt in ("-d", "--dryrun"):
-                # Dry run
-                reduction_setup.dryRun = True
-            # END-IF-ELSE
-        # END-FOR (opt)
-    # END-IF-ELSE (len(opt)==0)
-
-    # Check requirements
-    if reduction_setup.get_event_file() is None or reduction_setup.get_reduced_data_dir() is None:
-        print "Both input event Nexus file %s and output directory %s must be given!" % (
-            str(reduction_setup.get_event_file()), str(reduction_setup.get_reduced_data_dir()))
-        return False, reduction_setup
-
-    return True, reduction_setup
-
-
-def configure_reduction_setup(reduction_setup):
-    """ Obtain information from full path to input NeXus file including
-    1. base NeXus file name
-    2. directory to NeXus file
-    3. IPTS number
-    :param reduction_setup:
-    :return:
-    """
-    # check type
-    assert isinstance(reduction_setup, ReductionSetup), 'Input object of type %s is not ReductionSetup.' \
-                                                        '' % reduction_setup.__class__.__name__
-
-    # Check file's existence
-    if os.path.exists(reduction_setup.get_event_file()) is False:
-        raise RuntimeError('NeXus file %s is not accessible or does not exist. '
-                           '' % reduction_setup.get_event_file())
-
-    # get event file name (base name) and directory for NeXus file
-    reduction_setup.eventFile = os.path.split(reduction_setup.get_event_file())[-1]
-    reduction_setup.nexusDir = reduction_setup.get_event_file().replace(reduction_setup.eventFile, '')
-
-    # set the data file path in the search list
-    data_search_path = mantid.config.getDataSearchDirs()
-    data_search_path.append(reduction_setup.nexusDir)
-    mantid.config.setDataSearchDirs(";".join(data_search_path))
-
-    # parse the run number and IPTS
-    run_number = int(reduction_setup.eventFile.split('_')[1])
-    if reduction_setup.get_event_file().count("IPTS") == 1:
-        terms = reduction_setup.get_event_file().split("/")
-        ipts_str = ''
-        for t in terms:
-            if t.count("IPTS") == 1:
-                ipts_str = t
-                break
-        assert len(ipts_str) > 0, 'Impossible that IPTS string does not exist!'
-        ipts = int(ipts_str.split("-")[1])
-    else:
-        ipts = 0
-    reduction_setup.set_run_number(run_number)
-    reduction_setup.set_ipts_number(ipts)
-
-    # 1D plot file name
-    plot_image_file_name = os.path.join(reduction_setup.get_reduced_data_dir(), 'VULCAN_' + str(run_number) + '.png')
-    reduction_setup.set_plot_file_name(plot_image_file_name)
-
-    return reduction_setup
+        return True, (opts, args)
 
 
 def main(argv):
@@ -1467,31 +1521,36 @@ def main(argv):
     3. Reducing and generating GSAS file
     """
     # process inputs
-    status, ret_tuple = process_inputs(argv)
+    status, ret_tuple = MainUtility.process_inputs(argv)
     if not status:
         return
     else:
         opts, args = ret_tuple
 
     # parse arguments
-    print '[DB...BAT] args = ', args, type(args), 'argv = ', argv, type(argv)
-
-    status, reduction_setup = parse_argv(opts, argv)
+    status, reduction_setup = MainUtility.parse_argv(opts, argv)
     if not status:
         return
+
     # process
-    reduction_setup = configure_reduction_setup(reduction_setup)
+    reduction_setup.process_configurations()
 
     # create reducer
     reducer = ReduceVulcanData(reduction_setup)
 
-    # execute
-    if reduction_setup.dryRun:
+    # dry run
+    if reduction_setup.is_dry_run():
         # dry run
         reducer.dry_run(reduction_setup)
-    else:
-        # real reduction
+
+    # execute
+    status, error_message = reduction_setup.check_validity()
+    if status and not reduction_setup.is_dry_run():
+        # reduce data
         reducer.execute()
+    elif not status:
+        # error message
+        print '[Error] Reduction Setup:\n%s' % error_message
 
     return
 
