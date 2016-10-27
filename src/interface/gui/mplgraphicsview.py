@@ -872,7 +872,7 @@ class Qt4MplCanvas(FigureCanvas):
         self.fig.patch.set_facecolor('white')
 
         if True:
-            self.axes = self.fig.add_subplot(111) # return: matplotlib.axes.AxesSubplot
+            self.axes = self.fig.add_subplot(111)  # return: matplotlib.axes.AxesSubplot
             self.fig.subplots_adjust(bottom=0.15)
             self.axes2 = None
         else:
@@ -1055,7 +1055,7 @@ class Qt4MplCanvas(FigureCanvas):
         # self.axes.set_yticks(yticks)
 
         # show image
-        imgplot = self.axes.imshow(array2d, extent=[xmin,xmax,ymin,ymax], interpolation='none')
+        imgplot = self.axes.imshow(array2d, extent=[xmin, xmax, ymin, ymax], interpolation='none')
         # set y ticks as an option:
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
