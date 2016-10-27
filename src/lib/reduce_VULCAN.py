@@ -52,7 +52,7 @@ import sys
 # sys.path.append('/opt/mantidunstable/bin/')
 # sys.path.append("/opt/Mantid/bin")
 # sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
-# sys.path.append('/Users/wzz/Mantid/Code/debug/bin')
+sys.path.append('/Users/wzz/MantidBuild/debug-mantid2/bin/')
 
 import mantid.simpleapi as mantidsimple
 import mantid
@@ -236,6 +236,11 @@ class ReductionSetup(object):
 
         self._pngFileName = None
 
+        # about reduction required files
+        self._calibrationFileName = None
+        self._characterFileName = None
+        self._vulcanBinsFileName = None
+
         return
 
     @staticmethod
@@ -300,6 +305,17 @@ class ReductionSetup(object):
             status = False
 
         return status, error_message
+
+    def get_calibration_file(self):
+        """
+        get calibration file
+        :return:
+        """
+        # set to default if it is not set up yet
+        if self._calibrationFileName is None:
+            self._calibrationFileName = CalibrationFileName
+
+        return self._calibrationFileName
 
     def get_event_file(self):
         """
@@ -464,6 +480,22 @@ class ReductionSetup(object):
 
         return
 
+    def set_gsas_file(self, file_name, main_gsas):
+        """
+        Set the GSAS file name
+        :param file_name:
+        :param main_gsas:
+        :return:
+        """
+        assert isinstance(file_name, str), 'GSAS (or GSAS2) file name must be a string.'
+
+        if main_gsas:
+            self._mainGSASFileName = file_name
+        else:
+            self._2ndGSASFileName = file_name
+
+        return
+
     def set_ipts_number(self, ipts):
         """
         set IPTS number
@@ -473,6 +505,18 @@ class ReductionSetup(object):
         assert isinstance(ipts, int) and ipts >= 0
 
         self._iptsNumber = ipts
+
+        return
+
+    def set_log_dir(self, dir_name):
+        """
+        set the output directory for sample log files
+        :param dir_name:
+        :return:
+        """
+        assert isinstance(dir_name), 'directory name must be string'
+
+        self._sampleLogDirectory = dir_name
 
         return
 
@@ -499,6 +543,22 @@ class ReductionSetup(object):
         assert isinstance(plot_file_name, str)
 
         self._pngFileName = plot_file_name
+
+        return
+
+    def set_record_file(self, file_name, main_record):
+        """
+        Set record file
+        :param file_name:
+        :param main_record:
+        :return:
+        """
+        assert isinstance(file_name, str), 'blabla'
+
+        if main_record:
+            self._mainRecordFileName = file_name
+        else:
+            self._2ndRecordFileName = file_name
 
         return
 
@@ -1373,7 +1433,8 @@ class ReduceVulcanData(object):
 
             mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                             PreserveEvents=True,
-                                            CalibrationFile=CalibrationFileName,
+                                            # CalibrationFile=CalibrationFileName,
+                                            CalibrationFile=self._reductionSetup.get_calibration_file(),
                                             CharacterizationRunsFile=CharacterFileName,
                                             Binning="-0.001",
                                             SaveAS="",
@@ -1473,26 +1534,25 @@ class MainUtility(object):
                     return False, None
                 elif opt in ("-i", "--ifile"):
                     # Input NeXus file
-                    reduction_setup._eventFileFullPath = arg
+                    reduction_setup.set_event_file(arg)
                 elif opt in ("-o", "--ofile"):
                     # Output directory
                     reduction_setup._outputDirectory = arg
                 elif opt in ("-l", "--log") and arg != '0':
                     # Log file
-                    # FIXME/TODO/NOW/ISSUE 44: this is bad coding!
-                    reduction_setup._sampleLogDirectory = arg
+                    reduction_setup.set_log_dir(arg)
                 elif opt in ("-g", "--gsas") and arg != '0':
                     # GSAS file
-                    reduction_setup._mainGSASFileName = arg
+                    reduction_setup.set_gsas_file(arg, main_gsas=True)
                 elif opt in ("-G", "--gsas2") and arg != '0':
                     # GSAS file of 2nd copy
-                    reduction_setup._2ndGSASFileName = arg
+                    reduction_setup.set_gsas_file(arg, main_gsas=False)
                 elif opt in ("-r", "--record") and arg != '0':
                     # AutoReduce.txt
-                    reduction_setup._mainRecordFileName = arg
+                    reduction_setup.set_record_file(arg, main_record=True)
                 elif opt in ("-R", "--record2") and arg != '0':
                     # AutoReduce.txt in 2nd directory as a backup
-                    reduction_setup._2ndRecordFileName = arg
+                    reduction_setup.set_record_file(arg, main_record=False)
                 elif opt in ("-d", "--dryrun"):
                     # Dry run
                     reduction_setup.set_dry_run(True)
