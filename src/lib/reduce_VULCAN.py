@@ -260,7 +260,7 @@ class ReductionSetup(object):
         :param user_specified_dir: if it is not specified, change to .../logs/ as default
         """
         # Check validity
-        assert isinstance(original_directory, str)
+        assert isinstance(original_directory, str), 'Directory must be string but not %s.' % type(original_directory)
 
         # Change path from ..../autoreduce/ to .../logs/
         if original_directory.endswith("/"):
@@ -494,6 +494,9 @@ class ReductionSetup(object):
         VULCAN standard
         :return:
         """
+        # in case the output directory is not set
+        # TODO/NOW/ISSUE - clean up and well-documented!
+
         # sample log outputs (MTS, Generic, and etc)
         self._sampleLogDirectory = self.change_output_directory(self._outputDirectory)
 
@@ -955,14 +958,15 @@ class ReduceVulcanData(object):
 
         return is_alignment_run
 
-    @staticmethod
-    def dry_run(reduction_setup):
+    def dry_run(self):
         """
         Dry run to verify the output
-        :param reduction_setup:
         :return:
         """
+        print '[DB...BAT] It is a DRY RUN!'
+
         # check
+        reduction_setup = self._reductionSetup
         assert isinstance(reduction_setup, ReductionSetup), 'Input type is wrong!'
 
         dry_run_str = ''
@@ -988,7 +992,7 @@ class ReduceVulcanData(object):
 
         print 'Dry run:\n%s' % dry_run_str
 
-        return False
+        return True
 
     def duplicate_gsas_file(source_gsas_file_name, target_directory):
         """ Duplicate gsas file to a new directory with file mode 664

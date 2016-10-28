@@ -1002,6 +1002,50 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
+    def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
+        """
+        blabla
+        :param ipts_number:
+        :param run_numbers:
+        :param is_dry_run:
+        :return:
+        """
+        import reduce_VULCAN
+
+        print '[DB...BAT] X Run Numbers = ', run_numbers, 'IPTS = ', ipts_number
+
+        for run_number in run_numbers:
+            # balbla
+            print '[DB...BAT] Trying to set up reduction for Run ', run_number
+            reduce_setup = reduce_VULCAN.ReductionSetup()
+            print '1'
+            reduce_setup.set_ipts_number(ipts_number)
+            print '2'
+            reduce_setup.set_run_number(run_number)
+            print '3'
+
+            nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_number, run_number, run_number)
+            assert os.path.exists(nxs_file_name), 'NeXus file %s does not exist.' % nxs_file_name
+            if output_dir is None:
+                output_dir = '/SNS/VULCAN/IPTS-%d/shared/autoreduce/' % ipts_number
+
+            reduce_setup.set_event_file(nxs_file_name)
+            reduce_setup.set_output_dir(output_dir)
+
+            reduce_setup.set_defaults()
+            print '4'
+
+            # blabla
+            print '[DB...BAT] Trying to start reducer for DryRun = ', is_dry_run
+            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+            if is_dry_run:
+                reducer.dry_run()
+            else:
+                reducer.execute()
+
+        return
+
+
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory
         :rtype : tuple

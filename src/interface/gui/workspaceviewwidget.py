@@ -25,7 +25,7 @@ class WorkspaceViewWidget(QtGui.QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
-    Reserved_Command_List = ['plot', 'refresh', 'exit']
+    Reserved_Command_List = ['plot', 'refresh', 'exit', 'vhelp']
 
     def __init__(self, parent=None):
         """ Init
@@ -57,6 +57,8 @@ class WorkspaceViewWidget(QtGui.QWidget):
         script = script.strip()
         command = script.split()[0]
 
+        print '[DB...BAT] Going to execute: ', script
+
         if command == 'plot':
             print 'run: ', script
             err_msg = self.plot(script)
@@ -69,6 +71,9 @@ class WorkspaceViewWidget(QtGui.QWidget):
             # self.close()
             err_msg = None
 
+        elif command == 'vhelp':
+            # output help
+            err_msg = self.get_help_message()
         else:
             try:
                 status, err_msg = self._myMainWindow.execute_command(script)
@@ -93,9 +98,18 @@ class WorkspaceViewWidget(QtGui.QWidget):
         :return:
         """
         command = script.strip().split(',')[0].strip()
-        print '[DB...Test Reserved] command = ',command
+        print '[DB...Test Reserved] command = ', command, 'is reserved command'
 
         return command in self.Reserved_Command_List
+
+    def get_help_message(self):
+        """
+
+        :return:
+        """
+        message = 'Reserved commands: %s' % self.Reserved_Command_List
+
+        return message
 
     def plot(self, script):
         """
@@ -130,6 +144,9 @@ class WorkspaceViewWidget(QtGui.QWidget):
         :param diff_set:
         :return:
         """
+        # TODO/NOW/ISSUE/51 - Implement!
+
+        return
 
     def refresh_workspaces(self):
         """

@@ -29,7 +29,7 @@ class VdriveCommandProcessor(object):
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO']
 
         return
 
@@ -47,6 +47,8 @@ class VdriveCommandProcessor(object):
         :param command_args: arguments of a command, excluding command
         :return:
         """
+        print '[DB...COMMAND PROCESSOR] Command = %s; Arguments = %s' % (command, str(command_args))
+
         # check command (type, whether it is supported)
         assert isinstance(command, str), 'Command %s must be a string but not %s.' \
                                          '' % (str(command),  str(type(command)))
@@ -71,20 +73,44 @@ class VdriveCommandProcessor(object):
             if len(items) == 2:
                 arg_dict[items[0]] = items[1]
             else:
-                return False, 'Command %s %d-th term \"%s\" is not valid.' % (command, index,
-                                                                              term)
+                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
+                print '[DB...ERROR] ', err_msg
+                return False, err_msg
             # END-IF
         # END-FOR
 
         # call the specific command class builder
+        print '[DB...BAT] Now it is time to find a proper reserved VDRIVE command (%s) to run!' % command
         if command == 'CHOP':
             status, err_msg = self._process_chop(arg_dict)
         elif command == 'VBIN':
             status, err_msg = self._process_vbin(arg_dict)
         elif command == 'MERGE':
             status, err_msg = self._process_merge(arg_dict)
+        elif command == 'AUTO':
+            print '[DB...BAT] Am I reached???'
+            status, err_msg = self._process_auto_reduction(arg_dict)
         else:
             raise RuntimeError('Impossible situation!')
+
+        return status, err_msg
+
+    def _process_auto_reduction(self, arg_dict):
+        """
+        VDRIVE auto reduction
+        :param arg_dict:
+        :return:
+        """
+        print '[DB...BAT] Am I reached 2'
+        processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
+
+        print '[DB...BAT] Am I reached 3'
+        if len(arg_dict) == 0:
+            status = True
+            err_msg = 'EXAMPLE: AUTO, IPTS=12345, RUN=11223344'
+        else:
+            status, err_msg = processor.exec_cmd()
+        print '[DB...BAT] status = ', status, 'error message:', err_msg
 
         return status, err_msg
 
@@ -136,7 +162,7 @@ class VdriveCommandProcessor(object):
         :return:
         """
         if len(args) == 0:
-            help_msg = 'Options: -H (help)'
+            help_msg = 'VDRIVE: -H (help)'
             return True, help_msg
 
         if args == '-H':

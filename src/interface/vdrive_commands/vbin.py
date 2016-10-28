@@ -7,6 +7,103 @@ import procss_vcommand
 # cmd.run()
 
 
+class AutoReduce(procss_vcommand.VDriveCommand):
+    """
+    Command processor to call auto reduce script
+    """
+    SupportedArgs = ['IPTS', 'RUN', 'DRYRUN', 'OUTPUT']
+
+    def __init__(self, controller, command_args):
+        """
+        blabla
+        :param controller:
+        :param command_args:
+        """
+        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+
+        self._commandName = 'AUTO/AUTOREDUCE'
+
+        self.check_command_arguments(self.SupportedArgs)
+
+        return
+
+    def exec_cmd(self):
+        """
+        blabla
+        :return:
+        """
+        print '[DB...Command Arg List]: ', self._commandArgList
+        try:
+            ipts = int(self._commandArgList['IPTS'])
+        except KeyError:
+            return False, 'IPTS must be given!'
+        else:
+            print '[DB...BAT] IPTS = ', ipts
+
+        run_numbers_str = 'NO DEFINED'
+        try:
+            run_numbers_str = self._commandArgList['RUN']
+            run_number_list = self.split_run_numbers(run_numbers_str)
+        except KeyError:
+            return False, 'RUN number must be given.'
+        except ValueError:
+            return False, 'RUN number string %s cannot be parsed.' % run_numbers_str
+        except TypeError:
+            return False, 'RUN number string %s cannot be parsed due to TypeError.' % run_numbers_str
+        else:
+            print '[DB...BAT] Runs = ', run_number_list
+
+        if 'DRYRUN' in self._commandArgList:
+            dry_run = bool(int(self._commandArgList['DRYRUN']))
+        else:
+            dry_run = False
+
+        if 'OUTPUT' in self._commandArgList:
+            output_dir = self._commandArgList['OUTPUT']
+        else:
+            output_dir = None
+
+        # call auto reduction
+        self._controller.reduce_auto_script(ipts_number=ipts,
+                                            run_numbers=run_number_list,
+                                            output_dir=output_dir,
+                                            is_dry_run=dry_run)
+
+        return True, 'Good'
+
+    @staticmethod
+    def split_run_numbers(run_numbers_str):
+        """
+        blabla
+        :param run_numbers_str:
+        :return:
+        """
+        def pop_range(range_str):
+            """
+            blabla
+            :param range_str:
+            :return:
+            """
+            terms = range_str.split('-')
+            start_value = int(terms[0])
+            stop_value = int(terms[1])
+            return range(start_value, stop_value+1)
+
+        run_numbers_str = run_numbers_str.replace(' ', '')
+        terms = run_numbers_str.split(',')
+        run_number_list = list()
+        for term in terms:
+            if term.count('-') == 0:
+                run_number_list.append(int(term))
+            elif term.count('-') == 1:
+                run_number_list.extend(pop_range(term))
+            else:
+                raise ValueError('Single term contains more than 2 -')
+        # END-FOR
+
+        return run_number_list
+
+
 class VBin(procss_vcommand.VDriveCommand):
     """
     """
