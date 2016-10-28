@@ -1,11 +1,11 @@
 import random
-from procss_vcommand import VDriveCommandProcessor
+from procss_vcommand import VDriveCommand
 """
 VCHROP
 """
 
 
-class VdriveChop(VDriveCommandProcessor):
+class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
@@ -14,7 +14,9 @@ class VdriveChop(VDriveCommandProcessor):
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        VDriveCommandProcessor.__init__(self, controller, command_args)
+        VDriveCommand.__init__(self, controller, command_args)
+
+        self._commandName = 'CHOP'
 
         self.check_command_arguments(self.SupportedArgs)
         
@@ -29,11 +31,15 @@ class VdriveChop(VDriveCommandProcessor):
         # parse arguments
         self.set_ipts()
 
+        # parse the scope of runs
         try:
             run_start = int(self._commandArgList['RUNS'])
-            run_end = int(self._commandArgList['RUNE'])
         except KeyError as err:
-            raise RuntimeError('MERGE command requires input of argument RUNS/RUNE: %s.' % str(err))
+            raise RuntimeError('CHOP command requires input of argument RUNS: %s.' % str(err))
+        if 'RUNE' in self._commandArgList:
+            run_end = int(self._commandArgList['RUNE'])
+        else:
+            run_end = run_start
 
         # check input parameters
         assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
@@ -62,24 +68,49 @@ class VdriveChop(VDriveCommandProcessor):
         else:
             log_name = None
 
+        # locate the runs and add the reduction project
+        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
+                                                                                   run_end)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.project.add_runs(run_info_list)
+
         # do chopping
         for run_number in range(run_start, run_end+1):
             # chop
-            chop_id = random.randint(1, 100000)
-            self._controller.chop_data(registry=chop_id, ipts=self._iptsNumber, run=run_number, log_name=log_name,
-                                       time_step=time_step)
+            if time_step is not None:
+                self._controller.project.chop_data_by_time(run_number=run_number,
+                                                           start_time=None,
+                                                           stop_time=None,
+                                                           time_interval=time_step)
+            else:
+                raise RuntimeError('Not implemented yet for chopping by log value.')
+
+            # export
             if output_to_gsas:
-                reduce_id = self._controller.reduce_chopped_run(chop_id)
-                output_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/%d/' % (self._iptsNumber,
-                                                                             run_number)
-                self._controller.export_gsas_files(registry=reduce_id, output_dir=output_dir)
-            # END-IF
-        # END-FOR
+                # FIXME/TODO/NOW - Implement how to reduced chopped data
+                pass
+                # reduce_id = self._controller.reduce_chopped_run(chop_id)
+                # output_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/%d/' % (self._iptsNumber,
+                #                                                              run_number)
+                # self._controller.export_gsas_files(registry=reduce_id, output_dir=output_dir)
 
-        self.reduceSignal.emit(command_args)
+        # END-FOR (run_number)
 
-        return
+        # self.reduceSignal.emit(command_args)
 
+        return True, 'Still try to figure out how to write in the message'
+
+    def get_help(self):
+        """
+        override base class
+        :return:
+        """
+        help_str = 'Chop runs\n'
+        help_str += 'CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1\n'
+        help_str += 'Debug:\n'
+        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60'
+
+        return help_str
 
 """
 CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1

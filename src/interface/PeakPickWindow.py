@@ -15,6 +15,15 @@ except AttributeError:
 
 import gui.GuiUtility as GuiUtility
 import gui.VdrivePeakPicker as VdrivePeakPicker
+import gui.diffractionplotview as dv
+import GroupPeakDialog
+
+# Set up path to PyVDrive
+import socket
+# if it is on analysis computer...
+if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
+    sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
+import PyVDrive.lib.peak_util as peak_util
 
 
 # List of supported unit cell
@@ -24,6 +33,73 @@ UnitCellList = [('BCC', 'I m -3 m'),
                 ('Body-Center', 'I m m m'),
                 ('Face-Center', 'F m m m'),
                 ('Primitive', 'P m m m')]
+
+
+class PeakWidthSetupDialog(QtGui.QDialog):
+    """
+    Class for set up dialog
+    """
+    def __init__(self, parent):
+        """
+        Init ...
+        :return:
+        """
+        import gui.ui_PeakWidthSetup as widthSetupWindow
+
+        # Initialize
+        QtGui.QDialog.__init__(self, parent)
+
+        self.ui = widthSetupWindow.Ui_Dialog()
+        self.ui.setupUi(self)
+
+        # Define event handlers
+        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
+        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
+                     self.do_set_width)
+
+        # Class variables
+        self._peakWidth = None
+
+        return
+
+    def do_quit(self):
+        """
+        Return without doing anything
+        :return:
+        """
+        self.close()
+
+    def do_set_width(self):
+        """
+        Set peak width
+        :return:
+        """
+        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
+        if peak_width is None:
+            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
+            return
+        if peak_width <= 0.:
+            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
+            return
+
+        self._peakWidth = peak_width
+
+        # Close
+        self.close()
+
+        return
+
+    def get_peak_width(self):
+        """ Get peak width
+        Purpose: Get the stored peak width from the window object
+        Requirements: it must be set up
+        Guarantees: the peak width is given if it is set up
+        :return:
+        """
+        assert self._peakWidth
+
+        return self._peakWidth
 
 
 class PhaseWidgets(object):
@@ -261,79 +337,13 @@ class PhaseWidgets(object):
         return
 
 
-class PeakWidthSetupDialog(QtGui.QDialog):
-    """
-    Class for set up dialog
-    """
-    def __init__(self, parent):
-        """
-        Init ...
-        :return:
-        """
-        import gui.ui_PeakWidthSetup as widthSetupWindow
-
-        # Initialize
-        QtGui.QDialog.__init__(self, parent)
-
-        self.ui = widthSetupWindow.Ui_Dialog()
-        self.ui.setupUi(self)
-
-        # Define event handlers
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
-                     self.do_set_width)
-
-        # Class variables
-        self._peakWidth = None
-
-        return
-
-    def do_quit(self):
-        """
-        Return without doing anything
-        :return:
-        """
-        self.close()
-
-    def do_set_width(self):
-        """
-        Set peak width
-        :return:
-        """
-        peak_width = GuiUtility.parse_float(self.ui.lineEdit_peakWidth)
-        if peak_width is None:
-            GuiUtility.pop_dialog_error(self, 'Peak width is not set up!')
-            return
-        if peak_width <= 0.:
-            GuiUtility.pop_dialog_error(self, 'Peak width %f cannot be 0 or negative!' % peak_width)
-            return
-
-        self._peakWidth = peak_width
-
-        # Close
-        self.close()
-
-        return
-
-    def get_peak_width(self):
-        """ Get peak width
-        Purpose: Get the stored peak width from the window object
-        Requirements: it must be set up
-        Guarantees: the peak width is given if it is set up
-        :return:
-        """
-        assert self._peakWidth
-
-        return self._peakWidth
-
-
 class PeakPickerMode(object):
     """ Enumerate
     """
-    Normal = 0
-    QuickPick = 1
+    NoPick = 0
+    SinglePeakPick = 1
     MultiPeakPick = 2
+    AutoMode = 3
 
 
 class PeakPickerWindow(QtGui.QMainWindow):
@@ -348,6 +358,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # parent
         self._myParent = parent
+
+        # sub window
+        self._groupPeakDialog = None
 
         # set up UI
         self.ui = VdrivePeakPicker.Ui_MainWindow()
@@ -365,12 +378,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_undo_phase_changes)
 
         # peak processing
-        self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_add_picked_peaks)
+        self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
+                     self.evt_switch_peak_pick_mode)
+        self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_switch_peak_pick_mode)
 
+        # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_picked_peaks)
         self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
                      self.do_find_peaks)
-
+        self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
+                     self.do_group_auto_peaks)
         self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
                      self.do_import_peaks_from_file)
 
@@ -399,7 +417,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                      self.do_delete_peaks)
 
         self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
-                     self.do_process_pick_mode)
+                     self.do_set_pick_mode)
 
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
@@ -442,11 +460,10 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._dataKeyList = list()
 
         # Peak selection mode
-        self._peakPickerMode = PeakPickerMode.Normal
+        self._peakPickerMode = PeakPickerMode.NoPick
         self._peakSelectionMode = ''
         self._indicatorIDList = None
         self._indicatorPositionList = None
-        self._inEditMode = False
 
         # Mouse position
         self._currMousePosX = 0
@@ -462,26 +479,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Event handlers lock
         self._evtLockComboBankNumber = False
 
-        return
-
-    def evt_table_selection_changed(self):
-        """
-        Event handling as the selection of the row changed
-        :return:
-        """
-        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
-            self.ui.tableWidget_peakParameter.currentColumn()
-
-        """
-        print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
-        model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
-        print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
-
-        mode_index = model_selected_rows[0]
-        print mode_index.row
-        print mode_index.row()
-        print type(mode_index.row())
-        """
+        # group
+        self._autoPeakGroup = None
 
         return
 
@@ -523,25 +522,54 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                       self.ui.checkBox_usePhase3)
         self._phaseWidgetsGroupDict[3] = phase_widgets3
 
+        # Peak pick mode
+        self.ui.peak_picker_mode_group = QtGui.QButtonGroup(self)
+        self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModePower)
+        self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModeQuick)
+        self.ui.radioButton_pickModeQuick.setChecked(True)
+        self.ui.checkBox_pickPeak.setChecked(False)
+        self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak')
+        self._peakPickerMode = PeakPickerMode.NoPick
+        self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NonEdit)
+
         return
 
-    def initialize(self, controller):
+    def add_grouped_peaks(self):
         """
-        Purpose:
-            Set up controller instance
-        Requires:
-            It is not initialised before
-        Guarantees:
-            All function call to do with controller will work
-        :param controller:
+
         :return:
         """
-        # Check requirements
-        assert self._myController is None, 'Workflow controller has been already set up.'
-        assert isinstance(controller, vdapi.VDriveAPI)
+        # check
+        assert self._autoPeakGroup is not None
 
-        # Set up
-        self._myController = controller
+        # get information
+        # get bank
+        bank = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # get number of groups
+        group_id_list = sorted(self._autoPeakGroup.get_group_ids())
+        num_groups = len(group_id_list)
+        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
+
+        # add peak to table
+        for group_id in group_id_list:
+
+            peak_name = ''
+
+            group_left_b, group_right_b = self._autoPeakGroup.get_fit_range(group_id)
+            width = group_right_b - group_left_b
+
+            peak_tup_list = self._autoPeakGroup.get_peaks(group_id)
+
+            for peak_tup in peak_tup_list:
+                peak_centre = peak_tup[1]
+
+                self.ui.tableWidget_peakParameter.add_peak(bank=bank, name=peak_name,
+                                                           centre=peak_centre,
+                                                           width=width,
+                                                           group_id=group_id)
+            # END-FOR
+        # END-FOR
 
         return
 
@@ -554,9 +582,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # get number of groups
         num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
+
+        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
+
         for i_grp in xrange(num_groups):
             # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
+
+            # skip if group is not editable (in show-only mode)
+            if not group.is_editable():
+                continue
+
             peak_name = ''
             width = group.right_boundary - group.left_boundary
 
@@ -588,8 +624,11 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
             # make the group quit the edit mode
             self.ui.graphicsView_main.edit_group(group_id, False)
-
         # END-FOR
+
+        # quit peak editing mode
+        # TODO/NOW - this is a dirty solution.  need to have it solved by edit_group(...)
+        self.ui.graphicsView_main._inEditGroupList = list()
 
         return
 
@@ -666,6 +705,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
             peak_pos = peak_info_tup[0]
             peak_width = peak_info_tup[1]
             self.ui.graphicsView_main.plot_peak_indicator(peak_pos)
+        # END-FOR
+        print '[DB...BAT] Current peak indicators on canvas:', self.ui.graphicsView_main._shownPeakIDList
 
         return
 
@@ -731,7 +772,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :return:
         """
         # Check requirements
-        assert self._myController
+        assert self._myController is not None, 'Controller must be set up.'
+        assert self._peakPickerMode == PeakPickerMode.AutoMode, 'Peak pick mode must be in auto-mode.'
 
         # Get minimum and maximum d-spacing to calculate by the range in the graph
         min_d = GuiUtility.parse_float(self.ui.lineEdit_xMin)
@@ -740,7 +782,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             min_d = self.ui.graphicsView_main.getXLimit()[0]
         if max_d is None:
             max_d = self.ui.graphicsView_main.getXLimit()[1]
-        print '[DB] Get d-range: %f, %f' % (min_d, max_d)
+        assert min_d <= max_d, 'blablabla'
 
         # List all peaks if any is selected
         num_phases_used = 0
@@ -816,19 +858,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             return
 
         # Set the peaks to canvas
-        self.ui.graphicsView_main.sort_n_add_peaks(peak_info_list, plot=True)
-
-        """
-        # Set the peaks' parameters to table
-        for i_peak in xrange(len(peak_pos_list)):
-            hkl = hkl[i_peak]  # reflection list???
-            peak_pos = peak_pos_list[i_peak]
-            peak_width = peak_width_list[i_peak]
-            assert len(hkl) == 3, 'HKL is not a 3-item list but %s of type %s.' % (str(hkl), str(type(hkl)))
-            temp_name = '%d%d%d' % (hkl[0], hkl[1], hkl[2])
-            self.ui.tableWidget_peakParameter.add_peak(self._currentBankNumber, temp_name, peak_pos, peak_width, [])
-        # END-FOR
-        """""
+        self.ui.graphicsView_main.sort_n_add_peaks(peak_info_list)
 
         return
 
@@ -837,21 +867,32 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: the table is switched to editable or non-editable mode
         :return:
         """
-        # get selected row
-        row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows(True)
-        if len(row_number_list) == 0:
-            GuiUtility.pop_dialog_information(self, 'No row is selected to edit!')
+        # get selected columns
+        column_number_list = self.ui.tableWidget_peakParameter.get_selected_columns()
 
-        # set to editable
-        # FIXME - can we make this more flexible?
-        col_index = 1
-        for row_number in row_number_list:
-            item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
-
-            # FIXME/TODO/NOW - Implement this to NTableWidget
-            item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
-            self.ui.tableWidget_peakParameter.editItem(item_i)
+        num_rows = self.ui.tableWidget_peakParameter.rowCount()
+        for row_number in range(num_rows):
+            for col_index in column_number_list:
+                item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
+                item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
+                # self.ui.tableWidget_peakParameter.editItem(item_i)
         # END-FOR
+
+        # get selected row
+        # row_number_list = self.ui.tableWidget_peakParameter.get_selected_rows(True)
+        # if len(row_number_list) == 0:
+        #     GuiUtility.pop_dialog_information(self, 'No row is selected to edit!')
+
+        # # set to editable
+        # # FIXME - can we make this more flexible?
+        # col_index = 1
+        # for row_number in row_number_list:
+        #     item_i = self.ui.tableWidget_peakParameter.item(row_number, col_index)
+
+        #     # FIXME/TODO/NOW - Implement this to NTableWidget
+        #     item_i.setFlags(item_i.flags() | QtCore.Qt.ItemIsEditable)
+        #     self.ui.tableWidget_peakParameter.editItem(item_i)
+        # # END-FOR
 
         # is_editable = self.ui.tableWidget_peakParameter.is_editable()
         # self.ui.tableWidget_peakParameter.set_editable(is_editable)
@@ -878,12 +919,23 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def do_group_auto_peaks(self):
+        """
+        Group all the auto-selected peaks, which are not grouped and added yet, from canvas
+        by its position
+        :return:
+        """
+        self._groupPeakDialog = GroupPeakDialog.GroupPeakDialog(self)
+        self._groupPeakDialog.show()
+
+        return
+
     def do_hide_peaks(self):
         """
         Purpose: Highlight all peaks' indicators
         :return:
         """
-        self.ui.remove_picked_peaks_indicators()
+        self.ui.graphicsView_main.remove_show_only_peaks()
 
         return
 
@@ -949,37 +1001,88 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get new bank
         new_bank = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # check for non-plotting case
         if new_bank == self._currentBankNumber:
             # same bank as before. no need to do anything
-            print '[DB] Newly selected bank %d is same as current bank %d.' % (new_bank, self._currentBankNumber)
+            self.statusBar().showMessage('Newly selected bank %d is same as current bank %d.'
+                                         '' % (new_bank, self._currentBankNumber))
             return
         if self._isDataLoaded is False:
             # it is about to load new data, plotting will be called explicitly. no need to re-plot her
-            print '[DB] Data is in loading stage. Change to bank %d won\'t have any effect.' % new_bank
+            self.statusBar().showMessage('Data is in loading stage. Change to bank %d won\'t have any effect.'
+                                         '' % new_bank)
             return
 
         # Save the current peaks to memory and back up to disk
         self.ui.tableWidget_peakParameter.save_to_buffer(self._currentBankNumber)
 
-        # Clear table and canvas
-        self.ui.tableWidget_peakParameter.remove_all_rows()
-        self.ui.graphicsView_main.reset()
-
-        # Re-plot
-        # vec_x, vec_y = self._myController.get_diffraction_pattern(self._currDataKey, bank=new_bank)
-        new_spec = new_bank - 1
-        vec_x = self._currentDataSet[new_spec][0]
-        vec_y = self._currentDataSet[new_spec][1]
-        self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
-
+        # set the current ones to new bank
+        self._currentBankNumber = new_bank
         # take care of the run number
         if self._currentRunNumber is None:
             self._currentRunNumber = str(self.ui.comboBox_runNumber.currentText())
 
-        self._currentBankNumber = new_bank
-        self.ui.label_diffractionMessage.setText('Run %s Bank %d' % (
-            str(self._currentRunNumber), self._currentBankNumber))
+        # Clear table and canvas
+        self.ui.tableWidget_peakParameter.remove_all_rows()
+        self.ui.graphicsView_main.reset()
+        self.ui.graphicsView_main.clear_all_lines()
+
+        # TODO/NOW - Need to make the table to add the buffered peaks back
+        pass
+
+        # Re-plot
+        title = 'Run %s Bank %d' % (str(self._currentRunNumber), self._currentBankNumber)
+        new_spec = new_bank - 1
+        vec_x = self._currentDataSet[new_spec][0]
+        vec_y = self._currentDataSet[new_spec][1]
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title)
+
+        return
+
+    def evt_switch_peak_pick_mode(self):
+        """
+        Switch peak pick mode
+        :return:
+        """
+        if self.ui.checkBox_pickPeak.isChecked():
+            # enter the edit mode
+            # self.ui.pushButton_addPeaks.setEnabled(True)
+            self.ui.radioButton_pickModeQuick.setEnabled(True)
+            self.ui.radioButton_pickModePower.setEnabled(True)
+
+            # select the pick up mode
+            if self.ui.radioButton_pickModeQuick.isChecked():
+                # quick mode
+                self._peakPickerMode = PeakPickerMode.AutoMode
+                # button enable/disable
+                self.ui.pushButton_findPeaks.setEnabled(True)
+                self.ui.pushButton_groupAutoPickPeaks.setEnabled(True)
+                self.ui.pushButton_peakPickerMode.setEnabled(False)
+                # set the graphics view
+                self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.AutoMode)
+
+            else:
+                # power/manual mode
+                self._peakPickerMode = PeakPickerMode.SinglePeakPick
+                # button select
+                self.ui.pushButton_findPeaks.setEnabled(False)
+                self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
+                self.ui.pushButton_peakPickerMode.setEnabled(True)
+                # set the graphics view
+                self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NormalMode)
+
+        else:
+            # leave the edit mode
+            self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NonEdit)
+            self.ui.radioButton_pickModeQuick.setEnabled(False)
+            self.ui.radioButton_pickModePower.setEnabled(False)
+
+            # disable all push buttons
+            # self.ui.pushButton_addPeaks.setEnabled(False)
+            self.ui.pushButton_findPeaks.setEnabled(False)
+            self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
+            self.ui.pushButton_peakPickerMode.setEnabled(False)
 
         return
 
@@ -1131,10 +1234,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # self.ui.comboBox_runNumber.clear()
         if run_number is None:
             self.ui.comboBox_runNumber.addItem(str(data_key))
-            self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
+            title_message = 'File %s Bank %d' % (data_key, 1)
+            # self.ui.label_diffractionMessage.setText('File %s Bank %d' % (data_key, 1))
         else:
             self.ui.comboBox_runNumber.addItem(str(run_number))
-            self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
+            title_message = 'Run %d Bank %d' % (run_number, 1)
+            # self.ui.label_diffractionMessage.setText('Run %d Bank %d' % (run_number, 1))
 
         # Plot data: load bank 1 as default
         if run_number is None:
@@ -1152,7 +1257,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         vec_x = data_bank_1[0]
         vec_y = data_bank_1[1]
         self.ui.graphicsView_main.clear_all_lines()
-        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y)
+        self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title_message)
 
         # Set up class variables
         self._currentRunNumber = run_number
@@ -1164,48 +1269,35 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def load_chop_data(self):
-        """
-        Load chopped data... prototype
-        :return:
-        """
-        # FIXME/NOW/1st: Need to find out how to integrate this to GUI
-
-        # Get diffraction file
-        load_chop_data = False
-        if len(str(self.ui.lineEdit_chopDataToLoad.text())) > 0:
-            load_chop_data = True
-
-        chop_data_name = str(self.ui.lineEdit_chopDataToLoad.text())
-        raise RuntimeError('Implement ASAP to load chopped data %s' % chop_data_name)
-
-    def do_process_pick_mode(self):
+    def do_set_pick_mode(self):
         """ Enter for leave peak picker mode
         :return:
         """
-        if self._peakPickerMode == PeakPickerMode.Normal:
-            # enter normal mode to quick-pick mode (for single peak)
-            self._peakPickerMode = PeakPickerMode.QuickPick
-            self.ui.pushButton_peakPickerMode.setText('Select Multi-Peaks')
-            self.ui.graphicsView_main.set_peak_selection_mode(single_mode=True, multi_mode=False)
-            self.ui.label_peakSelectionMode.setText('Single-Peak Selection Mode')
-            self.ui.pushButton_addPeaks.setEnabled(False)
+        # check validity
+        assert self._peakPickerMode != PeakPickerMode.NoPick, 'Peak-picking mode cannot be NoPick if ' \
+                                                              'button peak mode selection is pushed.'
 
-        elif self._peakPickerMode == PeakPickerMode.QuickPick:
-            # enter multiple peaks-pick mode from quick mode
+        # select the peak pick mode and change the text of push button for next selection
+        if self._peakPickerMode == PeakPickerMode.SinglePeakPick:
+            # current is multiple peak mode, switch single-peak mode
             self._peakPickerMode = PeakPickerMode.MultiPeakPick
-            self.ui.pushButton_peakPickerMode.setText('Quit Peak Selection')
-            self.ui.graphicsView_main.set_peak_selection_mode(single_mode=False, multi_mode=True)
-            self.ui.label_peakSelectionMode.setText('Multiple-Peaks Selection Mode')
-            self.ui.pushButton_addPeaks.setEnabled(False)
+            self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.MultiMode)
+            # change UI indications
+            self.ui.graphicsView_main.canvas().set_title('Multi-Peaks Selection', color='red')
+            # next will be multi-peak mode again
+            self.ui.pushButton_peakPickerMode.setText('Enter Single-Peak Mode')
+
+        elif self._peakPickerMode == PeakPickerMode.MultiPeakPick:
+            # current is multiple peak mode, switch single-peak mode
+            self._peakPickerMode = PeakPickerMode.SinglePeakPick
+            self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NormalMode)
+            # change UI indications
+            self.ui.graphicsView_main.canvas().set_title('Single-Peak Selection', color='blue')
+            # next will be multi-peak mode again
+            self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak Mode')
 
         else:
-            # non-selection mode
-            self._peakPickerMode = PeakPickerMode.Normal
-            self.ui.pushButton_peakPickerMode.setText('Select Single-Peaks')
-            self.ui.graphicsView_main.set_peak_selection_mode(False, False)
-            self.ui.label_peakSelectionMode.setText('')
-            self.ui.pushButton_addPeaks.setEnabled(True)
+            raise RuntimeError('Mode %s is not supported.' % str(self._peakPickerMode))
 
         return
 
@@ -1328,6 +1420,73 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    def evt_table_selection_changed(self):
+        """
+        Event handling as the selection of the row changed
+        :return:
+        """
+        print '[Prototype] current row is ', self.ui.tableWidget_peakParameter.currentRow(), \
+            self.ui.tableWidget_peakParameter.currentColumn()
+
+        """
+        print type(self.ui.tableWidget_peakParameter.selectionModel().selectedRows())
+        model_selected_rows = self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+        print self.ui.tableWidget_peakParameter.selectionModel().selectedRows()
+
+        mode_index = model_selected_rows[0]
+        print mode_index.row
+        print mode_index.row()
+        print type(mode_index.row())
+        """
+
+        return
+
+    def clear_group_highlight(self):
+        """
+
+        :return:
+        """
+        self.ui.graphicsView_main.clear_highlight_data()
+
+        return
+
+    def group_peaks(self, resolution, num_fwhm):
+        """
+        Group a list of peaks for fitting
+        :param resolution:
+        :param num_fwhm:
+        :return:
+        """
+        # get single peaks from canvas
+        raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
+        print '[DB...BAT] Peak to group: ', raw_peak_pos_list
+
+        # call controller method to set group boundary
+        peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
+        assert isinstance(peak_group, peak_util.PeakGroupCollection)
+
+        self.clear_group_highlight()
+
+        # reflect the grouped peak to GUI
+        group_color = 'blue'
+        for group_id in sorted(peak_group.get_group_ids()):
+            # get the group's fit range
+            left_range, right_range = peak_group.get_fit_range(group_id)
+            # highlight the data
+            self.ui.graphicsView_main.highlight_data(left_range, right_range, group_color)
+
+            # set to next color
+            if group_color == 'blue':
+                group_color = 'green'
+            else:
+                group_color = 'blue'
+        # END-FOR
+
+        # set the returned peak group to class variable for future
+        self._autoPeakGroup = peak_group
+
+        return
+
     def load_runs(self, run_id_list):
         """
         Load runs and called from tree!
@@ -1415,7 +1574,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._indicatorIDList = None
         self._indicatorPositionList = None
         self._peakSelectionMode = ''
-        self._inEditMode = False
 
         return
 
@@ -1488,60 +1646,68 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    def on_mouse_release_event(self, event):
-        """ If the left button is released and previously in IN_PICKER_MOVING mode,
-        then the mode is over
-        """
-        button = event.button
-
-        if button == 1:
-            # left button click
-            if self._inEditMode:
-                # quit edit mode
-                self._inEditMode = False
-
-        elif button == 3:
-            # right button click: pop out menu
-            self.ui.menu = QtGui.QMenu(self)
-
-            action_add = QtGui.QAction('Add Peak', self)
-            action_add.triggered.connect(self.menu_add_peak)
-            self.ui.menu.addAction(action_add)
-
-            if self._peakSelectionMode == 'MoveCentre':
-                # in peak centre moving mode
-                action_switch = QtGui.QAction('Change Peak Width', self)
-                action_switch.triggered.connect(self.menu_switch_mode)
-                self.ui.menu.addAction(action_switch)
-
-                action_cancel = QtGui.QAction('Cancel', self)
-                action_cancel.triggered.connect(self.menu_cancel_selection)
-                self.ui.menu.addAction(action_cancel)
-
-            elif self._peakSelectionMode == 'ChangeWidth':
-                # in peak width determining  mode
-                action_switch = QtGui.QAction('Move Peak Centre', self)
-                action_switch.triggered.connect(self.menu_switch_mode)
-                self.ui.menu.addAction(action_switch)
-
-                action_cancel = QtGui.QAction('Cancel', self)
-                action_cancel.triggered.connect(self.menu_cancel_selection)
-                self.ui.menu.addAction(action_cancel)
-
-            else:
-                # others
-                action_select = QtGui.QAction('Select Peak', self)
-                action_select.triggered.connect(self.menu_select_peak)
-                self.ui.menu.addAction(action_select)
-
-                action_delete = QtGui.QAction('Delete Peak', self)
-                action_delete.triggered.connect(self.menu_delete_peak)
-                self.ui.menu.addAction(action_delete)
-
-            # pop up menu at cursor
-            self.ui.menu.popup(QtGui.QCursor.pos())
-
-        return
+    # NOT USED AT ALL!
+    # def on_mouse_release_event(self, event):
+    #     """ If the left button is released and previously in IN_PICKER_MOVING mode,
+    #     then the mode is over
+    #     """
+    #     button = event.button
+    #
+    #     if button == 1:
+    #         # left button click
+    #         if self._inEditMode and self._peakPickerMode == PeakPickerMode.QuickMode:
+    #             # quit edit mode: add a peak indicator
+    #             pos_x = event.xdata
+    #             if pos_x is None:
+    #                 return
+    #             else:
+    #                 self.ui.graphicsView_main.add_single_peak(pos_x)
+    #
+    #         else:
+    #             self._inEditMode = False
+    #
+    #     elif button == 3:
+    #         # right button click: pop out menu
+    #         self.ui.menu = QtGui.QMenu(self)
+    #
+    #         action_add = QtGui.QAction('Add Peak', self)
+    #         action_add.triggered.connect(self.menu_add_peak)
+    #         self.ui.menu.addAction(action_add)
+    #
+    #         if self._peakSelectionMode == 'MoveCentre':
+    #             # in peak centre moving mode
+    #             action_switch = QtGui.QAction('Change Peak Width', self)
+    #             action_switch.triggered.connect(self.menu_switch_mode)
+    #             self.ui.menu.addAction(action_switch)
+    #
+    #             action_cancel = QtGui.QAction('Cancel', self)
+    #             action_cancel.triggered.connect(self.menu_cancel_selection)
+    #             self.ui.menu.addAction(action_cancel)
+    #
+    #         elif self._peakSelectionMode == 'ChangeWidth':
+    #             # in peak width determining  mode
+    #             action_switch = QtGui.QAction('Move Peak Centre', self)
+    #             action_switch.triggered.connect(self.menu_switch_mode)
+    #             self.ui.menu.addAction(action_switch)
+    #
+    #             action_cancel = QtGui.QAction('Cancel', self)
+    #             action_cancel.triggered.connect(self.menu_cancel_selection)
+    #             self.ui.menu.addAction(action_cancel)
+    #
+    #         else:
+    #             # others
+    #             action_select = QtGui.QAction('Select Peak', self)
+    #             action_select.triggered.connect(self.menu_select_peak)
+    #             self.ui.menu.addAction(action_select)
+    #
+    #             action_delete = QtGui.QAction('Delete Peak', self)
+    #             action_delete.triggered.connect(self.menu_delete_peak)
+    #             self.ui.menu.addAction(action_delete)
+    #
+    #         # pop up menu at cursor
+    #         self.ui.menu.popup(QtGui.QCursor.pos())
+    #
+    #     return
 
     def on_mouse_motion(self, event):
         """ Event handling in case mouse is moving
@@ -1553,13 +1719,19 @@ class PeakPickerWindow(QtGui.QMainWindow):
         if new_x is None or new_y is None:
             return
 
-        # Determine resolution
+        # no need to respond to any moving if not in edit mode or quick-pick mode
+        if not self._inEditMode or self._peakPickerMode != PeakPickerMode.AutoMode:
+            # just return as no operation is required
+            return
+
+        # Determine resolution dynamically
         min_x, max_x = self.ui.graphicsView_main.getXLimit()
         resolution = (max_x - min_x) * 0.001
 
         # Ignore moving with small step
         dx = new_x - self._currMousePosX
         if abs(dx) < resolution:
+            # operation is required. just return
             return
 
         not_update = False
@@ -1568,7 +1740,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         elif self._inEditMode and self._peakSelectionMode == 'ChangeWidth':
             self.move_peak_boundary(new_x)
             not_update = True
-        elif self._inEditMode:
+        else:
             err_msg = 'It is not right such that InEditMode is %s and SelectionMode is %s.' % (
                 str(self._inEditMode), self._peakSelectionMode)
             raise RuntimeError(err_msg)
@@ -1669,26 +1841,25 @@ def retrieve_peak_positions(peak_tup_list):
 
     return peak_pos_list
 
-
-def main(argv):
-    """ Main method for testing purpose
-    """
-    import mocks.mockvdriveapi as mocks
-
-    parent = None
-    controller = mocks.MockVDriveAPI()
-
-    app = QtGui.QApplication(argv)
-
-    # my plot window app
-    myapp = PeakPickerWindow(parent)
-    myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
-    myapp.set_controller(controller)
-    myapp.show()
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
+# def main(argv):
+#     """ Main method for testing purpose
+#     """
+#     import mocks.mockvdriveapi as mocks
+#
+#     parent = None
+#     controller = mocks.MockVDriveAPI()
+#
+#     app = QtGui.QApplication(argv)
+#
+#     # my plot window app
+#     myapp = PeakPickerWindow(parent)
+#     myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
+#     myapp.set_controller(controller)
+#     myapp.show()
+#
+#     exit_code=app.exec_()
+#     sys.exit(exit_code)
+#
+#
+# if __name__ == "__main__":
+#     main(sys.argv)

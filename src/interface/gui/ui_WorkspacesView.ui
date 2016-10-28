@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1175</width>
-    <height>868</height>
+    <width>1300</width>
+    <height>766</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,23 +21,45 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QTableWidget" name="tableWidget_dataStructure">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+       <widget class="QDockWidget" name="dockWidget_2">
+        <widget class="QWidget" name="dockWidgetContents_4">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="WorkspaceGraphicView" name="graphicsView_general">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>600</width>
+              <height>0</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
       <item>
-       <widget class="QGraphicsView" name="graphicsView_general">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+       <widget class="QDockWidget" name="dockWidget">
+        <widget class="QWidget" name="dockWidgetContents_2">
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0">
+           <widget class="WorkspaceTableWidget" name="tableWidget_dataStructure">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
       <item>
@@ -54,12 +76,38 @@
     </widget>
    </item>
    <item>
-    <widget class="MantidIPythonWidget" name="widget_ipython" native="true"/>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>320</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>iPython Console</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="MantidIPythonWidget" name="widget_ipython" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <zorder>tableView_workspaces</zorder>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
-  <zorder>tableWidget_segments</zorder>
-  <zorder>widget_ipython</zorder>
-  <zorder>groupBox</zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -67,6 +115,16 @@
    <extends>QWidget</extends>
    <header>mantidipythonwidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WorkspaceTableWidget</class>
+   <extends>QTableWidget</extends>
+   <header>workspaceviewwidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>WorkspaceGraphicView</class>
+   <extends>QGraphicsView</extends>
+   <header>workspaceviewwidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

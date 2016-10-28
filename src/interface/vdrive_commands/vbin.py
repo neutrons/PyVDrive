@@ -6,7 +6,8 @@ import procss_vcommand
 # cmd = VBIN(conroller, args)
 # cmd.run()
 
-class VBin(procss_vcommand.VDriveCommandProcessor):
+
+class VBin(procss_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
@@ -16,7 +17,11 @@ class VBin(procss_vcommand.VDriveCommandProcessor):
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        procss_vcommand.VDriveCommandProcessor.__init__(self, controller, command_args)
+        procss_vcommand.VDriveCommand.__init__(self, controller, command_args)
+
+        self._commandName = 'VBIN/VDRIVEBIN'
+
+        self.check_command_arguments(self.SupportedArgs)
 
         return
 
@@ -37,7 +42,8 @@ class VBin(procss_vcommand.VDriveCommandProcessor):
         # RUNS or CHOPRUN
         run_start = int(self._commandArgList['RUNS'])
         run_end = int(self._commandArgList['RUNE'])
-        assert 0 < run_start < run_end, 'It is impossible to have run_start = %d and run_end = %d' % (run_start, run_end)
+        assert 0 < run_start < run_end, 'It is impossible to have run_start = %d and run_end = %d' \
+                                        '' % (run_start, run_end)
         
         # Use result from CHOP?
         if 'CHOPRUN' in input_args:
@@ -72,12 +78,33 @@ class VBin(procss_vcommand.VDriveCommandProcessor):
             tof_max = None
 
         # set the runs
-        run_info_list = self._controller.get_runs(start_run=run_start, end_run=run_end)
-        self._controller.add_runs_to_project(run_info_list)
+        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
+                                                                                   run_end)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.project.add_runs(run_info_list)
+
+        # set flag
+        run_number_list = list()
+        for run_info in run_info_list:
+            run_number_list.append(run_info['run'])
+        self._controller.set_runs_to_reduce(run_number_list)
 
         # reduce
         self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))
 
-        return
+        return True, error_message
+
+    @staticmethod
+    def get_help():
+        """
+
+        :return:
+        """
+        help_str = 'VBIN/VDRIVEBIN: binning data\n' \
+                   'Example: VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n' \
+                   '\n' \
+                   'Debug: "VBIN,IPTS=14094,RUNS=96450,RUNE=96451"'
+
+        return help_str
 
 

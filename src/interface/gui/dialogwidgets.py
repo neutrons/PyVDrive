@@ -30,10 +30,13 @@ class DateDialog(QDialog):
     def dateTime(self):
         return self.datetime.dateTime()
 
-    # static method to create the dialog and return (date, time, accepted)
-    @staticmethod
-    def getDateTime(parent = None):
-        dialog = DateDialog(parent)
-        result = dialog.exec_()
-        date = dialog.dateTime()
-        return (date.date(), date.time(), result == QDialog.Accepted)
+# static method to create the dialog and return (date, time, accepted)
+def getDateTime(parent = None):
+    dialog = DateDialog(parent)
+    result = dialog.exec_()
+    date = dialog.dateTime()
+    return (date.date(), date.time(), result == QDialog.Accepted)
+
+
+if __name__ == '__main__':
+    getDateTime()

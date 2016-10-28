@@ -16,6 +16,7 @@ import archivemanager
 import SampleLogHelper
 import vdrivehelper
 import mantid_helper
+import crystal_helper
 import io_peak_file
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
@@ -25,7 +26,7 @@ class VDriveAPI(object):
     """
     Class containing the methods to reduce and analyze VULCAN data.
     It is a pure python layer that does not consider GUI.
-    VDrivePlot is a GUI applicaton built upon this class
+    VDrivePlot is a GUI application built upon this class
     """
     def __init__(self, instrument_name):
         """
@@ -87,6 +88,30 @@ class VDriveAPI(object):
 
         return session_file_name
 
+    # Definition of properties
+    @property
+    def project(self):
+        """
+        Get reduction project
+        :return:
+        """
+        return self._myProject
+
+    @property
+    def archive_manager(self):
+        """ Get the access to archiving manager
+        """
+        return self._myArchiveManager
+
+    @property
+    def chop_manager(self):
+        """
+        Return the reference of slicer/chop manager
+        :return:
+        """
+        return self._mySlicingManager
+
+    # Definition of algorithms
     def add_runs_to_project(self, run_info_list):
         """
         Add runs under an IPTS dir to project
@@ -96,7 +121,7 @@ class VDriveAPI(object):
         """
         # check  input
         assert isinstance(run_info_list, list), 'Input run-tuple list must be instance of list but not %s.' \
-                                               '' % type(run_info_list)
+                                                '' % type(run_info_list)
         # add each run to project
         for index, run_info in enumerate(run_info_list):
             # check type
@@ -143,21 +168,21 @@ class VDriveAPI(object):
         # Convert phase type to
         phase_type = phase_type.split()[0]
         if phase_type == 'BCC':
-            phase_type = mantid_helper.UnitCell.BCC
+            phase_type = crystal_helper.UnitCell.BCC
         elif phase_type == 'FCC':
-            phase_type = mantid_helper.UnitCell.FCC
+            phase_type = crystal_helper.UnitCell.FCC
         elif phase_type == 'HCP':
-            phase_type = mantid_helper.UnitCell.HCP
+            phase_type = crystal_helper.UnitCell.HCP
         elif phase_type == 'Body-Center':
-            phase_type = mantid_helper.UnitCell.BC
+            phase_type = crystal_helper.UnitCell.BC
         elif phase_type == 'Face-Center':
-            phase_type = mantid_helper.UnitCell.FC
+            phase_type = crystal_helper.UnitCell.FC
         else:
             raise RuntimeError('Unit cell type %s is not supported.' % phase_type)
 
         # Get reflections
-        unit_cell = mantid_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
-        reflections = mantid_helper.calculate_reflections(unit_cell, min_d, max_d)
+        unit_cell = crystal_helper.UnitCell(phase_type, lattice_a, lattice_b, lattice_c)
+        reflections = crystal_helper.calculate_reflections(unit_cell, min_d, max_d)
 
         # Sort by d-space... NOT FINISHED YET
         num_ref = len(reflections)
@@ -218,18 +243,6 @@ class VDriveAPI(object):
         """
         if slicer_tag is not None:
             self._mySlicingManager.clean_workspace(run_number, slicer_tag)
-
-    def clear_runs(self):
-        """
-        Clear all runs in the VProject. 
-        :return:
-        """
-        try:
-            self._myProject.clear_runs()
-        except TypeError as e:
-            return False, str(e)
-
-        return True, ''
 
     def export_gsas_file(self, run_number, gsas_file_name):
         """
@@ -386,9 +399,9 @@ class VDriveAPI(object):
         self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
 
         status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
-                                                                           max_time=end_time,
-                                                                           time_interval=time_step,
-                                                                           tag=tag)
+                                                                                max_time=end_time,
+                                                                                time_interval=time_step,
+                                                                                tag=tag)
 
         return status, ret_obj
 
@@ -803,6 +816,7 @@ class VDriveAPI(object):
         :return:
         """
         run_list = self._myProject.get_runs()
+        print '[DB...BAT] run_list: ', run_list
 
         # Determine index of start run and end run
         try:
@@ -1434,7 +1448,7 @@ class VDriveAPI(object):
         elif splitter_src == 'time':
             self._mySlicingManager.set_current_slicer_time()
         elif splitter_src == 'manual':
-            self._mySlicingManager.set_current_slicer_manaul()
+            self._mySlicingManager.set_current_slicer_manual()
         else:
             raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
 

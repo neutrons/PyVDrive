@@ -1,8 +1,8 @@
 import os
-from procss_vcommand  import VDriveCommandProcessor
+from procss_vcommand  import VDriveCommand
 
 
-class VdriveMerge(VDriveCommandProcessor):
+class VdriveMerge(VDriveCommand):
     """
     Process command MERGE
     """
@@ -11,7 +11,7 @@ class VdriveMerge(VDriveCommandProcessor):
     def __init__(self, controller, command_args):
         """ Initialization
         """
-        VDriveCommandProcessor.__init__(self, controller, command_args)
+        VDriveCommand.__init__(self, controller, command_args)
 
         self.check_command_arguments(self.SupportedArgs)
         

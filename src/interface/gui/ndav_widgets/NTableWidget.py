@@ -33,10 +33,12 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def append_row(self, row_value_list, type_list=None):
+    def append_row(self, row_value_list, type_list=None, num_decimal=7):
         """
-
+        append a row to the table
         :param row_value_list:
+        :param type_list:
+        :param num_decimal: number of decimal points for floating
         :return: 2-tuple as (boolean, message)
         """
         # Check input
@@ -59,13 +61,22 @@ class NTableWidget(QtGui.QTableWidget):
 
         # Set values
         for i_col in xrange(min(len(row_value_list), self.columnCount())):
-            item = QtGui.QTableWidgetItem()
-            item.setText(_fromUtf8(str(row_value_list[i_col])))
-            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-            # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
             if type_list[i_col] == 'checkbox':
-                self.set_check_box(row_number, i_col, False)
+                # special case: check box
+                self.set_check_box(row_number, i_col, row_value_list[i_col])
             else:
+                # regular items
+                item_value = row_value_list[i_col]
+                if isinstance(item_value, float):
+                    # value_str = ('{0:.%dg}' % num_decimal).format(item_value)   # significant
+                    value_str = ('{0:.%df}' % num_decimal).format(item_value)
+                else:
+                    value_str = str(item_value)
+
+                item = QtGui.QTableWidgetItem()
+                item.setText(_fromUtf8(value_str))
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
                 self.setItem(row_number, i_col, item)
         # END-FOR(i_col)
 
@@ -181,8 +192,24 @@ class NTableWidget(QtGui.QTableWidget):
 
         return ret_list
 
+
+    def get_selected_columns(self):
+        """
+        Get selected columns with mouse actions
+        
+        NOTE: QModelIndexList QItemSelectionModel::selectedColumns
+        """
+        col_indexes = self.selectionModel().selectedColumns()
+        col_number_list = list()
+        for index in sorted(col_indexes):
+            # print('Column ', index, 'of type', type(index), 'is selected')
+            col_number_list.append(index.column())
+
+        return col_number_list
+
+
     def get_selected_rows(self, status=True):
-        """ Get the rows whose status is same as given status
+        """ Get the rows whose status is same as given status with checkbox
         Requirements: given status must be a boolean
         Guarantees: a list of row indexes are constructed for those rows that meet the requirement.
         :param status:
@@ -414,17 +441,19 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
-    def update_cell_value(self, row, col, value):
+    def update_cell_value(self, row, col, value, number_decimal=7):
         """
         Update (NOT reset) the value of a cell
         :param row:
         :param col:
         :param value:
+        :param number_decimal: significant digit for float
         :return:
         """
         # Check
         assert isinstance(row, int) and 0 <= row < self.rowCount()
         assert isinstance(col, int) and 0 <= col < self.columnCount()
+        assert isinstance(number_decimal, int) and number_decimal > 0
 
         cell_item = self.item(row, col)
         cell_widget = self.cellWidget(row, col)
@@ -433,7 +462,12 @@ class NTableWidget(QtGui.QTableWidget):
             # TableWidgetItem
             assert isinstance(cell_item, QtGui.QTableWidgetItem)
             if isinstance(value, float):
-                cell_item.setText(_fromUtf8('%.7f' % value))
+                # apply significant digit dynamically
+                # use 'g' for significant float_str = ('{0:.%dg}' % significant_digits).format(value)
+                float_str = ('{0:.%df}' % number_decimal).format(value)  # decimal
+                cell_item.setText(_fromUtf8(float_str))
+                # cell_item.setText(_fromUtf8('%.7f' % value))
+                # ('{0:.%dg}'%(2)).format(d)
             else:
                 cell_item.setText(_fromUtf8(str(value)))
         elif cell_item is None and cell_widget is not None:

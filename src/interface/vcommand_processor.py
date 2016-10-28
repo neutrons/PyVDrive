@@ -7,6 +7,7 @@ from PyQt4.QtCore import pyqtSignal
 import vdrive_commands.chop
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
+import vdrive_commands.procss_vcommand
 
 
 class VdriveCommandProcessor(object):
@@ -25,6 +26,8 @@ class VdriveCommandProcessor(object):
         if controller.__class__.__name__ != 'VDriveAPI':
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))
 
+        self._myController = controller
+
         # set up the commands
         self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE']
 
@@ -41,7 +44,7 @@ class VdriveCommandProcessor(object):
         """
         Process commands string
         :param command:
-        :param command_args: arguments of a command
+        :param command_args: arguments of a command, excluding command
         :return:
         """
         # check command (type, whether it is supported)
@@ -50,7 +53,7 @@ class VdriveCommandProcessor(object):
 
         if command not in self._commandList:
             return False, 'Command %s is not in supported command list, which includes %s' \
-                          '' % str(self._commandList)
+                          '' % (str(self._commandList), str(self._commandList))
 
         # command body
         assert isinstance(command_args, list)
@@ -68,8 +71,8 @@ class VdriveCommandProcessor(object):
             if len(items) == 2:
                 arg_dict[items[0]] = items[1]
             else:
-                return False, 'Command %s %d-th term "%s" is not valid.' % (command, index,
-                                                                            term)
+                return False, 'Command %s %d-th term \"%s\" is not valid.' % (command, index,
+                                                                              term)
             # END-IF
         # END-FOR
 
@@ -92,13 +95,9 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
+        processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
 
-        processor = vdrive_commands.chop.VdriveChop(self._myParent.get_controller(), arg_dict)
-
-        status, err_msg = processor.exec_cmd()
-
-        return status, err_msg
+        return self._process_command(processor, arg_dict)
 
     def _process_vbin(self, arg_dict):
         """
@@ -106,13 +105,29 @@ class VdriveCommandProcessor(object):
          :param arg_dict:
          :return:
          """
-        assert isinstance(arg_dict, dict) and len(arg_dict) > 0
+        processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
 
-        processor = vdrive_commands.vbin(self._myParent.get_controller(), arg_dict)
+        return self._process_command(processor, arg_dict)
 
-        status, err_msg = processor.exec_cmd()
+    @staticmethod
+    def _process_command(command_processor, arg_dict):
+        """
 
-        return status, err_msg
+        :param command_processor:
+        :param arg_dict:
+        :return:
+        """
+        assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
+            'not command processor but ...'
+        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
+
+        if len(arg_dict) == 0:
+            message = command_processor.get_help()
+            status = True
+        else:
+            status, message = command_processor.exec_cmd()
+
+        return status, message
 
     def _process_vdrive(self, args):
         """

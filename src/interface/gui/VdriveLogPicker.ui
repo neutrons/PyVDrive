@@ -381,7 +381,7 @@
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;show the start and stop time by indicators&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
-                 <string>Set and Show</string>
+                 <string>Show</string>
                 </property>
                </widget>
               </item>
@@ -390,7 +390,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_2">
               <item>
-               <widget class="QRadioButton" name="radioButton_autoSlicer">
+               <widget class="QRadioButton" name="radioButton_timeSlicer">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
@@ -402,7 +402,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton">
+               <widget class="QRadioButton" name="radioButton_logValueSlicer">
                 <property name="font">
                  <font>
                   <pointsize>9</pointsize>
@@ -532,19 +532,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
-               <widget class="QPushButton" name="pushButton_showSlicerSetup">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Show</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton">
+               <widget class="QPushButton" name="pushButton_setupAutoSlicer">
                 <property name="font">
                  <font>
                   <pointsize>10</pointsize>
@@ -795,31 +783,35 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QPushButton" name="pushButton_processSegments">
+         <widget class="QPushButton" name="pushButton_slicer">
           <property name="font">
            <font>
+            <pointsize>11</pointsize>
             <weight>75</weight>
             <bold>true</bold>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Chop source NeXus file to multiple NeXus files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="text">
+           <string>Chop</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_quit">
+          <property name="font">
+           <font>
+            <weight>50</weight>
+            <bold>false</bold>
            </font>
           </property>
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do further slicing between selected segments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
-           <string>Save</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_cancel">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Cancel</string>
+           <string>Quit</string>
           </property>
          </widget>
         </item>

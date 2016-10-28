@@ -71,6 +71,53 @@ class VDProject(object):
 
         return
 
+    def add_runs(self, run_info_list):
+        """
+        List of run-info-dict
+        :param run_info_list:
+        :return:
+        """
+        # check
+        assert isinstance(run_info_list, list), 'blabla'  # TODO/NOW - doc
+
+        for run_info in run_info_list:
+            assert isinstance(run_info, dict)
+            run_number = run_info['run']
+            ipts_number = run_info['ipts']
+            file_name = run_info['file']
+            self.add_run(run_number, file_name, ipts_number)
+
+        return
+
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval):
+        """
+        chop data by time
+        :param run_number:
+        :param start_time:
+        :param stop_time:
+        :param time_interval:
+        :return:
+        """
+        # TODO/NOW - doc and check
+
+        # load file
+        nxs_file_name = self._dataFileDict[run_number][0]
+        ws_name = os.path.basename(nxs_file_name).split('.')[0]
+        mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
+
+        # generate event filter
+        # FIXME/TODO/NOW - A better name!
+        split_ws_name = 'TempSplitters'
+        info_ws_name = 'TempInfoWS'
+        status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
+                                                                       start_time, stop_time, time_interval,
+                                                                       time_unit='Seconds')
+
+        # TODO/FIXME/NOW - TOF correction should be left to user to specify
+        mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
+
+        return
+
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False
         :return:

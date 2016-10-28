@@ -20,16 +20,8 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
 
-
-class WorkspaceViewer(QtGui.QWidget):
+class WorkspaceViewWidget(QtGui.QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
@@ -38,6 +30,8 @@ class WorkspaceViewer(QtGui.QWidget):
     def __init__(self, parent=None):
         """ Init
         """
+        import ui_WorkspacesView
+
         # call base
         QtGui.QWidget.__init__(self)
 
@@ -46,7 +40,7 @@ class WorkspaceViewer(QtGui.QWidget):
         self._myParent = parent
 
         # set up UI
-        self.ui = Ui_Form()
+        self.ui = ui_WorkspacesView.Ui_Form()
         self.ui.setupUi(self)
 
         self.ui.tableWidget_dataStructure.setup()
@@ -54,9 +48,9 @@ class WorkspaceViewer(QtGui.QWidget):
 
         return
 
-    def execute(self, script):
+    def execute_reserved_command(self, script):
         """
-
+        override execute?
         :param script:
         :return:
         """
@@ -76,14 +70,19 @@ class WorkspaceViewer(QtGui.QWidget):
             err_msg = None
 
         else:
-            status, err_msg = self._myMainWindow.execute_command(script)
+            try:
+                status, err_msg = self._myMainWindow.execute_command(script)
+            except AssertionError as ass_err:
+                status = False,
+                err_msg = 'Failed to execute VDRIVE command due to %s.' % str(ass_err)
+            # except KeyError as key_err:
+            #     status = False
+            #     err_msg = 'Failed to execute %s due to unrecognized key word: %s.' % (command, str(key_err))
+
             if status:
-                err_msg = 'VDRIVE command %s is executed successfully. %s.' \
-                          '' % (command, err_msg)
+                err_msg = 'VDRIVE command %s is executed successfully.\n%s.' % (command, err_msg)
             else:
-                err_msg = 'VDRIVE command %s failed due to %s.' % (
-                    command, err_msg
-                )
+                err_msg = 'Failed to execute VDRIVE command %s failed due to %s.' % (command, err_msg)
 
         return err_msg
 
@@ -93,7 +92,8 @@ class WorkspaceViewer(QtGui.QWidget):
         :param script:
         :return:
         """
-        command = script.strip().split()[0]
+        command = script.strip().split(',')[0].strip()
+        print '[DB...Test Reserved] command = ',command
 
         return command in self.Reserved_Command_List
 
@@ -239,56 +239,5 @@ class WorkspaceTableWidget(baseTable.NTableWidget):
 
         return
 
-
-class Ui_Form(object):
-    """
-    Ui form
-    """
-    def setupUi(self, Form):
-        Form.setObjectName(_fromUtf8("Form"))
-        Form.resize(1175, 868)
-        self.verticalLayout = QtGui.QVBoxLayout(Form)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.groupBox = QtGui.QGroupBox(Form)
-        self.groupBox.setObjectName(_fromUtf8("groupBox"))
-        self.horizontalLayout = QtGui.QHBoxLayout(self.groupBox)
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.tableWidget_dataStructure = WorkspaceTableWidget(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tableWidget_dataStructure.sizePolicy().hasHeightForWidth())
-        self.tableWidget_dataStructure.setSizePolicy(sizePolicy)
-        self.tableWidget_dataStructure.setObjectName(_fromUtf8("tableWidget_dataStructure"))
-        self.tableWidget_dataStructure.setColumnCount(0)
-        self.tableWidget_dataStructure.setRowCount(0)
-        self.horizontalLayout.addWidget(self.tableWidget_dataStructure)
-        self.graphicsView_general = WorkspaceGraphicView(self.groupBox)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.graphicsView_general.sizePolicy().hasHeightForWidth())
-        self.graphicsView_general.setSizePolicy(sizePolicy)
-        self.graphicsView_general.setObjectName(_fromUtf8("graphicsView_general"))
-        self.horizontalLayout.addWidget(self.graphicsView_general)
-        self.treeView_plotControl = PlotControlTreeWidget(self.groupBox)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.treeView_plotControl.sizePolicy().hasHeightForWidth())
-        self.treeView_plotControl.setSizePolicy(sizePolicy)
-        self.treeView_plotControl.setObjectName(_fromUtf8("tableView_workspaces"))
-        self.horizontalLayout.addWidget(self.treeView_plotControl)
-        self.verticalLayout.addWidget(self.groupBox)
-        self.widget_ipython = MantidIPythonWidget(Form)
-        self.widget_ipython.setObjectName(_fromUtf8("widget_ipython"))
-        self.verticalLayout.addWidget(self.widget_ipython)
-
-        self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
-
-    def retranslateUi(self, Form):
-        Form.setWindowTitle(_translate("Form", "Form", None))
-        self.groupBox.setTitle(_translate("Form", "Workspaces", None))
 
 

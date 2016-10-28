@@ -138,6 +138,7 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
 
     return True, (splitters_ws_name, info_ws_name)
 
+
 def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                   min_time, max_time,
                                   log_name, min_log_value, max_log_value, log_value_interval,
@@ -162,7 +163,6 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     :param log_value_change_direction:
     :return:
     """
-    print '[TRACE] Generate Filter By Log'
     # Check requirements
     assert isinstance(ws_name, str)
     src_ws = retrieve_workspace(ws_name)
@@ -825,6 +825,18 @@ def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_fi
     return
 
 
+def save_event_workspace(event_ws_name, nxs_file_name):
+    """
+
+    :param event_ws_name:
+    :param nxs_file_name:
+    :return:
+    """
+    mantidapi.SaveNexus(InputWorkspace=event_ws_name, Filename=nxs_file_name)
+
+    return
+
+
 def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):
     """
     Split events in a workspace
@@ -855,8 +867,8 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws
                                       FilterByPulseTime=False,
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
-                                      # FIXME/TODO This should be fixed in Mantid. Upon that, this option will be true.
-                                      SplitSampleLogs=False
+                                      SplitSampleLogs=True,
+                                      OutputWorkspaceIndexedFrom1=True
                                       )
 
     try:

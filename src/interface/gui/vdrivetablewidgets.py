@@ -443,13 +443,13 @@ class PeakParameterTable(NdavTable.NTableWidget):
     """
     A customized table to hold diffraction peaks with the parameters
     """
-    PeakTableSetup = [('Bank', 'int'),
+    PeakTableSetup = [('Select', 'checkbox'),
+                      ('Bank', 'int'),
                       ('Name', 'str'),
                       ('Centre', 'float'),
                       ('Range', 'float'),   # range of the single peak or overlapped peaks
                       ('HKLs', 'str'),
-                      ('Group', 'int'),
-                      ('Select', 'checkbox')]
+                      ('Group', 'int')]
 
     def __init__(self, parent):
         """ Initialization
@@ -468,6 +468,14 @@ class PeakParameterTable(NdavTable.NTableWidget):
         # group ID for overlapped peaks
         self._currGroupID = 0
 
+        # columns
+        self._bankColIndex = None
+        self._nameColIndex = None
+        self._posColIndex = None
+        self._widthColIndex = None
+        self._hklColIndex = None
+        self._groupColIndex = None
+
         return
 
     def add_peak(self, bank, name, centre, width, group_id):
@@ -482,7 +490,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         :param bank: bank number
         :param name: peak name
         :param width: peak width
-        :param overlapped_peak_pos_list:
+        :param group_id:
         :return:
         """
         # Check requirements
@@ -494,8 +502,14 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert isinstance(group_id, int), 'Group ID must be an integer.'
         assert width > 0
 
-        # Get new index
-        status, message = self.append_row([bank, name, centre, width, name, group_id, False])
+        # set default peak name
+        if len(name.strip()) == 0:
+            peak_index = self.rowCount() + 1
+            name = 'Peak%0d-B%d' % (peak_index, bank)
+
+        # add peak
+        status, message = self.append_row([True, bank, name, centre, width, name, group_id],
+                                          num_decimal=3)
         if status is False:
             raise RuntimeError('Unable to add a new row for a peak due to %s.' % message)
 
@@ -534,7 +548,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
         return
 
     def delete_peak(self, peak_index):
-        """ Delete a peak from the table
+        """ Delete i-th peak from the table
         Purpose:
             Delete a peak from the table
         Requirements:
@@ -551,11 +565,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
         # Remove peak
         self.remove_row(peak_index)
 
-        # Update the peak index of each peak behind
-        for i_row in xrange(peak_index, self.rowCount()):
-            this_index = self.get_cell_value(i_row, 0)
-            self.update_cell_value(i_row, 0, this_index-1)
-        # END-FOR(i_row)
+        # remove the peak from buffered
+        self._buffer.pop(peak_index)
 
         return
 
@@ -572,7 +583,6 @@ class PeakParameterTable(NdavTable.NTableWidget):
         bank_id_list = sorted(self._buffer.keys())
         bank_peak_dict = dict()
         for bank_id in bank_id_list:
-
             # skip the bank IDs to be excluded
             if bank_id in excluded_banks:
                 continue
@@ -591,6 +601,7 @@ class PeakParameterTable(NdavTable.NTableWidget):
                 peak_group = peak_row[5]
 
                 peak_i = [bank, peak_name, peak_centre, peak_width, peak_group]
+                print '[DB...BAT] Buffered peak: ', peak_i
                 peak_list.append(peak_i)
 
                 print 'Appending peak %d: %s' % (len(peak_list)-1, str(peak_i))
@@ -627,13 +638,13 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert 0 <= peak_index < self.rowCount(), 'Index of peak %d is out of boundary' % peak_index
 
         # Get information
-        bank = self.get_cell_value(peak_index, 0)
-        name = self.get_cell_value(peak_index, 1)
-        position = self.get_cell_value(peak_index, 2)
-        width = self.get_cell_value(peak_index, 3)
+        bank = self.get_cell_value(peak_index, self._bankColIndex)
+        name = self.get_cell_value(peak_index, self._nameColIndex)
+        position = self.get_cell_value(peak_index, self._posColIndex)
+        width = self.get_cell_value(peak_index, self._widthColIndex)
 
         # Get overlapped peaks' positions
-        group = self.get_cell_value(peak_index, 5)
+        group = self.get_cell_value(peak_index, self._groupColIndex)
 
         return [bank, name, position, width, group]
 
@@ -648,8 +659,8 @@ class PeakParameterTable(NdavTable.NTableWidget):
         assert len(row_number_list) > 0, 'At least one peak must be selected.'
 
         # FIXME - Made this more flexible for column index
-        pos_col_index = 2
-        width_col_index = 3
+        pos_col_index = self._posColIndex
+        width_col_index = self._widthColIndex
 
         peak_pos_list = list()
         for i_row in row_number_list:
@@ -702,18 +713,25 @@ class PeakParameterTable(NdavTable.NTableWidget):
         # Set up column width
         self.setColumnWidth(0, 60)
 
+        # set up column index
+        self._bankColIndex = self.get_column_index('Bank')
+        self._nameColIndex = self.get_column_index('Name')
+        self._posColIndex = self.get_column_index('Centre')
+        self._widthColIndex = self.get_column_index('Range')
+        self._hklColIndex = self.get_column_index('HKLs')
+        self._groupColIndex = self.get_column_index('Group')
+
         return
-
-
-TimeSegment_TableSetup = [('Start', 'float'),
-                          ('Stop', 'float'),
-                          ('Destination', 'int')]
 
 
 class TimeSegmentsTable(NdavTable.NTableWidget):
     """
     Table for show time segments for data splitting
     """
+    TimeSegment_TableSetup = [('Start', 'float'),
+                              ('Stop', 'float'),
+                              ('Destination', 'int')]
+
     def __init__(self, parent):
         """
         """
@@ -740,7 +758,7 @@ class TimeSegmentsTable(NdavTable.NTableWidget):
         Init setup
         :return:
         """
-        self.init_setup(TimeSegment_TableSetup)
+        self.init_setup(TimeSegmentsTable.TimeSegment_TableSetup)
 
         return
 
