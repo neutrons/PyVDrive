@@ -239,7 +239,7 @@ class ReductionSetup(object):
         self._pngFileName = None
 
         # about reduction required files
-        self._calibrationFileName = None
+        self._focusFileName = None
         self._characterFileName = None
         self._vulcanBinsFileName = None
 
@@ -290,20 +290,30 @@ class ReductionSetup(object):
 
     def check_validity(self):
         """
-
+        check whether the current setup is valid, focusing on whether all the required files are set and exist
         :return:
         """
-        # TODO/NOW/ - Doc and more check
-
         error_message = ''
 
         # check whether the directory is writable
         if not os.access(self._outputDirectory, os.W_OK):
             error_message += 'Output data directory %s is not writable.\n' % self._outputDirectory
 
+        # source event file
         if os.path.exists(self._eventFileFullPath) is False:
             error_message += 'NeXus file %s is not accessible or does not exist.' \
                              '' % self._eventFileFullPath
+
+        # focusing file
+        for file_name in [self._focusFileName, self._characterFileName, self._vulcanBinsFileName]:
+            if not os.path.exists(file_name):
+                error_message += 'Calibration file %s cannot be found.\n' % file_name
+
+        # GSAS file
+        if self._mainGSASName is not None and not os.access(self._mainGSASName, os.W_OK):
+            error_message += 'Main GSAS %s is not writable.' % self._mainGSASDir
+        if self._mainRecordFileName is not None and not os.access(self._mainRecordFileName, os.W_OK):
+            error_message += 'Main record file %s is not writable.' % self._mainGSASDir
 
         if error_message == '':
             status = True
@@ -312,16 +322,23 @@ class ReductionSetup(object):
 
         return status, error_message
 
-    def get_calibration_file(self):
+    def get_characterization_file(self):
         """
-        get calibration file
+        get characterization file
+        :return:
+        """
+        return self._characterFileName
+
+    def get_focus_file(self):
+        """
+        get diffraction focus (calibration) file
         :return:
         """
         # set to default if it is not set up yet
-        if self._calibrationFileName is None:
-            self._calibrationFileName = CalibrationFileName
+        if self._focusFileName is None:
+            self._focusFileName = CalibrationFileName
 
-        return self._calibrationFileName
+        return self._focusFileName
 
     def get_event_file(self):
         """
@@ -412,6 +429,13 @@ class ReductionSetup(object):
         """
         return self._sampleLogDirectory
 
+    def get_vulcan_bin_file(self):
+        """
+        get the VULCAN binning file (compatible to IDL) name
+        :return:
+        """
+        return self._vulcanBinsFileName
+
     def is_dry_run(self):
         """
         check if it is a dry run
@@ -489,6 +513,42 @@ class ReductionSetup(object):
 
         return
 
+    def set_focus_file(self, file_name):
+        """
+        set the diffraction focusing calibration file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._focusFileName = file_name
+
+        return
+
+    def set_charact_file(self, file_name):
+        """
+        set the characterization file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._characterFileName = file_name
+
+        return
+
+    def set_vulcan_bin_file(self, file_name):
+        """
+        set the VULCAN binning (compatible with IDL) file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._vulcanBinsFileName = file_name
+
+        return
+
     def set_defaults(self):
         """
         VULCAN standard
@@ -514,13 +574,15 @@ class ReductionSetup(object):
 
     def set_dry_run(self, status):
         """
-
-        :param status:
+        set whether it is a dry run or a normal run
+        :param status: True for dry run
         :return:
         """
-        # TODO/NOW/check/doc
+        assert isinstance(status, bool)
 
         self._isDryRun = status
+
+        return
 
     def set_event_file(self, event_file_path):
         """
@@ -862,23 +924,23 @@ class PatchRecord:
             attribdict[name] = value
 
         name = "das.neutrons"
-        if attribdict.has_key(name):
+        if name in attribdict:
             cvinfodict["TotalCounts"] = attribdict[name]
 
         name = "das.protoncharge"
-        if attribdict.has_key(name):
+        if name in attribdict:
             cvinfodict["ProtonCharge"] = attribdict[name]
 
         name = "das.runtime"
-        if attribdict.has_key(name):
+        if name in attribdict:
             cvinfodict["Duration(sec)"] = attribdict[name]
 
         name = "das.monitor2counts"
-        if attribdict.has_key(name):
+        if name in attribdict:
             cvinfodict["Monitor1"] = attribdict[name]
 
         name = "das.monitor3counts"
-        if attribdict.has_key(name):
+        if name in attribdict:
             cvinfodict["Monitor2"] = attribdict[name]
 
         return cvinfodict
@@ -1086,17 +1148,16 @@ class ReduceVulcanData(object):
                 filemode2 = 'new'
             else:
                 filemode2 = 'append'
-            # TODO/ISSUE/maintenance - make indent right!
             mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                OutputFilename=categorized_record_file,
-                                FileMode=filemode2,
-                                SampleLogNames=sample_name_list,
-                                SampleLogTitles=sample_title_list,
-                                SampleLogOperation=sample_operation_list,
-                                TimeZone="America/New_York",
-                                OverrideLogValue=patch_list,
-                                OrderByTitle='RUN',
-                                RemoveDuplicateRecord=True)
+                                             OutputFilename=categorized_record_file,
+                                             FileMode=filemode2,
+                                             SampleLogNames=sample_name_list,
+                                             SampleLogTitles=sample_title_list,
+                                             SampleLogOperation=sample_operation_list,
+                                             TimeZone="America/New_York",
+                                             OverrideLogValue=patch_list,
+                                             OrderByTitle='RUN',
+                                             RemoveDuplicateRecord=True)
 
             # Change file  mode
             if file_access_mode != '666' and file_access_mode != '676':
@@ -1114,15 +1175,15 @@ class ReduceVulcanData(object):
             else:
                 # Export the log by appending
                 mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                    OutputFilename=self._reductionSetup.get_record_2nd_file(),
-                                    FileMode=file_write_mode,
-                                    SampleLogNames=sample_name_list,
-                                    SampleLogTitles=sample_title_list,
-                                    SampleLogOperation=sample_operation_list,
-                                    TimeZone=TIMEZONE1,
-                                    OverrideLogValue=patch_list,
-                                    OrderByTitle='RUN',
-                                    RemoveDuplicateRecord=True)
+                                                 OutputFilename=self._reductionSetup.get_record_2nd_file(),
+                                                 FileMode=file_write_mode,
+                                                 SampleLogNames=sample_name_list,
+                                                 SampleLogTitles=sample_title_list,
+                                                 SampleLogOperation=sample_operation_list,
+                                                 TimeZone=TIMEZONE1,
+                                                 OverrideLogValue=patch_list,
+                                                 OrderByTitle='RUN',
+                                                 RemoveDuplicateRecord=True)
 
         return True, ''
 
@@ -1174,48 +1235,13 @@ class ReduceVulcanData(object):
         sample_log_names = ["furnace.temp1", "furnace.temp2", "furnace.power"]
         self.generate_csv_log(furnace_log_file_name, sample_log_names, None)
 
-        # Make a new name
-        # is_new_file = False
-        # max_attempts = 10
-        # out_file_name = ''
-        #
-        #
-
-        # # find out whether the furnace file is a new file or an old one.
-        # num_attempts = 0
-        # while is_new_file is False and num_attempts < max_attempts:
-        #     if num_attempts == 0:
-        #         out_file_name = os.path.join(output_directory, "furnace%d.txt" % (run_number))
-        #     else:
-        #         out_file_name = os.path.join(output_directory, "furnace%d_%d.txt" % (run_number, num_attempts))
-        #
-        #     if os.path.isfile(out_file_name) is False:
-        #         is_new_file = True
-        #     else:
-        #         num_attempts += 1
-        # # END- WHILE
-        #
-        # # Raise exception
-        # if is_new_file is False:
-        #     raise NotImplementedError("Unable to find an unused log file name for run %d. " % (run_number))
-        # else:
-        #     print "Log file will be written to %s. " % out_file_name
-        #
-        # try:
-        #     mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=log_ws_name,
-        #                               OutputFilename=out_file_name,
-        #                               SampleLogNames=["furnace.temp1", "furnace.temp2", "furnace.power"],
-        #                               TimeZone=TIMEZONE2)
-        # except RuntimeError as run_err:
-        #     raise RuntimeError('Unable to export sample log to %s due to %s.' % (out_file_name, str(run_err)))
-
         return
 
-    def exportGenericDAQLog(self, log_ws_name, outputDir, ipts, run_number):
+    def exportGenericDAQLog(self, log_ws_name, output_directory, ipts, run_number):
         """
         Export the generic DAQ log
         :param log_ws_name:
-        :param outputDir:
+        :param output_directory:
         :param ipts:
         :param run_number:
         :return:
@@ -1240,42 +1266,9 @@ class ReduceVulcanData(object):
         for title in header:
             headstr += "%s\t" % (title)
 
-        # make a new file name
-        is_new_file_name = False
-        max_attempts = 100
-        num_attempts = 0
-        output_file_name = ''
-        while is_new_file_name is False and num_attempts < max_attempts:
-            if num_attempts == 0:
-                output_file_name = "IPTS-%d-GenericDAQ-%d.txt" % (ipts, run_number)
-            else:
-                output_file_name = "IPTS-%d-GenericDAQ-%d_%d.txt" % (ipts, run_number, num_attempts)
-            output_file_name = os.path.join(outputDir, output_file_name)
-
-            if os.path.isfile(output_file_name) is False:
-                is_new_file_name = True
-            else:
-                num_attempts += 1
-        # ENDWHILE
-        assert len(output_file_name) > 0
-
-        # Raise exception
-        if is_new_file_name is False:
-            raise NotImplementedError("Unable to find an unused log file name for run %d. " % (run_number))
-        else:
-            print "Log file will be written to %s. " % output_file_name
-        # TODO/NOW - better to rename the existing GenericDAQ file
-
-        # Export
-        try:
-            mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=log_ws_name,
-                                                   OutputFilename=output_file_name,
-                                                   SampleLogNames=samplelognames,
-                                                   WriteHeaderFile=True,
-                                                   TimeZone=TIMEZONE2,
-                                                   Header=headstr)
-        except RuntimeError:
-            print "Error in exporting Generic DAQ log for run %s. " % (str(run_number))
+        output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
+        sample_log_names = ["furnace.temp1", "furnace.temp2", "furnace.power"]
+        self.generate_csv_log(output_file_name, samplelognames, headstr)
 
         return
 
@@ -1315,37 +1308,6 @@ class ReduceVulcanData(object):
         self.generate_csv_log(log_file_name=env_log_name,
                               sample_log_names=sample_log_name_list,
                               header=header_str)
-
-        # # Make a new name in case an old one exists. Try max 10 times
-        # is_new_file_name = False
-        # max_attempts = 10
-        # num_attempt = 0
-        # output_file_name = None
-        # while is_new_file_name is False and num_attempt < max_attempts:
-        #     # create file name
-        #     if num_attempt == 0:
-        #         output_file_name = 'Vulcan-IPTS-%d-SEnv-%d.txt' % (ipts, run_number)
-        #     else:
-        #         output_file_name = 'Vulcan-IPTS-%d-SEnv-%d-%d.txt' % (ipts, run_number, num_attempt)
-        #     output_file_name = os.path.join(output_dir, output_file_name)
-        #
-        #     # check whether it is a new file such that no old file will be overwritten
-        #     is_new_file_name = not os.path.exists(output_file_name)
-        #     num_attempt += 1
-        # # END-WHILE
-        # assert output_file_name is not None
-        # assert is_new_file_name, 'Unable to find an unused log file name for run %d.' % run_number
-        # print 'Log file will be written to %s.' % output_file_name
-        #
-        # # Export sample logs
-        # ExportSampleLogsToCSVFile(InputWorkspace=log_ws_name,
-        #                           OutputFilename=output_file_name,
-        #                           SampleLogNames=sample_log_name_list,
-        #                           WriteHeaderFile=True,
-        #                           SeparateHeaderFile=False,
-        #                           DateTitleInHeader=False,
-        #                           TimeZone=TIMEZONE2,
-        #                           Header=header_str)
 
         return
 
@@ -1399,15 +1361,13 @@ class ReduceVulcanData(object):
 
         return sample_title_list, sample_name_list, sample_operation_list
 
-    # TODO/FIXME/ISSUE/maintenance - Doc
     def generate_csv_log(self, log_file_name, sample_log_names, header):
         """
-        Generate a log file in csv format
-        :param log_ws_name:
-        :param log_file_base_name:
-        :param log_file_posfix:
-        :param output_dir
+        Generate a log file in csv format.
+        If the log file has existed, then rename the existing log file.  It will be tried for 100 times
+        :param log_file_name:
         :param sample_log_names:
+        :param header:
         :return:
         """
         # Make a new name by avoiding deleting the existing one.
@@ -1432,40 +1392,51 @@ class ReduceVulcanData(object):
             shutil.copy(log_file_name, back_file_name)
         # END-IF
 
-        # TODO/ISSUE/maintenance: clear format
-        mantidsimple.ExportSampleLogsToCSVFile(
-            InputWorkspace=self._dataWorkspaceName,
-            OutputFilename=log_file_name,
-            SampleLogNames=sample_log_names,
-            WriteHeaderFile=True,
-            TimeZone=TIMEZONE2,
-            Header=header)
+        # export log to CSV file
+        mantidsimple.ExportSampleLogsToCSVFile(InputWorkspace=self._dataWorkspaceName,
+                                               OutputFilename=log_file_name,
+                                               SampleLogNames=sample_log_names,
+                                               WriteHeaderFile=True,
+                                               TimeZone=TIMEZONE2,
+                                               Header=header)
 
         return log_file_name
 
     def execute(self):
         """
-
-        :return:
+        Execute the command for reduce
+        Raise RuntimeError
+        :return: (boolean, string) as success/fail and error message
         """
         # reduce and write to GSAS file
-        is_reduce_good, message = self.reduce_powder_diffraction_data()
+        is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
+        if not is_reduce_good:
+            return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
 
         # load the sample run
-        is_load_good, message2 = self.load_data_file()
+        is_load_good, msg_load_file = self.load_data_file()
+        if not is_load_good:
+            return False, 'Unable to load source data file %s.' % self._reductionSetup.get_event_file()
 
         # check whether it is an alignment run
         self._reductionSetup.is_alignment_run = self.check_alignment_run()
 
         # export the sample log record file
-        is_record_good, message3 = self.export_experiment_records()
+        is_record_good, msg_record = self.export_experiment_records()
 
         # write experiment files
-        is_log_good, message4 = self.export_log_files()
+        is_log_good, msg_log = self.export_log_files()
 
-        self.special_operation_auto_reduction_service()
+        is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
 
-        return
+        final_message = ''
+        final_message += msg_gsas + '\n'
+        final_message += msg_load_file + '\n'
+        final_message += msg_record + '\n'
+        final_message += msg_log + '\n'
+        final_message += msg_log + '\n'
+
+        return is_record_good and is_log_good and is_auto_good, final_message
 
     def generate_1d_plot(self):
         """
@@ -1532,7 +1503,7 @@ class ReduceVulcanData(object):
             mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,
-                                            CalibrationFile=self._reductionSetup.get_calibration_file(),
+                                            CalibrationFile=self._reductionSetup.get_focus_file(),
                                             CharacterizationRunsFile=CharacterFileName,
                                             Binning="-0.001",
                                             SaveAS="",
@@ -1671,8 +1642,17 @@ class MainUtility(object):
                 elif opt in ("-d", "--dryrun"):
                     # Dry run
                     reduction_setup.set_dry_run(True)
-                    # END-IF-ELSE
-                    # END-FOR (opt)
+                elif opt in ('-f', '--focus') and arg != '0':
+                    # focus file
+                    reduction_setup.set_focus_file(arg)
+                elif opt in ('-c', '--charact') and arg != '0':
+                    # characterization file
+                    reduction_setup.set_character_file(arg)
+                elif opt in ('-b', '--bin') and arg != '0':
+                    # VULCAN binning file
+                    reduction_setup.set_vulcan_bin_file(arg)
+                # END-IF-ELSE
+            # END-FOR (opt)
         # END-IF-ELSE (len(opt)==0)
 
         # Check requirements
@@ -1689,16 +1669,20 @@ class MainUtility(object):
         Print help message
         :return:
         """
-        # FIXME/TODO/NOW - Make these string!
-        print "%s -i <inputfile> -o <outputdirectory> ... ..." % (sys.argv[0])
-        print "-i/ifile  : mandatory input NeXus file name. "
-        print "-o/ofile  : mandatory directory for output files. "
-        print "-l/log    : optional directory for sample log files. "
-        print "-g/gsas   : optional directory for GSAS file owned by owner. "
-        print "-G/gsas2  : optional directory to copy GSAS file to  with file mode 664."
-        print "-r/record : optional experiment record file name (writable only to auot reduction service)."
-        print "-R/record2: experiment record file (can be modified by manual reduction)."
-        print "-d/dry    : dry run to check output status, file names and directories."
+        help_str = ''
+
+        help_str += "%s -i <inputfile> -o <outputdirectory> ... ...\n" % (sys.argv[0])
+        help_str += "-i/ifile    : mandatory input NeXus file name. \n"
+        help_str += "-o/ofile    : mandatory directory for output files. \n"
+        help_str += "-l/log      : optional directory for sample log files. \n"
+        help_str += "-g/gsas     : optional directory for GSAS file owned by owner. \n"
+        help_str += "-G/gsas2    : optional directory to copy GSAS file to  with file mode 664.\n"
+        help_str += "-r/record   : optional experiment record file name (writable only to auot reduction service).\n"
+        help_str += "-R/record2  : experiment record file (can be modified by manual reduction).\n"
+        help_str += "-d/dry      : dry run to check output status, file names and directories.\n"
+        help_str += '-f/focus    : focuss file.\n'
+        help_str += '-c/charact  : characterization file.\n'
+        help_str += '-b/bin      : binning file.\n'
 
         return
 
