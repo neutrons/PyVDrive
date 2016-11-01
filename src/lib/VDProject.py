@@ -120,13 +120,20 @@ class VDProject(object):
             reduce_setup = reduce_VULCAN.ReductionSetup()
             reduce_setup.set_event_file(nxs_file_name)
             reduce_setup.set_output_dir(output_dir)
+            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+            reduce_setup.process_configurations()
+
+            # TODO/ISSUE/51: it is required to add splitter WS and info WS to reduce_setup
+
+            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+            status, message = reducer.execute()
 
         else:
             # just split the workspace and saved in memory
             # TODO/FIXME/NOW - TOF correction should be left to user to specify
             mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
 
-        return
+        return message
 
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False

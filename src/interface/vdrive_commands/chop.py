@@ -85,15 +85,17 @@ class VdriveChop(VDriveCommand):
         self._controller.project.add_runs(run_info_list)
 
         # do chopping
+        sum_msg = ''
         for run_number in range(run_start, run_end+1):
             # chop
             if time_step is not None:
-                self._controller.project.chop_data_by_time(run_number=run_number,
-                                                           start_time=None,
-                                                           stop_time=None,
-                                                           time_interval=time_step,
-                                                           reduce=output_to_gsas,
-                                                           output_dir=output_dir)
+                message = self._controller.project.chop_data_by_time(run_number=run_number,
+                                                                     start_time=None,
+                                                                     stop_time=None,
+                                                                     time_interval=time_step,
+                                                                     reduce=output_to_gsas,
+                                                                     output_dir=output_dir)
+                sum_msg += 'Run %d: %s\n' % (run_number, message)
             else:
                 raise RuntimeError('Not implemented yet for chopping by log value.')
 
@@ -110,7 +112,9 @@ class VdriveChop(VDriveCommand):
 
         # self.reduceSignal.emit(command_args)
 
-        return True, 'Still try to figure out how to write in the message'
+        print '[DB...BAT] CHOP Message: ', sum_msg
+
+        return True, sum_msg
 
     def get_help(self):
         """

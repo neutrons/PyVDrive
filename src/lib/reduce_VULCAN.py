@@ -1026,7 +1026,7 @@ class ReduceVulcanData(object):
     def dry_run(self):
         """
         Dry run to verify the output
-        :return:
+        :return: 2-tuple (boolean, string)
         """
         # check
         reduction_setup = self._reductionSetup
@@ -1553,6 +1553,7 @@ class ReduceVulcanData(object):
 
         :return:
         """
+        # TODO/ISSUE/51: need another flag to control duplication. Example: manual reduction without 2nd gsas
         # 2nd copy for Ke if it IS NOT an alignment run
         if not self._reductionSetup.is_alignment_run:
             self.duplicate_gsas_file(self._reductionSetup.get_gsas_file(main_gsas=True),
