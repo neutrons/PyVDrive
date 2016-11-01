@@ -11,7 +11,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
     """
     Command processor to call auto reduce script
     """
-    SupportedArgs = ['IPTS', 'RUN', 'DRYRUN', 'OUTPUT']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'DRYRUN', 'OUTPUT']
 
     def __init__(self, controller, command_args):
         """
@@ -32,6 +32,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         blabla
         :return:
         """
+        # TODO/ISSUE/51 - incorporate new argument RUNS/RUNE/RUN=(A,B,C-D)
         print '[DB...Command Arg List]: ', self._commandArgList
         try:
             ipts = int(self._commandArgList['IPTS'])
@@ -42,14 +43,14 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 
         run_numbers_str = 'NO DEFINED'
         try:
-            run_numbers_str = self._commandArgList['RUN']
+            run_numbers_str = self._commandArgList['RUNS']
             run_number_list = self.split_run_numbers(run_numbers_str)
         except KeyError:
-            return False, 'RUN number must be given.'
+            return False, 'RUNS number must be given.'
         except ValueError:
-            return False, 'RUN number string %s cannot be parsed.' % run_numbers_str
+            return False, 'RUNS number string %s cannot be parsed.' % run_numbers_str
         except TypeError:
-            return False, 'RUN number string %s cannot be parsed due to TypeError.' % run_numbers_str
+            return False, 'RUNS number string %s cannot be parsed due to TypeError.' % run_numbers_str
         else:
             print '[DB...BAT] Runs = ', run_number_list
 
@@ -64,12 +65,12 @@ class AutoReduce(procss_vcommand.VDriveCommand):
             output_dir = None
 
         # call auto reduction
-        self._controller.reduce_auto_script(ipts_number=ipts,
-                                            run_numbers=run_number_list,
-                                            output_dir=output_dir,
-                                            is_dry_run=dry_run)
+        status, message = self._controller.reduce_auto_script(ipts_number=ipts,
+                                                              run_numbers=run_number_list,
+                                                              output_dir=output_dir,
+                                                              is_dry_run=dry_run)
 
-        return True, 'Good'
+        return True, message
 
     @staticmethod
     def split_run_numbers(run_numbers_str):
@@ -102,6 +103,24 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         # END-FOR
 
         return run_number_list
+
+    def get_help(self):
+        """
+        override base class
+        :return:
+        """
+        # TODO/ISSUE/51: better doc about the meaning of arguments!
+        help_str = 'Auto reduction\n'
+        help_str += 'Run auto reduction script for 1 run on analysis cluster:\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765\n'
+        help_str += 'Run auto reduction script for multiple runs on analysis cluster:\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765-99999\n'
+        help_str += 'Run auto reduction script for 1 run with user specified output directory.\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765, OUTPUT=/SNS/users/whoever/data\n'
+        help_str += 'Dry-Run auto reduction script for multiple runs with user specified output directory.\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765-98777, OUTPUT=/SNS/users/whoever/data\n'
+
+        return help_str
 
 
 class VBin(procss_vcommand.VDriveCommand):

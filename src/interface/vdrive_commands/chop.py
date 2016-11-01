@@ -9,7 +9,7 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate']
+    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT']
 
     def __init__(self, controller, command_args):
         """ Initialization
@@ -36,10 +36,15 @@ class VdriveChop(VDriveCommand):
             run_start = int(self._commandArgList['RUNS'])
         except KeyError as err:
             raise RuntimeError('CHOP command requires input of argument RUNS: %s.' % str(err))
+
         if 'RUNE' in self._commandArgList:
             run_end = int(self._commandArgList['RUNE'])
         else:
             run_end = run_start
+
+        if 'HELP' in self._commandArgList:
+            # TODO/NOW/ISSUE - set up run start and run end to whatever window
+            self.blabla
 
         # check input parameters
         assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
@@ -68,6 +73,11 @@ class VdriveChop(VDriveCommand):
         else:
             log_name = None
 
+        if 'OUTPUT' in self._commandArgList:
+            output_dir = str(self._commandArgList['OUTPUT'])
+        else:
+            output_dir = None
+
         # locate the runs and add the reduction project
         archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
                                                                                    run_end)
@@ -81,7 +91,9 @@ class VdriveChop(VDriveCommand):
                 self._controller.project.chop_data_by_time(run_number=run_number,
                                                            start_time=None,
                                                            stop_time=None,
-                                                           time_interval=time_step)
+                                                           time_interval=time_step,
+                                                           reduce=output_to_gsas,
+                                                           output_dir=output_dir)
             else:
                 raise RuntimeError('Not implemented yet for chopping by log value.')
 
@@ -107,7 +119,7 @@ class VdriveChop(VDriveCommand):
         """
         help_str = 'Chop runs\n'
         help_str += 'CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1\n'
-        help_str += 'Debug:\n'
+        help_str += 'Debug (chop run 96450) by 60 seconds:\n'
         help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60'
 
         return help_str

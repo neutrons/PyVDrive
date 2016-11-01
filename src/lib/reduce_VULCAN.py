@@ -549,16 +549,19 @@ class ReductionSetup(object):
 
         return
 
-    def set_defaults(self):
+    def set_auto_reduction_mode(self):
         """
-        VULCAN standard
+        Set the reduction to default mode, which is the standard VULCAN auto-reduction setup
         :return:
         """
         # in case the output directory is not set
         # TODO/NOW/ISSUE - clean up and well-documented!
 
         # sample log outputs (MTS, Generic, and etc)
-        self._sampleLogDirectory = self.change_output_directory(self._outputDirectory)
+        try:
+            self._sampleLogDirectory = self.change_output_directory(self._outputDirectory)
+        except OSError as os_err:
+            raise OSError('Unable to create/get sample log directory due to %s.' % str(os_err))
 
         # record files
         self._mainRecordFileName = os.path.join(self._outputDirectory, "AutoRecord.txt")
@@ -1025,8 +1028,6 @@ class ReduceVulcanData(object):
         Dry run to verify the output
         :return:
         """
-        print '[DB...BAT] It is a DRY RUN!'
-
         # check
         reduction_setup = self._reductionSetup
         assert isinstance(reduction_setup, ReductionSetup), 'Input type is wrong!'
@@ -1054,8 +1055,9 @@ class ReduceVulcanData(object):
 
         print 'Dry run:\n%s' % dry_run_str
 
-        return True
+        return True, dry_run_str
 
+    @staticmethod
     def duplicate_gsas_file(source_gsas_file_name, target_directory):
         """ Duplicate gsas file to a new directory with file mode 664
         """
@@ -1192,6 +1194,9 @@ class ReduceVulcanData(object):
 
         :return:
         """
+        # TODO/NOW/ISSUE - check all 'blabla'
+
+        # TODO/NOW/ISSUE - doc and warnings
         # check whether it is necessary
         if self._reductionSetup.get_vdrive_log_dir() is None:
             return True, 'No requirement'
@@ -1211,7 +1216,7 @@ class ReduceVulcanData(object):
         # Export standard VULCAN sample environment data
         self.exportVulcanSampleEnvLog(self._dataWorkspaceName, logDir, ipts, runNumber)
 
-        return True, 'Impossible!'
+        return True, 'Exporting log file successfully.'
 
     def exportFurnaceLog(self, log_ws_name, output_directory, run_number):
         """
@@ -1609,7 +1614,7 @@ class MainUtility(object):
             reduction_setup.set_output_dir(argv[1])
 
             # set up log directory, record files and etc.
-            reduction_setup.set_defaults()
+            reduction_setup.set_auto_reduction_mode()
 
         else:
             # manual reduction mode

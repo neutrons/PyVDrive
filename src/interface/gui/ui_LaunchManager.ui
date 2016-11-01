@@ -22,6 +22,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="pushButton_choppingHelper">
+     <property name="text">
+      <string>Chopping Helper</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="pushButton_peakProcessing">
      <property name="text">
       <string>Peak Processing</string>
@@ -32,6 +39,24 @@
     <widget class="QPushButton" name="pushButton_terminal">
      <property name="text">
       <string>Terminal</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBox_keepOpen">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>50</weight>
+       <italic>false</italic>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>Keep Open</string>
      </property>
     </widget>
    </item>

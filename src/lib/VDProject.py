@@ -89,16 +89,16 @@ class VDProject(object):
 
         return
 
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval):
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce, output_dir):
         """
-        chop data by time
+        chop data by time and reduce???
         :param run_number:
         :param start_time:
         :param stop_time:
         :param time_interval:
         :return:
         """
-        # TODO/NOW - doc and check
+        # TODO/ISSUE/51 - doc and check
 
         # load file
         nxs_file_name = self._dataFileDict[run_number][0]
@@ -113,8 +113,18 @@ class VDProject(object):
                                                                        start_time, stop_time, time_interval,
                                                                        time_unit='Seconds')
 
-        # TODO/FIXME/NOW - TOF correction should be left to user to specify
-        mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
+        if reduce:
+            # reduce to GSAS and etc
+            import reduce_VULCAN
+
+            reduce_setup = reduce_VULCAN.ReductionSetup()
+            reduce_setup.set_event_file(nxs_file_name)
+            reduce_setup.set_output_dir(output_dir)
+
+        else:
+            # just split the workspace and saved in memory
+            # TODO/FIXME/NOW - TOF correction should be left to user to specify
+            mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
 
         return
 

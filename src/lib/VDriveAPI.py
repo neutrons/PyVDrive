@@ -18,6 +18,7 @@ import vdrivehelper
 import mantid_helper
 import crystal_helper
 import io_peak_file
+import reduce_VULCAN
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -1002,18 +1003,19 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
+    @staticmethod
+    def reduce_auto_script(ipts_number, run_numbers, output_dir, is_dry_run):
         """
         blabla
         :param ipts_number:
         :param run_numbers:
         :param is_dry_run:
-        :return:
+        :return: running information
         """
-        import reduce_VULCAN
+        status = True
+        message = ''
 
-        print '[DB...BAT] X Run Numbers = ', run_numbers, 'IPTS = ', ipts_number
-
+        # TODO/NOW/ISSUE/ - clean and doc
         for run_number in run_numbers:
             # balbla
             print '[DB...BAT] Trying to set up reduction for Run ', run_number
@@ -1032,19 +1034,28 @@ class VDriveAPI(object):
             reduce_setup.set_event_file(nxs_file_name)
             reduce_setup.set_output_dir(output_dir)
 
-            reduce_setup.set_defaults()
+            try:
+                reduce_setup.set_auto_reduction_mode()
+            except OSError as os_err:
+                return False, str(os_err)
+
+            reduce_setup.process_configurations()
+
             print '4'
 
             # blabla
             print '[DB...BAT] Trying to start reducer for DryRun = ', is_dry_run
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
             if is_dry_run:
-                reducer.dry_run()
+                part_status, part_message = reducer.dry_run()
             else:
-                reducer.execute()
+                part_status, part_message = reducer.execute()
 
-        return
+            # contribute ..
+            status = status and part_status
+            message += part_message + '\n'
 
+        return status, message
 
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory

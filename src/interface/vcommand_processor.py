@@ -88,7 +88,7 @@ class VdriveCommandProcessor(object):
         elif command == 'MERGE':
             status, err_msg = self._process_merge(arg_dict)
         elif command == 'AUTO':
-            print '[DB...BAT] Am I reached???'
+            # auto reduction command
             status, err_msg = self._process_auto_reduction(arg_dict)
         else:
             raise RuntimeError('Impossible situation!')
@@ -102,15 +102,17 @@ class VdriveCommandProcessor(object):
         :return:
         """
         print '[DB...BAT] Am I reached 2'
-        processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
+        try:
+            processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as com_err:
+            return False, 'Command argument error: %s.' % str(com_err)
 
         print '[DB...BAT] Am I reached 3'
         if len(arg_dict) == 0:
             status = True
-            err_msg = 'EXAMPLE: AUTO, IPTS=12345, RUN=11223344'
+            err_msg = processor.get_help()
         else:
             status, err_msg = processor.exec_cmd()
-        print '[DB...BAT] status = ', status, 'error message:', err_msg
 
         return status, err_msg
 

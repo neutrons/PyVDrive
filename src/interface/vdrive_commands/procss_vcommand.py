@@ -12,6 +12,19 @@ Base class for VDRIVE command processors
 """
 
 
+class CommandKeyError(Exception):
+    """
+    Self-defined VDRIVE command key error
+    """
+    def __init__(self, error):
+        """
+
+        """
+        super(CommandKeyError, self).__init__(error)
+
+        return
+
+
 class VDriveCommand(object):
     """
     Base class to process VDRIVE commands
@@ -58,7 +71,7 @@ class VDriveCommand(object):
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
                                 'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list))
                 print error_message
-                raise KeyError(error_message)
+                raise CommandKeyError(error_message)
         # END-FOF
 
         return

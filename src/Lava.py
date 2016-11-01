@@ -27,15 +27,26 @@ class LauncherManager(QtGui.QDialog):
         self.ui = ui_LaunchManager.Ui_Dialog_Launcher()
         self.ui.setupUi(self)
 
+        # init widgets
+        self.ui.checkBox_keepOpen.setChecked(True)
+
         # define event handlers
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_exit)
         self.connect(self.ui.pushButton_vdrivePlot, QtCore.SIGNAL('clicked()'),
                      self.do_launch_vdrive)
+        self.connect(self.ui.pushButton_choppingHelper, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_chopper)
         self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
                      self.do_launch_peak_picker)
         self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
                      self.do_launch_terminal)
+
+        # initialize main window (may not be shown though)
+        self._mainReducerWindow = VdriveMainWindow()  # the main ui class in this file is called MainWindow
+
+        self._myPeakPickerWindow = None
+        self._myLogPickerWindow = None
 
         return
 
@@ -46,19 +57,37 @@ class LauncherManager(QtGui.QDialog):
         """
         self.close()
 
+        return
+
+    def do_launch_chopper(self):
+        """
+        blabla
+        :return:
+        """
+        import interface.LogPickerWindow as LP
+
+        self._myLogPickerWindow = LP.WindowLogPicker(self._mainReducerWindow)
+
+        self._myLogPickerWindow.show()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
     def do_launch_peak_picker(self):
         """
         blabla
         :return:
         """
         import interface.PeakPickWindow as PeakPickWindow
-        reducer = VdriveMainWindow()  # the main ui class in this file is called MainWindow
 
-        peakPickerWindow = PeakPickWindow.PeakPickerWindow(reducer)
-        peakPickerWindow.set_controller(reducer.get_controller())
-        peakPickerWindow.show()
+        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow)
+        self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
+        self._myPeakPickerWindow.show()
 
-        self.close()
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
 
         return
 
@@ -67,10 +96,10 @@ class LauncherManager(QtGui.QDialog):
 
         :return:
         """
-        reducer = VdriveMainWindow()  # the main ui class in this file is called MainWindow
-        reducer.menu_workspaces_view()
+        self._mainReducerWindow.menu_workspaces_view()
 
-        self.close()
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
 
         return
 
@@ -79,14 +108,17 @@ class LauncherManager(QtGui.QDialog):
         blabla
         :return:
         """
-        reducer = VdriveMainWindow()  # the main ui class in this file is called MainWindow
-        reducer.show()
+        self._mainReducerWindow.show()
 
-        self.close()
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
 
         return
 
+# END-DEFINITION (class)
 
+
+# Main application
 def lava_app():
     if QtGui.QApplication.instance():
         _app = QtGui.QApplication.instance()
