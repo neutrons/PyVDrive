@@ -37,16 +37,34 @@
            <bool>false</bool>
           </property>
           <widget class="QWidget" name="dockWidgetContents_5">
-           <layout class="QVBoxLayout" name="verticalLayout_3">
-            <item>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
              <widget class="WorkspaceTableWidget" name="tableWidget_dataStructure">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
              </widget>
+            </item>
+            <item row="1" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QPushButton" name="pushButton_plot">
+                <property name="text">
+                 <string>Plot</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_toggle">
+                <property name="text">
+                 <string>Toggle</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
@@ -137,7 +155,6 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <zorder>groupBox</zorder>
        </widget>
       </item>
      </layout>

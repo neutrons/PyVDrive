@@ -104,7 +104,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
                      self.do_slice_data_by_time)
         self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
-                     self.pop_manual_picker)
+                     self.do_launch_log_picker_window)
 
         # sub-tab-2
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
@@ -194,7 +194,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.load_settings()
 
         # VDRIVE command
-        self._vdriveCommandProcessor = VdriveCommandProcessor(self._myWorkflow)
+        self._vdriveCommandProcessor = VdriveCommandProcessor(self, self._myWorkflow)
 
         return
 
@@ -1276,10 +1276,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def pop_manual_picker(self):
+    def do_launch_log_picker_window(self):
         """
         Pop out manual picker window
-        :return:
+        :return: handler to log picker window
         """
         # Start
         if isinstance(self._logPickerWindow, LogPicker.WindowLogPicker):
@@ -1313,7 +1313,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Show
         self._logPickerWindow.show()
 
-        return
+        return self._logPickerWindow
 
     def pop_snap_view(self):
         """ Pop out snap view dialog (window)

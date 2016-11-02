@@ -66,9 +66,10 @@ class LauncherManager(QtGui.QDialog):
         """
         import interface.LogPickerWindow as LP
 
-        self._myLogPickerWindow = LP.WindowLogPicker(self._mainReducerWindow)
+        # self._myLogPickerWindow = LP.WindowLogPicker(self._mainReducerWindow)
+        # self._myLogPickerWindow.show()
 
-        self._myLogPickerWindow.show()
+        self._mainReducerWindow.do_launch_log_picker_window()
 
         if not self.ui.checkBox_keepOpen.isChecked():
             self.close()

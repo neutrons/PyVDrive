@@ -99,6 +99,7 @@ class VDProject(object):
         :return:
         """
         # TODO/ISSUE/51 - doc and check
+        assert isinstance(run_number, int), 'blabla'
 
         # load file
         nxs_file_name = self._dataFileDict[run_number][0]
@@ -106,9 +107,8 @@ class VDProject(object):
         mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
 
         # generate event filter
-        # FIXME/TODO/NOW - A better name!
-        split_ws_name = 'TempSplitters'
-        info_ws_name = 'TempInfoWS'
+        split_ws_name = 'TimeSplitters_%07d' % run_number
+        info_ws_name = 'TimeInfoTable_%07d' % run_number
         status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
                                                                        start_time, stop_time, time_interval,
                                                                        time_unit='Seconds')
@@ -127,7 +127,7 @@ class VDProject(object):
             reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            status, message = reducer.execute()
+            status, message = reducer.chop_reduce()
 
         else:
             # just split the workspace and saved in memory

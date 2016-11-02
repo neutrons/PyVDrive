@@ -163,6 +163,8 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     :param log_value_change_direction:
     :return:
     """
+    # TODO/ISSUE/51: clean and doc and etc.
+
     # Check requirements
     assert isinstance(ws_name, str)
     src_ws = retrieve_workspace(ws_name)
@@ -199,6 +201,7 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     :param time_unit:
     :return:
     """
+    # TODO/ISSUE/51: clean and doc and etc.
     # define optional inputs
     my_arg_dict = dict()
     my_arg_dict['InputWorkspace'] = ws_name

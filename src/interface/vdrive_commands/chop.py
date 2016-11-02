@@ -11,40 +11,67 @@ class VdriveChop(VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT']
 
-    def __init__(self, controller, command_args):
-        """ Initialization
+    def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
         """
-        VDriveCommand.__init__(self, controller, command_args)
+        Initialization
+        :param controller:
+        :param command_args:
+        :param ipts_number:
+        :param run_number_list:
+        """
+        # call super
+        super(VdriveChop, self).__init__(controller, command_args)
 
+        # set up my name
         self._commandName = 'CHOP'
-
+        # check argument
         self.check_command_arguments(self.SupportedArgs)
+
+        # set default
+        if ipts_number is not None and isinstance(ipts_number, int) and ipts_number > 0:
+            self._iptsNumber = ipts_number
+        if isinstance(run_number_list, list) and len(run_number_list) > 0:
+            self._runNumberList = run_number_list[:]
         
         return
 
     def exec_cmd(self):
         """
         Execute input command (override)
-        statu
+        :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """
         # parse arguments
         self.set_ipts()
 
         # parse the scope of runs
-        try:
+        # run numbers
+        if 'RUNS' in self._commandArgList:
+            # get RUNS/RUNE from arguments
             run_start = int(self._commandArgList['RUNS'])
-        except KeyError as err:
-            raise RuntimeError('CHOP command requires input of argument RUNS: %s.' % str(err))
-
-        if 'RUNE' in self._commandArgList:
-            run_end = int(self._commandArgList['RUNE'])
+            if 'RUNE' in self._commandArgList:
+                run_end = int(self._commandArgList['RUNE'])
+            else:
+                run_end = run_start
+            self._runNumberList = range(run_start, run_end + 1)
+        elif len(self._commandArgList) > 0:
+            # from previously stored value
+            run_start = self._commandArgList[0]
+            run_end = self._commandArgList[-1]
         else:
-            run_end = run_start
+            # not properly set up
+            raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
+        # END-IF
+
+        # locate the runs and add the reduction project
+        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
+                                                                                   run_end)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.project.add_runs(run_info_list)
 
         if 'HELP' in self._commandArgList:
-            # TODO/NOW/ISSUE - set up run start and run end to whatever window
-            self.blabla
+            # pop out the window
+            return True, 'pop'
 
         # check input parameters
         assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
@@ -78,11 +105,8 @@ class VdriveChop(VDriveCommand):
         else:
             output_dir = None
 
-        # locate the runs and add the reduction project
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
-        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.project.add_runs(run_info_list)
+
+
 
         # do chopping
         sum_msg = ''

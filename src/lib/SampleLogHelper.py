@@ -109,7 +109,6 @@ class SampleLogManager(object):
         self._runStartTimeDict = dict()
 
         # pure log value setup (independent of NeXus file or workspace)
-        self._currentChopTime = None  # option: 'time', 'log', 'manual'
         self._chopSetupDict = dict()
 
         return
@@ -664,12 +663,32 @@ class SampleLogManager(object):
 
         return
 
+    def set_log_value_slicer(self):
+        """
+        set up the value and etc...
+        :return:
+        """
+        # TODO/ISSUE/51 - implement it ASAP
+        self._chopSetupDict['log'] = {'name': log_name,
+                                      'start': start_time,
+                                      'stop': stop_time,
+                                      'step': log_value_step,
+                                      'min': min_log_value,
+                                      'max': max_log_value,
+                                      'direction': value_change_direction}
+
+        chop_mananger.generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
+                                                    min_log_value, max_log_value, log_value_interval,
+                                                    value_change_direction, tag)
+
+        return
+
     def set_time_slicer(self, start_time, time_step, stop_time):
         """
 
         :return:
         """
-        self._currentChopTime = 'time'
+        self.generate_events_filter_by_time(blabla)
         self._chopSetupDict['time'] = {'start': start_time, 'step': time_step, 'stop': stop_time}
 
         return

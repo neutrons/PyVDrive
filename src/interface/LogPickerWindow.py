@@ -888,9 +888,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         Set up the log value or time chopping
         :return:
         """
+        # TODO/ISSUE/55/ - clean!
+
         # get the chop helper/manager
-        controller = self.get_controller()
-        chop_mananger = controller.chop_manager
+        chop_mananger = self.get_controller().chop_manager
+        assert chop_mananger is not None
 
         # read the values
         start_time = GuiUtility.parse_float(self.ui.lineEdit_slicerStartTime)
@@ -902,7 +904,10 @@ class WindowLogPicker(QtGui.QMainWindow):
             chop_mananger.set_time_slicer(start_time, step, stop_time)
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
-            raise NotImplementedError('Implement ASAP')
+            # TODO/ISSUE/55 - make this work
+            chop_mananger.set_log_slicer(log_name, min_time, max_time, relative_time,
+                                      min_log_value, max_log_value, log_value_interval,
+                                      value_change_direction, tag)
 
         else:
             raise RuntimeError('Neither time nor log value chopping is selected.')
@@ -1183,6 +1188,23 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.load_plot_mts_log(reset_canvas=True)
 
         self._currLogType = 'mts'
+
+        return
+
+    def load_run(self, run_number):
+        """
+        blabla
+        :param run_number:
+        :return:
+        """
+        # check
+        assert isinstance(run_number, int), 'blabla'
+
+        # set
+        self.ui.lineEdit_runNumber.setText(str(run_number))
+
+        # and load
+        self.do_load_run()
 
         return
 

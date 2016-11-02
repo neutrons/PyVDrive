@@ -426,6 +426,22 @@ class ReductionSetup(object):
 
         return self._runNumber
 
+    def get_splitters(self, throw_not_set):
+        """
+        get splitters including SplittersWorkspace and Split-information workspace
+        :param throw_not_set: if it is true and the splitters are not set. raise RuntimeError
+        :return: 2-tuple
+        """
+        # check validity
+        if throw_not_set:
+            if self._splitterWsName is None or self._splitterInfoName is None:
+                raise RuntimeError('Splitters (workspaces) have not been set.')
+            if not (AnalysisDataService.doesExist(self._splitterWsName) and
+                        AnalysisDataService.doesExist(self._splitterInfoName)):
+                raise RuntimeError('Splitters (workspaces) do not exist.')
+
+        return self._splitterWsName, self._splitterInfoName
+
     def get_vdrive_log_dir(self):
         """
         Get the directory for vdrive log files
@@ -1070,6 +1086,77 @@ class ReduceVulcanData(object):
 
         return is_alignment_run
 
+    def chop_reduce(self):
+        """
+        Chop and reduce
+        :return:
+        """
+        # check whether it is good to go
+        assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
+        # configure the ReductionSetup
+        self._reductionSetup.process_configurations()
+
+        # reduce and write to GSAS file
+        # gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+        # if os.path.isfile(gsas_file_name) is True:
+        #     message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
+        #                '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
+
+        message = ''
+
+        split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
+
+        mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
+                                        PreserveEvents=True,
+                                        CalibrationFile=self._reductionSetup.get_focus_file(),
+                                        CharacterizationRunsFile=CharacterFileName,
+                                        Binning="-0.001",
+                                        SaveAS="",
+                                        OutputDirectory=self._reductionSetup.get_gsas_dir(),
+                                        NormalizeByCurrent=False,
+                                        FilterBadPulses=0,
+                                        CompressTOFTolerance=0.,
+                                        FrequencyLogNames="skf1.speed",
+                                        WaveLengthLogNames="skf12.lambda",
+                                        SplittersWorkspace=split_ws_name,
+                                        SplitInformationWorkspace=split_info_table
+                                        )
+
+        # create GSAS file for split workspaces
+        info_table = AnalysisDataService.retrieve(split_info_table)
+        num_split_ws = info_table.rowCount()
+        for i_ws in range(num_split_ws):
+            # get the split workspace's name
+            ws_index = int(info_table.cell(i_ws, 0))
+            reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
+            assert AnalysisDataService.doesExist(reduced_ws_name), 'blalba'
+
+            # convert unit and save for VULCAN-specific GSAS
+            tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
+            mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
+                                      OutputWorkspace=tof_ws_name,
+                                      Target="TOF",
+                                      EMode="Elastic",
+                                      AlignBins=False)
+
+            gsas_file_name = os.path.join(self._reductionSetup.get_reduced_data_dir(),
+                                          '%d_%d.gsa' % (self._reductionSetup.get_run_number(),
+                                                         ws_index))
+
+            # overwrite the original file
+            vdrive_bin_ws_name = reduced_ws_name # 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
+            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+                                       BinFilename=refLogTofFilename,
+                                       OutputWorkspace=vdrive_bin_ws_name,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFilename="Vulcan.prm")
+
+            # TODO/ISSUE/51: - message += output GSAS file name
+        # END-FOR
+
+        return True, message
+
     def dry_run(self):
         """
         Dry run to verify the output
@@ -1136,6 +1223,47 @@ class ReduceVulcanData(object):
             os.chmod(target_file_name, 0664)
 
         return
+
+    def execute(self):
+        """
+        Execute the command for reduce
+        Raise RuntimeError
+        :return: (boolean, string) as success/fail and error message
+        """
+        # check whether it is good to go
+        assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
+        # configure the ReductionSetup
+        self._reductionSetup.process_configurations()
+
+        # reduce and write to GSAS file
+        is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
+        if not is_reduce_good:
+            return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
+
+        # load the sample run
+        is_load_good, msg_load_file = self.load_data_file()
+        if not is_load_good:
+            return False, 'Unable to load source data file %s.' % self._reductionSetup.get_event_file()
+
+        # check whether it is an alignment run
+        self._reductionSetup.is_alignment_run = self.check_alignment_run()
+
+        # export the sample log record file
+        is_record_good, msg_record = self.export_experiment_records()
+
+        # write experiment files
+        is_log_good, msg_log = self.export_log_files()
+
+        is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
+
+        final_message = ''
+        final_message += msg_gsas + '\n'
+        final_message += msg_load_file + '\n'
+        final_message += msg_record + '\n'
+        final_message += msg_log + '\n'
+        final_message += msg_log + '\n'
+
+        return is_record_good and is_log_good and is_auto_good, final_message
 
     def export_experiment_records(self):
         """ Write the summarized sample logs of this run number to the record files
@@ -1306,7 +1434,7 @@ class ReduceVulcanData(object):
         # organized by dictionary
         if run_number >= 69214:
             for ilog in xrange(1, 17):
-                Generic_DAQ_List.append(("tc.user%d" % (ilog), "tc.user%d" % (ilog)))
+                Generic_DAQ_List.append(("tc.user%d" % ilog, "tc.user%d" % ilog))
 
         # Format to lists for input
         sample_log_name_list = list()
@@ -1321,7 +1449,7 @@ class ReduceVulcanData(object):
 
         header_str = ""
         for title in header_item_list:
-            header_str += "%s\t" % (title)
+            header_str += "%s\t" % title
 
         output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
         self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
@@ -1451,47 +1579,6 @@ class ReduceVulcanData(object):
 
         return log_file_name
 
-    def execute(self):
-        """
-        Execute the command for reduce
-        Raise RuntimeError
-        :return: (boolean, string) as success/fail and error message
-        """
-        # check whether it is good to go
-        assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
-        # configure the ReductionSetup
-        self._reductionSetup.process_configurations()
-
-        # reduce and write to GSAS file
-        is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
-        if not is_reduce_good:
-            return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
-
-        # load the sample run
-        is_load_good, msg_load_file = self.load_data_file()
-        if not is_load_good:
-            return False, 'Unable to load source data file %s.' % self._reductionSetup.get_event_file()
-
-        # check whether it is an alignment run
-        self._reductionSetup.is_alignment_run = self.check_alignment_run()
-
-        # export the sample log record file
-        is_record_good, msg_record = self.export_experiment_records()
-
-        # write experiment files
-        is_log_good, msg_log = self.export_log_files()
-
-        is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
-
-        final_message = ''
-        final_message += msg_gsas + '\n'
-        final_message += msg_load_file + '\n'
-        final_message += msg_record + '\n'
-        final_message += msg_log + '\n'
-        final_message += msg_log + '\n'
-
-        return is_record_good and is_log_good and is_auto_good, final_message
-
     def generate_1d_plot(self):
         """
         Export 1-D plot of the reduced powder pattern
@@ -1538,7 +1625,7 @@ class ReduceVulcanData(object):
 
     def reduce_powder_diffraction_data(self):
         """ Save for Nexus file
-
+        blabla
         """
         # required parameters:  ipts, runnumber, outputdir
 
@@ -1550,9 +1637,16 @@ class ReduceVulcanData(object):
         message = ''
         try:
             gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
-            if os.path.isfile(gsas_file_name) is True:
-                message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
-                           '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
+            if os.path.isfile(gsas_file_name):
+                if os.access(gsas_file_name, os.W_OK):
+                    # file is writable
+                    message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
+                               '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
+                else:
+                    # file cannot be overwritten, then abort!
+                    message += 'GSAS file (%s) exists and cannot be overwritten.\n' % gsas_file_name
+                    return False, message
+            # END-IF
 
             mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                             PreserveEvents=True,
@@ -1603,7 +1697,7 @@ class ReduceVulcanData(object):
         :return:
         """
         if not self._reductionSetup.is_full_reduction:
-            return
+            return True, 'No operation for auto reduction special.'
 
         # 2nd copy for Ke if it IS NOT an alignment run
         if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir():

@@ -2,6 +2,7 @@
 This module contains a class to handle standard VDRIVE commands
 """
 # from PyQt4 import QtCore
+from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal
 
 import vdrive_commands.chop
@@ -17,15 +18,17 @@ class VdriveCommandProcessor(object):
     # signal to reduce a run
     reduceSignal = pyqtSignal(list)
 
-    def __init__(self, controller):
+    def __init__(self, main_window, controller):
         """
         Initialization
         """
         # check input requirement
+        assert isinstance(main_window, QtGui.QMainWindow), 'Main window must be a QtGui.QMainWindow'
         assert controller is not None, 'controller cannot be None'
         if controller.__class__.__name__ != 'VDriveAPI':
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))
 
+        self._mainWindow = main_window
         self._myController = controller
 
         # set up the commands
@@ -121,11 +124,25 @@ class VdriveCommandProcessor(object):
         VDRIVE CHOP
         Example: CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
         :param arg_dict:
-        :return:
+        :return: 2-tuple
         """
+        # create a new VdriveChop instance
         processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
 
-        return self._process_command(processor, arg_dict)
+        # execute
+        status, message = self._process_command(processor, arg_dict)
+        print '[DB...BAT] ', status, message
+
+        # get information from VdriveChop
+        self._chopIPTSNumber, self._chopRunNumberList = processor.get_ipts_runs()
+
+        # process for special case: log-pick-helper
+        if message == 'pop':
+            log_window = self._mainWindow.do_launch_log_picker_window()
+            log_window.load_run(self._chopRunNumberList[0])
+        # END-IF
+
+        return status, message
 
     def _process_vbin(self, arg_dict):
         """

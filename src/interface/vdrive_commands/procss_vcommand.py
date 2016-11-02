@@ -52,7 +52,8 @@ class VDriveCommand(object):
         self._commandArgList = command_args
 
         # other command variables
-        self._iptsNumber = None
+        self._iptsNumber = None   # IPTS
+        self._runNumberList = list()   # RUN numbers
 
         return
 
@@ -83,15 +84,26 @@ class VDriveCommand(object):
         """
         return 'Invalid to call base class'
 
+    def get_ipts_runs(self):
+        """
+        blabla
+        :return:
+        """
+        return self._iptsNumber, self._runNumberList[:]
+
     def set_ipts(self):
         """
         Set IPTS
         """
-        # check setup
-        try:
+        # get IPTS from setup
+        if 'IPTS' in self._commandArgList:
+            # ITPS from command as highest priority
             self._iptsNumber = int(self._commandArgList['IPTS'])
-        except KeyError as key_err:
-            raise RuntimeError('IPTS is not given in the command arguments.')
+        elif self._iptsNumber is not None:
+            # IPTS is previously stored and to be used
+            pass
+        else:
+            raise RuntimeError('IPTS is not given in the command arguments. Or default is not set.')
 
         # check validity
         assert 0 < self._iptsNumber, 'IPTS number %d is an invalid integer.' % self._iptsNumber
