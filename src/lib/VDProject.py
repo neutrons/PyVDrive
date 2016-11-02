@@ -121,9 +121,10 @@ class VDProject(object):
             reduce_setup.set_event_file(nxs_file_name)
             reduce_setup.set_output_dir(output_dir)
             reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-            reduce_setup.process_configurations()
+            reduce_setup.is_full_reduction = False
 
-            # TODO/ISSUE/51: it is required to add splitter WS and info WS to reduce_setup
+            # add splitter workspace and splitter information workspace
+            reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
             status, message = reducer.execute()

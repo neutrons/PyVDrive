@@ -247,6 +247,10 @@ class ReductionSetup(object):
         self._isAlignmentRun = None
         self._reducedWorkspaceName = None
 
+        # for data chopping
+        self._splitterWsName = None
+        self._splitterInfoName = None
+
         return
 
     @staticmethod
@@ -446,7 +450,7 @@ class ReductionSetup(object):
     @property
     def is_alignment_run(self):
         """
-
+        Check whether the run set to this instance is an alignment run
         :return:
         """
         assert self._isAlignmentRun is not None, 'Not set up for alignment or not yet.'
@@ -456,7 +460,7 @@ class ReductionSetup(object):
     @is_alignment_run.setter
     def is_alignment_run(self, value):
         """
-
+        set to the instance whether it is an alignment run
         :param value:
         :return:
         """
@@ -466,15 +470,37 @@ class ReductionSetup(object):
 
         return
 
+    @property
+    def is_full_reduction(self):
+        """
+        check the state whether the current reduction is a standard (auto) reduction in archive
+        :return:
+        """
+        return self._isFullReduction
+
+    @is_full_reduction.setter
+    def is_full_reduction(self, value):
+        """
+        set the state whether current reduction is for a full reduction
+        :param value:
+        :return:
+        """
+        assert isinstance(value, bool), 'Allowed value for is_full_reduction is bool only.'
+
+        self._isFullReduction = value
+
+        return
+
     def process_configurations(self):
         """ Obtain information from full path to input NeXus file including
         1. base NeXus file name
         2. directory to NeXus file
-        3. IPTS number
-
+        3. IPTS numbe and run number
+        4. GSAS file name wit the knowledge of run number
+        5. PNG file name for reduced pattern
+        It must be called!
         :return:
         """
-        # TODO/NOW/ -- clean up!
         # get event file name (base name) and directory for NeXus file
         self._nexusDirectory, self._eventFileName = os.path.split(self._eventFileFullPath)
 
@@ -537,6 +563,21 @@ class ReductionSetup(object):
 
         return
 
+    def set_splitters(self, splitter_ws_name, info_ws_name):
+        """
+        set workspaces' names related to chopping data
+        :param splitter_ws_name:
+        :param info_ws_name:
+        :return:
+        """
+        assert isinstance(splitter_ws_name, str), 'blabla'
+        assert isinstance(info_ws_name, str), 'blabla'
+
+        self._splitterWsName = splitter_ws_name
+        self._splitterInfoName = info_ws_name
+
+        return
+
     def set_vulcan_bin_file(self, file_name):
         """
         set the VULCAN binning (compatible with IDL) file name
@@ -551,12 +592,16 @@ class ReductionSetup(object):
 
     def set_auto_reduction_mode(self):
         """
-        Set the reduction to default mode, which is the standard VULCAN auto-reduction setup
+        Set the reduction to default mode, which is the standard VULCAN auto-reduction setup,
+        in the case that only event file name and output directory is given.
+        In this method, the following directories will be set:
+        1. sample log directory;
+        2. main record file name;
+        3. 2nd record file name;
+        4. GSAS directory;
+        5. 2nd GSAS directory;
         :return:
         """
-        # in case the output directory is not set
-        # TODO/NOW/ISSUE - clean up and well-documented!
-
         # sample log outputs (MTS, Generic, and etc)
         try:
             self._sampleLogDirectory = self.change_output_directory(self._outputDirectory)
@@ -568,10 +613,10 @@ class ReductionSetup(object):
         self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
                                                "AutoRecord.txt")
         # output GSAS directory
-        self._mainGSASDir = self.change_output_directory(self._outputDirectory,
-                                                              "autoreduce/binned")
-        self._2ndGSASDir = self.change_output_directory(self._outputDirectory,
-                                                             "binned_data")
+        self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binned')
+        self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
+
+        self.is_full_reduction = True
 
         return
 
@@ -670,10 +715,11 @@ class ReductionSetup(object):
         """
         Set record file
         :param file_name:
-        :param main_record:
+        :param main_record: flag to indicate the file name is for main record file. Otherwise, it is for 2nd record
         :return:
         """
-        assert isinstance(file_name, str), 'blabla'
+        assert isinstance(file_name, str), 'Record file name %s must be a string but not %s.' \
+                                           '' % (str(file_name), type(file_name))
 
         if main_record:
             self._mainRecordFileName = file_name
@@ -684,10 +730,11 @@ class ReductionSetup(object):
 
     def set_reduced_workspace(self, ws_name):
         """
-
+        Set the name for the target reduced workspace
         :param ws_name:
         :return:
         """
+        assert isinstance(ws_name, str), 'Workspace name must be a string.'
         self._reducedWorkspaceName = ws_name
 
         return
@@ -749,7 +796,7 @@ class PatchRecord:
         """ Export patch as a list of strings
         """
         cvdict = self._readCvInfoFile()
-        rundict = self._readRunInfoFile()
+        rundict = self._read_run_info_file()
 
         patchdict = {}
         for title in cvdict.keys():
@@ -794,7 +841,7 @@ class PatchRecord:
         # # Substitute
         # ipts = self._getIPTS()
         # cvdict = self._readCvInfoFile()
-        # rundict = self._readRunInfoFile()
+        # rundict = self._read_run_info_file()
 
         # valuedict["IPTS"] = "%s" % (str(ipts))
         # for title in cvdict.keys():
@@ -948,7 +995,7 @@ class PatchRecord:
 
         return cvinfodict
 
-    def _readRunInfoFile(self):
+    def _read_run_info_file(self):
         """ Read Run info file
         """
         runinfodict = {}
@@ -1031,6 +1078,9 @@ class ReduceVulcanData(object):
         # check
         reduction_setup = self._reductionSetup
         assert isinstance(reduction_setup, ReductionSetup), 'Input type is wrong!'
+
+        # configure the ReductionSetup
+        self._reductionSetup.process_configurations()
 
         dry_run_str = ''
 
@@ -1191,34 +1241,37 @@ class ReduceVulcanData(object):
 
     def export_log_files(self):
         """
-
-        :return:
+        Export sample logs to multiple CSV files.  The log files include
+        1. Furnace log;
+        2. Generic DAQ log;
+        3. Load frame/MTS log;
+        4. VULCAN sample environment log
+        :return: 2-tuple. (boolean: status, string: message)
         """
-        # TODO/NOW/ISSUE - check all 'blabla'
-
-        # TODO/NOW/ISSUE - doc and warnings
         # check whether it is necessary
         if self._reductionSetup.get_vdrive_log_dir() is None:
             return True, 'No requirement'
 
-        logDir = self._reductionSetup.get_vdrive_log_dir()
-        runNumber = self._reductionSetup.get_run_number()
+        # get essential parameters
+        log_dir = self._reductionSetup.get_vdrive_log_dir()
+        run_number = self._reductionSetup.get_run_number()
         ipts = self._reductionSetup.get_ipts_number()
 
-        self.exportFurnaceLog(self._dataWorkspaceName, logDir, runNumber)
+        # export Furnace log
+        self.export_furnace_log(self._dataWorkspaceName, log_dir, run_number)
 
         # Export Generic DAQ log
-        self.exportGenericDAQLog(self._dataWorkspaceName, logDir, ipts, runNumber)
+        self.export_generic_daq_log(log_dir, ipts, run_number)
 
         # Export load frame /MTS log
-        self.exportMTSLog(self._dataWorkspaceName, logDir, ipts, runNumber)
+        self.export_mts_log()
 
         # Export standard VULCAN sample environment data
-        self.exportVulcanSampleEnvLog(self._dataWorkspaceName, logDir, ipts, runNumber)
+        self.export_sample_environment_log(log_dir, ipts, run_number)
 
         return True, 'Exporting log file successfully.'
 
-    def exportFurnaceLog(self, log_ws_name, output_directory, run_number):
+    def export_furnace_log(self, log_ws_name, output_directory, run_number):
         """
         Export the furnace log.
         1. File name: furnace
@@ -1242,10 +1295,9 @@ class ReduceVulcanData(object):
 
         return
 
-    def exportGenericDAQLog(self, log_ws_name, output_directory, ipts, run_number):
+    def export_generic_daq_log(self, output_directory, ipts, run_number):
         """
         Export the generic DAQ log
-        :param log_ws_name:
         :param output_directory:
         :param ipts:
         :param run_number:
@@ -1257,40 +1309,36 @@ class ReduceVulcanData(object):
                 Generic_DAQ_List.append(("tc.user%d" % (ilog), "tc.user%d" % (ilog)))
 
         # Format to lists for input
-        samplelognames = []
-        header = []
+        sample_log_name_list = list()
+        header_item_list = list()
         for i in xrange(len(Generic_DAQ_List)):
             title = Generic_DAQ_List[i][0]
             log_name = Generic_DAQ_List[i][1]
 
-            header.append(title)
+            header_item_list.append(title)
             if len(log_name) > 0:
-                samplelognames.append(log_name)
+                sample_log_name_list.append(log_name)
 
-        headstr = ""
-        for title in header:
-            headstr += "%s\t" % (title)
+        header_str = ""
+        for title in header_item_list:
+            header_str += "%s\t" % (title)
 
         output_file_name = os.path.join(output_directory, 'IPTS-%d-GenericDAQ-%d.txt' % (ipts, run_number))
-        sample_log_names = ["furnace.temp1", "furnace.temp2", "furnace.power"]
-        self.generate_csv_log(output_file_name, samplelognames, headstr)
+        self.generate_csv_log(output_file_name, sample_log_name_list, header_str)
 
         return
 
-    def exportVulcanSampleEnvLog(self, log_ws_name, output_dir, ipts, run_number):
+    def export_sample_environment_log(self, output_dir, ipts, run_number):
         """ Export Vulcan sample environment log
         Requirements
         Guarantees: export the file name as 'Vulcan-IPTS-XXXX-SEnv-RRRR.txt'
         """
         # Check inputs
-        assert isinstance(ipts, int)
-        assert isinstance(run_number, int)
+        assert isinstance(ipts, int), 'IPTS must be integer.'
+        assert isinstance(run_number, int), 'Run number must be integer'
 
         # Create list of the sample logs to be exported.
         # each element is a 2-tuple of string as (log name in output log file, log name in workspace)
-
-
-        # Generate title/header list and log name list from
         sample_log_name_list = []
         header_title_list = []
         for i in xrange(len(VulcanSampleLogList)):
@@ -1316,14 +1364,10 @@ class ReduceVulcanData(object):
 
         return
 
-    def exportMTSLog(self, logwsname, outputDir, ipts, run_number):
-        """ Export MTS log
-        List of MTS Log:
-            X       Y       Z       O       HROT     VROT
-            MTSDisplacement MTSForce        MTSStrain       MTSStress      MTSAngle
-            MTSTorque       MTSLaser        MTSlaserstrain  MTSDisplaceoffset       MTSAngleceoffset
-            MTST1   MTST2   MTST3   MTST4   FurnaceT
-            FurnaceOT       FurnacePower    VacT    VacOT
+    def export_mts_log(self):
+        """
+        Export MTS log
+        :return:
         """
         # Format to lists for input
         sample_log_names_list = list()
@@ -1413,6 +1457,11 @@ class ReduceVulcanData(object):
         Raise RuntimeError
         :return: (boolean, string) as success/fail and error message
         """
+        # check whether it is good to go
+        assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
+        # configure the ReductionSetup
+        self._reductionSetup.process_configurations()
+
         # reduce and write to GSAS file
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
         if not is_reduce_good:
@@ -1550,22 +1599,21 @@ class ReduceVulcanData(object):
 
     def special_operation_auto_reduction_service(self):
         """
-
+        some special operations used in auto reduction service only
         :return:
         """
-        # TODO/ISSUE/51: need another flag to control duplication. Example: manual reduction without 2nd gsas
+        if not self._reductionSetup.is_full_reduction:
+            return
+
         # 2nd copy for Ke if it IS NOT an alignment run
-        if not self._reductionSetup.is_alignment_run:
+        if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir():
             self.duplicate_gsas_file(self._reductionSetup.get_gsas_file(main_gsas=True),
                                      self._reductionSetup.get_gsas_2nd_dir())
 
-        message = ''
-
         # save the plot
         self.generate_1d_plot()
-        # END-IF
 
-        return True, message
+        return True, ''
 
 
 class MainUtility(object):
@@ -1653,7 +1701,7 @@ class MainUtility(object):
                     reduction_setup.set_focus_file(arg)
                 elif opt in ('-c', '--charact') and arg != '0':
                     # characterization file
-                    reduction_setup.set_character_file(arg)
+                    reduction_setup.set_charact_file(arg)
                 elif opt in ('-b', '--bin') and arg != '0':
                     # VULCAN binning file
                     reduction_setup.set_vulcan_bin_file(arg)
@@ -1766,7 +1814,7 @@ def main(argv):
     # dry run
     if reduction_setup.is_dry_run():
         # dry run
-        reducer.dry_run(reduction_setup)
+        reducer.dry_run()
 
     # execute
     status, error_message = reduction_setup.check_validity()

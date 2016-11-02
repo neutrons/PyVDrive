@@ -1006,54 +1006,53 @@ class VDriveAPI(object):
     @staticmethod
     def reduce_auto_script(ipts_number, run_numbers, output_dir, is_dry_run):
         """
-        blabla
+        Reduce the runs in the standard auto reduction workflow
         :param ipts_number:
         :param run_numbers:
         :param is_dry_run:
         :return: running information
         """
+        # check inputs' validity
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
+        assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
+        assert isinstance(output_dir, str), 'Output directory must be a string.'
+        assert isinstance(is_dry_run, bool), 'Is-Dry-Run must be a boolean'
+
         status = True
         message = ''
 
-        # TODO/NOW/ISSUE/ - clean and doc
         for run_number in run_numbers:
-            # balbla
-            print '[DB...BAT] Trying to set up reduction for Run ', run_number
+            # create a new ReductionSetup instance and configure
             reduce_setup = reduce_VULCAN.ReductionSetup()
-            print '1'
+            # set run number and IPTS
             reduce_setup.set_ipts_number(ipts_number)
-            print '2'
             reduce_setup.set_run_number(run_number)
-            print '3'
-
+            # set and check input file
             nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_number, run_number, run_number)
             assert os.path.exists(nxs_file_name), 'NeXus file %s does not exist.' % nxs_file_name
+            reduce_setup.set_event_file(nxs_file_name)
+            # set and check output directory
             if output_dir is None:
                 output_dir = '/SNS/VULCAN/IPTS-%d/shared/autoreduce/' % ipts_number
-
-            reduce_setup.set_event_file(nxs_file_name)
             reduce_setup.set_output_dir(output_dir)
-
+            # set the auto reduction configuration mode
             try:
                 reduce_setup.set_auto_reduction_mode()
             except OSError as os_err:
                 return False, str(os_err)
 
-            reduce_setup.process_configurations()
-
-            print '4'
-
-            # blabla
-            print '[DB...BAT] Trying to start reducer for DryRun = ', is_dry_run
+            # generate instance of ReduceVulcanData
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+            # and reduce!
             if is_dry_run:
                 part_status, part_message = reducer.dry_run()
             else:
                 part_status, part_message = reducer.execute()
 
-            # contribute ..
+            # contribute the overall message
             status = status and part_status
             message += part_message + '\n'
+        # END-FOR (run number)
 
         return status, message
 
@@ -1306,7 +1305,7 @@ class VDriveAPI(object):
             segment_list.append(tmp_seg)
         # END-IF
 
-        segment_list.sort(ascending=True)
+        segment_list.sort()
 
         # Check validity
         num_seg = len(segment_list)
