@@ -218,14 +218,16 @@ class SampleLogManager(object):
         :return:
         """
         # check
-        # TODO/NOW - Do it!
+        assert isinstance(raw_file_name, str), 'Raw file name %s must be a string but not %s.' % (str(raw_file_name),
+                                                                                                  type(raw_file_name))
+        assert isinstance(slicer_type, str), 'Slicer type %s must be a string but not %s.' % (str(slicer_type),
+                                                                                              type(slicer_type))
+        assert isinstance(output_directory, str), 'Output directory must be string.' % output_directory
 
         # load data
         # out_ws_name = os.path.basename(raw_file_name).split('.')[0]
         base = os.path.basename(raw_file_name)
-        print '[DB]... raw file name: ', raw_file_name, 'base name:', base,
         out_ws_name = os.path.splitext(base)[0]
-        print out_ws_name
 
         mantid_helper.load_nexus(data_file_name=raw_file_name,
                                  output_ws_name=out_ws_name,
@@ -300,7 +302,6 @@ class SampleLogManager(object):
                                       value_change_direction, tag):
         """
         Generate event filter by log value
-        :param ws_name:
         :param log_name:
         :param min_time:
         :param max_time:
@@ -308,8 +309,9 @@ class SampleLogManager(object):
         :param min_log_value:
         :param max_log_value:
         :param log_value_interval:
+        :param value_change_direction:
         :param tag:
-        :return:
+        :return: 2-tuple: (1) True, (tag, splitter workspace, information table) (2) False, error message
         """
         if relative_time is False:
             raise RuntimeError('It has not been implemented to use absolute start/stop time.')
@@ -345,7 +347,7 @@ class SampleLogManager(object):
             tag = log_name
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
 
-        return
+        return True, (tag, splitter_ws_name, info_ws_name)
 
     def generate_events_filter_by_time(self,min_time, max_time, time_interval, tag,  ws_name=None):
         """
@@ -663,23 +665,43 @@ class SampleLogManager(object):
 
         return
 
-    def set_log_value_slicer(self):
+    def set_log_value_slicer(self, log_name, log_value_step, start_time=None, stop_time=None,
+                             min_log_value=None, max_log_value=None, direction='both'):
         """
-        set up the value and etc...
+        set up a slicer by log value
+        :param log_name:
+        :param start_time:
+        :param stop_time:
+        :param min_log_value:
+        :param max_log_value:
+        :param log_value_step:
+        :param direction:
         :return:
         """
-        # TODO/ISSUE/51 - implement it ASAP
-        self._chopSetupDict['log'] = {'name': log_name,
-                                      'start': start_time,
-                                      'stop': stop_time,
-                                      'step': log_value_step,
-                                      'min': min_log_value,
-                                      'max': max_log_value,
-                                      'direction': value_change_direction}
+        # check validity of inputs
+        assert isinstance(log_name, str), 'Log name must be a string.'
+        assert isinstance(log_value_step, float), 'Log value step must be float but not %s.' % type(log_value_step)
+        assert isinstance(start_time, float) or start_time is None, 'Start time must be None or float.'
+        assert isinstance(stop_time, float) or stop_time is None, 'Stop time must be None or float'
+        assert isinstance(min_log_value, float) or min_log_value is None, 'Min log value must be None or float'
+        assert isinstance(max_log_value, float) or max_log_value is None, 'Max log value must be None or float'
+        assert isinstance(direction, str), 'Direction must be a string but not %s.' % type(direction)
 
-        chop_mananger.generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
-                                                    min_log_value, max_log_value, log_value_interval,
-                                                    value_change_direction, tag)
+        # add the values to the dictionary for later reference.
+        self._chopSetupDict[log_name] = {'start': start_time,
+                                         'stop': stop_time,
+                                         'step': log_value_step,
+                                         'min': min_log_value,
+                                         'max': max_log_value,
+                                         'direction': direction}
+
+        # generate filter
+        tag = 'Slicer_%06d_%s' % (self._currRunNumber, log_name)
+
+        self.generate_events_filter_by_log(self, log_name, start_time, stop_time, relative_time=True,
+                                           min_log_value=min_log_value, max_log_value=max_log_value,
+                                           log_value_interval=log_value_step, value_change_direction=direction,
+                                           tag=tag)
 
         return
 

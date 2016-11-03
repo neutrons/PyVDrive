@@ -29,11 +29,9 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 
     def exec_cmd(self):
         """
-        blabla
+        execute command AUTO
         :return:
         """
-        # TODO/ISSUE/51 - incorporate new argument RUNS/RUNE/RUN=(A,B,C-D)
-        print '[DB...Command Arg List]: ', self._commandArgList
         try:
             ipts = int(self._commandArgList['IPTS'])
         except KeyError:
@@ -45,6 +43,10 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         try:
             run_numbers_str = self._commandArgList['RUNS']
             run_number_list = self.split_run_numbers(run_numbers_str)
+            if len(run_number_list) == 1 and 'RUNE' in self._commandArgList:
+                # allow RUNE if RUNS is just 1 value
+                run_end = int(self._commandArgList['RUNE'])
+                run_number_list = range(run_number_list[0], run_end)
         except KeyError:
             return False, 'RUNS number must be given.'
         except ValueError:
@@ -109,16 +111,15 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         override base class
         :return:
         """
-        # TODO/ISSUE/51: better doc about the meaning of arguments!
         help_str = 'Auto reduction\n'
         help_str += 'Run auto reduction script for 1 run on analysis cluster:\n'
-        help_str += '> AUTO, IPTS=1234, RUNS=98765\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765\n\n'
         help_str += 'Run auto reduction script for multiple runs on analysis cluster:\n'
-        help_str += '> AUTO, IPTS=1234, RUNS=98765-99999\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765-99999\n\n'
         help_str += 'Run auto reduction script for 1 run with user specified output directory.\n'
         help_str += '> AUTO, IPTS=1234, RUNS=98765, OUTPUT=/SNS/users/whoever/data\n'
         help_str += 'Dry-Run auto reduction script for multiple runs with user specified output directory.\n'
-        help_str += '> AUTO, IPTS=1234, RUNS=98765-98777, OUTPUT=/SNS/users/whoever/data\n'
+        help_str += '> AUTO, IPTS=1234, RUNS=98765-98777, OUTPUT=/SNS/users/whoever/data, DRYRUN=1\n'
 
         return help_str
 

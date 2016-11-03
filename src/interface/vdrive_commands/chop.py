@@ -105,40 +105,31 @@ class VdriveChop(VDriveCommand):
         else:
             output_dir = None
 
-
-
-
         # do chopping
         sum_msg = ''
+        final_success = True
         for run_number in range(run_start, run_end+1):
             # chop
             if time_step is not None:
-                message = self._controller.project.chop_data_by_time(run_number=run_number,
-                                                                     start_time=None,
-                                                                     stop_time=None,
-                                                                     time_interval=time_step,
-                                                                     reduce=output_to_gsas,
-                                                                     output_dir=output_dir)
+                status, message = self._controller.project.chop_data_by_time(run_number=run_number,
+                                                                             start_time=None,
+                                                                             stop_time=None,
+                                                                             time_interval=time_step,
+                                                                             reduce=output_to_gsas,
+                                                                             output_dir=output_dir)
+                final_success = final_success and status
                 sum_msg += 'Run %d: %s\n' % (run_number, message)
             else:
                 raise RuntimeError('Not implemented yet for chopping by log value.')
 
-            # export
-            if output_to_gsas:
-                # FIXME/TODO/NOW - Implement how to reduced chopped data
-                pass
-                # reduce_id = self._controller.reduce_chopped_run(chop_id)
-                # output_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/%d/' % (self._iptsNumber,
-                #                                                              run_number)
-                # self._controller.export_gsas_files(registry=reduce_id, output_dir=output_dir)
-
         # END-FOR (run_number)
 
+        # TODO/THINK/ISSUE/51 - shall a signal be emit???
         # self.reduceSignal.emit(command_args)
 
         print '[DB...BAT] CHOP Message: ', sum_msg
 
-        return True, sum_msg
+        return final_success, sum_msg
 
     def get_help(self):
         """
@@ -148,7 +139,11 @@ class VdriveChop(VDriveCommand):
         help_str = 'Chop runs\n'
         help_str += 'CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1\n'
         help_str += 'Debug (chop run 96450) by 60 seconds:\n'
-        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60'
+        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60\n\n'
+
+        help_str += 'HELP:      the Log Picker Window will be launched and set up with given RUN number.\n'
+        help_str += 'bin=1:     chopped data will be reduced to GSAS files.\n'
+        help_str += 'loadframe: \n'
 
         return help_str
 

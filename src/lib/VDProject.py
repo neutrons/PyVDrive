@@ -4,6 +4,7 @@ import os.path
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
+import reduce_VULCAN
 
 
 class VDProject(object):
@@ -78,7 +79,8 @@ class VDProject(object):
         :return:
         """
         # check
-        assert isinstance(run_info_list, list), 'blabla'  # TODO/NOW - doc
+        assert isinstance(run_info_list, list), 'Run information list cannot be of type %s.' \
+                                                '' % type(run_info_list)
 
         for run_info in run_info_list:
             assert isinstance(run_info, dict)
@@ -89,17 +91,22 @@ class VDProject(object):
 
         return
 
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce, output_dir):
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag,
+                          output_dir):
         """
-        chop data by time and reduce???
+        Chop data by time interval
         :param run_number:
         :param start_time:
         :param stop_time:
         :param time_interval:
+        :param reduce_flag: flag to reduce the data afterwards
+        :param output_dir:
         :return:
         """
-        # TODO/ISSUE/51 - doc and check
-        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            '' % (str(run_number), type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
 
         # load file
         nxs_file_name = self._dataFileDict[run_number][0]
@@ -112,11 +119,12 @@ class VDProject(object):
         status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
                                                                        start_time, stop_time, time_interval,
                                                                        time_unit='Seconds')
+        if not status:
+            error_message = str(ret_obj)
+            return False, error_message
 
-        if reduce:
+        if reduce_flag:
             # reduce to GSAS and etc
-            import reduce_VULCAN
-
             reduce_setup = reduce_VULCAN.ReductionSetup()
             reduce_setup.set_event_file(nxs_file_name)
             reduce_setup.set_output_dir(output_dir)
@@ -134,7 +142,7 @@ class VDProject(object):
             # TODO/FIXME/NOW - TOF correction should be left to user to specify
             mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
 
-        return message
+        return True, message
 
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False

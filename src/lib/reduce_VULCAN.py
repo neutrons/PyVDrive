@@ -1102,7 +1102,7 @@ class ReduceVulcanData(object):
         #     message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
         #                '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
 
-        message = ''
+        message = 'Output GSAS files include:\n'
 
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
@@ -1152,7 +1152,9 @@ class ReduceVulcanData(object):
                                        IPTS=self._reductionSetup.get_ipts_number(),
                                        GSSParmFilename="Vulcan.prm")
 
-            # TODO/ISSUE/51: - message += output GSAS file name
+            # update message
+            message += '%d-th: %s\n' % (i_ws, gsas_file_name)
+
         # END-FOR
 
         return True, message
