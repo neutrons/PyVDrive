@@ -17,7 +17,7 @@ except AttributeError:
 import gui.GuiUtility as GuiUtility
 import gui.VdriveLogPicker as VdriveLogPicker
 import LoadMTSLogWindow
-
+import QuickChopDialog
 
 OUT_PICKER = 0
 IN_PICKER = 1
@@ -89,7 +89,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Further operation
         self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
-                     self.do_highlite_selected)
+                     self.do_highlight_selected)
 
         # automatic slicer setup
         self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
@@ -185,6 +185,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Mutex/Lock, multiple threading
         self._mutexLockLogNameComboBox = False
 
+        # Reference to slicers that have been set up
+        self._currSlicerKey = None
+        self._slicerKeyList = list()
+
         return
 
     def _init_widgets_setup(self):
@@ -270,6 +274,45 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def do_chop(self):
+        """
+        Save a certain number of time segment from table tableWidget_segments
+        :return:
+        """
+        # get the run and raw file
+        raw_file_name = None
+        if self.ui.radioButton_useNexus.isChecked():
+            try:
+                run_number = int(self.ui.lineEdit_runNumber.text())
+                status, info_tup = self.get_controller().get_run_info(run_number)
+                if status:
+                    raw_file_name = info_tup[0]
+            except ValueError:
+                pass
+
+        # pop up the dialog
+        self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._currRunNumber, raw_file_name)
+        result = self._quickChopDialog.exec_()
+
+        # quit if user cancels the operation
+        if result == 0:
+            return
+        else:
+            output_dir = self._quickChopDialog.get_output_dir()
+            reduce_data = self._quickChopDialog.to_reduce_data()
+
+        # get chop manager
+        chop_manager = self._myController.chop_manager
+
+        if reduce_data:
+            # slice and reduce data to GSAS
+            chop_manager.reduce_data(self._currRunNumber, raw_file_name, self._currSlicerKey, output_dir)
+        else:
+            # slice data and save the split workspace
+            chop_manager.chop_data(raw_file_name, self._currSlicerKey, output_dir)
+
+        return
+
     def do_select_time_segments(self):
         """
         mark all time segments in table to be selected in the table
@@ -292,7 +335,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_highlite_selected(self):
+    def do_highlight_selected(self):
         """
         Highlight the selected region of the log value
         :return:
@@ -300,8 +343,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Clear the highlight lines
         if str(self.ui.pushButton_highlight.text()) == 'Clear':
             # Delete all lines
-            for highlite_id in self._myHighLightedLineList:
-                self.ui.graphicsView_main.remove_line(highlite_id)
+            for highlight_id in self._myHighLightedLineList:
+                self.ui.graphicsView_main.remove_line(highlight_id)
 
             # Reset button text
             self.ui.pushButton_highlight.setText('Highlight')
@@ -325,94 +368,14 @@ class WindowLogPicker(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, ret_obj)
             else:
                 vec_times, vec_value = ret_obj
-                highlite_id = self.ui.graphicsView_main.add_plot_1d(vec_times, vec_value, color='red', marker='.')
-                self._myHighLightedLineList.append(highlite_id)
+                highlight_id = self.ui.graphicsView_main.add_plot_1d(vec_times, vec_value, color='red', marker='.')
+                self._myHighLightedLineList.append(highlight_id)
         # END-FOR
 
         # Reset
         self.ui.pushButton_highlight.setText('Clear')
 
         return
-
-    def do_chop(self):
-        """
-        Save a certain number of time segment from table tableWidget_segments
-        :return:
-        """
-        # get the slicing type
-        if self.ui.radioButton_timeSlicer.isChecked():
-            slice_type = 'time'
-        elif self.ui.radioButton_logValueSlicer.isChecked():
-            slice_type = 'log'
-        else:
-            slice_type = 'manual'
-
-        # get the run and raw file
-        raw_file_name = None
-        if self.ui.radioButton_useNexus.isChecked():
-            try:
-                run_number = int(self.ui.lineEdit_runNumber.text())
-                status, info_tup = self.get_controller().get_run_info(run_number)
-                if status:
-                    raw_file_name = info_tup[0]
-            except ValueError:
-                pass
-
-        # pop up the dialog
-        import QuickChopDialog
-        self._quickChopDialog = QuickChopDialog.QuickChopDialog(self)
-        self._quickChopDialog.set_run(raw_file_name)
-        self._quickChopDialog.set_slicer_type(slice_type)
-        self._quickChopDialog.show()
-
-        return
-
-        # # Name of the sample log
-        # log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
-        # print ('[DB...BAT] Log name %s vs current log name %s: %s' % (log_name, self._currLogName,
-        #                                                               str(log_name == self._currLogName)))
-        #
-        # # collect selected time segments
-        # source_time_segments, row_number_list = \
-        #     self.ui.tableWidget_segments.get_selected_time_segments(True)
-        #
-        # # pass the segments to API to generate slicers
-        # self._myParent.get_controller().generate_data_slicer(
-        #     self._currRunNumber, source_time_segments, by_log_value, by_time, step_value)
-        #
-        # # Run GenerateEventFilters
-        # num_segments = len(source_time_segments)
-        # index_list = range(num_segments)
-        # index_list.sort(reverse=True)
-        # for i in index_list:
-        #     slicer_tag = 'TempSlicerRun%dSeg%d' % (self._currRunNumber, i)
-        #     time_segment = source_time_segments[i]
-        #     if by_time is True:
-        #         self._myParent.get_controller().gen_data_slicer_by_time(
-        #             self._currRunNumber, start_time=time_segment[0], end_time=time_segment[1],
-        #             time_step=step_value, tag=slicer_tag)
-        #     else:
-        #         self._myParent.get_controller.gen_data_slicer_sample_log(
-        #             self._currRunNumber, log_name, time_segment[0], time_segment[1],
-        #             log_value_step=step_value, tag=slicer_tag)
-        #
-        #     # Get time segments, i.e., slicer
-        #     status, ret_obj = self._myParent.get_controller().get_event_slicer(
-        #         run_number=self._currRunNumber, slicer_type='manual', slicer_id=slicer_tag,
-        #         relative_time=True)
-        #     print '[DB-BAR] Returned object: ', ret_obj
-        #
-        #     self._myParent.get_controller().clean_memory(self._currRunNumber, slicer_tag)
-        #
-        #     if status is False:
-        #         err_msg = ret_obj
-        #         GuiUtility.pop_dialog_error(self, err_msg)
-        #     else:
-        #         sub_segments = ret_obj
-        #         self.ui.tableWidget_segments.replace_line(row_number_list[i], sub_segments)
-        # # END-FOR (i)
-        #
-        # return
 
     def get_controller(self):
         """
@@ -888,11 +851,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         Set up the log value or time chopping
         :return:
         """
-        # TODO/ISSUE/55/ - clean!
-
         # get the chop helper/manager
-        chop_mananger = self.get_controller().chop_manager
-        assert chop_mananger is not None
+        chop_manager = self.get_controller().chop_manager
+        assert chop_manager is not None
 
         # read the values
         start_time = GuiUtility.parse_float(self.ui.lineEdit_slicerStartTime)
@@ -901,15 +862,23 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # choice
         if self.ui.radioButton_timeSlicer.isChecked():
-            chop_mananger.set_time_slicer(start_time, step, stop_time)
+            # set and make time-based slicer
+            self._currSlicerKey = chop_manager.set_time_slicer(start_time, step, stop_time)
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
-            # TODO/ISSUE/55 - make this work
-            chop_mananger.set_log_slicer(log_name, min_time, max_time, relative_time,
-                                      min_log_value, max_log_value, log_value_interval,
-                                      value_change_direction, tag)
+            # set and make log vale-based slicer
+            log_name = str(self.ui.comboBox_logNames.currentText())
+            min_log_value = GuiUtility.parse_float(self.ui.lineEdit_minSlicerLogValue)
+            max_log_value = GuiUtility.parse_float(self.ui.lineEdit_maxSlicerLogValue)
+            log_value_step = GuiUtility.parse_float(self.ui.lineEdit_slicerLogValueStep)
+            value_change_direction = str(self.ui.comboBox_logChangeDirection.currentText())
+
+            self._currSlicerKey = chop_manager.set_log_value_slicer(log_name, log_value_step, start_time, stop_time,
+                                                                    min_log_value, max_log_value,
+                                                                    value_change_direction)
 
         else:
+            # bad coding
             raise RuntimeError('Neither time nor log value chopping is selected.')
 
         return

@@ -311,15 +311,18 @@ class SampleLogManager(object):
         :param log_value_interval:
         :param value_change_direction:
         :param tag:
-        :return: 2-tuple: (1) True, (tag, splitter workspace, information table) (2) False, error message
+        :return: 2-tuple: (1) True, (splitter workspace, information table) (2) False, error message
         """
+        # check inputs' validity
         if relative_time is False:
             raise RuntimeError('It has not been implemented to use absolute start/stop time.')
-
         if log_value_interval is None:
             # one and only one interval from min_log_value to max_log_value
             raise RuntimeError('I need to think of how to deal with this case.')
 
+        assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
+
+        # set default
         if value_change_direction is None:
             value_change_direction = 'Both'
         elif value_change_direction not in ['Both', 'Increase', 'Decrease']:
@@ -335,8 +338,8 @@ class SampleLogManager(object):
             max_time = '%.15E' % max_time
 
         # create output workspace as a standard
-        splitter_ws_name = '%s_splitter_%s' % (self._currLogWorkspaceName, log_name)
-        info_ws_name = '%s_info_%s' % (self._currLogWorkspaceName, log_name)
+        splitter_ws_name = tag
+        info_ws_name = '%s_Info' % tag
 
         mantid_helper.generate_event_filters_by_log(self._currLogWorkspaceName, splitter_ws_name, info_ws_name,
                                                     min_time, max_time, log_name, min_log_value, max_log_value,
@@ -347,9 +350,9 @@ class SampleLogManager(object):
             tag = log_name
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
 
-        return True, (tag, splitter_ws_name, info_ws_name)
+        return True, (splitter_ws_name, info_ws_name)
 
-    def generate_events_filter_by_time(self,min_time, max_time, time_interval, tag,  ws_name=None):
+    def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag,  ws_name=None):
         """
         Create splitters by time
         :param ws_name
@@ -364,40 +367,34 @@ class SampleLogManager(object):
             ws_name = self._currLogWorkspaceName
 
         # Check
-        assert isinstance(min_time, float) or isinstance(min_time, None)
-        assert isinstance(max_time, float) or isinstance(max_time, None)
-        assert isinstance(time_interval, float) or (time_interval is None)
+        assert isinstance(min_time, float) or min_time is None
+        assert isinstance(max_time, float) or max_time is None
+        assert isinstance(time_interval, float) or time_interval is None
         # assert event_ws, 'Current log workspace cannot be zero'
         if min_time is None and max_time is None and time_interval is None:
             raise RuntimeError('Generate events filter by time must specify at least one of'
                                'min_time, max_time and time_interval')
         assert isinstance(ws_name, str), 'Workspace name %s must be a string but not %s.' % (str(ws_name),
                                                                                              type(ws_name))
+        assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
 
         # Generate event filters
-        if tag is None:
-            tag = '_TIME_'
-            splitter_ws_name = '%s_splitter_TIME_' % ws_name
-            info_ws_name = '%s_info__TIME_' % ws_name
-        else:
-            splitter_ws_name = tag
-            info_ws_name = tag + '_info'
+        splitter_ws_name = tag
+        info_ws_name = tag + '_Info'
 
-        status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
+        status, message = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
                                                                        min_time, max_time,
                                                                        time_interval, 'Seconds')
 
         # Get result
         if status is False:
-            err_msg = ret_obj
-            return status, err_msg
+            return status, message
 
         # Store
-        # FIXME/NOW how splitter_ws_name is None!
         self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
         print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._currSplittersDict[tag]))
 
-        return True, ret_obj
+        return True, (splitter_ws_name, info_ws_name)
 
     def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
@@ -676,7 +673,7 @@ class SampleLogManager(object):
         :param max_log_value:
         :param log_value_step:
         :param direction:
-        :return:
+        :return: key to the slicer
         """
         # check validity of inputs
         assert isinstance(log_name, str), 'Log name must be a string.'
@@ -687,33 +684,57 @@ class SampleLogManager(object):
         assert isinstance(max_log_value, float) or max_log_value is None, 'Max log value must be None or float'
         assert isinstance(direction, str), 'Direction must be a string but not %s.' % type(direction)
 
-        # add the values to the dictionary for later reference.
-        self._chopSetupDict[log_name] = {'start': start_time,
-                                         'stop': stop_time,
-                                         'step': log_value_step,
-                                         'min': min_log_value,
-                                         'max': max_log_value,
-                                         'direction': direction}
-
         # generate filter
         tag = 'Slicer_%06d_%s' % (self._currRunNumber, log_name)
 
-        self.generate_events_filter_by_log(self, log_name, start_time, stop_time, relative_time=True,
-                                           min_log_value=min_log_value, max_log_value=max_log_value,
-                                           log_value_interval=log_value_step, value_change_direction=direction,
-                                           tag=tag)
+        status, ret_obj = self.generate_events_filter_by_log(log_name, start_time, stop_time, relative_time=True,
+                                                             min_log_value=min_log_value, max_log_value=max_log_value,
+                                                             log_value_interval=log_value_step,
+                                                             value_change_direction=direction, tag=tag)
+        if status:
+            split_ws_name = ret_obj[0]
+            info_ws_name = ret_obj[1]
+        else:
+            raise RuntimeError('Unable to generate log-value slicer due to %s.' % str(ret_obj))
 
-        return
+        # add the values to the dictionary for later reference.
+        self._chopSetupDict[tag] = {'start': start_time,
+                                    'stop': stop_time,
+                                    'step': log_value_step,
+                                    'min': min_log_value,
+                                    'max': max_log_value,
+                                    'direction': direction,
+                                    'splitter': split_ws_name,
+                                    'info': info_ws_name}
+
+        # user tag as slicer
+        slicer_key = tag
+
+        return slicer_key
 
     def set_time_slicer(self, start_time, time_step, stop_time):
         """
-
         :return:
         """
-        self.generate_events_filter_by_time(blabla)
-        self._chopSetupDict['time'] = {'start': start_time, 'step': time_step, 'stop': stop_time}
+        # set up Tag
+        tag = 'Slicer_%06d_Time' % self._currRunNumber
 
-        return
+        # generate slicer
+        status, ret_obj = self.generate_events_filter_by_time(start_time, stop_time, time_step, tag)
+        if status:
+            split_ws_name = ret_obj[0]
+            info_ws_name = ret_obj[1]
+        else:
+            raise RuntimeError('Unable to generate time slicer due to %s.' % str(ret_obj))
+
+        # set up record history
+        self._chopSetupDict[tag] = {'start': start_time, 'step': time_step, 'stop': stop_time,
+                                    'splitter': split_ws_name, 'info': info_ws_name}
+
+        # user tag to serve as slicer key
+        slicer_key = tag
+
+        return slicer_key
 
     def store_current_session(self):
         """ Store current session

@@ -199,9 +199,12 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     :param stop_time:
     :param delta_time:
     :param time_unit:
-    :return:
+    :return: 2-tuple. (1) boolean (2) message
     """
     # TODO/ISSUE/51: clean and doc and etc.
+    # assert
+    # assert
+
     # define optional inputs
     my_arg_dict = dict()
     my_arg_dict['InputWorkspace'] = ws_name
@@ -216,15 +219,12 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     if time_unit != 'Seconds' and time_unit is not None:
         my_arg_dict['UnitOfTime'] = time_unit
 
-    print my_arg_dict
-    print
-
     try:
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
 
-    return True, (splitter_ws_name, info_ws_name)
+    return True, ''
 
 
 def get_run_start(workspace, unit):
