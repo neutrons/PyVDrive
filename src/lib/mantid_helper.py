@@ -161,19 +161,17 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     :param max_log_value:
     :param log_value_interval:
     :param log_value_change_direction:
-    :return:
+    :return: 2-tuple. (boolean, (string, string)).  Strings as (1) split workspace name and (2) information table
     """
-    # TODO/ISSUE/51: clean and doc and etc.
-
     # Check requirements
-    assert isinstance(ws_name, str)
+    assert isinstance(ws_name, str), 'Workspace name must be a string but not %s.' % str(ws_name)
     src_ws = retrieve_workspace(ws_name)
-    assert src_ws is not None
+    assert src_ws is not None, 'Workspace %s does not exist.' % ws_name
 
-    assert isinstance(splitter_ws_name, str)
-    assert isinstance(info_ws_name)
+    assert isinstance(splitter_ws_name, str), 'SplittersWorkspace name must be a string.'
+    assert isinstance(info_ws_name, str), 'Splitting information TableWorkspace name must be a string.'
 
-    assert isinstance(log_name, str)
+    assert isinstance(log_name, str), 'Log name must be a string but not %s.' % type(log_name)
 
     # Call Mantid algorithm
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
@@ -195,15 +193,21 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     Purpose: Generate splitters by calling Mantid's GenerateEventsFilter
     Requirements:
     :param ws_name:
+    :param splitter_ws_name:
+    :param info_ws_name:
     :param start_time:
     :param stop_time:
     :param delta_time:
     :param time_unit:
     :return: 2-tuple. (1) boolean (2) message
     """
-    # TODO/ISSUE/51: clean and doc and etc.
-    # assert
-    # assert
+    # Check requirements
+    assert isinstance(ws_name, str), 'Workspace name must be a string but not %s.' % str(ws_name)
+    src_ws = retrieve_workspace(ws_name)
+    assert src_ws is not None, 'Workspace %s does not exist.' % ws_name
+
+    assert isinstance(splitter_ws_name, str), 'SplittersWorkspace name must be a string.'
+    assert isinstance(info_ws_name, str), 'Splitting information TableWorkspace name must be a string.'
 
     # define optional inputs
     my_arg_dict = dict()
