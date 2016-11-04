@@ -77,7 +77,7 @@ class TimeSegment(object):
         return self._data[1]
 
 
-class SampleLogManager(object):
+class DataChopper(object):
     """ Sample log manager for
 
     Assumptions:

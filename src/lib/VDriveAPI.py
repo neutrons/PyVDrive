@@ -59,9 +59,6 @@ class VDriveAPI(object):
         self._myAnalysisProject = AnalysisProject('New Analysis Project')
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
-        # TODO/ISSUE/51: remove this one permanently
-        self._mySlicingManager = SampleLogHelper.SampleLogManager()
-
         # default working directory to current directory.
         #  if it is not writable, then use /tmp/
         self._myWorkDir = os.getcwd()

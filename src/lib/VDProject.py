@@ -1,6 +1,7 @@
 import os
 import os.path
 
+from chop_utility import DataChopper
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
@@ -34,6 +35,9 @@ class VDProject(object):
         # dictionary for sample run number to be flagged to reduce.
         # Key: run number. Value: boolean flag for reduction
         self._sampleRunReductionFlagDict = dict()
+
+        # dictionary to manage data chopping
+        self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
         
         return
 
@@ -178,13 +182,35 @@ class VDProject(object):
 
         return
 
-    def deleteData(self, datafilename):
-        """ Delete a data file in the project
+    def delete_data_file(self, data_file_name):
         """
-        self._dataFileDict.remove(datafilename)
-        self._baseDataFileNameList.remove(os.path.basename(datafilename))
+        Delete a data file in the project
+        :param data_file_name:
+        :return:
+        """
+        assert isinstance(data_file_name, str), 'blabla'
+
+        if data_file_name in self._dataFileDict:
+            del self._dataFileDict[data_file_name]
+            self._baseDataFileNameList.remove(os.path.basename(data_file_name))
 
         return
+
+    def get_chopper(self, run_number):
+        """
+        Get data chopper (manager) of a run number
+        If the run number does not have any DataChopper associated, then create a one
+        :param run_number:
+        :return: DataChopper instance
+        """
+        if run_number in self._chopManagerDict:
+            # get the existing DataChopper instance
+            run_chopper = self._chopManagerDict[run_number]
+        else:
+            # create a new DataChopper associated with this run
+            run_chopper = DataChopper(run_number)
+
+        return run_chopper
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
@@ -194,16 +220,19 @@ class VDProject(object):
         :param slice_tag: string for slice tag name
         :return:
         """
-        # TODO/ISSUE/51 - make it work!
-        status, ret_obj = self._mySlicingManager.generate_events_filter_manual(
+        # check whether there is a DataChopper instance associated
+        if run_number not in self._chopManagerDict:
+            return False, 'Run number %s does not have DataChopper associated.'
+
+        # generate data slicer
+        status, ret_obj = self._chopManagerDict[run_number].generate_events_filter_manual(
             run_number, time_segment_list, relative_time, slice_tag)
 
         return status, ret_obj
 
-
     def gen_data_slicer_sample_log(self, run_number, sample_log_name,
                                    start_time, end_time, min_log_value, max_log_value,
-                                   log_value_step, tag=None):
+                                   log_value_step, slice_tag=None):
         """
         Generate data slicer/splitters by log values
         :param run_number:
@@ -213,9 +242,13 @@ class VDProject(object):
         :param min_log_value:
         :param max_log_value:
         :param log_value_step:
+        :param slice_tag:
         :return:
         """
-        # TODO/ISSUE/51 - make it work!
+        # check whether DataChopper
+        if run_number not in self._chopManagerDict:
+            return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
+
         # Get file name according to run number
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
@@ -244,7 +277,7 @@ class VDProject(object):
                                                              max_log_value=max_log_value,
                                                              log_value_interval=log_value_step,
                                                              value_change_direction='Both',
-                                                             tag=tag)
+                                                             tag=slice_tag)
 
         return
 
