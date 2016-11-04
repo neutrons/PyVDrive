@@ -4,8 +4,8 @@ from nose.tools import assert_equals, assert_true, assert_false
 import sys, os
 
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.vdrive.mantid_helper as mantid_helper
-import PyVDrive.VDriveAPI as vdapi
+import PyVDrive.lib.mantid_helper as mantid_helper
+import PyVDrive.lib.VDriveAPI as vdapi
 
 @step(u'I am using mantid helper')
 def init_background(step):

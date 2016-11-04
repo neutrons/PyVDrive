@@ -11,6 +11,7 @@ import mantid
 import mantid.api
 import mantid.geometry
 import mantid.simpleapi as mantidapi
+from mantid.api import AnalysisDataService as ADS
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -231,12 +232,21 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     return True, ''
 
 
-def get_run_start(workspace, unit):
+def get_run_start(workspace, time_unit):
     """ Get run start time
     :param workspace:
-    :param unit: nanosecond(s), second(s)
+    :param time_unit: nanosecond(s), second(s)
     :return:
     """
+    # check the situation if workspace is a string
+    assert isinstance(time_unit, str)
+    if isinstance(workspace, str):
+        if ADS.doesExist(workspace):
+            workspace = ADS.retrieve(workspace)
+        else:
+            raise RuntimeError('Workspace %s does not exist in Mantid AnalysisDataService.' % workspace)
+    # END-IF
+
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
     except AttributeError as e:
@@ -249,12 +259,12 @@ def get_run_start(workspace, unit):
 
     # Convert unit if
     run_start = run_start_ns
-    if unit.lower().startswith('nanosecond'):
+    if time_unit.lower().startswith('nanosecond'):
         pass
-    elif unit.lower().startswith('second'):
+    elif time_unit.lower().startswith('second'):
         run_start *= 1.E-9
     else:
-        raise RuntimeError('Unit %s is not supported by get_run_start().' % unit)
+        raise RuntimeError('Unit %s is not supported by get_run_start().' % time_unit)
 
     return run_start
 
@@ -279,19 +289,46 @@ def get_sample_log_info(src_workspace):
     return prop_info_list
 
 
-def get_sample_log_names(src_workspace):
+def get_sample_log_names(src_workspace, smart=False):
     """
     From workspace get sample log names as FloatTimeSeriesProperty
     :param src_workspace:
+    :param smart:
     :return:
     """
-    run = src_workspace.run()
-    property_list = run.getProperties()
+    # check input
+    if isinstance(src_workspace, str):
+        # very likely the input is workspace name
+        if not ADS.doesExist(src_workspace):
+            raise RuntimeError('Workspace %s does not exist in AnalysisDataService.' % src_workspace)
+        src_workspace = ADS.retrieve(src_workspace)
+
+    # get the Run object
+    run_obj = src_workspace.run()
+    property_list = run_obj.getProperties()
     name_list = list()
+    single_value_log_list = list()
 
     for item in property_list:
-        if isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
-            name_list.append(item.name)
+        # rule out any Non-FloatTimeSeriesProperty
+        if not isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
+            continue
+
+        # get log name
+        log_name = item.name
+        if not smart:
+            # non-smart mode, just simply log name
+            name_list.append(log_name)
+        else:
+            log_size = item.size()
+            if log_size > 1:
+                name_list.append('%s (%d)' % (log_name, log_size))
+            else:
+                single_value_log_list.append('%s (1)' % log_name)
+        # END-IF-ELSE
+    # END-FOR
+
+    name_list.extend(single_value_log_list)
 
     return name_list
 

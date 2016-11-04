@@ -130,6 +130,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_next_log_frame)
 
+        # TODO/ISSUE/51 - link Quit()
+
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
                                                         self.on_mouse_press_event)
@@ -302,6 +304,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             reduce_data = self._quickChopDialog.to_reduce_data()
 
         # get chop manager
+        # TODO/FIXME/ISSUE/51 - Continue from here!!!
         chop_manager = self._myController.chop_manager
 
         if reduce_data:
@@ -504,6 +507,9 @@ class WindowLogPicker(QtGui.QMainWindow):
                                         'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
 
+        # set the type of file
+        self._currLogType = 'nexus'
+
         # Load log names to combo box _logNames
         self.load_log_names()
 
@@ -512,7 +518,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         log_name = log_name.replace(' ', '').split('(')[0]
         self.plot_nexus_log(log_name)
         self._currLogName = log_name
-        self._currLogType = 'nexus'
 
         return
 
@@ -609,6 +614,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load next log
         :return:
         """
+        # TODO/FIXME/ISSUE/51 - This is very wrong!  cannot use _logNameList
+        # use the following!
+        # self.ui.comboBox_logNames.setCurrentIndex()
+        # self.ui.comboBox_logNames.currentIndex()
+
         # Next index
         next_index = self._currentLogIndex + 1
         if next_index > len(self._logNameList):
@@ -635,6 +645,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load previous log
         :return:
         """
+        # TODO/FIXME/ISSUE/51 - This is very wrong!  cannot use _logNameList
+        # use the following!
+        # self.ui.comboBox_logNames.setCurrentIndex()
+        # self.ui.comboBox_logNames.currentIndex()
+
         # Previous index
         prev_index = self._currentLogIndex - 1
         if prev_index < 0:
@@ -851,10 +866,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         Set up the log value or time chopping
         :return:
         """
-        # get the chop helper/manager
-        chop_manager = self.get_controller().chop_manager
-        assert chop_manager is not None
-
         # read the values
         start_time = GuiUtility.parse_float(self.ui.lineEdit_slicerStartTime)
         stop_time = GuiUtility.parse_float(self.ui.lineEdit_slicerStopTime)
@@ -863,19 +874,23 @@ class WindowLogPicker(QtGui.QMainWindow):
         # choice
         if self.ui.radioButton_timeSlicer.isChecked():
             # set and make time-based slicer
-            self._currSlicerKey = chop_manager.set_time_slicer(start_time, step, stop_time)
+            self._currSlicerKey = self.get_controller().gen_data_slicer_by_time(start_time, step, stop_time)
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # set and make log vale-based slicer
             log_name = str(self.ui.comboBox_logNames.currentText())
+            # log name might be with information
+            log_name = log_name.split('(')[0].strip()
             min_log_value = GuiUtility.parse_float(self.ui.lineEdit_minSlicerLogValue)
             max_log_value = GuiUtility.parse_float(self.ui.lineEdit_maxSlicerLogValue)
             log_value_step = GuiUtility.parse_float(self.ui.lineEdit_slicerLogValueStep)
             value_change_direction = str(self.ui.comboBox_logChangeDirection.currentText())
 
-            self._currSlicerKey = chop_manager.set_log_value_slicer(log_name, log_value_step, start_time, stop_time,
-                                                                    min_log_value, max_log_value,
-                                                                    value_change_direction)
+            self._currSlicerKey = self.get_controller().gen_data_slicer_sample_log(self._currRunNumber, log_name,
+                                                                                   log_value_step, start_time,
+                                                                                   stop_time,
+                                                                                   min_log_value, max_log_value,
+                                                                                   value_change_direction)
 
         else:
             # bad coding
@@ -1020,7 +1035,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             vec_x, vec_y = self._sampleLogDict[self._currRunNumber][log_name]
         else:
             # get sample log data from driver
-            vec_x, vec_y = self._myParent.get_sample_log_value(log_name, relative=True)
+            vec_x, vec_y = self._myParent.get_sample_log_value(self._currRunNumber, log_name, relative=True)
             self._sampleLogDict[self._currRunNumber][log_name] = vec_x, vec_y
         # END-IF
 
@@ -1059,8 +1074,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # check
         assert isinstance(vec_y, numpy.ndarray) and len(vec_y.shape) == 1
         assert isinstance(vec_x, numpy.ndarray) and len(vec_x.shape) == 1
-        assert (use_number_resolution and not use_time_resolution) or (
-        not use_number_resolution and use_time_resolution)
+        assert (use_number_resolution and not use_time_resolution) or \
+               (not use_number_resolution and use_time_resolution), 'wrong to configure use number resolution and ...'
 
         # range
         if min_x is None:

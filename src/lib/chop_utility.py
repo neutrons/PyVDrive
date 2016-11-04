@@ -84,130 +84,75 @@ class DataChopper(object):
     1. No 2 NeXus data files have the same name
     2. Run number can be retrieved
     """
-    def __init__(self):
+    def __init__(self, run_number, nxs_file_name):
         """
         Initialization
         :return:
         """
+        # Check input's validity
+        assert isinstance(run_number, int), 'Run number must be integer'
+        assert isinstance(nxs_file_name, str), 'NeXus file name must be integer'
+
         # Data structure for log data that is worked on now
-        self._currNexusFilename = ''
-        self._currRunNumber = None
+        self._myNeXusFileName = nxs_file_name
+        self._myRunNumber = run_number
 
-        self._currLogWorkspace = None
-        self._currLogWorkspaceName = ''
+        # workspace name (might be sample log only)
+        self._mtdWorkspaceName = None
+        self._logNameList = None
+        self._runStartTime = None
 
+        # splitters
         self._currSplitterWorkspace = None
-        self._currLogNamesList = list()
-        self._currSplittersDict = dict()  # key = sample log name, value = (split ws name, info ws name)
+        self._currInfoTableWorkspace = None
+        self._chopSetupDict = dict()  # key: user-specified tag   value: dictionary including everything!
 
-        # Stored session:
-        # key = log file name (base name), value = tuple as file name with full path, workspace name, splitter dict
-        self._prevSessionDict = dict()
-        # Keys map
-        self._runNxsNameMap = dict()
-        # Some useful value
-        self._runStartTimeDict = dict()
+        # initialization operation
+        self.load_data_file()
 
-        # pure log value setup (independent of NeXus file or workspace)
-        self._chopSetupDict = dict()
+        # replaced by chopSetupDict: self._splittersDict = dict()
+        # key = sample log name, value = (split ws name, info ws name)
+
+        # # Stored session:
+        # # key = log file name (base name), value = tuple as file name with full path, workspace name, splitter dict
+        # self._prevSessionDict = dict()
+        # # Keys map
+        # self._runNxsNameMap = dict()
+        # # Some useful value
+        # self._runStartTimeDict = dict()
 
         return
 
-    def checkout_session(self, nxs_file_name, run_number):
+    def load_data_file(self):
         """ Load NeXus file
-        This is the only way to set new and save_to_buffer old session
-        :param nxs_file_name:
         :return:
         """
-        # Check and store
-        if os.path.basename(nxs_file_name) == os.path.basename(self._currNexusFilename):
-            # same: no op
-            print '[INFO] Same NeXus file %s. No operation.' % str(self._currNexusFilename)
-            return True, ''
-        else:
-            # different: store current
-            self.store_current_session()
-
-        nxs_base_name = os.path.basename(nxs_file_name)
-
-        # Restore the previous log
-        if nxs_base_name in self._prevSessionDict:
-            self.restore_session(nxs_base_name)
-            return True, ''
-
-        # Start a brand new session
-        # Deal with run number
-        if run_number is not None:
-            assert isinstance(run_number, int)
-            self._runNxsNameMap[run_number] = nxs_base_name
-            self._currRunNumber = run_number
-
-        base_name = os.path.basename(nxs_file_name)
-        if base_name == self._currNexusFilename:
-            return True, 'Try to reload sample logs of file %s' % base_name
-        else:
-            # Start a new session
-            self._currNexusFilename = base_name
-            self._currRunNumber = run_number
-
-        # Output ws name
-        out_ws_name = os.path.basename(nxs_file_name).split('.')[0] + '_Meta'
+        # use base name for output workspace
+        base_name = os.path.basename(self._myNeXusFileName)
+        out_ws_name = base_name.split('.')[0] + '_MetaData'
 
         # Load sample logs
-        status, ret_obj = mantid_helper.load_nexus(data_file_name=nxs_file_name,
+        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
                                                    output_ws_name=out_ws_name,
                                                    meta_data_only=True)
 
         if status is False:
-            return False, ret_obj
-
-        self._currLogWorkspace = ret_obj
-        self._currLogWorkspaceName = out_ws_name
+            err_msg = str(ret_obj)
+            raise RuntimeError(err_msg)
+        else:
+            self._mtdWorkspaceName = out_ws_name
 
         # Set up log names list
         try:
-            self._currLogNamesList = mantid_helper.get_sample_log_names(self._currLogWorkspace)
-            assert isinstance(self._currLogNamesList, list)
+            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
+            assert isinstance(self._logNameList, list)
         except RuntimeError as err:
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTimeDict[nxs_base_name] = mantid_helper.get_run_start(self._currLogWorkspace, unit='nanoseconds')
+        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
 
-        # Set up log list
-        # self._logInfoList = mtd.get_sample_log_info(self._currWorkspace)
-
-        return True, ''
-
-    def _find_workspaces_by_run(self, run_number, slicer_tag):
-        """
-
-        :param run_number:
-        :param slicer_tag:
-        :return: 2-tuple as (boolean, ....)
-        """
-        # Access
-        if self._currRunNumber == run_number:
-            # current run
-            if slicer_tag in self._currSplittersDict:
-                split_ws, info_ws = self._currSplittersDict[slicer_tag]
-            else:
-                return False, 'Unable to find slicer tag %s of run %s' % (slicer_tag, str(run_number))
-
-        elif run_number not in self._runNxsNameMap:
-            # unable to find the run store
-            return False, 'Unable to find run %s' % str(run_number)
-
-        else:
-            # saved session
-            file_name = self._runNxsNameMap[run_number]
-            if slicer_tag not in self._prevSessionDict[file_name]:
-                return False, 'Unable to find slicer %s in run %s / %s' % (slicer_tag,
-                                                                           str(run_number),
-                                                                           file_name)
-            split_ws, info_ws = self._prevSessionDict[file_name][slicer_tag]
-
-        return True, (split_ws, info_ws)
+        return
 
     def chop_data(self, raw_file_name, slicer_type, output_directory):
         """
@@ -297,60 +242,26 @@ class DataChopper(object):
 
         return True, ''
 
-    def generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
-                                      min_log_value, max_log_value, log_value_interval,
-                                      value_change_direction, tag):
-        """
-        Generate event filter by log value
-        :param log_name:
-        :param min_time:
-        :param max_time:
-        :param relative_time:
-        :param min_log_value:
-        :param max_log_value:
-        :param log_value_interval:
-        :param value_change_direction:
-        :param tag:
-        :return: 2-tuple: (1) True, (splitter workspace, information table) (2) False, error message
-        """
-        # check inputs' validity
-        if relative_time is False:
-            raise RuntimeError('It has not been implemented to use absolute start/stop time.')
-        if log_value_interval is None:
-            # one and only one interval from min_log_value to max_log_value
-            raise RuntimeError('I need to think of how to deal with this case.')
-
-        assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
-
-        # set default
-        if value_change_direction is None:
-            value_change_direction = 'Both'
-        elif value_change_direction not in ['Both', 'Increase', 'Decrease']:
-            return False, 'Value change direction %s is not supported.' % value_change_direction
-
-        if isinstance(min_time, int) is True:
-            min_time = float(min_time)
-        if isinstance(min_time, float) is True:
-            min_time = '%.15E' % min_time
-        if isinstance(max_time, int):
-            max_time = float(max_time)
-        if isinstance(max_time, float):
-            max_time = '%.15E' % max_time
-
-        # create output workspace as a standard
-        splitter_ws_name = tag
-        info_ws_name = '%s_Info' % tag
-
-        mantid_helper.generate_event_filters_by_log(self._currLogWorkspaceName, splitter_ws_name, info_ws_name,
-                                                    min_time, max_time, log_name, min_log_value, max_log_value,
-                                                    log_value_interval, value_change_direction)
-
-        # Store
-        if tag is None:
-            tag = log_name
-        self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
-
-        return True, (splitter_ws_name, info_ws_name)
+    # TODO/ISSUE/51 - clean! combined wto set_log_value_slicer
+    # def generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
+    #                                   min_log_value, max_log_value, log_value_interval,
+    #                                   value_change_direction, tag):
+    #     """
+    #     Generate event filter by log value
+    #     :param log_name:
+    #     :param min_time:
+    #     :param max_time:
+    #     :param relative_time:
+    #     :param min_log_value:
+    #     :param max_log_value:
+    #     :param log_value_interval:
+    #     :param value_change_direction:
+    #     :param tag:
+    #     :return: 2-tuple: (1) True, (splitter workspace, information table) (2) False, error message
+    #     """
+    #
+    #
+    #     return True, (splitter_ws_name, info_ws_name)
 
     def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag,  ws_name=None):
         """
@@ -391,8 +302,8 @@ class DataChopper(object):
             return status, message
 
         # Store
-        self._currSplittersDict[tag] = (splitter_ws_name, info_ws_name)
-        print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._currSplittersDict[tag]))
+        self._splittersDict[tag] = (splitter_ws_name, info_ws_name)
+        print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._splittersDict[tag]))
 
         return True, (splitter_ws_name, info_ws_name)
 
@@ -406,7 +317,7 @@ class DataChopper(object):
         :return:
         """
         # Check
-        if self._currRunNumber != run_number:
+        if self._myRunNumber != run_number:
             return False, 'It is not supported to use stored run number for generate_events_filter_manual.'
         # Determine tag
         if splitter_tag is None:
@@ -427,7 +338,7 @@ class DataChopper(object):
 
         # Store
         split_ws_name, info_ws_name = ret_obj
-        self._currSplittersDict['_MANUAL_'] = (split_ws_name, info_ws_name)
+        self._splittersDict['_MANUAL_'] = (split_ws_name, info_ws_name)
 
         return True, ret_obj
 
@@ -440,8 +351,8 @@ class DataChopper(object):
         assert isinstance(run_number, int) and run_number > 0
 
         # return current workspace if run number is current run number
-        if run_number == self._currRunNumber:
-            return self._currLogWorkspace
+        if run_number == self._myRunNumber:
+            return self._mtdWorkspaceName
 
         # run number (might) be in stored session
         if run_number not in self._prevSessionDict:
@@ -454,55 +365,59 @@ class DataChopper(object):
     def get_sample_log_names(self, with_info=False):
         """
         Get all sample logs' names
+        :exception: run time error for mantid workspace does not exist.
         :param with_info: output name with more information i.e., size of sample log
-        :return:
+        :return: List of sample logs
         """
         # Check
-        if self._currLogWorkspace is None:
-            return False, 'Log helper has no data.'
+        if self._mtdWorkspaceName is None:
+            raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
         # Easy return
-        if with_info is False:
-            return True, self._currLogNamesList[:]
+        if not with_info:
+            return self._logNameList[:]
 
-        # Do something fun
-        self._currLogNamesList.sort()
+        return mantid_helper.get_sample_log_names(self._mtdWorkspaceName, smart=True)
 
-        ret_list = list()
-        single_value_list = list()
+        # return
+        #
+        # # Do something fun
+        # self._logNameList.sort()
+        #
+        # ret_list = list()
+        # single_value_list = list()
+        #
+        # for log_name in self._logNameList:
+        #     log_size = self._mtdWorkspaceName.run().getProperty(log_name).size()
+        #     if log_size > 1:
+        #         ret_list.append('%s (%d)' % (log_name, log_size))
+        #     else:
+        #         single_value_list.append('%s (1)' % log_name)
+        # # END-FOR
+        #
+        # ret_list.extend(single_value_list)
+        #
+        # return ret_list
 
-        for log_name in self._currLogNamesList:
-            log_size = self._currLogWorkspace.run().getProperty(log_name).size()
-            if log_size > 1:
-                ret_list.append('%s (%d)' % (log_name, log_size))
-            else:
-                single_value_list.append('%s (1)' % log_name)
-        # END-FOR
-
-        ret_list.extend(single_value_list)
-
-        return True, ret_list
-
-    def get_sample_data(self, run_number, sample_log_name, start_time, stop_time, relative):
+    def get_sample_data(self, sample_log_name, start_time, stop_time, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
-        # run_number, log_name, start_time, stop_time, relative
         :exception: RuntimeError for sample log name is not in list
+        :param run_number:
         :param sample_log_name:
+        :param start_time:
+        :param stop_time:
+        :param relative:
         :return: 2-tuple as (numpy.array, numpy.array) for time and log value
         """
         # Check
-        if run_number is not None and run_number != self._currRunNumber:
-            # FIXME - Deal with this situation
-            raise RuntimeError('It has not been considered to retrieve previous run from Mantid.')
-        if sample_log_name not in self._currLogNamesList:
+        assert isinstance(sample_log_name, str), 'Sample log name must be a string but not a %s.' \
+                                                 '' % type(sample_log_name)
+        if sample_log_name not in self._logNameList:
             raise RuntimeError('Sample log name %s is not a FloatSeries.' % sample_log_name)
 
         # Get property
-        print '[DB-Trace-Bug Helper 2] run number = ', run_number, 'sample log name = ', sample_log_name,
-        print 'start time  = ', start_time
-
-        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._currLogWorkspace,
+        vec_times, vec_value = mantid_helper.get_sample_log_value(src_workspace=self._mtdWorkspaceName,
                                                                   sample_log_name=sample_log_name,
                                                                   start_time=start_time,
                                                                   stop_time=stop_time,
@@ -526,7 +441,7 @@ class DataChopper(object):
         # Get time segments from file
         split_ws_name = ret_obj[0]
         print '[DB-TEST get_slicer] workspace names for ', slicer_tag, 'are ', ret_obj
-        print '[DB-TEST weird] ', self._currSplittersDict
+        print '[DB-TEST weird] ', self._splittersDict
         # FIXME/TODO/NOW : Need to find a way to get run_start in nanosecond
         if relative_time is True:
             nxs_base_name = self._runNxsNameMap[run_number]
@@ -559,7 +474,7 @@ class DataChopper(object):
 
         elif nxs_name is not None:
             # use NeXus file name
-            if nxs_name == os.path.basename(self._currNexusFilename):
+            if nxs_name == os.path.basename(self._myNeXusFileName):
                 use_current = True
             elif nxs_name not in self._prevSessionDict:
                 return False, 'NeXus file name %s has not been processed.' % nxs_name
@@ -568,12 +483,12 @@ class DataChopper(object):
             # use run number
             if run_number in self._prevSessionDict:
                 nxs_name = self._runNxsNameMap[run_number]
-            elif run_number == self._currRunNumber:
+            elif run_number == self._myRunNumber:
                 use_current = True
-                nxs_name = os.path.basename(self._currNexusFilename)
+                nxs_name = os.path.basename(self._myNeXusFileName)
             else:
                 return False, 'Run %d has not been processed. Current run = %s.' % (run_number,
-                                                                                    str(self._currRunNumber))
+                                                                                    str(self._myRunNumber))
 
         else:
             # specified neither
@@ -582,7 +497,7 @@ class DataChopper(object):
         # Get splitter
         if use_current is True:
             # Current log
-            splitter_dict = self._currSplittersDict
+            splitter_dict = self._splittersDict
         else:
             # Stored
             tup = self._prevSessionDict[nxs_name]
@@ -608,7 +523,7 @@ class DataChopper(object):
 
         elif nxs_name is not None:
             # use NeXus file name
-            if nxs_name == os.path.basename(self._currNexusFilename):
+            if nxs_name == os.path.basename(self._myNeXusFileName):
                 use_current = True
             elif nxs_name not in self._prevSessionDict:
                 return False, 'NeXus file name %s has not been processed.' % nxs_name
@@ -617,12 +532,12 @@ class DataChopper(object):
             # use run number
             if run_number in self._prevSessionDict:
                 nxs_name = self._runNxsNameMap[run_number]
-            elif run_number == self._currRunNumber:
+            elif run_number == self._myRunNumber:
                 use_current = True
-                nxs_name = os.path.basename(self._currNexusFilename)
+                nxs_name = os.path.basename(self._myNeXusFileName)
             else:
                 return False, 'Run %d has not been processed. Current run = %s.' % (run_number,
-                                                                                    str(self._currRunNumber))
+                                                                                    str(self._myRunNumber))
 
         else:
             # specified neither
@@ -630,7 +545,7 @@ class DataChopper(object):
 
         # Check for time
         if use_current is True:
-            split_dict = self._currSplittersDict
+            split_dict = self._splittersDict
         else:
             split_dict = self._prevSessionDict[nxs_name][3]
         if '_TIME_' not in split_dict:
@@ -645,9 +560,9 @@ class DataChopper(object):
         Set the current slicer as a time slicer set up previously
         :return:
         """
-        assert 'Time' in self._currSplittersDict, 'No time slicer set up.'
+        assert 'Time' in self._splittersDict, 'No time slicer set up.'
 
-        self._currSplitterWorkspace = self._currSplittersDict['Time']
+        self._currSplitterWorkspace = self._splittersDict['Time']
 
         return
 
@@ -656,14 +571,14 @@ class DataChopper(object):
         Set up current splitter workspace/slicer to a previously setup slicer in manual mode.
         :return:
         """
-        assert 'Manual' in self._currSplittersDict, 'No manually set up slicer found in splicers dictionary.'
+        assert 'Manual' in self._splittersDict, 'No manually set up slicer found in splicers dictionary.'
 
-        self._currSplitterWorkspace = self._currSplittersDict['Manual']
+        self._currSplitterWorkspace = self._splittersDict['Manual']
 
         return
 
     def set_log_value_slicer(self, log_name, log_value_step, start_time=None, stop_time=None,
-                             min_log_value=None, max_log_value=None, direction='both'):
+                             min_log_value=None, max_log_value=None, direction='Both'):
         """
         set up a slicer by log value
         :param log_name:
@@ -672,7 +587,7 @@ class DataChopper(object):
         :param min_log_value:
         :param max_log_value:
         :param log_value_step:
-        :param direction:
+        :param direction: log value change direction
         :return: key to the slicer
         """
         # check validity of inputs
@@ -682,20 +597,41 @@ class DataChopper(object):
         assert isinstance(stop_time, float) or stop_time is None, 'Stop time must be None or float'
         assert isinstance(min_log_value, float) or min_log_value is None, 'Min log value must be None or float'
         assert isinstance(max_log_value, float) or max_log_value is None, 'Max log value must be None or float'
+
         assert isinstance(direction, str), 'Direction must be a string but not %s.' % type(direction)
+        if direction not in ['Both', 'Increase', 'Decrease']:
+            return False, 'Value change direction %s is not supported.' % direction
 
         # generate filter
-        tag = 'Slicer_%06d_%s' % (self._currRunNumber, log_name)
+        tag = 'Slicer_%06d_%s' % (self._myRunNumber, log_name)
 
-        status, ret_obj = self.generate_events_filter_by_log(log_name, start_time, stop_time, relative_time=True,
-                                                             min_log_value=min_log_value, max_log_value=max_log_value,
-                                                             log_value_interval=log_value_step,
-                                                             value_change_direction=direction, tag=tag)
-        if status:
-            split_ws_name = ret_obj[0]
-            info_ws_name = ret_obj[1]
+        # set default
+        if isinstance(start_time, float) is True:
+            min_time = '%.15E' % start_time
         else:
-            raise RuntimeError('Unable to generate log-value slicer due to %s.' % str(ret_obj))
+            min_time = None
+        if isinstance(stop_time, float):
+            max_time = '%.15E' % stop_time
+        else:
+            max_time = None
+
+        # create output workspace as a standard
+        splitter_ws_name = tag
+        info_ws_name = '%s_Info' % tag
+
+        mantid_helper.generate_event_filters_by_log(self._mtdWorkspaceName, splitter_ws_name, info_ws_name,
+                                                    min_time, max_time, log_name, min_log_value, max_log_value,
+                                                    log_value_step, direction)
+
+        # status, ret_obj = self.generate_events_filter_by_log(log_name, start_time, stop_time, relative_time=True,
+        #                                                      min_log_value=min_log_value, max_log_value=max_log_value,
+        #                                                      log_value_interval=log_value_step,
+        #                                                      value_change_direction=direction, tag=tag)
+        # if status:
+        #     split_ws_name = ret_obj[0]
+        #     info_ws_name = ret_obj[1]
+        # else:
+        #     raise RuntimeError('Unable to generate log-value slicer due to %s.' % str(ret_obj))
 
         # add the values to the dictionary for later reference.
         self._chopSetupDict[tag] = {'start': start_time,
@@ -704,7 +640,7 @@ class DataChopper(object):
                                     'min': min_log_value,
                                     'max': max_log_value,
                                     'direction': direction,
-                                    'splitter': split_ws_name,
+                                    'splitter': splitter_ws_name,
                                     'info': info_ws_name}
 
         # user tag as slicer
@@ -717,7 +653,7 @@ class DataChopper(object):
         :return:
         """
         # set up Tag
-        tag = 'Slicer_%06d_Time' % self._currRunNumber
+        tag = 'Slicer_%06d_Time' % self._myRunNumber
 
         # generate slicer
         status, ret_obj = self.generate_events_filter_by_time(start_time, stop_time, time_step, tag)
@@ -740,10 +676,10 @@ class DataChopper(object):
         """ Store current session
         :return:
         """
-        nxs_name = self._currNexusFilename
-        run_number = self._currRunNumber
+        nxs_name = self._myNeXusFileName
+        run_number = self._myRunNumber
         ws_name = self._currLogWorkspaceName
-        splitter_dict = self._currSplittersDict.copy()
+        splitter_dict = self._splittersDict.copy()
 
         dict_key = os.path.basename(nxs_name)
         self._prevSessionDict[dict_key] = [nxs_name, run_number, ws_name, splitter_dict]
@@ -769,11 +705,11 @@ class DataChopper(object):
             return False, 'Log workspace %s does not exist.' % ws_name
 
         # Retrieve
-        self._currNexusFilename = nxs_name
-        self._currRunNumber = run_number
+        self._myNeXusFileName = nxs_name
+        self._myRunNumber = run_number
         self._currLogWorkspaceName = ws_name
-        self._currLogWorkspace = mantid_helper.get_workspace(ws_name)
-        self._currSplittersDict = splitter_dict
+        self._mtdWorkspaceName = mantid_helper.get_workspace(ws_name)
+        self._splittersDict = splitter_dict
 
         return True, ''
 

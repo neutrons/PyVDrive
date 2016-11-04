@@ -36,7 +36,7 @@ class VDriveAPI(object):
             Initialize an instance of VDriveAPI
         Requirements:
             Instrument name is supported
-        Guarantees:
+        Guarantees:94G
           Set
             1. Instrument name
           Initialize and set up
@@ -367,93 +367,52 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
         Generate data slicer by time
         :param run_number: run number (integer) or base file name (str)
         :param start_time:
         :param end_time:
         :param time_step:
-        :param tag: name of the output workspace
         :return:
         """
-        # TODO/ISSUE/51 - Find caller and re-direct to VDProject function call
-        # Get full-path file name according to run number
-        # base_file_name = None
-        # if isinstance(run_number, int):
-        #     # run number is a Run Number, locate file
-        #     file_name, ipts_number = self._myProject.get_run_info(run_number)
-        # elif isinstance(run_number, str):
-        #     # run number is a file name
-        #     base_file_name = run_number
-        #     file_name = self._myProject.get_file_path(base_file_name)
-        #     run_number = None
-        # else:
-        #     return False, 'Input run_number %s is either an integer or string.' % str(run_number)
-        #
-        # # Checkout log processing session
-        # self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
-        #
-        # # set up tag if it is None
-        # if tag is None:
-        #     if run_number is None:
-        #         tag = '%s_time' % base_file_name
-        #     else:
-        #         tag = '%d_time' % run_number
-        #
-        # status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
-        #                                                                         max_time=end_time,
-        #                                                                         time_interval=time_step,
-        #                                                                         tag=tag)
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
 
-        return status, ret_obj
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
 
-    def gen_data_slicer_sample_log(self, run_number, sample_log_name,
+        # generate data slicer
+        slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
+
+        return slicer_key
+
+    def gen_data_slicer_sample_log(self, run_number, sample_log_name, log_value_step,
                                    start_time, end_time, min_log_value, max_log_value,
-                                   log_value_step, tag=None):
+                                   change_direction):
         """
         Generate data slicer/splitters by log values
         :param run_number:
         :param sample_log_name:
+        :param log_value_step:
         :param start_time:
         :param end_time:
         :param min_log_value:
         :param max_log_value:
-        :param log_value_step:
+        :param change_direction:
         :return:
         """
-        # TODO/ISSUE/51 - Find caller and re-direct to VDProject function call
-        # # Get file name according to run number
-        # if isinstance(run_number, int):
-        #     # run number is a Run Number, locate file
-        #     file_name, ipts_number = self._myProject.get_run_info(run_number)
-        # elif isinstance(run_number, str):
-        #     # run number is a file name
-        #     base_file_name = run_number
-        #     file_name = self._myProject.get_file_path(base_file_name)
-        # else:
-        #     return False, 'Input run_number %s is either an integer or string.' % str(run_number)
-        #
-        # # Start a session
-        # self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
-        #
-        # # this_ws_name = get_standard_ws_name(file_name, True)
-        # # mtdHelper.load_nexus(file_name, this_ws_name, True)
-        # # slicer_name, info_name = get_splitters_names(this_ws_name)
-        # # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
-        # # print 'log_name = ', sample_log_name
-        #
-        # # FIXME - Need to pass value change direction
-        # self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-        #                                                      min_time=start_time, max_time=end_time,
-        #                                                      relative_time=True,
-        #                                                      min_log_value=min_log_value,
-        #                                                      max_log_value=max_log_value,
-        #                                                      log_value_interval=log_value_step,
-        #                                                      value_change_direction='Both',
-        #                                                      tag=tag)
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
 
-        return
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
+
+        # generate data slicer
+        slicer_key = chopper.set_log_value_slicer(sample_log_name, log_value_step,
+                                                  start_time=start_time, stop_time=end_time, direction=change_direction,
+                                                  min_log_value=min_log_value, max_log_value=max_log_value)
+        return slicer_key
 
     def get_instrument_name(self):
         """
@@ -841,42 +800,41 @@ class VDriveAPI(object):
 
         return True, ret_list
 
-    def get_sample_log_names(self, smart=False):
+    def get_sample_log_names(self, run_number, smart=False):
         """
         Get names of sample log with time series property
+        :param run_number:
         :param smart: a smart way to show sample log name with more information
         :return:
         """
-        # if self._mySlicingManager is None:
-        #     return False, 'Log helper has not been initialized.'
-        #
-        # status, ret_obj = self._mySlicingManager.get_sample_log_names(with_info=smart)
-        # if status is False:
-        #     return False, str(ret_obj)
-        # else:
-        #     name_list = ret_obj
+        assert run_number is not None, 'Run number cannot be None.'
 
-        return True, name_list
+        chopper = self._myProject.get_chopper(run_number)
+        sample_name_list = chopper.get_sample_log_names(smart)
+
+        return True, sample_name_list
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
+        :param run_number:
         :param log_name:
+        :param start_time:
+        :param stop_time:
         :param relative: if True, then the sample log's vec_time will be relative to Run_start
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
-        # TODO/ISSUE/51
-        # assert isinstance(log_name, str)
-        # try:
-        #     vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
-        #                                                                   sample_log_name=log_name,
-        #                                                                   start_time=start_time,
-        #                                                                   stop_time=stop_time,
-        #                                                                   relative=relative)
-        #
-        # except RuntimeError as e:
-        #     return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
+
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
+
+        # get log values
+        vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+                                                       start_time=start_time, stop_time=stop_time,
+                                                       relative=relative)
 
         return True, (vec_times, vec_value)
 
@@ -1491,7 +1449,7 @@ class VDriveAPI(object):
         else:
             run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
 
-        status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
+        status, errmsg = self._mySlicingManager.load_data_file(nxs_file_name, run_number)
 
         return status, errmsg
 

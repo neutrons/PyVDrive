@@ -95,8 +95,7 @@ class VDProject(object):
 
         return
 
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag,
-                          output_dir):
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
         """
         Chop data by time interval
         :param run_number:
@@ -208,7 +207,9 @@ class VDProject(object):
             run_chopper = self._chopManagerDict[run_number]
         else:
             # create a new DataChopper associated with this run
-            run_chopper = DataChopper(run_number)
+            nxs_file_name = self.get_file_path(run_number)
+
+            run_chopper = DataChopper(run_number, nxs_file_name)
 
         return run_chopper
 
@@ -261,7 +262,7 @@ class VDProject(object):
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
         # Start a session
-        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
+        self._mySlicingManager.load_data_file(nxs_file_name=file_name, run_number=run_number)
 
         # this_ws_name = get_standard_ws_name(file_name, True)
         # mtdHelper.load_nexus(file_name, this_ws_name, True)
@@ -280,47 +281,6 @@ class VDProject(object):
                                                              tag=slice_tag)
 
         return
-
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
-        """
-        Generate data slicer by time
-        :param run_number: run number (integer) or base file name (str)
-        :param start_time:
-        :param end_time:
-        :param time_step:
-        :param tag: name of the output workspace
-        :return:
-        """
-        # TODO/ISSUE/51 - make it work!
-        # Get full-path file name according to run number
-        base_file_name = None
-        if isinstance(run_number, int):
-            # run number is a Run Number, locate file
-            file_name, ipts_number = self._myProject.get_run_info(run_number)
-        elif isinstance(run_number, str):
-            # run number is a file name
-            base_file_name = run_number
-            file_name = self._myProject.get_file_path(base_file_name)
-            run_number = None
-        else:
-            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
-
-        # Checkout log processing session
-        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
-
-        # set up tag if it is None
-        if tag is None:
-            if run_number is None:
-                tag = '%s_time' % base_file_name
-            else:
-                tag = '%d_time' % run_number
-
-        status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
-                                                                                max_time=end_time,
-                                                                                time_interval=time_step,
-                                                                                tag=tag)
-
-        return status, ret_obj
 
     def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
@@ -494,46 +454,6 @@ class VDProject(object):
         Return :: list of data file names 
         """
         return self._myRunPdrDict.keys()
-
-    def get_sample_log_names(self, smart=False):
-        """
-        Get names of sample log with time series property
-        :param smart: a smart way to show sample log name with more information
-        :return:
-        """
-        # TODO/ISSUE/51 - Make it work
-        if self._mySlicingManager is None:
-            return False, 'Log helper has not been initialized.'
-
-        status, ret_obj = self._mySlicingManager.get_sample_log_names(with_info=smart)
-        if status is False:
-            return False, str(ret_obj)
-        else:
-            name_list = ret_obj
-
-        return True, name_list
-
-    def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
-        """
-        Get time and value of a sample log in vector
-        Returned time is in unit of second as epoch time
-        :param log_name:
-        :param relative: if True, then the sample log's vec_time will be relative to Run_start
-        :return: 2-tuple as status (boolean) and 2-tuple of vectors.
-        """
-        # TODO/ISSUE/51
-        assert isinstance(log_name, str)
-        try:
-            vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
-                                                                          sample_log_name=log_name,
-                                                                          start_time=start_time,
-                                                                          stop_time=stop_time,
-                                                                          relative=relative)
-
-        except RuntimeError as e:
-            return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
-
-        return True, (vec_times, vec_value)
 
     def has_run(self, run_number):
         """

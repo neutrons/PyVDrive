@@ -115,7 +115,7 @@ class VdriveChop(VDriveCommand):
                                                                              start_time=None,
                                                                              stop_time=None,
                                                                              time_interval=time_step,
-                                                                             reduce=output_to_gsas,
+                                                                             reduce_flag=output_to_gsas,
                                                                              output_dir=output_dir)
                 final_success = final_success and status
                 sum_msg += 'Run %d: %s\n' % (run_number, message)

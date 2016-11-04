@@ -7,7 +7,7 @@ import os
 
 # FIXME - This only works for Linux/MacOS X platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.VDriveAPI as vdapi
+import PyVDrive.lib.VDriveAPI as vdapi
 
 class MyData:
     def __init__(self):
@@ -91,11 +91,13 @@ def setup_ipts(step):
     """ Set up IPTS, run number and etc for reduction
     """
     # Set up workflow
-    wk_flow = vdapi.VDriveAPI()
+    wk_flow = vdapi.VDriveAPI('VULCAN')
 
     # data source
     cwd = os.getcwd()
-    data_dir = getPyDriveDataDir(cwd)
+    # data_dir = getPyDriveDataDir(cwd)
+    data_dir = '/SNS/VULCAN'
+    print 'Data Dir: ', data_dir
     wk_flow.set_data_root_directory(data_dir)
 
     # work dir
@@ -111,13 +113,15 @@ def setup_ipts(step):
 
     # Set up IPTS and expect 'false' result
     ipts_dir = os.path.join(data_dir, 'IPTS-10311')
-    status, errmsg = wk_flow.set_ipts(ipts_dir)
-    assert_false(status)
-
-    # Get runs from directory
-    status, run_tup_list = wk_flow.get_ipts_info(ipts_dir)
+    status, errmsg = wk_flow.set_ipts(10311)
+    if not status:
+        print '[ERROR]', errmsg
     assert_true(status)
-    assert_equals(len(run_tup_list), 4)
+
+    # Get runs from directory: get_ipts_info() is not used anymore
+    # status, run_tup_list = wk_flow.get_ipts_info(ipts_dir)
+    # assert_true(status)
+    # assert_equals(len(run_tup_list), 4)
 
     my_data.set_ipts_runs(-1, run_tup_list)
 
@@ -298,7 +302,7 @@ def slice_data_by_time(step):
     return
 
 
-if False:
+if True:
     setup_ipts(1)
     filter_runs(2)
     set_ipts_runs(3)
