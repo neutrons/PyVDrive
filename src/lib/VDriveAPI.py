@@ -104,14 +104,6 @@ class VDriveAPI(object):
         """
         return self._myArchiveManager
 
-    @property
-    def chop_manager(self):
-        """
-        Return the reference of slicer/chop manager
-        :return:
-        """
-        return self._mySlicingManager
-
     # Definition of algorithms
     def add_runs_to_project(self, run_info_list):
         """

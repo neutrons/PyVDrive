@@ -305,6 +305,9 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # get chop manager
         # TODO/FIXME/ISSUE/51 - Continue from here!!!
+        self.get_controller().slice_data(raw_file_name, self._currSlicerKey, output_dir, reduce_to_gsas=True)
+
+
         chop_manager = self._myController.chop_manager
 
         if reduce_data:
