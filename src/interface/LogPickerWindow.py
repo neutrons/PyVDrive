@@ -304,8 +304,10 @@ class WindowLogPicker(QtGui.QMainWindow):
             reduce_data = self._quickChopDialog.to_reduce_data()
 
         # get chop manager
-        # TODO/FIXME/ISSUE/51 - Continue from here!!!
-        self.get_controller().slice_data(raw_file_name, self._currSlicerKey, output_dir, reduce_to_gsas=True)
+        # TODO/FIXME/ISSUE/51 - Continue from here!!! something is very wrong!
+
+        self._currentPickerID
+        self.get_controller().slice_data(run_number, self._currSlicerKey)
 
 
         chop_manager = self._myController.chop_manager

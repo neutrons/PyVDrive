@@ -1278,7 +1278,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, sample_log_name=None, by_time=False):
+    def slice_data(self, run_number, slicer_id):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1321,6 +1321,13 @@ class VDriveAPI(object):
         # # Slice/split data
         # status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
         #                                              sample_log_name.replace('.', '-'))
+
+        this_chopper = self._myProject.get_chopper(run_number)
+        split_ws_name, info_ws_name = this_chopper.get_split_workspace(slicer_tag=slicer_id)
+
+        self._myProject.reduce_runs()
+
+        self._myProject.slice_data(run_number, splitter_ws_name, info_ws_name, out_base_name)
 
         return status, ret_obj
 

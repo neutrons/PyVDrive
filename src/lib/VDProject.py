@@ -95,6 +95,16 @@ class VDProject(object):
 
         return
 
+    def chop_data(self, run_number, slicer_key):
+        """
+
+        :param run_number:
+        :param slicer_key:
+        :return:
+        """
+        # TODO/NOW/ISSUE/NOW/NOW/NOW : make this one work similar to chop_data_by_time and using
+        # TODO/                        status, message = reducer.chop_reduce()
+
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
         """
         Chop data by time interval

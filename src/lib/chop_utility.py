@@ -110,6 +110,8 @@ class DataChopper(object):
         # initialization operation
         self.load_data_file()
 
+        # TODO/FIXME/ISSUE/NOW - Remove splittersDict!!!
+
         # replaced by chopSetupDict: self._splittersDict = dict()
         # key = sample log name, value = (split ws name, info ws name)
 
@@ -425,14 +427,28 @@ class DataChopper(object):
 
         return vec_times, vec_value
 
-    def get_slicer_by_id(self, run_number, slicer_tag, relative_time=True):
+    def get_split_workspace(self, slice_id):
+        """
+        Get the workspace for splitting with slice ID
+        :param slice_id:
+        :return: splitters workspace and splitter information table workspace
+        """
+        if slice_id not in self._chopSetupDict:
+            raise RuntimeError('Splitters dictionary does not have ID %s.' % str(slice_id))
+
+        split_ws_name = self._chopSetupDict[slice_id]['splitter']
+        info_table_name = self._chopSetupDict[slice_id]['info']
+
+        return split_ws_name, info_table_name
+
+    def get_slicer_by_id(self, slicer_tag, relative_time=True):
         """ Get slicer by slicer ID
-        :param run_number:
         :param slicer_tag:
         :return: 2-tuple
         """
         # Get workspaces
-        print '[DB Get Slicer] Run number = ', run_number, ', Tag = ', slicer_tag
+        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_id()
+
         status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
         if status is False:
             err_msg = ret_obj
@@ -461,6 +477,8 @@ class DataChopper(object):
         :param nxs_name:
         :return: 2-tuple as (boolean, object)
         """
+        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_log()
+
         # Check
         assert isinstance(run_number, int)
         assert isinstance(nxs_name, str) or nxs_name is None
@@ -514,6 +532,7 @@ class DataChopper(object):
         :param nxs_name:
         :return:
         """
+        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_time()
         # Check for using run number or nxs file name
         use_current = False
 
