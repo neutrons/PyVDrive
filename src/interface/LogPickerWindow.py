@@ -289,8 +289,11 @@ class WindowLogPicker(QtGui.QMainWindow):
                 status, info_tup = self.get_controller().get_run_info(run_number)
                 if status:
                     raw_file_name = info_tup[0]
-            except ValueError:
-                pass
+            except ValueError as val_error:
+                raise RuntimeError('Unable to find out run number')
+        else:
+            # TODO/ISSUE/NEXT - Find out how to generalize the current data structure for external log file
+            raise NotImplementedError('Coming Soon!')
 
         # pop up the dialog
         self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._currRunNumber, raw_file_name)
@@ -298,26 +301,15 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # quit if user cancels the operation
         if result == 0:
+            # cancel operation
             return
         else:
             output_dir = self._quickChopDialog.get_output_dir()
-            reduce_data = self._quickChopDialog.to_reduce_data()
+            reduce_gsas = self._quickChopDialog.to_reduce_data()
 
         # get chop manager
-        # TODO/FIXME/ISSUE/51 - Continue from here!!! something is very wrong!
-
-        self._currentPickerID
-        self.get_controller().slice_data(run_number, self._currSlicerKey)
-
-
-        chop_manager = self._myController.chop_manager
-
-        if reduce_data:
-            # slice and reduce data to GSAS
-            chop_manager.reduce_data(self._currRunNumber, raw_file_name, self._currSlicerKey, output_dir)
-        else:
-            # slice data and save the split workspace
-            chop_manager.chop_data(raw_file_name, self._currSlicerKey, output_dir)
+        self.get_controller().slice_data(run_number, self._currSlicerKey, reduce_data=reduce_gsas,
+                                         output_dir=output_dir)
 
         return
 
@@ -891,11 +883,15 @@ class WindowLogPicker(QtGui.QMainWindow):
             log_value_step = GuiUtility.parse_float(self.ui.lineEdit_slicerLogValueStep)
             value_change_direction = str(self.ui.comboBox_logChangeDirection.currentText())
 
-            self._currSlicerKey = self.get_controller().gen_data_slicer_sample_log(self._currRunNumber, log_name,
+            try:
+                self._currSlicerKey = self.get_controller().gen_data_slicer_sample_log(self._currRunNumber, log_name,
                                                                                    log_value_step, start_time,
                                                                                    stop_time,
                                                                                    min_log_value, max_log_value,
                                                                                    value_change_direction)
+            except RuntimeError as run_err:
+                # TODO/NOW/ISSUE - should pop out an error message
+                raise RuntimeError(run_err)
 
         else:
             # bad coding
@@ -1292,12 +1288,15 @@ class WindowLogPicker(QtGui.QMainWindow):
          1: left
          2: middle
          3: right
+        and double click event is a subcategory to press_event
         """
         # Get event data
         x = event.xdata
         y = event.ydata
         button = event.button
         print "[DB] Button %d is (pressed) down at (%s, %s)." % (button, str(x), str(y))
+        if event.dblclick:
+            print '[DB... double click (press)] ', event.dblclick, type(event.dblclick)
 
         # Select situation
         if x is None or y is None:
@@ -1315,6 +1314,9 @@ class WindowLogPicker(QtGui.QMainWindow):
     def on_mouse_release_event(self, event):
         """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
         then the mode is over
+
+        Note: double click (event.dblclick) does not correspond to any mouse release event
+
         """
         button = event.button
 

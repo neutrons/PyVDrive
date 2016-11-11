@@ -1278,7 +1278,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, slicer_id):
+    def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1287,49 +1287,11 @@ class VDriveAPI(object):
         :param by_time:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # TODO/ISSUE/51
-        # Check. Must either by sample log or by time
-        # if sample_log_name is not None and by_time is True:
-        #     return False, 'It is not allowed to specify both sample log name and time!'
-        # elif sample_log_name is None and by_time is False:
-        #     return False, 'it is not allowed to specify neither sample log nor time!'
-        #
-        # # Get and check slicers/splitters
-        # if by_time is True:
-        #     # Slice data by time
-        #     status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
-        #     if status is False:
-        #         err_msg = ret_obj
-        #         return False, err_msg
-        #     else:
-        #         slicer = ret_obj
-        #         sample_log_name = '_TIME_'
-        #         print '[DB] Slicer = ', str(slicer), '\n'
-        # else:
-        #     # Slice data by log value
-        #     assert isinstance(sample_log_name, str)
-        #     print '[DB] Run number = ', run_number, '\n'
-        #     status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, sample_log_name)
-        #     if status is False:
-        #         print '[DB]', ret_obj, '\n'
-        #         return False, ret_obj
-        #     else:
-        #         slicer = ret_obj
-        #     # slicer is a tuple for names of splitter workspace and information workspace
-        #     # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
-        #
-        # # Slice/split data
-        # status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
-        #                                              sample_log_name.replace('.', '-'))
+        # TODO/ISSUE/51 : clean
 
-        this_chopper = self._myProject.get_chopper(run_number)
-        split_ws_name, info_ws_name = this_chopper.get_split_workspace(slicer_tag=slicer_id)
+        self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data, output_dir=output_dir)
 
-        self._myProject.reduce_runs()
-
-        self._myProject.slice_data(run_number, splitter_ws_name, info_ws_name, out_base_name)
-
-        return status, ret_obj
+        return
 
     def set_focus_calibration_file(self, calibration_file):
         """

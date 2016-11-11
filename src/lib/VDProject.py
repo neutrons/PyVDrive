@@ -95,15 +95,49 @@ class VDProject(object):
 
         return
 
-    def chop_data(self, run_number, slicer_key):
+    def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
 
         :param run_number:
         :param slicer_key:
         :return:
         """
-        # TODO/NOW/ISSUE/NOW/NOW/NOW : make this one work similar to chop_data_by_time and using
-        # TODO/                        status, message = reducer.chop_reduce()
+        # TODO/NOW/clean!
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            '' % (str(run_number), type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+
+        # get chopping helper
+        try:
+            chopper = self._chopManagerDict[run_number]
+        except KeyError as key_error:
+            print '[KeyError] ', key_error, 'Available keys are: ', self._chopManagerDict.keys()
+            raise RuntimeError(blabla)
+
+        split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
+
+        if reduce_flag:
+            # reduce to GSAS
+            reduce_setup = reduce_VULCAN.ReductionSetup()
+            reduce_setup.set_event_file(self.get_file_path(run_number))
+            reduce_setup.set_output_dir(output_dir)
+            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+            reduce_setup.is_full_reduction = False
+
+            # add splitter workspace and splitter information workspace
+            reduce_setup.set_splitters(split_ws_name, info_ws_name)
+
+            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+            status, message = reducer.chop_reduce()
+            # TODO/NOW -- deal with output result
+
+        else:
+            # just chop the files and save to Nexus
+            # TODO/FIXME/ISSUE/NOW - make it work!
+            mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
+
+        return
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
         """
@@ -218,8 +252,11 @@ class VDProject(object):
         else:
             # create a new DataChopper associated with this run
             nxs_file_name = self.get_file_path(run_number)
-
             run_chopper = DataChopper(run_number, nxs_file_name)
+
+            # register chopper
+            self._chopManagerDict[run_number] = run_chopper
+        # END-IF-ELSE
 
         return run_chopper
 

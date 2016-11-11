@@ -642,16 +642,6 @@ class DataChopper(object):
                                                     min_time, max_time, log_name, min_log_value, max_log_value,
                                                     log_value_step, direction)
 
-        # status, ret_obj = self.generate_events_filter_by_log(log_name, start_time, stop_time, relative_time=True,
-        #                                                      min_log_value=min_log_value, max_log_value=max_log_value,
-        #                                                      log_value_interval=log_value_step,
-        #                                                      value_change_direction=direction, tag=tag)
-        # if status:
-        #     split_ws_name = ret_obj[0]
-        #     info_ws_name = ret_obj[1]
-        # else:
-        #     raise RuntimeError('Unable to generate log-value slicer due to %s.' % str(ret_obj))
-
         # add the values to the dictionary for later reference.
         self._chopSetupDict[tag] = {'start': start_time,
                                     'stop': stop_time,
