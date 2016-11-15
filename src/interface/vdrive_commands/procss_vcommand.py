@@ -86,8 +86,8 @@ class VDriveCommand(object):
 
     def get_ipts_runs(self):
         """
-        blabla
-        :return:
+        retrieve IPTS number and run numbers from the command
+        :return: 2-tuple: (1) integer for IPTS (2) list of integers for run numbers
         """
         return self._iptsNumber, self._runNumberList[:]
 

@@ -164,7 +164,8 @@ class VdriveCommandProcessor(object):
         """
         assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
             'not command processor but ...'
-        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
+        assert isinstance(arg_dict, dict), 'Arguments dictionary %s must be a dictionary but not a %s.' \
+                                           '' % (str(arg_dict), type(arg_dict))
 
         if len(arg_dict) == 0:
             message = command_processor.get_help()

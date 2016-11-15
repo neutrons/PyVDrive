@@ -586,8 +586,8 @@ class ReductionSetup(object):
         :param info_ws_name:
         :return:
         """
-        assert isinstance(splitter_ws_name, str), 'blabla'
-        assert isinstance(info_ws_name, str), 'blabla'
+        assert isinstance(splitter_ws_name, str), 'Splitters workspace name must be a string.'
+        assert isinstance(info_ws_name, str), 'Splitters information workspace name must be a string.'
 
         self._splitterWsName = splitter_ws_name
         self._splitterInfoName = info_ws_name
@@ -1129,7 +1129,8 @@ class ReduceVulcanData(object):
             # get the split workspace's name
             ws_index = int(info_table.cell(i_ws, 0))
             reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
-            assert AnalysisDataService.doesExist(reduced_ws_name), 'blalba'
+            assert AnalysisDataService.doesExist(reduced_ws_name), 'Input (already) reduced workspace name ' \
+                                                                   '%s does not exist.' % reduced_ws_name
 
             # convert unit and save for VULCAN-specific GSAS
             tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
@@ -1626,8 +1627,9 @@ class ReduceVulcanData(object):
         return True, ''
 
     def reduce_powder_diffraction_data(self):
-        """ Save for Nexus file
-        blabla
+        """
+        reduce powder diffraction data
+        :return:
         """
         # required parameters:  ipts, runnumber, outputdir
 

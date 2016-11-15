@@ -182,8 +182,9 @@ class PhaseWidgets(object):
         :return:
         """
         # Check requirements:
-        assert isinstance(phase_value_list, list), 'bla bla'
-        assert len(phase_value_list) == 5
+        assert isinstance(phase_value_list, list), 'Phase value list %s must be a list but not of type %s.' \
+                                                   '' % (str(phase_value_list), type(phase_value_list))
+        assert len(phase_value_list) == 5, 'Phase value list %s must be 5 elements.' % str(phase_value_list)
 
         # Set name
         phase_value_list[0] = str(self._lineEdit_name.text()).strip()
@@ -305,8 +306,9 @@ class PhaseWidgets(object):
         :return:
         """
         # Check requirements
-        assert isinstance(unit_cell_value, list), 'blabla'
-        assert len(unit_cell_value) == 5
+        assert isinstance(unit_cell_value, list), 'Unit cell value %s must be given in list but not %s.' \
+                                                  '' % (str(unit_cell_value), type(unit_cell_value))
+        assert len(unit_cell_value) == 5, 'Unit cell value %s must have 5 elements.' % str(unit_cell_value)
 
         # Set phase name
         self._lineEdit_name.setText(unit_cell_value[0])
@@ -782,7 +784,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             min_d = self.ui.graphicsView_main.getXLimit()[0]
         if max_d is None:
             max_d = self.ui.graphicsView_main.getXLimit()[1]
-        assert min_d <= max_d, 'blablabla'
+        assert min_d <= max_d, 'Minimum D %f cannot be larger than Maximum D %f.' % (min_d, max_d)
 
         # List all peaks if any is selected
         num_phases_used = 0
@@ -1579,10 +1581,22 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
     def menu_delete_peak(self):
         """
-        TODO/NOW: Implement and Doc
+        Delete a peak from menu at where the cursor is pointed to
         :return:
         """
-        print 'bla bla ...', 'Delete peak around x = %f' % self._currMousePosX
+        # TODO: Implement and Doc
+        print '[DB...BAT] Delete peak around x = %f' % self._currMousePosX
+
+        # find out where the peak is
+        temp_peak_pos = self._currMousePosX
+
+        nearest_peak_index = self.locate_peak(temp_peak_pos, resolution)
+        if nearest_peak_index is not None:
+            self.ui.graphicsView_main.delete_peak(nearest_peak_index)
+        else:
+            GuiUtility.pop_dialog_error(self, 'No peak is found around %f.' % self._currMousePosX)
+
+        return
 
     def menu_exit(self):
         """

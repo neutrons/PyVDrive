@@ -304,7 +304,7 @@ class VDriveAPI(object):
         Requirements:
          - by run number, a workspace containing the reduced run must be found
          - either auto (mode) is on or peak positions are given;
-         - peak profile must be Gaussian and blabla
+         - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
         :param run_number:
         :param bank_number:
         :param x_range:
@@ -321,11 +321,12 @@ class VDriveAPI(object):
 
         # Check
         # ... ... assert isinstance(run_number, int)
-        assert isinstance(bank_number, int)
-        assert isinstance(x_range, tuple) and len(x_range) == 2
-        assert isinstance(profile, str)
-        assert isinstance(peak_positions, list) or peak_positions is None
+        assert isinstance(bank_number, int), 'Bank number must be an integer.'
+        assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
+        assert isinstance(profile, str), 'Peak profile must be a string.'
+        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
 
+        # raise exceptions if the input parameters are not allowed.
         if isinstance(peak_positions, list) and auto_find:
             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
         if peak_positions is None and auto_find is False:
@@ -338,7 +339,7 @@ class VDriveAPI(object):
             # find peaks in an automatic way
             peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
         else:
-            # ... ...
+            # # find the peaks with list
             peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
                                                       hkl_list, profile)
 
@@ -350,14 +351,14 @@ class VDriveAPI(object):
         :param relative_time:
         :param time_segment_list:
         :param slice_tag: string for slice tag name
-        :return:
+        :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
         """
-        # TODO/ISSUE/51 - Find caller and re-direct to VDProject function call
+        # get the chopper
+        chopper = self._myProject.get_chopper(run_number)
+        slice_tag = chopper.generate_events_filter_manual(time_segment_list, relative_time=relative_time,
+                                                          splitter_tag=slice_tag)
 
-        # status, ret_obj = self._mySlicingManager.generate_events_filter_manual(
-        #     run_number, time_segment_list, relative_time, slice_tag)
-
-        return status, ret_obj
+        return slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
@@ -478,7 +479,7 @@ class VDriveAPI(object):
 
         elif run_number is None and isinstance(data_key, str):
             # given data key
-            assert len(data_key) > 0, 'bla bla'
+            assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
                 info = self._myAnalysisProject.get_data_information(data_key)
             except AssertionError as e:
@@ -555,33 +556,25 @@ class VDriveAPI(object):
 
     def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
         """
-        TODO/FIXME What am I supposed to do???
         :param run_number: run number for locate slicer
         :param slicer_id: log name, manual, time (decreasing priority)
         :param slicer_type: string as type of slicer
         :param relative_time: if True, time is in relative to run_start
         :return: vector of floats as time in unit of second
         """
-        # TODO/ISSUE/51 - Re-direct the function call to it
-        # # Check
-        # assert isinstance(run_number, int)
-        # assert isinstance(slicer_type, str)
-        # assert isinstance(slicer_id, str)
-        #
-        # if slicer_type.lower() == 'time':
-        #     status, ret_obj = self._mySlicingManager.get_slicer_by_time()
-        # elif slicer_type.lower() == 'log':
-        #     status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, slicer_id)
-        # else:
-        #     status, ret_obj = self._mySlicingManager.get_slicer_by_id(run_number, slicer_id, relative_time)
-        #
-        # if status is False:
-        #     err_msg = ret_obj
-        #     return False, err_msg
-        # else:
-        #     time_segment_list = ret_obj
 
-        return True, time_segment_list
+        # get the chopper for the run
+        chopper = self._myProject.get_chopper(run_number)
+
+        if slicer_type == 'time':
+            slicer_id = 'time'
+        elif slicer_type == 'manual':
+            slicer_id = 'manual'
+
+        # TODO/NOW/ISSUE - implement get_slicer_time_vec()
+        slicer_time_vec = chopper.get_slicer_time_vec(slicer_type)
+
+        return slicer_time_vec
 
     def get_ipts_number_from_dir(self, dir_name):
         """
@@ -857,8 +850,10 @@ class VDriveAPI(object):
         :return:
         """
         # Check requirements
-        assert isinstance(file_name, str), 'blabla'
-        assert isinstance(file_type, str), 'blabla'
+        assert isinstance(file_name, str), 'Diffraction file name %s must be a string but not %s.' \
+                                           '' % (str(file_name), type(file_name))
+        assert isinstance(file_type, str), 'Diffraction file type %s mut be a string but not %s.' \
+                                           '' % (str(file_type), type(file_type))
 
         # Load
         if file_type.lower() == 'gsas':
@@ -1134,7 +1129,8 @@ class VDriveAPI(object):
         :return:
         """
         # check
-        assert isinstance(log_file_name, str), 'blabla'
+        assert isinstance(log_file_name, str), 'MTS log file name %s must be a string but not %s.' \
+                                               '' % (str(log_file_name), type(log_file_name))
         if log_file_name not in self._mtsLogDict:
             raise KeyError('Log file %s has not been loaded. Loaded files are %s.'
                            '' % (log_file_name, str(self._mtsLogDict.keys())))
@@ -1221,18 +1217,21 @@ class VDriveAPI(object):
 
         return True, out_file_name
 
-    def save_splitter_workspace(self, run_number, sample_log_name, file_name):
+    def save_splitter_workspace(self, run_number, slicer_tag, file_name):
         """
         Save SplittersWorkspace to standard text file
         :param run_number:
-        :param sample_log_name:
+        :param slicer_tag:
         :param file_name:
         :return:
         """
-        # TODO/ISSUE/51
-        # status, err_msg = self._mySlicingManager.save_splitter_ws(run_number, sample_log_name, file_name)
+        # get chopper
+        assert isinstance(run_number, int), 'Run number must be an integer.'
+        chopper = self._myProject.get_chopper(run_number)
 
-        return status, err_msg
+        chopper.save_splitter_ws_text(slicer_tag, file_name)
+
+        return
 
     def save_time_segment(self, time_segment_list, ref_run_number, file_name):
         """

@@ -15,7 +15,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 
     def __init__(self, controller, command_args):
         """
-        blabla
+        initialization
         :param controller:
         :param command_args:
         """
@@ -77,19 +77,22 @@ class AutoReduce(procss_vcommand.VDriveCommand):
     @staticmethod
     def split_run_numbers(run_numbers_str):
         """
-        blabla
+        split run numbers from a string.
+        example: run1, run2-run10, run11, run12,
         :param run_numbers_str:
         :return:
         """
         def pop_range(range_str):
             """
-            blabla
+            replace a range a - b to a list such as a, a1, a2, .., b
             :param range_str:
             :return:
             """
             terms = range_str.split('-')
             start_value = int(terms[0])
             stop_value = int(terms[1])
+            assert start_value <= stop_value, 'Start value %d must be smaller or euqal to stop value %s.' \
+                                              '' % (start_value, stop_value)
             return range(start_value, stop_value+1)
 
         run_numbers_str = run_numbers_str.replace(' ', '')

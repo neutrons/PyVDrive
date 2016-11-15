@@ -1178,12 +1178,13 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def load_run(self, run_number):
         """
-        blabla
+        load a NeXus file by run number
         :param run_number:
         :return:
         """
         # check
-        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
+                                                                                              type(run_number))
 
         # set
         self.ui.lineEdit_runNumber.setText(str(run_number))

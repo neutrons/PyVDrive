@@ -52,7 +52,7 @@ class LauncherManager(QtGui.QDialog):
 
     def do_exit(self):
         """
-        blabla
+        exit the application
         :return:
         """
         self.close()
@@ -61,14 +61,9 @@ class LauncherManager(QtGui.QDialog):
 
     def do_launch_chopper(self):
         """
-        blabla
+        launch the log picker window
         :return:
         """
-        import interface.LogPickerWindow as LP
-
-        # self._myLogPickerWindow = LP.WindowLogPicker(self._mainReducerWindow)
-        # self._myLogPickerWindow.show()
-
         self._mainReducerWindow.do_launch_log_picker_window()
 
         if not self.ui.checkBox_keepOpen.isChecked():
@@ -78,7 +73,7 @@ class LauncherManager(QtGui.QDialog):
 
     def do_launch_peak_picker(self):
         """
-        blabla
+        launch peak picker window
         :return:
         """
         import interface.PeakPickWindow as PeakPickWindow
@@ -106,7 +101,7 @@ class LauncherManager(QtGui.QDialog):
 
     def do_launch_vdrive(self):
         """
-        blabla
+        launch the main VDrivePlot window
         :return:
         """
         self._mainReducerWindow.show()

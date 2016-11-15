@@ -132,8 +132,9 @@ def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     # check validity
     assert isinstance(peak_tuple_list, list), 'Input peak-tuple list must be a list but not %s.' \
                                               '' % peak_tuple_list.__class__.__name__
-    assert resolution, 'blabla'
-    assert fit_range_factor, 'blabla'
+    assert isinstance(resolution, float), 'Resolution %s must be a float but not %s.' % (str(resolution),
+                                                                                         type(resolution))
+    assert isinstance(fit_range_factor, float), 'Fit range factor must be a float.'
 
     # sort to reverse
     peak_tuple_list.sort(reverse=True)

@@ -97,12 +97,15 @@ class VDProject(object):
 
     def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
-
+        Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
+        split workspacs to GSAS
         :param run_number:
         :param slicer_key:
+        :param reduce_flag:
+        :param output_dir:
         :return:
         """
-        # TODO/NOW/clean!
+        # check inputs' validity
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
         assert isinstance(output_dir, str) and os.path.exists(output_dir), \
@@ -112,8 +115,9 @@ class VDProject(object):
         try:
             chopper = self._chopManagerDict[run_number]
         except KeyError as key_error:
-            print '[KeyError] ', key_error, 'Available keys are: ', self._chopManagerDict.keys()
-            raise RuntimeError(blabla)
+            error_message = 'Run number %d is not registered to chopper manager. Current runs are %s.' \
+                            '' % (run_number, str(self._chopManagerDict.keys()))
+            raise RuntimeError(error_message)
 
         split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
 
@@ -227,17 +231,21 @@ class VDProject(object):
 
     def delete_data_file(self, data_file_name):
         """
-        Delete a data file in the project
+        Delete a data file in the project but not delete the file physically
         :param data_file_name:
-        :return:
+        :return: boolean.  True if it is in the data file dictionary. False it is not in the project
         """
-        assert isinstance(data_file_name, str), 'blabla'
+        # check validity
+        assert isinstance(data_file_name, str), 'Data file name %s must be a string but not a %s.' \
+                                                '' % (str(data_file_name), type(data_file_name))
 
+        # delete data file only if it is in the file dictionary
         if data_file_name in self._dataFileDict:
             del self._dataFileDict[data_file_name]
             self._baseDataFileNameList.remove(os.path.basename(data_file_name))
+            return True
 
-        return
+        return False
 
     def get_chopper(self, run_number):
         """
@@ -457,7 +465,7 @@ class VDProject(object):
         :return:
         """
         # TODO/NOW/1st: think of how to implement!
-        return blabla
+        return ReductionHistory
 
     def get_reduced_run_information(self, run_number):
         """
