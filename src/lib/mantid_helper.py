@@ -881,33 +881,55 @@ def save_event_workspace(event_ws_name, nxs_file_name):
     return
 
 
-def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):
+def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_name=None,
+                     tof_correction=False, output_directory=None, delete_split_ws=True):
     """
-    Split events in a workspace
-    Requirements: given raw event workspace, splitter workspace, information workspace are in ADS.
-    :param raw_event_ws_name:
-    :param splitter_ws_name:
-    :param info_ws_name:
-    :param split_ws_base_name:
+    split event data file according pre-defined split workspace. optionally the split workspace
+    can be saved to NeXus files
+    :param raw_file_name:
+    :param split_ws_name:
+    :param info_table_name:
+    :param target_ws_name:
     :param tof_correction:
-    :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
+    :param output_directory:
+    :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
+    :return:
     """
     # Check requirements
-    assert workspace_does_exist(raw_event_ws_name)
-    assert workspace_does_exist(splitter_ws_name)
-    assert workspace_does_exist(info_ws_name)
-    assert isinstance(splitter_ws_name, str)
+    assert workspace_does_exist(split_ws_name)
+    assert workspace_does_exist(info_table_name)
+    assert isinstance(raw_file_name, str), 'Input file name must be a string but not %s.' % type(raw_file_name)
 
+    # rule out some unsupported scenario
+    if output_directory is None and delete_split_ws:
+        raise RuntimeError('It is not supported that no file is written (output_dir is None) '
+                           'and split workspace is to be delete.')
+    elif output_directory is not None:
+        assert isinstance(output_directory, str), 'Output directory %s must be a string but not %s.' \
+                                                  '' % (str(output_directory), type(output_directory))
+
+    # load the file to workspace
+    event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+    load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
+    # process TOF correction
     if tof_correction is True:
         correction = 'Elastic'
     else:
         correction = 'None'
 
-    # print '[DB] Information workspace = %s of type %s\n' % (str(info_ws_name), str(type(info_ws_name)))
-    ret_list = mantidapi.FilterEvents(InputWorkspace=raw_event_ws_name,
-                                      SplitterWorkspace=splitter_ws_name,
-                                      InformationWorkspace=info_ws_name,
-                                      OutputWorkspaceBaseName=split_ws_base_name,
+    # process the target workspace name
+    if target_ws_name is None:
+        target_ws_name = event_ws_name + '_split'
+    else:
+        assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
+                                                '' % (str(target_ws_name), type(target_ws_name))
+
+    # split workspace
+    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
+                                      SplitterWorkspace=split_ws_name,
+                                      InformationWorkspace=info_table_name,
+                                      OutputWorkspaceBaseName=target_ws_name,
                                       FilterByPulseTime=False,
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
@@ -918,19 +940,31 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws
     try:
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
-        split_ws_name_list = ret_list[2]
-        assert num_split_ws == len(split_ws_name_list)
+        chopped_ws_name_list = ret_list[2]
+        assert num_split_ws == len(chopped_ws_name_list)
     except IndexError:
         return False, 'Failed to split data by FilterEvents.'
 
-    if len(ret_list) != 3 + len(split_ws_name_list):
+    if len(ret_list) != 3 + len(chopped_ws_name_list):
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+
+    # Save result
+    if output_directory is not None:
+        for chopped_ws_name in chopped_ws_name_list:
+            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+            mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
 
     # Clear
     delete_workspace(correction_ws)
+    if delete_split_ws:
+        for chopped_ws_name in chopped_ws_name_list:
+            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
 
     # Output
-    ret_obj = (split_ws_name_list, ret_list[3:])
+    if delete_split_ws:
+        ret_obj = False
+    else:
+        ret_obj = (chopped_ws_name_list, ret_list[3:])
 
     return True, ret_obj
 

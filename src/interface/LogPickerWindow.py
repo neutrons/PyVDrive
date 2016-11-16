@@ -308,6 +308,8 @@ class WindowLogPicker(QtGui.QMainWindow):
             reduce_gsas = self._quickChopDialog.to_reduce_data()
 
         # get chop manager
+        assert isinstance(self._currSlicerKey, str), 'Slicer key %s must be a string but not %s.' \
+                                                     '' % (str(self._currSlicerKey), type(self._currSlicerKey))
         self.get_controller().slice_data(run_number, self._currSlicerKey, reduce_data=reduce_gsas,
                                          output_dir=output_dir)
 
@@ -884,14 +886,21 @@ class WindowLogPicker(QtGui.QMainWindow):
             value_change_direction = str(self.ui.comboBox_logChangeDirection.currentText())
 
             try:
-                self._currSlicerKey = self.get_controller().gen_data_slicer_sample_log(self._currRunNumber, log_name,
-                                                                                   log_value_step, start_time,
-                                                                                   stop_time,
-                                                                                   min_log_value, max_log_value,
+                status, ret_obj = self.get_controller().gen_data_slicer_sample_log(self._currRunNumber,
+                                                                                   log_name, log_value_step,
+                                                                                   start_time, stop_time, min_log_value,
+                                                                                   max_log_value,
                                                                                    value_change_direction)
+                if status:
+                    self._currSlicerKey = ret_obj
+                else:
+                    GuiUtility.pop_dialog_error(self, 'Failed to generate data slicer from sample log due to %s.'
+                                                      '' % ret_obj)
             except RuntimeError as run_err:
-                # TODO/NOW/ISSUE - should pop out an error message
-                raise RuntimeError(run_err)
+                # run time error
+                GuiUtility.pop_dialog_error(self, 'Unable to generate data slicer from sample log due to %s.'
+                                                  '' % str(run_err))
+                return
 
         else:
             # bad coding

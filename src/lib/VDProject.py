@@ -106,6 +106,8 @@ class VDProject(object):
         :return:
         """
         # check inputs' validity
+        assert isinstance(slicer_key, str), 'Slicer key %s of type %s is not supported. It ' \
+                                            'must be a string.' % (str(slicer_key), type(slicer_key))
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
         assert isinstance(output_dir, str) and os.path.exists(output_dir), \
@@ -138,8 +140,13 @@ class VDProject(object):
 
         else:
             # just chop the files and save to Nexus
-            # TODO/FIXME/ISSUE/NOW - make it work!
-            mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
+            mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),
+                                           split_ws_name=split_ws_name,
+                                           info_table_name=info_ws_name,
+                                           target_ws_name=None,
+                                           tof_correction=False,
+                                           output_directory=output_dir,
+                                           delete_split_ws=True)
 
         return
 

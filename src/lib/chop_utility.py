@@ -158,7 +158,7 @@ class DataChopper(object):
 
     def chop_data(self, raw_file_name, slicer_type, output_directory):
         """
-        chop data and save
+        chop data and save to GSAS file
         :param raw_file_name:
         :param slicer_type:
         :param output_directory:
@@ -433,8 +433,14 @@ class DataChopper(object):
         :param slice_id:
         :return: splitters workspace and splitter information table workspace
         """
+        # check inputs
+        assert isinstance(slice_id, str), 'Slicer ID %s must be a string but not of type %s.' % (str(slice_id),
+                                                                                                 type(slice_id))
+
+        # whether the slicer ID is in the set up dictionary?
         if slice_id not in self._chopSetupDict:
-            raise RuntimeError('Splitters dictionary does not have ID %s.' % str(slice_id))
+            raise RuntimeError('Splitters dictionary does not have ID %s.  Supported IDs are %s.'
+                               '' % (str(slice_id), str(self._chopSetupDict.keys())))
 
         split_ws_name = self._chopSetupDict[slice_id]['splitter']
         info_table_name = self._chopSetupDict[slice_id]['info']
@@ -607,7 +613,7 @@ class DataChopper(object):
         :param max_log_value:
         :param log_value_step:
         :param direction: log value change direction
-        :return: key to the slicer
+        :return: 2-tuple. (1) boolean (2) string: key to the slicer
         """
         # check validity of inputs
         assert isinstance(log_name, str), 'Log name must be a string.'
@@ -655,7 +661,7 @@ class DataChopper(object):
         # user tag as slicer
         slicer_key = tag
 
-        return slicer_key
+        return True, slicer_key
 
     def set_time_slicer(self, start_time, time_step, stop_time):
         """

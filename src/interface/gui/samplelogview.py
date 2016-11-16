@@ -49,9 +49,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             raise TypeError(err_msg)
 
         # add plot and register
-        # TODO/NOW/ISSUE/ - add show_legend option
         plot_id = self.add_plot_1d(vec_x, vec_y, label='', marker='.', color='blue', show_legend=False)
-        self.set_title(labe=the_label)
+        self.set_title(title=the_label)
         self._sizeRegister[plot_id] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
 
         # auto resize

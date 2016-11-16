@@ -393,7 +393,7 @@ class VDriveAPI(object):
         :param min_log_value:
         :param max_log_value:
         :param change_direction:
-        :return:
+        :return: 2-tuple. [1] True/Slicer Key  [2] False/Error Message
         """
         # check input
         assert run_number is not None, 'Run number cannot be None.'
@@ -402,10 +402,12 @@ class VDriveAPI(object):
         chopper = self._myProject.get_chopper(run_number)
 
         # generate data slicer
-        slicer_key = chopper.set_log_value_slicer(sample_log_name, log_value_step,
-                                                  start_time=start_time, stop_time=end_time, direction=change_direction,
-                                                  min_log_value=min_log_value, max_log_value=max_log_value)
-        return slicer_key
+        status, slicer_key = chopper.set_log_value_slicer(sample_log_name, log_value_step,
+                                                          start_time=start_time, stop_time=end_time,
+                                                          direction=change_direction,
+                                                          min_log_value=min_log_value, max_log_value=max_log_value)
+
+        return status, slicer_key
 
     def get_instrument_name(self):
         """
@@ -1278,6 +1280,9 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
+
+
+
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
