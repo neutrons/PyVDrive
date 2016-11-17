@@ -1091,6 +1091,23 @@ class ReduceVulcanData(object):
         Chop and reduce
         :return:
         """
+        def get_target_split_ws_index(table_ws):
+            """
+
+            :param table_ws:
+            :return:
+            """
+            target_set = set()
+            if table_ws.__class__.__name__.count('SplittersWorkspace') == 1:
+                # splitters workspace
+                for i_row in range(table_ws.rowCount()):
+                    target_ws_index = int(table_ws.cell(i_row, 2))
+                    target_set.add(target_ws_index)
+                # END-FOR
+            # END-IF
+
+            return sorted(list(target_set))
+
         # check whether it is good to go
         assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
@@ -1125,12 +1142,24 @@ class ReduceVulcanData(object):
         # create GSAS file for split workspaces
         info_table = AnalysisDataService.retrieve(split_info_table)
         num_split_ws = info_table.rowCount()
+
+        target_chop_index_list = get_target_split_ws_index(split_ws_name)
+
+        everything_is_right = True
+
         for i_ws in range(num_split_ws):
             # get the split workspace's name
             ws_index = int(info_table.cell(i_ws, 0))
             reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
-            assert AnalysisDataService.doesExist(reduced_ws_name), 'Input (already) reduced workspace name ' \
-                                                                   '%s does not exist.' % reduced_ws_name
+
+            # there won't be a workspace produced if there is no neutron event within the range.
+            if AnalysisDataService.doesExist(reduced_ws_name) is False:
+                if ws_index in target_chop_index_list:
+                    message += 'Reduced workspace %s does not exist. Investigate it!\n' % reduced_ws_name
+                    everything_is_right = False
+                else:
+                    message += 'Input reduced workspace %s does not exist, maybe no neutron.\n' % reduced_ws_name
+                continue
 
             # convert unit and save for VULCAN-specific GSAS
             tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
@@ -1158,7 +1187,7 @@ class ReduceVulcanData(object):
 
         # END-FOR
 
-        return True, message
+        return everything_is_right, message
 
     def dry_run(self):
         """

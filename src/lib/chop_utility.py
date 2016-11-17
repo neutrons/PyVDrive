@@ -277,7 +277,7 @@ class DataChopper(object):
         """
         # defaults to set up workspaces
         if ws_name is None:
-            ws_name = self._currLogWorkspaceName
+            ws_name = self._mtdWorkspaceName
 
         # Check
         assert isinstance(min_time, float) or min_time is None
@@ -693,7 +693,7 @@ class DataChopper(object):
         """
         nxs_name = self._myNeXusFileName
         run_number = self._myRunNumber
-        ws_name = self._currLogWorkspaceName
+        ws_name = self._mtdWorkspaceName
         splitter_dict = self._splittersDict.copy()
 
         dict_key = os.path.basename(nxs_name)
@@ -707,6 +707,7 @@ class DataChopper(object):
         :param nxs_base_name: as key
         :return:
         """
+        # TODO/ISSUE/NEXT - Make this work!
         # Check existence
         nxs_base_name = os.path.basename(nxs_base_name)
         if nxs_base_name not in self._prevSessionDict:
@@ -722,8 +723,7 @@ class DataChopper(object):
         # Retrieve
         self._myNeXusFileName = nxs_name
         self._myRunNumber = run_number
-        self._currLogWorkspaceName = ws_name
-        self._mtdWorkspaceName = mantid_helper.get_workspace(ws_name)
+        self._mtdWorkspaceName = ws_name
         self._splittersDict = splitter_dict
 
         return True, ''

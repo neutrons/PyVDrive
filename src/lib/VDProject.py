@@ -136,8 +136,6 @@ class VDProject(object):
 
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
             status, message = reducer.chop_reduce()
-            # TODO/NOW -- deal with output result
-
         else:
             # just chop the files and save to Nexus
             mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),
@@ -148,7 +146,10 @@ class VDProject(object):
                                            output_directory=output_dir,
                                            delete_split_ws=True)
 
-        return
+            status = True
+            message = 'blablabla'
+
+        return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
         """

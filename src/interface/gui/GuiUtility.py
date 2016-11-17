@@ -177,7 +177,7 @@ def pop_dialog_information(parent, message):
     :param message:
     :return:
     """
-    QtGui.QMessageBox.information(parent, 'Error!', message)
+    QtGui.QMessageBox.information(parent, 'Information!', message)
 
     return
 

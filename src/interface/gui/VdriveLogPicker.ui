@@ -789,7 +789,7 @@
          <widget class="QPushButton" name="pushButton_slicer">
           <property name="font">
            <font>
-            <pointsize>11</pointsize>
+            <pointsize>10</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -806,6 +806,7 @@
          <widget class="QPushButton" name="pushButton_quit">
           <property name="font">
            <font>
+            <pointsize>10</pointsize>
             <weight>50</weight>
             <bold>false</bold>
            </font>

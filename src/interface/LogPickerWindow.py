@@ -154,7 +154,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             self._iptsNumber = None
 
         # Class variables
-        self._currentLogIndex = 0
         self._logNameList = list()
         self._sampleLogDict = dict()
 
@@ -269,6 +268,12 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.lineEdit_maxSlicerLogValue.setEnabled(True)
             self.ui.comboBox_logChangeDirection.setEnabled(True)
 
+            # also set up the min and max log value
+            x_min, x_max, y_min, y_max = self.ui.graphicsView_main.get_data_range()
+
+            self.ui.lineEdit_minSlicerLogValue.setText('%.4f' % y_min)
+            self.ui.lineEdit_maxSlicerLogValue.setText('%.4f' % y_max)
+
         else:
             # manual slicer
             self.ui.groupBox_sliceSetupAuto.setEnabled(False)
@@ -310,8 +315,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         # get chop manager
         assert isinstance(self._currSlicerKey, str), 'Slicer key %s must be a string but not %s.' \
                                                      '' % (str(self._currSlicerKey), type(self._currSlicerKey))
-        self.get_controller().slice_data(run_number, self._currSlicerKey, reduce_data=reduce_gsas,
-                                         output_dir=output_dir)
+        status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
+                                                           reduce_data=reduce_gsas,
+                                                           output_dir=output_dir)
+
+        if status:
+            GuiUtility.pop_dialog_information(self, message)
+        else:
+            GuiUtility.pop_dialog_error(self, message)
 
         return
 
@@ -544,9 +555,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             # add log
             self.ui.comboBox_logNames.addItem(str(log_name))
         # END-FOR
-
-        # set current index
-        self._currentLogIndex = 0
+        self.ui.comboBox_logNames.setCurrentIndex(0)
 
         # release
         self._mutexLockLogNameComboBox = False
@@ -613,16 +622,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load next log
         :return:
         """
-        # TODO/FIXME/ISSUE/51 - This is very wrong!  cannot use _logNameList
-        # use the following!
-        # self.ui.comboBox_logNames.setCurrentIndex()
-        # self.ui.comboBox_logNames.currentIndex()
+        # get current index of the combo box and find out the next
+        current_index = self.ui.comboBox_logNames.currentIndex()
+        max_index = self.ui.comboBox_logNames.size()
+        next_index = (current_index + 1) % max_index
 
-        # Next index
-        next_index = self._currentLogIndex + 1
-        if next_index > len(self._logNameList):
-            next_index = 0
-        sample_log_name = self._logNameList[next_index]
+        # advance to the next one
+        self.ui.comboBox_logNames.setCurrentIndex(next_index)
+        sample_log_name = str(self.ui.comboBox_logNames.currentText())
+        sample_log_name = sample_log_name.split('(')[0].strip()
 
         # Plot
         if self._currLogType == 'nexus':
@@ -630,10 +638,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         else:
             self.plot_mts_log(log_name=sample_log_name,
                               reset_canvas=not self.ui.checkBox_overlay.isChecked())
-
-        # Change status if plotting is successful
-        self._currentLogIndex = next_index
-        self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
 
         # Update
         self._currLogName = sample_log_name
@@ -644,23 +648,24 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Load previous log
         :return:
         """
-        # TODO/FIXME/ISSUE/51 - This is very wrong!  cannot use _logNameList
-        # use the following!
-        # self.ui.comboBox_logNames.setCurrentIndex()
-        # self.ui.comboBox_logNames.currentIndex()
+        # get current index of the combo box and find out the next
+        current_index = self.ui.comboBox_logNames.currentIndex()
+        if current_index == 0:
+            prev_index = self.ui.comboBox_logNames.size() - 1
+        else:
+            prev_index = current_index - 1
 
-        # Previous index
-        prev_index = self._currentLogIndex - 1
-        if prev_index < 0:
-            prev_index = len(self._logNameList) - 1
-        sample_log_name = self._logNameList[prev_index]
+        # advance to the next one
+        self.ui.comboBox_logNames.setCurrentIndex(prev_index)
+        sample_log_name = str(self.ui.comboBox_logNames.currentText())
+        sample_log_name = sample_log_name.split('(')[0].strip()
 
         # Plot
-        self.plot_sample_log(sample_log_name)
-
-        # Change combobox index
-        self._currentLogIndex = prev_index
-        self.ui.comboBox_logNames.setCurrentIndex(self._currentLogIndex)
+        if self._currLogType == 'nexus':
+            self.plot_nexus_log(log_name=sample_log_name)
+        else:
+            self.plot_mts_log(log_name=sample_log_name,
+                              reset_canvas=not self.ui.checkBox_overlay.isChecked())
 
         # Update
         self._currLogName = sample_log_name
@@ -873,7 +878,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         # choice
         if self.ui.radioButton_timeSlicer.isChecked():
             # set and make time-based slicer
-            self._currSlicerKey = self.get_controller().gen_data_slicer_by_time(start_time, step, stop_time)
+            self._currSlicerKey = self.get_controller().gen_data_slicer_by_time(self._currRunNumber, start_time,
+                                                                                step, stop_time)
+
+            message = 'Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # set and make log vale-based slicer
@@ -902,9 +910,15 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                   '' % str(run_err))
                 return
 
+            message = 'Log %s slicer: from %s to %s with step %.3f.' % (log_name, str(min_log_value),
+                                                                      str(max_log_value), log_value_step)
+
         else:
             # bad coding
             raise RuntimeError('Neither time nor log value chopping is selected.')
+
+        # set up message
+        self.ui.label_slicerSetupInfo.setText(message)
 
         return
 
@@ -928,7 +942,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         :return:
         """
-        # TODO/NOW: DOC
+        # TODO/ISSUE/NOW: doc
 
         if self._mutexLockSwitchSliceMethod:
             return
@@ -960,7 +974,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             log_name = log_name.replace(' ', '').split('(')[0]
 
         # set class variables
-        self._currentLogIndex = int(self.ui.comboBox_logNames.currentIndex())
         self._currLogName = log_name
 
         # plot

@@ -1280,22 +1280,16 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
-
-
-
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
         :param run_number: run number
-        :param sample_log_name:
-        :param by_time:
+        :param slicer_id:
+        :param reduce_data:
+        :param output_dir:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # TODO/ISSUE/51 : clean
-
-        self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data, output_dir=output_dir)
-
-        return
+        return self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data, output_dir=output_dir)
 
     def set_focus_calibration_file(self, calibration_file):
         """
