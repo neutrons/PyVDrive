@@ -94,6 +94,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # automatic slicer setup
         self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
                      self.do_setup_uniform_slicer)
+        self.connect(self.ui.pushButton_setSlicerRange, QtCore.SIGNAL('clicked()'),
+                     self.do_show_slicer)
 
         # manual slicer picker
         self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
@@ -130,7 +132,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_next_log_frame)
 
-        # TODO/ISSUE/51 - link Quit()
+        # menu actions
+        self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
+                     self.do_quit_no_save)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -766,6 +770,33 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # Set to table
         self.ui.tableWidget_segments.append_start_time(current_time)
+
+        return
+
+    def do_show_slicer(self):
+        """
+        Show or hide the set up mantid-generated slicers on the canvas
+        :return:
+        """
+        # find out the mode
+        mode_str = str(self.ui.pushButton_setSlicerRange.text())
+
+        if mode_str == 'Show':
+            # show the slicers
+            slicer_time_vec, slicer_ws_vec = self.get_controller().get_slicer(self._currSlicerKey)
+            self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
+            # change the push button text
+            self.ui.pushButton_setSlicerRange.setText('Hide')
+
+        elif mode_str == 'Hide':
+            # hide the slicers
+            self.ui.graphicsView_main.hide_slicers()
+            # change the push button text
+            self.ui.pushButton_setSlicerRange.setText('Show')
+
+        else:
+            # un-supported case
+            raise RuntimeError('Show/hide slicer button does not support mode %s.' % mode_str)
 
         return
 

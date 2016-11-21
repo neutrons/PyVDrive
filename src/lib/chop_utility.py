@@ -164,6 +164,7 @@ class DataChopper(object):
         :param output_directory:
         :return:
         """
+        raise NotImplementedError('chop_data() requires refactor!')
         # check
         assert isinstance(raw_file_name, str), 'Raw file name %s must be a string but not %s.' % (str(raw_file_name),
                                                                                                   type(raw_file_name))
@@ -244,70 +245,49 @@ class DataChopper(object):
 
         return True, ''
 
-    # TODO/ISSUE/51 - clean! combined wto set_log_value_slicer
-    # def generate_events_filter_by_log(self, log_name, min_time, max_time, relative_time,
-    #                                   min_log_value, max_log_value, log_value_interval,
-    #                                   value_change_direction, tag):
+    # def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag,  ws_name=None):
     #     """
-    #     Generate event filter by log value
-    #     :param log_name:
+    #     Create splitters by time
+    #     :param ws_name
     #     :param min_time:
     #     :param max_time:
-    #     :param relative_time:
-    #     :param min_log_value:
-    #     :param max_log_value:
-    #     :param log_value_interval:
-    #     :param value_change_direction:
+    #     :param time_interval:
     #     :param tag:
-    #     :return: 2-tuple: (1) True, (splitter workspace, information table) (2) False, error message
+    #     :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
     #     """
+    #     # defaults to set up workspaces
+    #     if ws_name is None:
+    #         ws_name = self._mtdWorkspaceName
     #
+    #     # Check
+    #     assert isinstance(min_time, float) or min_time is None
+    #     assert isinstance(max_time, float) or max_time is None
+    #     assert isinstance(time_interval, float) or time_interval is None
+    #     # assert event_ws, 'Current log workspace cannot be zero'
+    #     if min_time is None and max_time is None and time_interval is None:
+    #         raise RuntimeError('Generate events filter by time must specify at least one of'
+    #                            'min_time, max_time and time_interval')
+    #     assert isinstance(ws_name, str), 'Workspace name %s must be a string but not %s.' % (str(ws_name),
+    #                                                                                          type(ws_name))
+    #     assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
+    #
+    #     # Generate event filters
+    #     splitter_ws_name = tag
+    #     info_ws_name = tag + '_Info'
+    #
+    #     status, message = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
+    #                                                                    min_time, max_time,
+    #                                                                    time_interval, 'Seconds')
+    #
+    #     # Get result
+    #     if status is False:
+    #         return status, message
+    #
+    #     # Store
+    #     self._splittersDict[tag] = (splitter_ws_name, info_ws_name)
+    #     print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._splittersDict[tag]))
     #
     #     return True, (splitter_ws_name, info_ws_name)
-
-    def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag,  ws_name=None):
-        """
-        Create splitters by time
-        :param ws_name
-        :param min_time:
-        :param max_time:
-        :param time_interval:
-        :param tag:
-        :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
-        """
-        # defaults to set up workspaces
-        if ws_name is None:
-            ws_name = self._mtdWorkspaceName
-
-        # Check
-        assert isinstance(min_time, float) or min_time is None
-        assert isinstance(max_time, float) or max_time is None
-        assert isinstance(time_interval, float) or time_interval is None
-        # assert event_ws, 'Current log workspace cannot be zero'
-        if min_time is None and max_time is None and time_interval is None:
-            raise RuntimeError('Generate events filter by time must specify at least one of'
-                               'min_time, max_time and time_interval')
-        assert isinstance(ws_name, str), 'Workspace name %s must be a string but not %s.' % (str(ws_name),
-                                                                                             type(ws_name))
-        assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
-
-        # Generate event filters
-        splitter_ws_name = tag
-        info_ws_name = tag + '_Info'
-
-        status, message = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
-                                                                       min_time, max_time,
-                                                                       time_interval, 'Seconds')
-
-        # Get result
-        if status is False:
-            return status, message
-
-        # Store
-        self._splittersDict[tag] = (splitter_ws_name, info_ws_name)
-        print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._splittersDict[tag]))
-
-        return True, (splitter_ws_name, info_ws_name)
 
     def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
@@ -667,25 +647,40 @@ class DataChopper(object):
         """
         :return:
         """
-        # set up Tag
-        tag = 'Slicer_%06d_Time' % self._myRunNumber
+        # self._mtdWorkspaceName
 
-        # generate slicer
-        status, ret_obj = self.generate_events_filter_by_time(start_time, stop_time, time_step, tag)
-        if status:
-            split_ws_name = ret_obj[0]
-            info_ws_name = ret_obj[1]
-        else:
-            raise RuntimeError('Unable to generate time slicer due to %s.' % str(ret_obj))
+        # Check inputs
+        assert isinstance(start_time, float) or start_time is None
+        assert isinstance(stop_time, float) or stop_time is None
+        assert isinstance(time_step, float) or time_step is None
 
-        # set up record history
+        if start_time is None and stop_time is None and time_step is None:
+            raise RuntimeError('It is not allowed to give all 3 Nones. Generate events filter by time '
+                               'must specify at least one of min_time, max_time and time_interval')
+
+        # define tag
+        tag = 'TimeSlicer_%06d' % self._myRunNumber
+
+        # define output workspace
+        splitter_ws_name = tag
+        info_ws_name = tag + '_Info'
+
+        status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
+                                                                       splitter_ws_name, info_ws_name,
+                                                                       start_time, stop_time,
+                                                                       time_step, 'Seconds')
+        # return with error message
+        if status is False:
+            return status, message
+
+        # set up splitter record
         self._chopSetupDict[tag] = {'start': start_time, 'step': time_step, 'stop': stop_time,
-                                    'splitter': split_ws_name, 'info': info_ws_name}
+                                    'splitter': splitter_ws_name, 'info': info_ws_name}
 
         # user tag to serve as slicer key
         slicer_key = tag
 
-        return slicer_key
+        return True, slicer_key
 
     def store_current_session(self):
         """ Store current session

@@ -376,9 +376,9 @@ class VDriveAPI(object):
         chopper = self._myProject.get_chopper(run_number)
 
         # generate data slicer
-        slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
+        status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
 
-        return slicer_key
+        return status, slicer_key
 
     def gen_data_slicer_sample_log(self, run_number, sample_log_name, log_value_step,
                                    start_time, end_time, min_log_value, max_log_value,
@@ -498,6 +498,18 @@ class VDriveAPI(object):
         :return: list of strings?
         """
         return self._myProject.get_reduced_runs()
+
+    def get_slicer(self, run_number, slicer_id):
+        """
+
+        :param run_number:
+        :param slicer_id:
+        :return:
+        """
+        chopper = self._myProject.get_chopper(run_number)
+        chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+
+        return
 
     def get_working_dir(self):
         """

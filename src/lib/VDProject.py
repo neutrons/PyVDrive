@@ -354,7 +354,7 @@ class VDProject(object):
         :param relative_time: if True, time is in relative to run_start
         :return: vector of floats as time in unit of second
         """
-        # TODO/ISSUE/51 - make it work!
+        # TODO/ISSUE/51 - make it work! From here!
         # Check
         assert isinstance(run_number, int)
         assert isinstance(slicer_type, str)
