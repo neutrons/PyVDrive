@@ -307,7 +307,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """ Pick up (time) slicing information and show it by indicating lines in snap view
         :return:
         """
-        self._myWorkflow.set_slicer('Manual')
+        raise NotImplementedError('Think of whether this feature shall be kept?')
+
+        run_number = self._get_run_numbers()
+
+        self._myWorkflow.set_slicer(run_number, 'Manual')
 
         self._apply_slicer_snap_view()
 

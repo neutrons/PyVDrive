@@ -110,19 +110,6 @@ class DataChopper(object):
         # initialization operation
         self.load_data_file()
 
-        # TODO/FIXME/ISSUE/NOW - Remove splittersDict!!!
-
-        # replaced by chopSetupDict: self._splittersDict = dict()
-        # key = sample log name, value = (split ws name, info ws name)
-
-        # # Stored session:
-        # # key = log file name (base name), value = tuple as file name with full path, workspace name, splitter dict
-        # self._prevSessionDict = dict()
-        # # Keys map
-        # self._runNxsNameMap = dict()
-        # # Some useful value
-        # self._runStartTimeDict = dict()
-
         return
 
     def load_data_file(self):
@@ -228,13 +215,14 @@ class DataChopper(object):
 
         return
 
-    def clean_workspace(self, run_number, slicer_tag):
+    def delete_slicer_by_id(self, slicer_tag):
         """
         Clean workspace
         :param run_number:
         :param slicer_tag:
         :return:
         """
+        # TODO/ISSUE/51 - make it work!
         status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
         if status is False:
             return False, ret_obj
@@ -244,50 +232,6 @@ class DataChopper(object):
         mantid_helper.delete_workspace(info_ws)
 
         return True, ''
-
-    # def generate_events_filter_by_time(self, min_time, max_time, time_interval, tag,  ws_name=None):
-    #     """
-    #     Create splitters by time
-    #     :param ws_name
-    #     :param min_time:
-    #     :param max_time:
-    #     :param time_interval:
-    #     :param tag:
-    #     :return: 2-tuple (boolean, objects): True/ws name tuple; False/error message
-    #     """
-    #     # defaults to set up workspaces
-    #     if ws_name is None:
-    #         ws_name = self._mtdWorkspaceName
-    #
-    #     # Check
-    #     assert isinstance(min_time, float) or min_time is None
-    #     assert isinstance(max_time, float) or max_time is None
-    #     assert isinstance(time_interval, float) or time_interval is None
-    #     # assert event_ws, 'Current log workspace cannot be zero'
-    #     if min_time is None and max_time is None and time_interval is None:
-    #         raise RuntimeError('Generate events filter by time must specify at least one of'
-    #                            'min_time, max_time and time_interval')
-    #     assert isinstance(ws_name, str), 'Workspace name %s must be a string but not %s.' % (str(ws_name),
-    #                                                                                          type(ws_name))
-    #     assert isinstance(tag, str) and len(tag) > 0, 'Tag "%s" must be a non-empty string.' % str(tag)
-    #
-    #     # Generate event filters
-    #     splitter_ws_name = tag
-    #     info_ws_name = tag + '_Info'
-    #
-    #     status, message = mantid_helper.generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
-    #                                                                    min_time, max_time,
-    #                                                                    time_interval, 'Seconds')
-    #
-    #     # Get result
-    #     if status is False:
-    #         return status, message
-    #
-    #     # Store
-    #     self._splittersDict[tag] = (splitter_ws_name, info_ws_name)
-    #     print '[BUG-TRACE] Splitter Dict: Tag = %s, Workspace Names = %s' % (tag, str(self._splittersDict[tag]))
-    #
-    #     return True, (splitter_ws_name, info_ws_name)
 
     def generate_events_filter_manual(self, run_number, split_list, relative_time, splitter_tag):
         """ Generate a split workspace with arbitrary input time
@@ -313,14 +257,18 @@ class DataChopper(object):
         assert isinstance(split_list, list)
 
         # Generate split workspace
-        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list, relative_time=True, tag=splitter_tag)
-        if status is False:
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
+                                                                         relative_time=True,
+                                                                         tag=splitter_tag)
+        if status:
+            split_ws_name, info_ws_name = ret_obj
+        else:
             err_msg = ret_obj
             return False, err_msg
 
         # Store
-        split_ws_name, info_ws_name = ret_obj
-        self._splittersDict['_MANUAL_'] = (split_ws_name, info_ws_name)
+        self._chopSetupDict[splitter_tag] = {'splitter': split_ws_name,
+                                             'info': info_ws_name}
 
         return True, ret_obj
 
@@ -407,6 +355,23 @@ class DataChopper(object):
 
         return vec_times, vec_value
 
+    def get_slicer_vecectors(self, slice_id):
+
+        assert isinstance(slice_id, str), 'Slicer ID must be a string.'
+
+        split_ws = self.get_split_workspace(slice_id)
+
+        if split_ws.__class__.__name__.count('Splitter') == 1:
+            # splitters workspace: convert matrix workspace
+            vec_time, vec_ws = mantid_helper.convert_splitters_workspace_to_vectors(split_ws)
+        else:
+            # matrix workspace or workspace 2D
+            vec_time = split_ws.readX(0)
+            vec_ws = split_ws.readY(0)
+        # END-IF-ELSE
+
+        return vec_time, vec_ws
+
     def get_split_workspace(self, slice_id):
         """
         Get the workspace for splitting with slice ID
@@ -432,142 +397,39 @@ class DataChopper(object):
         :param slicer_tag:
         :return: 2-tuple
         """
-        # Get workspaces
-        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_id()
+        # check
+        assert isinstance(slicer_tag, str), 'Slicer tag must be a string.'
+        try:
+            chopper = self._chopSetupDict[slicer_tag]
+        except KeyError as key_err:
+            return False, 'Slice tag %s does not exist for run %d. Existing tags include %s.' \
+                          '' % (slicer_tag, self._myRunNumber, str(self._chopSetupDict.keys()))
 
-        status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
-        if status is False:
-            err_msg = ret_obj
-            return False, err_msg
-
-        # Get time segments from file
-        split_ws_name = ret_obj[0]
-        print '[DB-TEST get_slicer] workspace names for ', slicer_tag, 'are ', ret_obj
-        print '[DB-TEST weird] ', self._splittersDict
-        # FIXME/TODO/NOW : Need to find a way to get run_start in nanosecond
-        if relative_time is True:
-            nxs_base_name = self._runNxsNameMap[run_number]
-            run_start_sec = self._runStartTimeDict[nxs_base_name] * 1.E-9
+        # relative time?
+        if relative_time:
+            run_start_time = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
         else:
-            run_start_sec = 0
-        print '[DB-BAR] run start tie in second = ', run_start_sec
+            run_start_time = None
 
-        segment_list = mantid_helper.get_time_segments_from_splitters(split_ws_name, time_shift=run_start_sec, unit='Seconds')
+        # get workspace
+        slice_ws_name = chopper['splitter']
+        try:
+            vec_times, vec_ws_index = mantid_helper.convert_splitters_workspace_to_vectors(
+                split_ws=slice_ws_name, run_start_time=run_start_time)
+        except AssertionError as ass_err:
+            return False, 'Unable to convert splitters workspace %s to vectors due to %s.' \
+                          '' % (slice_ws_name, str(ass_err))
 
-        return True, segment_list
-
-    def get_slicer_by_log(self, run_number, log_name, nxs_name=None):
-        """ Get slicer by log value
-        :param run_number:
-        :param log_name:
-        :param nxs_name:
-        :return: 2-tuple as (boolean, object)
-        """
-        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_log()
-
-        # Check
-        assert isinstance(run_number, int)
-        assert isinstance(nxs_name, str) or nxs_name is None
-        assert isinstance(log_name, str)
-
-        use_current = False
-
-        if run_number is not None and nxs_name is not None:
-            # specified both
-            raise RuntimeError('It is not allowed to use both run_number and nxs_name')
-
-        elif nxs_name is not None:
-            # use NeXus file name
-            if nxs_name == os.path.basename(self._myNeXusFileName):
-                use_current = True
-            elif nxs_name not in self._prevSessionDict:
-                return False, 'NeXus file name %s has not been processed.' % nxs_name
-
-        elif run_number is not None:
-            # use run number
-            if run_number in self._prevSessionDict:
-                nxs_name = self._runNxsNameMap[run_number]
-            elif run_number == self._myRunNumber:
-                use_current = True
-                nxs_name = os.path.basename(self._myNeXusFileName)
-            else:
-                return False, 'Run %d has not been processed. Current run = %s.' % (run_number,
-                                                                                    str(self._myRunNumber))
-
-        else:
-            # specified neither
-            raise RuntimeError('It is not allowed not to use neither run_number nor nxs_name')
-
-        # Get splitter
-        if use_current is True:
-            # Current log
-            splitter_dict = self._splittersDict
-        else:
-            # Stored
-            tup = self._prevSessionDict[nxs_name]
-            splitter_dict = tup[3]
-
-        if log_name not in splitter_dict:
-            return False, 'There is no processed slicer by log %s for NeXus file %s' % (log_name, nxs_name)
-
-        return True, splitter_dict[log_name]
-
-    def get_slicer_by_time(self, run_number, nxs_name=None):
-        """ Get slicer by log value
-        :param run_number:
-        :param nxs_name:
-        :return:
-        """
-        # TODO/NOW/FIXME/ISSUE - Find out who may call this method get_slicer_by_time()
-        # Check for using run number or nxs file name
-        use_current = False
-
-        if run_number is not None and nxs_name is not None:
-            # specified both
-            raise RuntimeError('It is not allowed to use both run_number and nxs_name')
-
-        elif nxs_name is not None:
-            # use NeXus file name
-            if nxs_name == os.path.basename(self._myNeXusFileName):
-                use_current = True
-            elif nxs_name not in self._prevSessionDict:
-                return False, 'NeXus file name %s has not been processed.' % nxs_name
-
-        elif run_number is not None:
-            # use run number
-            if run_number in self._prevSessionDict:
-                nxs_name = self._runNxsNameMap[run_number]
-            elif run_number == self._myRunNumber:
-                use_current = True
-                nxs_name = os.path.basename(self._myNeXusFileName)
-            else:
-                return False, 'Run %d has not been processed. Current run = %s.' % (run_number,
-                                                                                    str(self._myRunNumber))
-
-        else:
-            # specified neither
-            raise RuntimeError('It is not allowed not to use neither run_number nor nxs_name')
-
-        # Check for time
-        if use_current is True:
-            split_dict = self._splittersDict
-        else:
-            split_dict = self._prevSessionDict[nxs_name][3]
-        if '_TIME_' not in split_dict:
-            return False, 'There is no splitters by time for %s. Candidates are %s.\n' % (
-                nxs_name, str(split_dict.keys())
-            )
-
-        return True, split_dict['_TIME_']
+        return True, (vec_times, vec_ws_index)
 
     def set_current_slicer_time(self):
         """
         Set the current slicer as a time slicer set up previously
         :return:
         """
-        assert 'Time' in self._splittersDict, 'No time slicer set up.'
-
-        self._currSplitterWorkspace = self._splittersDict['Time']
+        time_slicer_tag = generate_tag('time', self._myRunNumber)
+        if time_slicer_tag in self._chopSetupDict:
+            self._currentSlicerTag = time_slicer_tag
 
         return
 
@@ -576,9 +438,9 @@ class DataChopper(object):
         Set up current splitter workspace/slicer to a previously setup slicer in manual mode.
         :return:
         """
-        assert 'Manual' in self._splittersDict, 'No manually set up slicer found in splicers dictionary.'
-
-        self._currSplitterWorkspace = self._splittersDict['Manual']
+        manual_slicer_tag = generate_tag('manual', self._myRunNumber)
+        if manual_slicer_tag in self._chopSetupDict:
+            self._currentSlicerTag = manual_slicer_tag
 
         return
 
@@ -682,51 +544,12 @@ class DataChopper(object):
 
         return True, slicer_key
 
-    def store_current_session(self):
-        """ Store current session
-        :return:
-        """
-        nxs_name = self._myNeXusFileName
-        run_number = self._myRunNumber
-        ws_name = self._mtdWorkspaceName
-        splitter_dict = self._splittersDict.copy()
-
-        dict_key = os.path.basename(nxs_name)
-        self._prevSessionDict[dict_key] = [nxs_name, run_number, ws_name, splitter_dict]
-
-        return
-
-    def restore_session(self, nxs_base_name):
-        """
-        Restore a save_to_buffer session
-        :param nxs_base_name: as key
-        :return:
-        """
-        # TODO/ISSUE/NEXT - Make this work!
-        # Check existence
-        nxs_base_name = os.path.basename(nxs_base_name)
-        if nxs_base_name not in self._prevSessionDict:
-            return False, 'File %s does not exist in stored sessions. ' % nxs_base_name
-
-        # Get parameters for recovering
-        nxs_name, run_number, ws_name, splitter_dict = self._prevSessionDict[nxs_base_name]
-
-        # Check workspace existence
-        if mantid_helper.workspace_does_exist(ws_name) is False:
-            return False, 'Log workspace %s does not exist.' % ws_name
-
-        # Retrieve
-        self._myNeXusFileName = nxs_name
-        self._myRunNumber = run_number
-        self._mtdWorkspaceName = ws_name
-        self._splittersDict = splitter_dict
-
-        return True, ''
-
     def save_splitter_ws(self, run_number, log_name, out_file_name):
         """ Save splitters workspace to segment file
         """
         # Get slicer
+        slice_tag = get_standard_log_tag(run_number, log_name)
+
         status, ret_obj = self.get_slicer_by_log(run_number, log_name)
         if status is False:
             err_msg = ret_obj
@@ -770,6 +593,79 @@ class DataChopper(object):
         except IOError as e:
             return False, 'Failed to write time segments to file %s due to %s' % (
                 out_file_name, str(e))
+
+        return True, None
+
+    def save_time_segments(self, file_name, time_segment_list):
+        """
+        Save a list of 3-tuple or 2-tuple time segments to an ASCII file
+        Time segments may be disordered.
+        Format:
+        # Reference Run Number =
+        # Run Start Time =
+        # Start Stop TargetIndex
+        Note that all units of time stamp or difference of time are seconds
+
+        :param file_name:
+        :param time_segment_list:
+        :return:
+        """
+        # Check
+        assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
+                                           '' % (str(file_name), type(file_name))
+        assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
+                                                    '' % type(segment_list)
+
+        # get run start time
+        run_start = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
+
+        # convert the time segments in list of 3-tuples to a list of TimeSegment objects
+        segment_list = list()
+        i_target = 1
+        for time_seg in time_segment_list:
+            # get the target workspace index
+            if len(time_seg) < 3:
+                # in case that the target workspace index is not given (2-tuple). use next target-index
+                tmp_target = '%d' % i_target
+                i_target += 1
+            else:
+                # use the 3rd element in the tuple as target workspace index
+                tmp_target = '%s' % str(time_seg[2])
+            # create a TimeSegment object
+            tmp_seg = TimeSegment(time_seg[0], time_seg[1], i_target)
+            segment_list.append(tmp_seg)
+        # END-IF
+
+        # sort by segments
+        segment_list.sort()
+
+        # start to write to file buffer
+        file_buffer = ''
+
+        # comment lines
+        file_buffer += '# Reference Run Number = %d' % self._myRunNumber
+
+        file_buffer += '# Run Start Time = '
+        if run_start is not None:
+            assert isinstance(run_start, float)
+            file_buffer += '%.9f'
+        file_buffer += '\n'
+
+        file_buffer += '# Start Time \tStop Time \tTarget\n'
+
+        # splitters
+        assert isinstance(segment_list, list)
+        for segment in segment_list:
+            file_buffer += '%.9f \t%.9f \t%d\n' % (segment.start, segment.stop, segment.target)
+
+        # write file from buffer
+        try:
+            set_file = open(file_name, 'w')
+            set_file.write(file_buffer)
+            set_file.close()
+        except IOError as e:
+            return False, 'Failed to write time segments to file %s due to %s' % (
+                file_name, str(e))
 
         return True, None
 
@@ -855,53 +751,4 @@ def parse_time_segments(file_name):
     return True, (ref_run, run_start, segment_list)
 
 
-def save_time_segments(file_name, segment_list, ref_run=None, run_start=None):
-    """
-    Format:
-    # Reference Run Number =
-    # Run Start Time =
-    # Start Stop TargetIndex
-    Note that all units of time stamp or difference of time are seconds
-    :param file_name:
-    :param segment_list:
-    :param ref_run:
-    :param run_start:
-    :return:
-    """
-    # Check
-    assert isinstance(file_name, str)
 
-    # Write to buffer
-    wbuf = ''
-
-    # comment lines
-    wbuf += '# Reference Run Number = '
-    if ref_run is not None:
-        assert isinstance(ref_run, int) or isinstance(ref_run, str)
-        wbuf += '%s\n' % str(ref_run)
-    else:
-        wbuf += '\n'
-
-    wbuf += '# Run Start Time = '
-    if run_start is not None:
-        assert isinstance(run_start, float)
-        wbuf += '%.9f'
-    wbuf += '\n'
-
-    wbuf += '# Start Time \tStop Time \tTarget\n'
-
-    # splitters
-    assert isinstance(segment_list, list)
-    for segment in segment_list:
-        wbuf += '%.9f \t%.9f \t%d\n' % (segment.start, segment.stop, segment.target)
-
-    # Write
-    try:
-        ofile = open(file_name, 'w')
-        ofile.write(wbuf)
-        ofile.close()
-    except IOError as e:
-        return False, 'Failed to write time segments to file %s due to %s' % (
-            file_name, str(e))
-
-    return True, None

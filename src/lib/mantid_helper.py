@@ -16,6 +16,48 @@ from mantid.api import AnalysisDataService as ADS
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
+def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
+    """
+    convert SplittersWorkspace to vectors of time and target workspace index
+    :param split_ws:
+    :param run_start_time:
+    :return: three tuple
+    """
+    # check inputs
+    assert split_ws.__class__.__name__.count('Splitter') == 1,\
+        'Input SplittersWorkspace %s must be of type %s' % (str(split_ws), split_ws.__class__.__name__)
+
+    num_rows = split_ws.rowCount()
+    time_list = list()
+    ws_list = list()
+    for row_index in range(num_rows):
+        start_time = split_ws.cell(row_index, 0)
+        end_time = split_ws.cell(row_index, 1)
+        ws_index = split_ws.cell(row_index, 2)
+
+        if row_index == 0:
+            # first splitter, starting with start_time[0]
+            time_list.append(start_time)
+        elif start_time > time_list[-1]:
+            # middle splitter, there is a gap between 2 splitters, fill in with -1
+            ws_list.append(-1)
+            time_list.append(start_time)
+
+        ws_list.append(ws_index)
+        time_list.append(end_time)
+    # END-FOR
+
+    # get the numpy arrays
+    vec_times = numpy.array(time_list)
+    vec_ws = numpy.array(ws_list)
+
+    if run_start_time is not None:
+        assert isinstance(run_start_time, float), 'Starting time must be a float'
+        vec_times -= run_start_time
+
+    return vec_times, vec_ws
+
+
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:

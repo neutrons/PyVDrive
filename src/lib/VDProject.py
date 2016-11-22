@@ -203,15 +203,23 @@ class VDProject(object):
 
         return True, message
 
-    def clean_memory(self, run_number, slicer_tag=None):
-        """ Clear memory by deleting workspaces
+    def delete_slicers(self, run_number, slicer_tag=None):
+        """ delete slicers from memory, i.e., mantid workspaces
         :param run_number: run number for the slicer
         :param slicer_tag:
         :return:
         """
-        # TODO/ISSUE/51 - slicer under VDProject
-        if slicer_tag is not None:
-            self._mySlicingManager.clean_workspace(run_number, slicer_tag)
+        # NOTE: No caller of this method so far
+        if run_number not in self._chopManagerDict:
+            return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
+
+        # get chopper
+        data_chopper = self._chopManagerDict[run_number]
+
+        # let DataChopper to do business
+        data_chopper.delete_slicer_by_id(slicer_tag)
+
+        return True, ''
 
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False
@@ -344,36 +352,6 @@ class VDProject(object):
                                                              tag=slice_tag)
 
         return
-
-    def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
-        """
-        TODO/FIXME What am I supposed to do???
-        :param run_number: run number for locate slicer
-        :param slicer_id: log name, manual, time (decreasing priority)
-        :param slicer_type: string as type of slicer
-        :param relative_time: if True, time is in relative to run_start
-        :return: vector of floats as time in unit of second
-        """
-        # TODO/ISSUE/51 - make it work! From here!
-        # Check
-        assert isinstance(run_number, int)
-        assert isinstance(slicer_type, str)
-        assert isinstance(slicer_id, str)
-
-        if slicer_type.lower() == 'time':
-            status, ret_obj = self._mySlicingManager.get_slicer_by_time()
-        elif slicer_type.lower() == 'log':
-            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, slicer_id)
-        else:
-            status, ret_obj = self._mySlicingManager.get_slicer_by_id(run_number, slicer_id, relative_time)
-
-        if status is False:
-            err_msg = ret_obj
-            return False, err_msg
-        else:
-            time_segment_list = ret_obj
-
-        return True, time_segment_list
 
     def get_file_path(self, run_number):
         """ Get file path
@@ -914,28 +892,6 @@ class VDProject(object):
             self._baseDataPath = data_dir
         else:
             raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
-
-        return
-
-    def set_slicer(self, splitter_src, sample_log_name=None):
-        """ Set slicer from
-        'SampleLog', 'Time', 'Manual'
-        :param splitter_src:
-        :param sample_log_name:
-        :return:
-        """
-        # TODO/ISSUE/51
-        splitter_src = splitter_src.lower()
-
-        if splitter_src == 'samplelog':
-            assert isinstance(sample_log_name, str)
-            self._mySlicingManager.set_current_slicer_sample_log(sample_log_name)
-        elif splitter_src == 'time':
-            self._mySlicingManager.set_current_slicer_time()
-        elif splitter_src == 'manual':
-            self._mySlicingManager.set_current_slicer_manual()
-        else:
-            raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
 
         return
 

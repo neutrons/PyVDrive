@@ -501,15 +501,15 @@ class VDriveAPI(object):
 
     def get_slicer(self, run_number, slicer_id):
         """
-
+        Get the slicer (in vectors) by run number and slicer ID
         :param run_number:
         :param slicer_id:
-        :return:
+        :return:  2-tuple.  [1] Boolean [2] (vector time, vector workspace) | error message
         """
         chopper = self._myProject.get_chopper(run_number)
-        chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+        status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
 
-        return
+        return status, ret_obj
 
     def get_working_dir(self):
         """
@@ -574,7 +574,8 @@ class VDriveAPI(object):
         :param slicer_id: log name, manual, time (decreasing priority)
         :param slicer_type: string as type of slicer
         :param relative_time: if True, time is in relative to run_start
-        :return: vector of floats as time in unit of second
+        :return: vector of floats as time in unit of second and vector of floats as workspace index
+                for the target workspaces
         """
 
         # get the chopper for the run
@@ -585,12 +586,13 @@ class VDriveAPI(object):
         elif slicer_type == 'manual':
             slicer_id = 'manual'
 
-        # TODO/NOW/ISSUE - implement get_slicer_time_vec()
-        slicer_time_vec = chopper.get_slicer_time_vec(slicer_type)
+        # TEST/NOW/ISSUE - implement get_slicer_time_vec()
+        slicer_time_vec, slicer_ws_vec = chopper.get_slicer_vecectors(slicer_id)
 
-        return slicer_time_vec
+        return slicer_time_vec, slicer_ws_vec
 
-    def get_ipts_number_from_dir(self, dir_name):
+    @staticmethod
+    def get_ipts_number_from_dir(dir_name):
         """
         Parse IPTS number from a directory path if it is a standard VULCAN archive directory
         :param dir_name: path to the directory
@@ -1254,40 +1256,8 @@ class VDriveAPI(object):
         :param file_name:
         :return:
         """
-        # TODO/ISSUE/51
-        # # Check
-        # assert isinstance(time_segment_list, list)
-        # assert isinstance(ref_run_number, int) or ref_run_number is None
-        # assert isinstance(file_name, str)
-        #
-        # # Form Segments
-        # run_start = self._mySlicingManager.get_run_start(ref_run_number, unit='second')
-        #
-        # segment_list = list()
-        # i_target = 1
-        # for time_seg in time_segment_list:
-        #     if len(time_seg < 3):
-        #         tmp_target = '%d' % i_target
-        #         i_target += 1
-        #     else:
-        #         tmp_target = '%s' % str(time_seg[2])
-        #     tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
-        #     segment_list.append(tmp_seg)
-        # # END-IF
-        #
-        # segment_list.sort()
-        #
-        # # Check validity
-        # num_seg = len(segment_list)
-        # if num_seg >= 2:
-        #     prev_stop = segment_list[0].stop
-        #     for index in xrange(1, num_seg):
-        #         if prev_stop >= segment_list[index].start:
-        #             return False, 'Overlapping time segments!'
-        # # END-IF
-        #
-        # # Write to file
-        # SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
+        chopper = self._myProject.get_chopper(ref_run_number)
+        chopper.save_time_segment(time_segment_list, file_name)
 
         return
 
@@ -1424,25 +1394,14 @@ class VDriveAPI(object):
 
         return status, errmsg
 
-    def set_slicer(self, splitter_src, sample_log_name=None):
-        """ Set slicer from
+    def set_slicer(self):
+        """ This method's purpose is ambiguous!
         'SampleLog', 'Time', 'Manual'
         :param splitter_src:
         :param sample_log_name:
         :return:
         """
-        # TODO/ISSUE/51
-        # splitter_src = splitter_src.lower()
-        #
-        # if splitter_src == 'samplelog':
-        #     assert isinstance(sample_log_name, str)
-        #     self._mySlicingManager.set_current_slicer_sample_log(sample_log_name)
-        # elif splitter_src == 'time':
-        #     self._mySlicingManager.set_current_slicer_time()
-        # elif splitter_src == 'manual':
-        #     self._mySlicingManager.set_current_slicer_manual()
-        # else:
-        #     raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
+        raise NotImplementedError('Need to consider how to use this method in the workflow!')
 
         return
 

@@ -783,7 +783,12 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         if mode_str == 'Show':
             # show the slicers
-            slicer_time_vec, slicer_ws_vec = self.get_controller().get_slicer(self._currSlicerKey)
+            status, ret_obj = self.get_controller().get_slicer(self._currSlicerKey)
+            if status:
+                slicer_time_vec, slicer_ws_vec = ret_obj
+            else:
+                GuiUtility.pop_dialog_error(str(ret_obj))
+                return
             self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
             # change the push button text
             self.ui.pushButton_setSlicerRange.setText('Hide')
