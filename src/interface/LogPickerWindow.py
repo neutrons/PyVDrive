@@ -783,11 +783,11 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         if mode_str == 'Show':
             # show the slicers
-            status, ret_obj = self.get_controller().get_slicer(self._currSlicerKey)
+            status, ret_obj = self.get_controller().get_slicer(self._currRunNumber, self._currSlicerKey)
             if status:
                 slicer_time_vec, slicer_ws_vec = ret_obj
             else:
-                GuiUtility.pop_dialog_error(str(ret_obj))
+                GuiUtility.pop_dialog_error(self, str(ret_obj))
                 return
             self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
             # change the push button text
@@ -913,11 +913,20 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # choice
         if self.ui.radioButton_timeSlicer.isChecked():
+            # filter events by time
             # set and make time-based slicer
-            self._currSlicerKey = self.get_controller().gen_data_slicer_by_time(self._currRunNumber, start_time,
-                                                                                step, stop_time)
 
-            message = 'Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
+            status, ret_obj = self.get_controller().gen_data_slicer_by_time(self._currRunNumber,
+                                                                            start_time=start_time,
+                                                                            end_time=stop_time,
+                                                                            time_step=step)
+            if status:
+                self._currSlicerKey = ret_obj
+                message = 'Time slicer: from %s to %s with step %f.' % (str(start_time), str(stop_time), step)
+            else:
+                GuiUtility.pop_dialog_error(self, 'Failed to generate data slicer by time due to %s.'
+                                                  '' % str(ret_obj))
+                return
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # set and make log vale-based slicer

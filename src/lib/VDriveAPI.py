@@ -587,7 +587,7 @@ class VDriveAPI(object):
             slicer_id = 'manual'
 
         # TEST/NOW/ISSUE - implement get_slicer_time_vec()
-        slicer_time_vec, slicer_ws_vec = chopper.get_slicer_vecectors(slicer_id)
+        slicer_time_vec, slicer_ws_vec = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
 
         return slicer_time_vec, slicer_ws_vec
 

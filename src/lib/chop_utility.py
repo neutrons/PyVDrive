@@ -355,23 +355,6 @@ class DataChopper(object):
 
         return vec_times, vec_value
 
-    def get_slicer_vecectors(self, slice_id):
-
-        assert isinstance(slice_id, str), 'Slicer ID must be a string.'
-
-        split_ws = self.get_split_workspace(slice_id)
-
-        if split_ws.__class__.__name__.count('Splitter') == 1:
-            # splitters workspace: convert matrix workspace
-            vec_time, vec_ws = mantid_helper.convert_splitters_workspace_to_vectors(split_ws)
-        else:
-            # matrix workspace or workspace 2D
-            vec_time = split_ws.readX(0)
-            vec_ws = split_ws.readY(0)
-        # END-IF-ELSE
-
-        return vec_time, vec_ws
-
     def get_split_workspace(self, slice_id):
         """
         Get the workspace for splitting with slice ID
@@ -395,13 +378,15 @@ class DataChopper(object):
     def get_slicer_by_id(self, slicer_tag, relative_time=True):
         """ Get slicer by slicer ID
         :param slicer_tag:
+        :param relative_time:
         :return: 2-tuple
         """
         # check
-        assert isinstance(slicer_tag, str), 'Slicer tag must be a string.'
+        assert isinstance(slicer_tag, str), 'Slicer tag %s must be a string but not a %s.' \
+                                            '' % (str(slicer_tag), type(slicer_tag))
         try:
             chopper = self._chopSetupDict[slicer_tag]
-        except KeyError as key_err:
+        except KeyError:
             return False, 'Slice tag %s does not exist for run %d. Existing tags include %s.' \
                           '' % (slicer_tag, self._myRunNumber, str(self._chopSetupDict.keys()))
 
@@ -410,6 +395,7 @@ class DataChopper(object):
             run_start_time = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
         else:
             run_start_time = None
+        print '[INFO] Run start time = ', run_start_time, 'of type ', type(run_start_time)
 
         # get workspace
         slice_ws_name = chopper['splitter']

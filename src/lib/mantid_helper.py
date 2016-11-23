@@ -24,9 +24,15 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     :return: three tuple
     """
     # check inputs
-    assert split_ws.__class__.__name__.count('Splitter') == 1,\
-        'Input SplittersWorkspace %s must be of type %s' % (str(split_ws), split_ws.__class__.__name__)
+    if isinstance(split_ws, str):
+        # in case user input split workspace name
+        split_ws = retrieve_workspace(split_ws)
 
+    assert split_ws.__class__.__name__.count('Splitter') == 1,\
+        'Input SplittersWorkspace %s must be of type SplittersWorkspace must not %s' \
+        '' % (str(split_ws), split_ws.__class__.__name__)
+
+    # go over rows
     num_rows = split_ws.rowCount()
     time_list = list()
     ws_list = list()
@@ -267,6 +273,7 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
         my_arg_dict['UnitOfTime'] = time_unit
 
     try:
+        print '[DB...BAT] Generate events by time: ', my_arg_dict
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
