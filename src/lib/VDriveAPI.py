@@ -568,29 +568,6 @@ class VDriveAPI(object):
 
         return root_dir
 
-    def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
-        """
-        :param run_number: run number for locate slicer
-        :param slicer_id: log name, manual, time (decreasing priority)
-        :param slicer_type: string as type of slicer
-        :param relative_time: if True, time is in relative to run_start
-        :return: vector of floats as time in unit of second and vector of floats as workspace index
-                for the target workspaces
-        """
-
-        # get the chopper for the run
-        chopper = self._myProject.get_chopper(run_number)
-
-        if slicer_type == 'time':
-            slicer_id = 'time'
-        elif slicer_type == 'manual':
-            slicer_id = 'manual'
-
-        # TEST/NOW/ISSUE - implement get_slicer_time_vec()
-        slicer_time_vec, slicer_ws_vec = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
-
-        return slicer_time_vec, slicer_ws_vec
-
     @staticmethod
     def get_ipts_number_from_dir(dir_name):
         """

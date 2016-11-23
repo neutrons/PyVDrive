@@ -37,9 +37,14 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     time_list = list()
     ws_list = list()
     for row_index in range(num_rows):
+        # get start time and end time in int64
         start_time = split_ws.cell(row_index, 0)
         end_time = split_ws.cell(row_index, 1)
         ws_index = split_ws.cell(row_index, 2)
+
+        # convert units of time from int64/nanoseconds to float/seconds
+        start_time = float(start_time) * 1.0E-9
+        end_time = float(end_time) * 1.0E-9
 
         if row_index == 0:
             # first splitter, starting with start_time[0]
@@ -58,8 +63,12 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     vec_ws = numpy.array(ws_list)
 
     if run_start_time is not None:
+        # run start time is of float in unit of seconds
         assert isinstance(run_start_time, float), 'Starting time must be a float'
         vec_times -= run_start_time
+
+    print '[DB...BAT] splitters: vector of time: ', vec_times.tolist()
+    print '[DB...BAT] size of output vectors: ', len(vec_times), len(vec_ws)
 
     return vec_times, vec_ws
 

@@ -1311,7 +1311,7 @@ class Qt4MplCanvas(FigureCanvas):
         """
         Get vecX and vecY
         :param line_id:
-        :return:
+        :return: 2-tuple as vector X and vector Y
         """
         line = self._lineDict[line_id]
         if line is None:

@@ -16,6 +16,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
+        # current plot IDs
+        self._currPlotID = None
+
         # register dictionaries
         self._sizeRegister = dict()
 
@@ -23,6 +26,33 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         self._titleMessage = ''
 
         return
+
+    def get_data_range(self):
+        """ Get data range from the 1D plots on canvas
+        :return: 4-tuples as min_x, max_x, min_y, max_y
+        """
+        if len(self._sizeRegister) == 0:
+            raise RuntimeError('Unable to get data range as there is no plot on canvas')
+
+        x_min_list = list()
+        x_max_list = list()
+        y_min_list = list()
+        y_max_list = list()
+
+        for value_tuple in self._sizeRegister.values():
+            x_min, x_max, y_min, y_max = value_tuple
+            x_min_list.append(x_min)
+            x_max_list.append(x_max)
+            y_min_list.append(y_min)
+            y_max_list.append(y_max)
+        # END-FOR
+
+        x_min = min(np.array(x_min_list))
+        x_max = max(np.array(x_max_list))
+        y_min = min(np.array(y_min_list))
+        y_max = max(np.array(y_max_list))
+
+        return x_min, x_max, y_min, y_max
 
     def plot_sample_log(self, vec_x, vec_y, sample_log_name):
         """ Purpose: plot sample log
@@ -56,34 +86,56 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # auto resize
         self.resize_canvas(margin=0.05)
 
+        # update
+        self._currPlotID = plot_id
+
         return
 
-    def get_data_range(self):
-        """ Get data range from the 1D plots on canvas
-        :return: 4-tuples as min_x, max_x, min_y, max_y
+    def show_slicers(self, vec_times, vec_target_ws):
         """
-        if len(self._sizeRegister) == 0:
-            raise RuntimeError('Unable to get data range as there is no plot on canvas')
 
-        x_min_list = list()
-        x_max_list = list()
-        y_min_list = list()
-        y_max_list = list()
+        :return:
+        """
+        # check state
+        if self._currPlotID is None:
+            return
 
-        for value_tuple in self._sizeRegister.values():
-            x_min, x_max, y_min, y_max = value_tuple
-            x_min_list.append(x_min)
-            x_max_list.append(x_max)
-            y_min_list.append(y_min)
-            y_max_list.append(y_max)
+        # TODO/ISSUE/51 - Docs + Clean
+
+        assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption!'
+
+        vec_x, vec_y = self.canvas().get_data(self._currPlotID)
+
+        for i_seg in range(len(vec_target_ws)):
+            x_start = vec_times[i_seg]
+            x_stop = vec_times[i_seg+1]
+            color_index = vec_target_ws[i_seg]
+
+            print '[DB...DEVELOP] Plot X = ', x_start, x_stop, ' with color index ', color_index
+
+            i_start = (np.abs(vec_times - x_start)).argmin()
+            i_stop = (np.abs(vec_times - x_stop)).argmin()
+
+            print '[DB...DEVELOP] Range: %d to %d  (%f to %f)' % (i_start, i_stop, vec_times[i_start], vec_times[i_stop])
+
+            # TODO/ISSUE/51 - From Here! Plot the segments of data
+
         # END-FOR
 
-        x_min = min(np.array(x_min_list))
-        x_max = max(np.array(x_max_list))
-        y_min = min(np.array(y_min_list))
-        y_max = max(np.array(y_max_list))
+        return
 
-        return x_min, x_max, y_min, y_max
+    def reset(self):
+        """
+        Reset canvas
+        :return:
+        """
+        # dictionary
+        self._sizeRegister.clear()
+
+        # clear all lines
+        self.clear_all_lines()
+
+        return
 
     def resize_canvas(self, margin):
         """
@@ -113,19 +165,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # resize canvas
         self.setXYLimit(xmin=canvas_x_min, xmax=canvas_x_max, ymin=canvas_y_min, ymax=canvas_y_max)
-
-        return
-
-    def reset(self):
-        """
-        Reset canvas
-        :return:
-        """
-        # dictionary
-        self._sizeRegister.clear()
-
-        # clear all lines
-        self.clear_all_lines()
 
         return
 
