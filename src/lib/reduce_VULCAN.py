@@ -1070,6 +1070,8 @@ class ReduceVulcanData(object):
         self._instrumentName = 'VULCAN'  # instrument name
         self._dataWorkspaceName = None   # source event data workspace' name
 
+        self._reducedWorkspaceList = list()
+
         return
 
     def check_alignment_run(self):
@@ -1085,6 +1087,22 @@ class ReduceVulcanData(object):
             is_alignment_run = False
 
         return is_alignment_run
+
+    def clear(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/51 - Doc and check
+        for ws_name in self._reducedWorkspaceList:
+            try:
+                mantidsimple.DeleteWorkspace(Workspace=ws_name)
+            except Exception:
+                pass
+
+        self._reducedWorkspaceList = list()
+
+        return
 
     def chop_reduce(self):
         """
@@ -1112,12 +1130,6 @@ class ReduceVulcanData(object):
         assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
-
-        # reduce and write to GSAS file
-        # gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
-        # if os.path.isfile(gsas_file_name) is True:
-        #     message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
-        #                '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
 
         message = 'Output GSAS files include:\n'
 
@@ -1147,13 +1159,17 @@ class ReduceVulcanData(object):
 
         everything_is_right = True
 
+        chopped_ws_name_list = list()
         for i_ws in range(num_split_ws):
             # get the split workspace's name
             ws_index = int(info_table.cell(i_ws, 0))
             reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
 
-            # there won't be a workspace produced if there is no neutron event within the range.
-            if AnalysisDataService.doesExist(reduced_ws_name) is False:
+            # check whether the proposed-chopped workspace does exist
+            if AnalysisDataService.doesExist(reduced_ws_name):
+                chopped_ws_name_list.append(reduced_ws_name)
+            else:
+                # there won't be a workspace produced if there is no neutron event within the range.
                 if ws_index in target_chop_index_list:
                     message += 'Reduced workspace %s does not exist. Investigate it!\n' % reduced_ws_name
                     everything_is_right = False
@@ -1174,7 +1190,7 @@ class ReduceVulcanData(object):
                                                          ws_index))
 
             # overwrite the original file
-            vdrive_bin_ws_name = reduced_ws_name # 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
+            vdrive_bin_ws_name = reduced_ws_name
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
                                        BinFilename=refLogTofFilename,
                                        OutputWorkspace=vdrive_bin_ws_name,
@@ -1187,7 +1203,7 @@ class ReduceVulcanData(object):
 
         # END-FOR
 
-        return everything_is_right, message
+        return everything_is_right, message, chopped_ws_name_list
 
     def dry_run(self):
         """
@@ -1256,9 +1272,32 @@ class ReduceVulcanData(object):
 
         return
 
-    def execute(self):
+    def execute_chop_reduction(self, clear_workspaces=True):
         """
-        Execute the command for reduce
+        Execute the chopping and reduction including exporting the log files with chopped data
+        :return:
+        """
+        # chop and reduce
+        status, message, output_ws_list = self.chop_reduce()
+
+        # create the log files
+        self.generate_sliced_logs(output_ws_list)
+
+        # clear workspace? or later
+        if clear_workspaces:
+            for ws_name in output_ws_list:
+                mantidsimple.DeleteWorkspace(Workspace=ws_name)
+        else:
+            self._reducedWorkspaceList.extend(output_ws_list)
+
+        return
+
+    def execute_vulcan_reduction(self):
+        """
+        Execute the command for reduce, including
+        (1) reduce to GSAS file
+        (2) export log file
+        (3) special reduction output for VULCAN auto reduction service
         Raise RuntimeError
         :return: (boolean, string) as success/fail and error message
         """
@@ -1630,6 +1669,13 @@ class ReduceVulcanData(object):
 
         return
 
+    def generate_sliced_logs(self, ws_name_list):
+        """
+
+        :param ws_name_list:
+        :return:
+        """
+
     def load_data_file(self):
         """
         Load NeXus file. If reducing to GSAS is also required, then load the complete NeXus file. Otherwise,
@@ -1947,7 +1993,7 @@ def main(argv):
     status, error_message = reduction_setup.check_validity()
     if status and not reduction_setup.is_dry_run():
         # reduce data
-        reducer.execute()
+        reducer.execute_vulcan_reduction()
     elif not status:
         # error message
         print '[Error] Reduction Setup:\n%s' % error_message

@@ -135,7 +135,7 @@ class VDProject(object):
             reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            status, message = reducer.chop_reduce()
+            status, message, output_ws_name_list = reducer.chop_reduce()
         else:
             # just chop the files and save to Nexus
             mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),

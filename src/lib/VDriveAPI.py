@@ -958,7 +958,7 @@ class VDriveAPI(object):
         # check inputs' validity
         assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
         assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
-        assert isinstance(output_dir, str), 'Output directory must be a string.'
+        assert isinstance(output_dir, str) or output_dir is None, 'Output directory must be a string or None (auto).'
         assert isinstance(is_dry_run, bool), 'Is-Dry-Run must be a boolean'
 
         status = True
@@ -990,7 +990,7 @@ class VDriveAPI(object):
             if is_dry_run:
                 part_status, part_message = reducer.dry_run()
             else:
-                part_status, part_message = reducer.execute()
+                part_status, part_message = reducer.execute_vulcan_reduction()
 
             # contribute the overall message
             status = status and part_status
@@ -1248,7 +1248,11 @@ class VDriveAPI(object):
         :param output_dir:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        return self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data, output_dir=output_dir)
+        # chop data
+        status, message = self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data,
+                                                    output_dir=output_dir)
+
+
 
     def set_focus_calibration_file(self, calibration_file):
         """
