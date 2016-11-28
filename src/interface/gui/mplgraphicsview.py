@@ -1313,10 +1313,14 @@ class Qt4MplCanvas(FigureCanvas):
         :param line_id:
         :return: 2-tuple as vector X and vector Y
         """
+        # check
+        if line_id not in self._lineDict:
+            raise KeyError('Line ID %s does not exist.' % str(line_id))
+
+        # get line
         line = self._lineDict[line_id]
         if line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % line_id
-            return
+            raise RuntimeError('Line ID %s has been removed.' % line_id)
 
         return line.get_xdata(), line.get_ydata()
 

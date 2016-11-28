@@ -40,7 +40,9 @@ class QuickChopDialog(QtGui.QDialog):
         self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
                      self.do_quit)
 
-        self._outputDir = None
+        # default output directory
+        self._outputDir = os.getcwd()
+        self.ui.lineEdit_outputDir.setText(self._outputDir)
 
         return
 

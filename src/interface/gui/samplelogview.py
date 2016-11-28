@@ -2,6 +2,8 @@ import numpy as np
 
 import mplgraphicsview
 
+COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
+
 
 class LogGraphicsView(mplgraphicsview.MplGraphicsView):
     """
@@ -24,6 +26,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # extra title message
         self._titleMessage = ''
+
+        # container for segments plot
+        self._splitterSegmentsList = list()
 
         return
 
@@ -91,36 +96,16 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def show_slicers(self, vec_times, vec_target_ws):
+    def remove_slicers(self):
         """
-
+        remove slicers
         :return:
         """
-        # check state
-        if self._currPlotID is None:
-            return
+        for slicer_plot_id in self._splitterSegmentsList:
+            self.remove_line(slicer_plot_id)
 
-        # TODO/ISSUE/51 - Docs + Clean
-
-        assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption!'
-
-        vec_x, vec_y = self.canvas().get_data(self._currPlotID)
-
-        for i_seg in range(len(vec_target_ws)):
-            x_start = vec_times[i_seg]
-            x_stop = vec_times[i_seg+1]
-            color_index = vec_target_ws[i_seg]
-
-            print '[DB...DEVELOP] Plot X = ', x_start, x_stop, ' with color index ', color_index
-
-            i_start = (np.abs(vec_times - x_start)).argmin()
-            i_stop = (np.abs(vec_times - x_stop)).argmin()
-
-            print '[DB...DEVELOP] Range: %d to %d  (%f to %f)' % (i_start, i_stop, vec_times[i_start], vec_times[i_stop])
-
-            # TODO/ISSUE/51 - From Here! Plot the segments of data
-
-        # END-FOR
+        # clear
+        self._splitterSegmentsList = list()
 
         return
 
@@ -132,8 +117,12 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # dictionary
         self._sizeRegister.clear()
 
+        # clear slicers
+        self.remove_slicers()
+
         # clear all lines
         self.clear_all_lines()
+        self._currPlotID = None
 
         return
 
@@ -165,6 +154,51 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # resize canvas
         self.setXYLimit(xmin=canvas_x_min, xmax=canvas_x_max, ymin=canvas_y_min, ymax=canvas_y_max)
+
+        return
+
+    def show_slicers(self, vec_times, vec_target_ws):
+        """
+        show slicers on the canvas
+        :param vec_times:
+        :param vec_target_ws:
+        :return:
+        """
+        # check state
+        if self._currPlotID is None:
+            return
+
+        assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption that input is a histogram!'
+
+        # get data from the figure
+        vec_x, vec_y = self.canvas().get_data(self._currPlotID)
+
+        num_color = len(COLOR_LIST)
+
+        for i_seg in range(len(vec_target_ws)):
+            # get start time and stop time
+            x_start = vec_times[i_seg]
+            x_stop = vec_times[i_seg+1]
+            color_index = vec_target_ws[i_seg]
+            print '[DB...DEVELOP] Plot X = ', x_start, x_stop, ' with color index ', color_index
+
+            # get start time and stop time's index
+            i_start = (np.abs(vec_x - x_start)).argmin()
+            i_stop = (np.abs(vec_x - x_stop)).argmin()
+            print '[DB...DEVELOP] Range: %d to %d  (%f to %f)' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+
+            # get the partial for plot
+            vec_x_i = vec_x[i_start:i_stop]
+            vec_y_i = vec_y[i_start:i_stop]
+
+            # plot
+            color_i = COLOR_LIST[color_index % num_color]
+            seg_plot_index = self.add_plot_1d(vec_x_i, vec_y_i, marker=None, line_style='-', color=color_i,
+                                              line_width=2)
+
+            self._splitterSegmentsList.append(seg_plot_index)
+
+        # END-FOR
 
         return
 
