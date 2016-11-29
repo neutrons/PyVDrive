@@ -48,11 +48,10 @@ import shutil
 import xml.etree.ElementTree as ET
 import sys
 
-# sys.path.append("/opt/mantidnightly/bin")
+sys.path.append("/opt/mantidnightly/bin")
 # sys.path.append('/opt/mantidunstable/bin/')
 # sys.path.append("/opt/Mantid/bin")
 # sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
-sys.path.append('/Users/wzz/MantidBuild/debug-mantid2/bin/')
 
 import mantid.simpleapi as mantidsimple
 import mantid
@@ -71,7 +70,7 @@ RecordBase = [
     ("IPTS",            "experiment_identifier", None),
     ("Title",           "run_title", None),
     ("Notes",           "file_notes", None),
-    ("Sample",          "Sample", None),  # stored on sample object
+    ("Sample",          "SampleInfo", None),  # stored on sample object
     ('ITEM',            'items.id', '0'),
     ("StartTime",       "run_start", "time"),
     ("Duration",        "duration", None),
@@ -251,6 +250,9 @@ class ReductionSetup(object):
         self._splitterWsName = None
         self._splitterInfoName = None
 
+        # reduction type
+        self._isFullReduction = True
+
         return
 
     @staticmethod
@@ -314,10 +316,30 @@ class ReductionSetup(object):
                 error_message += 'Calibration file %s cannot be found.\n' % file_name
 
         # GSAS file
-        if self._mainGSASName is not None and not os.access(self._mainGSASName, os.W_OK):
-            error_message += 'Main GSAS %s is not writable.' % self._mainGSASDir
-        if self._mainRecordFileName is not None and not os.access(self._mainRecordFileName, os.W_OK):
-            error_message += 'Main record file %s is not writable.' % self._mainGSASDir
+        if self._mainGSASName is not None:
+            if os.path.exists(self._mainGSASName):
+                # check whether it is over-writable
+                if not os.access(self._mainGSASName, os.W_OK):
+                    error_message += 'Existing main GSAS file %s cannot be over-written.' \
+                                     '' % self._mainGSASName
+            else:
+                # check whether the directory is writable
+                if not os.access(self._mainGSASDir, os.W_OK):
+                    error_message += 'Directory %s is not writable for main gSAS file.' % self._mainGSASDir
+        # END-IF
+
+        # Record file
+        if self._mainRecordFileName is not None:
+            if os.path.exists(self._mainRecordFileName):
+                # check whether it is over-writable
+                if not os.access(self._mainRecordFileName, os.W_OK):
+                    error_message += 'Main record file %s exists but cannot be written.' % self._mainRecordFileName
+            else:
+                # check whether the directory is writable
+                record_dir = os.path.dirname(self._mainRecordFileName)
+                if not os.access(record_dir, os.W_OK):
+                    error_message += 'Directory %s is not writable for main record file.' % record_dir
+        # END-IF
 
         if error_message == '':
             status = True
@@ -340,7 +362,7 @@ class ReductionSetup(object):
         """
         # set to default if it is not set up yet
         if self._focusFileName is None:
-            self._focusFileName = CalibrationFileName
+            raise RuntimeError('Focus file is not set up.')
 
         return self._focusFileName
 
@@ -629,7 +651,7 @@ class ReductionSetup(object):
         self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
                                                "AutoRecord.txt")
         # output GSAS directory
-        self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binned')
+        self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binnedgda')
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
 
         self.is_full_reduction = True
@@ -786,6 +808,9 @@ class PatchRecord:
     This class will not be used after all the required information/logs are
     added to NeXus file or exported to Mantid workspace
     """
+    # PatchLogList = ['TotalCounts', 'Monitor1', 'Monitor2', 'Sample']
+    PatchLogList = ['TotalCounts', 'Monitor1', 'Monitor2', 'VROT', 'Vcollimator', 'Sample']
+
     def __init__(self, instrument, ipts, run):
         """ Init
         """
@@ -808,7 +833,7 @@ class PatchRecord:
 
         return
 
-    def exportPatch(self):
+    def export_patch_list(self):
         """ Export patch as a list of strings
         """
         cvdict = self._readCvInfoFile()
@@ -821,68 +846,15 @@ class PatchRecord:
         for title in rundict.keys():
             patchdict[title] = rundict[title]
 
-        patchlist = []
+        patch_list = []
         for key in patchdict:
-            patchlist.append(str(key))
-            patchlist.append(str(patchdict[key]))
+            if key in self.PatchLogList:
+                patch_list.append(str(key))
+                patch_list.append(str(patchdict[key]))
 
-        return patchlist
+        print '[DB...BAT] Patch List: ', patch_list
 
-    def patchRecord(self, recordfilename):
-        """ Patch record, including ITPS, ...
-        """
-        raise NotImplementedError("Invalid!")
-
-        # # Get last line
-        # titleline, lastline = self.get_last_line_in_binary_file(recordfilename)
-
-        # # print "First line: ", titleline
-        # # print "Last line: ", lastline
-
-        # # Parse last line and first line
-        # rtitles = titleline.split("\t")
-        # titles = []
-        # for title in rtitles:
-        #     title = title.strip()
-        #     titles.append(title)
-
-        # values = lastline.split("\t")
-
-        # valuedict = {}
-        # if len(titles) != len(values):
-        #     raise NotImplementedError("Number of tiles are different than number of values.")
-        # for itit in xrange(len(titles)):
-        #     valuedict[titles[itit]] = values[itit]
-
-        # # Substitute
-        # ipts = self._getIPTS()
-        # cvdict = self._readCvInfoFile()
-        # rundict = self._read_run_info_file()
-
-        # valuedict["IPTS"] = "%s" % (str(ipts))
-        # for title in cvdict.keys():
-        #     valuedict[title] = cvdict[title]
-
-        # # print valuedict.keys()
-
-        # for title in rundict.keys():
-        #     valuedict[title] = rundict[title]
-
-        # # Form the line again: with 7 spaces in front
-        # newline = "       "
-        # for i in xrange(len(titles)):
-        #     title = titles[i]
-        #     if i > 0:
-        #         newline += "\t"
-        #     newline += "%s" % (str(valuedict[title]))
-
-        # # Remove last line and append the patched line
-        # self.remove_last_line_in_text(recordfilename)
-
-        # with open(recordfilename, "a") as myfile:
-        #     myfile.write("\n"+newline)
-
-        # return
+        return patch_list
 
     @staticmethod
     def get_last_line_in_binary_file(filename):
@@ -1138,7 +1110,7 @@ class ReduceVulcanData(object):
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
                                         CalibrationFile=self._reductionSetup.get_focus_file(),
-                                        CharacterizationRunsFile=CharacterFileName,
+                                        CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
                                         Binning="-0.001",
                                         SaveAS="",
                                         OutputDirectory=self._reductionSetup.get_gsas_dir(),
@@ -1192,7 +1164,7 @@ class ReduceVulcanData(object):
             # overwrite the original file
             vdrive_bin_ws_name = reduced_ws_name
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                       BinFilename=refLogTofFilename,
+                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                        OutputWorkspace=vdrive_bin_ws_name,
                                        GSSFilename=gsas_file_name,
                                        IPTS=self._reductionSetup.get_ipts_number(),
@@ -1351,7 +1323,7 @@ class ReduceVulcanData(object):
         patcher = PatchRecord(self._instrumentName,
                               self._reductionSetup.get_ipts_number(),
                               self._reductionSetup.get_run_number())
-        patch_list = patcher.exportPatch()
+        patch_list = patcher.export_patch_list()
 
         # Auto reduction and manual reduction
         if os.path.exists(self._reductionSetup.get_record_file()):  # logs_record_file_name
@@ -1731,7 +1703,7 @@ class ReduceVulcanData(object):
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
-                                            CharacterizationRunsFile=CharacterFileName,
+                                            CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
                                             Binning="-0.001",
                                             SaveAS="",
                                             OutputDirectory=self._reductionSetup.get_gsas_dir(),
@@ -1761,7 +1733,7 @@ class ReduceVulcanData(object):
 
         vdrive_bin_ws_name = 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
         mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                   BinFilename=refLogTofFilename,
+                                   BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                    OutputWorkspace=vdrive_bin_ws_name,
                                    GSSFilename=gsas_file_name,
                                    IPTS=self._reductionSetup.get_ipts_number(),
@@ -1978,8 +1950,11 @@ def main(argv):
     if not status:
         return
 
-    # process
+    # process and set calibration files
     reduction_setup.process_configurations()
+    reduction_setup.set_focus_file(CalibrationFileName)
+    reduction_setup.set_charact_file(CharacterFileName)
+    reduction_setup.set_vulcan_bin_file(refLogTofFilename)
 
     # create reducer
     reducer = ReduceVulcanData(reduction_setup)
@@ -1996,7 +1971,7 @@ def main(argv):
         reducer.execute_vulcan_reduction()
     elif not status:
         # error message
-        print '[Error] Reduction Setup:\n%s' % error_message
+        raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)
 
     return
 
