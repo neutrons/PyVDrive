@@ -15,7 +15,7 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-import gui.VdriveLogPicker as VdriveLogPicker
+import gui.ui_VdriveLogPicker as VdriveLogPicker
 import LoadMTSLogWindow
 import QuickChopDialog
 

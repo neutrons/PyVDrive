@@ -14,7 +14,7 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-import gui.VdrivePeakPicker as VdrivePeakPicker
+import gui.ui_VdrivePeakPicker as VdrivePeakPicker
 import gui.diffractionplotview as dv
 import GroupPeakDialog
 
