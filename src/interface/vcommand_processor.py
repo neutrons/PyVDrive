@@ -2,6 +2,7 @@
 This module contains a class to handle standard VDRIVE commands
 """
 # from PyQt4 import QtCore
+from PyQt4 import QtGui
 from PyQt4.QtCore import pyqtSignal
 
 import vdrive_commands.chop
@@ -17,19 +18,21 @@ class VdriveCommandProcessor(object):
     # signal to reduce a run
     reduceSignal = pyqtSignal(list)
 
-    def __init__(self, controller):
+    def __init__(self, main_window, controller):
         """
         Initialization
         """
         # check input requirement
+        assert isinstance(main_window, QtGui.QMainWindow), 'Main window must be a QtGui.QMainWindow'
         assert controller is not None, 'controller cannot be None'
         if controller.__class__.__name__ != 'VDriveAPI':
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))
 
+        self._mainWindow = main_window
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO']
 
         return
 
@@ -47,6 +50,8 @@ class VdriveCommandProcessor(object):
         :param command_args: arguments of a command, excluding command
         :return:
         """
+        print '[DB...COMMAND PROCESSOR] Command = %s; Arguments = %s' % (command, str(command_args))
+
         # check command (type, whether it is supported)
         assert isinstance(command, str), 'Command %s must be a string but not %s.' \
                                          '' % (str(command),  str(type(command)))
@@ -71,20 +76,46 @@ class VdriveCommandProcessor(object):
             if len(items) == 2:
                 arg_dict[items[0]] = items[1]
             else:
-                return False, 'Command %s %d-th term \"%s\" is not valid.' % (command, index,
-                                                                              term)
+                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
+                print '[DB...ERROR] ', err_msg
+                return False, err_msg
             # END-IF
         # END-FOR
 
         # call the specific command class builder
+        print '[DB...BAT] Now it is time to find a proper reserved VDRIVE command (%s) to run!' % command
         if command == 'CHOP':
             status, err_msg = self._process_chop(arg_dict)
         elif command == 'VBIN':
             status, err_msg = self._process_vbin(arg_dict)
         elif command == 'MERGE':
             status, err_msg = self._process_merge(arg_dict)
+        elif command == 'AUTO':
+            # auto reduction command
+            status, err_msg = self._process_auto_reduction(arg_dict)
         else:
             raise RuntimeError('Impossible situation!')
+
+        return status, err_msg
+
+    def _process_auto_reduction(self, arg_dict):
+        """
+        VDRIVE auto reduction
+        :param arg_dict:
+        :return:
+        """
+        print '[DB...BAT] Am I reached 2'
+        try:
+            processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as com_err:
+            return False, 'Command argument error: %s.' % str(com_err)
+
+        print '[DB...BAT] Am I reached 3'
+        if len(arg_dict) == 0:
+            status = True
+            err_msg = processor.get_help()
+        else:
+            status, err_msg = processor.exec_cmd()
 
         return status, err_msg
 
@@ -93,11 +124,28 @@ class VdriveCommandProcessor(object):
         VDRIVE CHOP
         Example: CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
         :param arg_dict:
-        :return:
+        :return: 2-tuple
         """
-        processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
+        # create a new VdriveChop instance
+        try:
+            processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
 
-        return self._process_command(processor, arg_dict)
+        # execute
+        status, message = self._process_command(processor, arg_dict)
+        print '[DB...BAT] ', status, message
+
+        # get information from VdriveChop
+        self._chopIPTSNumber, self._chopRunNumberList = processor.get_ipts_runs()
+
+        # process for special case: log-pick-helper
+        if message == 'pop':
+            log_window = self._mainWindow.do_launch_log_picker_window()
+            log_window.load_run(self._chopRunNumberList[0])
+        # END-IF
+
+        return status, message
 
     def _process_vbin(self, arg_dict):
         """
@@ -119,7 +167,8 @@ class VdriveCommandProcessor(object):
         """
         assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
             'not command processor but ...'
-        assert isinstance(arg_dict, dict), 'blabla'  # TODO/NOW - Message
+        assert isinstance(arg_dict, dict), 'Arguments dictionary %s must be a dictionary but not a %s.' \
+                                           '' % (str(arg_dict), type(arg_dict))
 
         if len(arg_dict) == 0:
             message = command_processor.get_help()
@@ -136,7 +185,7 @@ class VdriveCommandProcessor(object):
         :return:
         """
         if len(args) == 0:
-            help_msg = 'Options: -H (help)'
+            help_msg = 'VDRIVE: -H (help)'
             return True, help_msg
 
         if args == '-H':

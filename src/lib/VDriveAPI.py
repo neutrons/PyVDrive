@@ -18,6 +18,7 @@ import vdrivehelper
 import mantid_helper
 import crystal_helper
 import io_peak_file
+import reduce_VULCAN
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -35,7 +36,7 @@ class VDriveAPI(object):
             Initialize an instance of VDriveAPI
         Requirements:
             Instrument name is supported
-        Guarantees:
+        Guarantees:94G
           Set
             1. Instrument name
           Initialize and set up
@@ -57,7 +58,6 @@ class VDriveAPI(object):
         self._myProject = vp.VDProject('New Project')
         self._myAnalysisProject = AnalysisProject('New Analysis Project')
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
-        self._mySlicingManager = SampleLogHelper.SampleLogManager()
 
         # default working directory to current directory.
         #  if it is not writable, then use /tmp/
@@ -72,6 +72,7 @@ class VDriveAPI(object):
         # MTS file log
         self._mtsLogDict = dict()
         self._currentMTSLogFileName = None
+
         return
 
     @staticmethod
@@ -102,14 +103,6 @@ class VDriveAPI(object):
         """ Get the access to archiving manager
         """
         return self._myArchiveManager
-
-    @property
-    def chop_manager(self):
-        """
-        Return the reference of slicer/chop manager
-        :return:
-        """
-        return self._mySlicingManager
 
     # Definition of algorithms
     def add_runs_to_project(self, run_info_list):
@@ -235,15 +228,6 @@ class VDriveAPI(object):
 
         return reflection_list
 
-    def clean_memory(self, run_number, slicer_tag=None):
-        """ Clear memory by deleting workspaces
-        :param run_number: run number for the slicer
-        :param slicer_tag:
-        :return:
-        """
-        if slicer_tag is not None:
-            self._mySlicingManager.clean_workspace(run_number, slicer_tag)
-
     def export_gsas_file(self, run_number, gsas_file_name):
         """
         Purpose: export a reduced run to GSAS data file
@@ -320,7 +304,7 @@ class VDriveAPI(object):
         Requirements:
          - by run number, a workspace containing the reduced run must be found
          - either auto (mode) is on or peak positions are given;
-         - peak profile must be Gaussian and blabla
+         - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
         :param run_number:
         :param bank_number:
         :param x_range:
@@ -337,11 +321,12 @@ class VDriveAPI(object):
 
         # Check
         # ... ... assert isinstance(run_number, int)
-        assert isinstance(bank_number, int)
-        assert isinstance(x_range, tuple) and len(x_range) == 2
-        assert isinstance(profile, str)
-        assert isinstance(peak_positions, list) or peak_positions is None
+        assert isinstance(bank_number, int), 'Bank number must be an integer.'
+        assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
+        assert isinstance(profile, str), 'Peak profile must be a string.'
+        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
 
+        # raise exceptions if the input parameters are not allowed.
         if isinstance(peak_positions, list) and auto_find:
             raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
         if peak_positions is None and auto_find is False:
@@ -354,7 +339,7 @@ class VDriveAPI(object):
             # find peaks in an automatic way
             peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
         else:
-            # ... ...
+            # # find the peaks with list
             peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
                                                       hkl_list, profile)
 
@@ -366,90 +351,63 @@ class VDriveAPI(object):
         :param relative_time:
         :param time_segment_list:
         :param slice_tag: string for slice tag name
-        :return:
+        :return: slice tag. if user gives slice tag as None, then the returned one is the auto-generated.
         """
-        status, ret_obj = self._mySlicingManager.generate_events_filter_manual(
-            run_number, time_segment_list, relative_time, slice_tag)
+        # get the chopper
+        chopper = self._myProject.get_chopper(run_number)
+        slice_tag = chopper.generate_events_filter_manual(time_segment_list, relative_time=relative_time,
+                                                          splitter_tag=slice_tag)
 
-        return status, ret_obj
+        return slice_tag
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, tag=None):
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
         Generate data slicer by time
         :param run_number: run number (integer) or base file name (str)
         :param start_time:
         :param end_time:
         :param time_step:
-        :param tag: name of the output workspace
         :return:
         """
-        # Get full-path file name according to run number
-        if isinstance(run_number, int):
-            # run number is a Run Number, locate file
-            file_name, ipts_number = self._myProject.get_run_info(run_number)
-        elif isinstance(run_number, str):
-            # run number is a file name
-            base_file_name = run_number
-            file_name = self._myProject.get_file_path(base_file_name)
-            run_number = None
-        else:
-            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
 
-        # Checkout log processing session
-        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
 
-        status, ret_obj = self._mySlicingManager.generate_events_filter_by_time(min_time=start_time,
-                                                                                max_time=end_time,
-                                                                                time_interval=time_step,
-                                                                                tag=tag)
+        # generate data slicer
+        status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
 
-        return status, ret_obj
+        return status, slicer_key
 
-    def gen_data_slicer_sample_log(self, run_number, sample_log_name,
+    def gen_data_slicer_sample_log(self, run_number, sample_log_name, log_value_step,
                                    start_time, end_time, min_log_value, max_log_value,
-                                   log_value_step, tag=None):
+                                   change_direction):
         """
         Generate data slicer/splitters by log values
         :param run_number:
         :param sample_log_name:
+        :param log_value_step:
         :param start_time:
         :param end_time:
         :param min_log_value:
         :param max_log_value:
-        :param log_value_step:
-        :return:
+        :param change_direction:
+        :return: 2-tuple. [1] True/Slicer Key  [2] False/Error Message
         """
-        # Get file name according to run number
-        if isinstance(run_number, int):
-            # run number is a Run Number, locate file
-            file_name, ipts_number = self._myProject.get_run_info(run_number)
-        elif isinstance(run_number, str):
-            # run number is a file name
-            base_file_name = run_number
-            file_name = self._myProject.get_file_path(base_file_name)
-        else:
-            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
 
-        # Start a session
-        self._mySlicingManager.checkout_session(nxs_file_name=file_name, run_number=run_number)
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
 
-        # this_ws_name = get_standard_ws_name(file_name, True)
-        # mtdHelper.load_nexus(file_name, this_ws_name, True)
-        # slicer_name, info_name = get_splitters_names(this_ws_name)
-        # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
-        # print 'log_name = ', sample_log_name
+        # generate data slicer
+        status, slicer_key = chopper.set_log_value_slicer(sample_log_name, log_value_step,
+                                                          start_time=start_time, stop_time=end_time,
+                                                          direction=change_direction,
+                                                          min_log_value=min_log_value, max_log_value=max_log_value)
 
-        # FIXME - Need to pass value change direction
-        self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-                                                             min_time=start_time, max_time=end_time,
-                                                             relative_time=True,
-                                                             min_log_value=min_log_value,
-                                                             max_log_value=max_log_value,
-                                                             log_value_interval=log_value_step,
-                                                             value_change_direction='Both',
-                                                             tag=tag)
-
-        return
+        return status, slicer_key
 
     def get_instrument_name(self):
         """
@@ -523,7 +481,7 @@ class VDriveAPI(object):
 
         elif run_number is None and isinstance(data_key, str):
             # given data key
-            assert len(data_key) > 0, 'bla bla'
+            assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
                 info = self._myAnalysisProject.get_data_information(data_key)
             except AssertionError as e:
@@ -540,6 +498,18 @@ class VDriveAPI(object):
         :return: list of strings?
         """
         return self._myProject.get_reduced_runs()
+
+    def get_slicer(self, run_number, slicer_id):
+        """
+        Get the slicer (in vectors) by run number and slicer ID
+        :param run_number:
+        :param slicer_id:
+        :return:  2-tuple.  [1] Boolean [2] (vector time, vector workspace) | error message
+        """
+        chopper = self._myProject.get_chopper(run_number)
+        status, ret_obj = chopper.get_slicer_by_id(slicer_tag=slicer_id, relative_time=True)
+
+        return status, ret_obj
 
     def get_working_dir(self):
         """
@@ -598,36 +568,8 @@ class VDriveAPI(object):
 
         return root_dir
 
-    def get_event_slicer(self, run_number, slicer_type, slicer_id=None, relative_time=True):
-        """
-        TODO/FIXME What am I supposed to do???
-        :param run_number: run number for locate slicer
-        :param slicer_id: log name, manual, time (decreasing priority)
-        :param slicer_type: string as type of slicer
-        :param relative_time: if True, time is in relative to run_start
-        :return: vector of floats as time in unit of second
-        """
-        # Check
-        assert isinstance(run_number, int)
-        assert isinstance(slicer_type, str)
-        assert isinstance(slicer_id, str)
-
-        if slicer_type.lower() == 'time':
-            status, ret_obj = self._mySlicingManager.get_slicer_by_time()
-        elif slicer_type.lower() == 'log':
-            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, slicer_id)
-        else:
-            status, ret_obj = self._mySlicingManager.get_slicer_by_id(run_number, slicer_id, relative_time)
-
-        if status is False:
-            err_msg = ret_obj
-            return False, err_msg
-        else:
-            time_segment_list = ret_obj
-
-        return True, time_segment_list
-
-    def get_ipts_number_from_dir(self, dir_name):
+    @staticmethod
+    def get_ipts_number_from_dir(dir_name):
         """
         Parse IPTS number from a directory path if it is a standard VULCAN archive directory
         :param dir_name: path to the directory
@@ -836,41 +778,41 @@ class VDriveAPI(object):
 
         return True, ret_list
 
-    def get_sample_log_names(self, smart=False):
+    def get_sample_log_names(self, run_number, smart=False):
         """
         Get names of sample log with time series property
+        :param run_number:
         :param smart: a smart way to show sample log name with more information
         :return:
         """
-        if self._mySlicingManager is None:
-            return False, 'Log helper has not been initialized.'
+        assert run_number is not None, 'Run number cannot be None.'
 
-        status, ret_obj = self._mySlicingManager.get_sample_log_names(with_info=smart)
-        if status is False:
-            return False, str(ret_obj)
-        else:
-            name_list = ret_obj
+        chopper = self._myProject.get_chopper(run_number)
+        sample_name_list = chopper.get_sample_log_names(smart)
 
-        return True, name_list
+        return True, sample_name_list
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
         Get time and value of a sample log in vector
         Returned time is in unit of second as epoch time
+        :param run_number:
         :param log_name:
+        :param start_time:
+        :param stop_time:
         :param relative: if True, then the sample log's vec_time will be relative to Run_start
         :return: 2-tuple as status (boolean) and 2-tuple of vectors.
         """
-        assert isinstance(log_name, str)
-        try:
-            vec_times, vec_value = self._mySlicingManager.get_sample_data(run_number=run_number,
-                                                                          sample_log_name=log_name,
-                                                                          start_time=start_time,
-                                                                          stop_time=stop_time,
-                                                                          relative=relative)
+        # check input
+        assert run_number is not None, 'Run number cannot be None.'
 
-        except RuntimeError as e:
-            return False, 'Unable to get log %s\'s value due to %s.' % (log_name, str(e))
+        # get chopper
+        chopper = self._myProject.get_chopper(run_number)
+
+        # get log values
+        vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+                                                       start_time=start_time, stop_time=stop_time,
+                                                       relative=relative)
 
         return True, (vec_times, vec_value)
 
@@ -901,8 +843,10 @@ class VDriveAPI(object):
         :return:
         """
         # Check requirements
-        assert isinstance(file_name, str), 'blabla'
-        assert isinstance(file_type, str), 'blabla'
+        assert isinstance(file_name, str), 'Diffraction file name %s must be a string but not %s.' \
+                                           '' % (str(file_name), type(file_name))
+        assert isinstance(file_type, str), 'Diffraction file type %s mut be a string but not %s.' \
+                                           '' % (str(file_type), type(file_type))
 
         # Load
         if file_type.lower() == 'gsas':
@@ -1001,6 +945,59 @@ class VDriveAPI(object):
             ret_obj = str(re)
 
         return status, ret_obj
+
+    @staticmethod
+    def reduce_auto_script(ipts_number, run_numbers, output_dir, is_dry_run):
+        """
+        Reduce the runs in the standard auto reduction workflow
+        :param ipts_number:
+        :param run_numbers:
+        :param is_dry_run:
+        :return: running information
+        """
+        # check inputs' validity
+        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
+        assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
+        assert isinstance(output_dir, str) or output_dir is None, 'Output directory must be a string or None (auto).'
+        assert isinstance(is_dry_run, bool), 'Is-Dry-Run must be a boolean'
+
+        status = True
+        message = ''
+
+        for run_number in run_numbers:
+            # create a new ReductionSetup instance and configure
+            reduce_setup = reduce_VULCAN.ReductionSetup()
+            # set run number and IPTS
+            reduce_setup.set_ipts_number(ipts_number)
+            reduce_setup.set_run_number(run_number)
+            # set and check input file
+            nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_number, run_number, run_number)
+            assert os.path.exists(nxs_file_name), 'NeXus file %s does not exist.' % nxs_file_name
+            reduce_setup.set_event_file(nxs_file_name)
+            # set and check output directory
+            if output_dir is None:
+                output_dir = '/SNS/VULCAN/IPTS-%d/shared/autoreduce/' % ipts_number
+            reduce_setup.set_output_dir(output_dir)
+            # set the auto reduction configuration mode
+            try:
+                reduce_setup.set_auto_reduction_mode()
+            except OSError as os_err:
+                return False, str(os_err)
+
+            # generate instance of ReduceVulcanData
+            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+            # and reduce!
+            if is_dry_run:
+                part_status, part_message = reducer.dry_run()
+            else:
+                part_status, part_message = reducer.execute_vulcan_reduction()
+
+            # contribute the overall message
+            status = status and part_status
+            message += part_message + '\n'
+        # END-FOR (run number)
+
+        return status, message
 
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory
@@ -1125,7 +1122,8 @@ class VDriveAPI(object):
         :return:
         """
         # check
-        assert isinstance(log_file_name, str), 'blabla'
+        assert isinstance(log_file_name, str), 'MTS log file name %s must be a string but not %s.' \
+                                               '' % (str(log_file_name), type(log_file_name))
         if log_file_name not in self._mtsLogDict:
             raise KeyError('Log file %s has not been loaded. Loaded files are %s.'
                            '' % (log_file_name, str(self._mtsLogDict.keys())))
@@ -1212,17 +1210,21 @@ class VDriveAPI(object):
 
         return True, out_file_name
 
-    def save_splitter_workspace(self, run_number, sample_log_name, file_name):
+    def save_splitter_workspace(self, run_number, slicer_tag, file_name):
         """
         Save SplittersWorkspace to standard text file
         :param run_number:
-        :param sample_log_name:
+        :param slicer_tag:
         :param file_name:
         :return:
         """
-        status, err_msg = self._mySlicingManager.save_splitter_ws(run_number, sample_log_name, file_name)
+        # get chopper
+        assert isinstance(run_number, int), 'Run number must be an integer.'
+        chopper = self._myProject.get_chopper(run_number)
 
-        return status, err_msg
+        chopper.save_splitter_ws_text(slicer_tag, file_name)
+
+        return
 
     def save_time_segment(self, time_segment_list, ref_run_number, file_name):
         """
@@ -1231,86 +1233,26 @@ class VDriveAPI(object):
         :param file_name:
         :return:
         """
-        # Check
-        assert isinstance(time_segment_list, list)
-        assert isinstance(ref_run_number, int) or ref_run_number is None
-        assert isinstance(file_name, str)
-
-        # Form Segments
-        run_start = self._mySlicingManager.get_run_start(ref_run_number, unit='second')
-
-        segment_list = list()
-        i_target = 1
-        for time_seg in time_segment_list:
-            if len(time_seg < 3):
-                tmp_target = '%d' % i_target
-                i_target += 1
-            else:
-                tmp_target = '%s' % str(time_seg[2])
-            tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
-            segment_list.append(tmp_seg)
-        # END-IF
-
-        segment_list.sort(ascending=True)
-
-        # Check validity
-        num_seg = len(segment_list)
-        if num_seg >= 2:
-            prev_stop = segment_list[0].stop
-            for index in xrange(1, num_seg):
-                if prev_stop >= segment_list[index].start:
-                    return False, 'Overlapping time segments!'
-        # END-IF
-
-        # Write to file
-        SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
+        chopper = self._myProject.get_chopper(ref_run_number)
+        chopper.save_time_segment(time_segment_list, file_name)
 
         return
 
-    def slice_data(self, run_number, sample_log_name=None, by_time=False):
+    def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
         :param run_number: run number
-        :param sample_log_name:
-        :param by_time:
+        :param slicer_id:
+        :param reduce_data:
+        :param output_dir:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # Check. Must either by sample log or by time
-        if sample_log_name is not None and by_time is True:
-            return False, 'It is not allowed to specify both sample log name and time!'
-        elif sample_log_name is None and by_time is False:
-            return False, 'it is not allowed to specify neither sample log nor time!'
+        # chop data
+        status, message = self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data,
+                                                    output_dir=output_dir)
 
-        # Get and check slicers/splitters
-        if by_time is True:
-            # Slice data by time
-            status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
-            if status is False:
-                err_msg = ret_obj
-                return False, err_msg
-            else:
-                slicer = ret_obj
-                sample_log_name = '_TIME_'
-                print '[DB] Slicer = ', str(slicer), '\n'
-        else:
-            # Slice data by log value
-            assert isinstance(sample_log_name, str)
-            print '[DB] Run number = ', run_number, '\n'
-            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, sample_log_name)
-            if status is False:
-                print '[DB]', ret_obj, '\n'
-                return False, ret_obj
-            else:
-                slicer = ret_obj
-            # slicer is a tuple for names of splitter workspace and information workspace
-            # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
-
-        # Slice/split data
-        status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
-                                                     sample_log_name.replace('.', '-'))
-
-        return status, ret_obj
+        return status, message
 
     def set_focus_calibration_file(self, calibration_file):
         """
@@ -1429,28 +1371,18 @@ class VDriveAPI(object):
         else:
             run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
 
-        status, errmsg = self._mySlicingManager.checkout_session(nxs_file_name, run_number)
+        status, errmsg = self._mySlicingManager.load_data_file(nxs_file_name, run_number)
 
         return status, errmsg
 
-    def set_slicer(self, splitter_src, sample_log_name=None):
-        """ Set slicer from
+    def set_slicer(self):
+        """ This method's purpose is ambiguous!
         'SampleLog', 'Time', 'Manual'
         :param splitter_src:
         :param sample_log_name:
         :return:
         """
-        splitter_src = splitter_src.lower()
-
-        if splitter_src == 'samplelog':
-            assert isinstance(sample_log_name, str)
-            self._mySlicingManager.set_current_slicer_sample_log(sample_log_name)
-        elif splitter_src == 'time':
-            self._mySlicingManager.set_current_slicer_time()
-        elif splitter_src == 'manual':
-            self._mySlicingManager.set_current_slicer_manual()
-        else:
-            raise RuntimeError('Splitter source %s is not supported.' % splitter_src)
+        raise NotImplementedError('Need to consider how to use this method in the workflow!')
 
         return
 

@@ -872,12 +872,13 @@ class ReductionManager(object):
         if self._myOffsetWorkspaceName is None \
                 or mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName) is False:
             status, ret_obj = mantid_helper.load_time_focus_file(self._myInstrument,
-                                                                    self._reductionParameters.focus_calibration_file,
-                                                                    self._myInstrument)
+                                                                 self._reductionParameters.focus_calibration_file,
+                                                                 self._myInstrument)
+            if not status:
+                error_message = str(ret_obj)
+                raise RuntimeError(error_message)
 
-            # TODO/NOW/40 - Doc and clean
-            assert status, ret_obj
-
+            # set up the file names
             file_names = ret_obj
             self._myOffsetWorkspaceName = file_names[0]
             self._myGroupWorkspaceName = file_names[1]

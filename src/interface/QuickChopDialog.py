@@ -12,11 +12,11 @@ except AttributeError:
 import gui.ui_ChopDialog
 
 
-class QuickChopDialog(QtGui.QMainWindow):
+class QuickChopDialog(QtGui.QDialog):
     """
     A dialog box to do quick chopping
     """
-    def __init__(self, parent):
+    def __init__(self, parent, run_number, raw_file_name):
         """
         Initialization
         :param parent:
@@ -24,25 +24,25 @@ class QuickChopDialog(QtGui.QMainWindow):
         # base class init
         super(QuickChopDialog, self).__init__(parent)
 
-        # set up parent
-        self._myController = parent.get_controller()
-        assert self._myController is not None, 'Workflow controller cannot be NONE.'
-
-        # class variables
-        self._rawFileName = None
-        self._slicerType = None
-
         # init UI
-        self.ui = gui.ui_ChopDialog.Ui_MainWindow()
+        self.ui = gui.ui_ChopDialog.Ui_Dialog()
         self.ui.setupUi(self)
 
+        self.ui.lineEdit_runNumber.setText(str(run_number))
+        self.ui.lineEdit_sourceFile.setText(str(raw_file_name))
+        self.ui.radioButton_toGSAS.setChecked(True)
+
         # set up event handlers
-        self.connect(self.ui.pushButton_chop, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
                      self.do_chop)
         self.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
                      self.do_browse_output)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
                      self.do_quit)
+
+        # default output directory
+        self._outputDir = os.getcwd()
+        self.ui.lineEdit_outputDir.setText(self._outputDir)
 
         return
 
@@ -61,29 +61,9 @@ class QuickChopDialog(QtGui.QMainWindow):
         Chop data
         :return:
         """
-        # get slicer manager
-        chop_manager = self._myController.chop_manager
+        self._outputDir = str(self.ui.lineEdit_outputDir.text())
 
-        # chop data
-        run_or_file = str(self.ui.lineEdit_run.text())
-        if run_or_file.isdigit():
-            # it is a run
-            run_number = int(run_or_file)
-            status, info_tup = self._myController.get_run_info(run_number)
-            if status:
-                raw_file_name = info_tup
-            else:
-                raise RuntimeError('Unable to find file for run %d.' % run_number)
-        else:
-            # it is a file name
-            raw_file_name = run_or_file
-        # END-IF
-
-        output_dir = str(self.ui.lineEdit_outputDir.text())
-
-        chop_manager.chop_data(raw_file_name, self._slicerType, output_dir)
-
-        self.do_quit()
+        self.close()
 
         return
 
@@ -94,26 +74,18 @@ class QuickChopDialog(QtGui.QMainWindow):
         """
         self.close()
 
-    def set_run(self, raw_file_name):
-        """
-
-        :param raw_file_name:
-        :return:
-        """
-        if raw_file_name is None:
-            return
-
-        self._rawFileName = raw_file_name
-        self.ui.lineEdit_run.setText(self._rawFileName)
-
         return
 
-    def set_slicer_type(self, slicer_type):
+    def get_output_dir(self):
         """
-
-        :param slicer_type:
+        get output directory
         :return:
         """
-        self._slicerType = slicer_type
+        return self._outputDir
 
-        return
+    def to_reduce_data(self):
+        """
+        Get the flag whether the sliced data will be reduced to GSAS
+        :return:
+        """
+        return self.ui.radioButton_toGSAS.isChecked()

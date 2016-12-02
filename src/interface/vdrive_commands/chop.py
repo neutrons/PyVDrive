@@ -9,37 +9,69 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate']
+    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT']
 
-    def __init__(self, controller, command_args):
-        """ Initialization
+    def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
         """
-        VDriveCommand.__init__(self, controller, command_args)
+        Initialization
+        :param controller:
+        :param command_args:
+        :param ipts_number:
+        :param run_number_list:
+        """
+        # call super
+        super(VdriveChop, self).__init__(controller, command_args)
 
+        # set up my name
         self._commandName = 'CHOP'
-
+        # check argument
         self.check_command_arguments(self.SupportedArgs)
+
+        # set default
+        if ipts_number is not None and isinstance(ipts_number, int) and ipts_number > 0:
+            self._iptsNumber = ipts_number
+        if isinstance(run_number_list, list) and len(run_number_list) > 0:
+            self._runNumberList = run_number_list[:]
         
         return
 
     def exec_cmd(self):
         """
         Execute input command (override)
-        statu
+        :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """
         # parse arguments
         self.set_ipts()
 
         # parse the scope of runs
-        try:
+        # run numbers
+        if 'RUNS' in self._commandArgList:
+            # get RUNS/RUNE from arguments
             run_start = int(self._commandArgList['RUNS'])
-        except KeyError as err:
-            raise RuntimeError('CHOP command requires input of argument RUNS: %s.' % str(err))
-        if 'RUNE' in self._commandArgList:
-            run_end = int(self._commandArgList['RUNE'])
+            if 'RUNE' in self._commandArgList:
+                run_end = int(self._commandArgList['RUNE'])
+            else:
+                run_end = run_start
+            self._runNumberList = range(run_start, run_end + 1)
+        elif len(self._commandArgList) > 0:
+            # from previously stored value
+            run_start = self._commandArgList[0]
+            run_end = self._commandArgList[-1]
         else:
-            run_end = run_start
+            # not properly set up
+            raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
+        # END-IF
+
+        # locate the runs and add the reduction project
+        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
+                                                                                   run_end)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.project.add_runs(run_info_list)
+
+        if 'HELP' in self._commandArgList:
+            # pop out the window
+            return True, 'pop'
 
         # check input parameters
         assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
@@ -68,37 +100,36 @@ class VdriveChop(VDriveCommand):
         else:
             log_name = None
 
-        # locate the runs and add the reduction project
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
-        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.project.add_runs(run_info_list)
+        if 'OUTPUT' in self._commandArgList:
+            output_dir = str(self._commandArgList['OUTPUT'])
+        else:
+            output_dir = None
 
         # do chopping
+        sum_msg = ''
+        final_success = True
         for run_number in range(run_start, run_end+1):
             # chop
             if time_step is not None:
-                self._controller.project.chop_data_by_time(run_number=run_number,
-                                                           start_time=None,
-                                                           stop_time=None,
-                                                           time_interval=time_step)
+                status, message = self._controller.project.chop_data_by_time(run_number=run_number,
+                                                                             start_time=None,
+                                                                             stop_time=None,
+                                                                             time_interval=time_step,
+                                                                             reduce_flag=output_to_gsas,
+                                                                             output_dir=output_dir)
+                final_success = final_success and status
+                sum_msg += 'Run %d: %s\n' % (run_number, message)
             else:
                 raise RuntimeError('Not implemented yet for chopping by log value.')
 
-            # export
-            if output_to_gsas:
-                # FIXME/TODO/NOW - Implement how to reduced chopped data
-                pass
-                # reduce_id = self._controller.reduce_chopped_run(chop_id)
-                # output_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/%d/' % (self._iptsNumber,
-                #                                                              run_number)
-                # self._controller.export_gsas_files(registry=reduce_id, output_dir=output_dir)
-
         # END-FOR (run_number)
 
+        # TODO/THINK/ISSUE/51 - shall a signal be emit???
         # self.reduceSignal.emit(command_args)
 
-        return True, 'Still try to figure out how to write in the message'
+        print '[DB...BAT] CHOP Message: ', sum_msg
+
+        return final_success, sum_msg
 
     def get_help(self):
         """
@@ -107,8 +138,12 @@ class VdriveChop(VDriveCommand):
         """
         help_str = 'Chop runs\n'
         help_str += 'CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1\n'
-        help_str += 'Debug:\n'
-        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60'
+        help_str += 'Debug (chop run 96450) by 60 seconds:\n'
+        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60\n\n'
+
+        help_str += 'HELP:      the Log Picker Window will be launched and set up with given RUN number.\n'
+        help_str += 'bin=1:     chopped data will be reduced to GSAS files.\n'
+        help_str += 'loadframe: \n'
 
         return help_str
 

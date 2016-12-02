@@ -420,12 +420,25 @@ class MplGraphicsView(QtGui.QWidget):
 
         return key_list
 
-    def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label="", x_label=None, y_label=None,
-                    marker=None, line_style=None, line_width=1):
-        """ Add a new plot
+    def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label='', x_label=None, y_label=None,
+                    marker=None, line_style=None, line_width=1, show_legend=True):
+        """
+        Add a 1-D plot to canvas
+        :param vec_x:
+        :param vec_y:
+        :param y_err:
+        :param color:
+        :param label:
+        :param x_label:
+        :param y_label:
+        :param marker:
+        :param line_style:
+        :param line_width:
+        :param show_legend:
+        :return:
         """
         line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
-                                              line_width)
+                                              line_width, show_legend)
 
         return line_key
 
@@ -828,6 +841,17 @@ class MplGraphicsView(QtGui.QWidget):
         self._myLineMarkerColorIndex = 0
         return
 
+    def set_title(self, title, color='black'):
+        """
+        set title to canvas
+        :param title:
+        :param color:
+        :return:
+        """
+        self._myCanvas.set_title(title, color)
+
+        return
+
     def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
         """ Set X-Y limit automatically
         """
@@ -911,7 +935,7 @@ class Qt4MplCanvas(FigureCanvas):
         return
 
     def add_plot_1d(self, vec_x, vec_y, y_err=None, color=None, label="", x_label=None, y_label=None,
-                    marker=None, line_style=None, line_width=1):
+                    marker=None, line_style=None, line_width=1, show_legend=True):
         """
 
         :param vec_x: numpy array X
@@ -968,7 +992,8 @@ class Qt4MplCanvas(FigureCanvas):
         self.axes.set_aspect('auto')
 
         # set/update legend
-        self._setupLegend()
+        if show_legend:
+            self._setupLegend()
 
         # Register
         line_key = self._lineIndex
@@ -1286,12 +1311,16 @@ class Qt4MplCanvas(FigureCanvas):
         """
         Get vecX and vecY
         :param line_id:
-        :return:
+        :return: 2-tuple as vector X and vector Y
         """
+        # check
+        if line_id not in self._lineDict:
+            raise KeyError('Line ID %s does not exist.' % str(line_id))
+
+        # get line
         line = self._lineDict[line_id]
         if line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % line_id
-            return
+            raise RuntimeError('Line ID %s has been removed.' % line_id)
 
         return line.get_xdata(), line.get_ydata()
 
@@ -1362,8 +1391,6 @@ class Qt4MplCanvas(FigureCanvas):
 
         handles, labels = self.axes.get_legend_handles_labels()
         self.axes.legend(handles, labels, loc=location)
-        # print handles
-        # print labels
         #self.axes.legend(self._myLegendHandlers, self._myLegentLabels)
 
         return

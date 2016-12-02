@@ -11,8 +11,66 @@ import mantid
 import mantid.api
 import mantid.geometry
 import mantid.simpleapi as mantidapi
+from mantid.api import AnalysisDataService as ADS
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
+
+
+def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
+    """
+    convert SplittersWorkspace to vectors of time and target workspace index
+    :param split_ws:
+    :param run_start_time:
+    :return: three tuple
+    """
+    # check inputs
+    if isinstance(split_ws, str):
+        # in case user input split workspace name
+        split_ws = retrieve_workspace(split_ws)
+
+    assert split_ws.__class__.__name__.count('Splitter') == 1,\
+        'Input SplittersWorkspace %s must be of type SplittersWorkspace must not %s' \
+        '' % (str(split_ws), split_ws.__class__.__name__)
+
+    # go over rows
+    num_rows = split_ws.rowCount()
+    time_list = list()
+    ws_list = list()
+    for row_index in range(num_rows):
+        # get start time and end time in int64
+        start_time = split_ws.cell(row_index, 0)
+        end_time = split_ws.cell(row_index, 1)
+        ws_index = split_ws.cell(row_index, 2)
+
+        # convert units of time from int64/nanoseconds to float/seconds
+        start_time = float(start_time) * 1.0E-9
+        end_time = float(end_time) * 1.0E-9
+
+        if row_index == 0:
+            # first splitter, starting with start_time[0]
+            time_list.append(start_time)
+        elif start_time > time_list[-1]:
+            # middle splitter, there is a gap between 2 splitters, fill in with -1
+            ws_list.append(-1)
+            time_list.append(start_time)
+
+        ws_list.append(ws_index)
+        time_list.append(end_time)
+    # END-FOR
+
+    # get the numpy arrays
+    vec_times = numpy.array(time_list)
+    vec_ws = numpy.array(ws_list)
+
+    if run_start_time is not None:
+        # run start time is of float in unit of seconds
+        assert isinstance(run_start_time, float), 'Starting time must be a float'
+        vec_times -= run_start_time
+
+    print '[DB...BAT] splitters: vector of time: ', vec_times.tolist()
+    print '[DB...BAT] size of output vectors: ', len(vec_times), len(vec_ws)
+
+    return vec_times, vec_ws
 
 
 def delete_workspace(workspace):
@@ -161,19 +219,20 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     :param max_log_value:
     :param log_value_interval:
     :param log_value_change_direction:
-    :return:
+    :return: 2-tuple. (boolean, (string, string)).  Strings as (1) split workspace name and (2) information table
     """
     # Check requirements
-    assert isinstance(ws_name, str)
+    assert isinstance(ws_name, str), 'Workspace name must be a string but not %s.' % str(ws_name)
     src_ws = retrieve_workspace(ws_name)
-    assert src_ws is not None
+    assert src_ws is not None, 'Workspace %s does not exist.' % ws_name
 
-    assert isinstance(splitter_ws_name, str)
-    assert isinstance(info_ws_name)
+    assert isinstance(splitter_ws_name, str), 'SplittersWorkspace name must be a string.'
+    assert isinstance(info_ws_name, str), 'Splitting information TableWorkspace name must be a string.'
 
-    assert isinstance(log_name, str)
+    assert isinstance(log_name, str), 'Log name must be a string but not %s.' % type(log_name)
 
     # Call Mantid algorithm
+    # default is to start from min_log_value and go up
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
                                    LogName=log_name,
@@ -181,7 +240,8 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                    MinimumLogValue=min_log_value,
                                    MaximumLogValue=max_log_value,
                                    LogValueInterval=log_value_interval,
-                                   FilterLogValueByChangingDirection=log_value_change_direction)
+                                   FilterLogValueByChangingDirection=log_value_change_direction,
+                                   LogValueTolerance=0)
 
     return True, (splitter_ws_name, info_ws_name)
 
@@ -193,12 +253,22 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     Purpose: Generate splitters by calling Mantid's GenerateEventsFilter
     Requirements:
     :param ws_name:
+    :param splitter_ws_name:
+    :param info_ws_name:
     :param start_time:
     :param stop_time:
     :param delta_time:
     :param time_unit:
-    :return:
+    :return: 2-tuple. (1) boolean (2) message
     """
+    # Check requirements
+    assert isinstance(ws_name, str), 'Workspace name must be a string but not %s.' % str(ws_name)
+    src_ws = retrieve_workspace(ws_name)
+    assert src_ws is not None, 'Workspace %s does not exist.' % ws_name
+
+    assert isinstance(splitter_ws_name, str), 'SplittersWorkspace name must be a string.'
+    assert isinstance(info_ws_name, str), 'Splitting information TableWorkspace name must be a string.'
+
     # define optional inputs
     my_arg_dict = dict()
     my_arg_dict['InputWorkspace'] = ws_name
@@ -213,23 +283,30 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
     if time_unit != 'Seconds' and time_unit is not None:
         my_arg_dict['UnitOfTime'] = time_unit
 
-    print my_arg_dict
-    print
-
     try:
+        print '[DB...BAT] Generate events by time: ', my_arg_dict
         mantidapi.GenerateEventsFilter(**my_arg_dict)
     except RuntimeError as e:
         return False, str(e)
 
-    return True, (splitter_ws_name, info_ws_name)
+    return True, ''
 
 
-def get_run_start(workspace, unit):
+def get_run_start(workspace, time_unit):
     """ Get run start time
     :param workspace:
-    :param unit: nanosecond(s), second(s)
+    :param time_unit: nanosecond(s), second(s)
     :return:
     """
+    # check the situation if workspace is a string
+    assert isinstance(time_unit, str)
+    if isinstance(workspace, str):
+        if ADS.doesExist(workspace):
+            workspace = ADS.retrieve(workspace)
+        else:
+            raise RuntimeError('Workspace %s does not exist in Mantid AnalysisDataService.' % workspace)
+    # END-IF
+
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
     except AttributeError as e:
@@ -242,12 +319,12 @@ def get_run_start(workspace, unit):
 
     # Convert unit if
     run_start = run_start_ns
-    if unit.lower().startswith('nanosecond'):
+    if time_unit.lower().startswith('nanosecond'):
         pass
-    elif unit.lower().startswith('second'):
+    elif time_unit.lower().startswith('second'):
         run_start *= 1.E-9
     else:
-        raise RuntimeError('Unit %s is not supported by get_run_start().' % unit)
+        raise RuntimeError('Unit %s is not supported by get_run_start().' % time_unit)
 
     return run_start
 
@@ -272,19 +349,46 @@ def get_sample_log_info(src_workspace):
     return prop_info_list
 
 
-def get_sample_log_names(src_workspace):
+def get_sample_log_names(src_workspace, smart=False):
     """
     From workspace get sample log names as FloatTimeSeriesProperty
     :param src_workspace:
+    :param smart:
     :return:
     """
-    run = src_workspace.run()
-    property_list = run.getProperties()
+    # check input
+    if isinstance(src_workspace, str):
+        # very likely the input is workspace name
+        if not ADS.doesExist(src_workspace):
+            raise RuntimeError('Workspace %s does not exist in AnalysisDataService.' % src_workspace)
+        src_workspace = ADS.retrieve(src_workspace)
+
+    # get the Run object
+    run_obj = src_workspace.run()
+    property_list = run_obj.getProperties()
     name_list = list()
+    single_value_log_list = list()
 
     for item in property_list:
-        if isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
-            name_list.append(item.name)
+        # rule out any Non-FloatTimeSeriesProperty
+        if not isinstance(item, mantid.kernel.FloatTimeSeriesProperty):
+            continue
+
+        # get log name
+        log_name = item.name
+        if not smart:
+            # non-smart mode, just simply log name
+            name_list.append(log_name)
+        else:
+            log_size = item.size()
+            if log_size > 1:
+                name_list.append('%s (%d)' % (log_name, log_size))
+            else:
+                single_value_log_list.append('%s (1)' % log_name)
+        # END-IF-ELSE
+    # END-FOR
+
+    name_list.extend(single_value_log_list)
 
     return name_list
 
@@ -837,33 +941,55 @@ def save_event_workspace(event_ws_name, nxs_file_name):
     return
 
 
-def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws_base_name, tof_correction=False):
+def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_name=None,
+                     tof_correction=False, output_directory=None, delete_split_ws=True):
     """
-    Split events in a workspace
-    Requirements: given raw event workspace, splitter workspace, information workspace are in ADS.
-    :param raw_event_ws_name:
-    :param splitter_ws_name:
-    :param info_ws_name:
-    :param split_ws_base_name:
+    split event data file according pre-defined split workspace. optionally the split workspace
+    can be saved to NeXus files
+    :param raw_file_name:
+    :param split_ws_name:
+    :param info_table_name:
+    :param target_ws_name:
     :param tof_correction:
-    :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
+    :param output_directory:
+    :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
+    :return:
     """
     # Check requirements
-    assert workspace_does_exist(raw_event_ws_name)
-    assert workspace_does_exist(splitter_ws_name)
-    assert workspace_does_exist(info_ws_name)
-    assert isinstance(splitter_ws_name, str)
+    assert workspace_does_exist(split_ws_name)
+    assert workspace_does_exist(info_table_name)
+    assert isinstance(raw_file_name, str), 'Input file name must be a string but not %s.' % type(raw_file_name)
 
+    # rule out some unsupported scenario
+    if output_directory is None and delete_split_ws:
+        raise RuntimeError('It is not supported that no file is written (output_dir is None) '
+                           'and split workspace is to be delete.')
+    elif output_directory is not None:
+        assert isinstance(output_directory, str), 'Output directory %s must be a string but not %s.' \
+                                                  '' % (str(output_directory), type(output_directory))
+
+    # load the file to workspace
+    event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+    load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
+    # process TOF correction
     if tof_correction is True:
         correction = 'Elastic'
     else:
         correction = 'None'
 
-    # print '[DB] Information workspace = %s of type %s\n' % (str(info_ws_name), str(type(info_ws_name)))
-    ret_list = mantidapi.FilterEvents(InputWorkspace=raw_event_ws_name,
-                                      SplitterWorkspace=splitter_ws_name,
-                                      InformationWorkspace=info_ws_name,
-                                      OutputWorkspaceBaseName=split_ws_base_name,
+    # process the target workspace name
+    if target_ws_name is None:
+        target_ws_name = event_ws_name + '_split'
+    else:
+        assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
+                                                '' % (str(target_ws_name), type(target_ws_name))
+
+    # split workspace
+    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
+                                      SplitterWorkspace=split_ws_name,
+                                      InformationWorkspace=info_table_name,
+                                      OutputWorkspaceBaseName=target_ws_name,
                                       FilterByPulseTime=False,
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
@@ -874,19 +1000,31 @@ def split_event_data(raw_event_ws_name, splitter_ws_name, info_ws_name, split_ws
     try:
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
-        split_ws_name_list = ret_list[2]
-        assert num_split_ws == len(split_ws_name_list)
+        chopped_ws_name_list = ret_list[2]
+        assert num_split_ws == len(chopped_ws_name_list)
     except IndexError:
         return False, 'Failed to split data by FilterEvents.'
 
-    if len(ret_list) != 3 + len(split_ws_name_list):
+    if len(ret_list) != 3 + len(chopped_ws_name_list):
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+
+    # Save result
+    if output_directory is not None:
+        for chopped_ws_name in chopped_ws_name_list:
+            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+            mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
 
     # Clear
     delete_workspace(correction_ws)
+    if delete_split_ws:
+        for chopped_ws_name in chopped_ws_name_list:
+            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
 
     # Output
-    ret_obj = (split_ws_name_list, ret_list[3:])
+    if delete_split_ws:
+        ret_obj = False
+    else:
+        ret_obj = (chopped_ws_name_list, ret_list[3:])
 
     return True, ret_obj
 

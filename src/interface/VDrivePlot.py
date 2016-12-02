@@ -104,7 +104,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
                      self.do_slice_data_by_time)
         self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
-                     self.pop_manual_picker)
+                     self.do_launch_log_picker_window)
 
         # sub-tab-2
         self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
@@ -194,7 +194,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.load_settings()
 
         # VDRIVE command
-        self._vdriveCommandProcessor = VdriveCommandProcessor(self._myWorkflow)
+        self._vdriveCommandProcessor = VdriveCommandProcessor(self, self._myWorkflow)
 
         return
 
@@ -307,7 +307,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """ Pick up (time) slicing information and show it by indicating lines in snap view
         :return:
         """
-        self._myWorkflow.set_slicer('Manual')
+        raise NotImplementedError('Think of whether this feature shall be kept?')
+
+        run_number = self._get_run_numbers()
+
+        self._myWorkflow.set_slicer(run_number, 'Manual')
 
         self._apply_slicer_snap_view()
 
@@ -1044,9 +1048,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return status, err_msg
 
-    def get_sample_log_value(self, log_name, time_range=None, relative=False):
+    def get_sample_log_value(self, run_number, log_name, time_range=None, relative=False):
         """
         Get sample log value
+        :param run_number:
         :param log_name:
         :param time_range:
         :param relative:
@@ -1062,7 +1067,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             stop_time = time_range[1]
             assert start_time < stop_time
 
-        status, ret_obj = self._myWorkflow.get_sample_log_values(None, log_name, start_time, stop_time,
+        status, ret_obj = self._myWorkflow.get_sample_log_values(run_number, log_name, start_time, stop_time,
                                                                  relative=relative)
         if status is False:
             raise RuntimeError(ret_obj)
@@ -1100,7 +1105,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return: list of string for log names
         """
         # Check
-        assert isinstance(run, str) or isinstance(run, int)
+        assert isinstance(run, str) or isinstance(run, int), 'Run must be either an integer (run number) ' \
+                                                             'or a string (NeXus file name) but not a %s.' \
+                                                             '' % type(run)
 
         # Get NeXus file name
         if isinstance(run, int):
@@ -1111,16 +1118,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
             nxs_file_name = run_tuple[0]
             run_number = int(run)
         else:
+            # run is in the form of data file name
             nxs_file_name = run
             run_number = None
+            raise RuntimeError('It is not supported to use a random NeXus file.')
 
         # Load file
-        status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name, run_number=run_number)
-        if status is False:
-            raise RuntimeError(errmsg)
-
+        # status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name, run_number=run_number)
+        # if status is False:
+        #     raise RuntimeError(errmsg)
+        #
         # Get log names
-        status, ret_value = self._myWorkflow.get_sample_log_names(smart)
+        status, ret_value = self._myWorkflow.get_sample_log_names(run_number, smart)
         if status is False:
             errmsg = ret_value
             raise RuntimeError(errmsg)
@@ -1276,10 +1285,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def pop_manual_picker(self):
+    def do_launch_log_picker_window(self):
         """
         Pop out manual picker window
-        :return:
+        :return: handler to log picker window
         """
         # Start
         if isinstance(self._logPickerWindow, LogPicker.WindowLogPicker):
@@ -1313,7 +1322,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Show
         self._logPickerWindow.show()
 
-        return
+        return self._logPickerWindow
 
     def pop_snap_view(self):
         """ Pop out snap view dialog (window)

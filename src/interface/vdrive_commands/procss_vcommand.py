@@ -12,6 +12,19 @@ Base class for VDRIVE command processors
 """
 
 
+class CommandKeyError(Exception):
+    """
+    Self-defined VDRIVE command key error
+    """
+    def __init__(self, error):
+        """
+
+        """
+        super(CommandKeyError, self).__init__(error)
+
+        return
+
+
 class VDriveCommand(object):
     """
     Base class to process VDRIVE commands
@@ -39,7 +52,8 @@ class VDriveCommand(object):
         self._commandArgList = command_args
 
         # other command variables
-        self._iptsNumber = None
+        self._iptsNumber = None   # IPTS
+        self._runNumberList = list()   # RUN numbers
 
         return
 
@@ -55,8 +69,10 @@ class VDriveCommand(object):
         input_args = self._commandArgList.keys()
         for arg_key in input_args:
             if arg_key not in supported_arg_list:
-                raise KeyError('Command %s\'s argument "%s" is not recognized. Supported '
-                               'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list)))
+                error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
+                                'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list))
+                print error_message
+                raise CommandKeyError(error_message)
         # END-FOF
 
         return
@@ -68,15 +84,26 @@ class VDriveCommand(object):
         """
         return 'Invalid to call base class'
 
+    def get_ipts_runs(self):
+        """
+        retrieve IPTS number and run numbers from the command
+        :return: 2-tuple: (1) integer for IPTS (2) list of integers for run numbers
+        """
+        return self._iptsNumber, self._runNumberList[:]
+
     def set_ipts(self):
         """
         Set IPTS
         """
-        # check setup
-        try:
+        # get IPTS from setup
+        if 'IPTS' in self._commandArgList:
+            # ITPS from command as highest priority
             self._iptsNumber = int(self._commandArgList['IPTS'])
-        except KeyError as key_err:
-            raise RuntimeError('IPTS is not given in the command arguments.')
+        elif self._iptsNumber is not None:
+            # IPTS is previously stored and to be used
+            pass
+        else:
+            raise RuntimeError('IPTS is not given in the command arguments. Or default is not set.')
 
         # check validity
         assert 0 < self._iptsNumber, 'IPTS number %d is an invalid integer.' % self._iptsNumber

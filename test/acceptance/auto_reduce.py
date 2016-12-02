@@ -7,7 +7,7 @@ import os.path
 
 # FIXME - This only works for Linux platform
 sys.path.append('/home/wzz/local/lib/python2.7/Site-Packages/')
-import PyVDrive.VDriveAPI as vdapi
+import PyVDrive.lib.VDriveAPI as vdapi
 
 
 class MyData:
