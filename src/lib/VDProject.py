@@ -155,58 +155,6 @@ class VDProject(object):
 
         return status, message
 
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
-        """
-        Chop data by time interval
-        :param run_number:
-        :param start_time:
-        :param stop_time:
-        :param time_interval:
-        :param reduce_flag: flag to reduce the data afterwards
-        :param output_dir:
-        :return:
-        """
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
-
-        # load file
-        nxs_file_name = self._dataFileDict[run_number][0]
-        ws_name = os.path.basename(nxs_file_name).split('.')[0]
-        mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
-
-        # generate event filter
-        split_ws_name = 'TimeSplitters_%07d' % run_number
-        info_ws_name = 'TimeInfoTable_%07d' % run_number
-        status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
-                                                                       start_time, stop_time, time_interval,
-                                                                       time_unit='Seconds')
-        if not status:
-            error_message = str(ret_obj)
-            return False, error_message
-
-        if reduce_flag:
-            # reduce to GSAS and etc
-            reduce_setup = reduce_VULCAN.ReductionSetup()
-            reduce_setup.set_event_file(nxs_file_name)
-            reduce_setup.set_output_dir(output_dir)
-            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-            reduce_setup.is_full_reduction = False
-
-            # add splitter workspace and splitter information workspace
-            reduce_setup.set_splitters(split_ws_name, info_ws_name)
-
-            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            status, message = reducer.chop_reduce()
-
-        else:
-            # just split the workspace and saved in memory
-            # TODO/FIXME/NOW - TOF correction should be left to user to specify
-            mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
-
-        return True, message
-
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
         :param run_number: run number for the slicer

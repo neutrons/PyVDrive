@@ -983,6 +983,8 @@ class VDriveAPI(object):
                 reduce_setup.set_auto_reduction_mode()
             except OSError as os_err:
                 return False, str(os_err)
+            # use default calibration files
+            reduce_setup.set_default_calibration_files()
 
             # generate instance of ReduceVulcanData
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)

@@ -134,6 +134,16 @@ class VBin(procss_vcommand.VDriveCommand):
             'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'Tag',
             'BinFoler', 'Mytofbmax', 'Mytobmin']
 
+    ArgsDocDict = {
+        'IPTS': 'IPTS number',
+        'RUNE': 'First run number',
+        'RUNS': 'Last run number',
+
+        'RUNV': 'Run number for vanadium file (file in instrument directory)',
+        'OneBank': 'Add 2 bank data together (=1).',
+        'Tag': '"Si/V" for instrument calibration.',
+    }
+
     def __init__(self, controller, command_args):
         """ Initialization
         """
@@ -214,16 +224,25 @@ class VBin(procss_vcommand.VDriveCommand):
 
         return True, error_message
 
-    @staticmethod
-    def get_help():
+    def get_help(self):
         """
-
+        get help
         :return:
         """
-        help_str = 'VBIN/VDRIVEBIN: binning data\n' \
-                   'Example: VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n' \
-                   '\n' \
-                   'Debug: "VBIN,IPTS=14094,RUNS=96450,RUNE=96451"'
+        help_str = 'VBIN/VDRIVEBIN: binning data (without generating log files)\n'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        # examples
+        help_str += 'Examples:\n'
+        help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
+        help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
 
         return help_str
 
