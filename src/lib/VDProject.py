@@ -130,12 +130,16 @@ class VDProject(object):
             reduce_setup.set_output_dir(output_dir)
             reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
             reduce_setup.is_full_reduction = False
+            reduce_setup.set_default_calibration_files()
 
             # add splitter workspace and splitter information workspace
             reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            status, message, output_ws_name_list = reducer.chop_reduce()
+            reducer.execute_chop_reduction(clear_workspaces=False)
+
+            status = True,
+            message = ''
         else:
             # just chop the files and save to Nexus
             mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),

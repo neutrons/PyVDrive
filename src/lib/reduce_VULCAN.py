@@ -47,6 +47,7 @@ import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
+import pandas as pd
 
 sys.path.append("/opt/mantidnightly/bin")
 # sys.path.append('/opt/mantidunstable/bin/')
@@ -56,6 +57,7 @@ sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
+from mantid.kernel import DateAndTime
 
 refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
 CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
@@ -528,6 +530,14 @@ class ReductionSetup(object):
         self._isFullReduction = value
 
         return
+    
+    @property
+    def output_directory(self):
+        """
+        get output directory
+        :return:
+        """
+        return self._outputDirectory
 
     def process_configurations(self):
         """ Obtain information from full path to input NeXus file including
@@ -655,6 +665,17 @@ class ReductionSetup(object):
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
 
         self.is_full_reduction = True
+
+        return
+
+    def set_default_calibration_files(self):
+        """
+        set default calibration files
+        :return:
+        """
+        self.set_focus_file(CalibrationFileName)
+        self.set_charact_file(CharacterFileName)
+        self.set_vulcan_bin_file(refLogTofFilename)
 
         return
 
@@ -1105,8 +1126,10 @@ class ReduceVulcanData(object):
 
         message = 'Output GSAS files include:\n'
 
+        # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
+        # call SNSPowderReduction for chopping and
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
                                         CalibrationFile=self._reductionSetup.get_focus_file(),
@@ -1291,12 +1314,13 @@ class ReduceVulcanData(object):
         # check whether it is an alignment run
         self._reductionSetup.is_alignment_run = self.check_alignment_run()
 
-        # export the sample log record file
+        # export the sample log record file: AutoRecord.txt and etc.
         is_record_good, msg_record = self.export_experiment_records()
 
         # write experiment files
         is_log_good, msg_log = self.export_log_files()
 
+        # special operations for auto reduction
         is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
 
         final_message = ''
@@ -1360,6 +1384,7 @@ class ReduceVulcanData(object):
             return False, message
 
         # Export to either data or align
+        error_message = ''
         try:
             record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
             if self._reductionSetup.is_alignment_run:
@@ -1381,17 +1406,19 @@ class ReduceVulcanData(object):
                                              OverrideLogValue=patch_list,
                                              OrderByTitle='RUN',
                                              RemoveDuplicateRecord=True)
-
-            # Change file  mode
-            if file_access_mode != '666' and file_access_mode != '676':
-                os.chmod(categorized_record_file, 0666)
+            # change file mode for local manual modification
+            os.chmod(categorized_record_file, 0666)
         except NameError as e:
-            print '[Error] %s.' % str(e)
+            if self._reductionSetup.is_alignment_run:
+                error_message += 'Unable to write to AutoRecord-Alignment due to %s.' % str(e)
+            else:
+                error_message += 'Unable to write to AutoRecord-Data due to %s.' % str(e)
+            categorized_record_file = None
 
         # Auto reduction only
         if self._reductionSetup.get_record_2nd_file() is not None:
             # Check if it is necessary to copy AutoRecord.txt from rfilename2 to rfilename1
-            if os.path.exists(self._reductionSetup.get_record_2nd_file()) is False:
+            if not os.path.exists(self._reductionSetup.get_record_2nd_file()):
                 # File do not exist, the copy
                 shutil.copy(self._reductionSetup.get_record_file(),
                             self._reductionSetup.get_record_2nd_file())
@@ -1407,8 +1434,41 @@ class ReduceVulcanData(object):
                                                  OverrideLogValue=patch_list,
                                                  OrderByTitle='RUN',
                                                  RemoveDuplicateRecord=True)
+            # change file mode for local manual modification
+            os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
 
-        return True, ''
+        # prepare for the cop for  auto record align or data file
+        if self._reductionSetup.get_record_2nd_file() is not None and len(error_message) == 0:
+            # find out the path
+            record_file_2_path = os.path.dirname(self._reductionSetup.get_record_2nd_file())
+            if self._reductionSetup.is_alignment_run:
+                categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordAlign.txt')
+            else:
+                categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordData.txt')
+
+            if os.path.exists(categorized_record_file) is False:
+                # File do not exist, the copy
+                shutil.copy(categorized_record_file, categorized_2_record_file)
+            else:
+                # append to the existing file
+                filemode2 = 'append'
+                mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
+                                                 OutputFilename=categorized_2_record_file,
+                                                 FileMode=filemode2,
+                                                 SampleLogNames=sample_name_list,
+                                                 SampleLogTitles=sample_title_list,
+                                                 SampleLogOperation=sample_operation_list,
+                                                 TimeZone="America/New_York",
+                                                 OverrideLogValue=patch_list,
+                                                 OrderByTitle='RUN',
+                                                 RemoveDuplicateRecord=True)
+            # END-IF-ELSE
+
+            # Change file  mode
+            os.chmod(categorized_2_record_file, 0666)
+        # END-IF
+
+        return True, error_message
 
     def export_log_files(self):
         """
@@ -1597,19 +1657,17 @@ class ReduceVulcanData(object):
             file_name, file_ext = os.path.splitext(log_file_name)
             max_attempts = 99
             num_attempts = 0
-            back_file_name = None
             while num_attempts < max_attempts:
                 # form new name
                 back_file_name = file_name + '_%02d' % num_attempts + file_ext
                 # check backup file name
-                if os.path.exists(back_file_name):
+                if os.path.exists(back_file_name) and num_attempts < max_attempts - 1:
                     num_attempts += 1
                 else:
+                    # save last file
+                    shutil.copy(log_file_name, back_file_name)
                     break
             # END-WHILE()
-
-            # save last file
-            shutil.copy(log_file_name, back_file_name)
         # END-IF
 
         # export log to CSV file
@@ -1619,6 +1677,9 @@ class ReduceVulcanData(object):
                                                WriteHeaderFile=True,
                                                TimeZone=TIMEZONE2,
                                                Header=header)
+
+        # change the file permission
+        os.chmod(log_file_name, 0666)
 
         return log_file_name
 
@@ -1643,10 +1704,129 @@ class ReduceVulcanData(object):
 
     def generate_sliced_logs(self, ws_name_list):
         """
-
+        generate sliced logs
         :param ws_name_list:
         :return:
         """
+        # check
+        assert isinstance(ws_name_list, list) and len(ws_name_list) > 0, 'Workspace name list must be a non-' \
+                                                                         'empty list'
+        ws_name_list.sort()
+
+        # get the properties' names list
+        ws_name = ws_name_list[0]
+        workspace = AnalysisDataService.retrieve(ws_name)
+        property_name_list = list()
+        run_start = DateAndTime(workspace.run().getProperty('run_start').value)
+        for sample_log in workspace.run().getProperties():
+            p_name = sample_log.name
+            property_name_list.append(p_name)
+        property_name_list.sort()
+
+        # get output file name with creating necessary directory
+        try:
+            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+            if not os.path.exists(parent_dir):
+                os.mkdir(parent_dir)
+            chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
+            if not os.path.exists(chop_dir):
+                os.mkdir(chop_dir)
+        except OSError as os_err:
+            # mostly because permission to write
+            print '[WARNING] Unable to write to shared folder due to %s.' % str(os_err)
+
+            # get local directory
+            if not os.path.exists(self._reductionSetup.output_directory):
+                os.mkdir(self._reductionSetup.output_directory)
+            chop_dir = os.path.join(self._reductionSetup.output_directory,
+                                    '%d' % self._reductionSetup.get_run_number())
+            if not os.path.exists(chop_dir):
+                os.mkdir(chop_dir)
+        # END
+
+        # start value
+        start_file_name = os.path.join(chop_dir,
+                                       '%dsampleenv_chopped_start.txt' % self._reductionSetup.get_run_number())
+        mean_file_name = os.path.join(chop_dir,
+                                      '%dsampleenv_chopped_mean.txt' % self._reductionSetup.get_run_number())
+        end_file_name = os.path.join(chop_dir,
+                                     '%dsampleenv_chopped_end.txt' % self._reductionSetup.get_run_number())
+
+        # output
+        # create Pandas series dictionary
+        start_series_dict = dict()
+        mean_series_dict = dict()
+        end_series_dict = dict()
+        mts_columns = list()
+        for entry in MTS_Header_List:
+            pd_series = pd.Series()
+            mts_name, log_name = entry
+            start_series_dict[mts_name] = pd_series
+            mean_series_dict[mts_name] = pd_series
+            end_series_dict[mts_name] = pd_series
+            mts_columns.append(mts_name)
+
+            if log_name not in property_name_list:
+                print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+        # END-FOR
+
+        # go through workspaces
+        for i_ws, ws_name in enumerate(ws_name_list):
+            # get workspace
+            workspace_i = AnalysisDataService.retrieve(ws_name)
+
+            # check: log "run_start" should be the same for workspaces split from the same EventWorkspace.
+            run_start_i = DateAndTime(workspace_i.run().getProperty('run_start').value)
+            assert run_start == run_start_i, '"run_start" of all the split workspaces should be same!'
+
+            # get difference in REAL starting time (proton_charge[0])
+            real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            time_stamp = real_start_time_i.total_nanoseconds()
+            # time (step) in seconds
+            diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9
+
+            for entry in MTS_Header_List:
+                mts_name, log_name = entry
+                if len(log_name) > 0 and log_name in property_name_list:
+                    # regular log
+                    sample_log = workspace_i.run().getProperty(log_name).value
+                    start_value = sample_log[0]
+                    mean_value = sample_log.mean()
+                    end_value = sample_log[-1]
+                elif mts_name == 'TimeStamp':
+                    # time stamp
+                    start_value = mean_value = end_value = float(time_stamp)
+                elif mts_name == 'Time [sec]':
+                    # time step
+                    start_value = mean_value = end_value = diff_time
+                elif len(log_name) > 0:
+                    # sample log does not exist in NeXus file. warned before. ignore!
+                    start_value = mean_value = end_value = 0.
+                else:
+                    # unknown
+                    print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                    start_value = mean_value = end_value = 0.
+                # END-IF-ELSE
+
+                pd_index = float(i_ws + 1)
+                start_series_dict[mts_name].set_value(pd_index, start_value)
+                mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                end_series_dict[mts_name].set_value(pd_index, end_value)
+
+            # END-FOR (entry)
+        # END-FOR (workspace)
+
+        # export to csv file
+        pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
+        pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+
+        pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
+        pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+
+        pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
+        pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+
+        return
 
     def load_data_file(self):
         """
@@ -1952,9 +2132,7 @@ def main(argv):
 
     # process and set calibration files
     reduction_setup.process_configurations()
-    reduction_setup.set_focus_file(CalibrationFileName)
-    reduction_setup.set_charact_file(CharacterFileName)
-    reduction_setup.set_vulcan_bin_file(refLogTofFilename)
+    reduction_setup.set_default_calibration_files()
 
     # create reducer
     reducer = ReduceVulcanData(reduction_setup)

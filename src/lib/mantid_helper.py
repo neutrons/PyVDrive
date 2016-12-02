@@ -232,6 +232,7 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     assert isinstance(log_name, str), 'Log name must be a string but not %s.' % type(log_name)
 
     # Call Mantid algorithm
+    # default is to start from min_log_value and go up
     mantidapi.GenerateEventsFilter(InputWorkspace=ws_name,
                                    OutputWorkspace=splitter_ws_name, InformationWorkspace=info_ws_name,
                                    LogName=log_name,
@@ -239,7 +240,8 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
                                    MinimumLogValue=min_log_value,
                                    MaximumLogValue=max_log_value,
                                    LogValueInterval=log_value_interval,
-                                   FilterLogValueByChangingDirection=log_value_change_direction)
+                                   FilterLogValueByChangingDirection=log_value_change_direction,
+                                   LogValueTolerance=0)
 
     return True, (splitter_ws_name, info_ws_name)
 

@@ -1252,7 +1252,7 @@ class VDriveAPI(object):
         status, message = self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data,
                                                     output_dir=output_dir)
 
-
+        return status, message
 
     def set_focus_calibration_file(self, calibration_file):
         """

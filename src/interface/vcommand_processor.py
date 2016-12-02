@@ -127,7 +127,10 @@ class VdriveCommandProcessor(object):
         :return: 2-tuple
         """
         # create a new VdriveChop instance
-        processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
+        try:
+            processor = vdrive_commands.chop.VdriveChop(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
 
         # execute
         status, message = self._process_command(processor, arg_dict)
