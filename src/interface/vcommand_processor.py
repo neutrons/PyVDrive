@@ -8,6 +8,7 @@ from PyQt4.QtCore import pyqtSignal
 import vdrive_commands.chop
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
+import vdrive_commands.view
 import vdrive_commands.procss_vcommand
 
 
@@ -32,7 +33,7 @@ class VdriveCommandProcessor(object):
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW']
 
         return
 
@@ -88,6 +89,8 @@ class VdriveCommandProcessor(object):
             status, err_msg = self._process_chop(arg_dict)
         elif command == 'VBIN':
             status, err_msg = self._process_vbin(arg_dict)
+        elif command == 'VDRIVEVIEW' or command == 'VIEW':
+            status, err_msg = self._process_view(arg_dict)
         elif command == 'MERGE':
             status, err_msg = self._process_merge(arg_dict)
         elif command == 'AUTO':
@@ -144,6 +147,26 @@ class VdriveCommandProcessor(object):
             log_window = self._mainWindow.do_launch_log_picker_window()
             log_window.load_run(self._chopRunNumberList[0])
         # END-IF
+
+        return status, message
+
+    def _process_view(self, arg_dict):
+        """
+        process cammand VIEW or VDRIVEVIEW
+        :param arg_dict:
+        :return:
+        """
+        # create a new VdriveView instance
+        try:
+            processor = vdrive_commands.view.VdriveView(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
+
+        # execute
+        status, message = self._process_command(processor, arg_dict)
+
+        view_window = self._mainWindow.do_view_reduction()
+        # view_window.setup(self._myController)
 
         return status, message
 

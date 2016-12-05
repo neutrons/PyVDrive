@@ -18,7 +18,7 @@ import gui.ui_GPView
 
 
 class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
-    """ Class for general-purposed plot window
+    """ Class for general-purposed plot window to view reduced data
     """
     # class
     def __init__(self, parent=None):

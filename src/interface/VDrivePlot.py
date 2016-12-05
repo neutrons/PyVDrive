@@ -171,6 +171,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._peakPickerWindow = None
         self._snapViewWindow = None
         self._workspaceView = None
+        self._reducedDataViewWindow = None
 
         # Snap view related variables and data structures
         self._currentSnapViewIndex = -1
@@ -399,34 +400,21 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Purpose: Launch reduction view
         Requirements: ... ...
         Guarantees: ... ...
-        :return:
+        :return: handler to child window
         """
-        # TODO/NOW/1st complete it!
+        # TODO/ISSUE/55 - Docs & ...
 
-        # Launch data view and set up
-        self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
-        self._reducedDataViewWindow.setup(self._myWorkflow)
-        # set up more parameters such as unit ...
-        # ... ...
+        if self._reducedDataViewWindow is None:
+            # initialize a window instance it has not been
+            self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
+            self._reducedDataViewWindow.setup(self._myWorkflow)
+            self._myChildWindows.append(self._reducedDataViewWindow)
+        # END-IF
 
-        """ TODO/NOW/ Add methods to set up to plot window
-        radioButton_viewInTOF
-        radioButton_viewInD
-        radioButton_viewInQ
-
-        lineEdit_minX
-        lineEdit_maxX
-
-        checkBox_normaliseCurrent
-        checkBox_normaliseByVanadium
-        checkBox_logScaleIntensity
-        """
-
+        # # show the window if it exists and return
         self._reducedDataViewWindow.show()
 
-        # TODO/FIXME/NOW/1st register the window for closing procedure!
-
-        return
+        return self._reducedDataViewWindow
 
     def do_remove_runs_from_reduction(self):
         """

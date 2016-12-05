@@ -1,6 +1,7 @@
 ########################################################################
 #
 # General-purposed plotting window
+# It can be used seamless outside of PyVDrive project.
 #
 ########################################################################
 import sys
@@ -21,7 +22,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import ui_GPPlot
+import gui.ui_GPPlot as ui_GPPlot
 
 
 class Window_GPPlot(QMainWindow):

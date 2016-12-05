@@ -1826,6 +1826,9 @@ class ReduceVulcanData(object):
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
         pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
 
+        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+                                                                          end_file_name)
+
         return
 
     def load_data_file(self):
