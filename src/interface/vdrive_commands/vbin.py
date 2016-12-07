@@ -33,7 +33,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         :return:
         """
         try:
-            ipts = int(self._commandArgList['IPTS'])
+            ipts = int(self._commandArgsDict['IPTS'])
         except KeyError:
             return False, 'IPTS must be given!'
         else:
@@ -41,11 +41,11 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 
         run_numbers_str = 'NO DEFINED'
         try:
-            run_numbers_str = self._commandArgList['RUNS']
+            run_numbers_str = self._commandArgsDict['RUNS']
             run_number_list = self.split_run_numbers(run_numbers_str)
-            if len(run_number_list) == 1 and 'RUNE' in self._commandArgList:
+            if len(run_number_list) == 1 and 'RUNE' in self._commandArgsDict:
                 # allow RUNE if RUNS is just 1 value
-                run_end = int(self._commandArgList['RUNE'])
+                run_end = int(self._commandArgsDict['RUNE'])
                 run_number_list = range(run_number_list[0], run_end)
         except KeyError:
             return False, 'RUNS number must be given.'
@@ -56,13 +56,13 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         else:
             print '[DB...BAT] Runs = ', run_number_list
 
-        if 'DRYRUN' in self._commandArgList:
-            dry_run = bool(int(self._commandArgList['DRYRUN']))
+        if 'DRYRUN' in self._commandArgsDict:
+            dry_run = bool(int(self._commandArgsDict['DRYRUN']))
         else:
             dry_run = False
 
-        if 'OUTPUT' in self._commandArgList:
-            output_dir = self._commandArgList['OUTPUT']
+        if 'OUTPUT' in self._commandArgsDict:
+            output_dir = self._commandArgsDict['OUTPUT']
         else:
             output_dir = None
 
@@ -160,7 +160,7 @@ class VBin(procss_vcommand.VDriveCommand):
         Execute command: override
         """
         # check whether the any non-supported args
-        input_args = self._commandArgList.keys()
+        input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
             if arg_key not in VBin.SupportedArgs:
                 raise KeyError('VBIN argument %s is not recognized.' % arg_key)
@@ -170,8 +170,8 @@ class VBin(procss_vcommand.VDriveCommand):
         self.set_ipts()
 
         # RUNS or CHOPRUN
-        run_start = int(self._commandArgList['RUNS'])
-        run_end = int(self._commandArgList['RUNE'])
+        run_start = int(self._commandArgsDict['RUNS'])
+        run_end = int(self._commandArgsDict['RUNE'])
         assert 0 < run_start < run_end, 'It is impossible to have run_start = %d and run_end = %d' \
                                         '' % (run_start, run_end)
         
@@ -183,7 +183,7 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # bin with
         if 'BINW' in input_args:
-            bin_width = float(self._commandArgList['BINW'])
+            bin_width = float(self._commandArgsDict['BINW'])
         else:
             bin_width = 0.005
 
@@ -193,17 +193,17 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNV
         if 'RUNV' in input_args:
-            van_run = int(self._commandArgList['RUNV'])
+            van_run = int(self._commandArgsDict['RUNV'])
         else:
             van_run = None
 
         if 'FullProf' in input_args:
-            output_fullprof = int(self._commandArgList['Fullprof']) == 1
+            output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
             output_fullprof = False
 
         if 'Mytofbmax' in input_args:
-            tof_max = float(self._commandArgList['Mytofbmax'])
+            tof_max = float(self._commandArgsDict['Mytofbmax'])
         else:
             tof_max = None
 

@@ -637,6 +637,7 @@ class ReductionManager(object):
             2. Return reduced workspace's name
         Arguments:
          - unit :: target unit; If None, then no need to convert unit
+        :exception: KeyError if run number does not exist in self._reductionTrackDict
         :param run_number:
         :param unit:
         :return: Workspace (success) or 2-tuple (False and error message)
@@ -645,7 +646,7 @@ class ReductionManager(object):
         assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
         # get tracker
         tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker)
+        assert isinstance(tracker, DataReductionTracker), 'blabla'
 
         reduced_ws_name = tracker.event_workspace_name
 

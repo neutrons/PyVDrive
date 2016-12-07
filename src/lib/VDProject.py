@@ -385,7 +385,7 @@ class VDProject(object):
         """
         # check
         assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str)
+        assert unit is None or isinstance(unit, str), 'blabla'
 
         # get reduced workspace name
         reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)

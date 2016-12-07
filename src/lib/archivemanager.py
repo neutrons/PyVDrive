@@ -5,6 +5,7 @@ import os
 import time
 import pickle
 
+import mantid_helper
 import vdrivehelper
 import vulcan_util
 
@@ -103,47 +104,34 @@ class DataArchiveManager(object):
 
         return
 
-    # Methods
-    def get_files_time_information(self, file_name_list):
-        """ Get files' information
-        Purpose:
-            Get the time information of a list of files
-        Requirements:
-            Given files do exist
-        Guarantees:
-            Creation time of given files are returned
-        :param file_name_list: list of string of file names
-        :return: a list of 2-tuple (time as creation time, string as file name)
+    @staticmethod
+    def get_data_archive_gsas(ipts_number, run_number):
         """
-        # Check requirements
-        assert isinstance(file_name_list, list), 'Input must be a list'
 
-        time_file_list = list()
+        :param ipts_number:
+        :param run_number:
+        :return: list of data or None (cannot find)
+        """
+        # TODO/ISSUE/55 - Docs
 
-        for filename in file_name_list:
-            # Check whether file exists
-            assert os.path.exists(filename), 'Given file %s does not exist for file time information.' % filename
+        # check
+        assert isinstance(ipts_number, int), 'blabla'
+        assert isinstance(run_number, int), 'blabla'
 
-            # modification time: return is float
-            # mod_time = os.path.getmtime(filename)
-            # create_time = time.ctime(create_time) # as string
-            # create_time = time.strptime(create_time)
-            # After experiments, this is the most suitable way
-            create_time = os.path.getctime(filename)
-            time_file_list.append((create_time, filename))
-        # END-FOR (file_name)
+        # check whether the IPTS/run is valid
+        nexus_dir = '/SNS/VULCAN/IPTS-%d/0/%d/' % (ipts_number, run_number)
+        if not os.path.exists(nexus_dir):
+            return None
 
-        # Sort list by time
-        time_file_list = sorted(time_file_list)
+        # locate reduced GSAS file name
+        gsas_file_name = os.path.join('/SNS/VULCAN/IPTS-%d/shared/binned_data' % ipts_number, '%d.gda' % run_number)
+        if not os.path.exists(gsas_file_name):
+            return None
 
-        if self.__DEBUG__ is True:
-            delta_t = 3600*24
-            for i in xrange(len(time_file_list)-1):
-                d_epoch = time_file_list[i+1][0] - time_file_list[i][0]
-                if d_epoch > delta_t:
-                    print "Delta Day = %.2f" % (d_epoch/delta_t)
+        # get data
+        data_set = mantid_helper.get_data_from_gsas(gsas_file_name)
 
-        return time_file_list
+        return data_set
 
     def get_experiment_run_info(self, archive_key, start_run=None, end_run=None):
         """ Get runs' information of an IPTS
@@ -249,6 +237,48 @@ class DataArchiveManager(object):
         # END-FOR
 
         return run_tup_list
+
+    # Methods
+    def get_files_time_information(self, file_name_list):
+        """ Get files' information
+        Purpose:
+            Get the time information of a list of files
+        Requirements:
+            Given files do exist
+        Guarantees:
+            Creation time of given files are returned
+        :param file_name_list: list of string of file names
+        :return: a list of 2-tuple (time as creation time, string as file name)
+        """
+        # Check requirements
+        assert isinstance(file_name_list, list), 'Input must be a list'
+
+        time_file_list = list()
+
+        for filename in file_name_list:
+            # Check whether file exists
+            assert os.path.exists(filename), 'Given file %s does not exist for file time information.' % filename
+
+            # modification time: return is float
+            # mod_time = os.path.getmtime(filename)
+            # create_time = time.ctime(create_time) # as string
+            # create_time = time.strptime(create_time)
+            # After experiments, this is the most suitable way
+            create_time = os.path.getctime(filename)
+            time_file_list.append((create_time, filename))
+        # END-FOR (file_name)
+
+        # Sort list by time
+        time_file_list = sorted(time_file_list)
+
+        if self.__DEBUG__ is True:
+            delta_t = 3600*24
+            for i in xrange(len(time_file_list)-1):
+                d_epoch = time_file_list[i+1][0] - time_file_list[i][0]
+                if d_epoch > delta_t:
+                    print "Delta Day = %.2f" % (d_epoch/delta_t)
+
+        return time_file_list
 
     def get_local_run_info(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
         """

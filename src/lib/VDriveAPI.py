@@ -430,7 +430,42 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_data(self, run_id, target_unit):
+    def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
+        """
+        sequence to look for chopped data
+        :param ipts_number:
+        :param run_number:
+        :param chop_seq:
+        :return:
+        """
+        # TODO/ISSUE/55: docs and check
+        assert isinstance(chop_seq, int), 'blabla 416ee'
+
+        # try to get from archive first
+        status = False
+        data_set_dict = None
+        if search_archive:
+            status, ret_obj = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
+            if status:
+                data_set_dict = ret_obj
+        # END-IF (search_archive)
+
+        if not status and search_dirs is not None:
+            status, ret_obj = self._myProject.get_data_spec_dir_chopped_gsas(search_dirs, run_number, chop_seq)
+            if status:
+                data_set_dict = ret_obj
+        # END-IF
+
+        if not status:
+            error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
+            ret_obj = error_message
+        else:
+            assert data_set_dict is not None, 'blabla NoneNone'
+            ret_obj = data_set_dict
+
+        return status, ret_obj
+
+    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
@@ -439,16 +474,30 @@ class VDriveAPI(object):
         :param target_unit:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
+        # TODO/ISSUE/55 : better docs
         # Check
         assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
                                                                    'but not %s.' % str(type(run_id))
-
         assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
 
+        # 2 cases: run ID is run number or run ID is the file name
         if isinstance(run_id, int):
             # case as run number
             run_number = run_id
-            data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            try:
+                # get data from current Project
+                data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            except KeyError:
+                print '[INFO] Run %d is not reduced in current session.' % run_number
+                # optionally get data from archive
+                if search_archive:
+                    assert isinstance(ipts_number, int), 'blabla'
+                    data_set = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_number)
+                    if data_set is None:
+                        return False, 'blabla 1'
+                else:
+                    return False, 'blabla 2'
+            # END-TRY-EXCEPTION
         else:
             # case as dat key
             data_key = run_id

@@ -1081,6 +1081,8 @@ class Qt4MplCanvas(FigureCanvas):
 
         # show image
         imgplot = self.axes.imshow(array2d, extent=[xmin, xmax, ymin, ymax], interpolation='none')
+
+        # TODO/ISSUE/55: how to make this part more powerful
         # set y ticks as an option:
         if yticklabels is not None:
             # it will always label the first N ticks even image is zoomed in
@@ -1102,6 +1104,51 @@ class Qt4MplCanvas(FigureCanvas):
         self._flush()
 
         return
+
+    def add_contour_plot(self, vec_x, vec_y, matrix_z):
+        """
+
+        :param vec_x:
+        :param vec_y:
+        :param matrix_z:
+        :return:
+        """
+        # create mesh grid
+        grid_x, grid_y = np.meshgrid(vec_x, vec_y)
+
+        # check size
+        assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
+                                               '' % (len(vec_x), len(vec_y), matrix_z.shape)
+
+        # Release the current image
+        self.axes.hold(False)
+
+        # Do plot
+        contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
+
+        labels = [item.get_text() for item in self.axes.get_yticklabels()]
+        print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
+
+        # TODO/ISSUE/55: how to make this part more powerful
+        if len(labels) == 2*len(vec_y) - 1:
+            new_labels = [''] * len(labels)
+            for i in range(len(vec_y)):
+                new_labels[i*2] = '%d' % int(vec_y[i])
+            self.axes.set_yticklabels(new_labels)
+
+        # explicitly set aspect ratio of the image
+        self.axes.set_aspect('auto')
+
+        # Set color bar.  plt.colorbar() does not work!
+        if self._colorBar is None:
+            # set color map type
+            contour_plot.set_cmap('spectral')
+            self._colorBar = self.fig.colorbar(contour_plot)
+        else:
+            self._colorBar.update_bruteforce(contour_plot)
+
+        # Flush...
+        self._flush()
 
     def addImage(self, imagefilename):
         """ Add an image by file

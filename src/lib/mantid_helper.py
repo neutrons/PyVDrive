@@ -430,6 +430,19 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
+def get_data_from_gsas(gsas_file_name):
+    """
+
+    :param gsas_file_name:
+    :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
+    """
+    # TODO/ISSUE/55 - Docs and check
+    out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
+    mantidapi.LoadGSS(Filename=gsas_file_name, OutputWorkspace=out_ws_name)
+
+    return get_data_from_workspace(out_ws_name, point_data=True)
+
+
 def get_data_from_workspace(workspace_name, point_data):
     """
     Purpose: get data from a workspace

@@ -24,8 +24,8 @@ class VdriveMerge(VDriveCommand):
         self.set_ipts()
 
         try:
-            run_file = str(self._commandArgList['RUNFILE'])
-            chop_run = str(self._commandArgList['CHOPRUN'])
+            run_file = str(self._commandArgsDict['RUNFILE'])
+            chop_run = str(self._commandArgsDict['CHOPRUN'])
 
         except KeyError as err:
             raise RuntimeError('MERGE command requires input of argument %s.' % 'RUNFILE and CHOPRUN')

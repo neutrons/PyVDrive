@@ -48,8 +48,8 @@ class VDriveCommand(object):
         # set controller
         self._controller = controller
 
-        # set arguments
-        self._commandArgList = command_args
+        # set arguments to command arguments dictionary: it is only set once here
+        self._commandArgsDict = command_args
 
         # other command variables
         self._iptsNumber = None   # IPTS
@@ -66,7 +66,7 @@ class VDriveCommand(object):
         """ Check whether the command arguments are valid
         """
         # check whether the any non-supported args
-        input_args = self._commandArgList.keys()
+        input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
             if arg_key not in supported_arg_list:
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
@@ -96,9 +96,9 @@ class VDriveCommand(object):
         Set IPTS
         """
         # get IPTS from setup
-        if 'IPTS' in self._commandArgList:
+        if 'IPTS' in self._commandArgsDict:
             # ITPS from command as highest priority
-            self._iptsNumber = int(self._commandArgList['IPTS'])
+            self._iptsNumber = int(self._commandArgsDict['IPTS'])
         elif self._iptsNumber is not None:
             # IPTS is previously stored and to be used
             pass

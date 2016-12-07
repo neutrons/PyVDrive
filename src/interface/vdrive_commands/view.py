@@ -50,6 +50,8 @@ class VdriveView(VDriveCommand):
         # class variables
         self._figureDimension = 0
         self._isChoppedRun = False
+        self._multiRuns = False
+        self._choppedRunSeqList = None
 
         return
 
@@ -59,10 +61,45 @@ class VdriveView(VDriveCommand):
         :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """
-        # parse arguments
+        # parse IPTS
         self.set_ipts()
 
-        #
+        # parse RUNS and RUNE
+        if 'RUNS' in self._commandArgsDict:
+            # get RUNS/RUNE from arguments
+            run_start = int(self._commandArgsDict['RUNS'])
+            if 'RUNE' in self._commandArgsDict:
+                run_end = int(self._commandArgsDict['RUNE'])
+            else:
+                run_end = run_start
+        else:
+            # not properly set up
+            raise RuntimeError('VIEW command requires input of argument RUNS.')
+
+        # parse run numbers with chopped runs
+        if 'CHOPRUN' in self._commandArgsDict:
+            # chopped runs
+            self._runNumberList = [int(self._commandArgsDict['CHOPRUN'])]
+            self._choppedRunSeqList = range(run_start, run_end + 1)
+            self._isChoppedRun = True
+        else:
+            # regular runs
+            self._runNumberList = range(run_start, run_end + 1)
+            self._isChoppedRun = False
+        # END-IF
+
+        if len(self._runNumberList) > 1:
+            self._multiRuns = True
+        else:
+            self._multiRuns = False
+
+        # set up the plot dimension
+        if (not self._multiRuns) and (not self._isChoppedRun):
+            # not multiple Run or chopped Run
+            self._figureDimension = 1
+        else:
+            # at least 2D
+            self._figureDimension = 2
 
         return True, ''
 
@@ -89,6 +126,13 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._isChoppedRun
+
+    def get_chopped_sequence_range(self):
+        """
+        blabla
+        :return:
+        """
+        return self._choppedRunSeqList[:]
 
     def get_ipts_number(self):
         """

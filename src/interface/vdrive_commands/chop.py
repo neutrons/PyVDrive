@@ -157,18 +157,18 @@ class VdriveChop(VDriveCommand):
 
         # parse the scope of runs
         # run numbers
-        if 'RUNS' in self._commandArgList:
+        if 'RUNS' in self._commandArgsDict:
             # get RUNS/RUNE from arguments
-            run_start = int(self._commandArgList['RUNS'])
-            if 'RUNE' in self._commandArgList:
-                run_end = int(self._commandArgList['RUNE'])
+            run_start = int(self._commandArgsDict['RUNS'])
+            if 'RUNE' in self._commandArgsDict:
+                run_end = int(self._commandArgsDict['RUNE'])
             else:
                 run_end = run_start
             self._runNumberList = range(run_start, run_end + 1)
-        elif len(self._commandArgList) > 0:
+        elif len(self._commandArgsDict) > 0:
             # from previously stored value
-            run_start = self._commandArgList[0]
-            run_end = self._commandArgList[-1]
+            run_start = self._commandArgsDict[0]
+            run_end = self._commandArgsDict[-1]
         else:
             # not properly set up
             raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
@@ -181,11 +181,11 @@ class VdriveChop(VDriveCommand):
         self._controller.project.add_runs(run_info_list)
 
         # Go through all the arguments
-        if 'HELP' in self._commandArgList:
+        if 'HELP' in self._commandArgsDict:
             # pop out the window
             return True, 'pop'
 
-        if 'DRYRUN' in self._commandArgList and int(self._commandArgList['DRYRUN']) == 1:
+        if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
             # dry run
             is_dry_run = True
         else:
@@ -198,17 +198,17 @@ class VdriveChop(VDriveCommand):
             )
 
         # parse other optional parameters
-        if 'dbin' in self._commandArgList:
-            time_step = float(self._commandArgList['dbin'])
+        if 'dbin' in self._commandArgsDict:
+            time_step = float(self._commandArgsDict['dbin'])
         else:
             time_step = None
 
-        if 'loadframe' in self._commandArgList:
+        if 'loadframe' in self._commandArgsDict:
             use_load_frame = True
         else:
             use_load_frame = False
 
-        if 'bin' in self._commandArgList:
+        if 'bin' in self._commandArgsDict:
             output_to_gsas = True
         else:
             output_to_gsas = False
@@ -218,9 +218,9 @@ class VdriveChop(VDriveCommand):
         else:
             log_name = None
 
-        if 'OUTPUT' in self._commandArgList:
+        if 'OUTPUT' in self._commandArgsDict:
             # use user defined
-            output_dir = str(self._commandArgList['OUTPUT'])
+            output_dir = str(self._commandArgsDict['OUTPUT'])
         else:
             output_dir = None
 

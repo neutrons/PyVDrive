@@ -152,7 +152,7 @@ class VdriveCommandProcessor(object):
 
     def _process_view(self, arg_dict):
         """
-        process cammand VIEW or VDRIVEVIEW
+        process command VIEW or VDRIVEVIEW
         :param arg_dict:
         :return:
         """
@@ -164,9 +164,30 @@ class VdriveCommandProcessor(object):
 
         # execute
         status, message = self._process_command(processor, arg_dict)
+        if not status:
+            return status, message
 
         view_window = self._mainWindow.do_view_reduction()
-        # view_window.setup(self._myController)
+        view_window.set_ipts_number(processor.get_ipts_number())
+
+        if processor.is_1_d:
+            # 1-D image
+            view_window.set_canvas_type(dimension=1)
+            view_window.set_run_numbers(processor.get_run_number_list())
+            # plot
+            view_window.plot_run(processor.get_run_number(), bank_id=1)
+        elif processor.is_chopped_run:
+            # 2-D image for chopped run
+            view_window.set_canvas_type(dimension=2)
+            view_window.set_chop_run_number(processor.get_run_number())
+            view_window.set_chop_sequences(processor.get_chopped_sequence_range())
+            view_window.plot_chopped_run()
+        else:
+            # 2-D or 3-D image for multiple runs
+            view_window.set_canvas_type(dimension=2)
+            view_window.set_run_numbers(processor.get_run_number_list())
+            view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
+        # END-FOR
 
         return status, message
 
