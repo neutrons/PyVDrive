@@ -126,7 +126,12 @@ class VDProject(object):
         if reduce_flag:
             # reduce to GSAS
             reduce_setup = reduce_VULCAN.ReductionSetup()
-            reduce_setup.set_event_file(self.get_file_path(run_number))
+
+            src_file_name, ipts_number = self.get_run_info(run_number)
+            reduce_setup.set_ipts_number(ipts_number)
+            reduce_setup.set_run_number(run_number)
+            reduce_setup.set_event_file(src_file_name)
+
             reduce_setup.set_output_dir(output_dir)
             reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
             reduce_setup.is_full_reduction = False
@@ -228,6 +233,7 @@ class VDProject(object):
         else:
             # create a new DataChopper associated with this run
             nxs_file_name = self.get_file_path(run_number)
+            print '[DB...BAT 104022] NeXus file name: ', nxs_file_name
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
@@ -425,9 +431,9 @@ class VDProject(object):
         """
         Get run's information
         :param run_number:
-        :return:  2-tuple (file name, IPTS)
+        :return:  2-tuple (file name, IPTS number)
         """
-        if self._dataFileDict.has_key(run_number) is False:
+        if run_number not in self._dataFileDict:
             raise RuntimeError('Unable to find run %d in project manager.' % run_number)
 
         return self._dataFileDict[run_number]

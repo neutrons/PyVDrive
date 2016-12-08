@@ -3,10 +3,10 @@
 # General-purposed plotting window
 #
 ########################################################################
+import os
 from PyQt4 import QtCore, QtGui
 
 import gui.GuiUtility as GuiUtility
-
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -339,7 +339,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return run_number_list
 
-    def plot_chopped_run(self):
+    def plot_chopped_run(self, bank_id=1, bank_id_from_1=True):
         """
         Plot a chopped run
         :return:
@@ -349,8 +349,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         if len(self._choppedSequenceList) == 1:
             # 1D plot
-            status, ret_obj = self._myController.get_reduced_chopped_data(self._choppedRunNumber,
-                                                                          self._choppedSequenceList[0])
+            status, ret_obj = self._myController.get_reduced_chopped_data(self._iptsNumber, self._choppedRunNumber,
+                                                                          self._choppedSequenceList[0],
+                                                                          search_archive=True,
+                                                                          search_dirs=[os.path.abspath('.')])
             if not status:
                 GuiUtility.pop_dialog_error(self, ret_obj)
                 return
@@ -365,15 +367,30 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             data_set_list = list()
 
             for seq_number in self._choppedSequenceList:
-                status, ret_obj = self._myController.get_reduced_chopped_data(self._choppedRunNumber,
-                                                                              seq_number)
+                # get reduced GSAS data
+                # ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None)
+                status, ret_obj = self._myController.get_reduced_chopped_data(self._iptsNumber, self._choppedRunNumber,
+                                                                              seq_number, search_archive=True,
+                                                                              search_dirs=[os.path.abspath('.')])
                 if not status:
                     error_message += 'Unable to retrieve run %d chopped section %d due to %s.\n' \
                                      '' % (self._choppedRunNumber, seq_number, ret_obj)
                     continue
 
+                data_set_dict = ret_obj
+                assert isinstance(data_set_dict, dict), 'blabla eed'
+                if bank_id_from_1:
+                    spec_id = bank_id - 1
+                else:
+                    spec_id = bank_id
+                assert spec_id in data_set_dict, 'blabla 9in'
+
                 chop_seq_list.append(seq_number)
-                data_set_list.append(ret_obj)
+
+                vec_x = data_set_dict[spec_id][0]
+                vec_y = data_set_dict[spec_id][1]
+                data_set_list.append((vec_x, vec_y))
+                print data_set_list[-1]
             # END-FOR
 
             if len(chop_seq_list) == 0:

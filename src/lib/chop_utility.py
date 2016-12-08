@@ -513,6 +513,7 @@ class DataChopper(object):
         splitter_ws_name = tag
         info_ws_name = tag + '_Info'
 
+        assert self._mtdWorkspaceName is not None, 'Mantid workspace has not been loaded yet.'
         status, message = mantid_helper.generate_event_filters_by_time(self._mtdWorkspaceName,
                                                                        splitter_ws_name, info_ws_name,
                                                                        start_time, stop_time,

@@ -97,6 +97,7 @@ class VdriveChop(VDriveCommand):
                 outputs += '\n[WARNING] Output directory %s is not writable!' % output_dir
 
             return True, outputs
+        # END-IF (dry run)
 
         # generate data slicer
         status, slicer_key = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
@@ -178,6 +179,7 @@ class VdriveChop(VDriveCommand):
         archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
                                                                                    run_end)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        # TODO/FIXME/ISSUE/55 - This is not a good call and makes confusion!
         self._controller.project.add_runs(run_info_list)
 
         # Go through all the arguments

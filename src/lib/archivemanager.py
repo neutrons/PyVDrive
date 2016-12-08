@@ -105,6 +105,19 @@ class DataArchiveManager(object):
         return
 
     @staticmethod
+    def get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq):
+        """
+        blablabla
+        :param ipts_number:
+        :param run_number:
+        :param chop_seq:
+        :return:
+        """
+        chop_data_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % ipts_number
+
+        return DataArchiveManager.get_data_chopped_gsas([chop_data_dir], run_number, chop_seq)
+
+    @staticmethod
     def get_data_archive_gsas(ipts_number, run_number):
         """
 
@@ -130,6 +143,39 @@ class DataArchiveManager(object):
 
         # get data
         data_set = mantid_helper.get_data_from_gsas(gsas_file_name)
+
+        return data_set
+
+    @staticmethod
+    def get_data_chopped_gsas(search_dirs, run_number, chop_seq):
+        """
+
+        :param search_dirs:
+        :param run_number:
+        :param chop_seq:
+        :return:
+        """
+        # TODO/ISSUE/55 - doc and check
+        assert isinstance(search_dirs, list), 'blabla ii'
+        assert isinstance(run_number, int), 'blabla qq'
+        assert isinstance(chop_seq, int), 'blabla 0-0'
+
+        found = False
+        chop_gsas_name = None
+        for parent_dir in search_dirs:
+            chop_dir = os.path.join(parent_dir, '%d' % run_number)
+            chop_gsas_name = os.path.join(chop_dir, '%d.gda' % chop_seq)
+            if os.path.exists(chop_gsas_name):
+                found = True
+                break
+        # END-FOR
+
+        if not found:
+            raise RuntimeError('Unable to locate chopped run %d seq %d' % (run_number, chop_seq))
+
+        # parse gsas
+        assert chop_gsas_name is not None, 'blabla 1231ihk'
+        data_set = mantid_helper.get_data_from_gsas(chop_gsas_name)
 
         return data_set
 

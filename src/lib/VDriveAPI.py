@@ -442,28 +442,42 @@ class VDriveAPI(object):
         assert isinstance(chop_seq, int), 'blabla 416ee'
 
         # try to get from archive first
-        status = False
         data_set_dict = None
-        if search_archive:
-            status, ret_obj = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
-            if status:
-                data_set_dict = ret_obj
-        # END-IF (search_archive)
+        data_found = False
 
-        if not status and search_dirs is not None:
-            status, ret_obj = self._myProject.get_data_spec_dir_chopped_gsas(search_dirs, run_number, chop_seq)
-            if status:
-                data_set_dict = ret_obj
+        # search from archive
+        if search_archive:
+            try:
+                data_set_dict = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
+            except RuntimeError:
+                pass
+            else:
+                data_found = True
         # END-IF
 
-        if not status:
+        print '[DB...BAT...FL1] Data Set Dict: ', data_set_dict
+
+        # search from user-specified directories
+        if not data_found and search_dirs is not None:
+            try:
+                data_set_dict = self._myArchiveManager.get_data_chopped_gsas(search_dirs, run_number, chop_seq)
+            except RuntimeError:
+                pass
+            else:
+                data_found = True
+        # END-IF
+
+        print '[DB...BAT...FL2] Data Set Dict: ', data_set_dict
+
+        # check
+        if not data_found:
             error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
             ret_obj = error_message
         else:
             assert data_set_dict is not None, 'blabla NoneNone'
             ret_obj = data_set_dict
 
-        return status, ret_obj
+        return data_found, ret_obj
 
     def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False):
         """ Get reduced data
