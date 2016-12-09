@@ -337,8 +337,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self.ui.checkBox_chopRun.isChecked():
             raise NotImplementedError('Binning data with option to chop will be solved later!')
 
-        import VDrivePlotDataBinning as BinHelper
-        status, error_message = BinHelper.do_bin_data(self.ui, self._myWorkflow)
+        import VDrivePlotDataBinning as ReductionUtil
+        status, error_message = ReductionUtil.do_bin_data(self.ui, self._myWorkflow)
         if status:
             # Show message to notify user that the reduction is complete
             GuiUtility.pop_dialog_information(self, 'Reduction is complete.')

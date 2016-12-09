@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1407</width>
-    <height>762</height>
+    <height>799</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1085,19 +1085,6 @@
         <string>Bin</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_9">
-        <item row="3" column="0">
-         <widget class="QPushButton" name="pushButton_binData">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>BIN DATA</string>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="0">
          <widget class="QGroupBox" name="groupBox_10">
           <property name="title">
@@ -1420,6 +1407,19 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_8">
            <item>
+            <widget class="QPushButton" name="pushButton_binData">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>BIN DATA</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <layout class="QGridLayout" name="gridLayout_27">
              <item row="1" column="1">
               <widget class="QPushButton" name="pushButton_useVulcanSharedFolder">
@@ -1427,6 +1427,9 @@
                 <font>
                  <pointsize>8</pointsize>
                 </font>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output results to /SNS/VULCAN/IPTS-1234/shared/, which will be same as auto reduction service.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>VULCAN Shared</string>
@@ -1459,6 +1462,9 @@
                  <pointsize>9</pointsize>
                 </font>
                </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export records of sample logs to AutoRecord.txt under /SNS/VULCAN/IPTS-1234/shared/&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Auto Records</string>
                </property>
@@ -1484,6 +1490,9 @@
                 <font>
                  <pointsize>9</pointsize>
                 </font>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export sample logs to csv files under /SNS/VULCAN/IPTS-1234/shared/&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;The exported log files include:&lt;/p&gt;&lt;p&gt;1. MTSLog&lt;/p&gt;&lt;p&gt;2. GenericLog&lt;/p&gt;&lt;p&gt;3. ... &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Sample Logs</string>
@@ -1626,7 +1635,7 @@
               <item>
                <widget class="QRadioButton" name="radioButton_plotData2D">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
                  <string>2D Contour</string>
