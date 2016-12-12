@@ -27,6 +27,7 @@ import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 from vcommand_processor import VdriveCommandProcessor
+import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
 if config.DEBUG:
@@ -115,6 +116,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_save_log_slicer)
 
         # Tab-2
+        self.connect(self.ui.pushButton_browseOutputDir, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_output_dir)
+        self.connect(self.ui.checkBox_autoReduction, QtCore.SIGNAL('stateChanged(int)'),
+                     self.do_use_output_vulcan_shared)
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
                      self.do_bin_data)
 
@@ -333,19 +338,30 @@ class VdriveMainWindow(QtGui.QMainWindow):
             If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # Process data slicers
-        if self.ui.checkBox_chopRun.isChecked():
-            raise NotImplementedError('Binning data with option to chop will be solved later!')
+        reducer = ReductionUtil.VulcanGuiReduction(self.ui, self._myWorkflow)
 
-        import VDrivePlotDataBinning as ReductionUtil
-        status, error_message = ReductionUtil.do_bin_data(self.ui, self._myWorkflow)
+        status, error_message = reducer.reduce_data()
         if status:
             # Show message to notify user that the reduction is complete
             GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
             # switch the tab to 'VIEW'
             self.ui.tabWidget_reduceData.setCurrentIndex(2)
         else:
+            # reduction failed
             GuiUtility.pop_dialog_error(self, error_message)
+            return
+
+        return
+
+    def do_browse_output_dir(self):
+        """
+        browse output directory
+        :return:
+        """
+        output_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory for output files',
+                                                                self._myWorkflow.get_working_dir()))
+        if len(output_dir) > 0:
+            self.ui.lineEdit_outputDir.setText(output_dir)
 
         return
 
@@ -392,6 +408,43 @@ class VdriveMainWindow(QtGui.QMainWindow):
         curr_state = self.ui.checkBox_selectRuns.isChecked()
 
         self.ui.tableWidget_selectedRuns.select_all_rows(curr_state)
+
+        return
+
+    def do_use_output_vulcan_shared(self):
+        """
+        use VULCAN shared directory for output
+        :return:
+        """
+        if self.ui.checkBox_autoReduction.isChecked():
+            # turn on auto reduction mode
+            parent_dir = '/SNS/VULCAN/shared'
+
+            # check access to directories
+            if not os.path.exists(parent_dir):
+                self.ui.checkBox_autoReduction.setChecked(False)
+                GuiUtility.pop_dialog_error(self, 'Archive directory %s cannot found!' % parent_dir)
+                return
+            if not os.access(parent_dir, os.W_OK):
+                self.ui.checkBox_autoReduction.setChecked(False)
+                GuiUtility.pop_dialog_error(self, 'User has no writing permit to archive.')
+                return
+
+            # set other check boxes
+            self.ui.checkBox_outGSAS.setChecked(True)
+            self.ui.checkBox_outputAutoRecords.setChecked(True)
+            self.ui.checkBox_outputSampleLogs.setChecked(True)
+            self.ui.checkBox_outGSAS.setEnabled(False)
+            self.ui.checkBox_outputAutoRecords.setEnabled(False)
+            self.ui.checkBox_outputSampleLogs.setEnabled(False)
+            self.ui.checkBox_outFullprof.setEnabled(False)
+
+        else:
+            # turn off auto reduction mode
+            self.ui.checkBox_outGSAS.setEnabled(True)
+            self.ui.checkBox_outputAutoRecords.setEnabled(True)
+            self.ui.checkBox_outputSampleLogs.setEnabled(True)
+            self.ui.checkBox_outFullprof.setEnabled(True)
 
         return
 

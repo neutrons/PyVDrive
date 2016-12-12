@@ -490,7 +490,7 @@
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;V-GSAS: Implement later... after GSAS-II can be worked with VULCAN&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <property name="iconSize">
        <size>
@@ -1421,21 +1421,6 @@
            </item>
            <item>
             <layout class="QGridLayout" name="gridLayout_27">
-             <item row="1" column="1">
-              <widget class="QPushButton" name="pushButton_useVulcanSharedFolder">
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output results to /SNS/VULCAN/IPTS-1234/shared/, which will be same as auto reduction service.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>VULCAN Shared</string>
-               </property>
-              </widget>
-             </item>
              <item row="0" column="1">
               <widget class="QPushButton" name="pushButton_browseOutputDir">
                <property name="font">
@@ -1455,7 +1440,7 @@
            </item>
            <item>
             <layout class="QGridLayout" name="gridLayout_2">
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QCheckBox" name="checkBox_outputAutoRecords">
                <property name="font">
                 <font>
@@ -1470,21 +1455,21 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="0">
+             <item row="1" column="0">
               <widget class="QCheckBox" name="checkBox_outGSAS">
                <property name="text">
                 <string>GSAS</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <widget class="QCheckBox" name="checkBox_outFullprof">
                <property name="text">
                 <string>Fullprof</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QCheckBox" name="checkBox_outputSampleLogs">
                <property name="font">
                 <font>
@@ -1496,6 +1481,19 @@
                </property>
                <property name="text">
                 <string>Sample Logs</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QCheckBox" name="checkBox_autoReduction">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Auto Reduction</string>
                </property>
               </widget>
              </item>
