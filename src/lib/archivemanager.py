@@ -107,12 +107,14 @@ class DataArchiveManager(object):
     @staticmethod
     def get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq):
         """
-        blablabla
+        get chopped data from GSAS file stored in archive server
         :param ipts_number:
         :param run_number:
         :param chop_seq:
         :return:
         """
+        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+
         chop_data_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % ipts_number
 
         return DataArchiveManager.get_data_chopped_gsas([chop_data_dir], run_number, chop_seq)
@@ -120,16 +122,14 @@ class DataArchiveManager(object):
     @staticmethod
     def get_data_archive_gsas(ipts_number, run_number):
         """
-
+        get reduced data from GSAS file stored on archive server
         :param ipts_number:
         :param run_number:
         :return: list of data or None (cannot find)
         """
-        # TODO/ISSUE/55 - Docs
-
         # check
-        assert isinstance(ipts_number, int), 'blabla'
-        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # check whether the IPTS/run is valid
         nexus_dir = '/SNS/VULCAN/IPTS-%d/0/%d/' % (ipts_number, run_number)
@@ -149,17 +149,18 @@ class DataArchiveManager(object):
     @staticmethod
     def get_data_chopped_gsas(search_dirs, run_number, chop_seq):
         """
-
-        :param search_dirs:
+        get chopped data from GSAS files in designated directories.
+        :param search_dirs: list of strings
         :param run_number:
         :param chop_seq:
-        :return:
+        :return: dictionary of reduced data. keys are spectral numbers.
         """
-        # TODO/ISSUE/55 - doc and check
-        assert isinstance(search_dirs, list), 'blabla ii'
-        assert isinstance(run_number, int), 'blabla qq'
-        assert isinstance(chop_seq, int), 'blabla 0-0'
+        assert isinstance(search_dirs, list), 'Search directories must be a list of strings.'
+        assert len(search_dirs) > 0, 'There must be at least 1 diretory to search for chopped data.'
+        assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
+        assert isinstance(chop_seq, int), 'Chop sequence %s must be a non-negative integer.' % str(chop_seq)
 
+        # search GSAS file (seq.gda) under given directories
         found = False
         chop_gsas_name = None
         for parent_dir in search_dirs:
@@ -171,10 +172,11 @@ class DataArchiveManager(object):
         # END-FOR
 
         if not found:
-            raise RuntimeError('Unable to locate chopped run %d seq %d' % (run_number, chop_seq))
+            raise RuntimeError('Unable to locate chopped run %d seq %d from these directories: %s.'
+                               '' % (run_number, chop_seq, str(search_dirs)))
 
         # parse gsas
-        assert chop_gsas_name is not None, 'blabla 1231ihk'
+        assert chop_gsas_name is not None, 'It is impossible to have a None value of GSAS file name here.'
         data_set = mantid_helper.get_data_from_gsas(chop_gsas_name)
 
         return data_set
@@ -383,19 +385,19 @@ class DataArchiveManager(object):
 
     def get_ipts_number(self, run_number, throw):
         """
-
+        Find out IPTS number from a run number
         :param run_number:
-        :param throw:
-        :return:
+        :param throw: a flag to throw an exception if run number does not exist in current Run-Info dictionary.
+        :return: IPTS number or None if not thrown
         """
-        # TODO/NOW: check + doc!
+        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         if run_number in self._runInfoDict:
             ipts_number = self._runInfoDict[run_number]['ipts']
         elif not throw:
             ipts_number = None
         else:
-            raise RuntimeError('Blabla')
+            raise RuntimeError('Run number %d does not exist in current Run-Info-Dictionary' % run_number)
 
         return ipts_number
 
@@ -407,12 +409,15 @@ class DataArchiveManager(object):
         :param end_run:
         :return:
         """
-        # TODO/NOW - check inputs
-        pass
+        # check
+        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+        assert isinstance(start_run, int), 'Start run number must be an integer.'
+        assert isinstance(end_run, int), 'End run number must be an integer.'
+        assert start_run <= end_run, 'Start run must be ahead of end run.'
 
         # form IPTS
         ipts_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts_number)
-        assert os.path.exists(ipts_dir), 'IPTS dir wrong... blabla'
+        assert os.path.exists(ipts_dir), 'IPTS dir %s does not exist.' % ipts_dir
 
         # archive key:
         archive_key = 'IPTS-%d-%d-%d' % (ipts_number, start_run, end_run)

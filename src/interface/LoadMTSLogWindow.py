@@ -129,10 +129,14 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # get the run number
         # get the run start and run stop time of the
-        run_start_time = blabla
-        run_stop_time = blabla
+        # TODO/ISSUE/NEXT - Get the run start time and run stop time and COMPLETE THIS METHOD!
+        raise NotImplementedError('Implement this in NEXT issue.')
+        # run_start_time = 0
+        # run_stop_time = 0
 
-        # get the start and stop time
+        # # get the start and stop time
+
+        return
 
     def do_correct_blocks(self):
         """

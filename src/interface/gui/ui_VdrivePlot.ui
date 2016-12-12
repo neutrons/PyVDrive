@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1407</width>
+    <width>1467</width>
     <height>799</height>
    </rect>
   </property>
@@ -33,7 +33,7 @@
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select IPTS diectory by pushing this push button.s&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>Select IPTS folders </string>
@@ -2164,8 +2164,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1407</width>
-     <height>25</height>
+     <width>1467</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

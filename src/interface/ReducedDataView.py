@@ -344,8 +344,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Plot a chopped run
         :return:
         """
-        assert self._choppedRunNumber > 0, 'blabla 333'
-        assert isinstance(self._choppedSequenceList, list), 'blabla 222cd2'
+        assert self._choppedRunNumber > 0, 'The chopped run number %s must be a positive integer. If None, very ' \
+                                           'likely not specified yet.' % str(self._choppedRunNumber)
+        assert isinstance(self._choppedSequenceList, list), 'Chopped sequence list %s must be a LIST.' \
+                                                            '' % str(self._choppedSequenceList)
 
         if len(self._choppedSequenceList) == 1:
             # 1D plot
@@ -378,12 +380,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                     continue
 
                 data_set_dict = ret_obj
-                assert isinstance(data_set_dict, dict), 'blabla eed'
+                assert isinstance(data_set_dict, dict), 'data set dictionary %s must be a dictionary.' \
+                                                        '' % str(data_set_dict)
                 if bank_id_from_1:
                     spec_id = bank_id - 1
                 else:
                     spec_id = bank_id
-                assert spec_id in data_set_dict, 'blabla 9in'
+                assert spec_id in data_set_dict, 'Spectrum ID %d must be in data set dictionary with keys %s.' \
+                                                 '' % (spec_id, str(data_set_dict.keys()))
 
                 chop_seq_list.append(seq_number)
 
@@ -408,11 +412,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def plot_multiple_runs(self, bank_id, bank_id_from_1=False):
         """
-
+        Plot multiple runs (reduced data) to contour plot.
         :return:
         """
-        # TODO/ISSUE/55 - Doc and check!
-        #
+        assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negetive integer.' \
+                                                          '' % str(bank_id)
 
         # get the list of runs
         error_msg = ''
@@ -514,7 +518,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         assert run_number > 0
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
-        assert bank_id > 0, 'blabla 99x'
+        assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
 
         # Get data (run)
         status, ret_obj = self.get_reduced_data(run_number, bank_id)
@@ -621,7 +625,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int), 'blabla xxyiz'
+        assert isinstance(run_number, int) and run_number > 0, 'run number %s must be a positive integer.' \
+                                                               '' % str(run_number)
 
         self._choppedRunNumber = run_number
 
@@ -629,11 +634,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def set_chop_sequence(self, chop_run_sequence_list):
         """
-        blabla
+        set a sequence of integers to self._choppedSequenceList
         :param chop_run_sequence_list:
         :return:
         """
-        assert isinstance(chop_run_sequence_list, list), 'blabla cid700'
+        assert isinstance(chop_run_sequence_list, list), 'Input chopped run sequence must be a list.'
+        for seq in chop_run_sequence_list:
+            assert isinstance(seq, int) and seq >= 0, 'Sequence %s in list must be a non-negative integer.' \
+                                                      '' % str(seq)
 
         self._choppedSequenceList = chop_run_sequence_list[:]
 
@@ -645,7 +653,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param ipts_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'blabla 2722'
+        assert isinstance(ipts_number, int), 'Set IPTS number must be an integer.'
 
         self._iptsNumber = ipts_number
 
@@ -653,11 +661,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def set_run_numbers(self, run_number_list):
         """
-
+        set run numbers to combo-box-run numbers
         :param run_number_list:
         :return:
         """
-        # TODO/ISSUE/55 - Check
         assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
                                                   '' % (str(run_number_list), type(run_number_list))
 

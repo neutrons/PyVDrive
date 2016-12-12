@@ -129,7 +129,7 @@ class VdriveView(VDriveCommand):
 
     def get_chopped_sequence_range(self):
         """
-        blabla
+        get the sequence range of the chopped data, which is previously parsed into this instance from VDRIVE command
         :return:
         """
         return self._choppedRunSeqList[:]

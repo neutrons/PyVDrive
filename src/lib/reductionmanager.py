@@ -646,7 +646,7 @@ class ReductionManager(object):
         assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
         # get tracker
         tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker), 'blabla'
+        assert isinstance(tracker, DataReductionTracker), 'Stored tracker must be an instance of DataReductioTracker.'
 
         reduced_ws_name = tracker.event_workspace_name
 

@@ -436,10 +436,13 @@ class VDriveAPI(object):
         :param ipts_number:
         :param run_number:
         :param chop_seq:
-        :return:
+        :param search_archive: flag to search the chopped data from archive under
+            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/
+        :return: 2-tuple [1] boolean (data found) [2] data dictionary
         """
-        # TODO/ISSUE/55: docs and check
-        assert isinstance(chop_seq, int), 'blabla 416ee'
+        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+        assert isinstance(run_number, int), 'Run number must be an integer'
+        assert isinstance(chop_seq, int), 'chop sequence must be a non-negative integer.'
 
         # try to get from archive first
         data_set_dict = None
@@ -455,8 +458,6 @@ class VDriveAPI(object):
                 data_found = True
         # END-IF
 
-        print '[DB...BAT...FL1] Data Set Dict: ', data_set_dict
-
         # search from user-specified directories
         if not data_found and search_dirs is not None:
             try:
@@ -467,14 +468,12 @@ class VDriveAPI(object):
                 data_found = True
         # END-IF
 
-        print '[DB...BAT...FL2] Data Set Dict: ', data_set_dict
-
         # check
         if not data_found:
             error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
             ret_obj = error_message
         else:
-            assert data_set_dict is not None, 'blabla NoneNone'
+            assert data_set_dict is not None, 'Data set dictionary cannot be None (i.e., data not found)'
             ret_obj = data_set_dict
 
         return data_found, ret_obj
@@ -486,9 +485,10 @@ class VDriveAPI(object):
         Guarantees: returned with 3 numpy arrays, x, y and e
         :param run_id: it is a run number or data key
         :param target_unit:
+        :param ipts_number: IPTS number
+        :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/ISSUE/55 : better docs
         # Check
         assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
                                                                    'but not %s.' % str(type(run_id))
@@ -505,12 +505,12 @@ class VDriveAPI(object):
                 print '[INFO] Run %d is not reduced in current session.' % run_number
                 # optionally get data from archive
                 if search_archive:
-                    assert isinstance(ipts_number, int), 'blabla'
+                    assert isinstance(ipts_number, int), 'IPTS number must be an integer'
                     data_set = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_number)
                     if data_set is None:
-                        return False, 'blabla 1'
+                        return False, 'Unable to get data from archive'
                 else:
-                    return False, 'blabla 2'
+                    return False, 'Data is not reduced in this session.'
             # END-TRY-EXCEPTION
         else:
             # case as dat key

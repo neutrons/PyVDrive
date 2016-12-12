@@ -1770,7 +1770,7 @@ class ReduceVulcanData(object):
             property_name_list.append(p_name)
         property_name_list.sort()
 
-        assert self._choppedDataDirectory is not None, 'blabla 992'
+        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
 
         # start value
         start_file_name = os.path.join(self._choppedDataDirectory,

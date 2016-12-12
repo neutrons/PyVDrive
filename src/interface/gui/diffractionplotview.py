@@ -233,7 +233,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :return:
         """
         # check
-        assert isinstance(peak_pos, float), 'blabla'
+        assert isinstance(peak_pos, float), 'peak position %s must be a float number but not %s.
+                                            ' % (str(peak_pos), type(peak_pos))
 
         # add peak
         peak_id = self.add_vertical_indicator(peak_pos, color='blue')

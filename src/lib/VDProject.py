@@ -156,7 +156,7 @@ class VDProject(object):
                                            delete_split_ws=True)
 
             status = True
-            message = 'blablabla'
+            message = 'Run %d is chopped and reduced. ' % run_number
 
         return status, message
 
@@ -391,7 +391,7 @@ class VDProject(object):
         """
         # check
         assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str), 'blabla'
+        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
 
         # get reduced workspace name
         reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)

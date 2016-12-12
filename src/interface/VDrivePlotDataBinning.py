@@ -4,7 +4,7 @@ import gui.GuiUtility as GuiUtil
 
 class VulcanGuiReduction(object):
     """
-    blabla
+    A utility class to set up reduction/binning by gathering information from GUI.
     """
     def __init__(self, usr_interface, wf_controller):
         """
@@ -13,8 +13,8 @@ class VulcanGuiReduction(object):
         :param wf_controller:
         """
         # check
-        assert usr_interface is not None, 'blabla 440X'
-        assert wf_controller is not None, 'blabla 440Y'
+        assert usr_interface is not None, 'User interface object cannot be None.'
+        assert wf_controller is not None, 'Controller instance cannot be None.'
 
         self.user_interface = usr_interface
         self.controller = wf_controller
@@ -23,7 +23,7 @@ class VulcanGuiReduction(object):
 
     def read_binning_parameters(self):
         """
-        blabla
+        parse and check binning parameters.
         :return:
         """
         # parse binning parameter
@@ -82,8 +82,8 @@ class VulcanGuiReduction(object):
 
     def read_output_options(self):
         """
-        blabla
-        :return:
+        read the options for output from GUI.
+        :return: dictionary
         """
         option_dict = dict()
         option_dict['gsas'] = self.user_interface.checkBox_outGSAS.isChecked()
@@ -96,7 +96,7 @@ class VulcanGuiReduction(object):
 
     def read_run_number_list(self):
         """
-        blabla
+        read the run numbers to reduce from GUI.
         :return:
         """
         # retrieve the runs to reduce
@@ -109,8 +109,7 @@ class VulcanGuiReduction(object):
 
     def reduce_data(self):
         """
-        main method to reduce data
-        blabla
+        main method to reduce data by gathering reduction options and parameters from GUI.
         :return:
         """
         # get the binning parameter

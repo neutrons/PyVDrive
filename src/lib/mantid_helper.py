@@ -111,8 +111,8 @@ def find_peaks(diff_data, peak_profile, auto):
                         BackgroundType='Linear')
 
     peak_ws = mantidapi.AnalysisDataService.retrieve(out_ws_name)
-    # check blablabla...
 
+    # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()
     col_index_centre = col_names.index('centre')
     col_index_height = col_names.index('height')
@@ -687,8 +687,9 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     """ Load time focus file (or say calibration in Mantid's nomenclature)
     :return:
     """
-    # TODO/NOW/40 - Doc and check!
-    # bla..bla..bla..
+    # check
+    assert isinstance(time_focus_file, str) and os.path.exists(time_focus_file), 'Time focus file error.'
+    assert isinstance(base_ws_name, str), 'Base workspace name must be a string.'
 
     mantidapi.LoadCalFile(InstrumentName=instrument,
                           CalFilename=time_focus_file,
@@ -702,8 +703,11 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     mask_ws_name = '%s_mask' % base_ws_name
     cal_ws_name  = '%s_cal' % base_ws_name
 
-    # TODO/NOW/40 - Check existence of the workspaces output from LoadCalFile
-    # blablabal
+    # Check existence of the workspaces output from LoadCalFile
+    assert workspace_does_exist(offset_ws_name), 'Offset workspace does not exist.'
+    assert workspace_does_exist(grouping_ws_name), 'Grouping workspace does not exist.'
+    assert workspace_does_exist(mask_ws_name), 'Mask worksapce does not exist.'
+    assert workspace_does_exist(cal_ws_name), 'Calibration worksapce does not exist.'
 
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 

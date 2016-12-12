@@ -31,10 +31,10 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         size_set = set()
         for data_set in data_set_list:
             vec_x, vec_y = data_set
-            assert len(vec_x) == len(vec_y), 'blabla 239d'
+            assert len(vec_x) == len(vec_y), 'Size of vector X (%d) and vector Y (%d) must be same!' % (len(vec_x), len(vec_y))
             size_set.add(len(vec_x))
         # END-FOR
-        assert len(size_set) == 1, 'blabla add'
+        assert len(size_set) == 1, 'All the reduced data must have equal sizes but not %s.' % str(size_set)
         vec_x = data_set_list[0][0]
 
         # build mesh
@@ -60,7 +60,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         :param target_type:
         :return:
         """
-        # TODO/ISSUE/55 - check and etc.
+        # check
+        assert isinstance(target_dim, int) and 1 <= target_dim <= 3, 'Target dimension must be an integer between 1 and 3.'
 
         # clear current canvas
         self.clear_canvas()
