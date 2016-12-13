@@ -359,20 +359,17 @@ class VDProject(object):
         """
         return len(self._dataFileDict)
 
-    def get_number_reduction_runs(self):
+    def get_runs_to_reduce(self):
         """
-        Get the number/amount of the runs that have been reduced.
-        :return:
+        Get run numbers that are going to be reduced
+        :return: a list of integers
         """
-        num_to_reduce = 0
-        print '[DB-BAT] ', self._sampleRunReductionFlagDict
-        print
-
+        run_number_list = list()
         for run_number in self._sampleRunReductionFlagDict.keys():
             if self._sampleRunReductionFlagDict[run_number]:
-                num_to_reduce += 1
+                run_number_list.append(run_number)
 
-        return num_to_reduce
+        return run_number_list
 
     def get_reduced_runs(self):
         """ Get the run/run numbers of the reduced runs
@@ -566,20 +563,14 @@ class VDProject(object):
 
         return
 
-    def reduce_runs(self):
-        """ Reduce a set of runs without being normalized by vanadium. Mostly align and focus
+    def reduce_runs(self, run_number_list, output_direcory, background=False,
+                    vanadium=False, gsas=True, fullprof=False, record_file=False,
+                    sample_log_file=False):
+        """
+        Reduce a set of runs without being normalized by vanadium. Mostly align and focus
         Purpose:
         Requirements:
         Guarantees:
-
-        Note:
-        1. There is no need to call LoadCalFile explicitly, because AlignAndFocus() will
-           check whether the calibration file has been loaded by standard offset and group
-           workspace name.
-
-        Migrated from reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
-        Focus and process the selected data sets to powder diffraction data
-        for GSAS/Fullprof/ format
 
         Workflow:
          1. Get a list of runs to reduce;
@@ -590,8 +581,25 @@ class VDProject(object):
         Arguments:
          - normByVanadium :: flag to normalize by vanadium
 
+
+        Note:
+        1. There is no need to call LoadCalFile explicitly, because AlignAndFocus() will
+           check whether the calibration file has been loaded by standard offset and group
+           workspace name.
+        2. It tries to use most of the existing methods from auto reduction scripts
+        Focus and process the selected data sets to powder diffraction data
+        for GSAS/Fullprof/ format
+        :param run_number_list:
+        :param output_direcory:
+        :param background:
+        :param vanadium:
+        :param gsas:
+        :param fullprof:
+        :param record_file:
+        :param sample_log_file:
         :return:
         """
+        # TODO/NOW/ISSUE/55: make the following script work!
         # Load time focusing calibration: there is no need to load time focus calibration
         try:
             self._reductionManager.load_time_focus_calibration()

@@ -972,8 +972,11 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, norm_by_vanadium=False, bin_size=None):
-        """ Reduce a set of data
+    def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
+                        vanadium=False, special_pattern=False,
+                        record=False, logs=False, gsas=True, fullprof=False):
+        """
+        Reduce a set of data
         Purpose:
             Reduce a set of event data
         Requirements:
@@ -982,30 +985,58 @@ class VDriveAPI(object):
             -
         Guarantees:
             Event data will be reduced to diffraction pattern.
-
-        :param norm_by_vanadium: flag to normalize the final reduction data by vanadium
+        :param auto_reduce: boolean flag whether the reduction uses auto reduction script
+        :param output_directory:  output directory
+        :param binning: binning parameter. [1] None for default; [2] a size 1 container as bin size
+                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
+        :param background: boolean flag to subtract background
+        :param vanadium: boolean flag to normalize by vanadium
+        :param special_pattern: boolean flag to normalize by special pattern
+        :param record: boolean flag to output AutoRecord and etc.
+        :param logs: boolean flag to output sample log files (MTS)
+        :param gsas: boolean flag to produce GSAS files from reduced runs
+        :param fullprof: boolean flag tro produces Fullprof files from reduced runs
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
-        num_runs_flagged = self._myProject.get_number_reduction_runs()
+        runs_to_reduce = self._myProject.get_runs_to_reduce()
+        num_runs_flagged = len(runs_to_reduce)
         assert num_runs_flagged > 0, 'At least one run should be flagged for reduction.'
 
-        # Reduce vanadium run for calibration
-        if norm_by_vanadium is True:
-            try:
-                self._myProject.reduce_vanadium_runs()
-            except RuntimeError as run_err:
-                err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
-                return False, err_msg
-        # END-IF (nom_by_vanadium)
+        # check whether all the runs to reduce are belonged to the same IPTS number
+        ipts_set = set()
+        for run_number in runs_to_reduce:
+            ipts_number = self._myArchiveManager.get_ipts_number(run_number, throw=True)
+            ipts_set.add(ipts_number)
+        # END-FOR
+        assert len(ipts_set) == 1, 'There are runs from different IPTS.  It is not supported in PyVDrive.'
 
-        # Reduce runs
-        try:
-            status, ret_obj = self._myProject.reduce_runs()
-        except AssertionError as re:
-            print '[ERROR] Assertion error from reduce_runs.'
-            status = False
-            ret_obj = str(re)
+        # Reduce data set
+        if auto_reduce:
+            # auto reduction
+            ipts_number = self._myArchiveManager.get_ipts_number(runs_to_reduce[0], throw=True)
+            status, message = self.reduce_auto_script(ipts_number=ipts_number,
+                                                      run_numbers=runs_to_reduce,
+                                                      output_dir=output_directory,
+                                                      is_dry_run=False)
+
+        else:
+            # manual reduction: Reduce runs
+            try:
+                status, ret_obj = self._myProject.reduce_runs()
+            except AssertionError as re:
+                status = False
+                ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
+
+        # TODO/NEXT/ISSUE
+        # # Reduce vanadium run for calibration
+        # if norm_by_vanadium is True:
+        #     try:
+        #         self._myProject.reduce_vanadium_runs()
+        #     except RuntimeError as run_err:
+        #         err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
+        #         return False, err_msg
+        # # END-IF (nom_by_vanadium)
 
         return status, ret_obj
 

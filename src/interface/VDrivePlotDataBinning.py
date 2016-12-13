@@ -86,6 +86,7 @@ class VulcanGuiReduction(object):
         :return: dictionary
         """
         option_dict = dict()
+        option_dict['auto_reduce'] = self.user_interface.checkBox_autoReduction.isChecked()
         option_dict['gsas'] = self.user_interface.checkBox_outGSAS.isChecked()
         option_dict['fullprof'] = self.user_interface.checkBox_outFullprof.isChecked()
         option_dict['record'] = self.user_interface.checkBox_outputAutoRecords.isChecked()
