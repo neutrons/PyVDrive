@@ -84,8 +84,8 @@ def convert_to_qdate_datetime(date_time):
     # TODO/NOW/Doc
 
     # check
-    assert isinstance(date_time, datetime.datetime), 'Input date and time must be a datetime.datetime but not %s.
-                                                     ' % type(date_time)
+    assert isinstance(date_time, datetime.datetime), 'Input date and time must be a datetime.datetime but not %s.' \
+                                                     '' % type(date_time)
 
     # convert
     year = date_time.year

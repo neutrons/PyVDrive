@@ -209,6 +209,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             assert isinstance(self._iptsNumber, int) and self._iptsNumber > 0, 'IPTS number must be verified ' \
                                                                                'for quick-filter-run mode.'
             ipts_run_dir = self._iptsNumber
+            # TODO/FIXME/ISSUE/55 - scan_ipts_runs() is not a method of workflow_controller!!!
             status, ret_obj = workflow_controller.scan_ipts_runs(ipts_run_dir, begin_run, end_run)
 
         else:

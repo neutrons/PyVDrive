@@ -445,7 +445,8 @@ class DataChopper(object):
         """
         # check validity of inputs
         assert isinstance(log_name, str), 'Log name must be a string.'
-        assert isinstance(log_value_step, float), 'Log value step must be float but not %s.' % type(log_value_step)
+        assert isinstance(log_value_step, float) or log_value_step is None,\
+            'Log value step must be float or None but not %s.' % type(log_value_step)
         assert isinstance(start_time, float) or start_time is None, 'Start time must be None or float.'
         assert isinstance(stop_time, float) or stop_time is None, 'Stop time must be None or float'
         assert isinstance(min_log_value, float) or min_log_value is None, 'Min log value must be None or float'

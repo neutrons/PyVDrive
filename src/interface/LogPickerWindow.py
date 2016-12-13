@@ -955,8 +955,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                   '' % str(run_err))
                 return
 
-            message = 'Log %s slicer: from %s to %s with step %.3f.' % (log_name, str(min_log_value),
-                                                                      str(max_log_value), log_value_step)
+            message = 'Log {0} slicer: from {1} to {2} with step {3}.'.format(log_name,
+                                                                              str(min_log_value),
+                                                                              str(max_log_value),
+                                                                              log_value_step)
 
         else:
             # bad coding
