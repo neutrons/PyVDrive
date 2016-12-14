@@ -57,8 +57,8 @@ class DataArchiveManager(object):
         self._localData = False
 
         # data storage
-        self._infoDict = dict()     # key: archive ID
-        self._runInfoDict = dict()  # key: run number
+        self._infoDict = dict()     # key: archive ID, value: list of dictionaries
+        # self._runInfoDict = dict()  # key: run number
 
         # Debug mode
         self.__DEBUG__ = False
@@ -383,23 +383,23 @@ class DataArchiveManager(object):
 
         return ipts, runnumber
 
-    def get_ipts_number(self, run_number, throw):
-        """
-        Find out IPTS number from a run number
-        :param run_number:
-        :param throw: a flag to throw an exception if run number does not exist in current Run-Info dictionary.
-        :return: IPTS number or None if not thrown
-        """
-        assert isinstance(run_number, int), 'Run number must be an integer.'
-
-        if run_number in self._runInfoDict:
-            ipts_number = self._runInfoDict[run_number]['ipts']
-        elif not throw:
-            ipts_number = None
-        else:
-            raise RuntimeError('Run number %d does not exist in current Run-Info-Dictionary' % run_number)
-
-        return ipts_number
+    # def get_ipts_number(self, run_number, throw):
+    #     """
+    #     Find out IPTS number from a run number
+    #     :param run_number:
+    #     :param throw: a flag to throw an exception if run number does not exist in current Run-Info dictionary.
+    #     :return: IPTS number or None if not thrown
+    #     """
+    #     assert isinstance(run_number, int), 'Run number must be an integer.'
+    #
+    #     if run_number in self._runInfoDict:
+    #         ipts_number = self._runInfoDict[run_number]['ipts']
+    #     elif not throw:
+    #         ipts_number = None
+    #     else:
+    #         raise RuntimeError('Run number %d does not exist in current Run-Info-Dictionary' % run_number)
+    #
+    #     return ipts_number
 
     def scan_archive(self, ipts_number, start_run, end_run):
         """

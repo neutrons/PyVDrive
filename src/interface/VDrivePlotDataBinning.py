@@ -91,7 +91,7 @@ class VulcanGuiReduction(object):
         option_dict['fullprof'] = self.user_interface.checkBox_outFullprof.isChecked()
         option_dict['record'] = self.user_interface.checkBox_outputAutoRecords.isChecked()
         option_dict['logs'] = self.user_interface.checkBox_outputSampleLogs.isChecked()
-        option_dict['output_dir'] = str(self.user_interface.lineEdit_outputDir.text())
+        option_dict['output_directory'] = str(self.user_interface.lineEdit_outputDir.text())
 
         return option_dict
 
