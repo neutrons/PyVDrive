@@ -551,6 +551,20 @@ def get_workspace_information(run_ws_name):
     return bank_id_list
 
 
+def get_workspace_unit(workspace_name):
+    """
+
+    :param workspace_name:
+    :return:
+    """
+    assert isinstance(workspace_name, str) and len(workspace_name) > 0
+    assert ADS.doesExist(workspace_name), 'blabla %s not' % workspace_name
+
+    workspace = ADS.retrieve(workspace_name)
+
+    return workspace.getAxis(0).getUnit().unitID()
+
+
 def event_data_ws_name(run_number):
     """ workspace name for raw event data
     :param run_number:

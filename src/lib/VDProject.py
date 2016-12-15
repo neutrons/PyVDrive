@@ -76,25 +76,6 @@ class VDProject(object):
 
         return
 
-    def add_runs(self, run_info_list):
-        """
-        List of run-info-dict
-        :param run_info_list:
-        :return:
-        """
-        # check
-        assert isinstance(run_info_list, list), 'Run information list cannot be of type %s.' \
-                                                '' % type(run_info_list)
-
-        for run_info in run_info_list:
-            assert isinstance(run_info, dict)
-            run_number = run_info['run']
-            ipts_number = run_info['ipts']
-            file_name = run_info['file']
-            self.add_run(run_number, file_name, ipts_number)
-
-        return
-
     def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
@@ -563,11 +544,11 @@ class VDProject(object):
 
         return
 
-    def reduce_runs(self, run_number_list, output_direcory, background=False,
+    def reduce_runs(self, ipts_number, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
                     sample_log_file=False):
         """
-        Reduce a set of runs without being normalized by vanadium. Mostly align and focus
+        Reduce a set of runs with selected options
         Purpose:
         Requirements:
         Guarantees:
@@ -590,7 +571,7 @@ class VDProject(object):
         Focus and process the selected data sets to powder diffraction data
         for GSAS/Fullprof/ format
         :param run_number_list:
-        :param output_direcory:
+        :param output_directory:
         :param background:
         :param vanadium:
         :param gsas:
@@ -599,123 +580,42 @@ class VDProject(object):
         :param sample_log_file:
         :return:
         """
-        # TODO/NOW/ISSUE/55: make the following script work!
-        # Load time focusing calibration: there is no need to load time focus calibration
-        try:
-            self._reductionManager.load_time_focus_calibration()
-        except AssertionError, err:
-            raise RuntimeError('Unable to load time focus calibration due to %s.' % str(err))
+        import reduce_VULCAN
 
-        # Reduce all runs
-        for run_number in self._sampleRunReductionFlagDict.keys():
-            if self._sampleRunReductionFlagDict[run_number] is True:
-                # Initialize trackers
-                data_file_name = self._dataFileDict[run_number][0]
-                self._reductionManager.init_tracker(run_number, data_file_name)
+        # check input
+        assert isinstance(run_number_list, list), 'Run number must be a list.'
 
-                # Reduce
-                self._reductionManager.reduce_sample_run(run_number)
+        # set up reduction general
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        reduction_setup.set_default_calibration_files()
+        reduction_setup.set_output_dir(output_directory)
+        reduction_setup.set_gsas_dir(output_directory, True)
+
+        reduce_all_success = True
+        message = ''
+
+        for run_number in run_number_list:
+            # set up
+            reduction_setup.set_run_number(run_number)
+            full_event_file_path, ipts_number = self._dataFileDict[run_number]
+            reduction_setup.set_event_file(full_event_file_path)
+            reduction_setup.set_ipts_number(ipts_number)
+
+            # init tracker
+            self._reductionManager.init_tracker(run_number)
+
+            # reduce
+            reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
+            reducer.execute_vulcan_reduction()
+
+            status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
+            reduce_all_success = reduce_all_success and status
+            if status:
+                self._reductionManager
+
         # END-FOR
 
-        return True, ''
-
-        print 'Refactor!'
-        self._lastReductionSuccess = False
-
-        # Build list of files to reduce
-        rundict = {}
-        runbasenamelist = []
-        for run in self._reductionFlagDict.keys():
-            if self._reductionFlagDict[run] is True:
-                basenamerun = os.path.basename(run)
-                rundict[basenamerun] = (run, None)
-                runbasenamelist.append(basenamerun)
-        # ENDFOR
-        print "[DB] Runs to reduce: %s." % (str(runbasenamelist))
-        if len(rundict.keys()) == 0:
-            return (False, 'No run is selected to reduce!')
-
-        # Build list of vanadium runs
-        vanrunlist = []
-        if normByVanadium is True:
-            for runbasename in sorted(self._datacalibfiledict.keys()):
-                if (runbasename in runbasenamelist) is True:
-                    print "[DB] Run %s has vanadium mapped: %s" % (runbasename, str(self._datacalibfiledict[runbasename]))
-                    candidlist = self._datacalibfiledict[runbasename][0]
-                    if candidlist is None:
-                        # no mapped vanadium
-                        continue
-                    elif isinstance(candidlist, list) is False:
-                        # unsupported case
-                        raise NotImplementedError("Vanadium candidate list 'candidlist' must be either list or None. \
-                                Now it is %s." % (str(candidlist)))
-                    vanindex = self._datacalibfiledict[runbasename][1]
-                    try:
-                        vanrunlist.append(int(candidlist[vanindex]))
-                        rundict[runbasename] = (rundict[runbasename][0], int(candidlist[vanindex]))
-                    except TypeError as te:
-                        print "[Warning] Van run in candidate list is %s.  \
-                                Cannot be converted to van run du to %s. " % (str(candidlist[vanindex]), str(te))
-                    except IndexError as ie:
-                        raise ie
-                # ENDIF
-            # ENDFOR
-            vanrunlist = list(set(vanrunlist))
-        # ENDIF
-        print "[DB] Vanadium runs (to reduce): %s" % (str(vanrunlist))
-
-        # from vanadium run to create vanadium file
-        vanfilenamedict = {}
-        for vrun in vanrunlist:
-            vanfilename = self._generateFileName(vrun, self._myVanRunIptsDict[int(vrun)])
-            vanfilenamedict[int(vrun)] = vanfilename
-        # ENDFOR
-
-        # Reduce all vanadium runs
-        vanPdrDict = {}
-        for vrun in vanrunlist:
-            vrunfilename = vanfilenamedict[vrun]
-            vpdr = prl.ReductionManager(vrunfilename, isvanadium=True)
-            vanws = vpdr.reduce_vanadium_run(params={})
-            if vanws is None:
-                raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
-            vanPdrDict[vrun] = vpdr
-        # ENDFOR
-
-        # Reduce all
-        for basenamerun in sorted(rundict.keys()):
-            # reduce regular powder diffraction data
-            fullpathfname = rundict[basenamerun][0]
-            vanrun = rundict[basenamerun][1]
-
-            runpdr = prl.ReductionManager(fullpathfname, isvanadium=False)
-
-            # optinally chop
-            doChopData = False
-            if eventFilteringSetup is not None:
-                runpdr.setupEventFiltering(eventFilteringSetup)
-                doChopData = True
-            # ENDIF
-
-            # set up vanadium
-            if vanPdrDict.has_key(vanrun) is True and normByVanadium is True:
-                vrun = vanPdrDict[vanrun]
-            else:
-                vrun = None
-            # ENDIF (vrun)
-
-            # reduce data
-            runpdr.reducePDData(params=prl.PowderReductionParameters(),
-                                vrun=vrun,
-                                chopdata=doChopData,
-                                tofmin=self._tofMin, tofmax=self._tofMax)
-
-            self._myRunPdrDict[basenamerun] = runpdr
-        # ENDFOR(basenamerun)
-
-        self._lastReductionSuccess = True
-
-        return (True, '')
+        return reduce_all_success, ''
 
     def save_session(self, out_file_name):
         """ Save session to a dictionary

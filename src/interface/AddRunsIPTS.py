@@ -394,8 +394,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                 self._iptsNumber = ret_obj
         # END-IF-ELSE
 
-        # set IPTS number of controller
-        workflow_controller.set_ipts(self._iptsNumber)
+        # # set IPTS number of controller
+        # workflow_controller.set_ipts(self._iptsNumber)
 
         # get the list of runs by run number of date
         if self.ui.radioButton_filterByDate.isChecked():

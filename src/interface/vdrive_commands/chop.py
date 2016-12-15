@@ -176,11 +176,10 @@ class VdriveChop(VDriveCommand):
         # END-IF
 
         # locate the runs and add the reduction project
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
+                                                                                             run_end)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        # TODO/FIXME/ISSUE/55 - This is not a good call and makes confusion!
-        self._controller.project.add_runs(run_info_list)
+        self._controller.add_runs_to_project(run_info_list)
 
         # Go through all the arguments
         if 'HELP' in self._commandArgsDict:

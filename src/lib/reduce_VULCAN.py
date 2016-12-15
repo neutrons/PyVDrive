@@ -1059,6 +1059,12 @@ class ReduceVulcanData(object):
         self._instrumentName = 'VULCAN'  # instrument name
         self._dataWorkspaceName = None   # source event data workspace' name
 
+        # for output workspaces
+        self._reducedWorkspaceMtd = None
+        self._reducedWorkspaceVDrive = None
+        self._reducedWorkspaceDSpace = None
+        self._reduceGood = False
+
         self._reducedWorkspaceList = list()
 
         self._choppedDataDirectory = None
@@ -1859,6 +1865,19 @@ class ReduceVulcanData(object):
 
         return
 
+    def get_reduced_workspaces(self, chopped):
+        """
+
+        :param chopped:
+        :return: 2-tuples
+        [1] non-chopped data: True/False, (VDrive workspace, Mantid TOF workspace, Mantid DSpacing workspace)
+        """
+        # early return for chopped data
+        if chopped:
+            return True, self._reducedWorkspaceList[:]
+
+        return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceMtd)
+
     def load_data_file(self):
         """
         Load NeXus file. If reducing to GSAS is also required, then load the complete NeXus file. Otherwise,
@@ -1887,7 +1906,7 @@ class ReduceVulcanData(object):
     def reduce_powder_diffraction_data(self):
         """
         reduce powder diffraction data
-        :return:
+        :return: 2-tuples
         """
         # required parameters:  ipts, runnumber, outputdir
 
@@ -1950,6 +1969,12 @@ class ReduceVulcanData(object):
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+
+        # collect result
+        self._reducedWorkspaceDSpace = reduced_ws_name
+        self._reducedWorkspaceMtd = tof_ws_name
+        self._reducedWorkspaceVDrive = vdrive_bin_ws_name
+        self._reduceGood = True
 
         return True, message
 

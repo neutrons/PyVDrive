@@ -1,312 +1,10 @@
 ################################################################################
-#
-# Modified SNS Powder Reduction
-#
-# Example:
-# AlignAndFocusPowder(InputWorkspace='VULCAN_80239_0', OutputWorkspace='VULCAN_80239_0',
-#        CalFileName='/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal',
-#        GroupingWorkspace='VULCAN_group',
-#        CalibrationWorkspace='VULCAN_cal',
-#        MaskWorkspace='VULCAN_mask',
-#        Params='-0.001',
-#        CompressTolerance=0,
-#        CropWavelengthMax=0,
-#        PrimaryFlightPath=43.753999999999998,
-#        SpectrumIDs='1,2',
-#        L2='2.00944,2.00944',
-#        Polar='90.122,90.122',
-#        Azimuthal='0,0', ReductionProperties='__snspowderreduction')
-# RenameWorkspace(InputWorkspace='VULCAN_80239_0', OutputWorkspace='VULCAN_80239')
-# CompressEvents(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Tolerance=0)
-# PDDetermineCharacterizations(InputWorkspace='VULCAN_80239', Characterizations='characterizations', ReductionProperties='__snspowderreduction', FrequencyLogNames='skf1.speed', WaveLengthLogNames='skf12.lambda')
-# CompressEvents(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Tolerance=0)
-# GeneratePythonScript(InputWorkspace='VULCAN_80239', Filename='/home/wzz/Projects/MantidTests/Instruments_Specific/Vulcan/Reduction/temp/VULCAN_80239.py')
-# ConvertUnits(InputWorkspace='VULCAN_80239', OutputWorkspace='VULCAN_80239', Target='dSpacing')
-#
+# Manage the reduced VULCAN runs
 ################################################################################
-import sys
 import os
-
-"""
-# FIXME : This is for local development only!
-homedir = os.path.expanduser('~')
-mantidpath = os.path.join(homedir, 'Mantid/Code/debug/bin/')
-sys.path.append(mantidpath)
-"""
-
 import mantid_helper
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
-
-DEBUGMODE = True
-DEBUGDIR = os.path.join(os.path.expanduser('~'), 'Temp')
-
-
-class PowderReductionParameters(object):
-    """ Class to contain align and focus parameters
-    Many of them server as default values
-    """
-    # FIXME/TODO/NOW Improve & refine!
-
-    # define the default calibration files
-    refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-    TimeFocusCalibrationFilePath = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-    VULCANCharacterizationFilePath = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
-
-    def __init__(self):
-        """ Initialization
-        """
-        # binning parameters
-        self._binStep = -0.001
-        self._tofMin = None
-        self._tofMax = None
-
-        # define class variables with defaults
-        self._focusFileName = PowderReductionParameters.TimeFocusCalibrationFilePath
-        self._preserveEvents = True
-        self._LRef = 0   # default = 0
-        self._DIFCref = 0
-        self._compressTolerance = 0.01
-        self._removePromptPulseWidth = 0.0
-        self._lowResTOFoffset = -1
-        self._wavelengthMin = 0.0
-
-        self._filterBadPulse = False
-        self._normalizeByCurrent = True
-        self._calibrateByVanadium = False
-
-        return
-
-    @property
-    def bin_step(self):
-        """
-        Purpose:
-            Get the binning step
-        Guarantees:
-        :return:
-        """
-        return self._binStep
-
-    @bin_step.setter
-    def bin_step(self, value):
-        """
-        Purpose: Set up bin size (or say bin step)
-        Requirements: input value must be a float
-        :param value:
-        :return:
-        """
-        assert isinstance(value, float)
-        self._binStep = value
-
-        return
-
-    @property
-    def calibrate_by_vanadium(self):
-        """
-
-        :return:
-        """
-        return self._calibrateByVanadium
-
-    @property
-    def compress_tolerance(self):
-        """
-        :return: value of compress tolerance
-        """
-        return self._compressTolerance
-
-    @compress_tolerance.setter
-    def compress_tolerance(self, value):
-        """ Set value to _compressTolerance
-        Requirements: positive float
-        :return:
-        """
-        assert isinstance(value, float)
-        assert value > 0
-
-        self._compressTolerance = value
-
-        return
-
-    @property
-    def filter_bad_pulse(self):
-        """
-        Get the status whether bad pulse will be filtered
-        :return: boolean
-        """
-        return self._filterBadPulse
-
-    @filter_bad_pulse.setter
-    def filter_bad_pulse(self, value):
-        """
-        Set the flag whether bad pulse shall be filtered
-        :param value:
-        :return:
-        """
-        isinstance(value, bool)
-
-        self._filterBadPulse = value
-
-        return
-
-    @property
-    def focus_calibration_file(self):
-        """ Get time focusing calibration file.
-        :return:
-        """
-        return self._focusFileName
-
-    @focus_calibration_file.setter
-    def focus_calibration_file(self, value):
-        """ Set time focusing calibration file
-        Requirements:
-        - value must be an existing calibration file
-        :param value:
-        :return:
-        """
-        assert isinstance(value, str)
-        assert os.path.exists(value)
-
-        self._focusFileName = value
-
-    @property
-    def min_tof(self):
-        """ Return mininum TOF
-        :return:
-        """
-        return self._tofMin
-
-    @min_tof.setter
-    def min_tof(self, value):
-        """
-        Purpose: set up the minimum TOF value
-        Requirements: input value must be either None for automatic min value or a postive float number,
-        which is smaller than maxTOF if is set up
-        :return:
-        """
-        # check requirements
-        assert (value is None) or isinstance(value, float)
-
-        # set up for None issue
-        if value is None:
-            # auto mode
-            self._tofMin = None
-        else:
-            # explicit set up
-            assert value > 0
-
-            if self._tofMax is None:
-                self._tofMin = value
-            else:
-                assert value < self._tofMax
-                self._tofMin = value
-            # END-IF-ELSE
-        # END-IF
-
-        return
-
-    @property
-    def max_tof(self):
-        """ Return maximum TOF
-        :return:
-        """
-        return self._tofMax
-
-    @max_tof.setter
-    def max_tof(self, value):
-        """
-        Purpose: set up the maximum TOF value
-        Requirements: input value must be either None for automatic min value or a postive float number,
-        which is smaller than maxTOF if is set up
-        :return:
-        """
-        # check requirements
-        assert (value is None) or isinstance(value, float)
-
-        # set up for None issue
-        if value is None:
-            # auto mode
-            self._tofMax = None
-        else:
-            # explicit set up
-            assert value > 0
-
-            if self._tofMin is None:
-                self._tofMax = value
-            else:
-                assert value > self._tofMin
-                self._tofMax = value
-            # END-IF-ELSE
-        # END-IF
-
-        return
-
-    @property
-    def normalize_by_current(self):
-        """
-
-        :return:
-        """
-        return self._normalizeByCurrent
-
-    @property
-    def preserve_events(self):
-        """
-        Return the flag whether events will be preserved during reduction
-        :return:
-        """
-        return self._preserveEvents
-
-    @preserve_events.setter
-    def preserve_events(self, value):
-        """
-        Set the flag to preserve events during reduciton
-        Requirements: value must be bool
-        :param value:
-        :return:
-        """
-        assert isinstance(value, bool)
-
-        self._preserveEvents = value
-
-        return
-
-    def form_binning_parameter(self):
-        """
-        form the binning parameter for Mantid's input
-        :return: string, either as 'min_tof, bin_step, max_tof' or 'bin_step'
-        """
-        # Check
-        assert isinstance(self._binStep, float)
-
-        if self._tofMin is None or self._tofMax is None:
-            bin_par = '%.7f' % self._binStep
-        else:
-            bin_par = '%.7f, %.7f, %.7f' % (self._tofMin, self._binStep, self._tofMax)
-
-        print '[DB-BAT] binning parameter is [%s]' % bin_par
-
-        return bin_par
-
-    def set_from_dictionary(self, param_dict):
-        """ Set reduction parameters' values from a dictionary
-        :param param_dict:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(param_dict, dict), 'Input must be a dictionary but not %s.' % str(type(param_dict))
-
-        # Set
-        for param_name in param_dict:
-            if param_name in dir(self):
-                setattr(self, param_name, param_dict[param_name])
-            elif param_name in self.__dict__:
-                setattr(self, param_name, param_dict[param_name])
-            else:
-                print '[Warning] Parameter %s is not an attribute for ' \
-                      'reduction parameter' % param_name
-
-        return
 
 
 class ReductionHistory(object):
@@ -402,7 +100,7 @@ class ReductionHistory(object):
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
     """
-    def __init__(self, run_number, file_path, vanadium_calibration):
+    def __init__(self, run_number):
         """
         Purpose:
             Initialize an object of DataReductionTracer
@@ -414,14 +112,11 @@ class DataReductionTracker(object):
         """
         # Check requirements
         assert isinstance(run_number, int)
-        assert isinstance(file_path, str)
-        assert vanadium_calibration is None or isinstance(vanadium_calibration, str)
 
         # set up
         self._runNumber = run_number
-        self._filePath = file_path
         # FIXME - it is not clear whether it is better to use vanadium file name or vanadium run number
-        self._vanadiumCalibrationRunNumber = vanadium_calibration
+        self._vanadiumCalibrationRunNumber = None
 
         # Workspaces' names
         # event workspaces
@@ -431,6 +126,10 @@ class DataReductionTracker(object):
         # status flag
         self._myHistory = ReductionHistory()
         self._isReduced = False
+
+        self._vdriveWorkspace = None
+        self._tofWorkspace = None
+        self._dspaceWorkspace = None
 
         return
 
@@ -483,12 +182,27 @@ class DataReductionTracker(object):
         """
         return self._runNumber
 
-    @property
-    def file_path(self):
-        """ Read only
+    def set_reduced_workspaces(self, vdrive_bin_ws, tof_ws, dspace_ws):
+        """
+
+        :param vdrive_bin_ws:
+        :param tof_ws:
+        :param dspace_ws:
         :return:
         """
-        return self._filePath
+        # check workspaces existing
+        assert mantid_helper.workspace_does_exist(vdrive_bin_ws), 'blabla'
+        assert mantid_helper.workspace_does_exist(tof_ws), 'blabla'
+        assert mantid_helper.workspace_does_exist(dspace_ws), 'blabla'
+        assert mantid_helper.get_workspace_unit(dspace_ws) == 'dSpacing', 'blabla dspacing'  # Out[12]: 'dSpacing'
+
+        self._vdriveWorkspace = vdrive_bin_ws
+        self._tofWorkspace = tof_ws
+        self._dspaceWorkspace = dspace_ws
+
+        self._isReduced = True
+
+        return
 
     @property
     def vanadium_calibration(self):
@@ -573,33 +287,23 @@ class ReductionManager(object):
             'Instrument %s is not in the supported instruments (%s).' % (instrument,
                                                                          ReductionManager.SUPPORTED_INSTRUMENT)
 
-        # Reduction parameters
-        self._reductionParameters = PowderReductionParameters()
-
         # Set up including default
         self._myInstrument = instrument
+
+        # reduction tracker: key = run number (integer), value = DataReductionTracker
         self._reductionTrackDict = dict()
-
-        # time focusing calibration file
-        self._focusCalibrationFile = None
-
-        # Cached workspaces
-        self._myOffsetWorkspaceName = None
-        self._myGroupWorkspaceName = None
-        self._myMaskWorkspaceName = None
-        self._myCalibrationWorkspaceName = None
 
         return
 
     def get_event_workspace_name(self, run_number):
         """
-        Get or generate the name of a run
+        Get or generate the name of a raw event workspace
         Requirements: run number must be a positive integer
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int)
-        assert run_number > 0
+        assert isinstance(run_number, int), 'blabla'
+        assert run_number > 0, 'blabla'
 
         event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
 
@@ -619,7 +323,7 @@ class ReductionManager(object):
     def get_reduced_runs(self):
         """
         Get the runs that have been reduced. It is just for information
-        :return:
+        :return:  a list of run numbers
         """
         return_list = list()
         for run_number in self._reductionTrackDict.keys():
@@ -629,7 +333,7 @@ class ReductionManager(object):
 
         return return_list
 
-    def get_reduced_workspace(self, run_number, unit='TOF'):
+    def get_reduced_workspace(self, run_number, is_vdrive_bin, unit='TOF'):
         """ Get the reduced matrix workspace
         Requirements:
             1. Specified run is correctly reduced;
@@ -637,7 +341,8 @@ class ReductionManager(object):
             2. Return reduced workspace's name
         Arguments:
          - unit :: target unit; If None, then no need to convert unit
-        :exception: KeyError if run number does not exist in self._reductionTrackDict
+        :exception: Assertion Error if run number does not exist in self._reductionTrackDict
+        :exception: RuntimeError if unit is not supported
         :param run_number:
         :param unit:
         :return: Workspace (success) or 2-tuple (False and error message)
@@ -645,89 +350,24 @@ class ReductionManager(object):
         # Check requirements
         assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
         # get tracker
+        assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
         tracker = self._reductionTrackDict[run_number]
         assert isinstance(tracker, DataReductionTracker), 'Stored tracker must be an instance of DataReductioTracker.'
 
-        reduced_ws_name = tracker.event_workspace_name
+        if is_vdrive_bin and unit != 'TOF':
+            raise RuntimeError('It is possible to get a VDrive-binned workspace in unit {0} other than TOF.'
+                               ''.format(unit))
+        elif unit != 'TOF' and unit.lower() != 'dspace':
+            raise RuntimeError('Unit {0} is not supported.'.format(unit))
 
-        # Convert unit
-        mantid_helper.mtd_convert_units(reduced_ws_name, unit)
-
-        return reduced_ws_name
-
-    def align_and_focus(self, event_ws_name):
-        """
-
-        :param event_ws_name:
-        :return:
-        """
-        mantid_helper.mtd_align_and_focus(event_ws_name, self._reductionParameters,
-                                          self._myGroupWorkspaceName, self._myOffsetWorkspaceName,
-                                          self._myCalibrationWorkspaceName)
-
-        return True
-
-    def reduce_sample_run(self, run_number):
-        """ Reduce one sample run, which is not a vanadium run
-        Purpose:
-            Reduce a sample run
-        Requirements:
-            Run number is in list to reduce
-        Guarantees:
-            A sample run is reduced to a Rietveld diffraction pattern
-        :param run_number:
-        :param full_file_path:
-        :return: 2-tuple as boolean (status, error message)
-        """
-        # Check
-        assert isinstance(run_number, int), 'Run number %s to reduce sample run must be integer' % str(run_number)
-        assert run_number in self._reductionTrackDict, 'Run %d is not managed by reduction tracker. ' \
-                                                       'Current tracked runs are %s.' % \
-                                                       (run_number, str(self._reductionTrackDict.keys()))
-        tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker)
-        if tracker.is_reduced is True:
-            return False, 'Run %d has been reduced.' % run_number
-
-        # Get data or load
-        event_ws_name = tracker.event_workspace_name
-
-        if event_ws_name is None:
-            # never been loaded: get a name a load
-            event_ws_name = self.get_event_workspace_name(run_number)
-            tracker.event_workspace_name = event_ws_name
-            data_file_name = tracker.file_path
-            mantid_helper.load_nexus(data_file_name=data_file_name, output_ws_name=event_ws_name,
-                                     meta_data_only=False)
+        if is_vdrive_bin:
+            return_ws_name = tracker.vdrive_workspace
+        elif unit == 'TOF':
+            return_ws_name = tracker.tof_workspace
         else:
-            # already loaded or even processed
-            pass
+            return_ws_name = tracker.dpsace_worksapce
 
-        # Filter bad pulses as an option
-        # FIXME - Need to apply reduction-history here in the case that the workspace has been processed
-        if self._reductionParameters.filter_bad_pulse is True:
-            self.mtd_filter_bad_pulses(event_ws_name, reduction_parameters, grouping_ws_name,
-                                       offset_ws_name)
-            tracker.add_history(ReductionHistory.FilterBadPulse)
-
-        # Align and focus
-        status = self.align_and_focus(event_ws_name)
-        assert status
-        tracker.add_history(ReductionHistory.AlignAndFocus)
-
-        # Normalize by current as an option
-        if self._reductionParameters.normalize_by_current:
-            mantid_helper.mtd_normalize_by_current(event_ws_name)
-            tracker.add_history(ReductionHistory.NormaliseByCurrent)
-
-        # Normalize/calibrate by vanadium
-        if self._reductionParameters.calibrate_by_vanadium is True:
-            mantid_helper.normalizeByVanadium(event_ws_name)
-            tracker.add_history(ReductionHistory.CalibratedByVanadium)
-
-        tracker.is_reduced = True
-
-        return
+        return return_ws_name
 
     def get_smoothed_vanadium(self, van_run_number):
         """
@@ -740,111 +380,23 @@ class ReductionManager(object):
         :param van_run_number:
         :return:
         """
+        # TODO/FIXME/ISSUE/55++ -- Required in next**2 step
         # Check requirements
-        assert isinstance(van_run_number, int)
-        assert self.does_van_ws_exist(van_run_number)
+        # assert isinstance(van_run_number, int)
+        # assert self.does_van_ws_exist(van_run_number)
+        #
+        # # Call method to smooth vnadium
+        # smooth_parameter = self._redctionParameter.vanadium_smooth_parameter
+        # temp_van_ws_name = self._workspaceManager.get_vanadium_workspace_name('smooth')
+        # mantid.SmoothVanadium(van_run_number, temp_van_ws_name, smooth_parameter)
 
-        # Call method to smooth vnadium
-        smooth_parameter = self._redctionParameter.vanadium_smooth_parameter
-        temp_van_ws_name = self._workspaceManager.get_vanadium_workspace_name('smooth')
-        mantid.SmoothVanadium(van_run_number, temp_van_ws_name, smooth_parameter)
+        temp_van_ws_name = 'Not Implemented Yet!'
 
         return temp_van_ws_name
 
-    @property
-    def time_focus_calibration_file(self):
-        """ Get the full path of time focusing calibration file
-        Requirements:
-            the calibration file should have been set up
-        Guarantees:
-            calibration file with pull path
-        :return:
-        """
-        assert self._focusCalibrationFile is not None
-        return self._focusCalibrationFile
-
-    @time_focus_calibration_file.setter
-    def time_focus_calibration_file(self, value):
-        """
-        Purpose: set up the calibration file for time focusing
-        Requirements: value must be a string and file exists
-        Guarantees: calibration file is set up.
-        :param value:
-        :return:
-        """
-        assert isinstance(value, str)
-        assert os.path.exists(value), 'Input file path %s does not exist.' % value
-
-        self._focusCalibrationFile = value
-
-        return
-
-    def set_focus_calibration_file(self, focus_calibration_file):
-        """ Set time focusing calibration file
-        Purpose: Get the calibration file to do time focusing (offset, calibration, mask and etc)
-        Requirements: Input file must exist
-        Guarantees: file name is set to class variable
-        :return:
-        """
-        # Check requirements
-        assert isinstance(focus_calibration_file, str)
-        assert os.path.exists(focus_calibration_file), 'Focus calibration file %s ' \
-                                                       'does not exist.' % focus_calibration_file
-
-        # Set value
-        self._focusCalibrationFile = focus_calibration_file
-
-        return
-
-    def clear_time_focus_calibration(self):
-        """ Clear the loaded time focusing calibration
-        :return:
-        """
-        if self._myGroupWorkspaceName is not None:
-            mantid_helper.delete_workspace(workspace=self._myGroupWorkspaceName)
-        if self._myOffsetWorkspaceName is not None:
-            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
-        if self._myMaskWorkspaceName is not None:
-            mantid_helper.delete_workspace(workspace=self._myOffsetWorkspaceName)
-
-        return
-
-    def convert_to_vulcan_bin(self, run_number, out_gss_name):
-        """ Convert to VULCAN binning
-        Purpose: Convert the workspace to vulcan's IDL bin and write out GSAS file
-        Requirements:
-        Guarantees:
-        :param run_number:
-        :param out_gss_name: name of the output GSAS file name
-        :return:
-        """
-        # Check requirements
-        assert isinstance(run_number, int), 'Input run number must be an integer but %s.' % str(type(run_number))
-        assert run_number in self._reductionTrackDict, 'Run number %d is not tracked.' % run_number
-
-        # Tracker
-        tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker), 'The object in track dictionary is not correct.'
-
-        # Get workspace name
-        assert tracker.is_reduced, 'Run %d is not reduced yet.' % run_number
-        ipts_number = self._myProject.get_ipts_number(run_number)
-
-        # Convert unit and save_to_buffer for VULCAN GSS
-        reduced_ws_name = tracker.event_workspace_name
-        mantid_helper.mtd_convert_units(reduced_ws_name, 'TOF')
-        self.mtd_save_vulcan_gss(source_ws_name=reduced_ws_name,
-                                 out_gss_file=out_gss_name,
-                                 ipts=ipts_number,
-                                 binning_reference_file=self._binningReferenceFile,
-                                 gss_parm_file='Vulcan.parm')
-
-        return
-
-    def init_tracker(self, run_number, full_data_path):
+    def init_tracker(self, run_number):
         """ Initialize tracker
         :param run_number:
-        :param full_data_path: full path to the data file to reduce
         :return:
         """
         # Check requirements
@@ -853,272 +405,29 @@ class ReductionManager(object):
 
         # Initialize a new tracker
         if run_number not in self._reductionTrackDict:
-            new_tracker = DataReductionTracker(run_number, file_path=full_data_path,
-                                               vanadium_calibration=None)
+            new_tracker = DataReductionTracker(run_number)
             self._reductionTrackDict[run_number] = new_tracker
-
-        # Check
-        assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker), 'It is not DataReductionTracker.'
+        else:
+            # existing tracker: double check
+            assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker),\
+                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
 
         return
 
-    def load_time_focus_calibration(self):
-        """ Load time focusing calibration file if it has not been loaded
+    def set_reduced_workspaces(self, run_number, vdrive_bin_ws, tof_ws, dspace_ws):
+        """
+        set a run's reduced workspaces
+        :param run_number: int
+        :param vdrive_bin_ws: str
+        :param tof_ws: str
+        :param dspace_ws: str
         :return:
         """
-        # Check requirement
-        assert self._reductionParameters.focus_calibration_file is not None, 'Time focus file has not been setup.'
+        # check
+        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(vdrive_bin_ws, str) and isinstance(tof_ws, str) and isinstance(dspace_ws, str), 'blabla'
 
-        # Load calibration file if it is not loaded
-        if self._myOffsetWorkspaceName is None \
-                or mantid_helper.workspace_does_exist(self._myOffsetWorkspaceName) is False:
-            status, ret_obj = mantid_helper.load_time_focus_file(self._myInstrument,
-                                                                 self._reductionParameters.focus_calibration_file,
-                                                                 self._myInstrument)
-            if not status:
-                error_message = str(ret_obj)
-                raise RuntimeError(error_message)
-
-            # set up the file names
-            file_names = ret_obj
-            self._myOffsetWorkspaceName = file_names[0]
-            self._myGroupWorkspaceName = file_names[1]
-            self._myMaskWorkspaceName = file_names[2]
-            self._myCalibrationWorkspaceName = file_names[3]
+        self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
 
         return
 
-    def reduce_vanadium_run(self, run_number):
-        """ Reduce vanadium data and strip vanadium peaks
-
-        Requirements:
-            Input run number is a valid integer run number
-        :param run_number:
-        :return: reduced workspace or None if failed to reduce
-        """
-        # FIXME/TODO/NOW : heavy-modification! On going!
-
-        # Check requirements
-        assert isinstance(run_number, int), 'Input vanadium run number must be integer but not %s.' % \
-                                            str(type(run_number))
-        assert run_number in self._reductionTrackDict, 'Reduction tracker does not have run %d.' % run_number
-
-        # Get tracker
-        tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker)
-
-        # Load data
-        mantid_helper.load_nexus(data_file_name=van_file_name, meta_data_only=False, output_ws_name=van_ws_name)
-        assert mantid_helper.is_van_run(van_ws_name)
-
-        # Filter bad pulse
-        self.mtd_filter_bad_pulses(van_ws_name)
-        self.align_and_focus(van_ws_name)
-        mantid_helper.mtd_compress_events(van_ws_name)
-        mantid_helper.mtd_convert_units(van_ws_name, 'TOF')
-
-        mantidapi.SetSampleMaterial(InputWorkspace=wksp, 
-                                 ChemicalFormula="V", 
-                                 SampleNumberDensity=0.0721)
-        wksp = mantidapi.MultipleScatteringCylinderAbsorption(InputWorkspace=wksp, 
-                                                           OutputWorkspace=wksp.name())
-
-        # Align and focus
-        if params is None:
-            params = PowderReductionParameters()
-        wksp = self._doAlignFocus(wksp, params)
-
-        # Strip vanadium peaks in d-spacd
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(), 
-                                   Target="dSpacing")
-        if DEBUGMODE is True:
-            filename = os.path.join(DEBUGDIR, wksp.name()+"_beforeStripVPeak.nxs")
-            mantidapi.SaveNexusProcessed(InputWorkspace=wksp,
-                                         FileName= filename)
-
-        wksp = mantidapi.StripVanadiumPeaks(InputWorkspace=wksp, 
-                                         OutputWorkspace=wksp.name(), 
-                                         FWHM=self._vanPeakFWHM, 
-                                         PeakPositionTolerance=self._vanPeakTol,
-                                         BackgroundType="Quadratic", 
-                                         HighBackground=True)
-
-        if DEBUGMODE is True:
-            filename = os.path.join(DEBUGDIR, wksp.name()+"_afterStripVPeaks.nxs")
-            mantidapi.SaveNexusProcessed(InputWorkspace=wksp,
-                                         FileName= filename)
-        # Smooth
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(),
-                                   Target="TOF")
-        wksp = mantidapi.FFTSmooth(InputWorkspace=wksp, 
-                                OutputWorkspace=wksp.name(), 
-                                Filter="Butterworth", 
-                                Params=self._vanSmoothing,
-                                IgnoreXBins=True,
-                                AllSpectra=True)
-        wksp = mantidapi.SetUncertainties(InputWorkspace=wksp, 
-                                       OutputWorkspace=wksp.name())
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(), 
-                                   Target="TOF")
-
-        if wksp is not None: 
-            self._vanRunWS = wksp
-
-        return wksp
-
-
-    def setVanadium(self, vanws, vanbkgdws):
-        """ Set vanadium 
-        """
-        # set vanadium ws
-        if vanws is None:
-            self._doVanadium = False
-        else:
-            self._doVanadium = True
-            self.vanWS = vanws
-
-        # remove background
-        if vanbkgdws is not None:
-            self.vanWS -= vanbkgdws
-
-        return
-
-    def set_parameters(self, param_dict):
-        """ Set parameters for reduction
-        Purpose: set parameters' value from a parameter dictionary with parameter name as key and value as value
-        Requirements: input is a dictionary
-        Guarantees: parameters' value are set
-        :param param_dict:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(param_dict, dict)
-        assert self._reductionParameters is not None
-
-        # Set
-        self._reductionParameters.set_from_dictionary(param_dict)
-
-        return
-
-    def setTimeFilter(self, tmin, tmax, tstep):
-        """ Set event filtering
-
-        Arguments:
-         - tmin  :: min (relative) time in unit of seconds for time filter 
-         - tmax  :: max (relative) time in unit of seconds for time filter 
-         - tstep :: step of time in unit of seconds for time filter.  
-        """
-        # set event filtering
-        self._filterMode = 'TIME'
-
-        # check validity
-        self._tmin = tmin
-        self._tmax = tmax
-        self._tstep = tstep
-
-        return
-
-
-    def setSampleLogFilter(self, logname, minvalue, maxvalue, step): 
-        """ Set event filter by sample log
-        """
-        # set event mode
-        self._filterMode = 'LOG'
-
-        # check validity
-
-        # set values
-        self._logname = logname
-        self._minvalue = minvalue
-        self._maxvalue = maxvalue
-        self._logstep = step
-
-        return
-
-    def stripVanadiumPeaks(self):
-        """ 
-        """
-        # FIXME - Make sure there is one and only 1 workspace
-        wksp = self._anyRunWSList[0]
-
-        # Strip vanadium peaks in d-spacd
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                      OutputWorkspace=wksp.name(), 
-                                      Target="dSpacing")
-        self._anyRunWSList[0] = wksp
-
-        wksp = mantidapi.StripVanadiumPeaks(InputWorkspace=wksp, 
-                                            OutputWorkspace=wksp.name()+"_van", 
-                                            FWHM=self._vanPeakFWHM, 
-                                            PeakPositionTolerance=self._vanPeakTol,
-                                            BackgroundType="Quadratic", 
-                                            HighBackground=True)
-        self._processedVanadiumWS = wksp
-
-        return (True, '')
-
-    def smoothVanadiumSpectra(self):
-        """
-        """
-        wksp = self._processedVanadiumWS
-
-        # Smooth
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(),
-                                   Target="TOF")
-        wksp = mantidapi.FFTSmooth(InputWorkspace=wksp, 
-                                OutputWorkspace=wksp.name(), 
-                                Filter="Butterworth", 
-                                Params=self._vanSmoothing,
-                                IgnoreXBins=True,
-                                AllSpectra=True)
-        wksp = mantidapi.SetUncertainties(InputWorkspace=wksp, 
-                                       OutputWorkspace=wksp.name())
-        wksp = mantidapi.ConvertUnits(InputWorkspace=wksp, 
-                                   OutputWorkspace=wksp.name(), 
-                                   Target="TOF")
-
-        self._processedVanadiumWS = wksp
-
-        return
-
-    def __init_old__(self, nxsfilename, isvanadium=False):
-        """ Init
-        """
-        # Set up parameters
-        self._myRawNeXusFileName = nxsfilename
-
-        # Status variables
-        self._statusVanadium = False
-
-        # min, step, max
-        self._binParam = [None, -0.01, None]
-
-        # Is vanadium
-        self._isVanadiumRun = bool(isvanadium)
-
-        self._anyRunWSList = []
-
-        # Define class variables
-        if self._isVanadiumRun is True:
-            self._vanRunWS = None
-            self._vanPeakFWHM = 7
-            self._vanPeakTol = 0.05
-            self._vanSmoothing = "20,2"
-        else:
-            # FIXME - Need to get a way to set up these parameters!
-            self._vanRunWS = None
-            self._vanPeakFWHM = 7
-            self._vanPeakTol = 0.05
-            self._vanSmoothing = "20,2"
-
-        self._tempSmoothedVanadiumWS = None
-
-        # general align and focussing
-        self._tofMin = None
-        self._tofMax = None
-
-        return

@@ -683,10 +683,10 @@ class VDriveAPI(object):
         status = False
 
         try:
-            archive_key = self._myArchiveManager.scan_experiment_run_info(ipts_dir)
+            ipts_number = self._myArchiveManager.scan_runs_from_directory(ipts_dir)
 
             status = True
-            ret_obj = archive_key
+            ret_obj = ipts_number
         except AssertionError as ass_err:
             ret_obj = str(ass_err)
 
@@ -1006,37 +1006,40 @@ class VDriveAPI(object):
         # check whether all the runs to reduce are belonged to the same IPTS number
         ipts_set = set()
         for run_number in runs_to_reduce:
-            ipts_number = self._myArchiveManager.get_ipts_number(run_number, throw=True)
-            ipts_set.add(ipts_number)
+            try:
+                tmp_ipts_number = self._myArchiveManager.get_ipts_number(run_number)
+                ipts_set.add(tmp_ipts_number)
+            except KeyError:
+                return False, 'Run {0} has not been searched and thus found in archive.'.format(run_number)
         # END-FOR
         assert len(ipts_set) == 1, 'There are runs from different IPTS.  It is not supported in PyVDrive.'
+        ipts_number = ipts_set.pop()
 
         # Reduce data set
         if auto_reduce:
             # auto reduction
-            ipts_number = self._myArchiveManager.get_ipts_number(runs_to_reduce[0], throw=True)
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
                                                       is_dry_run=False)
+            ret_obj = message
 
         else:
             # manual reduction: Reduce runs
             try:
-                status, ret_obj = self._myProject.reduce_runs()
+                status, ret_obj = self._myProject.reduce_runs(ipts_number=ipts_number,
+                                                              run_number_list=runs_to_reduce,
+                                                              output_directory=output_directory,
+                                                              background=background,
+                                                              vanadium=vanadium,
+                                                              gsas=gsas,
+                                                              fullprof=fullprof,
+                                                              record_file=record,
+                                                              sample_log_file=logs)
+
             except AssertionError as re:
                 status = False
                 ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
-
-        # TODO/NEXT/ISSUE
-        # # Reduce vanadium run for calibration
-        # if norm_by_vanadium is True:
-        #     try:
-        #         self._myProject.reduce_vanadium_runs()
-        #     except RuntimeError as run_err:
-        #         err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
-        #         return False, err_msg
-        # # END-IF (nom_by_vanadium)
 
         return status, ret_obj
 
@@ -1105,7 +1108,10 @@ class VDriveAPI(object):
         if os.path.exists(root_dir) is False:
             return False, 'Directory %s cannot be found.' % root_dir
 
-        self._myArchiveManager.set_data_root_path(root_dir)
+        try:
+            self._myArchiveManager.root_directory = root_dir
+        except OSError as err:
+            return False, 'Unable to set data root directory: {0}'.format(str(err))
 
         return True, ''
 
@@ -1156,7 +1162,7 @@ class VDriveAPI(object):
         return status, err_msg
 
     def set_runs_to_reduce(self, run_numbers):
-        """ Set runs for reduction
+        """ Set runs for reduction by turning on the reduction flag
         Purpose:
             Mark the runs to be reduced;
         Requirements:
@@ -1167,8 +1173,8 @@ class VDriveAPI(object):
         :return: 2-tuple (boolean, string) for status and error message
         """
         # Check requirements
-        assert isinstance(run_numbers, list)
-        assert self._myProject is not None
+        assert isinstance(run_numbers, list), 'Input run number list must be a list.'
+        assert self._myProject is not None, 'Project instance cannot be None.'
 
         # Pass the run number list to VDriveProject
         return_status = True
@@ -1369,25 +1375,25 @@ class VDriveAPI(object):
 
         return
 
-    def set_ipts(self, ipts_number):
-        """ Set IPTS to the workflow
-        Purpose
-
-        Requirement:
-
-        Guarantees:
-
-        :param ipts_number: integer for IPTS number
-        :return:
-        """
-        # Requirements
-        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
-                                             '' % (str(ipts_number), type(ipts_number))
-        assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
-
-        self._myArchiveManager.set_ipts_number(ipts_number)
-
-        return True, ''
+    # def set_ipts(self, ipts_number):
+    #     """ Set IPTS to the workflow
+    #     Purpose
+    #
+    #     Requirement:
+    #
+    #     Guarantees:
+    #
+    #     :param ipts_number: integer for IPTS number
+    #     :return:
+    #     """
+    #     # Requirements
+    #     assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+    #                                          '' % (str(ipts_number), type(ipts_number))
+    #     assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
+    #
+    #     self._myArchiveManager.set_ipts_number(ipts_number)
+    #
+    #     return True, ''
 
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """

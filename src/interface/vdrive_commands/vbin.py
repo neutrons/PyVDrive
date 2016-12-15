@@ -207,11 +207,11 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             tof_max = None
 
-        # set the runs
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
+        # scan the runs with data archive manager and add the runs to project
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
+                                                                                             run_end)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.project.add_runs(run_info_list)
+        self._controller.add_runs_to_project(run_info_list)
 
         # set flag
         run_number_list = list()
@@ -219,10 +219,15 @@ class VBin(procss_vcommand.VDriveCommand):
             run_number_list.append(run_info['run'])
         self._controller.set_runs_to_reduce(run_number_list)
 
-        # reduce
-        self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))
+        # FIXME/TODO/ISSUE/55/ - This is just for debug purpose
+        import os
+        output_dir = os.getcwd()
 
-        return True, error_message
+        # reduce
+        status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+                                                           vanadium=(van_run is not None))
+
+        return status, str(ret_obj)
 
     def get_help(self):
         """

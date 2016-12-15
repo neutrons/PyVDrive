@@ -109,7 +109,7 @@ class VDriveCommand(object):
         assert 0 < self._iptsNumber, 'IPTS number %d is an invalid integer.' % self._iptsNumber
 
         # set
-        self._controller.set_ipts(self._iptsNumber)
+        # self._controller.set_ipts(self._iptsNumber)
 
         return
 
