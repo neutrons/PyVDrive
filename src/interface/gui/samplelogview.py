@@ -166,7 +166,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         """
         # check state
         if self._currPlotID is None:
-            return
+            return True, 'No plot on the screen yet.'
 
         assert len(vec_times) == len(vec_target_ws) + 1, 'Assumption that input is a histogram!'
 
@@ -175,7 +175,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         num_color = len(COLOR_LIST)
 
-        for i_seg in range(len(vec_target_ws)):
+        # if there are too many slicing segments, then only shows the first N segments
+        MAX_SEGMENT_TO_SHOW = 20
+        num_seg_to_show = min(len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
+
+        for i_seg in range(num_seg_to_show):
             # get start time and stop time
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
@@ -200,7 +204,14 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # END-FOR
 
-        return
+        status = True
+        error_msg = None
+        if len(vec_target_ws) > MAX_SEGMENT_TO_SHOW:
+            status = False
+            error_msg = 'There are too many (%d) segments in the slicers.  Only show the first %d.' \
+                        '' % (len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
+
+        return status, error_msg
 
 # END-DEFINITION
 

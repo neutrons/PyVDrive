@@ -18,15 +18,16 @@ import socket
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
+import gui.ui_VdrivePlot as mainUi
+import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView
-import PeakPickWindow as PeakPickWindow
-import gui.VdriveMain as mainUi
 import gui.GuiUtility as GuiUtility
 import AddRunsIPTS as dlgrun
 import LogPickerWindow as LogPicker
 import LogSnapView as dlgSnap
 from vcommand_processor import VdriveCommandProcessor
+import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
 if config.DEBUG:
@@ -115,6 +116,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                      self.do_save_log_slicer)
 
         # Tab-2
+        self.connect(self.ui.pushButton_browseOutputDir, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_output_dir)
+        self.connect(self.ui.checkBox_autoReduction, QtCore.SIGNAL('stateChanged(int)'),
+                     self.do_use_output_vulcan_shared)
         self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
                      self.do_bin_data)
 
@@ -171,6 +176,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._peakPickerWindow = None
         self._snapViewWindow = None
         self._workspaceView = None
+        self._reducedDataViewWindow = None
 
         # Snap view related variables and data structures
         self._currentSnapViewIndex = -1
@@ -332,19 +338,30 @@ class VdriveMainWindow(QtGui.QMainWindow):
             If the data slicing is selected, then reduce the sliced data.
         :return:
         """
-        # Process data slicers
-        if self.ui.checkBox_chopRun.isChecked():
-            raise NotImplementedError('Binning data with option to chop will be solved later!')
+        reducer = ReductionUtil.VulcanGuiReduction(self.ui, self._myWorkflow)
 
-        import VDrivePlotDataBinning as BinHelper
-        status, error_message = BinHelper.do_bin_data(self.ui, self._myWorkflow)
+        status, error_message = reducer.reduce_data()
         if status:
             # Show message to notify user that the reduction is complete
             GuiUtility.pop_dialog_information(self, 'Reduction is complete.')
             # switch the tab to 'VIEW'
             self.ui.tabWidget_reduceData.setCurrentIndex(2)
         else:
+            # reduction failed
             GuiUtility.pop_dialog_error(self, error_message)
+            return
+
+        return
+
+    def do_browse_output_dir(self):
+        """
+        browse output directory
+        :return:
+        """
+        output_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory for output files',
+                                                                self._myWorkflow.get_working_dir()))
+        if len(output_dir) > 0:
+            self.ui.lineEdit_outputDir.setText(output_dir)
 
         return
 
@@ -394,39 +411,65 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_view_reduction(self):
+    def do_use_output_vulcan_shared(self):
         """
-        Purpose: Launch reduction view
-        Requirements: ... ...
-        Guarantees: ... ...
+        use VULCAN shared directory for output
         :return:
         """
-        # TODO/NOW/1st complete it!
+        if self.ui.checkBox_autoReduction.isChecked():
+            # turn on auto reduction mode
+            parent_dir = '/SNS/VULCAN/shared'
 
-        # Launch data view and set up
-        self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
-        self._reducedDataViewWindow.setup(self._myWorkflow)
-        # set up more parameters such as unit ...
-        # ... ...
+            # check access to directories
+            if not os.path.exists(parent_dir):
+                self.ui.checkBox_autoReduction.setChecked(False)
+                GuiUtility.pop_dialog_error(self, 'Archive directory %s cannot found!' % parent_dir)
+                return
+            if not os.access(parent_dir, os.W_OK):
+                self.ui.checkBox_autoReduction.setChecked(False)
+                GuiUtility.pop_dialog_error(self, 'User has no writing permit to archive.')
+                return
 
-        """ TODO/NOW/ Add methods to set up to plot window
-        radioButton_viewInTOF
-        radioButton_viewInD
-        radioButton_viewInQ
+            # set other check boxes
+            self.ui.checkBox_outGSAS.setChecked(True)
+            self.ui.checkBox_outputAutoRecords.setChecked(True)
+            self.ui.checkBox_outputSampleLogs.setChecked(True)
+            self.ui.checkBox_outGSAS.setEnabled(False)
+            self.ui.checkBox_outputAutoRecords.setEnabled(False)
+            self.ui.checkBox_outputSampleLogs.setEnabled(False)
+            self.ui.checkBox_outFullprof.setEnabled(False)
 
-        lineEdit_minX
-        lineEdit_maxX
-
-        checkBox_normaliseCurrent
-        checkBox_normaliseByVanadium
-        checkBox_logScaleIntensity
-        """
-
-        self._reducedDataViewWindow.show()
-
-        # TODO/FIXME/NOW/1st register the window for closing procedure!
+        else:
+            # turn off auto reduction mode
+            self.ui.checkBox_outGSAS.setEnabled(True)
+            self.ui.checkBox_outputAutoRecords.setEnabled(True)
+            self.ui.checkBox_outputSampleLogs.setEnabled(True)
+            self.ui.checkBox_outFullprof.setEnabled(True)
 
         return
+
+    def do_view_reduction(self):
+        """
+        Purpose: Launch reduction view and set up
+        Requirements: ... ...
+        Guarantees: ... ...
+        :return: handler to child window
+        """
+        # create the instance of a reduction data view window
+        if self._reducedDataViewWindow is None:
+            # initialize a window instance it has not been
+            self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
+            self._reducedDataViewWindow.setup(self._myWorkflow)
+            self._myChildWindows.append(self._reducedDataViewWindow)
+        # END-IF
+
+        # update to current reduction status
+        self._reducedDataViewWindow.set_run_numbers(self._myWorkflow.get_reduced_runs(), clear_previous=True)
+
+        # show the window if it exists and return
+        self._reducedDataViewWindow.show()
+
+        return self._reducedDataViewWindow
 
     def do_remove_runs_from_reduction(self):
         """

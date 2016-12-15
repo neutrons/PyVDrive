@@ -50,10 +50,6 @@ import sys
 import pandas as pd
 
 sys.path.append("/opt/mantidnightly/bin")
-# sys.path.append('/opt/mantidunstable/bin/')
-# sys.path.append("/opt/Mantid/bin")
-# sys.path.append('/home/wzz/Mantid/Code/debug/bin/')
-
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -830,7 +826,7 @@ class PatchRecord:
     added to NeXus file or exported to Mantid workspace
     """
     # PatchLogList = ['TotalCounts', 'Monitor1', 'Monitor2', 'Sample']
-    PatchLogList = ['TotalCounts', 'Monitor1', 'Monitor2', 'VROT', 'Vcollimator', 'Sample']
+    PatchLogList = ['TotalCounts', 'Monitor1', 'Monitor2', 'VROT', 'Collimator', 'Sample']
 
     def __init__(self, instrument, ipts, run):
         """ Init
@@ -1063,7 +1059,15 @@ class ReduceVulcanData(object):
         self._instrumentName = 'VULCAN'  # instrument name
         self._dataWorkspaceName = None   # source event data workspace' name
 
+        # for output workspaces
+        self._reducedWorkspaceMtd = None
+        self._reducedWorkspaceVDrive = None
+        self._reducedWorkspaceDSpace = None
+        self._reduceGood = False
+
         self._reducedWorkspaceList = list()
+
+        self._choppedDataDirectory = None
 
         return
 
@@ -1097,7 +1101,7 @@ class ReduceVulcanData(object):
 
         return
 
-    def chop_reduce(self):
+    def chop_reduce(self, chop_dir=None):
         """
         Chop and reduce
         :return:
@@ -1124,6 +1128,10 @@ class ReduceVulcanData(object):
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
 
+        # get the chopped data directory if not specified
+        if chop_dir is None:
+            chop_dir = self._reductionSetup.get_reduced_data_dir()
+
         message = 'Output GSAS files include:\n'
 
         # get splitters workspaces
@@ -1147,12 +1155,20 @@ class ReduceVulcanData(object):
                                         )
 
         # create GSAS file for split workspaces
+        # convert the chopped data to GSAS file in VULCAN's special bin
         info_table = AnalysisDataService.retrieve(split_info_table)
         num_split_ws = info_table.rowCount()
 
         target_chop_index_list = get_target_split_ws_index(split_ws_name)
 
         everything_is_right = True
+
+        # find out a naming issue
+        run_str = '%d' % self._reductionSetup.get_run_number()
+        if chop_dir.count(run_str) == 0:
+            use_special_name = True
+        else:
+            use_special_name = False
 
         chopped_ws_name_list = list()
         for i_ws in range(num_split_ws):
@@ -1180,12 +1196,16 @@ class ReduceVulcanData(object):
                                       EMode="Elastic",
                                       AlignBins=False)
 
-            gsas_file_name = os.path.join(self._reductionSetup.get_reduced_data_dir(),
-                                          '%d_%d.gsa' % (self._reductionSetup.get_run_number(),
-                                                         ws_index))
-
             # overwrite the original file
             vdrive_bin_ws_name = reduced_ws_name
+
+            # it might be tricky to give out the name of GSAS
+            if use_special_name:
+                gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
+                                                                       ws_index+1))
+            else:
+                gsas_file_name = os.path.join(chop_dir, '%d.gda' % (ws_index + 1))
+
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                        OutputWorkspace=vdrive_bin_ws_name,
@@ -1199,6 +1219,36 @@ class ReduceVulcanData(object):
         # END-FOR
 
         return everything_is_right, message, chopped_ws_name_list
+
+    def create_chop_dir(self):
+        """
+        create directory for chopped data
+        :return:
+        """
+        # get output file name with creating necessary directory
+        try:
+            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+            if not os.path.exists(parent_dir):
+                os.mkdir(parent_dir)
+            chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
+            if not os.path.exists(chop_dir):
+                os.mkdir(chop_dir)
+        except OSError as os_err:
+            # mostly because permission to write
+            print '[WARNING] Unable to write to shared folder due to %s.' % str(os_err)
+
+            # get local directory
+            if not os.path.exists(self._reductionSetup.output_directory):
+                os.mkdir(self._reductionSetup.output_directory)
+            chop_dir = os.path.join(self._reductionSetup.output_directory,
+                                    '%d' % self._reductionSetup.get_run_number())
+            if not os.path.exists(chop_dir):
+                os.mkdir(chop_dir)
+                # END
+
+        self._choppedDataDirectory = chop_dir
+
+        return
 
     def dry_run(self):
         """
@@ -1272,8 +1322,11 @@ class ReduceVulcanData(object):
         Execute the chopping and reduction including exporting the log files with chopped data
         :return:
         """
+        # create output directory
+        self.create_chop_dir()
+
         # chop and reduce
-        status, message, output_ws_list = self.chop_reduce()
+        status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
 
         # create the log files
         self.generate_sliced_logs(output_ws_list)
@@ -1723,33 +1776,14 @@ class ReduceVulcanData(object):
             property_name_list.append(p_name)
         property_name_list.sort()
 
-        # get output file name with creating necessary directory
-        try:
-            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
-            if not os.path.exists(parent_dir):
-                os.mkdir(parent_dir)
-            chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-        except OSError as os_err:
-            # mostly because permission to write
-            print '[WARNING] Unable to write to shared folder due to %s.' % str(os_err)
-
-            # get local directory
-            if not os.path.exists(self._reductionSetup.output_directory):
-                os.mkdir(self._reductionSetup.output_directory)
-            chop_dir = os.path.join(self._reductionSetup.output_directory,
-                                    '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-        # END
+        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
 
         # start value
-        start_file_name = os.path.join(chop_dir,
+        start_file_name = os.path.join(self._choppedDataDirectory,
                                        '%dsampleenv_chopped_start.txt' % self._reductionSetup.get_run_number())
-        mean_file_name = os.path.join(chop_dir,
+        mean_file_name = os.path.join(self._choppedDataDirectory,
                                       '%dsampleenv_chopped_mean.txt' % self._reductionSetup.get_run_number())
-        end_file_name = os.path.join(chop_dir,
+        end_file_name = os.path.join(self._choppedDataDirectory,
                                      '%dsampleenv_chopped_end.txt' % self._reductionSetup.get_run_number())
 
         # output
@@ -1826,7 +1860,23 @@ class ReduceVulcanData(object):
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
         pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
 
+        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+                                                                          end_file_name)
+
         return
+
+    def get_reduced_workspaces(self, chopped):
+        """
+
+        :param chopped:
+        :return: 2-tuples
+        [1] non-chopped data: True/False, (VDrive workspace, Mantid TOF workspace, Mantid DSpacing workspace)
+        """
+        # early return for chopped data
+        if chopped:
+            return True, self._reducedWorkspaceList[:]
+
+        return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceDSpace)
 
     def load_data_file(self):
         """
@@ -1856,7 +1906,7 @@ class ReduceVulcanData(object):
     def reduce_powder_diffraction_data(self):
         """
         reduce powder diffraction data
-        :return:
+        :return: 2-tuples
         """
         # required parameters:  ipts, runnumber, outputdir
 
@@ -1919,6 +1969,12 @@ class ReduceVulcanData(object):
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+
+        # collect result
+        self._reducedWorkspaceDSpace = reduced_ws_name
+        self._reducedWorkspaceMtd = tof_ws_name
+        self._reducedWorkspaceVDrive = vdrive_bin_ws_name
+        self._reduceGood = True
 
         return True, message
 

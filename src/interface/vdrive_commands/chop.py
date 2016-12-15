@@ -1,15 +1,28 @@
-import random
+"""
+Implement VDRIVE command VCHOP
+"""
+import os
 from procss_vcommand import VDriveCommand
-"""
-VCHROP
-"""
 
 
 class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT']
+    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT', 'DRYRUN']
+
+    ArgsDocDict = {
+        'IPTS': 'IPTS number',
+        'RUNS': 'First run number',
+        'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
+
+        'dbin': 'time step for binning interval',
+        'loadframe': 'chop load frame data',
+        'bin': 'If bin=1, chopped data will be reduced to GSAS files',
+
+        'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
+        'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
+    }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
         """
@@ -35,6 +48,105 @@ class VdriveChop(VDriveCommand):
         
         return
 
+    def chop_data_by_log(self):
+        """
+
+        :return:
+        """
+        # run_number=run_number,
+        #                                                 start_time=None,
+        #                                                 stop_time=None,
+        #                                                 log_name=log_name,
+        #                                                 log_value_stepl=delta_log_value,
+        #                                                 reduce_flag=output_to_gsas,
+        #                                                 output_dir=output_dir,
+        #                                                 dry_run=is_dry_run)
+        # TODO/ISSUE/55 - Implement!
+
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir,
+                          dry_run):
+        """
+        Chop data by time interval
+        :param run_number:
+        :param start_time:
+        :param stop_time:
+        :param time_interval:
+        :param reduce_flag: flag to reduce the data afterwards
+        :param output_dir:
+        :param dry_run:
+        :return:
+        """
+        # check inputs
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            '' % (str(run_number), type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+
+        # dry run: return input options
+        if dry_run:
+            outputs = 'Slice IPTS-%d Run %d by time with (%s, %s, %s) ' % (self._iptsNumber, run_number,
+                                                                           str(start_time), str(time_interval),
+                                                                           str(stop_time))
+            if reduce_flag:
+                outputs += 'and reduce (to GSAS) '
+            else:
+                outputs += 'and save to NeXus files '
+            outputs += 'to directory %s' % output_dir
+
+            if not os.access(output_dir, os.W_OK):
+                outputs += '\n[WARNING] Output directory %s is not writable!' % output_dir
+
+            return True, outputs
+        # END-IF (dry run)
+
+        # generate data slicer
+        status, slicer_key = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
+                                                                      time_interval)
+        if not status:
+            error_msg = str(slicer_key)
+            return False, 'Unable to generate data slicer by time due to %s.' % error_msg
+
+        # chop and reduce
+        status, message = self._controller.slice_data(run_number, slicer_key,
+                                                      reduce_data=reduce_flag, output_dir=output_dir)
+
+        return status, message
+        # # load file
+        # nxs_file_name = self._dataFileDict[run_number][0]
+        # ws_name = os.path.basename(nxs_file_name).split('.')[0]
+        # mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
+        #
+        # # generate event filter
+        # split_ws_name = 'TimeSplitters_%07d' % run_number
+        # info_ws_name = 'TimeInfoTable_%07d' % run_number
+        # status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
+        #                                                                start_time, stop_time, time_interval,
+        #                                                                time_unit='Seconds')
+        # if not status:
+        #     error_message = str(ret_obj)
+        #     return False, error_message
+        #
+        # if reduce_flag:
+        #     # reduce to GSAS and etc
+        #     reduce_setup = reduce_VULCAN.ReductionSetup()
+        #     reduce_setup.set_event_file(nxs_file_name)
+        #     reduce_setup.set_output_dir(output_dir)
+        #     reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+        #     reduce_setup.is_full_reduction = False
+        #
+        #     # add splitter workspace and splitter information workspace
+        #     reduce_setup.set_splitters(split_ws_name, info_ws_name)
+        #
+        #     reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+        #     status, message = reducer.chop_reduce()
+        #
+        # else:
+        #     # just split the workspace and saved in memory
+        #     # TODO/FIXME/NOW - TOF correction should be left to user to specify
+        #     mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
+
+        return True, message
+
     def exec_cmd(self):
         """
         Execute input command (override)
@@ -46,32 +158,39 @@ class VdriveChop(VDriveCommand):
 
         # parse the scope of runs
         # run numbers
-        if 'RUNS' in self._commandArgList:
+        if 'RUNS' in self._commandArgsDict:
             # get RUNS/RUNE from arguments
-            run_start = int(self._commandArgList['RUNS'])
-            if 'RUNE' in self._commandArgList:
-                run_end = int(self._commandArgList['RUNE'])
+            run_start = int(self._commandArgsDict['RUNS'])
+            if 'RUNE' in self._commandArgsDict:
+                run_end = int(self._commandArgsDict['RUNE'])
             else:
                 run_end = run_start
             self._runNumberList = range(run_start, run_end + 1)
-        elif len(self._commandArgList) > 0:
+        elif len(self._commandArgsDict) > 0:
             # from previously stored value
-            run_start = self._commandArgList[0]
-            run_end = self._commandArgList[-1]
+            run_start = self._commandArgsDict[0]
+            run_end = self._commandArgsDict[-1]
         else:
             # not properly set up
             raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
         # END-IF
 
         # locate the runs and add the reduction project
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
+                                                                                             run_end)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.project.add_runs(run_info_list)
+        self._controller.add_runs_to_project(run_info_list)
 
-        if 'HELP' in self._commandArgList:
+        # Go through all the arguments
+        if 'HELP' in self._commandArgsDict:
             # pop out the window
             return True, 'pop'
+
+        if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
+            # dry run
+            is_dry_run = True
+        else:
+            is_dry_run = False
 
         # check input parameters
         assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
@@ -80,17 +199,17 @@ class VdriveChop(VDriveCommand):
             )
 
         # parse other optional parameters
-        if 'dbin' in self._commandArgList:
-            time_step = float(self._commandArgList['dbin'])
+        if 'dbin' in self._commandArgsDict:
+            time_step = float(self._commandArgsDict['dbin'])
         else:
             time_step = None
 
-        if 'loadframe' in self._commandArgList:
+        if 'loadframe' in self._commandArgsDict:
             use_load_frame = True
         else:
             use_load_frame = False
 
-        if 'bin' in self._commandArgList:
+        if 'bin' in self._commandArgsDict:
             output_to_gsas = True
         else:
             output_to_gsas = False
@@ -100,8 +219,9 @@ class VdriveChop(VDriveCommand):
         else:
             log_name = None
 
-        if 'OUTPUT' in self._commandArgList:
-            output_dir = str(self._commandArgList['OUTPUT'])
+        if 'OUTPUT' in self._commandArgsDict:
+            # use user defined
+            output_dir = str(self._commandArgsDict['OUTPUT'])
         else:
             output_dir = None
 
@@ -109,27 +229,83 @@ class VdriveChop(VDriveCommand):
         sum_msg = ''
         final_success = True
         for run_number in range(run_start, run_end+1):
-            # chop
-            if time_step is not None:
-                status, message = self._controller.project.chop_data_by_time(run_number=run_number,
-                                                                             start_time=None,
-                                                                             stop_time=None,
-                                                                             time_interval=time_step,
-                                                                             reduce_flag=output_to_gsas,
-                                                                             output_dir=output_dir)
-                final_success = final_success and status
-                sum_msg += 'Run %d: %s\n' % (run_number, message)
-            else:
-                raise RuntimeError('Not implemented yet for chopping by log value.')
+            # create default directory
+            if output_dir is None:
+                try:
+                    output_dir = self.create_default_chop_output_dir(run_number)
+                except OSError as os_err:
+                    final_success = False
+                    sum_msg += 'Unable to chop and reduce run %d due to %s.' % (run_number, str(os_err))
+                    continue
 
+            # chop and optionally reduce
+            if time_step is not None:
+                # chop by time and reduce
+                status, message = self.chop_data_by_time(run_number=run_number,
+                                                         start_time=None,
+                                                         stop_time=None,
+                                                         time_interval=time_step,
+                                                         reduce_flag=output_to_gsas,
+                                                         output_dir=output_dir,
+                                                         dry_run=is_dry_run)
+            else:
+                # chop by log value
+                status, message = self.chop_data_by_log(run_number=run_number,
+                                                        start_time=None,
+                                                        stop_time=None,
+                                                        log_name=log_name,
+                                                        log_value_stepl=delta_log_value,
+                                                        reduce_flag=output_to_gsas,
+                                                        output_dir=output_dir,
+                                                        dry_run=is_dry_run)
+            # END-IF-ELSE
+
+            final_success = final_success and status
+            sum_msg += 'Run %d: %s\n' % (run_number, message)
         # END-FOR (run_number)
 
-        # TODO/THINK/ISSUE/51 - shall a signal be emit???
+        # TODO/THINK/ISSUE/55 - shall a signal be emit???
         # self.reduceSignal.emit(command_args)
 
         print '[DB...BAT] CHOP Message: ', sum_msg
 
         return final_success, sum_msg
+
+    def create_default_chop_output_dir(self, run_number):
+        """
+        find out the default output directory for the run from /SNS/VULCAN/IPTS-???/shared/
+        and create it!
+        :exception: OSError if there is no permit to create the directory
+        :param run_number:
+        :return: directory name
+        """
+        # check root
+        ipts_root_dir = '/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber
+        if not os.access(ipts_root_dir, os.W_OK):
+            raise OSError('User has no writing permission to ITPS shared directory for chopped data %s.'
+                          '' % ipts_root_dir)
+
+        # check and create directory ../../ChoppedData/
+        chop_dir = os.path.join(ipts_root_dir, 'ChoppedData')
+        if os.path.exists(chop_dir):
+            if not os.access(chop_dir, os.W_OK):
+                raise OSError('User has no writing permission to directory %s for chopped data.'
+                              '' % chop_dir)
+        else:
+            os.mkdir(chop_dir)
+            os.chmod(chop_dir, 0777)
+
+        # create the Chopped data for the run
+        default_dir = os.path.join(chop_dir, '%d' % run_number)
+        if os.path.exists(default_dir):
+            if not os.access(default_dir, os.W_OK):
+                raise OSError('User has no writing permission to previously-generated %s for chopped data.'
+                              '' % default_dir)
+        else:
+            os.mkdir(default_dir)
+            os.chmod(default_dir, 0777)
+
+        return default_dir
 
     def get_help(self):
         """
@@ -137,13 +313,18 @@ class VdriveChop(VDriveCommand):
         :return:
         """
         help_str = 'Chop runs\n'
-        help_str += 'CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1\n'
-        help_str += 'Debug (chop run 96450) by 60 seconds:\n'
-        help_str += 'CHOP, IPTS=14094, RUNS=96450, dbin=60\n\n'
 
-        help_str += 'HELP:      the Log Picker Window will be launched and set up with given RUN number.\n'
-        help_str += 'bin=1:     chopped data will be reduced to GSAS files.\n'
-        help_str += 'loadframe: \n'
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        help_str += 'Examples:\n'
+        help_str += '1. Chop run 96450 by 60 seconds:\n'
+        help_str += ' > CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1\n\n'
 
         return help_str
 

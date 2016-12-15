@@ -33,7 +33,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         :return:
         """
         try:
-            ipts = int(self._commandArgList['IPTS'])
+            ipts = int(self._commandArgsDict['IPTS'])
         except KeyError:
             return False, 'IPTS must be given!'
         else:
@@ -41,11 +41,11 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 
         run_numbers_str = 'NO DEFINED'
         try:
-            run_numbers_str = self._commandArgList['RUNS']
+            run_numbers_str = self._commandArgsDict['RUNS']
             run_number_list = self.split_run_numbers(run_numbers_str)
-            if len(run_number_list) == 1 and 'RUNE' in self._commandArgList:
+            if len(run_number_list) == 1 and 'RUNE' in self._commandArgsDict:
                 # allow RUNE if RUNS is just 1 value
-                run_end = int(self._commandArgList['RUNE'])
+                run_end = int(self._commandArgsDict['RUNE'])
                 run_number_list = range(run_number_list[0], run_end)
         except KeyError:
             return False, 'RUNS number must be given.'
@@ -56,13 +56,13 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         else:
             print '[DB...BAT] Runs = ', run_number_list
 
-        if 'DRYRUN' in self._commandArgList:
-            dry_run = bool(int(self._commandArgList['DRYRUN']))
+        if 'DRYRUN' in self._commandArgsDict:
+            dry_run = bool(int(self._commandArgsDict['DRYRUN']))
         else:
             dry_run = False
 
-        if 'OUTPUT' in self._commandArgList:
-            output_dir = self._commandArgList['OUTPUT']
+        if 'OUTPUT' in self._commandArgsDict:
+            output_dir = self._commandArgsDict['OUTPUT']
         else:
             output_dir = None
 
@@ -134,6 +134,16 @@ class VBin(procss_vcommand.VDriveCommand):
             'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'Tag',
             'BinFoler', 'Mytofbmax', 'Mytobmin']
 
+    ArgsDocDict = {
+        'IPTS': 'IPTS number',
+        'RUNE': 'First run number',
+        'RUNS': 'Last run number',
+
+        'RUNV': 'Run number for vanadium file (file in instrument directory)',
+        'OneBank': 'Add 2 bank data together (=1).',
+        'Tag': '"Si/V" for instrument calibration.',
+    }
+
     def __init__(self, controller, command_args):
         """ Initialization
         """
@@ -150,7 +160,7 @@ class VBin(procss_vcommand.VDriveCommand):
         Execute command: override
         """
         # check whether the any non-supported args
-        input_args = self._commandArgList.keys()
+        input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
             if arg_key not in VBin.SupportedArgs:
                 raise KeyError('VBIN argument %s is not recognized.' % arg_key)
@@ -160,8 +170,8 @@ class VBin(procss_vcommand.VDriveCommand):
         self.set_ipts()
 
         # RUNS or CHOPRUN
-        run_start = int(self._commandArgList['RUNS'])
-        run_end = int(self._commandArgList['RUNE'])
+        run_start = int(self._commandArgsDict['RUNS'])
+        run_end = int(self._commandArgsDict['RUNE'])
         assert 0 < run_start < run_end, 'It is impossible to have run_start = %d and run_end = %d' \
                                         '' % (run_start, run_end)
         
@@ -173,7 +183,7 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # bin with
         if 'BINW' in input_args:
-            bin_width = float(self._commandArgList['BINW'])
+            bin_width = float(self._commandArgsDict['BINW'])
         else:
             bin_width = 0.005
 
@@ -183,25 +193,26 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNV
         if 'RUNV' in input_args:
-            van_run = int(self._commandArgList['RUNV'])
+            # TODO/ISSUE/55 FIND IT AT /SNS/VULCAN/IPTS-14094/shared/Instrument
+            van_run = int(self._commandArgsDict['RUNV'])
         else:
             van_run = None
 
         if 'FullProf' in input_args:
-            output_fullprof = int(self._commandArgList['Fullprof']) == 1
+            output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
             output_fullprof = False
 
         if 'Mytofbmax' in input_args:
-            tof_max = float(self._commandArgList['Mytofbmax'])
+            tof_max = float(self._commandArgsDict['Mytofbmax'])
         else:
             tof_max = None
 
-        # set the runs
-        archive_key, error_message = self._controller.archive_manager.scan_archive(self._iptsNumber, run_start,
-                                                                                   run_end)
+        # scan the runs with data archive manager and add the runs to project
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
+                                                                                             run_end)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.project.add_runs(run_info_list)
+        self._controller.add_runs_to_project(run_info_list)
 
         # set flag
         run_number_list = list()
@@ -209,21 +220,35 @@ class VBin(procss_vcommand.VDriveCommand):
             run_number_list.append(run_info['run'])
         self._controller.set_runs_to_reduce(run_number_list)
 
+        # FIXME/TODO/ISSUE/55/ - This is just for debug purpose
+        import os
+        output_dir = os.getcwd()
+
         # reduce
-        self._controller.reduce_data_set(norm_by_vanadium=(van_run is not None))
+        status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+                                                           vanadium=(van_run is not None))
 
-        return True, error_message
+        return status, str(ret_obj)
 
-    @staticmethod
-    def get_help():
+    def get_help(self):
         """
-
+        get help
         :return:
         """
-        help_str = 'VBIN/VDRIVEBIN: binning data\n' \
-                   'Example: VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n' \
-                   '\n' \
-                   'Debug: "VBIN,IPTS=14094,RUNS=96450,RUNE=96451"'
+        help_str = 'VBIN/VDRIVEBIN: binning data (without generating log files)\n'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        # examples
+        help_str += 'Examples:\n'
+        help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
+        help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
 
         return help_str
 

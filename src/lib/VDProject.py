@@ -76,25 +76,6 @@ class VDProject(object):
 
         return
 
-    def add_runs(self, run_info_list):
-        """
-        List of run-info-dict
-        :param run_info_list:
-        :return:
-        """
-        # check
-        assert isinstance(run_info_list, list), 'Run information list cannot be of type %s.' \
-                                                '' % type(run_info_list)
-
-        for run_info in run_info_list:
-            assert isinstance(run_info, dict)
-            run_number = run_info['run']
-            ipts_number = run_info['ipts']
-            file_name = run_info['file']
-            self.add_run(run_number, file_name, ipts_number)
-
-        return
-
     def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
@@ -126,7 +107,12 @@ class VDProject(object):
         if reduce_flag:
             # reduce to GSAS
             reduce_setup = reduce_VULCAN.ReductionSetup()
-            reduce_setup.set_event_file(self.get_file_path(run_number))
+
+            src_file_name, ipts_number = self.get_run_info(run_number)
+            reduce_setup.set_ipts_number(ipts_number)
+            reduce_setup.set_run_number(run_number)
+            reduce_setup.set_event_file(src_file_name)
+
             reduce_setup.set_output_dir(output_dir)
             reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
             reduce_setup.is_full_reduction = False
@@ -151,61 +137,9 @@ class VDProject(object):
                                            delete_split_ws=True)
 
             status = True
-            message = 'blablabla'
+            message = 'Run %d is chopped and reduced. ' % run_number
 
         return status, message
-
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir):
-        """
-        Chop data by time interval
-        :param run_number:
-        :param start_time:
-        :param stop_time:
-        :param time_interval:
-        :param reduce_flag: flag to reduce the data afterwards
-        :param output_dir:
-        :return:
-        """
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
-
-        # load file
-        nxs_file_name = self._dataFileDict[run_number][0]
-        ws_name = os.path.basename(nxs_file_name).split('.')[0]
-        mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
-
-        # generate event filter
-        split_ws_name = 'TimeSplitters_%07d' % run_number
-        info_ws_name = 'TimeInfoTable_%07d' % run_number
-        status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
-                                                                       start_time, stop_time, time_interval,
-                                                                       time_unit='Seconds')
-        if not status:
-            error_message = str(ret_obj)
-            return False, error_message
-
-        if reduce_flag:
-            # reduce to GSAS and etc
-            reduce_setup = reduce_VULCAN.ReductionSetup()
-            reduce_setup.set_event_file(nxs_file_name)
-            reduce_setup.set_output_dir(output_dir)
-            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-            reduce_setup.is_full_reduction = False
-
-            # add splitter workspace and splitter information workspace
-            reduce_setup.set_splitters(split_ws_name, info_ws_name)
-
-            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            status, message = reducer.chop_reduce()
-
-        else:
-            # just split the workspace and saved in memory
-            # TODO/FIXME/NOW - TOF correction should be left to user to specify
-            mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
-
-        return True, message
 
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
@@ -280,6 +214,7 @@ class VDProject(object):
         else:
             # create a new DataChopper associated with this run
             nxs_file_name = self.get_file_path(run_number)
+            print '[DB...BAT 104022] NeXus file name: ', nxs_file_name
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
@@ -405,20 +340,17 @@ class VDProject(object):
         """
         return len(self._dataFileDict)
 
-    def get_number_reduction_runs(self):
+    def get_runs_to_reduce(self):
         """
-        Get the number/amount of the runs that have been reduced.
-        :return:
+        Get run numbers that are going to be reduced
+        :return: a list of integers
         """
-        num_to_reduce = 0
-        print '[DB-BAT] ', self._sampleRunReductionFlagDict
-        print
-
+        run_number_list = list()
         for run_number in self._sampleRunReductionFlagDict.keys():
             if self._sampleRunReductionFlagDict[run_number]:
-                num_to_reduce += 1
+                run_number_list.append(run_number)
 
-        return num_to_reduce
+        return run_number_list
 
     def get_reduced_runs(self):
         """ Get the run/run numbers of the reduced runs
@@ -437,10 +369,10 @@ class VDProject(object):
         """
         # check
         assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str)
+        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
 
         # get reduced workspace name
-        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)
+        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
 
         # get data
         data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
@@ -468,7 +400,7 @@ class VDProject(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number)
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -477,9 +409,9 @@ class VDProject(object):
         """
         Get run's information
         :param run_number:
-        :return:  2-tuple (file name, IPTS)
+        :return:  2-tuple (file name, IPTS number)
         """
-        if self._dataFileDict.has_key(run_number) is False:
+        if run_number not in self._dataFileDict:
             raise RuntimeError('Unable to find run %d in project manager.' % run_number)
 
         return self._dataFileDict[run_number]
@@ -612,20 +544,14 @@ class VDProject(object):
 
         return
 
-    def reduce_runs(self):
-        """ Reduce a set of runs without being normalized by vanadium. Mostly align and focus
+    def reduce_runs(self, ipts_number, run_number_list, output_directory, background=False,
+                    vanadium=False, gsas=True, fullprof=False, record_file=False,
+                    sample_log_file=False):
+        """
+        Reduce a set of runs with selected options
         Purpose:
         Requirements:
         Guarantees:
-
-        Note:
-        1. There is no need to call LoadCalFile explicitly, because AlignAndFocus() will
-           check whether the calibration file has been loaded by standard offset and group
-           workspace name.
-
-        Migrated from reduceToPDData(self, normByVanadium=True, eventFilteringSetup=None):
-        Focus and process the selected data sets to powder diffraction data
-        for GSAS/Fullprof/ format
 
         Workflow:
          1. Get a list of runs to reduce;
@@ -636,124 +562,64 @@ class VDProject(object):
         Arguments:
          - normByVanadium :: flag to normalize by vanadium
 
+
+        Note:
+        1. There is no need to call LoadCalFile explicitly, because AlignAndFocus() will
+           check whether the calibration file has been loaded by standard offset and group
+           workspace name.
+        2. It tries to use most of the existing methods from auto reduction scripts
+        Focus and process the selected data sets to powder diffraction data
+        for GSAS/Fullprof/ format
+        :param run_number_list:
+        :param output_directory:
+        :param background:
+        :param vanadium:
+        :param gsas:
+        :param fullprof:
+        :param record_file:
+        :param sample_log_file:
         :return:
         """
-        # Load time focusing calibration: there is no need to load time focus calibration
-        try:
-            self._reductionManager.load_time_focus_calibration()
-        except AssertionError, err:
-            raise RuntimeError('Unable to load time focus calibration due to %s.' % str(err))
+        import reduce_VULCAN
 
-        # Reduce all runs
-        for run_number in self._sampleRunReductionFlagDict.keys():
-            if self._sampleRunReductionFlagDict[run_number] is True:
-                # Initialize trackers
-                data_file_name = self._dataFileDict[run_number][0]
-                self._reductionManager.init_tracker(run_number, data_file_name)
+        # check input
+        assert isinstance(run_number_list, list), 'Run number must be a list.'
 
-                # Reduce
-                self._reductionManager.reduce_sample_run(run_number)
+        # set up reduction general
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        reduction_setup.set_default_calibration_files()
+        reduction_setup.set_output_dir(output_directory)
+        if gsas:
+            reduction_setup.set_gsas_dir(output_directory, True)
+
+        reduce_all_success = True
+        message = ''
+
+        for run_number in run_number_list:
+            # set up
+            reduction_setup.set_run_number(run_number)
+            full_event_file_path, ipts_number = self._dataFileDict[run_number]
+            reduction_setup.set_event_file(full_event_file_path)
+            reduction_setup.set_ipts_number(ipts_number)
+
+            # init tracker
+            self._reductionManager.init_tracker(run_number)
+
+            # reduce
+            reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
+            reduce_good, message = reducer.execute_vulcan_reduction()
+
+            status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
+            reduce_all_success = reduce_all_success and status
+            if status:
+                vdrive_ws, tof_ws, d_ws = ret_obj
+                self._reductionManager.set_reduced_workspaces(run_number, vdrive_ws, tof_ws, d_ws)
+            else:
+                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, str(ret_obj))
+
         # END-FOR
 
-        return True, ''
-
-        print 'Refactor!'
-        self._lastReductionSuccess = False
-
-        # Build list of files to reduce
-        rundict = {}
-        runbasenamelist = []
-        for run in self._reductionFlagDict.keys():
-            if self._reductionFlagDict[run] is True:
-                basenamerun = os.path.basename(run)
-                rundict[basenamerun] = (run, None)
-                runbasenamelist.append(basenamerun)
-        # ENDFOR
-        print "[DB] Runs to reduce: %s." % (str(runbasenamelist))
-        if len(rundict.keys()) == 0:
-            return (False, 'No run is selected to reduce!')
-
-        # Build list of vanadium runs
-        vanrunlist = []
-        if normByVanadium is True:
-            for runbasename in sorted(self._datacalibfiledict.keys()):
-                if (runbasename in runbasenamelist) is True:
-                    print "[DB] Run %s has vanadium mapped: %s" % (runbasename, str(self._datacalibfiledict[runbasename]))
-                    candidlist = self._datacalibfiledict[runbasename][0]
-                    if candidlist is None:
-                        # no mapped vanadium
-                        continue
-                    elif isinstance(candidlist, list) is False:
-                        # unsupported case
-                        raise NotImplementedError("Vanadium candidate list 'candidlist' must be either list or None. \
-                                Now it is %s." % (str(candidlist)))
-                    vanindex = self._datacalibfiledict[runbasename][1]
-                    try:
-                        vanrunlist.append(int(candidlist[vanindex]))
-                        rundict[runbasename] = (rundict[runbasename][0], int(candidlist[vanindex]))
-                    except TypeError as te:
-                        print "[Warning] Van run in candidate list is %s.  \
-                                Cannot be converted to van run du to %s. " % (str(candidlist[vanindex]), str(te))
-                    except IndexError as ie:
-                        raise ie
-                # ENDIF
-            # ENDFOR
-            vanrunlist = list(set(vanrunlist))
-        # ENDIF
-        print "[DB] Vanadium runs (to reduce): %s" % (str(vanrunlist))
-
-        # from vanadium run to create vanadium file
-        vanfilenamedict = {}
-        for vrun in vanrunlist:
-            vanfilename = self._generateFileName(vrun, self._myVanRunIptsDict[int(vrun)])
-            vanfilenamedict[int(vrun)] = vanfilename
-        # ENDFOR
-
-        # Reduce all vanadium runs
-        vanPdrDict = {}
-        for vrun in vanrunlist:
-            vrunfilename = vanfilenamedict[vrun]
-            vpdr = prl.ReductionManager(vrunfilename, isvanadium=True)
-            vanws = vpdr.reduce_vanadium_run(params={})
-            if vanws is None:
-                raise NotImplementedError("Unable to reduce vanadium run %s." % (str(vrun)))
-            vanPdrDict[vrun] = vpdr
-        # ENDFOR
-
-        # Reduce all
-        for basenamerun in sorted(rundict.keys()):
-            # reduce regular powder diffraction data
-            fullpathfname = rundict[basenamerun][0]
-            vanrun = rundict[basenamerun][1]
-
-            runpdr = prl.ReductionManager(fullpathfname, isvanadium=False)
-
-            # optinally chop
-            doChopData = False
-            if eventFilteringSetup is not None:
-                runpdr.setupEventFiltering(eventFilteringSetup)
-                doChopData = True
-            # ENDIF
-
-            # set up vanadium
-            if vanPdrDict.has_key(vanrun) is True and normByVanadium is True:
-                vrun = vanPdrDict[vanrun]
-            else:
-                vrun = None
-            # ENDIF (vrun)
-
-            # reduce data
-            runpdr.reducePDData(params=prl.PowderReductionParameters(),
-                                vrun=vrun,
-                                chopdata=doChopData,
-                                tofmin=self._tofMin, tofmax=self._tofMax)
-
-            self._myRunPdrDict[basenamerun] = runpdr
-        # ENDFOR(basenamerun)
-
-        self._lastReductionSuccess = True
-
-        return (True, '')
+        return reduce_all_success, message
 
     def save_session(self, out_file_name):
         """ Save session to a dictionary

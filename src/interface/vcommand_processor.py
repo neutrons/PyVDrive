@@ -8,6 +8,7 @@ from PyQt4.QtCore import pyqtSignal
 import vdrive_commands.chop
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
+import vdrive_commands.view
 import vdrive_commands.procss_vcommand
 
 
@@ -32,7 +33,7 @@ class VdriveCommandProcessor(object):
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW']
 
         return
 
@@ -88,6 +89,8 @@ class VdriveCommandProcessor(object):
             status, err_msg = self._process_chop(arg_dict)
         elif command == 'VBIN':
             status, err_msg = self._process_vbin(arg_dict)
+        elif command == 'VDRIVEVIEW' or command == 'VIEW':
+            status, err_msg = self._process_view(arg_dict)
         elif command == 'MERGE':
             status, err_msg = self._process_merge(arg_dict)
         elif command == 'AUTO':
@@ -144,6 +147,47 @@ class VdriveCommandProcessor(object):
             log_window = self._mainWindow.do_launch_log_picker_window()
             log_window.load_run(self._chopRunNumberList[0])
         # END-IF
+
+        return status, message
+
+    def _process_view(self, arg_dict):
+        """
+        process command VIEW or VDRIVEVIEW
+        :param arg_dict:
+        :return:
+        """
+        # create a new VdriveView instance
+        try:
+            processor = vdrive_commands.view.VdriveView(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
+
+        # execute
+        status, message = self._process_command(processor, arg_dict)
+        if not status:
+            return status, message
+
+        view_window = self._mainWindow.do_view_reduction()
+        view_window.set_ipts_number(processor.get_ipts_number())
+
+        if processor.is_1_d:
+            # 1-D image
+            view_window.set_canvas_type(dimension=1)
+            view_window.set_run_numbers(processor.get_run_number_list())
+            # plot
+            view_window.plot_run(processor.get_run_number(), bank_id=1)
+        elif processor.is_chopped_run:
+            # 2-D image for chopped run
+            view_window.set_canvas_type(dimension=2)
+            view_window.set_chop_run_number(processor.get_run_number())
+            view_window.set_chop_sequence(processor.get_chopped_sequence_range())
+            view_window.plot_chopped_run(chopped_data_dir=processor.get_reduced_data_directory())
+        else:
+            # 2-D or 3-D image for multiple runs
+            view_window.set_canvas_type(dimension=2)
+            view_window.set_run_numbers(processor.get_run_number_list())
+            view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
+        # END-FOR
 
         return status, message
 

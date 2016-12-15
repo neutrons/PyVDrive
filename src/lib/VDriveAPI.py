@@ -430,25 +430,88 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_data(self, run_id, target_unit):
+    def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
+        """
+        sequence to look for chopped data
+        :param ipts_number:
+        :param run_number:
+        :param chop_seq:
+        :param search_archive: flag to search the chopped data from archive under
+            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/
+        :return: 2-tuple [1] boolean (data found) [2] data dictionary
+        """
+        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
+        assert isinstance(run_number, int), 'Run number must be an integer'
+        assert isinstance(chop_seq, int), 'chop sequence must be a non-negative integer.'
+
+        # try to get from archive first
+        data_set_dict = None
+        data_found = False
+
+        # search from archive
+        if search_archive:
+            try:
+                data_set_dict = self._myArchiveManager.get_data_archive_chopped_gsas(ipts_number, run_number, chop_seq)
+            except RuntimeError:
+                pass
+            else:
+                data_found = True
+        # END-IF
+
+        # search from user-specified directories
+        if not data_found and search_dirs is not None:
+            try:
+                data_set_dict = self._myArchiveManager.get_data_chopped_gsas(search_dirs, run_number, chop_seq)
+            except RuntimeError:
+                pass
+            else:
+                data_found = True
+        # END-IF
+
+        # check
+        if not data_found:
+            error_message = 'Unable to find chopped and reduced run %d chopped seq %d' % (run_number, chop_seq)
+            ret_obj = error_message
+        else:
+            assert data_set_dict is not None, 'Data set dictionary cannot be None (i.e., data not found)'
+            ret_obj = data_set_dict
+
+        return data_found, ret_obj
+
+    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
         :param run_id: it is a run number or data key
         :param target_unit:
+        :param ipts_number: IPTS number
+        :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
         # Check
         assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
                                                                    'but not %s.' % str(type(run_id))
-
         assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
 
+        # 2 cases: run ID is run number or run ID is the file name
         if isinstance(run_id, int):
             # case as run number
             run_number = run_id
-            data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            try:
+                # get data from current Project
+                data_set = self._myProject.get_reduced_data(run_number, target_unit)
+            except KeyError:
+                print '[INFO] Run %d is not reduced in current session.' % run_number
+                # optionally get data from archive
+                if search_archive:
+                    assert isinstance(ipts_number, int), 'IPTS number must be an integer'
+                    data_set = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_number)
+                    if data_set is None:
+                        return False, 'Unable to get data from archive'
+                else:
+                    return False, 'Data is not reduced in this session.'
+            # END-TRY-EXCEPTION
         else:
             # case as dat key
             data_key = run_id
@@ -620,10 +683,10 @@ class VDriveAPI(object):
         status = False
 
         try:
-            archive_key = self._myArchiveManager.scan_experiment_run_info(ipts_dir)
+            ipts_number = self._myArchiveManager.scan_runs_from_directory(ipts_dir)
 
             status = True
-            ret_obj = archive_key
+            ret_obj = ipts_number
         except AssertionError as ass_err:
             ret_obj = str(ass_err)
 
@@ -909,8 +972,11 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, norm_by_vanadium=False, bin_size=None):
-        """ Reduce a set of data
+    def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
+                        vanadium=False, special_pattern=False,
+                        record=False, logs=False, gsas=True, fullprof=False):
+        """
+        Reduce a set of data
         Purpose:
             Reduce a set of event data
         Requirements:
@@ -919,30 +985,61 @@ class VDriveAPI(object):
             -
         Guarantees:
             Event data will be reduced to diffraction pattern.
-
-        :param norm_by_vanadium: flag to normalize the final reduction data by vanadium
+        :param auto_reduce: boolean flag whether the reduction uses auto reduction script
+        :param output_directory:  output directory
+        :param binning: binning parameter. [1] None for default; [2] a size 1 container as bin size
+                                           [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
+        :param background: boolean flag to subtract background
+        :param vanadium: boolean flag to normalize by vanadium
+        :param special_pattern: boolean flag to normalize by special pattern
+        :param record: boolean flag to output AutoRecord and etc.
+        :param logs: boolean flag to output sample log files (MTS)
+        :param gsas: boolean flag to produce GSAS files from reduced runs
+        :param fullprof: boolean flag tro produces Fullprof files from reduced runs
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
-        num_runs_flagged = self._myProject.get_number_reduction_runs()
+        runs_to_reduce = self._myProject.get_runs_to_reduce()
+        num_runs_flagged = len(runs_to_reduce)
         assert num_runs_flagged > 0, 'At least one run should be flagged for reduction.'
 
-        # Reduce vanadium run for calibration
-        if norm_by_vanadium is True:
+        # check whether all the runs to reduce are belonged to the same IPTS number
+        ipts_set = set()
+        for run_number in runs_to_reduce:
             try:
-                self._myProject.reduce_vanadium_runs()
-            except RuntimeError as run_err:
-                err_msg = 'Unable to reduce vanadium runs due to %s.' % str(run_err)
-                return False, err_msg
-        # END-IF (nom_by_vanadium)
+                tmp_ipts_number = self._myArchiveManager.get_ipts_number(run_number)
+                ipts_set.add(tmp_ipts_number)
+            except KeyError:
+                return False, 'Run {0} has not been searched and thus found in archive.'.format(run_number)
+        # END-FOR
+        assert len(ipts_set) == 1, 'There are runs from different IPTS.  It is not supported in PyVDrive.'
+        ipts_number = ipts_set.pop()
 
-        # Reduce runs
-        try:
-            status, ret_obj = self._myProject.reduce_runs()
-        except AssertionError as re:
-            print '[ERROR] Assertion error from reduce_runs.'
-            status = False
-            ret_obj = str(re)
+        # Reduce data set
+        if auto_reduce:
+            # auto reduction
+            status, message = self.reduce_auto_script(ipts_number=ipts_number,
+                                                      run_numbers=runs_to_reduce,
+                                                      output_dir=output_directory,
+                                                      is_dry_run=False)
+            ret_obj = message
+
+        else:
+            # manual reduction: Reduce runs
+            try:
+                status, ret_obj = self._myProject.reduce_runs(ipts_number=ipts_number,
+                                                              run_number_list=runs_to_reduce,
+                                                              output_directory=output_directory,
+                                                              background=background,
+                                                              vanadium=vanadium,
+                                                              gsas=gsas,
+                                                              fullprof=fullprof,
+                                                              record_file=record,
+                                                              sample_log_file=logs)
+
+            except AssertionError as re:
+                status = False
+                ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
 
         return status, ret_obj
 
@@ -983,6 +1080,8 @@ class VDriveAPI(object):
                 reduce_setup.set_auto_reduction_mode()
             except OSError as os_err:
                 return False, str(os_err)
+            # use default calibration files
+            reduce_setup.set_default_calibration_files()
 
             # generate instance of ReduceVulcanData
             reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
@@ -1009,7 +1108,10 @@ class VDriveAPI(object):
         if os.path.exists(root_dir) is False:
             return False, 'Directory %s cannot be found.' % root_dir
 
-        self._myArchiveManager.set_data_root_path(root_dir)
+        try:
+            self._myArchiveManager.root_directory = root_dir
+        except OSError as err:
+            return False, 'Unable to set data root directory: {0}'.format(str(err))
 
         return True, ''
 
@@ -1060,7 +1162,7 @@ class VDriveAPI(object):
         return status, err_msg
 
     def set_runs_to_reduce(self, run_numbers):
-        """ Set runs for reduction
+        """ Set runs for reduction by turning on the reduction flag
         Purpose:
             Mark the runs to be reduced;
         Requirements:
@@ -1071,8 +1173,8 @@ class VDriveAPI(object):
         :return: 2-tuple (boolean, string) for status and error message
         """
         # Check requirements
-        assert isinstance(run_numbers, list)
-        assert self._myProject is not None
+        assert isinstance(run_numbers, list), 'Input run number list must be a list.'
+        assert self._myProject is not None, 'Project instance cannot be None.'
 
         # Pass the run number list to VDriveProject
         return_status = True
@@ -1273,25 +1375,25 @@ class VDriveAPI(object):
 
         return
 
-    def set_ipts(self, ipts_number):
-        """ Set IPTS to the workflow
-        Purpose
-
-        Requirement:
-
-        Guarantees:
-
-        :param ipts_number: integer for IPTS number
-        :return:
-        """
-        # Requirements
-        assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
-                                             '' % (str(ipts_number), type(ipts_number))
-        assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
-
-        self._myArchiveManager.set_ipts_number(ipts_number)
-
-        return True, ''
+    # def set_ipts(self, ipts_number):
+    #     """ Set IPTS to the workflow
+    #     Purpose
+    #
+    #     Requirement:
+    #
+    #     Guarantees:
+    #
+    #     :param ipts_number: integer for IPTS number
+    #     :return:
+    #     """
+    #     # Requirements
+    #     assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
+    #                                          '' % (str(ipts_number), type(ipts_number))
+    #     assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
+    #
+    #     self._myArchiveManager.set_ipts_number(ipts_number)
+    #
+    #     return True, ''
 
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """

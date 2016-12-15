@@ -111,8 +111,8 @@ def find_peaks(diff_data, peak_profile, auto):
                         BackgroundType='Linear')
 
     peak_ws = mantidapi.AnalysisDataService.retrieve(out_ws_name)
-    # check blablabla...
 
+    # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()
     col_index_centre = col_names.index('centre')
     col_index_height = col_names.index('height')
@@ -430,6 +430,19 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
     return vec_times, vec_value
 
 
+def get_data_from_gsas(gsas_file_name):
+    """
+
+    :param gsas_file_name:
+    :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
+    """
+    # TODO/ISSUE/55 - Docs and check
+    out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
+    mantidapi.LoadGSS(Filename=gsas_file_name, OutputWorkspace=out_ws_name)
+
+    return get_data_from_workspace(out_ws_name, point_data=True)
+
+
 def get_data_from_workspace(workspace_name, point_data):
     """
     Purpose: get data from a workspace
@@ -536,6 +549,20 @@ def get_workspace_information(run_ws_name):
     bank_id_list = range(1, num_spec+1)
 
     return bank_id_list
+
+
+def get_workspace_unit(workspace_name):
+    """
+
+    :param workspace_name:
+    :return:
+    """
+    assert isinstance(workspace_name, str) and len(workspace_name) > 0
+    assert ADS.doesExist(workspace_name), 'blabla %s not' % workspace_name
+
+    workspace = ADS.retrieve(workspace_name)
+
+    return workspace.getAxis(0).getUnit().unitID()
 
 
 def event_data_ws_name(run_number):
@@ -674,8 +701,9 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     """ Load time focus file (or say calibration in Mantid's nomenclature)
     :return:
     """
-    # TODO/NOW/40 - Doc and check!
-    # bla..bla..bla..
+    # check
+    assert isinstance(time_focus_file, str) and os.path.exists(time_focus_file), 'Time focus file error.'
+    assert isinstance(base_ws_name, str), 'Base workspace name must be a string.'
 
     mantidapi.LoadCalFile(InstrumentName=instrument,
                           CalFilename=time_focus_file,
@@ -689,8 +717,11 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     mask_ws_name = '%s_mask' % base_ws_name
     cal_ws_name  = '%s_cal' % base_ws_name
 
-    # TODO/NOW/40 - Check existence of the workspaces output from LoadCalFile
-    # blablabal
+    # Check existence of the workspaces output from LoadCalFile
+    assert workspace_does_exist(offset_ws_name), 'Offset workspace does not exist.'
+    assert workspace_does_exist(grouping_ws_name), 'Grouping workspace does not exist.'
+    assert workspace_does_exist(mask_ws_name), 'Mask worksapce does not exist.'
+    assert workspace_does_exist(cal_ws_name), 'Calibration worksapce does not exist.'
 
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 

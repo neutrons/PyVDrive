@@ -117,7 +117,7 @@
           <item>
            <widget class="QPushButton" name="pushButton_readData">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Read GSAS data and plot to canvas to the right by pushing this button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Read GSAS Data</string>
@@ -936,7 +936,7 @@
      <x>0</x>
      <y>0</y>
      <width>1494</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">
@@ -1095,7 +1095,7 @@
        <item row="0" column="0">
         <widget class="QPushButton" name="pushButton_save">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;push this button wil have blabla effect!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;It will save all the peaks to a text file with GSAS standard by pushing this button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Save Peaks</string>

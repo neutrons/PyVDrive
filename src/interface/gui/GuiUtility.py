@@ -77,14 +77,15 @@ def convert_to_qdate(date_time):
 
 def convert_to_qdate_datetime(date_time):
     """
-
+    Convert python's datetime.datetime to PyQt's QDate for display.
     :param date_time:
     :return:
     """
     # TODO/NOW/Doc
 
     # check
-    assert isinstance(date_time, datetime.datetime), 'blabla'
+    assert isinstance(date_time, datetime.datetime), 'Input date and time must be a datetime.datetime but not %s.' \
+                                                     '' % type(date_time)
 
     # convert
     year = date_time.year

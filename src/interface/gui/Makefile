@@ -12,4 +12,4 @@ all: $(PYFILES)
 	pyuic4 $< --output $@
 
 clean: 
-	rm *pyc */*.pyc
+	rm *pyc ui_*.py */*.pyc
