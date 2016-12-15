@@ -193,6 +193,7 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNV
         if 'RUNV' in input_args:
+            # TODO/ISSUE/55 FIND IT AT /SNS/VULCAN/IPTS-14094/shared/Instrument
             van_run = int(self._commandArgsDict['RUNV'])
         else:
             van_run = None

@@ -181,7 +181,7 @@ class VdriveCommandProcessor(object):
             view_window.set_canvas_type(dimension=2)
             view_window.set_chop_run_number(processor.get_run_number())
             view_window.set_chop_sequence(processor.get_chopped_sequence_range())
-            view_window.plot_chopped_run()
+            view_window.plot_chopped_run(chopped_data_dir=processor.get_reduced_data_directory())
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)

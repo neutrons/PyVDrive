@@ -372,7 +372,7 @@ class VDProject(object):
         assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
 
         # get reduced workspace name
-        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, unit)
+        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
 
         # get data
         data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
@@ -400,7 +400,7 @@ class VDProject(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number)
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -589,7 +589,8 @@ class VDProject(object):
         reduction_setup = reduce_VULCAN.ReductionSetup()
         reduction_setup.set_default_calibration_files()
         reduction_setup.set_output_dir(output_directory)
-        reduction_setup.set_gsas_dir(output_directory, True)
+        if gsas:
+            reduction_setup.set_gsas_dir(output_directory, True)
 
         reduce_all_success = True
         message = ''
@@ -606,16 +607,19 @@ class VDProject(object):
 
             # reduce
             reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
-            reducer.execute_vulcan_reduction()
+            reduce_good, message = reducer.execute_vulcan_reduction()
 
             status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             reduce_all_success = reduce_all_success and status
             if status:
-                self._reductionManager
+                vdrive_ws, tof_ws, d_ws = ret_obj
+                self._reductionManager.set_reduced_workspaces(run_number, vdrive_ws, tof_ws, d_ws)
+            else:
+                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, str(ret_obj))
 
         # END-FOR
 
-        return reduce_all_success, ''
+        return reduce_all_success, message
 
     def save_session(self, out_file_name):
         """ Save session to a dictionary

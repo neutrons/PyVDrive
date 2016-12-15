@@ -339,9 +339,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return run_number_list
 
-    def plot_chopped_run(self, bank_id=1, bank_id_from_1=True):
+    def plot_chopped_run(self, bank_id=1, bank_id_from_1=True, chopped_data_dir=None):
         """
         Plot a chopped run
+        :param bank_id:
+        :param bank_id_from_1:
+        :param chopped_data_dir: diectory of chopped data
         :return:
         """
         assert self._choppedRunNumber > 0, 'The chopped run number %s must be a positive integer. If None, very ' \
@@ -349,18 +352,31 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         assert isinstance(self._choppedSequenceList, list), 'Chopped sequence list %s must be a LIST.' \
                                                             '' % str(self._choppedSequenceList)
 
+        # directory to search data
+        if chopped_data_dir is not None:
+            dirs_to_search = [chopped_data_dir]
+        else:
+            # default
+            dirs_to_search = os.path.abspath('.')
+
         if len(self._choppedSequenceList) == 1:
             # 1D plot
             status, ret_obj = self._myController.get_reduced_chopped_data(self._iptsNumber, self._choppedRunNumber,
                                                                           self._choppedSequenceList[0],
                                                                           search_archive=True,
-                                                                          search_dirs=[os.path.abspath('.')])
+                                                                          search_dirs=dirs_to_search)
             if not status:
                 GuiUtility.pop_dialog_error(self, ret_obj)
                 return
+            else:
+                # FIXME/TODO/ISSUE/55+ Make it robust
+                assert isinstance(ret_obj, dict), 'blabla xxx'
+                bank_data = ret_obj[bank_id-1]
+                vec_x = bank_data[0]
+                vec_y = bank_data[1]
 
-            vec_x, vec_y = ret_obj
-            self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y)
+            title = 'Chopped run {0} sequence {1}.'.format(self._choppedRunNumber, self._choppedSequenceList[0])
+            self.ui.graphicsView_mainPlot.add_plot_1d(vec_x, vec_y, x_label='TOF', label=title)
 
         else:
             # 2D plot
@@ -373,7 +389,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 # ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None)
                 status, ret_obj = self._myController.get_reduced_chopped_data(self._iptsNumber, self._choppedRunNumber,
                                                                               seq_number, search_archive=True,
-                                                                              search_dirs=[os.path.abspath('.')])
+                                                                              search_dirs=dirs_to_search)
                 if not status:
                     error_message += 'Unable to retrieve run %d chopped section %d due to %s.\n' \
                                      '' % (self._choppedRunNumber, seq_number, ret_obj)
@@ -659,7 +675,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_run_numbers(self, run_number_list):
+    def set_run_numbers(self, run_number_list, clear_previous=False):
         """
         set run numbers to combo-box-run numbers
         :param run_number_list:
@@ -673,8 +689,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # show on the list: turn or and off mutex locks around change of the combo box conents
         self._mutexRunNumberList = True
+
+        # clear existing runs
+        if clear_previous:
+            self.ui.comboBox_runs.clear()
         for run_number in self._runNumberList:
             self.ui.comboBox_runs.addItem(str(run_number))
+
+        # release mutex lock
         self._mutexRunNumberList = False
 
         return

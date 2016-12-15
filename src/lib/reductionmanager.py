@@ -182,6 +182,30 @@ class DataReductionTracker(object):
         """
         return self._runNumber
 
+    @property
+    def dpsace_worksapce(self):
+        """
+        Mantid binned DSpaceing workspace
+        :return:
+        """
+        return self._dspaceWorkspace
+
+    @property
+    def vdrive_workspace(self):
+        """
+        VDrive-binned workspace
+        :return:
+        """
+        return self._vdriveWorkspace
+
+    @property
+    def tof_workspace(self):
+        """
+        Mantid binned TOF workspace
+        :return:
+        """
+        return self._tofWorkspace
+
     def set_reduced_workspaces(self, vdrive_bin_ws, tof_ws, dspace_ws):
         """
 
@@ -194,7 +218,9 @@ class DataReductionTracker(object):
         assert mantid_helper.workspace_does_exist(vdrive_bin_ws), 'blabla'
         assert mantid_helper.workspace_does_exist(tof_ws), 'blabla'
         assert mantid_helper.workspace_does_exist(dspace_ws), 'blabla'
-        assert mantid_helper.get_workspace_unit(dspace_ws) == 'dSpacing', 'blabla dspacing'  # Out[12]: 'dSpacing'
+        dspace_ws_unit = mantid_helper.get_workspace_unit(dspace_ws)
+        assert dspace_ws_unit == 'dSpacing',\
+            'The unit of DSpace workspace {0} should be dSpacing but not {1}.'.format(str(dspace_ws), dspace_ws_unit)
 
         self._vdriveWorkspace = vdrive_bin_ws
         self._tofWorkspace = tof_ws
@@ -344,6 +370,7 @@ class ReductionManager(object):
         :exception: Assertion Error if run number does not exist in self._reductionTrackDict
         :exception: RuntimeError if unit is not supported
         :param run_number:
+        :param is_vdrive_bin:
         :param unit:
         :return: Workspace (success) or 2-tuple (False and error message)
         """

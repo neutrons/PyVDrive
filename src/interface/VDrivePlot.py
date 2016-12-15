@@ -450,13 +450,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
     def do_view_reduction(self):
         """
-        Purpose: Launch reduction view
+        Purpose: Launch reduction view and set up
         Requirements: ... ...
         Guarantees: ... ...
         :return: handler to child window
         """
-        # TODO/ISSUE/55 - Docs & ...
-
+        # create the instance of a reduction data view window
         if self._reducedDataViewWindow is None:
             # initialize a window instance it has not been
             self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
@@ -464,7 +463,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
             self._myChildWindows.append(self._reducedDataViewWindow)
         # END-IF
 
-        # # show the window if it exists and return
+        # update to current reduction status
+        self._reducedDataViewWindow.set_run_numbers(self._myWorkflow.get_reduced_runs(), clear_previous=True)
+
+        # show the window if it exists and return
         self._reducedDataViewWindow.show()
 
         return self._reducedDataViewWindow

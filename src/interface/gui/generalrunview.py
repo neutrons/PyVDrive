@@ -20,6 +20,14 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def plot_1d_data(self, vec_x, vec_y):
+        """
+
+        :param vec_x:
+        :param vec_y:
+        :return:
+        """
+
     def plot_2d_contour(self, run_number_list, data_set_list):
         """
 

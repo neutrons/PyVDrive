@@ -17,12 +17,14 @@ class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MinV', 'MaxV', 'NORM']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MinV', 'MaxV', 'NORM', 'DIR']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
+        'CHOPRUN': 'Run number of the chopped run.',
+        'DIR': 'User specified directory to find the reduced data (including those being chopped)'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -52,6 +54,7 @@ class VdriveView(VDriveCommand):
         self._isChoppedRun = False
         self._multiRuns = False
         self._choppedRunSeqList = None
+        self._reducedDataDir = None  # user specified directory for reduced data
 
         return
 
@@ -87,6 +90,10 @@ class VdriveView(VDriveCommand):
             self._runNumberList = range(run_start, run_end + 1)
             self._isChoppedRun = False
         # END-IF
+
+        # directory of the reduced data
+        if 'DIR' in self._commandArgsDict:
+            self._reducedDataDir = self._commandArgsDict['DIR']
 
         if len(self._runNumberList) > 1:
             self._multiRuns = True
@@ -155,3 +162,9 @@ class VdriveView(VDriveCommand):
         """
         return self._runNumberList[:]
 
+    def get_reduced_data_directory(self):
+        """
+        blabla
+        :return:
+        """
+        return self._reducedDataDir

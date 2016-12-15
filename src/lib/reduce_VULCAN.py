@@ -1876,7 +1876,7 @@ class ReduceVulcanData(object):
         if chopped:
             return True, self._reducedWorkspaceList[:]
 
-        return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceMtd)
+        return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceDSpace)
 
     def load_data_file(self):
         """

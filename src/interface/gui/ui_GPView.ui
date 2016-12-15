@@ -298,6 +298,9 @@
             </item>
             <item row="1" column="3">
              <widget class="QPushButton" name="pushButton_normByVanadium">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Try to find vanadium run in /SNS/VULCAN/IPTS-14094/shared/Instrument&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
                <string>Normalize By Vanadium</string>
               </property>
