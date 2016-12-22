@@ -30,7 +30,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
     def exec_cmd(self):
         """
         execute command AUTO
-        :return:
+        :return: 2-tuple
         """
         try:
             ipts = int(self._commandArgsDict['IPTS'])
@@ -39,22 +39,10 @@ class AutoReduce(procss_vcommand.VDriveCommand):
         else:
             print '[DB...BAT] IPTS = ', ipts
 
-        run_numbers_str = 'NO DEFINED'
         try:
-            run_numbers_str = self._commandArgsDict['RUNS']
-            run_number_list = self.split_run_numbers(run_numbers_str)
-            if len(run_number_list) == 1 and 'RUNE' in self._commandArgsDict:
-                # allow RUNE if RUNS is just 1 value
-                run_end = int(self._commandArgsDict['RUNE'])
-                run_number_list = range(run_number_list[0], run_end)
-        except KeyError:
-            return False, 'RUNS number must be given.'
-        except ValueError:
-            return False, 'RUNS number string %s cannot be parsed.' % run_numbers_str
-        except TypeError:
-            return False, 'RUNS number string %s cannot be parsed due to TypeError.' % run_numbers_str
-        else:
-            print '[DB...BAT] Runs = ', run_number_list
+            run_number_list = self.parse_run_numbers()
+        except RuntimeError as error:
+            return False, 'Unable to parse run numbers due to {0}'.format(error)
 
         if 'DRYRUN' in self._commandArgsDict:
             dry_run = bool(int(self._commandArgsDict['DRYRUN']))
@@ -73,41 +61,6 @@ class AutoReduce(procss_vcommand.VDriveCommand):
                                                               is_dry_run=dry_run)
 
         return True, message
-
-    @staticmethod
-    def split_run_numbers(run_numbers_str):
-        """
-        split run numbers from a string.
-        example: run1, run2-run10, run11, run12,
-        :param run_numbers_str:
-        :return:
-        """
-        def pop_range(range_str):
-            """
-            replace a range a - b to a list such as a, a1, a2, .., b
-            :param range_str:
-            :return:
-            """
-            terms = range_str.split('-')
-            start_value = int(terms[0])
-            stop_value = int(terms[1])
-            assert start_value <= stop_value, 'Start value %d must be smaller or euqal to stop value %s.' \
-                                              '' % (start_value, stop_value)
-            return range(start_value, stop_value+1)
-
-        run_numbers_str = run_numbers_str.replace(' ', '')
-        terms = run_numbers_str.split(',')
-        run_number_list = list()
-        for term in terms:
-            if term.count('-') == 0:
-                run_number_list.append(int(term))
-            elif term.count('-') == 1:
-                run_number_list.extend(pop_range(term))
-            else:
-                raise ValueError('Single term contains more than 2 -')
-        # END-FOR
-
-        return run_number_list
 
     def get_help(self):
         """
@@ -170,11 +123,11 @@ class VBin(procss_vcommand.VDriveCommand):
         self.set_ipts()
 
         # RUNS or CHOPRUN
-        run_start = int(self._commandArgsDict['RUNS'])
-        run_end = int(self._commandArgsDict['RUNE'])
-        assert 0 < run_start < run_end, 'It is impossible to have run_start = %d and run_end = %d' \
-                                        '' % (run_start, run_end)
-        
+        try:
+            run_number_list = self.parse_run_number()
+        except RuntimeError as run_err:
+            return False, 'Unable to parse run numbers due to {0}'.format(run_err)
+
         # Use result from CHOP?
         if 'CHOPRUN' in input_args:
             use_chop_data = True
@@ -209,8 +162,9 @@ class VBin(procss_vcommand.VDriveCommand):
             tof_max = None
 
         # scan the runs with data archive manager and add the runs to project
-        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
-                                                                                             run_end)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                             run_number_list)
+
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
         self._controller.add_runs_to_project(run_info_list)
 
@@ -220,7 +174,10 @@ class VBin(procss_vcommand.VDriveCommand):
             run_number_list.append(run_info['run'])
         self._controller.set_runs_to_reduce(run_number_list)
 
-        # FIXME/TODO/ISSUE/55/ - This is just for debug purpose
+        # set vanadium runs
+        if van_run is not None:
+            self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+
         import os
         output_dir = os.getcwd()
 
@@ -249,6 +206,7 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += 'Examples:\n'
         help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
+        help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
 
         return help_str
 

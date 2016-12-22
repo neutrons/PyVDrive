@@ -47,6 +47,7 @@ import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
+import numpy
 import pandas as pd
 
 sys.path.append("/opt/mantidnightly/bin")
@@ -250,6 +251,10 @@ class ReductionSetup(object):
 
         # reduction type
         self._isFullReduction = True
+
+        # vanadium related
+        self._vanadiumFlag = False
+        self._vanadium3Tuple = None
 
         return
 
@@ -462,6 +467,13 @@ class ReductionSetup(object):
 
         return self._splitterWsName, self._splitterInfoName
 
+    def get_vanadium_info(self):
+        """
+        get vanadium calibration parameters
+        :return:
+        """
+        return self._vanadium3Tuple
+
     def get_vdrive_log_dir(self):
         """
         Get the directory for vdrive log files
@@ -622,15 +634,24 @@ class ReductionSetup(object):
 
         return
 
-    def set_vulcan_bin_file(self, file_name):
+    @property
+    def normalized_by_vanadium(self):
         """
-        set the VULCAN binning (compatible with IDL) file name
-        :param file_name:
+        check whether the reduced data will be normalized by vanadium
         :return:
         """
-        assert isinstance(file_name, str), 'Input arg type error.'
+        return self._vanadiumFlag
 
-        self._vulcanBinsFileName = file_name
+    @normalized_by_vanadium.setter
+    def normalized_by_vanadium(self, flag):
+        """
+        blabla
+        :param flag:
+        :return:
+        """
+        assert isinstance(flag, bool), 'blabla 322'
+
+        self._vanadiumFlag = flag
 
         return
 
@@ -803,6 +824,30 @@ class ReductionSetup(object):
         assert isinstance(run_number, int), 'run number must be an integer.'
 
         self._runNumber = run_number
+
+        return
+
+    def set_vanadium(self, van_run_number, van_gda_file, vanadium_tag):
+        """
+        set up vanadium run
+        :param van_run_number:
+        :param van_gda_file:
+        :param vanadium_tag:
+        :return:
+        """
+        self._vanadium3Tuple = (van_run_number, van_gda_file, vanadium_tag)
+
+        return
+
+    def set_vulcan_bin_file(self, file_name):
+        """
+        set the VULCAN binning (compatible with IDL) file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._vulcanBinsFileName = file_name
 
         return
 
@@ -1903,6 +1948,22 @@ class ReduceVulcanData(object):
 
         return True, ''
 
+    @staticmethod
+    def load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag):
+        """
+        :param van_gda_file:
+        :param van_run_number:
+        :param vanadium_tag:
+        :return:
+        """
+        assert isinstance(van_gda_file, str), 'blabla 951'
+
+        van_ws_name = 'Vanadium_{0}_{1}'.format(van_run_number, vanadium_tag)
+        if not AnalysisDataService.doesExist(van_ws_name):
+            mantidsimple.LoadGSS(Filename=van_gda_file, OutputWorkspace=van_ws_name)
+
+        return van_ws_name
+
     def reduce_powder_diffraction_data(self):
         """
         reduce powder diffraction data
@@ -1969,6 +2030,30 @@ class ReduceVulcanData(object):
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+
+        if self._reductionSetup.normalized_by_vanadium:
+            # FIXME/TODO/ISSUE/57 - Refactor!
+            t3 = self._reductionSetup.get_vanadium_info()
+            assert t3 is not None, 'blabla 948'
+            van_run_number, van_gda_file, vanadium_tag = t3
+            van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
+
+            gss_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+            van_ws = AnalysisDataService.retrieve(van_ws_name)
+
+            gda_vec_x = gss_ws.readX(0)
+            van_vec_x = van_ws.readX(0)
+            diff_vec = numpy.abs((van_vec_x-gda_vec_x)/gda_vec_x)
+            assert numpy.max(diff_vec) < 0.01, 'Vec X differs too much!'
+
+            num_spec = gss_ws.getNumberHistograms()
+            assert num_spec == van_ws.getNumberHistograms(), 'blabla 1028'
+
+            for ws_index in range(num_spec):
+                numpy.copyto(van_ws.dataX(ws_index), gss_ws.readX(ws_index))
+
+            gss_ws = gss_ws/van_ws
+            mantidsimple.SaveGSS(InputWorkspace=gss_ws, Filename='whatever')
 
         # collect result
         self._reducedWorkspaceDSpace = reduced_ws_name

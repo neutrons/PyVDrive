@@ -1017,7 +1017,7 @@ class VDriveAPI(object):
 
         # Reduce data set
         if auto_reduce:
-            # auto reduction
+            # auto reduction: auto reduction script does not work with vanadium normalization
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
@@ -1438,6 +1438,26 @@ class VDriveAPI(object):
             error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
 
         return status, error_msg
+
+    def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
+        """
+        set corresponding vanadium run to a specific list of sample run numbers
+        :param ipts_number:
+        :param run_number_list:
+        :param van_run_number:
+        :return:
+        """
+        assert isinstance(ipts_number, int), 'blabla 134'
+        assert isinstance(van_run_number, int), 'blabla 135'
+        assert isinstance(run_number_list, list), 'blabla 135B'
+
+        file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
+        if not file_exist:
+            return False, 'Unable to locate vanadium GSAS file'
+
+        self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
+
+        return
 
     def set_vanadium_calibration_files(self, run_numbers, vanadium_file_names):
         """

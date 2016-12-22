@@ -25,6 +25,8 @@ class VDProject(object):
         # dictionary for sample run mapping to vanadium run
         # Key: sample run number of type integer; Value: vanadium run number in type of integer
         self._sampleRunVanadiumDict = dict()
+        # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
+        self._vanadiumGSASFileDict = dict()
 
         # Data structure to manage split run: key run number or file name
         self._splitWorkspaceDict = dict()
@@ -581,6 +583,9 @@ class VDProject(object):
         :return:
         """
         import reduce_VULCAN
+        import random
+
+        print 'VANADIUM IS', vanadium
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
@@ -595,12 +600,26 @@ class VDProject(object):
         reduce_all_success = True
         message = ''
 
+        vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
+
         for run_number in run_number_list:
             # set up
             reduction_setup.set_run_number(run_number)
             full_event_file_path, ipts_number = self._dataFileDict[run_number]
             reduction_setup.set_event_file(full_event_file_path)
             reduction_setup.set_ipts_number(ipts_number)
+            reduction_setup.normalized_by_vanadium = vanadium
+            # set up vanadium
+            if vanadium:
+                try:
+                    van_run = self._sampleRunVanadiumDict[run_number]
+                    van_gda = self._vanadiumGSASFileDict[van_run]
+                except KeyError:
+                    reduce_all_success = False
+                    message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
+                    continue
+                reduction_setup.set_vanadium(van_run, van_gda, vanadium_tag)
+
 
             # init tracker
             self._reductionManager.init_tracker(run_number)
@@ -746,6 +765,23 @@ class VDProject(object):
         assert isinstance(parameter_dict, dict)
 
         self._reductionManager.set_parameters(parameter_dict)
+
+        return
+
+    def set_vanadium_runs(self, run_number_list, van_run_number, van_file_name):
+        """
+        set the corresponding vanadium run to a list of run numbers
+        :param run_number_list:
+        :param van_run_number:
+        :return: None
+        """
+        assert isinstance(run_number_list, list), 'blabla 129'
+        assert isinstance(van_run_number, int), 'blabla 129B'
+
+        for run_number in run_number_list:
+            self._sampleRunVanadiumDict[run_number] = van_run_number
+
+        self._vanadiumGSASFileDict[van_run_number] = van_file_name
 
         return
 

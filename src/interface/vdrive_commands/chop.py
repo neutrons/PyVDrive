@@ -176,8 +176,9 @@ class VdriveChop(VDriveCommand):
         # END-IF
 
         # locate the runs and add the reduction project
-        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber, run_start,
-                                                                                             run_end)
+        run_number_list = range(run_start, run_end+1)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                             run_number_list)
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
         self._controller.add_runs_to_project(run_info_list)
 

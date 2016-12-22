@@ -91,6 +91,28 @@ class VDriveCommand(object):
         """
         return self._iptsNumber, self._runNumberList[:]
 
+    def parse_run_number(self):
+        """
+        parse run numbers from RUNS and RUNE
+        :return:
+        """
+        run_numbers_str = 'NO DEFINED'
+        try:
+            run_numbers_str = self._commandArgsDict['RUNS']
+            run_number_list = self.split_run_numbers(run_numbers_str)
+            if len(run_number_list) == 1 and 'RUNE' in self._commandArgsDict:
+                # allow RUNE if RUNS is just 1 value
+                run_end = int(self._commandArgsDict['RUNE'])
+                if run_end < run_number_list[0]:
+                    raise RuntimeError('RUNE {0} is less than RUNS {1}'.format(run_end, run_number_list[0]))
+                run_number_list = range(run_number_list[0], run_end)
+        except KeyError:
+            raise RuntimeError('RUNS is not found.')
+        except (ValueError, TypeError):
+            raise RuntimeError('RUNS {0} is not an integer.'.format(run_numbers_str))
+
+        return run_number_list
+
     def set_ipts(self):
         """
         Set IPTS
@@ -113,3 +135,37 @@ class VDriveCommand(object):
 
         return
 
+    @staticmethod
+    def split_run_numbers(run_numbers_str):
+        """
+        split run numbers from a string.
+        example: run1, run2-run10, run11, run12,
+        :param run_numbers_str:
+        :return:
+        """
+        def pop_range(range_str):
+            """
+            replace a range a - b to a list such as a, a1, a2, .., b
+            :param range_str:
+            :return:
+            """
+            terms = range_str.split('-')
+            start_value = int(terms[0])
+            stop_value = int(terms[1])
+            assert start_value <= stop_value, 'Start value %d must be smaller or euqal to stop value %s.' \
+                                              '' % (start_value, stop_value)
+            return range(start_value, stop_value+1)
+
+        run_numbers_str = run_numbers_str.replace(' ', '')
+        terms = run_numbers_str.split(',')
+        run_number_list = list()
+        for term in terms:
+            if term.count('-') == 0:
+                run_number_list.append(int(term))
+            elif term.count('-') == 1:
+                run_number_list.extend(pop_range(term))
+            else:
+                raise ValueError('Single term contains more than 2 -')
+        # END-FOR
+
+        return run_number_list
