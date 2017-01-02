@@ -151,6 +151,13 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             van_run = None
 
+        # TAG
+        if 'TAG' in input_args:
+            material_type = self._commandArgsDict['RUNV'].lower()
+            process_standard = material_type
+        else:
+            process_standard = None
+
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
@@ -184,6 +191,12 @@ class VBin(procss_vcommand.VDriveCommand):
         # reduce
         status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                            vanadium=(van_run is not None))
+
+        # process standards
+        if process_standard is not None:
+            assert len(run_number_list) == 1, 'It is not allowed to process several standards {0} simultaneously.' \
+                                              ''.format(process_standard)
+            self._controller.process_reduced_standard(run_number_list[0], process_standard)
 
         return status, str(ret_obj)
 

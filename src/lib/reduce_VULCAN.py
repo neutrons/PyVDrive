@@ -1083,8 +1083,7 @@ class PatchRecord:
                 break
 
         return runinfodict
-
-# ENDCLASS
+# END-CLASS
 
 
 class ReduceVulcanData(object):

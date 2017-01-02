@@ -100,8 +100,8 @@ class VDProject(object):
         try:
             chopper = self._chopManagerDict[run_number]
         except KeyError as key_error:
-            error_message = 'Run number %d is not registered to chopper manager. Current runs are %s.' \
-                            '' % (run_number, str(self._chopManagerDict.keys()))
+            error_message = 'Run number %d is not registered to chopper manager (%s). Current runs are %s.' \
+                            '' % (run_number, str(key_error), str(self._chopManagerDict.keys()))
             raise RuntimeError(error_message)
 
         split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
@@ -382,6 +382,16 @@ class VDProject(object):
                                                 'but not %s.' % str(type(data_set_dict))
 
         return data_set_dict
+
+    def get_reduced_file(self, run_number, file_type):
+        """
+        get the path of the reduced file
+        :param run_number:
+        :param file_type:
+        :return:
+        """
+        self._reductionManager.get_reduced_runs()
+        self.get_run_info(run_number)
 
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run

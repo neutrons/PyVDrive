@@ -9,11 +9,11 @@
 import os
 import datetime
 import pandas as pd
+import shutil
 
 import VDProject as vp
 from analysisproject import AnalysisProject
 import archivemanager
-import SampleLogHelper
 import vdrivehelper
 import mantid_helper
 import crystal_helper
@@ -1043,8 +1043,7 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    @staticmethod
-    def reduce_auto_script(ipts_number, run_numbers, output_dir, is_dry_run):
+    def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
         """
         Reduce the runs in the standard auto reduction workflow
         :param ipts_number:
@@ -1052,6 +1051,14 @@ class VDriveAPI(object):
         :param is_dry_run:
         :return: running information
         """
+        # self._myProject.reduce_runs(ipts_number=ipts_number,
+        #                             run_number_list=run_numbers,
+        #                             output_dir=output_dir,
+        #                             is_dry_run=is_dry_run,
+        #                             mode=auto)
+        # TODO/NOW/ - Merge this method with VDProject.reduce_runs()
+        raise NotImplementedError('FROM HERE!!! CONTINUE')
+
         # check inputs' validity
         assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
         assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
@@ -1231,6 +1238,37 @@ class VDriveAPI(object):
                            '' % (log_file_name, str(self._mtsLogDict.keys())))
 
         return self._mtsLogDict[log_file_name].keys()
+
+    def process_reduced_standard(self, run_number, standard_type):
+        """
+        process the reduced standard sample such as Ni, Si, Vanadium
+        the method shall put the reduced data to its specific location on the server
+        :param run_number: integer
+        :param standard_type: string
+        :return:
+        """
+        # check inputs
+        assert isinstance(run_number, int), 'blabla 1012'
+        assert isinstance(standard_type, str) and standard_type in ['Si', 'V'], 'blabla 1013'
+
+        # locate the target directory to put reduced data
+        if standard_type == 'V':
+            standard_sub_dir = 'Vanadium'
+        elif standard_type == 'Si':
+            standard_sub_dir = 'Si'
+        else:
+            raise RuntimeError('Impossible situation to fall into this brach')
+
+        # call the controller
+
+        target_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/{0}'.format(standard_sub_dir)
+        assert os.path.exists(target_dir), 'blabla 1018'
+
+        # find the reduced data
+        gsa_file = self._myProject.get_reduced_file(run_number, file_type='gda')
+        shutil.copy(gsa_file, target_dir)
+
+
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
