@@ -7,7 +7,7 @@ import reductionmanager as prl
 import archivemanager
 
 
-class VDProject(object):
+class ProjectManager(object):
     """ VDrive Project
     """
     def __init__(self, project_name, instrument='VULCAN'):

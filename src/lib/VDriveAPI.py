@@ -11,7 +11,7 @@ import datetime
 import pandas as pd
 import shutil
 
-import VDProject as vp
+import ProjectManager as vp
 from analysisproject import AnalysisProject
 import archivemanager
 import vdrivehelper
@@ -55,7 +55,7 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = vp.VDProject('New Project')
+        self._myProject = vp.ProjectManager('New Project')
         self._myAnalysisProject = AnalysisProject('New Analysis Project')
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
