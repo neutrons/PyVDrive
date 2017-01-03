@@ -1,105 +1,20 @@
 ################################################################################
 # Manage the reduced VULCAN runs
 ################################################################################
-import os
+import reduce_VULCAN
 import mantid_helper
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
-class ReductionHistory(object):
-    """
-    Class to describe the reduction history on one data set
-
-    The default history is 'being loaded'
+class DataReductionTracker(object):
+    """ Record tracker of data reduction for an individual run.
     """
     FilterBadPulse = 1
     AlignAndFocus = 2
     NormaliseByCurrent = 3
     CalibratedByVanadium = 4
 
-    def __init__(self, workspace_name=None):
-        """
-        The key to a reduction history is its workspace name
-        :param workspace_name:
-        :return:
-        """
-        if workspace_name is not None:
-            assert isinstance(workspace_name, str), 'Workspace name must be a string.'
-            assert mantid_helper.workspace_does_exist(workspace_name), 'Workspace %s ' \
-                                                                       'does not exist.' % workspace_name
-            self._workspaceName = workspace_name
-
-        self._isFocused = False
-        self._badPulseRemoved = False
-        self._normalisedByCurrent = False
-        self._correctedByVanadium = False
-
-        return
-
-    @property
-    def is_raw(self):
-        """
-        Show the status whether the workspace has never been processed
-        :return:
-        """
-        if self._isFocused is True or self._badPulseRemoved is True:
-            return False
-        return True
-
-    @property
-    def is_focused(self):
-        """
-        Whether
-        :return:
-        """
-        return self._isFocused
-
-    def exec_focused(self):
-        """
-
-        :return:
-        """
-        assert self._isFocused is False, 'A focused workspace cannot be focused again.'
-
-        self._isFocused = True
-
-    @property
-    def is_corrected_by_vanadium(self):
-        """
-
-        :return:
-        """
-        return self._correctedByVanadium
-
-    def set(self, history):
-        """
-        Set history
-        Requirements: history must be an integer for enum of history
-        :param history:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(history, int)
-
-        # Set
-        if history == ReductionHistory.AlignAndFocus:
-            self._isFocused = True
-        elif history == ReductionHistory.FilterBadPulse:
-            self._badPulseRemoved = True
-        elif history == ReductionHistory.NormaliseByCurrent:
-            self._normalisedByCurrent = True
-        elif history == ReductionHistory.CalibratedByVanadium:
-            self._correctedByVanadium = True
-        else:
-            raise RuntimeError('History with value %d is not defined.' % history)
-
-        return
-
-
-class DataReductionTracker(object):
-    """ Record tracker of data reduction for an individual run.
-    """
     def __init__(self, run_number):
         """
         Purpose:
@@ -121,15 +36,17 @@ class DataReductionTracker(object):
         # Workspaces' names
         # event workspaces
         self._eventWorkspace = None
-        self._operationsOnEventWS = list()
-
-        # status flag
-        self._myHistory = ReductionHistory()
-        self._isReduced = False
-
         self._vdriveWorkspace = None
         self._tofWorkspace = None
         self._dspaceWorkspace = None
+
+        # status flag
+        self._isReduced = False
+
+        # initialize states of reduction beyond
+        self._badPulseRemoved = False
+        self._normalisedByCurrent = False
+        self._correctedByVanadium = False
 
         return
 
@@ -157,6 +74,43 @@ class DataReductionTracker(object):
         self._eventWorkspace = value
 
     @property
+    def is_corrected_by_vanadium(self):
+        """
+
+        :return:
+        """
+        return self._correctedByVanadium
+
+    @is_corrected_by_vanadium.setter
+    def is_corrected_by_vanadium(self, state):
+        """
+
+        :param state:
+        :return:
+        """
+        assert isinstance(state, bool), 'blabla 1423'
+        self._correctedByVanadium = state
+
+    @property
+    def is_normalized_by_current(self):
+        """
+
+        :return:
+        """
+        return self._normalisedByCurrent
+
+    @is_normalized_by_current.setter
+    def is_normalized_by_current(self, state):
+        """
+
+        :param state:
+        :return:
+        """
+        assert isinstance(state, bool)
+
+        self._normalisedByCurrent = state
+
+    @property
     def is_reduced(self):
         """ Check whether the event data that has been reduced
         :return:
@@ -174,6 +128,14 @@ class DataReductionTracker(object):
         """
         assert isinstance(value, bool), 'Input for is_reduced must be a boolean but not %s.' % str(type(value))
         self._isReduced = value
+
+    @property
+    def is_raw(self):
+        """
+        Show the status whether the workspace has never been processed
+        :return:
+        """
+        return not self._isReduced
 
     @property
     def run_number(self):
@@ -255,27 +217,6 @@ class DataReductionTracker(object):
 
         return
 
-    def add_history(self, reduction_history):
-        """
-        Add reduction history
-        Purpose:
-        Requirements: the reduction history must be a valid
-        Guarantees:
-        :param reduction_history: a reduction history defined in ReductionHistory
-        :return:
-        """
-        # Check requirements
-        assert isinstance(reduction_history, int), 'Reduction history must be an integer but not %s.' % \
-                                                   str(type(reduction_history))
-
-        # Set
-        if reduction_history == ReductionHistory.AlignAndFocus:
-            self._isReduced = True
-
-        self._myHistory.set(reduction_history)
-
-        return
-
 
 class ReductionManager(object):
     """ Class ReductionManager takes the control of reducing SNS/VULCAN's event data
@@ -318,6 +259,29 @@ class ReductionManager(object):
 
         # reduction tracker: key = run number (integer), value = DataReductionTracker
         self._reductionTrackDict = dict()
+
+        return
+
+    def chop_data(self, data_file, chop_manager, slice_key, output_dir):
+        """
+
+        :param data_file:
+        :param chop_manager:
+        :param slice_key:
+        :param output_dir:
+        :return:
+        """
+        split_ws_name, info_ws_name = chop_manager.get_split_workspace(slice_key)
+
+        mantid_helper.split_event_data(raw_file_name=data_file,
+                                       split_ws_name=split_ws_name,
+                                       info_table_name=info_ws_name,
+                                       target_ws_name=None,
+                                       tof_correction=False,
+                                       output_directory=output_dir,
+                                       delete_split_ws=True)
+
+        # TODO/ISSUE/57 - implement the code to manage output workspace and data
 
         return
 
@@ -440,6 +404,39 @@ class ReductionManager(object):
                 'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
 
         return
+
+    def reduce_chopped_data(self, ipts_number, src_file_name, run_number, chop_manager, slicer_key, output_dir):
+        """
+
+        :param run_number:
+        :param chop_manager:
+        :return:
+        """
+        # check inputs
+        assert isinstance(run_number, int), 'blabla 1329'
+
+        split_ws_name, info_ws_name = chop_manager.get_split_workspace(slicer_key)
+        reduce_setup = reduce_VULCAN.ReductionSetup()
+
+        reduce_setup.set_ipts_number(ipts_number)
+        reduce_setup.set_run_number(run_number)
+        reduce_setup.set_event_file(src_file_name)
+
+        reduce_setup.set_output_dir(output_dir)
+        reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+        reduce_setup.is_full_reduction = False
+        reduce_setup.set_default_calibration_files()
+
+        # add splitter workspace and splitter information workspace
+        reduce_setup.set_splitters(split_ws_name, info_ws_name)
+
+        reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+        reducer.execute_chop_reduction(clear_workspaces=False)
+
+        # get the reduced file names and workspaces
+        # TODO/ISSUE/57 - Implement ASAP
+
+        return True, None
 
     def set_reduced_workspaces(self, run_number, vdrive_bin_ws, tof_ws, dspace_ws):
         """

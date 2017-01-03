@@ -1519,32 +1519,10 @@ class VDriveAPI(object):
 
         return
 
-    def set_slicer_helper(self, nxs_file_name, run_number):
-        """
-        Initialize the event slicing helper object
-        :param nxs_file_name:
-        :param run_number:
-        :return:
-        """
-        if run_number is not None:
-            assert isinstance(run_number, int)
-        else:
-            run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
-
-        status, errmsg = self._mySlicingManager.load_data_file(nxs_file_name, run_number)
-
-        return status, errmsg
-
-    def set_slicer(self):
-        """ This method's purpose is ambiguous!
-        'SampleLog', 'Time', 'Manual'
-        :param splitter_src:
-        :param sample_log_name:
-        :return:
-        """
-        raise NotImplementedError('Need to consider how to use this method in the workflow!')
-
-        return
+    # Found not used
+    # def set_slicer_helper(self, nxs_file_name, run_number)
+    # Never been implemented
+    # def set_slicer(self):
 
     def set_working_directory(self, work_dir):
         """

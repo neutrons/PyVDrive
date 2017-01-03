@@ -5,66 +5,38 @@ from chop_utility import DataChopper
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
-import reduce_VULCAN
 
 
 class VDProject(object):
     """ VDrive Project
     """
-    def __init__(self, project_name):
+    def __init__(self, project_name, instrument='VULCAN'):
         """ Init
         """
+        # project name
         self._name = project_name
-        # dictionary for the information of run number, file name and IPTS
-        # key: run number, value: 2-tuple (file name, IPTS)
-        self._dataFileDict = dict()
-        # List of data file's base name
-        self._baseDataFileNameList = list()
         # Data path.  With baseDataFileName, a full path to a data set can be constructed
         self._baseDataPath = None
+
+        # chopping and reduction managers
+        # Reduction manager
+        self._reductionManager = prl.ReductionManager(instrument=instrument)
+        # dictionary to manage data chopping
+        self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
+
+        # definition of dictionaries
+        # dictionary for the information of run number, file name and IPTS
+        self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
         # dictionary for sample run mapping to vanadium run
-        # Key: sample run number of type integer; Value: vanadium run number in type of integer
-        self._sampleRunVanadiumDict = dict()
+        self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
         # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
         self._vanadiumGSASFileDict = dict()
 
-        # Data structure to manage split run: key run number or file name
-        self._splitWorkspaceDict = dict()
+        # List of data file's base name
+        self._baseDataFileNameList = list()
 
-        # Set class variable
-
-        # workspace holder
-        self._dataWorkspaceDict = dict()
-        # map between data key and full path
-        self._dataKeyPathMap = dict()
-
-        # Reduction manager
-        # FIXME - Need to make the setup of instrument more flexible.
-        self._reductionManager = prl.ReductionManager(instrument='VULCAN')
         # dictionary for sample run number to be flagged to reduce.
-        # Key: run number. Value: boolean flag for reduction
-        self._sampleRunReductionFlagDict = dict()
-
-        # dictionary to manage data chopping
-        self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
-        
-        return
-
-    def _clear_split_run(self, run_number):
-        """
-        Clear splitted workspace of a run
-        :param run_number:
-        :return:
-        """
-        # Check
-        if run_number not in self._splitWorkspaceDict:
-            return False, 'Run number %d has not split workspaces.' % run_number
-
-        # Delete workspaces
-        num_ws = len(self._splitWorkspaceDict[run_number])
-        for i_split_ws in xrange(num_ws):
-            split_ws = self._splitWorkspaceDict[run_number][num_ws-i_split_ws-1]
-            mantid_helper.delete_workspace(split_ws)
+        self._sampleRunReductionFlagDict = dict()  # Key: run number. Value: boolean flag for reduction
 
         return
 
@@ -77,18 +49,19 @@ class VDProject(object):
         :return:
         """
         # Check input
-        assert(isinstance(run_number, int))
-        assert(isinstance(ipts_number, int))
-        assert(isinstance(file_name, str))
+        assert isinstance(run_number, int)
+        assert isinstance(ipts_number, int)
+        assert isinstance(file_name, str)
 
         self._dataFileDict[run_number] = (file_name, ipts_number)
+        self._baseDataFileNameList.append(os.path.basename(file_name))
 
         return
 
     def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
-        split workspacs to GSAS
+        split workspaces to GSAS
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
@@ -111,44 +84,33 @@ class VDProject(object):
                             '' % (run_number, str(key_error), str(self._chopManagerDict.keys()))
             raise RuntimeError(error_message)
 
-        split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
-
         if reduce_flag:
             # reduce to GSAS
-            reduce_setup = reduce_VULCAN.ReductionSetup()
-
             src_file_name, ipts_number = self.get_run_info(run_number)
-            reduce_setup.set_ipts_number(ipts_number)
-            reduce_setup.set_run_number(run_number)
-            reduce_setup.set_event_file(src_file_name)
-
-            reduce_setup.set_output_dir(output_dir)
-            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-            reduce_setup.is_full_reduction = False
-            reduce_setup.set_default_calibration_files()
-
-            # add splitter workspace and splitter information workspace
-            reduce_setup.set_splitters(split_ws_name, info_ws_name)
-
-            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            reducer.execute_chop_reduction(clear_workspaces=False)
+            self._reductionManager.reduce_chopped_data(ipts_number, run_number, src_file_name, chopper, slicer_key,
+                                                       output_dir)
 
             status = True,
             message = ''
+
         else:
             # just chop the files and save to Nexus
-            mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),
-                                           split_ws_name=split_ws_name,
-                                           info_table_name=info_ws_name,
-                                           target_ws_name=None,
-                                           tof_correction=False,
-                                           output_directory=output_dir,
-                                           delete_split_ws=True)
+            data_file = self.get_file_path(run_number)
+            self._reductionManager.chop_data(data_file, chopper, slicer_key, output_dir)
 
             status = True
             message = 'Run %d is chopped and reduced. ' % run_number
 
         return status, message
+
+    def clear_reduction_flags(self):
+        """ Set to all runs' reduction flags to be False
+        :return:
+        """
+        for run_number in self._sampleRunReductionFlagDict.keys():
+            self._sampleRunReductionFlagDict[run_number] = False
+
+        return
 
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
@@ -167,15 +129,6 @@ class VDProject(object):
         data_chopper.delete_slicer_by_id(slicer_tag)
 
         return True, ''
-
-    def clear_reduction_flags(self):
-        """ Set to all runs' reduction flags to be False
-        :return:
-        """
-        for run_number in self._sampleRunReductionFlagDict.keys():
-            self._sampleRunReductionFlagDict[run_number] = False
-
-        return
 
     def clear_runs(self):
         """
@@ -890,78 +843,6 @@ class VDProject(object):
             raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
 
         return
-
-    def slice_data_main(self, run_number, sample_log_name=None, by_time=False):
-        """ Slice data (corresponding to a run) by either log value or time.
-        Requirements: slicer/splitters has already been set up for this run.
-        Guarantees:
-        :param run_number: run number
-        :param sample_log_name:
-        :param by_time:
-        :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
-        """
-        # TODO/ISSUE/51 - How to make it work with 'slice_data()'????
-        # Check. Must either by sample log or by time
-        if sample_log_name is not None and by_time is True:
-            return False, 'It is not allowed to specify both sample log name and time!'
-        elif sample_log_name is None and by_time is False:
-            return False, 'it is not allowed to specify neither sample log nor time!'
-
-        # Get and check slicers/splitters
-        if by_time is True:
-            # Slice data by time
-            status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
-            if status is False:
-                err_msg = ret_obj
-                return False, err_msg
-            else:
-                slicer = ret_obj
-                sample_log_name = '_TIME_'
-                print '[DB] Slicer = ', str(slicer), '\n'
-        else:
-            # Slice data by log value
-            assert isinstance(sample_log_name, str)
-            print '[DB] Run number = ', run_number, '\n'
-            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, sample_log_name)
-            if status is False:
-                print '[DB]', ret_obj, '\n'
-                return False, ret_obj
-            else:
-                slicer = ret_obj
-            # slicer is a tuple for names of splitter workspace and information workspace
-            # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
-
-        # Slice/split data
-        status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
-                                                     sample_log_name.replace('.', '-'))
-
-        return status, ret_obj
-
-    def slice_data(self, run_number, splitter_ws_name, info_ws_name, out_base_name):
-        """
-        Split data by event filter
-        :param run_number:
-        :param splitter_ws_name:
-        :param info_ws_name:
-        :param out_base_name:
-        :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
-        """
-        # Load data to event workspace
-        ret_obj = self.get_run_info(run_number)
-        nxs_file_name = ret_obj[0]
-        event_ws_name = mantid_helper.event_data_ws_name(run_number)
-        mantid_helper.load_nexus(data_file_name=nxs_file_name, output_ws_name=event_ws_name, meta_data_only=False)
-
-        # Split
-        splitted_ws_base_name = mantid_helper.get_split_workpsace_base_name(run_number, out_base_name)
-        status, ret_obj = mantid_helper.split_event_data(event_ws_name, splitter_ws_name, info_ws_name,
-                                                         splitted_ws_base_name, tof_correction=False)
-
-        if status is True:
-            self._clear_split_run(run_number)
-            self._splitWorkspaceDict[run_number] = ret_obj[1]
-
-        return status, ret_obj[0]
 
     def _generateFileName(self, runnumber, iptsstr):
         """ Generate a NeXus file name with full path with essential information
