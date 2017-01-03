@@ -31,6 +31,13 @@ class VDProject(object):
         # Data structure to manage split run: key run number or file name
         self._splitWorkspaceDict = dict()
 
+        # Set class variable
+
+        # workspace holder
+        self._dataWorkspaceDict = dict()
+        # map between data key and full path
+        self._dataKeyPathMap = dict()
+
         # Reduction manager
         # FIXME - Need to make the setup of instrument more flexible.
         self._reductionManager = prl.ReductionManager(instrument='VULCAN')
@@ -225,6 +232,53 @@ class VDProject(object):
 
         return run_chopper
 
+    def get_data(self, data_key=None, data_file_name=None):
+        """ Get whole data set as a dictionary.  Each entry is of a bank
+        Requirements: data key or data file name is specified
+        Guarantees:
+        :param data_key: data key generated in Vdrive project
+        :param data_file_name: full path data file
+        :return:
+        """
+        # Check requirements
+        assert (data_key is None and data_file_name is None) is False, \
+            'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
+        assert (data_key is not None and data_file_name is not None) is False, \
+            'Both data key and data file name are given.'
+
+        # check and convert to data key
+        if data_file_name is not None:
+            assert isinstance(data_file_name, str), 'blabla'
+            # TODO: make this to a method ???
+            data_key = get_data_key(data_file_name)
+        else:
+            assert isinstance(data_key, str), 'blabla'
+
+        # check existence
+        if data_key not in self._dataWorkspaceDict:
+            raise KeyError('data key %s does not exist.' % data_key)
+
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
+        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
+
+        return True, data_set_dict
+
+    def get_data_information(self, data_key):
+        """ Get bank information of a loaded data file (workspace)
+        Requirements: data_key is a valid string as an existing key to the MatrixWorkspace
+        Guarantees: return
+        :param data_key:
+        :return:
+        """
+        # Check requirements
+        assert isinstance(data_key, str), 'Data key must be a string but not %s.' % str(type(data_key))
+        assert data_key in self._dataWorkspaceDict, 'Data key %s does not exist.' % data_key
+
+        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
+        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
+
+        return data_set_dict.keys()
+
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
         :param run_number:
@@ -310,6 +364,19 @@ class VDProject(object):
             raise RuntimeError('Run %d does not exist in this project.' % run_number)
 
         return file_path
+
+    def get_workspace_name(self, data_key):
+        """ Get workspace name
+        :param data_key:
+        :return:
+        """
+        # TODO/NOW - Doc and Check requirements
+
+        assert data_key in self._dataWorkspaceDict, 'There is no workspace for data key %s. ' \
+                                                    'Candidates are %s.' % (str(data_key),
+                                                                            str(self._dataWorkspaceDict.keys()))
+
+        return self._dataWorkspaceDict[data_key]
 
     def getBaseDataPath(self):
         """ Get the base data path of the project
@@ -520,11 +587,24 @@ class VDProject(object):
 
         return
 
+    @property
     def name(self):
-        """ Get name of the project
-        :return:
+        """ Return project name
+        :return: if return None, it means that the project name has not been set up yet.
         """
         return self._name
+
+    @name.setter
+    def name(self, project_name):
+        """ Set project name
+        Requirements: project name is a string
+        :param project_name:
+        :return:
+        """
+        assert isinstance(project_name, str)
+        self._name = project_name
+
+        return
 
     def reduce_vanadium_runs(self):
         """ Reduce vanadium runs
@@ -904,3 +984,14 @@ class VDProject(object):
             print "[DB] Successfully generate an existing NeXus file with name %s." % (nxsfname)
 
         return nxsfname
+
+
+def get_data_key(file_name):
+    """ Generate data key according to file name
+    :param file_name:
+    :return:
+    """
+    # TODO/NOW - Doc!
+    assert isinstance(file_name, str)
+
+    return os.path.basename(file_name)
