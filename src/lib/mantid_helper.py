@@ -432,18 +432,44 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
 def get_data_from_gsas(gsas_file_name):
     """
-
+    Load and get data from a GSAS file
     :param gsas_file_name:
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
-    # TODO/ISSUE/55 - Docs and check
+    # check input
+    assert isinstance(gsas_file_name, str), 'blabla 1710'
+
+    # get output workspace name
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
-    mantidapi.LoadGSS(Filename=gsas_file_name, OutputWorkspace=out_ws_name)
 
-    return get_data_from_workspace(out_ws_name, point_data=True)
+    # load GSAS file
+    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
+
+    data_set_dict = get_data_from_workspace(out_ws_name, point_data=True)
+
+    return data_set_dict
 
 
-def get_data_from_workspace(workspace_name, point_data):
+def get_data_banks(workspace_name, start_bank_id=1):
+    """
+    get bank number
+    :param workspace_name:
+    :param start_bank_id:
+    :return:
+    """
+    # Requirements
+    assert isinstance(workspace_name, str), 'blabla 610Night'
+    assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+
+    workspace = retrieve_workspace(workspace_name)
+    num_hist = workspace.getNumberHistograms()
+
+    bank_list = range(start_bank_id, start_bank_id + num_hist)
+
+    return bank_list
+
+
+def get_data_from_workspace(workspace_name, point_data, start_bank_id=1):
     """
     Purpose: get data from a workspace
     Requirements: a valid matrix workspace is given
@@ -483,7 +509,7 @@ def get_data_from_workspace(workspace_name, point_data):
         data_y[:] = vec_y[:]
         data_e[:] = vec_e[:]
     
-        data_set_dict[i_ws] = (data_x, data_y, data_e)
+        data_set_dict[i_ws + start_bank_id] = (data_x, data_y, data_e)
     
     # END-FOR
     

@@ -244,7 +244,7 @@ class VDriveAPI(object):
 
         assert isinstance(gsas_file_name, str)
         out_dir = os.path.dirname(gsas_file_name)
-        assert os.writable(out_dir)
+        assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
 
         try:
             self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
@@ -331,7 +331,7 @@ class VDriveAPI(object):
             raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
 
         # Get workspace from
-        data_ws_name = self._myAnalysisProject.get_workspace_name(data_key)
+        data_ws_name = self._myProject.get_workspace_name(data_key)
 
         if auto_find:
             # find peaks in an automatic way
@@ -514,7 +514,10 @@ class VDriveAPI(object):
             # case as dat key
             data_key = run_id
             print '[DB-BAT] VDriveAPI... get data of data key', data_key, 'of type', type(run_id)
-            status, ret_obj = self._myAnalysisProject.get_data(data_key=data_key)
+
+            balbla from here .... 
+
+            status, ret_obj = self._myProject.get_data(data_key=data_key)
             if status is False:
                 return False, ret_obj
             data_set = ret_obj
@@ -544,7 +547,7 @@ class VDriveAPI(object):
             # given data key
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                info = self._myAnalysisProject.get_data_information(data_key)
+                info = self._myProject.get_data_bank_list(data_key)
             except AssertionError as e:
                 return False, str(e)
 
@@ -741,7 +744,7 @@ class VDriveAPI(object):
         """
         print '[DB...BAT] Archive key = ', archive_key
 
-        # call archive mananger
+        # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
                                                                        standard_sns_file)
 
@@ -754,7 +757,7 @@ class VDriveAPI(object):
                                                                                               begin_run,
                                                                                               end_run)
 
-        return
+        return status, ret_obj
 
     def get_ipts_run_range(self, archive_key):
         """
@@ -900,25 +903,11 @@ class VDriveAPI(object):
     def load_diffraction_file(self, file_name, file_type):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
+        :param file_name
         :param file_type:
         :return:
         """
-        # Check requirements
-        assert isinstance(file_name, str), 'Diffraction file name %s must be a string but not %s.' \
-                                           '' % (str(file_name), type(file_name))
-        assert isinstance(file_type, str), 'Diffraction file type %s mut be a string but not %s.' \
-                                           '' % (str(file_type), type(file_type))
-
-        # Load
-        if file_type.lower() == 'gsas':
-            # load
-            data_key = self._myAnalysisProject.load_data(data_file_name=file_name, data_type=file_type)
-        else:
-            raise RuntimeError('Unable to support %s file.' % file_type)
-
-        # data_key = os.path.basename(file_name)
-
-        print '[DB-BAT] Load %s and reference it by %s.' % (file_name, data_key)
+        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type)
 
         return data_key
 

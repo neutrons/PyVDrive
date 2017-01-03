@@ -5,6 +5,7 @@ from chop_utility import DataChopper
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
+import loaded_data_manager
 
 
 class ProjectManager(object):
@@ -21,6 +22,8 @@ class ProjectManager(object):
         # chopping and reduction managers
         # Reduction manager
         self._reductionManager = prl.ReductionManager(instrument=instrument)
+        # Loaded (previously) binned data manager
+        self._loadedDataManager = loaded_data_manager.LoadedDataManager(self)
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
 
@@ -111,6 +114,14 @@ class ProjectManager(object):
             self._sampleRunReductionFlagDict[run_number] = False
 
         return
+
+    @property
+    def data_loading_manager(self):
+        """
+        return the handler to data loading manager
+        :return:
+        """
+        return self._loadedDataManager
 
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
@@ -216,21 +227,21 @@ class ProjectManager(object):
 
         return True, data_set_dict
 
-    def get_data_information(self, data_key):
+    def get_data_bank_list(self, data_key):
         """ Get bank information of a loaded data file (workspace)
         Requirements: data_key is a valid string as an existing key to the MatrixWorkspace
         Guarantees: return
         :param data_key:
         :return:
         """
-        # Check requirements
-        assert isinstance(data_key, str), 'Data key must be a string but not %s.' % str(type(data_key))
-        assert data_key in self._dataWorkspaceDict, 'Data key %s does not exist.' % data_key
+        if self._loadedDataManager.has_data(data_key):
+            bank_list = self._loadedDataManager.get_bank_list(data_key)
+        elif self._reductionManager.has_data(data_key):
+            bank_list = self._reductionManager.get_bank_list(data_key)
+        else:
+            raise RuntimeError('Data key {0} cannot be found in project manager.'.format(data_key))
 
-        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
-        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
-
-        return data_set_dict.keys()
+        return bank_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
