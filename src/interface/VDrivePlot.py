@@ -867,7 +867,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         print '[DB-BAR] Importing time segment file: %s' % seg_file_name
 
         # Import file
-        status, ret_obj = VdriveAPI.parse_time_segment_file(seg_file_name)
+        status, ret_obj = self._myWorkflow.parse_time_segment_file(seg_file_name)
         if status is False:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)

@@ -405,7 +405,7 @@ class ReductionManager(object):
 
         return
 
-    def reduce_chopped_data(self, ipts_number, src_file_name, run_number, chop_manager, slicer_key, output_dir):
+    def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key, output_dir):
         """
 
         :param run_number:
@@ -413,7 +413,9 @@ class ReductionManager(object):
         :return:
         """
         # check inputs
-        assert isinstance(run_number, int), 'blabla 1329'
+        assert isinstance(ipts_number, int), 'IPTS number blabla 1329'
+        assert isinstance(run_number, int), 'Input run number {0} must be an integer ' \
+                                            'but not {1}.'.format(run_number, type(run_number))
 
         split_ws_name, info_ws_name = chop_manager.get_split_workspace(slicer_key)
         reduce_setup = reduce_VULCAN.ReductionSetup()

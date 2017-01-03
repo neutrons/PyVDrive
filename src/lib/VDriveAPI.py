@@ -7,18 +7,17 @@
 #
 #####
 import os
-import datetime
 import pandas as pd
 import shutil
 
 import ProjectManager as vp
-from analysisproject import AnalysisProject
 import archivemanager
 import vdrivehelper
 import mantid_helper
 import crystal_helper
 import io_peak_file
 import reduce_VULCAN
+import chop_utility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -56,7 +55,6 @@ class VDriveAPI(object):
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
         self._myProject = vp.ProjectManager('New Project')
-        self._myAnalysisProject = AnalysisProject('New Analysis Project')
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.
@@ -915,10 +913,6 @@ class VDriveAPI(object):
         if file_type.lower() == 'gsas':
             # load
             data_key = self._myAnalysisProject.load_data(data_file_name=file_name, data_type=file_type)
-            """
-            gss_ws_name = get_standard_ws_name(file_name, False)
-            mantid_helper.load_gsas_file(file_name, gss_ws_name)
-            """
         else:
             raise RuntimeError('Unable to support %s file.' % file_type)
 
@@ -1239,6 +1233,17 @@ class VDriveAPI(object):
 
         return self._mtsLogDict[log_file_name].keys()
 
+    @staticmethod
+    def parse_time_segment_file(file_name):
+        """
+
+        :param file_name:
+        :return:
+        """
+        status, ret_obj = chop_utility.parse_time_segments(file_name)
+
+        return status, ret_obj
+
     def process_reduced_standard(self, run_number, standard_type):
         """
         process the reduced standard sample such as Ni, Si, Vanadium
@@ -1548,115 +1553,3 @@ class VDriveAPI(object):
             self._myWorkDir = work_dir
 
         return True, ''
-
-
-def filter_runs_by_run(run_tuple_list, start_run, end_run):
-    """
-    Filter runs by range of run numbers
-    :param run_tuple_list:
-    :param start_run:
-    :param end_run:
-    :return:
-    """
-    # Check
-    assert(isinstance(run_tuple_list, list))
-    assert(isinstance(start_run, int))
-    assert(isinstance(end_run, int))
-    assert(start_run <= end_run)
-    
-    # Sort by runs
-    run_tuple_list.sort(key=lambda x: x[0])
-    
-    # FIXME - Use binary search for determine the range of run numbers in the tuple-list
-    result_list = []
-    for tup in run_tuple_list:
-        assert(isinstance(tup[0], int))
-        if start_run <= tup[0] <= end_run:
-            result_list.append(tup)
-    
-    return True, result_list
-
-
-def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=False):
-    """
-    Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
-    will be included.
-    :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
-    :param start_date:
-    :param end_date:
-    :param include_end_date: Flag whether the end-date will be included in the return
-    :return:
-    """
-    # Get starting date and end date's epoch time
-    try:
-        assert(isinstance(start_date, str))
-        epoch_start = vdrivehelper.convert_to_epoch(start_date)
-        epoch_end = vdrivehelper.convert_to_epoch(end_date)
-        if include_end_date is True:
-            # Add one day for next date
-            epoch_end += 24*3600
-        print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                               (epoch_end-epoch_start)/3600.)
-    except ValueError as e:
-        return False, str(e)
-    
-    # Sort by time
-    assert isinstance(run_tuple_list, list)
-    run_tuple_list.sort(key=lambda x: x[1])
-    
-    # FIXME - Using binary search will be great!
-    result_list = []
-    for tup in run_tuple_list:
-        file_epoch = tup[1]
-        if epoch_start <= file_epoch < epoch_end:
-            result_list.append(tup[:])
-        # END-IF
-    # END-IF
-
-    return True, result_list
-
-
-def get_splitters_names(base_name):
-    """ Get splitter workspaces's name including
-    (1) SplittersWS and (2) InformationWS
-    using current epoch time
-    :param base_name:
-    :return:
-    """
-    now = datetime.datetime.now()
-    special_key = '%02d06%d' % (now.second, now.microsecond)
-
-    splitter_ws = '%s_%s_Splitters' % (base_name, special_key)
-    info_ws = '%s_%s_Info' % (base_name, special_key)
-
-    return splitter_ws, info_ws
-
-
-def get_standard_ws_name(file_name, meta_only):
-    """
-    Get the standard name for a loaded workspace
-    :param file_name:
-    :return:
-    """
-    ws_name = os.path.basename(file_name).split('.')[0]
-    file_type = os.path.basename(file_name).split('.')[1]
-    if file_type.lower() == 'gsa' or file_type.lower() == 'gda':
-        ws_name += '_gda'
-
-    if meta_only is True:
-        ws_name += '_Meta'
-
-    return ws_name
-
-
-def parse_time_segment_file(file_name):
-    """
-
-    :param file_name:
-    :return:
-    """
-    status, ret_obj = SampleLogHelper.parse_time_segments(file_name)
-
-    return status, ret_obj
-
-
