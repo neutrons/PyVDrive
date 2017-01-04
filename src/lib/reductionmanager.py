@@ -1,6 +1,7 @@
 ################################################################################
 # Manage the reduced VULCAN runs
 ################################################################################
+import os
 import reduce_VULCAN
 import mantid_helper
 
@@ -48,7 +49,30 @@ class DataReductionTracker(object):
         self._normalisedByCurrent = False
         self._correctedByVanadium = False
 
+        # reduced file list
+        self._reducedFiles = list()
+
         return
+
+    def add_reduced_files(self, file_name_list):
+        """
+        add reduced file
+        :param file_name_list:
+        :return:
+        """
+        assert isinstance(file_name_list, list), 'blabla 326PM'
+
+        self._reducedFiles.extend(file_name_list[:])
+
+        return
+
+    @property
+    def dpsace_worksapce(self):
+        """
+        Mantid binned DSpaceing workspace
+        :return:
+        """
+        return self._dspaceWorkspace
 
     @property
     def event_workspace_name(self):
@@ -72,6 +96,25 @@ class DataReductionTracker(object):
         assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
         # Set
         self._eventWorkspace = value
+
+    def get_reduced_gsas(self):
+        """
+
+        :return:
+        """
+        gsas_file = None
+
+        for file_name in self._reducedFiles:
+            main_file_name, file_ext = os.path.splitext(file_name)
+            if file_ext.lower() in ['.gda', '.gsas', '.gsa']:
+                gsas_file = file_name
+                break
+
+        if gsas_file is None:
+            raise RuntimeError('Unable to locate reduced GSAS file of run {0}.  '
+                               'Files found are {1}'.format(self._runNumber, self._reducedFiles))
+
+        return gsas_file
 
     @property
     def is_corrected_by_vanadium(self):
@@ -144,13 +187,6 @@ class DataReductionTracker(object):
         """
         return self._runNumber
 
-    @property
-    def dpsace_worksapce(self):
-        """
-        Mantid binned DSpaceing workspace
-        :return:
-        """
-        return self._dspaceWorkspace
 
     @property
     def vdrive_workspace(self):
@@ -334,6 +370,24 @@ class ReductionManager(object):
 
         return data_set_dict
 
+    def get_reduced_file(self, run_number, file_type):
+        """
+
+        :param run_number:
+        :param file_type:
+        :return:
+        """
+        # check inputs
+        assert isinstance(file_type, str) and file_type in ['gda', 'gsas', 'gss'],\
+            'File type {0} is not supported.'.format(file_type)
+
+        if file_type in ['gda', 'gsas', 'gsa']:
+            file_name = self._reductionTrackDict[run_number].get_reduced_gsas()
+        else:
+            raise RuntimeError('Not Implemented yet!')
+
+        return file_name
+
     def get_reduced_runs(self):
         """
         Get the runs that have been reduced. It is just for information
@@ -471,6 +525,67 @@ class ReductionManager(object):
         # TODO/ISSUE/57 - Implement ASAP
 
         return True, None
+
+    def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
+                   vanadium_tuple=None, gsas=True):
+        """
+        Reduce run with selected options
+        Purpose:
+        Requirements:
+        Guarantees:
+        :param ipts_number:
+        :param run_number:
+        :param event_file:
+        :param output_directory:
+        :param vanadium:
+        :param vanadium_tuple:
+        :param gsas:
+        :return:
+        """
+        # set up reduction options
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        reduction_setup.set_default_calibration_files()
+
+        # run number, ipts and etc
+        reduction_setup.set_run_number(run_number)
+        reduction_setup.set_event_file(event_file)
+        reduction_setup.set_ipts_number(ipts_number)
+
+        # vanadium
+        reduction_setup.normalized_by_vanadium = vanadium
+        if vanadium:
+            assert isinstance(vanadium_tuple, tuple) and len(vanadium_tuple) == 3, 'blabla 1426'
+            van_run, van_gda, vanadium_tag = vanadium_tuple
+            reduction_setup.set_vanadium(van_run, van_gda, vanadium_tag)
+
+        # outputs
+        reduction_setup.set_output_dir(output_directory)
+        if gsas:
+            reduction_setup.set_gsas_dir(output_directory, True)
+
+        # reduce
+        reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
+        reduce_good, message = reducer.execute_vulcan_reduction()
+
+        # record reduction tracker
+        if reduce_good:
+            self.init_tracker(run_number)
+
+            if vanadium:
+                self._reductionTrackDict[run_number].is_corrected_by_vanadium = True
+
+            # set reduced files
+            self._reductionTrackDict[run_number].add_reduced_files(reducer.get_reduced_files())
+            # set workspaces
+            status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
+            if status:
+                # it may not have the workspace because
+                vdrive_ws, tof_ws, d_ws = ret_obj
+                self.set_reduced_workspaces(run_number, vdrive_ws, tof_ws, d_ws)
+
+        # END-IF
+
+        return reduce_good, message
 
     def set_reduced_workspaces(self, run_number, vdrive_bin_ws, tof_ws, dspace_ws):
         """

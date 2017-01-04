@@ -1110,6 +1110,7 @@ class ReduceVulcanData(object):
         self._reduceGood = False
 
         self._reducedWorkspaceList = list()
+        self._reducedDataFiles = list()
 
         self._choppedDataDirectory = None
 
@@ -1909,6 +1910,13 @@ class ReduceVulcanData(object):
 
         return
 
+    def get_reduced_files(self):
+        """
+        get the list of output reduced files
+        :return:
+        """
+        return self._reducedDataFiles[:]
+
     def get_reduced_workspaces(self, chopped):
         """
 
@@ -2029,6 +2037,7 @@ class ReduceVulcanData(object):
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+        self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
             # FIXME/TODO/ISSUE/57 - Refactor!

@@ -475,16 +475,6 @@ class ProjectManager(object):
 
         return data_set
 
-    def get_reduced_file(self, run_number, file_type):
-        """
-        get the path of the reduced file
-        :param run_number:
-        :param file_type:
-        :return:
-        """
-        self._reductionManager.get_reduced_runs()
-        self.get_run_info(run_number)
-
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run
         :param run_number:
@@ -660,8 +650,16 @@ class ProjectManager(object):
         # END-FOR
 
         return
+    
+    @property
+    def reduction_manager(self):
+        """
+        handler to _myReductionManager
+        :return:
+        """
+        return self._reductionManager
 
-    def reduce_runs(self, ipts_number, run_number_list, output_directory, background=False,
+    def reduce_runs(self, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
                     sample_log_file=False):
         """
@@ -697,20 +695,10 @@ class ProjectManager(object):
         :param sample_log_file:
         :return:
         """
-        import reduce_VULCAN
         import random
-
-        print 'VANADIUM IS', vanadium
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
-
-        # set up reduction general
-        reduction_setup = reduce_VULCAN.ReductionSetup()
-        reduction_setup.set_default_calibration_files()
-        reduction_setup.set_output_dir(output_directory)
-        if gsas:
-            reduction_setup.set_gsas_dir(output_directory, True)
 
         reduce_all_success = True
         message = ''
@@ -718,38 +706,31 @@ class ProjectManager(object):
         vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
 
         for run_number in run_number_list:
-            # set up
-            reduction_setup.set_run_number(run_number)
+            # get IPTS and files
             full_event_file_path, ipts_number = self._dataFileDict[run_number]
-            reduction_setup.set_event_file(full_event_file_path)
-            reduction_setup.set_ipts_number(ipts_number)
-            reduction_setup.normalized_by_vanadium = vanadium
-            # set up vanadium
+
+            # vanadium
             if vanadium:
                 try:
                     van_run = self._sampleRunVanadiumDict[run_number]
                     van_gda = self._vanadiumGSASFileDict[van_run]
+                    vanadium_tuple = van_run, van_gda, vanadium_tag
                 except KeyError:
                     reduce_all_success = False
                     message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
                     continue
-                reduction_setup.set_vanadium(van_run, van_gda, vanadium_tag)
-
-
-            # init tracker
-            self._reductionManager.init_tracker(run_number)
+            else:
+                vanadium_tuple = None
+            # END-IF (vanadium)
 
             # reduce
-            reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
-            reduce_good, message = reducer.execute_vulcan_reduction()
+            status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
+                                                                    output_directory, vanadium=vanadium,
+                                                                    vanadium_tuple=vanadium_tuple, gsas=gsas)
 
-            status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             reduce_all_success = reduce_all_success and status
-            if status:
-                vdrive_ws, tof_ws, d_ws = ret_obj
-                self._reductionManager.set_reduced_workspaces(run_number, vdrive_ws, tof_ws, d_ws)
-            else:
-                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, str(ret_obj))
+            if not status:
+                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
 
         # END-FOR
 

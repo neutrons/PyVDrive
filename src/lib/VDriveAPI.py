@@ -968,8 +968,7 @@ class VDriveAPI(object):
         else:
             # manual reduction: Reduce runs
             try:
-                status, ret_obj = self._myProject.reduce_runs(ipts_number=ipts_number,
-                                                              run_number_list=runs_to_reduce,
+                status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
                                                               vanadium=vanadium,
@@ -1201,26 +1200,39 @@ class VDriveAPI(object):
         """
         # check inputs
         assert isinstance(run_number, int), 'blabla 1012'
-        assert isinstance(standard_type, str) and standard_type in ['Si', 'V'], 'blabla 1013'
+        assert isinstance(standard_type, str) and standard_type in ['Si', 'V'],\
+            'Standard type {0} must be a string but not {1}.'.format(standard_type, type(standard_type))
 
         # locate the target directory to put reduced data
         if standard_type == 'V':
             standard_sub_dir = 'Vanadium'
+            record_file_name = 'VRecord.txt'
         elif standard_type == 'Si':
             standard_sub_dir = 'Si'
+            record_file_name = 'SiRecord.txt'
         else:
             raise RuntimeError('Impossible situation to fall into this brach')
 
         # call the controller
-
+        # TODO/NOW/FIXME/ISSUE/57 - The target directory is for testing purpose
         target_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/{0}'.format(standard_sub_dir)
+        target_dir = '/home/wzz/Projects/workspaces/VDrive/Instrument/Standard/{0}'.format(standard_sub_dir)
         assert os.path.exists(target_dir), 'blabla 1018'
 
         # find the reduced data
-        gsa_file = self._myProject.get_reduced_file(run_number, file_type='gda')
-        shutil.copy(gsa_file, target_dir)
+        gsa_file = self._myProject.reduction_manager.get_reduced_file(run_number, file_type='gda')
+        try:
+            shutil.copy(gsa_file, target_dir)
+        except IOError as io_err:
+            print '[ERROR] Unable to copy {0} to {1} due to {2}.'.format(gsa_file, target_dir, io_err)
 
+        # write record file
+        record_file_name = os.path.join(target_dir, record_file_name)
+        
 
+        # ... to be continued from here ...
+
+        return
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """

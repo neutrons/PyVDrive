@@ -95,7 +95,7 @@ def find_peaks(diff_data, peak_profile, auto):
     #                    BackgroundType='Quadratic',
     #                    PeaksList='peaks')
 
-    # TODO/NOW - Make it work in the code!
+    # TODO/NOW/ISSUE/57 - Make it work in the code! and more ...
 
     ws_index = 0
     out_ws_name = '70269_gda_peaks'

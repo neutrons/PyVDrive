@@ -146,14 +146,14 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # RUNV
         if 'RUNV' in input_args:
-            # TODO/ISSUE/55 FIND IT AT /SNS/VULCAN/IPTS-14094/shared/Instrument
+            # TODO/ISSUE/57 FIND IT AT /SNS/VULCAN/IPTS-14094/shared/Instrument
             van_run = int(self._commandArgsDict['RUNV'])
         else:
             van_run = None
 
         # TAG
         if 'TAG' in input_args:
-            material_type = self._commandArgsDict['RUNV'].lower()
+            material_type = self._commandArgsDict['TAG']
             process_standard = material_type
         else:
             process_standard = None
