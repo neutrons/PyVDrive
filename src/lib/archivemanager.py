@@ -142,7 +142,7 @@ class DataArchiveManager(object):
     @staticmethod
     def get_data_archive_gsas(ipts_number, run_number):
         """
-        get reduced data from GSAS file stored on archive server
+        get the path of GSAS file stored on archive server
         :param ipts_number:
         :param run_number:
         :return: list of data or None (cannot find)
@@ -161,10 +161,7 @@ class DataArchiveManager(object):
         if not os.path.exists(gsas_file_name):
             return None
 
-        # get data
-        data_set = mantid_helper.get_data_from_gsas(gsas_file_name)
-
-        return data_set
+        return gsas_file_name
 
     @staticmethod
     def get_data_chopped_gsas(search_dirs, run_number, chop_seq):

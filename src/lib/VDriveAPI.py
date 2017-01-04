@@ -487,45 +487,19 @@ class VDriveAPI(object):
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # Check
-        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
-                                                                   'but not %s.' % str(type(run_id))
-        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
+        try:
+            # get GSAS file name
+            if search_archive and isinstance(run_id, int):
+                gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+            else:
+                gsas_file = None
 
-        # 2 cases: run ID is run number or run ID is the file name
-        if isinstance(run_id, int):
-            # case as run number
-            run_number = run_id
-            try:
-                # get data from current Project
-                data_set = self._myProject.get_reduced_data(run_number, target_unit)
-            except KeyError:
-                print '[INFO] Run %d is not reduced in current session.' % run_number
-                # optionally get data from archive
-                if search_archive:
-                    assert isinstance(ipts_number, int), 'IPTS number must be an integer'
-                    data_set = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_number)
-                    if data_set is None:
-                        return False, 'Unable to get data from archive'
-                else:
-                    return False, 'Data is not reduced in this session.'
-            # END-TRY-EXCEPTION
-        else:
-            # case as dat key
-            data_key = run_id
-            print '[DB-BAT] VDriveAPI... get data of data key', data_key, 'of type', type(run_id)
+            # get data from project
+            data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+        except RuntimeError as run_err:
+            return False, 'Unable to get data due to {0}'.format(run_err)
 
-            balbla from here .... 
-
-            status, ret_obj = self._myProject.get_data(data_key=data_key)
-            if status is False:
-                return False, ret_obj
-            data_set = ret_obj
-        # END-IF
-
-        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
-
-        return True, data_set
+        return True, data_set_dict
 
     def get_reduced_run_info(self, run_number, data_key=None):
         """

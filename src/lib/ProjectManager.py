@@ -204,28 +204,28 @@ class ProjectManager(object):
         :param data_file_name: full path data file
         :return:
         """
-        # Check requirements
-        assert (data_key is None and data_file_name is None) is False, \
-            'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
-        assert (data_key is not None and data_file_name is not None) is False, \
-            'Both data key and data file name are given.'
-
-        # check and convert to data key
-        if data_file_name is not None:
-            assert isinstance(data_file_name, str), 'blabla'
-            # TODO: make this to a method ???
-            data_key = get_data_key(data_file_name)
-        else:
-            assert isinstance(data_key, str), 'blabla'
-
-        # check existence
-        if data_key not in self._dataWorkspaceDict:
-            raise KeyError('data key %s does not exist.' % data_key)
-
-        # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
-        data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
-
-        return True, data_set_dict
+        # # Check requirements
+        # assert (data_key is None and data_file_name is None) is False, \
+        #     'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
+        # assert (data_key is not None and data_file_name is not None) is False, \
+        #     'Both data key and data file name are given.'
+        #
+        # # check and convert to data key
+        # if data_file_name is not None:
+        #     assert isinstance(data_file_name, str), 'blabla'
+        #     # TODO: make this to a method ???
+        #     data_key = get_data_key(data_file_name)
+        # else:
+        #     assert isinstance(data_key, str), 'blabla'
+        #
+        # # check existence
+        # if data_key not in self._dataWorkspaceDict:
+        #     raise KeyError('data key %s does not exist.' % data_key)
+        #
+        # # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
+        # data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
+        #
+        # return True, data_set_dict
 
     def get_data_bank_list(self, data_key):
         """ Get bank information of a loaded data file (workspace)
@@ -391,28 +391,50 @@ class ProjectManager(object):
         """
         return self._reductionManager.get_reduced_runs()
 
-    def get_reduced_data(self, run_number, unit):
-        """ Get data (x, y and e) of a reduced run in the specified unit
-        Purpose: Get reduced data including all spectra
-        Requirements: run number is a valid integer; unit is a string for supported unit
-        Guarantees: all data of the reduced run will be returned
-        :param run_number:
-        :param unit: target unit for the output X vector.  If unit is None, then no request
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+    def get_reduced_data(self, run_id, target_unit, reduced_data_file=None):
+        """ Get reduced data
+        Purpose: Get all data from a reduced run, either from run number or data key
+        - Order to locate the reduced data
+          1. loaded reduced data file referenced by data_key;
+          2. reduced data from reduction manager;
+          3. given data file from archive;
+        Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
+        Guarantees: returned with 3 numpy arrays, x, y and e
+        :param run_id: it is a run number or data key
+        :param target_unit:
+        :param reduced_data_file: flag to allow search reduced data from archive
+        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # check
-        assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
-
-        # get reduced workspace name
-        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
+        # Check inputs
+        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
+                                                                   'but not %s.' % str(type(run_id))
+        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
 
         # get data
-        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
-        assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
-                                                'but not %s.' % str(type(data_set_dict))
+        if self._loadedDataManager.has_data(run_id):
+            # get data from loaded data manager
+            data_set = self._loadedDataManager.get_data_set(run_id, target_unit)
 
-        return data_set_dict
+        elif self._reductionManager.has_run(run_id):
+            # try to get data from reduction manager if given run number (run id)
+            data_set = self._reductionManager.get_reduced_data(run_id, target_unit)
+
+        elif isinstance(reduced_data_file, str) and os.path.exists(reduced_data_file):
+            # load from a file
+            data_key = self._loadedDataManager.load_binned_data(data_file_name=reduced_data_file,
+                                                                data_file_type=None)
+            data_set = self._loadedDataManager.get_data_set(data_key, target_unit)
+
+        else:
+            # no idea what to do
+            raise RuntimeError('Unable to find reduced data {0}/{1}/{2}'
+                               ''.format(run_id, target_unit, reduced_data_file))
+        # END-IF-ELSE
+
+        # check return
+        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
+
+        return data_set
 
     def get_reduced_file(self, run_number, file_type):
         """

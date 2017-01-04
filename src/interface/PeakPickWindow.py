@@ -1254,7 +1254,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get spectrum 0, i.e, bank 1
         assert isinstance(ret_obj, dict)
         self._currentDataSet = ret_obj
-        data_bank_1 = self._currentDataSet[0]
+        data_bank_1 = self._currentDataSet[1]
         # FIXME - It might return vec_x, vec_y AND vec_e
         vec_x = data_bank_1[0]
         vec_y = data_bank_1[1]

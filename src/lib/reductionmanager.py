@@ -310,6 +310,31 @@ class ReductionManager(object):
         # TODO/NEXT:
         raise NotImplementedError('Implement ASAP!')
 
+    def get_reduced_data(self, run_number, unit):
+        """ Get data (x, y and e) of a reduced run in the specified unit
+        Purpose: Get reduced data including all spectra
+        Requirements: run number is a valid integer; unit is a string for supported unit
+        Guarantees: all data of the reduced run will be returned
+        :param run_number:
+        :param unit: target unit for the output X vector.  If unit is None, then no request
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        """
+        # check
+        assert isinstance(run_number, int), 'Input run number must be an integer.'
+        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
+
+        # TODO/NOW/FIXME/ISSUE/57 - How to apply unit???
+
+        # get reduced workspace name
+        reduced_ws_name = self.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
+
+        # get data
+        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
+        assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
+                                                'but not %s.' % str(type(data_set_dict))
+
+        return data_set_dict
+
     def get_reduced_runs(self):
         """
         Get the runs that have been reduced. It is just for information
@@ -384,6 +409,14 @@ class ReductionManager(object):
         temp_van_ws_name = 'Not Implemented Yet!'
 
         return temp_van_ws_name
+
+    def has_run(self, run_number):
+        """
+        check whether a certain run number is reduced and stored
+        :param run_number:
+        :return:
+        """
+        return run_number in self._reductionTrackDict
 
     def init_tracker(self, run_number):
         """ Initialize tracker
