@@ -445,7 +445,8 @@ def get_data_from_gsas(gsas_file_name):
     # load GSAS file
     load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
 
-    data_set_dict = get_data_from_workspace(out_ws_name, point_data=True)
+    data_set_dict = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
+                                            start_bank_id=True)
 
     return data_set_dict
 
@@ -469,12 +470,13 @@ def get_data_banks(workspace_name, start_bank_id=1):
     return bank_list
 
 
-def get_data_from_workspace(workspace_name, point_data, start_bank_id=1):
+def get_data_from_workspace(workspace_name, target_unit, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
     Requirements: a valid matrix workspace is given
     Guarantees: transform all the data to 1-dimension arrays.
     :param workspace_name:
+    :param target_unit:
     :param point_data: If point data is true, then the output arrays must have equal sizes of x and y arrays
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
@@ -482,8 +484,17 @@ def get_data_from_workspace(workspace_name, point_data, start_bank_id=1):
     assert isinstance(workspace_name, str) and isinstance(point_data, bool)
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
 
+    assert isinstance(target_unit, str) and target_unit in ['TOF', 'dSpacing'], 'blabla 1104'
+
+    # get unit
+    current_unit = get_workspace_unit(workspace_name)
+    if current_unit != target_unit:
+        mantidapi.ConvertUnit(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+                              Target=target_unit)
+
     # Convert to point data
-    if point_data is True:
+    workspace = mantid.AnalysisDataService.retrieve(workspace_name)
+    if point_data is True and workspace.isHistogramData():
         mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                      OutputWorkspace=workspace_name)
 

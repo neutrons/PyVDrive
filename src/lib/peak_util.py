@@ -127,14 +127,14 @@ def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     :param fit_range_factor:
     :return: a dictionary. key is group ID. value is a list of peak ID
     """
-    # print '[DB...BAT] Group peaks: ', peak_tuple_list
-
     # check validity
     assert isinstance(peak_tuple_list, list), 'Input peak-tuple list must be a list but not %s.' \
                                               '' % peak_tuple_list.__class__.__name__
     assert isinstance(resolution, float), 'Resolution %s must be a float but not %s.' % (str(resolution),
                                                                                          type(resolution))
-    assert isinstance(fit_range_factor, float), 'Fit range factor must be a float.'
+    assert isinstance(fit_range_factor, float) or isinstance(fit_range_factor, int), \
+        'Fit range factor {0} must be a float or integer but not {1}.'.format(fit_range_factor,
+                                                                              type(fit_range_factor))
 
     # sort to reverse
     peak_tuple_list.sort(reverse=True)

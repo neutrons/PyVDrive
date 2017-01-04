@@ -827,15 +827,24 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # Use algorithm to find peak automatically
             GuiUtility.pop_dialog_information(self, 'No phase is selected. Find peak automatically!')
             try:
-                peak_info_list = self._myController.find_peaks(data_key=curr_data,
-                                                               run_number=self._currentRunNumber,
-                                                               bank_number=self._currentBankNumber,
-                                                               x_range=(min_d, max_d),
-                                                               profile='Gaussian',
-                                                               auto_find=True)
+                status, ret_obj = self._myController.find_peaks(data_key=curr_data,
+                                                                bank_number=self._currentBankNumber,
+                                                                x_range=(min_d, max_d),
+                                                                profile='Gaussian',
+                                                                auto_find=True)
 
-                hkl = [(0, 0, 0)] * len(peak_info_list)
-                reflection_list = [p_tup + (hkl[index],) for index, p_tup in enumerate(peak_info_list)]
+                if status is False:
+                    GuiUtility.pop_dialog_error(self, str(ret_obj))
+                    return
+                else:
+                    peak_info_list = ret_obj
+
+                # Return if no reflection can be found
+                if len(peak_info_list) == 0:
+                    # No reflection can be found
+                    GuiUtility.pop_dialog_error(self,
+                                                'Unable to find any reflection between %f and %f.' % (min_d, max_d))
+                    return
 
             except RuntimeError as re:
                 GuiUtility.pop_dialog_error(self, str(re))
@@ -844,7 +853,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # Use algorithm find peak with given peak positions to eliminate the non-existing peaks
             try:
                 peak_info_list = self._myController.find_peaks(run_number=self._currentRunNumber,
-                                                               bank_number=self._currentBankNumber,
                                                                x_range=(min_d, max_d),
                                                                peak_positions=reflection_list[0],
                                                                hkl_list=reflection_list[1],
@@ -852,12 +860,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             except RuntimeError as e:
                 GuiUtility.pop_dialog_error(self, str(e))
                 return
-
-        # Return if no reflection can be found
-        if len(reflection_list) == 0:
-            # No reflection can be found
-            GuiUtility.pop_dialog_error(self, 'Unable to find any reflection between %f and %f.' % (min_d, max_d))
-            return
 
         # Set the peaks to canvas
         self.ui.graphicsView_main.sort_n_add_peaks(peak_info_list)
@@ -1030,14 +1032,13 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
 
-        # TODO/NOW - Need to make the table to add the buffered peaks back
+        # TODO/NOW/ISSUE - Need to make the table to add the buffered peaks back
         pass
 
         # Re-plot
         title = 'Run %s Bank %d' % (str(self._currentRunNumber), self._currentBankNumber)
-        new_spec = new_bank - 1
-        vec_x = self._currentDataSet[new_spec][0]
-        vec_y = self._currentDataSet[new_spec][1]
+        vec_x = self._currentDataSet[new_bank][0]
+        vec_y = self._currentDataSet[new_bank][1]
         self.ui.graphicsView_main.plot_diffraction_pattern(vec_x, vec_y, title=title)
 
         return
@@ -1228,7 +1229,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for i_bank in bank_id_list:
             assert isinstance(i_bank, int), 'Bank index %s should be integer but not %s.' \
                                             '' % (str(i_bank), str(type(i_bank)))
-            self.ui.comboBox_bankNumbers.addItem(str(i_bank + 1))
+            self.ui.comboBox_bankNumbers.addItem(str(i_bank))
         self.ui.comboBox_bankNumbers.setCurrentIndex(0)
 
         self._evtLockComboBankNumber = False

@@ -323,13 +323,12 @@ class ReductionManager(object):
         assert isinstance(run_number, int), 'Input run number must be an integer.'
         assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
 
-        # TODO/NOW/FIXME/ISSUE/57 - How to apply unit???
-
         # get reduced workspace name
         reduced_ws_name = self.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
 
         # get data
-        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
+        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, target_unit=unit,
+                                                              point_data=True, start_bank_id=True)
         assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
                                                 'but not %s.' % str(type(data_set_dict))
 

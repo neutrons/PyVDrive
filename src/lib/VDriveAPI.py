@@ -294,7 +294,7 @@ class VDriveAPI(object):
 
         return
 
-    def find_peaks(self, data_key, run_number, bank_number, x_range,
+    def find_peaks(self, data_key, bank_number, x_range,
                    auto_find, profile='Gaussian',
                    peak_positions=None, hkl_list=None):
         """
@@ -303,7 +303,7 @@ class VDriveAPI(object):
          - by run number, a workspace containing the reduced run must be found
          - either auto (mode) is on or peak positions are given;
          - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-        :param run_number:
+        :param data_key: a data key (for loaded previously reduced data) or run number
         :param bank_number:
         :param x_range:
         :param peak_positions:
@@ -312,36 +312,20 @@ class VDriveAPI(object):
         :param auto_find:
         :return: list of tuples for peak information as (peak center, height, width)
         """
-        # TODO/NOW - Make more logic!
+        try:
+            # raise exceptions if the input parameters are not allowed.
+            if isinstance(peak_positions, list) and auto_find:
+                raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+            if peak_positions is None and auto_find is False:
+                raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
 
-        if isinstance(run_number, int) is False:
-            print '[DB...BAT] To find_peaks(), run number %s is not integer.' % str(run_number)
+            peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
+                                                                    peak_positions, hkl_list,
+                                                                    profile)
+        except AssertionError as ass_err:
+            return False, 'Unable to find peaks due to {0}'.format(ass_err)
 
-        # Check
-        # ... ... assert isinstance(run_number, int)
-        assert isinstance(bank_number, int), 'Bank number must be an integer.'
-        assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
-        assert isinstance(profile, str), 'Peak profile must be a string.'
-        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
-
-        # raise exceptions if the input parameters are not allowed.
-        if isinstance(peak_positions, list) and auto_find:
-            raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-        if peak_positions is None and auto_find is False:
-            raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-
-        # Get workspace from
-        data_ws_name = self._myProject.get_workspace_name(data_key)
-
-        if auto_find:
-            # find peaks in an automatic way
-            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
-        else:
-            # # find the peaks with list
-            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
-                                                      hkl_list, profile)
-
-        return peak_info_list
+        return True, peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
