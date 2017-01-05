@@ -252,6 +252,9 @@ class ReductionSetup(object):
         # reduction type
         self._isFullReduction = True
 
+        # standard
+        self._isStandardSample = False
+
         # vanadium related
         self._vanadiumFlag = False
         self._vanadium3Tuple = None
@@ -538,7 +541,28 @@ class ReductionSetup(object):
         self._isFullReduction = value
 
         return
-    
+
+    @property
+    def is_standard(self):
+        """
+        get whether the reduction is about a Standard sample (Si or Vanadium)
+        :return:
+        """
+        return self._isStandardSample
+
+    @is_standard.setter
+    def is_standard(self, state):
+        """
+        set whether the reduction is about a standard sample
+        :param state:
+        :return:
+        """
+        assert isinstance(state, bool)
+
+        self._isStandardSample = state
+
+        return
+
     @property
     def output_directory(self):
         """
@@ -1430,6 +1454,57 @@ class ReduceVulcanData(object):
 
         return is_record_good and is_log_good and is_auto_good, final_message
 
+    def _export_experiment_log(self, target_file, sample_name_list,
+                               sample_title_list, sample_operation_list, patch_list):
+        """
+        export experiment log
+        :param target_file:
+        :return:
+        """
+        # check inputs
+        assert isinstance(target_file, str), 'blabla 926A'
+        assert isinstance(sample_name_list, list), 'blabla 926A1'
+        assert isinstance(sample_title_list, list), 'blabla 926A2'
+        assert isinstance(sample_operation_list, list), 'blabla 926A3'
+        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list)
+
+        # get file mode
+        if os.path.exists(target_file):
+            file_write_mode = 'append'
+        else:
+            file_write_mode = 'new'
+
+        # write
+        try:
+            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
+                                             OutputFilename=target_file,
+                                             FileMode=file_write_mode,
+                                             SampleLogNames=sample_name_list,
+                                             SampleLogTitles=sample_title_list,
+                                             SampleLogOperation=sample_operation_list,
+                                             TimeZone="America/New_York",
+                                             OverrideLogValue=patch_list,
+                                             OrderByTitle='RUN',
+                                             RemoveDuplicateRecord=True)
+        except RuntimeError as run_err:
+            message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
+                                                                        str(run_err))
+            return False, message
+
+        # Set up the mode for global access
+        file_access_mode = oct(os.stat(self._reductionSetup.get_record_file())[stat.ST_MODE])
+        file_access_mode = file_access_mode[-3:]
+        if file_access_mode != '666' and file_access_mode != '676':
+            print "Current file %s's mode is %s." % (self._reductionSetup.get_record_file(),
+                                                     file_access_mode)
+            try:
+                os.chmod(target_file, 0666)
+            except OSError as os_err:
+                print '[ERROR] Unable to set file {0} to mode 666 due to {1}.'.format(target_file, os_err)
+        # END-IF
+
+        return True, ''
+
     def export_experiment_records(self):
         """ Write the summarized sample logs of this run number to the record files
         :return: True if it is an alignment run
@@ -1447,126 +1522,69 @@ class ReduceVulcanData(object):
                               self._reductionSetup.get_run_number())
         patch_list = patcher.export_patch_list()
 
-        # Auto reduction and manual reduction
-        if os.path.exists(self._reductionSetup.get_record_file()):  # logs_record_file_name
-            # Determine mode: append is safer, as the list of titles changes, the old record
-            # will be written to the a new file.
-            file_write_mode = "append"
-        else:
-            # New a file
-            file_write_mode = "new"
-
-        # Export to auto record
-        try:
-            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                             OutputFilename=self._reductionSetup.get_record_file(),
-                                             FileMode=file_write_mode,
-                                             SampleLogNames=sample_name_list,
-                                             SampleLogTitles=sample_title_list,
-                                             SampleLogOperation=sample_operation_list,
-                                             TimeZone="America/New_York",
-                                             OverrideLogValue=patch_list,
-                                             OrderByTitle='RUN',
-                                             RemoveDuplicateRecord=True)
-
-            # Set up the mode for global access
-            file_access_mode = oct(os.stat(self._reductionSetup.get_record_file())[stat.ST_MODE])
-            file_access_mode = file_access_mode[-3:]
-            if file_access_mode != '666' and file_access_mode != '676':
-                print "Current file %s's mode is %s." % (self._reductionSetup.get_record_file(),
-                                                         file_access_mode)
-                os.chmod(self._reductionSetup.get_record_file(), 0666)
-        except RuntimeError as run_err:
-            message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
-                                                                        str(run_err))
-            return False, message
+        # export to AutoRecord.txt
+        status1, message1 = self._export_experiment_log(self._reductionSetup.get_record_file(),
+                                                        sample_name_list, sample_title_list,
+                                                        sample_operation_list, patch_list)
 
         # Export to either data or align
-        error_message = ''
-        try:
-            record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
-            if self._reductionSetup.is_alignment_run:
-                categorized_record_file = os.path.join(record_file_path, 'AutoRecordAlign.txt')
-            else:
-                categorized_record_file = os.path.join(record_file_path, 'AutoRecordData.txt')
+        record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
+        if self._reductionSetup.is_alignment_run:
+            categorized_record_file = os.path.join(record_file_path, 'AutoRecordAlign.txt')
+        else:
+            categorized_record_file = os.path.join(record_file_path, 'AutoRecordData.txt')
 
-            if os.path.exists(categorized_record_file) is False:
-                filemode2 = 'new'
-            else:
-                filemode2 = 'append'
-            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                             OutputFilename=categorized_record_file,
-                                             FileMode=filemode2,
-                                             SampleLogNames=sample_name_list,
-                                             SampleLogTitles=sample_title_list,
-                                             SampleLogOperation=sample_operation_list,
-                                             TimeZone="America/New_York",
-                                             OverrideLogValue=patch_list,
-                                             OrderByTitle='RUN',
-                                             RemoveDuplicateRecord=True)
-            # change file mode for local manual modification
-            os.chmod(categorized_record_file, 0666)
-        except NameError as e:
-            if self._reductionSetup.is_alignment_run:
-                error_message += 'Unable to write to AutoRecord-Alignment due to %s.' % str(e)
-            else:
-                error_message += 'Unable to write to AutoRecord-Data due to %s.' % str(e)
-            categorized_record_file = None
+        status2, message2 = self._export_experiment_log(categorized_record_file,
+                                                        sample_name_list, sample_title_list,
+                                                        sample_operation_list, patch_list)
 
         # Auto reduction only
         if self._reductionSetup.get_record_2nd_file() is not None:
-            # Check if it is necessary to copy AutoRecord.txt from rfilename2 to rfilename1
-            if not os.path.exists(self._reductionSetup.get_record_2nd_file()):
-                # File do not exist, the copy
+            # 2nd copy of Auto Record . txt
+            if os.path.exists(self._reductionSetup.get_record_2nd_file()):
+                # if the target copy of AutoRecord.txt exists, then append
+                self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
+                                            sample_name_list, sample_title_list,
+                                            sample_operation_list, patch_list)
+            else:
+                # if the target copy of AutoRecord.txt does not exist
                 shutil.copy(self._reductionSetup.get_record_file(),
                             self._reductionSetup.get_record_2nd_file())
-            else:
-                # Export the log by appending
-                mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                                 OutputFilename=self._reductionSetup.get_record_2nd_file(),
-                                                 FileMode=file_write_mode,
-                                                 SampleLogNames=sample_name_list,
-                                                 SampleLogTitles=sample_title_list,
-                                                 SampleLogOperation=sample_operation_list,
-                                                 TimeZone=TIMEZONE1,
-                                                 OverrideLogValue=patch_list,
-                                                 OrderByTitle='RUN',
-                                                 RemoveDuplicateRecord=True)
-            # change file mode for local manual modification
-            os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                # change mode to 666
+                try:
+                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                except IOError as io_err:
+                    print 'Unable to change file {0} mode to 666 due to {1}.' \
+                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+            # END-IF-ELSE
 
-        # prepare for the cop for  auto record align or data file
-        if self._reductionSetup.get_record_2nd_file() is not None and len(error_message) == 0:
-            # find out the path
+            # 2nd copy of auto align/sample
+            # find out the path of the target file
             record_file_2_path = os.path.dirname(self._reductionSetup.get_record_2nd_file())
             if self._reductionSetup.is_alignment_run:
                 categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordAlign.txt')
             else:
                 categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordData.txt')
 
-            if os.path.exists(categorized_record_file) is False:
-                # File do not exist, the copy
+            if os.path.exists(categorized_record_file) is False and status2:
+                # file do not exist and previous write-to-file is successful
                 shutil.copy(categorized_record_file, categorized_2_record_file)
             else:
-                # append to the existing file
-                filemode2 = 'append'
-                mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                                 OutputFilename=categorized_2_record_file,
-                                                 FileMode=filemode2,
-                                                 SampleLogNames=sample_name_list,
-                                                 SampleLogTitles=sample_title_list,
-                                                 SampleLogOperation=sample_operation_list,
-                                                 TimeZone="America/New_York",
-                                                 OverrideLogValue=patch_list,
-                                                 OrderByTitle='RUN',
-                                                 RemoveDuplicateRecord=True)
+                # write to the 2nd copy
+                self._export_experiment_log(categorized_2_record_file,
+                                            sample_name_list, sample_title_list,
+                                            sample_operation_list, patch_list)
             # END-IF-ELSE
+        # END-IF-ELSE
 
-            # Change file  mode
-            os.chmod(categorized_2_record_file, 0666)
+        # standards output
+        if self._reductionSetup.is_standard:
+            self._export_experiment_log(self._reductionSetup.get_standard_record_file(),
+                                        sample_name_list, sample_title_list,
+                                        sample_operation_list, patch_list)
         # END-IF
 
-        return True, error_message
+        return True, message1
 
     def export_log_files(self):
         """
