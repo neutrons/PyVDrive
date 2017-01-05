@@ -47,6 +47,7 @@ import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
+import numpy
 import pandas as pd
 
 sys.path.append("/opt/mantidnightly/bin")
@@ -250,6 +251,16 @@ class ReductionSetup(object):
 
         # reduction type
         self._isFullReduction = True
+
+        # standard
+        self._isStandardSample = False
+        self._standardSampleName = None
+        self._standardDirectory = None
+        self._standardRecordFile = None
+
+        # vanadium related
+        self._vanadiumFlag = False
+        self._vanadium3Tuple = None
 
         return
 
@@ -456,11 +467,25 @@ class ReductionSetup(object):
         if throw_not_set:
             if self._splitterWsName is None or self._splitterInfoName is None:
                 raise RuntimeError('Splitters (workspaces) have not been set.')
-            if not (AnalysisDataService.doesExist(self._splitterWsName) and
-                        AnalysisDataService.doesExist(self._splitterInfoName)):
+            if not (AnalysisDataService.doesExist(self._splitterWsName)
+                    and AnalysisDataService.doesExist(self._splitterInfoName)):
                 raise RuntimeError('Splitters (workspaces) do not exist.')
 
         return self._splitterWsName, self._splitterInfoName
+
+    def get_standard_processing_setup(self):
+        """
+        get the processing setup for VULCAN standard
+        :return: 2-tuple
+        """
+        return self._standardDirectory, self._standardRecordFile
+
+    def get_vanadium_info(self):
+        """
+        get vanadium calibration parameters
+        :return:
+        """
+        return self._vanadium3Tuple
 
     def get_vdrive_log_dir(self):
         """
@@ -526,7 +551,28 @@ class ReductionSetup(object):
         self._isFullReduction = value
 
         return
-    
+
+    @property
+    def is_standard(self):
+        """
+        get whether the reduction is about a Standard sample (Si or Vanadium)
+        :return:
+        """
+        return self._isStandardSample
+
+    @is_standard.setter
+    def is_standard(self, state):
+        """
+        set whether the reduction is about a standard sample
+        :param state:
+        :return:
+        """
+        assert isinstance(state, bool)
+
+        self._isStandardSample = state
+
+        return
+
     @property
     def output_directory(self):
         """
@@ -622,15 +668,24 @@ class ReductionSetup(object):
 
         return
 
-    def set_vulcan_bin_file(self, file_name):
+    @property
+    def normalized_by_vanadium(self):
         """
-        set the VULCAN binning (compatible with IDL) file name
-        :param file_name:
+        check whether the reduced data will be normalized by vanadium
         :return:
         """
-        assert isinstance(file_name, str), 'Input arg type error.'
+        return self._vanadiumFlag
 
-        self._vulcanBinsFileName = file_name
+    @normalized_by_vanadium.setter
+    def normalized_by_vanadium(self, flag):
+        """
+        blabla
+        :param flag:
+        :return:
+        """
+        assert isinstance(flag, bool), 'blabla 322'
+
+        self._vanadiumFlag = flag
 
         return
 
@@ -803,6 +858,49 @@ class ReductionSetup(object):
         assert isinstance(run_number, int), 'run number must be an integer.'
 
         self._runNumber = run_number
+
+        return
+
+    def set_standard_sample(self, standard, directory, base_record_file):
+        """
+        set the VULCAN standard output option
+        :param standard:
+        :param directory:
+        :param base_record_file:
+        :return:
+        """
+        # check inputs
+        assert isinstance(standard, str), 'blabla 1142'
+        assert isinstance(directory, str), 'blabla 1142B'
+        assert isinstance(base_record_file, str), 'blabla 1142C'
+
+        self._standardSampleName = standard
+        self._standardDirectory = directory
+        self._standardRecordFile = os.path.join(directory, base_record_file)
+
+        return
+
+    def set_vanadium(self, van_run_number, van_gda_file, vanadium_tag):
+        """
+        set up vanadium run
+        :param van_run_number:
+        :param van_gda_file:
+        :param vanadium_tag:
+        :return:
+        """
+        self._vanadium3Tuple = (van_run_number, van_gda_file, vanadium_tag)
+
+        return
+
+    def set_vulcan_bin_file(self, file_name):
+        """
+        set the VULCAN binning (compatible with IDL) file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._vulcanBinsFileName = file_name
 
         return
 
@@ -1038,8 +1136,7 @@ class PatchRecord:
                 break
 
         return runinfodict
-
-# ENDCLASS
+# END-CLASS
 
 
 class ReduceVulcanData(object):
@@ -1066,6 +1163,7 @@ class ReduceVulcanData(object):
         self._reduceGood = False
 
         self._reducedWorkspaceList = list()
+        self._reducedDataFiles = list()
 
         self._choppedDataDirectory = None
 
@@ -1346,6 +1444,10 @@ class ReduceVulcanData(object):
         (1) reduce to GSAS file
         (2) export log file
         (3) special reduction output for VULCAN auto reduction service
+        (4) process VULCAN standard sample
+
+        Note: VULCAN standard sample can only be processed in the sub methods because it needs a lot of
+              variables defined in expoort_experiment_records() only
         Raise RuntimeError
         :return: (boolean, string) as success/fail and error message
         """
@@ -1358,6 +1460,15 @@ class ReduceVulcanData(object):
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
         if not is_reduce_good:
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
+        if self._reductionSetup.is_standard:
+            # standard sample for VULCAN
+            gsas_file = self.get_reduced_files()[0]
+            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+            try:
+                shutil.copy(gsas_file, standard_dir)
+            except IOError as io_err:
+                raise RuntimeError('Unable to write standard GSAS file to '
+                                   '{0} due to {1}'.format(standard_dir, io_err))
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
@@ -1385,13 +1496,66 @@ class ReduceVulcanData(object):
 
         return is_record_good and is_log_good and is_auto_good, final_message
 
+    def _export_experiment_log(self, target_file, sample_name_list,
+                               sample_title_list, sample_operation_list, patch_list):
+        """
+        export experiment log
+        :param target_file:
+        :return:
+        """
+        # check inputs
+        assert isinstance(target_file, str), 'blabla 926A'
+        assert isinstance(sample_name_list, list), 'blabla 926A1'
+        assert isinstance(sample_title_list, list), 'blabla 926A2'
+        assert isinstance(sample_operation_list, list), 'blabla 926A3'
+        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list)
+
+        # get file mode
+        if os.path.exists(target_file):
+            file_write_mode = 'append'
+        else:
+            file_write_mode = 'new'
+
+        # write
+        try:
+            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
+                                             OutputFilename=target_file,
+                                             FileMode=file_write_mode,
+                                             SampleLogNames=sample_name_list,
+                                             SampleLogTitles=sample_title_list,
+                                             SampleLogOperation=sample_operation_list,
+                                             TimeZone="America/New_York",
+                                             OverrideLogValue=patch_list,
+                                             OrderByTitle='RUN',
+                                             RemoveDuplicateRecord=True)
+        except RuntimeError as run_err:
+            message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
+                                                                        str(run_err))
+            return False, message
+
+        # Set up the mode for global access
+        file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])
+        file_access_mode = file_access_mode[-3:]
+        if file_access_mode != '666' and file_access_mode != '676':
+            print "Current file %s's mode is %s." % (target_file, file_access_mode)
+            try:
+                os.chmod(target_file, 0666)
+            except OSError as os_err:
+                print '[ERROR] Unable to set file {0} to mode 666 due to {1}.'.format(target_file, os_err)
+        # END-IF
+
+        return True, ''
+
     def export_experiment_records(self):
         """ Write the summarized sample logs of this run number to the record files
         :return: True if it is an alignment run
         """
         # return if there is no requirement to export record file
-        if self._reductionSetup.get_record_file() is None and self._reductionSetup.get_record_2nd_file() is None:
-            return True, 'Auto record file is not required to write out.'
+        record_file_name = self._reductionSetup.get_record_file()
+        user_record_name = self._reductionSetup.get_record_2nd_file()
+
+        if record_file_name is None and user_record_name is None and not self._reductionSetup.is_standard:
+            return True, 'No record file is required to write out.'
 
         # Convert the record base to input arrays
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
@@ -1402,126 +1566,105 @@ class ReduceVulcanData(object):
                               self._reductionSetup.get_run_number())
         patch_list = patcher.export_patch_list()
 
-        # Auto reduction and manual reduction
-        if os.path.exists(self._reductionSetup.get_record_file()):  # logs_record_file_name
-            # Determine mode: append is safer, as the list of titles changes, the old record
-            # will be written to the a new file.
-            file_write_mode = "append"
-        else:
-            # New a file
-            file_write_mode = "new"
+        # define over all message
+        return_status = True
+        return_message = ''
 
-        # Export to auto record
-        try:
-            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                             OutputFilename=self._reductionSetup.get_record_file(),
-                                             FileMode=file_write_mode,
-                                             SampleLogNames=sample_name_list,
-                                             SampleLogTitles=sample_title_list,
-                                             SampleLogOperation=sample_operation_list,
-                                             TimeZone="America/New_York",
-                                             OverrideLogValue=patch_list,
-                                             OrderByTitle='RUN',
-                                             RemoveDuplicateRecord=True)
+        # export to AutoRecord.txt
+        if record_file_name:
+            # export main experiment log
+            status1, message1 = self._export_experiment_log(self._reductionSetup.get_record_file(),
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            if not status1:
+                return status1, message1
+            else:
+                return_message += message1 + '\n'
 
-            # Set up the mode for global access
-            file_access_mode = oct(os.stat(self._reductionSetup.get_record_file())[stat.ST_MODE])
-            file_access_mode = file_access_mode[-3:]
-            if file_access_mode != '666' and file_access_mode != '676':
-                print "Current file %s's mode is %s." % (self._reductionSetup.get_record_file(),
-                                                         file_access_mode)
-                os.chmod(self._reductionSetup.get_record_file(), 0666)
-        except RuntimeError as run_err:
-            message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
-                                                                        str(run_err))
-            return False, message
-
-        # Export to either data or align
-        error_message = ''
-        try:
+            # export to either data or align log file
             record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
             if self._reductionSetup.is_alignment_run:
                 categorized_record_file = os.path.join(record_file_path, 'AutoRecordAlign.txt')
             else:
                 categorized_record_file = os.path.join(record_file_path, 'AutoRecordData.txt')
 
-            if os.path.exists(categorized_record_file) is False:
-                filemode2 = 'new'
-            else:
-                filemode2 = 'append'
-            mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                             OutputFilename=categorized_record_file,
-                                             FileMode=filemode2,
-                                             SampleLogNames=sample_name_list,
-                                             SampleLogTitles=sample_title_list,
-                                             SampleLogOperation=sample_operation_list,
-                                             TimeZone="America/New_York",
-                                             OverrideLogValue=patch_list,
-                                             OrderByTitle='RUN',
-                                             RemoveDuplicateRecord=True)
-            # change file mode for local manual modification
-            os.chmod(categorized_record_file, 0666)
-        except NameError as e:
-            if self._reductionSetup.is_alignment_run:
-                error_message += 'Unable to write to AutoRecord-Alignment due to %s.' % str(e)
-            else:
-                error_message += 'Unable to write to AutoRecord-Data due to %s.' % str(e)
+            status2, message2 = self._export_experiment_log(categorized_record_file,
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            return_status = return_status and status2
+            return_message += message2 + '\n'
+        else:
+            # no need to export main AutoRecord file
+            status2 = False
             categorized_record_file = None
+        # END-IF-ELSE
 
-        # Auto reduction only
-        if self._reductionSetup.get_record_2nd_file() is not None:
-            # Check if it is necessary to copy AutoRecord.txt from rfilename2 to rfilename1
-            if not os.path.exists(self._reductionSetup.get_record_2nd_file()):
-                # File do not exist, the copy
-                shutil.copy(self._reductionSetup.get_record_file(),
-                            self._reductionSetup.get_record_2nd_file())
+        # Auto reduction only: record file for users
+        if user_record_name:
+            # 2nd copy of Auto Record . txt
+            if os.path.exists(self._reductionSetup.get_record_2nd_file()):
+                # if the target copy of AutoRecord.txt exists, then append
+                status3, message3 = self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
+                                                                sample_name_list, sample_title_list,
+                                                                sample_operation_list, patch_list)
+                return_status += status3
+                return_message += message3 + '\n'
             else:
-                # Export the log by appending
-                mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                                 OutputFilename=self._reductionSetup.get_record_2nd_file(),
-                                                 FileMode=file_write_mode,
-                                                 SampleLogNames=sample_name_list,
-                                                 SampleLogTitles=sample_title_list,
-                                                 SampleLogOperation=sample_operation_list,
-                                                 TimeZone=TIMEZONE1,
-                                                 OverrideLogValue=patch_list,
-                                                 OrderByTitle='RUN',
-                                                 RemoveDuplicateRecord=True)
-            # change file mode for local manual modification
-            os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                # if the target copy of AutoRecord.txt does not exist
+                if os.access(self._reductionSetup.get_record_2nd_file(), os.W_OK):
+                    shutil.copy(self._reductionSetup.get_record_file(),
+                                self._reductionSetup.get_record_2nd_file())
+                    # change mode to 666
+                    try:
+                        os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                    except IOError as io_err:
+                        return_status = False
+                        return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
+                                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+                else:
+                    return_status = False
+                    return_message += 'Unable to write file {0} without writing permission.\n' \
+                                      ''.format(self._reductionSetup.get_record_2nd_file())
+            # END-IF-ELSE
 
-        # prepare for the cop for  auto record align or data file
-        if self._reductionSetup.get_record_2nd_file() is not None and len(error_message) == 0:
-            # find out the path
+            # 2nd copy of auto align/sample
+            # find out the path of the target file
             record_file_2_path = os.path.dirname(self._reductionSetup.get_record_2nd_file())
             if self._reductionSetup.is_alignment_run:
                 categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordAlign.txt')
             else:
                 categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordData.txt')
 
-            if os.path.exists(categorized_record_file) is False:
-                # File do not exist, the copy
-                shutil.copy(categorized_record_file, categorized_2_record_file)
+            if os.path.exists(categorized_2_record_file) is False and status2:
+                # target record file does not exist and previous write-to-file is successful
+                try:
+                    shutil.copy(categorized_record_file, categorized_2_record_file)
+                except IOError as io_err:
+                    return_status = False
+                    return_message += 'Unable to copy {0} to {1} due to {2}.\n' \
+                                      ''.format(categorized_record_file, categorized_2_record_file,
+                                                io_err)
             else:
-                # append to the existing file
-                filemode2 = 'append'
-                mantidsimple.ExportExperimentLog(InputWorkspace=self._dataWorkspaceName,
-                                                 OutputFilename=categorized_2_record_file,
-                                                 FileMode=filemode2,
-                                                 SampleLogNames=sample_name_list,
-                                                 SampleLogTitles=sample_title_list,
-                                                 SampleLogOperation=sample_operation_list,
-                                                 TimeZone="America/New_York",
-                                                 OverrideLogValue=patch_list,
-                                                 OrderByTitle='RUN',
-                                                 RemoveDuplicateRecord=True)
+                # write to the 2nd copy
+                status4, message4 = self._export_experiment_log(categorized_2_record_file,
+                                                                sample_name_list, sample_title_list,
+                                                                sample_operation_list, patch_list)
+                return_status = return_status and status4
+                return_message += message4 + '\n'
             # END-IF-ELSE
+        # END-IF-ELSE (auto record only)
 
-            # Change file  mode
-            os.chmod(categorized_2_record_file, 0666)
+        # process standard sample for VULCAN/VDRIVE
+        if self._reductionSetup.is_standard:
+            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+            status5, message5 = self._export_experiment_log(standard_record,
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            return_status = return_status and status5
+            return_message += message5 + '\n'
         # END-IF
 
-        return True, error_message
+        return return_status, return_message
 
     def export_log_files(self):
         """
@@ -1865,6 +2008,13 @@ class ReduceVulcanData(object):
 
         return
 
+    def get_reduced_files(self):
+        """
+        get the list of output reduced files
+        :return:
+        """
+        return self._reducedDataFiles[:]
+
     def get_reduced_workspaces(self, chopped):
         """
 
@@ -1902,6 +2052,22 @@ class ReduceVulcanData(object):
             return False, message
 
         return True, ''
+
+    @staticmethod
+    def load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag):
+        """
+        :param van_gda_file:
+        :param van_run_number:
+        :param vanadium_tag:
+        :return:
+        """
+        assert isinstance(van_gda_file, str), 'blabla 951'
+
+        van_ws_name = 'Vanadium_{0}_{1}'.format(van_run_number, vanadium_tag)
+        if not AnalysisDataService.doesExist(van_ws_name):
+            mantidsimple.LoadGSS(Filename=van_gda_file, OutputWorkspace=van_ws_name)
+
+        return van_ws_name
 
     def reduce_powder_diffraction_data(self):
         """
@@ -1969,6 +2135,32 @@ class ReduceVulcanData(object):
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+        self._reducedDataFiles.append(gsas_file_name)
+
+        if self._reductionSetup.normalized_by_vanadium:
+            # FIXME/TODO/ISSUE/57 - Refactor!
+            t3 = self._reductionSetup.get_vanadium_info()
+            assert t3 is not None, 'blabla 948'
+            van_run_number, van_gda_file, vanadium_tag = t3
+            van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
+
+            gss_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+            van_ws = AnalysisDataService.retrieve(van_ws_name)
+
+            gda_vec_x = gss_ws.readX(0)
+            van_vec_x = van_ws.readX(0)
+            diff_vec = numpy.abs((van_vec_x-gda_vec_x)/gda_vec_x)
+            assert numpy.max(diff_vec) < 0.01, 'Vec X differs too much!'
+
+            num_spec = gss_ws.getNumberHistograms()
+            assert num_spec == van_ws.getNumberHistograms(), 'blabla 1028'
+
+            for ws_index in range(num_spec):
+                numpy.copyto(van_ws.dataX(ws_index), gss_ws.readX(ws_index))
+
+            gss_ws = gss_ws/van_ws
+            mantidsimple.SaveGSS(InputWorkspace=gss_ws, Filename='whatever')
+        # END-IF (vanadium)
 
         # collect result
         self._reducedWorkspaceDSpace = reduced_ws_name

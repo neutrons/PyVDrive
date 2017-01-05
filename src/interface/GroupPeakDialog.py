@@ -45,6 +45,8 @@ class GroupPeakDialog(QtGui.QMainWindow):
         """
         self._parentWindow.add_grouped_peaks()
 
+        self.close()
+
         return
 
     def do_cancel_return(self):

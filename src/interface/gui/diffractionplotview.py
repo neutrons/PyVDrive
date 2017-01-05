@@ -142,7 +142,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # add a peak
             self.add_peak(new_peak_center, grp_id)
 
-        elif self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
+        elif self._myPeakSelectionMode == PeakAdditionState.MultiMode:
             # multi-peak-indication mode:
             group_id = self._myPeakGroupManager.get_group_id(pos_x)
             print '[DB] Group-ID = %d vs. current Group ID %s' % (group_id, self._currGroupID)
@@ -1501,8 +1501,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert self._myPeakSelectionMode != PeakAdditionState.NonEdit, 'Peak selection mode cannot be ' \
                                                                        'in NonEdit mode.'
 
-        assert isinstance(peak_info_list, list), 'Peak information list must of type list but not ' \
-                                                 '%s.' % peak_info_list.__class__.__name__
+        assert isinstance(peak_info_list, list), 'Peak information list {0} must of type list but not ' \
+                                                 '{1}.'.format(peak_info_list, peak_info_list.__class__.__name__)
         if len(peak_info_list) == 0:
             # return for an empty peak list
             return

@@ -7,18 +7,17 @@
 #
 #####
 import os
-import datetime
 import pandas as pd
+import shutil
 
-import VDProject as vp
-from analysisproject import AnalysisProject
+import ProjectManager as vp
 import archivemanager
-import SampleLogHelper
 import vdrivehelper
 import mantid_helper
 import crystal_helper
 import io_peak_file
 import reduce_VULCAN
+import chop_utility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -55,8 +54,7 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = vp.VDProject('New Project')
-        self._myAnalysisProject = AnalysisProject('New Analysis Project')
+        self._myProject = vp.ProjectManager('New Project')
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.
@@ -246,7 +244,7 @@ class VDriveAPI(object):
 
         assert isinstance(gsas_file_name, str)
         out_dir = os.path.dirname(gsas_file_name)
-        assert os.writable(out_dir)
+        assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
 
         try:
             self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
@@ -296,7 +294,7 @@ class VDriveAPI(object):
 
         return
 
-    def find_peaks(self, data_key, run_number, bank_number, x_range,
+    def find_peaks(self, data_key, bank_number, x_range,
                    auto_find, profile='Gaussian',
                    peak_positions=None, hkl_list=None):
         """
@@ -305,7 +303,7 @@ class VDriveAPI(object):
          - by run number, a workspace containing the reduced run must be found
          - either auto (mode) is on or peak positions are given;
          - peak profile is default as Gaussian and is limited to the peak profile supported by Mantid
-        :param run_number:
+        :param data_key: a data key (for loaded previously reduced data) or run number
         :param bank_number:
         :param x_range:
         :param peak_positions:
@@ -314,36 +312,20 @@ class VDriveAPI(object):
         :param auto_find:
         :return: list of tuples for peak information as (peak center, height, width)
         """
-        # TODO/NOW - Make more logic!
+        try:
+            # raise exceptions if the input parameters are not allowed.
+            if isinstance(peak_positions, list) and auto_find:
+                raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
+            if peak_positions is None and auto_find is False:
+                raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
 
-        if isinstance(run_number, int) is False:
-            print '[DB...BAT] To find_peaks(), run number %s is not integer.' % str(run_number)
+            peak_info_list = self._myProject.find_diffraction_peaks(data_key, bank_number, x_range,
+                                                                    peak_positions, hkl_list,
+                                                                    profile)
+        except AssertionError as ass_err:
+            return False, 'Unable to find peaks due to {0}'.format(ass_err)
 
-        # Check
-        # ... ... assert isinstance(run_number, int)
-        assert isinstance(bank_number, int), 'Bank number must be an integer.'
-        assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
-        assert isinstance(profile, str), 'Peak profile must be a string.'
-        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
-
-        # raise exceptions if the input parameters are not allowed.
-        if isinstance(peak_positions, list) and auto_find:
-            raise RuntimeError('It is not allowed to specify both peak positions and turn on auto mode.')
-        if peak_positions is None and auto_find is False:
-            raise RuntimeError('Either peak positions is given. Or auto mode is turned on.')
-
-        # Get workspace from
-        data_ws_name = self._myAnalysisProject.get_workspace_name(data_key)
-
-        if auto_find:
-            # find peaks in an automatic way
-            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=auto_find)
-        else:
-            # # find the peaks with list
-            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
-                                                      hkl_list, profile)
-
-        return peak_info_list
+        return True, peak_info_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
@@ -489,42 +471,19 @@ class VDriveAPI(object):
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # Check
-        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
-                                                                   'but not %s.' % str(type(run_id))
-        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
+        try:
+            # get GSAS file name
+            if search_archive and isinstance(run_id, int):
+                gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+            else:
+                gsas_file = None
 
-        # 2 cases: run ID is run number or run ID is the file name
-        if isinstance(run_id, int):
-            # case as run number
-            run_number = run_id
-            try:
-                # get data from current Project
-                data_set = self._myProject.get_reduced_data(run_number, target_unit)
-            except KeyError:
-                print '[INFO] Run %d is not reduced in current session.' % run_number
-                # optionally get data from archive
-                if search_archive:
-                    assert isinstance(ipts_number, int), 'IPTS number must be an integer'
-                    data_set = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_number)
-                    if data_set is None:
-                        return False, 'Unable to get data from archive'
-                else:
-                    return False, 'Data is not reduced in this session.'
-            # END-TRY-EXCEPTION
-        else:
-            # case as dat key
-            data_key = run_id
-            print '[DB-BAT] VDriveAPI... get data of data key', data_key, 'of type', type(run_id)
-            status, ret_obj = self._myAnalysisProject.get_data(data_key=data_key)
-            if status is False:
-                return False, ret_obj
-            data_set = ret_obj
-        # END-IF
+            # get data from project
+            data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+        except RuntimeError as run_err:
+            return False, 'Unable to get data due to {0}'.format(run_err)
 
-        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
-
-        return True, data_set
+        return True, data_set_dict
 
     def get_reduced_run_info(self, run_number, data_key=None):
         """
@@ -546,7 +505,7 @@ class VDriveAPI(object):
             # given data key
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                info = self._myAnalysisProject.get_data_information(data_key)
+                info = self._myProject.get_data_bank_list(data_key)
             except AssertionError as e:
                 return False, str(e)
 
@@ -743,7 +702,7 @@ class VDriveAPI(object):
         """
         print '[DB...BAT] Archive key = ', archive_key
 
-        # call archive mananger
+        # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
                                                                        standard_sns_file)
 
@@ -756,7 +715,7 @@ class VDriveAPI(object):
                                                                                               begin_run,
                                                                                               end_run)
 
-        return
+        return status, ret_obj
 
     def get_ipts_run_range(self, archive_key):
         """
@@ -902,29 +861,11 @@ class VDriveAPI(object):
     def load_diffraction_file(self, file_name, file_type):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
+        :param file_name
         :param file_type:
         :return:
         """
-        # Check requirements
-        assert isinstance(file_name, str), 'Diffraction file name %s must be a string but not %s.' \
-                                           '' % (str(file_name), type(file_name))
-        assert isinstance(file_type, str), 'Diffraction file type %s mut be a string but not %s.' \
-                                           '' % (str(file_type), type(file_type))
-
-        # Load
-        if file_type.lower() == 'gsas':
-            # load
-            data_key = self._myAnalysisProject.load_data(data_file_name=file_name, data_type=file_type)
-            """
-            gss_ws_name = get_standard_ws_name(file_name, False)
-            mantid_helper.load_gsas_file(file_name, gss_ws_name)
-            """
-        else:
-            raise RuntimeError('Unable to support %s file.' % file_type)
-
-        # data_key = os.path.basename(file_name)
-
-        print '[DB-BAT] Load %s and reference it by %s.' % (file_name, data_key)
+        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type)
 
         return data_key
 
@@ -974,7 +915,8 @@ class VDriveAPI(object):
 
     def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
                         vanadium=False, special_pattern=False,
-                        record=False, logs=False, gsas=True, fullprof=False):
+                        record=False, logs=False, gsas=True, fullprof=False,
+                        standard_sample_tuple=None):
         """
         Reduce a set of data
         Purpose:
@@ -996,6 +938,7 @@ class VDriveAPI(object):
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
         :param fullprof: boolean flag tro produces Fullprof files from reduced runs
+        :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1017,7 +960,7 @@ class VDriveAPI(object):
 
         # Reduce data set
         if auto_reduce:
-            # auto reduction
+            # auto reduction: auto reduction script does not work with vanadium normalization
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
@@ -1027,15 +970,15 @@ class VDriveAPI(object):
         else:
             # manual reduction: Reduce runs
             try:
-                status, ret_obj = self._myProject.reduce_runs(ipts_number=ipts_number,
-                                                              run_number_list=runs_to_reduce,
+                status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
                                                               vanadium=vanadium,
                                                               gsas=gsas,
                                                               fullprof=fullprof,
                                                               record_file=record,
-                                                              sample_log_file=logs)
+                                                              sample_log_file=logs,
+                                                              standard_sample_tuple=standard_sample_tuple)
 
             except AssertionError as re:
                 status = False
@@ -1043,8 +986,7 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    @staticmethod
-    def reduce_auto_script(ipts_number, run_numbers, output_dir, is_dry_run):
+    def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
         """
         Reduce the runs in the standard auto reduction workflow
         :param ipts_number:
@@ -1052,6 +994,14 @@ class VDriveAPI(object):
         :param is_dry_run:
         :return: running information
         """
+        # self._myProject.reduce_runs(ipts_number=ipts_number,
+        #                             run_number_list=run_numbers,
+        #                             output_dir=output_dir,
+        #                             is_dry_run=is_dry_run,
+        #                             mode=auto)
+        # TODO/NOW/ - Merge this method with VDProject.reduce_runs()
+        raise NotImplementedError('FROM HERE!!! CONTINUE')
+
         # check inputs' validity
         assert isinstance(ipts_number, int), 'IPTS number %s must be an integer.' % str(ipts_number)
         assert isinstance(run_numbers, list), 'Run numbers must be a list but not %s.' % type(run_numbers)
@@ -1231,6 +1181,17 @@ class VDriveAPI(object):
                            '' % (log_file_name, str(self._mtsLogDict.keys())))
 
         return self._mtsLogDict[log_file_name].keys()
+
+    @staticmethod
+    def parse_time_segment_file(file_name):
+        """
+
+        :param file_name:
+        :return:
+        """
+        status, ret_obj = chop_utility.parse_time_segments(file_name)
+
+        return status, ret_obj
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
@@ -1439,6 +1400,26 @@ class VDriveAPI(object):
 
         return status, error_msg
 
+    def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
+        """
+        set corresponding vanadium run to a specific list of sample run numbers
+        :param ipts_number:
+        :param run_number_list:
+        :param van_run_number:
+        :return:
+        """
+        assert isinstance(ipts_number, int), 'blabla 134'
+        assert isinstance(van_run_number, int), 'blabla 135'
+        assert isinstance(run_number_list, list), 'blabla 135B'
+
+        file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
+        if not file_exist:
+            return False, 'Unable to locate vanadium GSAS file'
+
+        self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
+
+        return
+
     def set_vanadium_calibration_files(self, run_numbers, vanadium_file_names):
         """
         Purpose:
@@ -1461,32 +1442,10 @@ class VDriveAPI(object):
 
         return
 
-    def set_slicer_helper(self, nxs_file_name, run_number):
-        """
-        Initialize the event slicing helper object
-        :param nxs_file_name:
-        :param run_number:
-        :return:
-        """
-        if run_number is not None:
-            assert isinstance(run_number, int)
-        else:
-            run_number = archivemanager.DataArchiveManager.get_ipts_run_from_file_name(nxs_file_name)[1]
-
-        status, errmsg = self._mySlicingManager.load_data_file(nxs_file_name, run_number)
-
-        return status, errmsg
-
-    def set_slicer(self):
-        """ This method's purpose is ambiguous!
-        'SampleLog', 'Time', 'Manual'
-        :param splitter_src:
-        :param sample_log_name:
-        :return:
-        """
-        raise NotImplementedError('Need to consider how to use this method in the workflow!')
-
-        return
+    # Found not used
+    # def set_slicer_helper(self, nxs_file_name, run_number)
+    # Never been implemented
+    # def set_slicer(self):
 
     def set_working_directory(self, work_dir):
         """
@@ -1512,115 +1471,3 @@ class VDriveAPI(object):
             self._myWorkDir = work_dir
 
         return True, ''
-
-
-def filter_runs_by_run(run_tuple_list, start_run, end_run):
-    """
-    Filter runs by range of run numbers
-    :param run_tuple_list:
-    :param start_run:
-    :param end_run:
-    :return:
-    """
-    # Check
-    assert(isinstance(run_tuple_list, list))
-    assert(isinstance(start_run, int))
-    assert(isinstance(end_run, int))
-    assert(start_run <= end_run)
-    
-    # Sort by runs
-    run_tuple_list.sort(key=lambda x: x[0])
-    
-    # FIXME - Use binary search for determine the range of run numbers in the tuple-list
-    result_list = []
-    for tup in run_tuple_list:
-        assert(isinstance(tup[0], int))
-        if start_run <= tup[0] <= end_run:
-            result_list.append(tup)
-    
-    return True, result_list
-
-
-def filter_runs_by_date(run_tuple_list, start_date, end_date, include_end_date=False):
-    """
-    Filter runs by date.  Any runs ON and AFTER start_date and BEFORE end_date
-    will be included.
-    :param run_tuple_list: 3-tuple: run number, epoch time in second, file name with full path
-    :param start_date:
-    :param end_date:
-    :param include_end_date: Flag whether the end-date will be included in the return
-    :return:
-    """
-    # Get starting date and end date's epoch time
-    try:
-        assert(isinstance(start_date, str))
-        epoch_start = vdrivehelper.convert_to_epoch(start_date)
-        epoch_end = vdrivehelper.convert_to_epoch(end_date)
-        if include_end_date is True:
-            # Add one day for next date
-            epoch_end += 24*3600
-        print '[INFO] Time range: %f, %f with dT = %f hours' % (epoch_start, epoch_end,
-                                                               (epoch_end-epoch_start)/3600.)
-    except ValueError as e:
-        return False, str(e)
-    
-    # Sort by time
-    assert isinstance(run_tuple_list, list)
-    run_tuple_list.sort(key=lambda x: x[1])
-    
-    # FIXME - Using binary search will be great!
-    result_list = []
-    for tup in run_tuple_list:
-        file_epoch = tup[1]
-        if epoch_start <= file_epoch < epoch_end:
-            result_list.append(tup[:])
-        # END-IF
-    # END-IF
-
-    return True, result_list
-
-
-def get_splitters_names(base_name):
-    """ Get splitter workspaces's name including
-    (1) SplittersWS and (2) InformationWS
-    using current epoch time
-    :param base_name:
-    :return:
-    """
-    now = datetime.datetime.now()
-    special_key = '%02d06%d' % (now.second, now.microsecond)
-
-    splitter_ws = '%s_%s_Splitters' % (base_name, special_key)
-    info_ws = '%s_%s_Info' % (base_name, special_key)
-
-    return splitter_ws, info_ws
-
-
-def get_standard_ws_name(file_name, meta_only):
-    """
-    Get the standard name for a loaded workspace
-    :param file_name:
-    :return:
-    """
-    ws_name = os.path.basename(file_name).split('.')[0]
-    file_type = os.path.basename(file_name).split('.')[1]
-    if file_type.lower() == 'gsa' or file_type.lower() == 'gda':
-        ws_name += '_gda'
-
-    if meta_only is True:
-        ws_name += '_Meta'
-
-    return ws_name
-
-
-def parse_time_segment_file(file_name):
-    """
-
-    :param file_name:
-    :return:
-    """
-    status, ret_obj = SampleLogHelper.parse_time_segments(file_name)
-
-    return status, ret_obj
-
-

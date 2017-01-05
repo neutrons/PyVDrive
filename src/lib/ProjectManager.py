@@ -1,61 +1,46 @@
 import os
 import os.path
+import random
 
 from chop_utility import DataChopper
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
-import reduce_VULCAN
+import loaded_data_manager
 
 
-class VDProject(object):
+class ProjectManager(object):
     """ VDrive Project
     """
-    def __init__(self, project_name):
+    def __init__(self, project_name, instrument='VULCAN'):
         """ Init
         """
+        # project name
         self._name = project_name
-        # dictionary for the information of run number, file name and IPTS
-        # key: run number, value: 2-tuple (file name, IPTS)
-        self._dataFileDict = dict()
-        # List of data file's base name
-        self._baseDataFileNameList = list()
         # Data path.  With baseDataFileName, a full path to a data set can be constructed
         self._baseDataPath = None
-        # dictionary for sample run mapping to vanadium run
-        # Key: sample run number of type integer; Value: vanadium run number in type of integer
-        self._sampleRunVanadiumDict = dict()
 
-        # Data structure to manage split run: key run number or file name
-        self._splitWorkspaceDict = dict()
-
+        # chopping and reduction managers
         # Reduction manager
-        # FIXME - Need to make the setup of instrument more flexible.
-        self._reductionManager = prl.ReductionManager(instrument='VULCAN')
-        # dictionary for sample run number to be flagged to reduce.
-        # Key: run number. Value: boolean flag for reduction
-        self._sampleRunReductionFlagDict = dict()
-
+        self._reductionManager = prl.ReductionManager(instrument=instrument)
+        # Loaded (previously) binned data manager
+        self._loadedDataManager = loaded_data_manager.LoadedDataManager(self)
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
-        
-        return
 
-    def _clear_split_run(self, run_number):
-        """
-        Clear splitted workspace of a run
-        :param run_number:
-        :return:
-        """
-        # Check
-        if run_number not in self._splitWorkspaceDict:
-            return False, 'Run number %d has not split workspaces.' % run_number
+        # definition of dictionaries
+        # dictionary for the information of run number, file name and IPTS
+        self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+        # dictionary for sample run mapping to vanadium run
+        self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
+        # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
+        self._vanadiumGSASFileDict = dict()
 
-        # Delete workspaces
-        num_ws = len(self._splitWorkspaceDict[run_number])
-        for i_split_ws in xrange(num_ws):
-            split_ws = self._splitWorkspaceDict[run_number][num_ws-i_split_ws-1]
-            mantid_helper.delete_workspace(split_ws)
+        # List of data file's base name
+        self._baseDataFileNameList = list()
+
+        # dictionary for sample run number to be flagged to reduce.
+        self._sampleRunReductionFlagDict = dict()  # Key: run number. Value: boolean flag for reduction
 
         return
 
@@ -68,18 +53,19 @@ class VDProject(object):
         :return:
         """
         # Check input
-        assert(isinstance(run_number, int))
-        assert(isinstance(ipts_number, int))
-        assert(isinstance(file_name, str))
+        assert isinstance(run_number, int)
+        assert isinstance(ipts_number, int)
+        assert isinstance(file_name, str)
 
         self._dataFileDict[run_number] = (file_name, ipts_number)
+        self._baseDataFileNameList.append(os.path.basename(file_name))
 
         return
 
     def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
-        split workspacs to GSAS
+        split workspaces to GSAS
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
@@ -98,48 +84,45 @@ class VDProject(object):
         try:
             chopper = self._chopManagerDict[run_number]
         except KeyError as key_error:
-            error_message = 'Run number %d is not registered to chopper manager. Current runs are %s.' \
-                            '' % (run_number, str(self._chopManagerDict.keys()))
+            error_message = 'Run number %d is not registered to chopper manager (%s). Current runs are %s.' \
+                            '' % (run_number, str(key_error), str(self._chopManagerDict.keys()))
             raise RuntimeError(error_message)
-
-        split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
 
         if reduce_flag:
             # reduce to GSAS
-            reduce_setup = reduce_VULCAN.ReductionSetup()
-
             src_file_name, ipts_number = self.get_run_info(run_number)
-            reduce_setup.set_ipts_number(ipts_number)
-            reduce_setup.set_run_number(run_number)
-            reduce_setup.set_event_file(src_file_name)
-
-            reduce_setup.set_output_dir(output_dir)
-            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-            reduce_setup.is_full_reduction = False
-            reduce_setup.set_default_calibration_files()
-
-            # add splitter workspace and splitter information workspace
-            reduce_setup.set_splitters(split_ws_name, info_ws_name)
-
-            reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-            reducer.execute_chop_reduction(clear_workspaces=False)
+            self._reductionManager.reduce_chopped_data(ipts_number, run_number, src_file_name, chopper, slicer_key,
+                                                       output_dir)
 
             status = True,
             message = ''
+
         else:
             # just chop the files and save to Nexus
-            mantid_helper.split_event_data(raw_file_name=self.get_file_path(run_number),
-                                           split_ws_name=split_ws_name,
-                                           info_table_name=info_ws_name,
-                                           target_ws_name=None,
-                                           tof_correction=False,
-                                           output_directory=output_dir,
-                                           delete_split_ws=True)
+            data_file = self.get_file_path(run_number)
+            self._reductionManager.chop_data(data_file, chopper, slicer_key, output_dir)
 
             status = True
             message = 'Run %d is chopped and reduced. ' % run_number
 
         return status, message
+
+    def clear_reduction_flags(self):
+        """ Set to all runs' reduction flags to be False
+        :return:
+        """
+        for run_number in self._sampleRunReductionFlagDict.keys():
+            self._sampleRunReductionFlagDict[run_number] = False
+
+        return
+
+    @property
+    def data_loading_manager(self):
+        """
+        return the handler to data loading manager
+        :return:
+        """
+        return self._loadedDataManager
 
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
@@ -158,15 +141,6 @@ class VDProject(object):
         data_chopper.delete_slicer_by_id(slicer_tag)
 
         return True, ''
-
-    def clear_reduction_flags(self):
-        """ Set to all runs' reduction flags to be False
-        :return:
-        """
-        for run_number in self._sampleRunReductionFlagDict.keys():
-            self._sampleRunReductionFlagDict[run_number] = False
-
-        return
 
     def clear_runs(self):
         """
@@ -201,6 +175,45 @@ class VDProject(object):
 
         return False
 
+    def find_diffraction_peaks(self, data_key, bank_number, x_range,
+                               peak_positions, hkl_list, profile):
+        """
+        Find diffraction peaks
+        :param data_key:
+        :param bank_number:
+        :param x_range:
+        :param peak_positions: If not specified (None) then it is in auto mode
+        :param hkl_list:
+        :param profile:
+        :param auto_find:
+        :return:
+        """
+        # Check input
+        assert isinstance(data_key, int) or isinstance(data_key, str), 'blabla 1119'
+        assert isinstance(bank_number, int), 'Bank number must be an integer.'
+        assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
+        assert isinstance(profile, str), 'Peak profile must be a string.'
+        assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
+
+        # locate the workspace
+        if self._reductionManager.has_run(data_key):
+            data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=False)
+        elif self._loadedDataManager.has_data(data_key):
+            data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
+        else:
+            raise RuntimeError('Workspace cannot be found with data key/run number {0}'.format(data_key))
+
+        #
+        if peak_positions is None:
+            # find peaks in an automatic way
+            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=True)
+        else:
+            # # find the peaks with list
+            peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,
+                                                      hkl_list, profile)
+
+        return peak_info_list
+
     def get_chopper(self, run_number):
         """
         Get data chopper (manager) of a run number
@@ -222,6 +235,53 @@ class VDProject(object):
         # END-IF-ELSE
 
         return run_chopper
+
+    def get_data(self, data_key=None, data_file_name=None):
+        """ Get whole data set as a dictionary.  Each entry is of a bank
+        Requirements: data key or data file name is specified
+        Guarantees:
+        :param data_key: data key generated in Vdrive project
+        :param data_file_name: full path data file
+        :return:
+        """
+        # # Check requirements
+        # assert (data_key is None and data_file_name is None) is False, \
+        #     'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
+        # assert (data_key is not None and data_file_name is not None) is False, \
+        #     'Both data key and data file name are given.'
+        #
+        # # check and convert to data key
+        # if data_file_name is not None:
+        #     assert isinstance(data_file_name, str), 'blabla'
+        #     # TODO: make this to a method ???
+        #     data_key = get_data_key(data_file_name)
+        # else:
+        #     assert isinstance(data_key, str), 'blabla'
+        #
+        # # check existence
+        # if data_key not in self._dataWorkspaceDict:
+        #     raise KeyError('data key %s does not exist.' % data_key)
+        #
+        # # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
+        # data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
+        #
+        # return True, data_set_dict
+
+    def get_data_bank_list(self, data_key):
+        """ Get bank information of a loaded data file (workspace)
+        Requirements: data_key is a valid string as an existing key to the MatrixWorkspace
+        Guarantees: return
+        :param data_key:
+        :return:
+        """
+        if self._loadedDataManager.has_data(data_key):
+            bank_list = self._loadedDataManager.get_bank_list(data_key)
+        elif self._reductionManager.has_data(data_key):
+            bank_list = self._reductionManager.get_bank_list(data_key)
+        else:
+            raise RuntimeError('Data key {0} cannot be found in project manager.'.format(data_key))
+
+        return bank_list
 
     def gen_data_slice_manual(self, run_number, relative_time, time_segment_list, slice_tag):
         """ generate event slicer for data manually
@@ -309,6 +369,19 @@ class VDProject(object):
 
         return file_path
 
+    def get_workspace_name(self, data_key):
+        """ Get workspace name
+        :param data_key:
+        :return:
+        """
+        # TODO/NOW - Doc and Check requirements
+
+        assert data_key in self._dataWorkspaceDict, 'There is no workspace for data key %s. ' \
+                                                    'Candidates are %s.' % (str(data_key),
+                                                                            str(self._dataWorkspaceDict.keys()))
+
+        return self._dataWorkspaceDict[data_key]
+
     def getBaseDataPath(self):
         """ Get the base data path of the project
         """
@@ -358,28 +431,50 @@ class VDProject(object):
         """
         return self._reductionManager.get_reduced_runs()
 
-    def get_reduced_data(self, run_number, unit):
-        """ Get data (x, y and e) of a reduced run in the specified unit
-        Purpose: Get reduced data including all spectra
-        Requirements: run number is a valid integer; unit is a string for supported unit
-        Guarantees: all data of the reduced run will be returned
-        :param run_number:
-        :param unit: target unit for the output X vector.  If unit is None, then no request
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+    def get_reduced_data(self, run_id, target_unit, reduced_data_file=None):
+        """ Get reduced data
+        Purpose: Get all data from a reduced run, either from run number or data key
+        - Order to locate the reduced data
+          1. loaded reduced data file referenced by data_key;
+          2. reduced data from reduction manager;
+          3. given data file from archive;
+        Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
+        Guarantees: returned with 3 numpy arrays, x, y and e
+        :param run_id: it is a run number or data key
+        :param target_unit:
+        :param reduced_data_file: flag to allow search reduced data from archive
+        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # check
-        assert isinstance(run_number, int), 'Input run number must be an integer.'
-        assert unit is None or isinstance(unit, str), 'Output data unit must be either None (default) or a string.'
-
-        # get reduced workspace name
-        reduced_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
+        # Check inputs
+        assert isinstance(run_id, int) or isinstance(run_id, str), 'Run ID must be either integer or string,' \
+                                                                   'but not %s.' % str(type(run_id))
+        assert isinstance(target_unit, str), 'Target unit must be a string but not %s.' % str(type(target_unit))
 
         # get data
-        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, point_data=True)
-        assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
-                                                'but not %s.' % str(type(data_set_dict))
+        if self._loadedDataManager.has_data(run_id):
+            # get data from loaded data manager
+            data_set = self._loadedDataManager.get_data_set(run_id, target_unit)
 
-        return data_set_dict
+        elif self._reductionManager.has_run(run_id):
+            # try to get data from reduction manager if given run number (run id)
+            data_set = self._reductionManager.get_reduced_data(run_id, target_unit)
+
+        elif isinstance(reduced_data_file, str) and os.path.exists(reduced_data_file):
+            # load from a file
+            data_key = self._loadedDataManager.load_binned_data(data_file_name=reduced_data_file,
+                                                                data_file_type=None)
+            data_set = self._loadedDataManager.get_data_set(data_key, target_unit)
+
+        else:
+            # no idea what to do
+            raise RuntimeError('Unable to find reduced data {0}/{1}/{2}'
+                               ''.format(run_id, target_unit, reduced_data_file))
+        # END-IF-ELSE
+
+        # check return
+        assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
+
+        return data_set
 
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run
@@ -508,11 +603,24 @@ class VDProject(object):
 
         return
 
+    @property
     def name(self):
-        """ Get name of the project
-        :return:
+        """ Return project name
+        :return: if return None, it means that the project name has not been set up yet.
         """
         return self._name
+
+    @name.setter
+    def name(self, project_name):
+        """ Set project name
+        Requirements: project name is a string
+        :param project_name:
+        :return:
+        """
+        assert isinstance(project_name, str)
+        self._name = project_name
+
+        return
 
     def reduce_vanadium_runs(self):
         """ Reduce vanadium runs
@@ -543,10 +651,18 @@ class VDProject(object):
         # END-FOR
 
         return
+    
+    @property
+    def reduction_manager(self):
+        """
+        handler to _myReductionManager
+        :return:
+        """
+        return self._reductionManager
 
-    def reduce_runs(self, ipts_number, run_number_list, output_directory, background=False,
+    def reduce_runs(self, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
-                    sample_log_file=False):
+                    sample_log_file=False, standard_sample_tuple=None):
         """
         Reduce a set of runs with selected options
         Purpose:
@@ -578,44 +694,48 @@ class VDProject(object):
         :param fullprof:
         :param record_file:
         :param sample_log_file:
+        :param standard_sample_tuple: 3-tuple: (sample_name, sample_directory, sample_record_name)
         :return:
         """
-        import reduce_VULCAN
+        # rule out the situation that the standard can be only processed one at a time
+        if standard_sample_tuple is not None and len(run_number_list) > 1:
+            raise RuntimeError('It is not allowed to process multiple standard samples in a single call.')
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
 
-        # set up reduction general
-        reduction_setup = reduce_VULCAN.ReductionSetup()
-        reduction_setup.set_default_calibration_files()
-        reduction_setup.set_output_dir(output_directory)
-        if gsas:
-            reduction_setup.set_gsas_dir(output_directory, True)
-
         reduce_all_success = True
         message = ''
 
-        for run_number in run_number_list:
-            # set up
-            reduction_setup.set_run_number(run_number)
-            full_event_file_path, ipts_number = self._dataFileDict[run_number]
-            reduction_setup.set_event_file(full_event_file_path)
-            reduction_setup.set_ipts_number(ipts_number)
+        vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
 
-            # init tracker
-            self._reductionManager.init_tracker(run_number)
+        for run_number in run_number_list:
+            # get IPTS and files
+            full_event_file_path, ipts_number = self._dataFileDict[run_number]
+
+            # vanadium
+            if vanadium:
+                try:
+                    van_run = self._sampleRunVanadiumDict[run_number]
+                    van_gda = self._vanadiumGSASFileDict[van_run]
+                    vanadium_tuple = van_run, van_gda, vanadium_tag
+                except KeyError:
+                    reduce_all_success = False
+                    message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
+                    continue
+            else:
+                vanadium_tuple = None
+            # END-IF (vanadium)
 
             # reduce
-            reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
-            reduce_good, message = reducer.execute_vulcan_reduction()
+            status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
+                                                                    output_directory, vanadium=vanadium,
+                                                                    vanadium_tuple=vanadium_tuple, gsas=gsas,
+                                                                    standard_sample_tuple=standard_sample_tuple)
 
-            status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             reduce_all_success = reduce_all_success and status
-            if status:
-                vdrive_ws, tof_ws, d_ws = ret_obj
-                self._reductionManager.set_reduced_workspaces(run_number, vdrive_ws, tof_ws, d_ws)
-            else:
-                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, str(ret_obj))
+            if not status:
+                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
 
         # END-FOR
 
@@ -749,6 +869,23 @@ class VDProject(object):
 
         return
 
+    def set_vanadium_runs(self, run_number_list, van_run_number, van_file_name):
+        """
+        set the corresponding vanadium run to a list of run numbers
+        :param run_number_list:
+        :param van_run_number:
+        :return: None
+        """
+        assert isinstance(run_number_list, list), 'blabla 129'
+        assert isinstance(van_run_number, int), 'blabla 129B'
+
+        for run_number in run_number_list:
+            self._sampleRunVanadiumDict[run_number] = van_run_number
+
+        self._vanadiumGSASFileDict[van_run_number] = van_file_name
+
+        return
+
     def set_base_data_path(self, data_dir):
         """ Set base data path such as /SNS/VULCAN/
         to locate the data via run number and IPTS
@@ -764,78 +901,6 @@ class VDProject(object):
             raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
 
         return
-
-    def slice_data_main(self, run_number, sample_log_name=None, by_time=False):
-        """ Slice data (corresponding to a run) by either log value or time.
-        Requirements: slicer/splitters has already been set up for this run.
-        Guarantees:
-        :param run_number: run number
-        :param sample_log_name:
-        :param by_time:
-        :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
-        """
-        # TODO/ISSUE/51 - How to make it work with 'slice_data()'????
-        # Check. Must either by sample log or by time
-        if sample_log_name is not None and by_time is True:
-            return False, 'It is not allowed to specify both sample log name and time!'
-        elif sample_log_name is None and by_time is False:
-            return False, 'it is not allowed to specify neither sample log nor time!'
-
-        # Get and check slicers/splitters
-        if by_time is True:
-            # Slice data by time
-            status, ret_obj = self._mySlicingManager.get_slicer_by_time(run_number)
-            if status is False:
-                err_msg = ret_obj
-                return False, err_msg
-            else:
-                slicer = ret_obj
-                sample_log_name = '_TIME_'
-                print '[DB] Slicer = ', str(slicer), '\n'
-        else:
-            # Slice data by log value
-            assert isinstance(sample_log_name, str)
-            print '[DB] Run number = ', run_number, '\n'
-            status, ret_obj = self._mySlicingManager.get_slicer_by_log(run_number, sample_log_name)
-            if status is False:
-                print '[DB]', ret_obj, '\n'
-                return False, ret_obj
-            else:
-                slicer = ret_obj
-            # slicer is a tuple for names of splitter workspace and information workspace
-            # print '[DB] Slicer = %s of type %s\n' % (str(slicer), str(type(slicer)))
-
-        # Slice/split data
-        status, ret_obj = self._myProject.slice_data(run_number, slicer[0], slicer[1],
-                                                     sample_log_name.replace('.', '-'))
-
-        return status, ret_obj
-
-    def slice_data(self, run_number, splitter_ws_name, info_ws_name, out_base_name):
-        """
-        Split data by event filter
-        :param run_number:
-        :param splitter_ws_name:
-        :param info_ws_name:
-        :param out_base_name:
-        :return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
-        """
-        # Load data to event workspace
-        ret_obj = self.get_run_info(run_number)
-        nxs_file_name = ret_obj[0]
-        event_ws_name = mantid_helper.event_data_ws_name(run_number)
-        mantid_helper.load_nexus(data_file_name=nxs_file_name, output_ws_name=event_ws_name, meta_data_only=False)
-
-        # Split
-        splitted_ws_base_name = mantid_helper.get_split_workpsace_base_name(run_number, out_base_name)
-        status, ret_obj = mantid_helper.split_event_data(event_ws_name, splitter_ws_name, info_ws_name,
-                                                         splitted_ws_base_name, tof_correction=False)
-
-        if status is True:
-            self._clear_split_run(run_number)
-            self._splitWorkspaceDict[run_number] = ret_obj[1]
-
-        return status, ret_obj[0]
 
     def _generateFileName(self, runnumber, iptsstr):
         """ Generate a NeXus file name with full path with essential information
@@ -858,3 +923,14 @@ class VDProject(object):
             print "[DB] Successfully generate an existing NeXus file with name %s." % (nxsfname)
 
         return nxsfname
+
+
+def get_data_key(file_name):
+    """ Generate data key according to file name
+    :param file_name:
+    :return:
+    """
+    # TODO/NOW - Doc!
+    assert isinstance(file_name, str)
+
+    return os.path.basename(file_name)

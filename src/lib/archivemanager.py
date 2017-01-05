@@ -142,7 +142,7 @@ class DataArchiveManager(object):
     @staticmethod
     def get_data_archive_gsas(ipts_number, run_number):
         """
-        get reduced data from GSAS file stored on archive server
+        get the path of GSAS file stored on archive server
         :param ipts_number:
         :param run_number:
         :return: list of data or None (cannot find)
@@ -161,10 +161,7 @@ class DataArchiveManager(object):
         if not os.path.exists(gsas_file_name):
             return None
 
-        # get data
-        data_set = mantid_helper.get_data_from_gsas(gsas_file_name)
-
-        return data_set
+        return gsas_file_name
 
     @staticmethod
     def get_data_chopped_gsas(search_dirs, run_number, chop_seq):
@@ -335,7 +332,21 @@ class DataArchiveManager(object):
 
         return ipts, run_number
 
-    def scan_runs_from_archive(self, ipts_number, start_run, end_run):
+    @staticmethod
+    def locate_vanadium_gsas_file(ipts_number, van_run_number):
+        """ Locate a smoothed vanadium run reduced to GSAS file format
+        get the vanadium GSAS file name
+        :param ipts_number:
+        :param van_run_number:
+        :return:
+        """
+        van_gda_file = '/SNS/VULCAN/IPTS-{0}/shared/Instrument/{1}-s.gda'.format(ipts_number, van_run_number)
+
+        file_accessible = os.path.exists(van_gda_file)
+
+        return file_accessible, van_gda_file
+
+    def scan_runs_from_archive(self, ipts_number, run_number_list):
         """
         Scan VULCAN archive with a specific IPTS by guessing the name of NeXus and checking its existence.
         :param ipts_number:
@@ -345,9 +356,9 @@ class DataArchiveManager(object):
         """
         # check
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(start_run, int), 'Start run number must be an integer.'
-        assert isinstance(end_run, int), 'End run number must be an integer.'
-        assert start_run <= end_run, 'Start run must be ahead of end run.'
+        assert isinstance(run_number_list, list), 'Run number list cannot be of type {0}' \
+                                                  ''.format(type(run_number_list))
+        assert len(run_number_list) > 0, 'Run number list cannot be empty.'
 
         # form IPTS
         ipts_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts_number)
@@ -360,7 +371,7 @@ class DataArchiveManager(object):
         err_msg = ''
 
         # locate file
-        for run_number in range(start_run, end_run+1):
+        for run_number in sorted(run_number_list):
             # form file
             nexus_file_name = os.path.join(ipts_dir, 'data/VULCAN_%d_event.nxs' % run_number)
             if os.path.exists(nexus_file_name):

@@ -394,15 +394,17 @@
            <widget class="QCheckBox" name="checkBox_pickPeak">
             <property name="font">
              <font>
-              <pointsize>9</pointsize>
-              <italic>true</italic>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <italic>false</italic>
+              <bold>true</bold>
              </font>
             </property>
             <property name="layoutDirection">
              <enum>Qt::RightToLeft</enum>
             </property>
             <property name="text">
-             <string>pick peak</string>
+             <string>Pick Peaks</string>
             </property>
            </widget>
           </item>
@@ -415,6 +417,13 @@
                 <width>60</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
               </property>
               <property name="text">
                <string>Bank</string>
@@ -440,6 +449,11 @@
                 <width>60</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
               </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Bank numbers&lt;/p&gt;&lt;p&gt;It is a list of the available of bank numbers that are loaded.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -936,7 +950,7 @@
      <x>0</x>
      <y>0</y>
      <width>1494</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTest">

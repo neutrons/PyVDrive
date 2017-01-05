@@ -95,7 +95,7 @@ def find_peaks(diff_data, peak_profile, auto):
     #                    BackgroundType='Quadratic',
     #                    PeaksList='peaks')
 
-    # TODO/NOW - Make it work in the code!
+    # TODO/NOW/ISSUE/57 - Make it work in the code! and more ...
 
     ws_index = 0
     out_ws_name = '70269_gda_peaks'
@@ -432,23 +432,51 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
 def get_data_from_gsas(gsas_file_name):
     """
-
+    Load and get data from a GSAS file
     :param gsas_file_name:
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
-    # TODO/ISSUE/55 - Docs and check
+    # check input
+    assert isinstance(gsas_file_name, str), 'blabla 1710'
+
+    # get output workspace name
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
-    mantidapi.LoadGSS(Filename=gsas_file_name, OutputWorkspace=out_ws_name)
 
-    return get_data_from_workspace(out_ws_name, point_data=True)
+    # load GSAS file
+    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
+
+    data_set_dict = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
+                                            start_bank_id=True)
+
+    return data_set_dict
 
 
-def get_data_from_workspace(workspace_name, point_data):
+def get_data_banks(workspace_name, start_bank_id=1):
+    """
+    get bank number
+    :param workspace_name:
+    :param start_bank_id:
+    :return:
+    """
+    # Requirements
+    assert isinstance(workspace_name, str), 'blabla 610Night'
+    assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+
+    workspace = retrieve_workspace(workspace_name)
+    num_hist = workspace.getNumberHistograms()
+
+    bank_list = range(start_bank_id, start_bank_id + num_hist)
+
+    return bank_list
+
+
+def get_data_from_workspace(workspace_name, target_unit, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
     Requirements: a valid matrix workspace is given
     Guarantees: transform all the data to 1-dimension arrays.
     :param workspace_name:
+    :param target_unit:
     :param point_data: If point data is true, then the output arrays must have equal sizes of x and y arrays
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
@@ -456,8 +484,17 @@ def get_data_from_workspace(workspace_name, point_data):
     assert isinstance(workspace_name, str) and isinstance(point_data, bool)
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
 
+    assert isinstance(target_unit, str) and target_unit in ['TOF', 'dSpacing'], 'blabla 1104'
+
+    # get unit
+    current_unit = get_workspace_unit(workspace_name)
+    if current_unit != target_unit:
+        mantidapi.ConvertUnit(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+                              Target=target_unit)
+
     # Convert to point data
-    if point_data is True:
+    workspace = mantid.AnalysisDataService.retrieve(workspace_name)
+    if point_data is True and workspace.isHistogramData():
         mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                      OutputWorkspace=workspace_name)
 
@@ -483,7 +520,7 @@ def get_data_from_workspace(workspace_name, point_data):
         data_y[:] = vec_y[:]
         data_e[:] = vec_e[:]
     
-        data_set_dict[i_ws] = (data_x, data_y, data_e)
+        data_set_dict[i_ws + start_bank_id] = (data_x, data_y, data_e)
     
     # END-FOR
     
