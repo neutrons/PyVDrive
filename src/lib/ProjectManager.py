@@ -1,5 +1,6 @@
 import os
 import os.path
+import random
 
 from chop_utility import DataChopper
 import mantid_helper
@@ -661,7 +662,7 @@ class ProjectManager(object):
 
     def reduce_runs(self, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
-                    sample_log_file=False):
+                    sample_log_file=False, standard_sample_tuple=None):
         """
         Reduce a set of runs with selected options
         Purpose:
@@ -693,9 +694,12 @@ class ProjectManager(object):
         :param fullprof:
         :param record_file:
         :param sample_log_file:
+        :param standard_sample_tuple: 3-tuple: (sample_name, sample_directory, sample_record_name)
         :return:
         """
-        import random
+        # rule out the situation that the standard can be only processed one at a time
+        if standard_sample_tuple is not None and len(run_number_list) > 1:
+            raise RuntimeError('It is not allowed to process multiple standard samples in a single call.')
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
@@ -726,7 +730,8 @@ class ProjectManager(object):
             # reduce
             status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
                                                                     output_directory, vanadium=vanadium,
-                                                                    vanadium_tuple=vanadium_tuple, gsas=gsas)
+                                                                    vanadium_tuple=vanadium_tuple, gsas=gsas,
+                                                                    standard_sample_tuple=standard_sample_tuple)
 
             reduce_all_success = reduce_all_success and status
             if not status:

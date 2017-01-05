@@ -527,7 +527,7 @@ class ReductionManager(object):
         return True, None
 
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
-                   vanadium_tuple=None, gsas=True):
+                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None):
         """
         Reduce run with selected options
         Purpose:
@@ -562,6 +562,14 @@ class ReductionManager(object):
         reduction_setup.set_output_dir(output_directory)
         if gsas:
             reduction_setup.set_gsas_dir(output_directory, True)
+
+        # process on standards
+        if standard_sample_tuple:
+            assert isinstance(standard_sample_tuple, tuple) and len(standard_sample_tuple) == 3, 'blabla 1116'
+            standard_sample, standard_dir, standard_record_file = standard_sample_tuple
+            reduction_setup.is_standard = True
+            reduction_setup.set_standard_sample(standard_sample, standard_dir, standard_record_file)
+        # END-IF (standard sample tuple)
 
         # reduce
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)

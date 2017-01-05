@@ -915,7 +915,8 @@ class VDriveAPI(object):
 
     def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
                         vanadium=False, special_pattern=False,
-                        record=False, logs=False, gsas=True, fullprof=False):
+                        record=False, logs=False, gsas=True, fullprof=False,
+                        standard_sample_tuple=None):
         """
         Reduce a set of data
         Purpose:
@@ -937,6 +938,7 @@ class VDriveAPI(object):
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
         :param fullprof: boolean flag tro produces Fullprof files from reduced runs
+        :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -975,7 +977,8 @@ class VDriveAPI(object):
                                                               gsas=gsas,
                                                               fullprof=fullprof,
                                                               record_file=record,
-                                                              sample_log_file=logs)
+                                                              sample_log_file=logs,
+                                                              standard_sample_tuple=standard_sample_tuple)
 
             except AssertionError as re:
                 status = False
@@ -1189,50 +1192,6 @@ class VDriveAPI(object):
         status, ret_obj = chop_utility.parse_time_segments(file_name)
 
         return status, ret_obj
-
-    def process_reduced_standard(self, run_number, standard_type):
-        """
-        process the reduced standard sample such as Ni, Si, Vanadium
-        the method shall put the reduced data to its specific location on the server
-        :param run_number: integer
-        :param standard_type: string
-        :return:
-        """
-        # check inputs
-        assert isinstance(run_number, int), 'blabla 1012'
-        assert isinstance(standard_type, str) and standard_type in ['Si', 'V'],\
-            'Standard type {0} must be a string but not {1}.'.format(standard_type, type(standard_type))
-
-        # locate the target directory to put reduced data
-        if standard_type == 'V':
-            standard_sub_dir = 'Vanadium'
-            record_file_name = 'VRecord.txt'
-        elif standard_type == 'Si':
-            standard_sub_dir = 'Si'
-            record_file_name = 'SiRecord.txt'
-        else:
-            raise RuntimeError('Impossible situation to fall into this brach')
-
-        # call the controller
-        # TODO/NOW/FIXME/ISSUE/57 - The target directory is for testing purpose
-        target_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/{0}'.format(standard_sub_dir)
-        target_dir = '/home/wzz/Projects/workspaces/VDrive/Instrument/Standard/{0}'.format(standard_sub_dir)
-        assert os.path.exists(target_dir), 'blabla 1018'
-
-        # find the reduced data
-        gsa_file = self._myProject.reduction_manager.get_reduced_file(run_number, file_type='gda')
-        try:
-            shutil.copy(gsa_file, target_dir)
-        except IOError as io_err:
-            print '[ERROR] Unable to copy {0} to {1} due to {2}.'.format(gsa_file, target_dir, io_err)
-
-        # write record file
-        record_file_name = os.path.join(target_dir, record_file_name)
-        
-
-        # ... to be continued from here ...
-
-        return
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """

@@ -1,3 +1,4 @@
+import os
 import procss_vcommand
 
 # VDRIVEBIN, i.e., VBIN
@@ -153,10 +154,32 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # TAG
         if 'TAG' in input_args:
+            # process material type
             material_type = self._commandArgsDict['TAG']
-            process_standard = material_type
+            material_type = material_type.lower()
+            """
+            for example
+            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+            """
+            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
+            # TODO/NOW/ISSUE/FIXME/57 - Using a debug directory now!!! remove it before releasing!
+            standard_dir = os.getcwd()
+
+            if material_type == 'si':
+                material_type = 'Si'
+                standard_dir = os.path.join(standard_dir, 'Si')
+                standard_file = 'SiRecord.txt'
+            elif material_type == 'v':
+                material_type = 'Vanadium'
+                standard_dir = os.path.join(standard_dir, 'Vanadium')
+                standard_file = 'VRecord.txt'
+            else:
+                return False, 'Unable to process unsupported TAG {0}.'.format(material_type)
+
+            standard_tuple = material_type, standard_dir, standard_file
         else:
-            process_standard = None
+            standard_tuple = None
 
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
@@ -185,18 +208,18 @@ class VBin(procss_vcommand.VDriveCommand):
         if van_run is not None:
             self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
 
-        import os
         output_dir = os.getcwd()
 
         # reduce
         status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
-                                                           vanadium=(van_run is not None))
+                                                           vanadium=(van_run is not None),
+                                                           standard_sample_tuple=standard_tuple)
 
-        # process standards
-        if process_standard is not None:
-            assert len(run_number_list) == 1, 'It is not allowed to process several standards {0} simultaneously.' \
-                                              ''.format(process_standard)
-            self._controller.process_reduced_standard(run_number_list[0], process_standard)
+        # # process standards
+        # if process_standard is not None:
+        #     assert len(run_number_list) == 1, 'It is not allowed to process several standards {0} simultaneously.' \
+        #                                       ''.format(process_standard)
+        #     self._controller.process_reduced_standard(run_number_list[0], process_standard)
 
         return status, str(ret_obj)
 

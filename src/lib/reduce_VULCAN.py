@@ -254,6 +254,9 @@ class ReductionSetup(object):
 
         # standard
         self._isStandardSample = False
+        self._standardSampleName = None
+        self._standardDirectory = None
+        self._standardRecordFile = None
 
         # vanadium related
         self._vanadiumFlag = False
@@ -464,11 +467,18 @@ class ReductionSetup(object):
         if throw_not_set:
             if self._splitterWsName is None or self._splitterInfoName is None:
                 raise RuntimeError('Splitters (workspaces) have not been set.')
-            if not (AnalysisDataService.doesExist(self._splitterWsName) and
-                        AnalysisDataService.doesExist(self._splitterInfoName)):
+            if not (AnalysisDataService.doesExist(self._splitterWsName)
+                    and AnalysisDataService.doesExist(self._splitterInfoName)):
                 raise RuntimeError('Splitters (workspaces) do not exist.')
 
         return self._splitterWsName, self._splitterInfoName
+
+    def get_standard_processing_setup(self):
+        """
+        get the processing setup for VULCAN standard
+        :return: 2-tuple
+        """
+        return self._standardDirectory, self._standardRecordFile
 
     def get_vanadium_info(self):
         """
@@ -848,6 +858,25 @@ class ReductionSetup(object):
         assert isinstance(run_number, int), 'run number must be an integer.'
 
         self._runNumber = run_number
+
+        return
+
+    def set_standard_sample(self, standard, directory, base_record_file):
+        """
+        set the VULCAN standard output option
+        :param standard:
+        :param directory:
+        :param base_record_file:
+        :return:
+        """
+        # check inputs
+        assert isinstance(standard, str), 'blabla 1142'
+        assert isinstance(directory, str), 'blabla 1142B'
+        assert isinstance(base_record_file, str), 'blabla 1142C'
+
+        self._standardSampleName = standard
+        self._standardDirectory = directory
+        self._standardRecordFile = os.path.join(directory, base_record_file)
 
         return
 
@@ -1415,6 +1444,10 @@ class ReduceVulcanData(object):
         (1) reduce to GSAS file
         (2) export log file
         (3) special reduction output for VULCAN auto reduction service
+        (4) process VULCAN standard sample
+
+        Note: VULCAN standard sample can only be processed in the sub methods because it needs a lot of
+              variables defined in expoort_experiment_records() only
         Raise RuntimeError
         :return: (boolean, string) as success/fail and error message
         """
@@ -1427,6 +1460,15 @@ class ReduceVulcanData(object):
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
         if not is_reduce_good:
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
+        if self._reductionSetup.is_standard:
+            # standard sample for VULCAN
+            gsas_file = self.get_reduced_files()[0]
+            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+            try:
+                shutil.copy(gsas_file, standard_dir)
+            except IOError as io_err:
+                raise RuntimeError('Unable to write standard GSAS file to '
+                                   '{0} due to {1}'.format(standard_dir, io_err))
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
@@ -1492,11 +1534,10 @@ class ReduceVulcanData(object):
             return False, message
 
         # Set up the mode for global access
-        file_access_mode = oct(os.stat(self._reductionSetup.get_record_file())[stat.ST_MODE])
+        file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])
         file_access_mode = file_access_mode[-3:]
         if file_access_mode != '666' and file_access_mode != '676':
-            print "Current file %s's mode is %s." % (self._reductionSetup.get_record_file(),
-                                                     file_access_mode)
+            print "Current file %s's mode is %s." % (target_file, file_access_mode)
             try:
                 os.chmod(target_file, 0666)
             except OSError as os_err:
@@ -1510,8 +1551,11 @@ class ReduceVulcanData(object):
         :return: True if it is an alignment run
         """
         # return if there is no requirement to export record file
-        if self._reductionSetup.get_record_file() is None and self._reductionSetup.get_record_2nd_file() is None:
-            return True, 'Auto record file is not required to write out.'
+        record_file_name = self._reductionSetup.get_record_file()
+        user_record_name = self._reductionSetup.get_record_2nd_file()
+
+        if record_file_name is None and user_record_name is None and not self._reductionSetup.is_standard:
+            return True, 'No record file is required to write out.'
 
         # Convert the record base to input arrays
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
@@ -1522,40 +1566,65 @@ class ReduceVulcanData(object):
                               self._reductionSetup.get_run_number())
         patch_list = patcher.export_patch_list()
 
+        # define over all message
+        return_status = True
+        return_message = ''
+
         # export to AutoRecord.txt
-        status1, message1 = self._export_experiment_log(self._reductionSetup.get_record_file(),
-                                                        sample_name_list, sample_title_list,
-                                                        sample_operation_list, patch_list)
+        if record_file_name:
+            # export main experiment log
+            status1, message1 = self._export_experiment_log(self._reductionSetup.get_record_file(),
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            if not status1:
+                return status1, message1
+            else:
+                return_message += message1 + '\n'
 
-        # Export to either data or align
-        record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
-        if self._reductionSetup.is_alignment_run:
-            categorized_record_file = os.path.join(record_file_path, 'AutoRecordAlign.txt')
+            # export to either data or align log file
+            record_file_path = os.path.dirname(self._reductionSetup.get_record_file())
+            if self._reductionSetup.is_alignment_run:
+                categorized_record_file = os.path.join(record_file_path, 'AutoRecordAlign.txt')
+            else:
+                categorized_record_file = os.path.join(record_file_path, 'AutoRecordData.txt')
+
+            status2, message2 = self._export_experiment_log(categorized_record_file,
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            return_status = return_status and status2
+            return_message += message2 + '\n'
         else:
-            categorized_record_file = os.path.join(record_file_path, 'AutoRecordData.txt')
+            # no need to export main AutoRecord file
+            status2 = False
+            categorized_record_file = None
+        # END-IF-ELSE
 
-        status2, message2 = self._export_experiment_log(categorized_record_file,
-                                                        sample_name_list, sample_title_list,
-                                                        sample_operation_list, patch_list)
-
-        # Auto reduction only
-        if self._reductionSetup.get_record_2nd_file() is not None:
+        # Auto reduction only: record file for users
+        if user_record_name:
             # 2nd copy of Auto Record . txt
             if os.path.exists(self._reductionSetup.get_record_2nd_file()):
                 # if the target copy of AutoRecord.txt exists, then append
-                self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
-                                            sample_name_list, sample_title_list,
-                                            sample_operation_list, patch_list)
+                status3, message3 = self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
+                                                                sample_name_list, sample_title_list,
+                                                                sample_operation_list, patch_list)
+                return_status += status3
+                return_message += message3 + '\n'
             else:
                 # if the target copy of AutoRecord.txt does not exist
-                shutil.copy(self._reductionSetup.get_record_file(),
-                            self._reductionSetup.get_record_2nd_file())
-                # change mode to 666
-                try:
-                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
-                except IOError as io_err:
-                    print 'Unable to change file {0} mode to 666 due to {1}.' \
-                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+                if os.access(self._reductionSetup.get_record_2nd_file(), os.W_OK):
+                    shutil.copy(self._reductionSetup.get_record_file(),
+                                self._reductionSetup.get_record_2nd_file())
+                    # change mode to 666
+                    try:
+                        os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                    except IOError as io_err:
+                        return_status = False
+                        return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
+                                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+                else:
+                    return_status = False
+                    return_message += 'Unable to write file {0} without writing permission.\n' \
+                                      ''.format(self._reductionSetup.get_record_2nd_file())
             # END-IF-ELSE
 
             # 2nd copy of auto align/sample
@@ -1566,25 +1635,36 @@ class ReduceVulcanData(object):
             else:
                 categorized_2_record_file = os.path.join(record_file_2_path, 'AutoRecordData.txt')
 
-            if os.path.exists(categorized_record_file) is False and status2:
-                # file do not exist and previous write-to-file is successful
-                shutil.copy(categorized_record_file, categorized_2_record_file)
+            if os.path.exists(categorized_2_record_file) is False and status2:
+                # target record file does not exist and previous write-to-file is successful
+                try:
+                    shutil.copy(categorized_record_file, categorized_2_record_file)
+                except IOError as io_err:
+                    return_status = False
+                    return_message += 'Unable to copy {0} to {1} due to {2}.\n' \
+                                      ''.format(categorized_record_file, categorized_2_record_file,
+                                                io_err)
             else:
                 # write to the 2nd copy
-                self._export_experiment_log(categorized_2_record_file,
-                                            sample_name_list, sample_title_list,
-                                            sample_operation_list, patch_list)
+                status4, message4 = self._export_experiment_log(categorized_2_record_file,
+                                                                sample_name_list, sample_title_list,
+                                                                sample_operation_list, patch_list)
+                return_status = return_status and status4
+                return_message += message4 + '\n'
             # END-IF-ELSE
-        # END-IF-ELSE
+        # END-IF-ELSE (auto record only)
 
-        # standards output
+        # process standard sample for VULCAN/VDRIVE
         if self._reductionSetup.is_standard:
-            self._export_experiment_log(self._reductionSetup.get_standard_record_file(),
-                                        sample_name_list, sample_title_list,
-                                        sample_operation_list, patch_list)
+            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+            status5, message5 = self._export_experiment_log(standard_record,
+                                                            sample_name_list, sample_title_list,
+                                                            sample_operation_list, patch_list)
+            return_status = return_status and status5
+            return_message += message5 + '\n'
         # END-IF
 
-        return True, message1
+        return return_status, return_message
 
     def export_log_files(self):
         """
@@ -2080,6 +2160,7 @@ class ReduceVulcanData(object):
 
             gss_ws = gss_ws/van_ws
             mantidsimple.SaveGSS(InputWorkspace=gss_ws, Filename='whatever')
+        # END-IF (vanadium)
 
         # collect result
         self._reducedWorkspaceDSpace = reduced_ws_name
