@@ -2071,7 +2071,7 @@ class ReduceVulcanData(object):
 
     def reduce_powder_diffraction_data(self):
         """
-        reduce powder diffraction data
+        reduce powder diffraction data.
         :return: 2-tuples
         """
         # required parameters:  ipts, runnumber, outputdir
@@ -2138,28 +2138,8 @@ class ReduceVulcanData(object):
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
-            # FIXME/TODO/ISSUE/57 - Refactor!
-            t3 = self._reductionSetup.get_vanadium_info()
-            assert t3 is not None, 'blabla 948'
-            van_run_number, van_gda_file, vanadium_tag = t3
-            van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
-
-            gss_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-            van_ws = AnalysisDataService.retrieve(van_ws_name)
-
-            gda_vec_x = gss_ws.readX(0)
-            van_vec_x = van_ws.readX(0)
-            diff_vec = numpy.abs((van_vec_x-gda_vec_x)/gda_vec_x)
-            assert numpy.max(diff_vec) < 0.01, 'Vec X differs too much!'
-
-            num_spec = gss_ws.getNumberHistograms()
-            assert num_spec == van_ws.getNumberHistograms(), 'blabla 1028'
-
-            for ws_index in range(num_spec):
-                numpy.copyto(van_ws.dataX(ws_index), gss_ws.readX(ws_index))
-
-            gss_ws = gss_ws/van_ws
-            mantidsimple.SaveGSS(InputWorkspace=gss_ws, Filename='whatever')
+            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
         # END-IF (vanadium)
 
         # collect result
@@ -2169,6 +2149,53 @@ class ReduceVulcanData(object):
         self._reduceGood = True
 
         return True, message
+
+    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
+        """
+
+        :return:
+        """
+        # check inputs and get input workspace
+        assert isinstance(reduced_gss_ws_name, str), 'blabla 912A'
+        reduced_gss_ws = AnalysisDataService.retrieve(reduced_gss_ws_name)
+
+        # get vanadium information according to vanadium run number
+        van_info_tuple = self._reductionSetup.get_vanadium_info()
+        assert van_info_tuple is not None, 'blabla 948'
+        van_run_number, van_gda_file, vanadium_tag = van_info_tuple
+        van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
+
+        # get vanadium workspace
+        van_ws = AnalysisDataService.retrieve(van_ws_name)
+
+        # check whether the reduced GSAS workspace has the same binning with vanadium workspace
+        gda_vec_x = reduced_gss_ws.readX(0)
+        van_vec_x = van_ws.readX(0)
+        diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
+        if numpy.max(diff_vec) >= 0.01:
+            raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
+                               'differs too much!'.format(van_run_number, reduced_gss_ws_name))
+
+        # check whether vanadium and sample run workspace have the same number of spectra
+        num_spec = reduced_gss_ws.getNumberHistograms()
+        if num_spec != van_ws.getNumberHistograms():
+            raise RuntimeError('blabla 1028')
+
+        # normalize by vanadium
+        # make the binning exactly the same because there is always some tiny difference between loaded GSAS
+        for ws_index in range(num_spec):
+            numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
+
+        # normalize and write out again
+        reduced_gss_ws = reduced_gss_ws / van_ws
+
+        mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_gss_ws,
+                                   OutputWorkspace=reduced_gss_ws_name,
+                                   GSSFilename=output_file_name,
+                                   IPTS=self._reductionSetup.get_ipts_number(),
+                                   GSSParmFilename="Vulcan.prm")
+
+        return
 
     def special_operation_auto_reduction_service(self):
         """
