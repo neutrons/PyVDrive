@@ -33,7 +33,7 @@ class VdriveCommandProcessor(object):
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK']
 
         return
 
@@ -96,6 +96,10 @@ class VdriveCommandProcessor(object):
         elif command == 'AUTO':
             # auto reduction command
             status, err_msg = self._process_auto_reduction(arg_dict)
+        elif command_args == 'VPEAK':
+            # process vanadium peak
+            # FIXME/TODO/ISSUE/59: Implement it!
+            status, err_msg = self._process_vanadium_peak(arg_dict)
         else:
             raise RuntimeError('Impossible situation!')
 
