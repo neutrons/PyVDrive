@@ -13,7 +13,7 @@ class VanadiumPeak(VDriveCommand):
         'HELP': 'Launch General Plot Viewer',
         'OneBank': 'Add 2 bank data together (=1).',
         'Shift': 'the chopper center is shift to large lambda aggressively.',
-        'Nsmooth': 'the number of points to be used in the boxcar smoothing algorithm.',
+        'Nsmooth': 'the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.',
         'OUTPUT': 'the directory where the smooth vanadium gsas file will be saved other than default.'
     }
 
@@ -38,10 +38,89 @@ class VanadiumPeak(VDriveCommand):
         """
         super(VanadiumPeak, self).__init__(controller, command_args)
 
+        # define variables
+        self._vanRunNumber = None
+        self._doShift = False
+        self._mergeToOneBank = False
+
         return
 
     def exec_cmd(self):
         """
         Execute command: override
         """
-        # ... FIXME/TODO/NOW/ISSUE/59 - From here!
+        # check
+        if 'RUNV' not in self._commandArgsDict:
+            return False, 'RUNV must be specified!'
+
+        # parse IPTS
+        self.set_ipts()
+
+        # parse the parameters
+        self._vanRunNumber = int(self._commandArgsDict['RUNV'])
+        assert self._vanRunNumber > 0, 'Vanadium run number {0} cannot be non-positive.'.format(self._vanRunNumber)
+
+        if 'OneBank' in self._commandArgsDict:
+            self._mergeToOneBank = bool(int(self._commandArgsDict['OneBank']))
+
+        if 'Shift' in self._commandArgsDict:
+            self._doShift = bool(int(self._commandArgsDict['Shift']))
+
+        if 'HELP' in self._commandArgsDict:
+            do_launch_gui = bool(int(self._commandArgsDict['HELP']))
+        else:
+            do_launch_gui = False
+
+        # return to pop
+        if do_launch_gui:
+            return True, 'pop'
+
+        return True, None
+
+    def get_help(self):
+        """
+        get helping strings for this VBIN command
+        :return:
+        """
+        help_str = 'VPEAK: Strip peaks and smooth vanadium spectra and save to GSAS.\n'
+        help_str += '       By default, the smoothed data is named as ####-s.gda and saved to ' \
+                    '/SNS/VULCAN/IPTS-XXXX/shared/Instrument, as well as a copy in the VULCAN shared fold.'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        # examples
+        help_str += 'Examples:\n'
+        help_str += '> VVPEAK, IPTS=1000, RUNV=5000\n'
+
+        return help_str
+
+    @property
+    def to_merge_to_one_bank(self):
+        """
+
+        :return:
+        """
+        return self._mergeToOneBank
+
+    @property
+    def to_shift(self):
+        """
+
+        :return:
+        """
+        return self._doShift
+
+    @property
+    def vanadium_run_number(self):
+        """
+        property as vanadium run number
+        :return:
+        """
+        assert self._vanRunNumber is not None, 'Vanadium run number is not set yet.'
+        return self._vanRunNumber
