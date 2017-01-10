@@ -91,6 +91,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_unit_changed)
 
+        # vanadium
+        self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_vanadium_dialog)
+
         return
 
     def _init_widgets(self):
@@ -160,6 +164,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         over_plot = self.ui.checkBox_overPlot.isChecked()
         self.plot_run(run_number=run_number, bank_id=bank_id, over_plot=over_plot)
+
+        return
+
+    def do_launch_vanadium_dialog(self):
+        """
+        blabla
+        :return:
+        """
+        import vanadium_controller_dialog
+
+        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+        self._vanadiumProcessDialog.show()
 
         return
 
@@ -700,6 +716,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         return
+
+    def set_title(self, title):
+        """
+        blalba
+        :param title:
+        :return:
+        """
+        self.ui.label_currentRun.setText(title)
 
     def setup(self, controller):
         """ Set up the GUI from controller

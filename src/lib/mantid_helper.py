@@ -1097,6 +1097,38 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     return True, ret_obj
 
 
+def smooth_vanadium(input_workspace, output_workspace):
+    """
+
+    :param input_workspace:
+    :param output_workspace:
+    :return:
+    """
+    # call mantid
+    # TODO/ISSUE/59/ - Find from SNSPowderReduction
+    raise NotImplementedError('1057...')
+
+
+def strip_vanadium_peaks(input_workspace, output_workspace=None):
+    """
+
+    :param input_workspace:
+    :param output_workspace:
+    :return:
+    """
+    # check inputs
+    assert isinstance(input_workspace, str), 'blabla 1032'
+    if not workspace_does_exist(input_workspace):
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_workspace))
+
+    if output_workspace is None:
+        output_workspace = input_workspace + '_no_peak'
+
+    # call mantid
+    # TODO/ISSUE/59/ - Find from SNSPowderReduction
+    raise NotImplementedError('1057...')
+
+
 def workspace_does_exist(workspace_name):
     """ Check whether a workspace exists in analysis data service by its name
     Requirements: input workspace name must be a non-empty string

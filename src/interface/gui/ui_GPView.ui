@@ -235,7 +235,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_8">
          <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="pushButton_launchVanProcessDialog">
            <property name="font">
             <font>
              <pointsize>10</pointsize>

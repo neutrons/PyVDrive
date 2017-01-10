@@ -9,6 +9,7 @@ import vdrive_commands.chop
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
 import vdrive_commands.view
+import vdrive_commands.vpeak
 import vdrive_commands.procss_vcommand
 
 
@@ -84,7 +85,6 @@ class VdriveCommandProcessor(object):
         # END-FOR
 
         # call the specific command class builder
-        print '[DB...BAT] Now it is time to find a proper reserved VDRIVE command (%s) to run!' % command
         if command == 'CHOP':
             status, err_msg = self._process_chop(arg_dict)
         elif command == 'VBIN':
@@ -96,7 +96,7 @@ class VdriveCommandProcessor(object):
         elif command == 'AUTO':
             # auto reduction command
             status, err_msg = self._process_auto_reduction(arg_dict)
-        elif command_args == 'VPEAK':
+        elif command == 'VPEAK':
             # process vanadium peak
             # FIXME/TODO/ISSUE/59: Implement it!
             status, err_msg = self._process_vanadium_peak(arg_dict)
@@ -192,6 +192,28 @@ class VdriveCommandProcessor(object):
             view_window.set_run_numbers(processor.get_run_number_list())
             view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
         # END-FOR
+
+        return status, message
+
+    def _process_vanadium_peak(self, arg_dict):
+        """
+        process vanadium peak
+        :param arg_dict:
+        :return:
+        """
+        # generate a VanadiumPeak object to process the command
+        processor = vdrive_commands.vpeak.VanadiumPeak(self._myController, arg_dict)
+
+        # process command
+        status, message = self._process_command(processor, arg_dict)
+        if not status:
+            return False, message
+
+        # process for special case: log-pick-helper
+        if message == 'pop':
+            data_viewer = self._mainWindow.do_view_reduction()
+            data_viewer.set_title('Processing vanadium')
+        # END-IF
 
         return status, message
 

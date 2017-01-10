@@ -75,7 +75,14 @@ class VanadiumPeak(VDriveCommand):
         if do_launch_gui:
             return True, 'pop'
 
-        return True, None
+        # execute vanadium strip command
+        status, ret_obj = self._controller.process_vanadium_run(ipts_number=self._iptsNumber,
+                                                                run_number=self._vanRunNumber,
+                                                                use_reduced_file=True,
+                                                                one_bank=self._mergeToOneBank,
+                                                                do_shift=self._doShift)
+
+        return status, ret_obj
 
     def get_help(self):
         """
@@ -96,7 +103,9 @@ class VanadiumPeak(VDriveCommand):
 
         # examples
         help_str += 'Examples:\n'
-        help_str += '> VVPEAK, IPTS=1000, RUNV=5000\n'
+        help_str += '> VPEAK, IPTS=1000, RUNV=5000\n'
+        help_str += '> VPEAK, IPTS=16062, RUNV=132261\n'
+        # /SNS/VULCAN/IPTS-16062/0/132261/NeXus/VULCAN_132261_event.nxs'
 
         return help_str
 

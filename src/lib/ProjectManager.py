@@ -622,33 +622,39 @@ class ProjectManager(object):
 
         return
 
-    def reduce_vanadium_runs(self):
-        """ Reduce vanadium runs
-        Purpose:
-            Get or reduce vanadium runs according to the runs that are flagged for reduction
-        Requirements:
-            There are some vanadium runs that can be found
-        Guarantees:
-            The corresponding vanadium runs are reduced with the proper binning parameters
+    def process_vanadium_spectra(self, ipts_number, run_number, gsas_file=None, use_workspace=False):
+        """
+        process vanadium including peak striping and smooth
+        :param ipts_number:
+        :param run_number:
+        :param gsas_file:
+        :param use_workspace:
         :return:
         """
-        # Check requirements
-        van_run_number_set = set()
-        for sample_run_number in self._sampleRunReductionFlagDict:
-            if self._sampleRunReductionFlagDict[sample_run_number] is True:
-                assert sample_run_number in self._sampleRunVanadiumDict
-                van_run_number = self._sampleRunVanadiumDict[sample_run_number]
-                van_run_number_set.add(van_run_number)
-        # END-FOR
-        assert len(van_run_number_set) > 0, 'There must be at least more than 1 vanadium runs for the sample runs.'
+        # check
+        if gsas_file is None and use_workspace is False:
+            raise RuntimeError('Neither GSAS file is defined, Nor workspace is used.')
+        elif gsas_file and use_workspace:
+            raise RuntimeError('Both GSAS file is defined and workspace is used.')
 
-        # Get binning parameters and decide whether to reduce or not
-        for van_run_number in van_run_number_set:
-            if self._vanadiumRunsManager.has(van_run_number) is False:
-                handler = self._reductionManager.reduce_sample_run(van_run_number)
-                self._vanadiumRunsManager.set_reduced_vanadium(handler)
-            # END-IF
-        # END-FOR
+        # load file
+        if gsas_file:
+            data_key = self._loadedDataManager.load_binned_data(gsas_file, 'gsas')
+            workspace_name = self._loadedDataManager.get_workspace_name(data_key)
+        else:
+            workspace_name = self._reductionManager.get_reduced_workspace(run_number,
+                                                                          is_vdrive_bin=True, unit='dSpacing')
+
+        # call mantid to strip vanadium peaks
+        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name)
+
+        # smooth
+        output_ws_name = mantid_helper.smooth_vanadium(input_workspace=output_ws_name)
+
+        # save
+        # TODO/FIXME/ISSUE/59 - Need a better outcome
+        self.save_vanadium_to_file(ipts_number, run_number, output_ws_name, output_to_server=True,
+                                   local_dir=os.getcwd())
 
         return
     
@@ -695,7 +701,7 @@ class ProjectManager(object):
         :param record_file:
         :param sample_log_file:
         :param standard_sample_tuple: 3-tuple: (sample_name, sample_directory, sample_record_name)
-        :return:
+        :return: (boolean, message)
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
