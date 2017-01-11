@@ -177,7 +177,7 @@ class VdriveCommandProcessor(object):
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
-            view_window.set_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_number_list())
             # plot
             view_window.plot_run(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
@@ -189,7 +189,7 @@ class VdriveCommandProcessor(object):
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
-            view_window.set_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_number_list())
             view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
         # END-FOR
 
@@ -212,7 +212,12 @@ class VdriveCommandProcessor(object):
         # process for special case: log-pick-helper
         if message == 'pop':
             data_viewer = self._mainWindow.do_view_reduction()
+            # title
             data_viewer.set_title('Processing vanadium')
+            # get data (key), set to viewer and plot
+            controller_data_key = processor.get_loaded_data()
+            viewer_data_key = data_viewer.add_data_set(controller_data_key)
+            data_viewer.plot_data(viewer_data_key, bank_id=1)
         # END-IF
 
         return status, message

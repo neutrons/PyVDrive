@@ -198,6 +198,24 @@ class DataArchiveManager(object):
 
         return data_set
 
+    def get_event_file(self, ipts_number, run_number, check_file_exist):
+        """
+        get the raw event NEXUS file from archive
+        :param ipts_number:
+        :param run_number:
+        :param check_file_exist: if file is not found, raise RuntimeError()
+        :return:
+        """
+        # build the path
+        base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
+        sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
+        raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
+
+        if check_file_exist and not os.path.exists(raw_event_file_name):
+            raise RuntimeError('Event NeXus file {0} is not found.'.format(raw_event_file_name))
+
+        return raw_event_file_name
+
     def get_experiment_run_info(self, archive_key, start_run=None, end_run=None):
         """ Get the information of all runs from an IPTS that has been scanned before
         Purpose:
@@ -240,33 +258,6 @@ class DataArchiveManager(object):
 
         return self._runIptsDict[run_number]
 
-    def get_partial_run_info(self, archive_key, start_run, end_run):
-        """
-        Get a subset of runs (with all information) by specified range of run numbers
-        :param archive_key:
-        :param start_run:
-        :param end_run:
-        :return:
-        """
-        # check
-        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %d.' \
-                                             '' % (str(archive_key), type(archive_key))
-        assert isinstance(start_run, int) and isinstance(end_run, int) and start_run <= end_run, \
-            'start run %s (%s vs int) must be less or equal to end run %s (%d vs int).' \
-            '' % (str(start_run), type(start_run), str(end_run), type(end_run))
-
-        # get partial list
-        partial_list = list()
-        for run_number in sorted(self._iptsInfoDict[archive_key].keys()):
-            run_dict = self._iptsInfoDict[archive_key][run_number]
-            if start_run <= run_number <= end_run:
-                partial_list.append(run_dict)
-            elif run_number > end_run:
-                # quit the loop as searching is finished
-                break
-
-        return partial_list
-
     # Methods
     @staticmethod
     def get_files_time_information(file_name_list):
@@ -298,6 +289,25 @@ class DataArchiveManager(object):
         time_file_list = sorted(time_file_list)
 
         return time_file_list
+
+    def get_gsas_file(self, ipts_number, run_number, check_exist):
+        """
+        get reduced data written in GSAS.
+        :param ipts_number:
+        :param run_number:
+        :param check_exist: if specified as True and file does not exist, a RuntimeError will be raised
+        :return:
+        """
+        # build file name
+        base_name = '{0}.gda'.format(run_number)
+        sub_path = os.path.join('IPTS-{0}/shared/binned_data/'.format(ipts_number), base_name)
+        gsas_full_path = os.path.join(self._archiveRootDirectory, sub_path)
+
+        # check
+        if check_exist and not os.path.exists(gsas_full_path):
+            raise RuntimeError('Reduced GSAS file {0} is not found.'.format(gsas_full_path))
+
+        return gsas_full_path
 
     @staticmethod
     def get_ipts_run_from_file_name(nxs_file_name):
@@ -331,6 +341,33 @@ class DataArchiveManager(object):
             run_number = None
 
         return ipts, run_number
+
+    def get_partial_run_info(self, archive_key, start_run, end_run):
+        """
+        Get a subset of runs (with all information) by specified range of run numbers
+        :param archive_key:
+        :param start_run:
+        :param end_run:
+        :return:
+        """
+        # check
+        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %d.' \
+                                             '' % (str(archive_key), type(archive_key))
+        assert isinstance(start_run, int) and isinstance(end_run, int) and start_run <= end_run, \
+            'start run %s (%s vs int) must be less or equal to end run %s (%d vs int).' \
+            '' % (str(start_run), type(start_run), str(end_run), type(end_run))
+
+        # get partial list
+        partial_list = list()
+        for run_number in sorted(self._iptsInfoDict[archive_key].keys()):
+            run_dict = self._iptsInfoDict[archive_key][run_number]
+            if start_run <= run_number <= end_run:
+                partial_list.append(run_dict)
+            elif run_number > end_run:
+                # quit the loop as searching is finished
+                break
+
+        return partial_list
 
     @staticmethod
     def locate_vanadium_gsas_file(ipts_number, van_run_number):

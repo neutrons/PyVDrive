@@ -464,7 +464,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # END-IF
 
         # update to current reduction status
-        self._reducedDataViewWindow.set_run_numbers(self._myWorkflow.get_reduced_runs(), clear_previous=True)
+        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(), clear_previous=True)
 
         # show the window if it exists and return
         self._reducedDataViewWindow.show()

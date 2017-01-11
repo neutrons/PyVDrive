@@ -1193,6 +1193,44 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
+    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file):
+        """
+
+        :param ipts_number:
+        :param run_number:
+        :param use_reduced_file:
+        :return:
+        """
+        van_file_name = None
+
+        # highest priority: load data from
+        if use_reduced_file:
+            # search reduced GSAS file
+            try:
+                van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+            except RuntimeError as run_err:
+                print '[WARNING]: {0}'.format(run_err)
+                van_file_name = None
+        # END-IF
+
+        if van_file_name is None:
+            # if vanadium gsas file is not found, reduce it
+            nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            self._myProject.add_run(run_number, nxs_file, ipts_number)
+            reduced, message = self._myProject.reduce_runs([run_number], output_directory=self._myWorkDir,
+                                                           vanadium=False)
+            if not reduced:
+                return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
+                              ''.format(run_number, ipts_number, message)
+            else:
+                van_ws_key = self._myProject.reduction_manager.get_reduced_run(ipts_number, run_number)
+            # END-IF
+        else:
+            # load vanadium file
+            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
+
+        return True, van_ws_key
+
     def process_vanadium_run(self, ipts_number, run_number, use_reduced_file,
                              one_bank=False, do_shift=False):
         """
@@ -1206,29 +1244,11 @@ class VDriveAPI(object):
         """
         try:
             # get reduced vanadium file
-            van_file = None
-            if use_reduced_file:
-                # search reduced GSAS file
-                file_exist, van_file = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, run_number)
-                if file_exist:
-                    van_file = None
-            # END-IF
-
-            if van_file is None:
-                nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number)
-                self._myProject.add_run(run_number, nxs_file, ipts_number)
-                reduced, message = self._myProject.reduce_runs([run_number], output_directory=self._myWorkDir)
-                if not reduced:
-                    return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
-                                  ''.format(run_number, ipts_number, message)
-
-            # END-IF
+            van_ws_key = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
+                                                use_reduced_file=use_reduced_file)
 
             # process vanadium
-            if van_file:
-                self._myProject.process_vanadium_spectra(ipts_number, run_number, gsas_file=van_file)
-            else:
-                self._myProject.process_vanadium_spectra(ipts_number, run_number, use_workspace=True)
+            self._myProject.process_vanadium_spectra(ipts_number, run_number, van_ws_key, use_workspace=True)
 
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)

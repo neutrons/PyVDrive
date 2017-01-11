@@ -489,8 +489,8 @@ def get_data_from_workspace(workspace_name, target_unit, point_data=True, start_
     # get unit
     current_unit = get_workspace_unit(workspace_name)
     if current_unit != target_unit:
-        mantidapi.ConvertUnit(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
-                              Target=target_unit)
+        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+                               Target=target_unit)
 
     # Convert to point data
     workspace = mantid.AnalysisDataService.retrieve(workspace_name)
@@ -1106,6 +1106,15 @@ def smooth_vanadium(input_workspace, output_workspace):
     """
     # call mantid
     # TODO/ISSUE/59/ - Find from SNSPowderReduction
+
+    mantidapi.FFTSmooth(InputWorkspace=input_workspace,
+                        OutputWorkspace=output_workspace,
+                        WorkspaceIndex=ws_index,
+                        Filter=smooth_filter,
+                        Params=smooth_params,
+                        IgnoreXBins=True,
+                        AllSpectra=False)
+
     raise NotImplementedError('1057...')
 
 

@@ -58,10 +58,10 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.do_undo_smooth_vanadium)
 
         # define signal
-        self.myStripPeakSignal.connect(self._myParent.evt_strip_vanadium_peaks)
-        self.myUndoStripPeakSignal.connect(self._myParent.evt_undo_strip_van_peaks)
-        self.mySmoothVanadiumSignal.connect(self._myParent.evt_smooth_vanadium)
-        self.myUndoSmoothVanadium.connect(self._myParent.evt_smooth_vanadium)
+        self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
+        self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
+        self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
+        self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
 
         return
 
@@ -77,8 +77,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         # about smoothing
         self.ui.comboBox_smoothFilterTiype.clear()
-        self.ui.comboBox_smoothFilterTiype.addItem()
-        self.ui.comboBox_smoothFilterTiype.addItem()
+        self.ui.comboBox_smoothFilterTiype.addItem('Zeroing')
+        self.ui.comboBox_smoothFilterTiype.addItem('Butterworth')
 
         self._inInteractiveMode = self.ui.checkBox_interactiveSmoothing.isChecked()
 
@@ -118,17 +118,24 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         """
         # collect the parameters from the UI
         try:
-            peak_fwhm = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
-            fit_tolerance = gutil.parse_float(self.ui.lineEdit_stripPeakTolerance)
+            peak_fwhm = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM, allow_blank=False)
+            fit_tolerance = gutil.parse_float(self.ui.lineEdit_stripPeakTolerance, allow_blank=False)
         except RuntimeError:
             gutil.pop_dialog_error(self, 'Both FWHM and Tolerance must be specified.')
             return
 
-        background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentIndex())
+        background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
         self.myStripPeakSignal.emit(peak_fwhm, fit_tolerance, background_type, is_high_background)
 
+        return
+
+    def do_undo_smooth_vanadium(self):
+        """
+
+        :return:
+        """
         return
 
     def do_undo_strip(self):

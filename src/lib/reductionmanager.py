@@ -448,6 +448,18 @@ class ReductionManager(object):
 
         return file_name
 
+    def get_reduced_run(self, ipts_number, run_number):
+        """
+        get the workspace key to a reduced run
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        if (ipts_number, run_number) in self._reductionTrackDict:
+            return ipts_number, run_number
+
+        return None
+
     def get_reduced_runs(self):
         """
         Get the runs that have been reduced. It is just for information

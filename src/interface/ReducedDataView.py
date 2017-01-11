@@ -25,11 +25,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        super(GeneralPurposedDataViewWindow, self).__init__(parent)
 
         # Parent & others
         self._myParent = parent
         self._myController = None
+
+        self._bankIDList = ['1', '2', 'All']
+
+        # Controlling data structure on lines that are plotted on graph
+        self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
 
         # current status
         self._iptsNumber = 0
@@ -44,12 +49,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         self._canvasDimension = 1
         self._plotType = None
-
-        self._bankIDList = ['1', '2', 'All']
-
-        # Controlling data structure on lines that are plotted on graph
-        self._linesDict = dict()  # key: tuple as run number and bank ID, value: line ID
-        self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
 
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
@@ -106,6 +105,66 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.addItem('1')
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
+
+    def add_data_set(self, controller_data_key):
+        """
+        add a new data set to this data viewer window
+        :param controller_data_key:
+        :return:
+        """
+        # return if the controller data key exist
+        if controller_data_key in self._reducedDataDict:
+            return
+
+        # show on the list: turn or and off mutex locks around change of the combo box contents
+        self._mutexRunNumberList = True
+        # clear existing runs
+        self.ui.comboBox_runs.addItem(str(controller_data_key))
+        # release mutex lock
+        self._mutexRunNumberList = False
+
+        # get reduced data set from controller
+        status, ret_obj = self._myController.get_reduced_data(controller_data_key,
+                                                              target_unit=self._currUnit)
+        # return if unable to get reduced data
+        if status is False:
+            raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
+                                                                                   ret_obj))
+        # add data set (arrays)
+        reduced_data_dict = ret_obj
+        assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+                                                    '' % type(reduced_data_dict)
+
+        # add the returned data objects to dictionary
+        self._reducedDataDict[controller_data_key] = reduced_data_dict
+
+        return controller_data_key
+
+    def add_run_numbers(self, run_number_list, clear_previous=False):
+        """
+        set run numbers to combo-box-run numbers
+        :param run_number_list:
+        :return:
+        """
+        assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
+                                                  '' % (str(run_number_list), type(run_number_list))
+
+        self._runNumberList = run_number_list[:]
+        self._runNumberList.sort()
+
+        # show on the list: turn or and off mutex locks around change of the combo box conents
+        self._mutexRunNumberList = True
+
+        # clear existing runs
+        if clear_previous:
+            self.ui.comboBox_runs.clear()
+        for run_number in self._runNumberList:
+            self.ui.comboBox_runs.addItem(str(run_number))
+
+        # release mutex lock
+        self._mutexRunNumberList = False
+
+        return
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -280,14 +339,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # Get the new run number
-        run_number = int(self.ui.comboBox_runs.currentText())
+        run_number = str(self.ui.comboBox_runs.currentText())
+        try:
+            run_number = int(run_number)
+            status, run_info = self._myController.get_reduced_run_info(run_number)
+            bank_id_list = run_info
+        except ValueError:
+            print '[DB...BAT] ', self._reducedDataDict[run_number]
+            raise NotImplementedError('blabla')
         self._currRunNumber = run_number
-        status, run_info = self._myController.get_reduced_run_info(run_number)
+
         if status is False:
             GuiUtility.pop_dialog_error(self, run_info)
 
         # Re-set the spectra list combo box
-        bank_id_list = run_info
+
         if len(bank_id_list) != len(self._bankIDList) - 1:
             # different number of banks
             self.ui.comboBox_spectraList.clear()
@@ -322,9 +388,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Reset current unit
         self._currUnit = new_unit
-
-        # Clear the line dictionary
-        self._linesDict = dict()
 
         # Clear previous image and re-plot
         self.ui.graphicsView_mainPlot.clear_all_lines()
@@ -481,7 +544,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """
         get reduced data in vectors of X and Y
-        :param run_number:
+        :param run_number: data key or run number
         :param bank_id:
         :param bank_id_from_1:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
@@ -532,6 +595,28 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
+    def plot_data(self, data_key, bank_id):
+        """
+
+        :param data_key:
+        :param bank_id:
+        :return:
+        """
+        # check inputs
+        if data_key not in self._reducedDataDict:
+            raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
+
+        # get data
+        vec_x = self._reducedDataDict[data_key][bank_id][0]
+        vec_y = self._reducedDataDict[data_key][bank_id][1]
+
+        # plot
+        label = "Run {0} bank {1}".format(data_key, bank_id)
+        self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
+                                                   line_key=data_key)
+
+        return
+
     def plot_run(self, run_number, bank_id, over_plot=False):
         """
         Plot a run on graph
@@ -564,17 +649,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._currRunNumber = run_number
         self._currBank = bank_id
 
-        # if previous image is not supposed to keep, then clear the holder
-        if over_plot is False:
-            self._linesDict = dict()
-
         # Plot the run
+        # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
         label = "run %d bank %d" % (run_number, bank_id)
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
         line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
                                                             x_label=self._currUnit, marker='.', color='red')
-        self._linesDict[(run_number, bank_id)] = line_id
+        # self._linesDict[(run_number, bank_id)] = line_id
 
         # Change label
         self.ui.label_currentRun.setText(str(run_number))
@@ -691,32 +773,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_run_numbers(self, run_number_list, clear_previous=False):
-        """
-        set run numbers to combo-box-run numbers
-        :param run_number_list:
-        :return:
-        """
-        assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
-                                                  '' % (str(run_number_list), type(run_number_list))
-
-        self._runNumberList = run_number_list[:]
-        self._runNumberList.sort()
-
-        # show on the list: turn or and off mutex locks around change of the combo box conents
-        self._mutexRunNumberList = True
-
-        # clear existing runs
-        if clear_previous:
-            self.ui.comboBox_runs.clear()
-        for run_number in self._runNumberList:
-            self.ui.comboBox_runs.addItem(str(run_number))
-
-        # release mutex lock
-        self._mutexRunNumberList = False
-
-        return
-
     def set_title(self, title):
         """
         blalba
@@ -742,3 +798,46 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self.ui.comboBox_runs.addItem(str(run_number))
 
         return
+
+    # FIXME/TODO/ISSUE/59: Starting to implementing all methods below!!!
+
+    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
+        """
+
+        :param peak_fwhm:
+        :param tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        print '[DB...BAT] Striping vanadium peak of current run {0} with {1}, {2}, {3}, {4}.' \
+              ''.format(self._currRunNumber, peak_fwhm, tolerance, background_type, is_high_background)
+
+        return
+
+    def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
+        """
+
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :return:
+        """
+        print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
+              ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
+
+        return
+
+    def signal_undo_strip_van_peaks(self):
+        """
+
+        :return:
+        """
+        print '[DB...BAT] Undo Peak Striping.'
+
+    def do_undo_smooth_vanadium(self):
+        """
+
+        :return:
+        """
+        print '[DB...BAT] Undo Peak Smoothing.'

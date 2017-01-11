@@ -18,15 +18,23 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self._plotDimension = 1
         self._plotType = None
 
+        # dictionary
+        self._linesDict = dict()
+
         return
 
-    def plot_1d_data(self, vec_x, vec_y):
+    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key):
         """
 
         :param vec_x:
         :param vec_y:
         :return:
         """
+        line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
+                                   x_label=x_unit, marker='.', color='red')
+        self._linesDict[line_key] = line_id
+
+        return line_id
 
     def plot_2d_contour(self, run_number_list, data_set_list):
         """

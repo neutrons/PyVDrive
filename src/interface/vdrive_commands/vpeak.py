@@ -42,6 +42,7 @@ class VanadiumPeak(VDriveCommand):
         self._vanRunNumber = None
         self._doShift = False
         self._mergeToOneBank = False
+        self._myVanDataKey = None
 
         return
 
@@ -73,7 +74,15 @@ class VanadiumPeak(VDriveCommand):
 
         # return to pop
         if do_launch_gui:
-            return True, 'pop'
+            # launch GUI.  load vanadium data now!
+            status, ret_obj = self._controller.load_vanadium_run(ipts_number=self._iptsNumber,
+                                                                 run_number=self._vanRunNumber,
+                                                                 use_reduced_file=True)
+            if status:
+                self._myVanDataKey = ret_obj
+                return True, 'pop'
+
+            return status, str(ret_obj)
 
         # execute vanadium strip command
         status, ret_obj = self._controller.process_vanadium_run(ipts_number=self._iptsNumber,
@@ -108,6 +117,16 @@ class VanadiumPeak(VDriveCommand):
         # /SNS/VULCAN/IPTS-16062/0/132261/NeXus/VULCAN_132261_event.nxs'
 
         return help_str
+
+    def get_loaded_data(self):
+        """
+        get the loaded vanadium's data key in controller
+        :return:
+        """
+        if self._myVanDataKey is None:
+            raise RuntimeError('There is no vanadium data loaded.')
+
+        return self._myVanDataKey
 
     @property
     def to_merge_to_one_bank(self):
