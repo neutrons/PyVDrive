@@ -118,11 +118,12 @@ def convert_to_qdate_epoch(epoch_time):
     return m_date
 
 
-def parse_integer(line_edit):
+def parse_integer(line_edit, allow_blank=True):
     """
     Parse a line edit to an integer value
     :exception: ValueError
     :param line_edit:
+    :param allow_blank: if true, then return None if there is no string written in the LineEdit
     :return: integer or None
     """
     # Check input
@@ -130,7 +131,10 @@ def parse_integer(line_edit):
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
-        return None
+        if allow_blank:
+            return None
+        else:
+            raise RuntimeError('Blank editor')
 
     try:
         int_value = int(str_value)
@@ -140,10 +144,11 @@ def parse_integer(line_edit):
     return int_value
 
 
-def parse_float(line_edit):
+def parse_float(line_edit, allow_blank=True):
     """
     Parse a line edit as a float number
     :param line_edit:
+    :param allow_blank: if true, then return None if there is no string written in the LineEdit
     :return: float or None
     """
     # Check input
@@ -151,7 +156,10 @@ def parse_float(line_edit):
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
-        return None
+        if allow_blank:
+            return None
+        else:
+            raise RuntimeError('Blank editor')
 
     try:
         float_value = float(str_value)

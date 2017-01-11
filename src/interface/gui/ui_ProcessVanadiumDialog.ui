@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>710</width>
-    <height>343</height>
+    <width>748</width>
+    <height>404</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -27,7 +27,7 @@
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="pushButton_stripVanadiumPeaks">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -46,7 +46,7 @@
          <item>
           <layout class="QGridLayout" name="gridLayout">
            <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEdit">
+            <widget class="QLineEdit" name="lineEdit_vanPeakFWHM">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -61,7 +61,7 @@
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QComboBox" name="comboBox">
+            <widget class="QComboBox" name="comboBox_vanPeakBackgroundType">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -82,7 +82,7 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_2">
+            <widget class="QLineEdit" name="lineEdit_stripPeakTolerance">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -124,7 +124,7 @@
             </widget>
            </item>
            <item row="3" column="1">
-            <widget class="QCheckBox" name="checkBox">
+            <widget class="QCheckBox" name="checkBox_isHighBackground">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -171,7 +171,7 @@
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="pushButton_undoPeakStrip">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -183,7 +183,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_4">
+          <widget class="QPushButton" name="pushButton_setPeakStripParamToDefaults">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -195,7 +195,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_3">
+          <widget class="QPushButton" name="pushButton_savePeakStripParamAsDefaults">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -231,7 +231,7 @@
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QPushButton" name="pushButton_5">
+          <widget class="QPushButton" name="pushButton_smoothVanadium">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -260,7 +260,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QComboBox" name="comboBox_2">
+            <widget class="QComboBox" name="comboBox_smoothFilterTiype">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -269,7 +269,7 @@
             </widget>
            </item>
            <item row="3" column="1">
-            <widget class="QSlider" name="horizontalSlider">
+            <widget class="QSlider" name="horizontalSlider_smoothN">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -287,7 +287,7 @@
             </widget>
            </item>
            <item row="5" column="1">
-            <widget class="QSlider" name="horizontalSlider_2">
+            <widget class="QSlider" name="horizontalSlider_smoothOrder">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -305,7 +305,7 @@
             </widget>
            </item>
            <item row="4" column="1">
-            <widget class="QLineEdit" name="lineEdit_4">
+            <widget class="QLineEdit" name="lineEdit_smoothParameterOrder">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -320,7 +320,7 @@
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QLineEdit" name="lineEdit_3">
+            <widget class="QLineEdit" name="lineEdit_smoothParameterN">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -359,7 +359,7 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QCheckBox" name="checkBox_2">
+            <widget class="QCheckBox" name="checkBox_interactiveSmoothing">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -406,14 +406,19 @@
        <item>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QPushButton" name="pushButton_7">
+          <widget class="QPushButton" name="pushButton_undoSmooth">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
            <property name="text">
             <string>Undo</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_6">
+          <widget class="QPushButton" name="pushButton_setSmoothParamToDefaults">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -425,7 +430,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_8">
+          <widget class="QPushButton" name="pushButton_saveSmoothParamAsDefaults">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -448,14 +453,14 @@
            </property>
            <layout class="QGridLayout" name="gridLayout_3">
             <item row="1" column="2">
-             <widget class="QPushButton" name="pushButton_11">
+             <widget class="QPushButton" name="pushButton_setSmoothNRange">
               <property name="text">
                <string>set</string>
               </property>
              </widget>
             </item>
             <item row="3" column="2">
-             <widget class="QPushButton" name="pushButton_12">
+             <widget class="QPushButton" name="pushButton_setSmoothOrderRange">
               <property name="text">
                <string>set</string>
               </property>
@@ -476,7 +481,7 @@
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEdit_6">
+             <widget class="QLineEdit" name="lineEdit_smoothOrderRange">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -491,7 +496,7 @@
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEdit_5">
+             <widget class="QLineEdit" name="lineEdit_smoothNRange">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -550,7 +555,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_9">
+      <widget class="QPushButton" name="pushButton_saveVanProcessResult">
        <property name="text">
         <string>Save</string>
        </property>
@@ -573,7 +578,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_10">
+      <widget class="QPushButton" name="pushButton_quit">
        <property name="text">
         <string>Quit</string>
        </property>
