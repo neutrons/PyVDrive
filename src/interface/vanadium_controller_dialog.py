@@ -57,6 +57,11 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
                      self.do_undo_smooth_vanadium)
 
+        self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
+                     self.evt_smooth_param_changed)
+        self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
+                     self.evt_smooth_param_changed)
+
         # define signal
         self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
         self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
@@ -81,6 +86,10 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.ui.comboBox_smoothFilterTiype.addItem('Butterworth')
 
         self._inInteractiveMode = self.ui.checkBox_interactiveSmoothing.isChecked()
+
+        # set range of the sliders
+        self.ui.horizontalSlider_smoothN.setRange(0, 50)
+        self.ui.horizontalSlider_smoothOrder.setRange(0, 40)
 
         return
 
@@ -110,6 +119,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         # get smoothing parameter
         smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentIndex())
 
+        blabla
+
 
     def do_strip_vanadium_peaks(self):
         """
@@ -136,6 +147,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         :return:
         """
+        blabla
+
         return
 
     def do_undo_strip(self):
@@ -146,5 +159,21 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.myUndoStripPeakSignal.emit()
 
         return
+
+    def evt_smooth_param_changed(self):
+        """
+        handling the event caused by value change  of smooth parameters
+        :return:
+        """
+        # get the value
+        smooth_n = self.ui.horizontalSlider_smoothN.value()
+        self.ui.lineEdit_smoothParameterN.setText(str(smooth_n))
+
+        smooth_order = self.ui.horizontalSlider_smoothOrder.value()
+        self.ui.lineEdit_smoothParameterOrder.setText(str(smooth_order))
+
+        return
+
+
 
 

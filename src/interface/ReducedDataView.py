@@ -813,6 +813,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         print '[DB...BAT] Striping vanadium peak of current run {0} with {1}, {2}, {3}, {4}.' \
               ''.format(self._currRunNumber, peak_fwhm, tolerance, background_type, is_high_background)
 
+        blabla
+
         return
 
     def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
@@ -826,6 +828,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
               ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
 
+        blabla
+
         return
 
     def signal_undo_strip_van_peaks(self):
@@ -835,9 +839,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         print '[DB...BAT] Undo Peak Striping.'
 
+        blabla
+
+
     def do_undo_smooth_vanadium(self):
         """
 
         :return:
         """
         print '[DB...BAT] Undo Peak Smoothing.'
+
+        blabla
