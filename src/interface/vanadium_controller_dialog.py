@@ -56,6 +56,12 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.do_smooth_vanadium)
         self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
                      self.do_undo_smooth_vanadium)
+        self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
+                     self.do_restore_smooth_vanadium_parameters)
+        self.connect(self.ui.pushButton_saveSmoothParamAsDefaults, QtCore.SIGNAL('clicked()'),
+                     self.do_save_vanadium_smooth_parameters)
+
+        self.connect()
 
         self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
                      self.evt_smooth_param_changed)
@@ -67,6 +73,9 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
+
+        # stored default parameters
+        self._defaultDict = dict()
 
         return
 
@@ -98,7 +107,25 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         restore the vanadium peak striping parameters to defaults
         :return:
         """
-        blabla
+        self.ui.lineEdit_vanPeakFWHM.setText(str(self._defaultDict['FWHM']))
+        self.ui.lineEdit_stripPeakTolerance.setText(str(self._defaultDict['Tolerance']))
+
+        return
+
+    def do_restore_smooth_vanadium_parameters(self):
+        """
+        restore the vanadium smoothing parameters to defaults
+        :return:
+        """
+        # parameter order and n
+        self.ui.lineEdit_smoothParameterOrder.setText(str(self._defaultDict['Order']))
+        self.ui.lineEdit_smoothParameterN.setText(str(self._defaultDict['n']))
+
+        # type of smoothing algorithm
+        if self._defaultDict['Smoother'] == 'Zeroing':
+            self.ui.comboBox_smoothFilterTiype.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_smoothFilterTiype.setCurrentIndex(1)
 
         return
 
@@ -107,7 +134,21 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         save current vanadium-peak-striping parameters as defaults
         :return:
         """
-        blabla
+        self._defaultDict['FWHM'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
+        self._defaultDict['Tolerance'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
+        self._defaultDict['BackgroundType'] = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
+        self._defaultDict['IsHighBackground'] = self.ui.checkBox_isHighBackground.isChecked()
+
+        return
+
+    def do_save_vanadium_smooth_parameters(self):
+        """
+        save the vanadium smoothing parameters
+        :return:
+        """
+        self._defaultDict['Order'] = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder)
+        self._defaultDict['n'] = gutil.parse_integer(self.ui.lineEdit_smoothParameterN)
+        self._defaultDict['Smoother'] = str(self.ui.comboBox_smoothFilterTiype.currentText())
 
         return
 
@@ -117,10 +158,18 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         :return:
         """
         # get smoothing parameter
-        smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentIndex())
+        try:
+            smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentIndex())
+            smoother_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+            smoother_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+        except RuntimeError:
+            gutil.pop_dialog_error(self, 'Smoothing parameter N or order is specified incorrectly.')
+            return
 
-        blabla
+        # emit signal
+        self.mySmoothVanadiumSignal.emit(smoother_type, smoother_n, smoother_order)
 
+        return
 
     def do_strip_vanadium_peaks(self):
         """
@@ -144,10 +193,10 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
     def do_undo_smooth_vanadium(self):
         """
-
+        undo the action to smooth vanadium
         :return:
         """
-        blabla
+        self.myUndoSmoothVanadium.emit()
 
         return
 
