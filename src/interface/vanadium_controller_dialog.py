@@ -60,9 +60,13 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.do_restore_smooth_vanadium_parameters)
         self.connect(self.ui.pushButton_saveSmoothParamAsDefaults, QtCore.SIGNAL('clicked()'),
                      self.do_save_vanadium_smooth_parameters)
+        self.connect(self.ui.pushButton_setSmoothNRange, QtCore.SIGNAL('clicked()'),
+                     self.do_set_smooth_n_range)
+        self.connect(self.ui.pushButton_setSmoothOrderRange, QtCore.SIGNAL('clicked()'),
+                     self.do_set_smooth_order_range)
 
-        self.connect()
-
+        self.connect(self.ui.lineEdit_smoothParameterN, QtCore.SIGNAL('textChanged(QString)'),
+                     self.evt_smooth_vanadium)
         self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
                      self.evt_smooth_param_changed)
         self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
@@ -152,6 +156,40 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         return
 
+    def do_set_smooth_n_range(self):
+        """
+        set the slider for smoothing parameter n's range
+        :return:
+        """
+        try:
+            min_value, max_value = gutil.parse_integer_list(self.ui.lineEdit_smoothNRange, 2, check_order=True,
+                                                            increase=True)
+        except RuntimeError:
+            gutil.pop_dialog_error(self, 'Smoothing parameter N\'s range must have 2 integers'
+                                         'in increase order.')
+            return
+
+        self.ui.horizontalSlider_smoothN.setRange(min_value, max_value)
+
+        return
+
+    def do_set_smooth_order_range(self):
+        """
+        set the slider for smoothing parameter order's range
+        :return:
+        """
+        try:
+            min_value, max_value = gutil.parse_integer_list(self.ui.lineEdit_smoothOrderRange, 2, check_order=True,
+                                                            increase=True)
+        except RuntimeError:
+            gutil.pop_dialog_error(self, 'Smoothing parameter order\'s range must have 2 integers'
+                                         'in increasing order.')
+            return
+
+        self.ui.horizontalSlider_smoothOrder.setRange(min_value, max_value)
+
+        return
+
     def do_smooth_vanadium(self):
         """
         smooth vanadium data
@@ -211,7 +249,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
     def evt_smooth_param_changed(self):
         """
-        handling the event caused by value change  of smooth parameters
+        handling the event caused by value change  of smooth parameters via the slider
         :return:
         """
         # get the value
@@ -220,6 +258,18 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         smooth_order = self.ui.horizontalSlider_smoothOrder.value()
         self.ui.lineEdit_smoothParameterOrder.setText(str(smooth_order))
+
+        return
+
+    def evt_smooth_vanadium(self):
+        """
+        handle the event that the smoothing parameters are changed in the line edits
+        if the smoothing operation is in the interactive mode, then it is same as
+        pressing the 'smooth vanadium' button
+        :return:
+        """
+        if self.ui.checkBox_interactiveSmoothing.isChecked():
+            self.do_smooth_vanadium()
 
         return
 

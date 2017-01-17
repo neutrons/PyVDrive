@@ -131,7 +131,7 @@ class VanadiumPeak(VDriveCommand):
     @property
     def to_merge_to_one_bank(self):
         """
-
+        get the user option whether the reduced data will be merged to one peak
         :return:
         """
         return self._mergeToOneBank
@@ -139,7 +139,7 @@ class VanadiumPeak(VDriveCommand):
     @property
     def to_shift(self):
         """
-
+        get the user option whether the vanadium peak will be shifted
         :return:
         """
         return self._doShift

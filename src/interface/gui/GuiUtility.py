@@ -144,6 +144,53 @@ def parse_integer(line_edit, allow_blank=True):
     return int_value
 
 
+def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
+    """
+    parse a QLineEdit whose text can be converted to a list of integers;
+    the optional operation can be used to check size, and order
+    :param line_edit:
+    :param size:
+    :param check_order:
+    :param increase:
+    :return:
+    """
+    # TODO/ISSUE/59 - TEST
+    # check inputs
+    assert isinstance(line_edit, QtGui.QLineEdit), 'Input must be a QLineEdit instance.'
+
+    # get the text and split
+    line_text = str(line_edit.text())
+    line_text.replace(',', ' ')
+    terms = line_text.split()
+
+    # check size
+    if size is not None and len(terms) != size:
+        raise RuntimeError('Number of integers must be 2 but not {0}. FYI: {1}'
+                           ''.format(len(terms), terms))
+
+    # parse to integers
+    int_list = list()
+    for idx, term in enumerate(terms):
+        try:
+            int_list.append(int(term))
+        except ValueError:
+            raise RuntimeError('{0}-th term {1} is not an integer.'.format(idx, term))
+    # END-FOR
+
+    # check order
+    if check_order:
+        if increase:
+            factor = 1
+        else:
+            factor = -1
+        for idx in range(len(int_list)-1):
+            if int_list[idx] * factor > increase[idx+1] * factor:
+                raise RuntimeError('The order is wrong.')
+    # END-IF
+
+    return int_list
+
+
 def parse_float(line_edit, allow_blank=True):
     """
     Parse a line edit as a float number

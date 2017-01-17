@@ -15,6 +15,7 @@ except AttributeError:
         return s
         
 import gui.ui_GPView
+import vanadium_controller_dialog
 
 
 class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
@@ -53,6 +54,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
         self._mutexBankIDList = False
+
+        # data structure to manage the fitting result
+        self._stripBufferDict = dict()  # key = [self._iptsNumber, self._currRunNumber, self._currBank]
+        self._vanStripPlotID = None
+        self._smoothedPlotID = None
 
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
@@ -93,6 +99,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # vanadium
         self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
                      self.do_launch_vanadium_dialog)
+
+        # sub window
+        self._vanadiumProcessDialog = None
 
         return
 
@@ -228,11 +237,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def do_launch_vanadium_dialog(self):
         """
-        blabla
+        launch the vanadium run processing dialog
         :return:
         """
-        import vanadium_controller_dialog
-
         self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
         self._vanadiumProcessDialog.show()
 
@@ -344,9 +351,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             run_number = int(run_number)
             status, run_info = self._myController.get_reduced_run_info(run_number)
             bank_id_list = run_info
-        except ValueError:
-            print '[DB...BAT] ', self._reducedDataDict[run_number]
-            raise NotImplementedError('blabla')
+        except ValueError as value_err:
+            raise NotImplementedError('Unable to get run information from run {0} due to {1}'.format(run_number, value_err))
         self._currRunNumber = run_number
 
         if status is False:
@@ -449,7 +455,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 return
             else:
                 # FIXME/TODO/ISSUE/55+ Make it robust
-                assert isinstance(ret_obj, dict), 'blabla xxx'
+                assert isinstance(ret_obj, dict), 'Returned object from get_reduced_chopped_data() must be a ' \
+                                                  'dictionary but not a {0}.'.format(type(ret_obj))
                 bank_data = ret_obj[bank_id-1]
                 vec_x = bank_data[0]
                 vec_y = bank_data[1]
@@ -597,8 +604,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def plot_data(self, data_key, bank_id):
         """
-
-        :param data_key:
+        plot a spectrum in a workspace
+        :param data_key: key to find the workspace
         :param bank_id:
         :return:
         """
@@ -612,10 +619,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # plot
         label = "Run {0} bank {1}".format(data_key, bank_id)
-        self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
-                                                   line_key=data_key)
+        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
+                                                             line_key=data_key)
 
-        return
+        return line_id
 
     def plot_run(self, run_number, bank_id, over_plot=False):
         """
@@ -803,7 +810,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
         """
-
+        process the signal to strip vanadium peaks
         :param peak_fwhm:
         :param tolerance:
         :param background_type:
@@ -813,13 +820,30 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         print '[DB...BAT] Striping vanadium peak of current run {0} with {1}, {2}, {3}, {4}.' \
               ''.format(self._currRunNumber, peak_fwhm, tolerance, background_type, is_high_background)
 
-        blabla
+        # note: as it is from a signal with defined parameters types, there is no need to check
+        #       the validity of parameters
+
+        # strip vanadium peaks
+        status, ret_obj = self._myController.strip_vanadium_peaks(self._iptsNumber, self._currRunNumber,
+                                                                  self._currBank, peak_fwhm, tolerance,
+                                                                  background_type, is_high_background)
+        if status:
+            result_data_key = ret_obj
+        else:
+            err_msg = ret_obj
+            GuiUtility.pop_dialog_error(self, err_msg)
+            return
+
+        # plot the data without vanadium peaks
+        self._vanStripPlotID = self.plot_data(data_key=result_data_key, bank_id=self._currBank)
+
+        self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_data_key
 
         return
 
     def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
         """
-
+        process the signal to smooth vanadium spectra
         :param smoother_type:
         :param param_n:
         :param param_order:
@@ -828,25 +852,55 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
               ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
 
-        blabla
+        # call the original data to for smoothing
+        status, ret_obj = self._myController.smooth_data(self._iptsNumber, self._currRunNumber, self._currBank,
+                                                         smoother_type, param_n, param_order)
+        if status:
+            result_data_key = ret_obj
+            self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_data_key
+        else:
+            err_msg = ret_obj
+            GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
+
+        # plot data
+        self.ui.graphicsView_mainPlot.reset()
+        self.plot_data(data_key=result_data_key, bank_id=self._currBank)
 
         return
 
     def signal_undo_strip_van_peaks(self):
         """
-
+        undo the strip vanadium peak action, i.e., delete the previous result and remove the plot
         :return:
         """
         print '[DB...BAT] Undo Peak Striping.'
 
-        blabla
+        if self._vanStripPlotID is None:
+            print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
+            return
 
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(line_id=self._vanStripPlotID)
+        self._vanStripPlotID = None
 
-    def do_undo_smooth_vanadium(self):
+        return
+
+    def signal_undo_smooth_vanadium(self):
         """
-
+        undo the smoothing operation on the spectrum including
+        1. delete the result
+        2. remove the smoothed plot
         :return:
         """
         print '[DB...BAT] Undo Peak Smoothing.'
 
-        blabla
+        # return if there is no such action before
+        if self._smoothedPlotID is None:
+            print '[INFO] There is no smoothed spectrum to undo.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(self._vanStripPlotID)
+        self._smoothedPlotID = None
+
+        return

@@ -389,7 +389,7 @@ class ReductionManager(object):
         :return:
         """
         assert isinstance(run_number, int), 'Input run number must be an integer but not {0}.'.format(type(run_number))
-        assert run_number > 0, 'blabla'
+        assert run_number > 0, 'Given run number {0} must be a positive number.'.format(run_number)
 
         event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
 
@@ -646,7 +646,8 @@ class ReductionManager(object):
         # vanadium
         reduction_setup.normalized_by_vanadium = vanadium
         if vanadium:
-            assert isinstance(vanadium_tuple, tuple) and len(vanadium_tuple) == 3, 'blabla 1426'
+            assert isinstance(vanadium_tuple, tuple) and len(vanadium_tuple) == 3,\
+                'Input vanadium-tuple must be a tuple with length 3.'
             van_run, van_gda, vanadium_tag = vanadium_tuple
             reduction_setup.set_vanadium(van_run, van_gda, vanadium_tag)
 
@@ -657,7 +658,8 @@ class ReductionManager(object):
 
         # process on standards
         if standard_sample_tuple:
-            assert isinstance(standard_sample_tuple, tuple) and len(standard_sample_tuple) == 3, 'blabla 1116'
+            assert isinstance(standard_sample_tuple, tuple) and len(standard_sample_tuple) == 3,\
+                'Input standard sample-tuple must be a tuple with length 3.'
             standard_sample, standard_dir, standard_record_file = standard_sample_tuple
             reduction_setup.is_standard = True
             reduction_setup.set_standard_sample(standard_sample, standard_dir, standard_record_file)
@@ -697,8 +699,11 @@ class ReductionManager(object):
         :return:
         """
         # check
-        assert isinstance(run_number, int), 'blabla'
-        assert isinstance(vdrive_bin_ws, str) and isinstance(tof_ws, str) and isinstance(dspace_ws, str), 'blabla'
+        assert isinstance(run_number, int), 'Input run number {0} must be a integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
+        assert isinstance(vdrive_bin_ws, str) and isinstance(tof_ws, str) and isinstance(dspace_ws, str),\
+            'VDRIVE-binning workspace name {0}, TOF workspace name {1} and Dspacing workspace {2} must be a string.' \
+            ''.format(vdrive_bin_ws, tof_ws, dspace_ws)
 
         self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
 
