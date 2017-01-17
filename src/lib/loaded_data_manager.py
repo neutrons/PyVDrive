@@ -75,7 +75,12 @@ class LoadedDataManager(object):
                                                                        'is not supported.'.format(data_key,
                                                                                                   type(data_key))
 
-        return data_key in self._workspaceDict
+        has = data_key in self._workspaceDict
+
+        if not has:
+            print '[DB....BAT] Loaded data keys are {0}.'.format(self._workspaceDict.keys())
+
+        return has
 
     def load_binned_data(self, data_file_name, data_file_type):
         """

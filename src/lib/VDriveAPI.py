@@ -575,6 +575,19 @@ class VDriveAPI(object):
 
         return binned_dir
 
+    @staticmethod
+    def get_data_from_workspace(workspace_name, bank_id):
+        """
+        blabla
+        :param workspace_name:
+        :param bank_id:
+        :return:
+        """
+        # TODO/ISSUE/59 - Make it more flexible
+        data_dict = mantid_helper.get_data_from_workspace(workspace_name, 'dSpacing')
+
+        return data_dict[bank_id]
+
     def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN
         :return: data root directory, such as /SNS/VULCAN/ or None if throw is False
@@ -1228,6 +1241,7 @@ class VDriveAPI(object):
         else:
             # load vanadium file
             van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
+            self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
 
         return True, van_ws_key
 
@@ -1533,3 +1547,33 @@ class VDriveAPI(object):
             self._myWorkDir = work_dir
 
         return True, ''
+
+    def strip_vanadium_peaks(self, ipts_number, run_number, bank_id, peak_fwhm,
+                             peak_pos_tolerance, background_type, is_high_background,
+                             data_key):
+        """
+
+        :param ipts_number:
+        :param run_number:
+        :param bank_id:
+        :param peak_fwhm:
+        :param peak_pos_tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        # TODO/ISSUE/59 - Clean and check!
+        # check
+        if data_key is None:
+            if not self._myProject.has_reduced_workspace(ipts_number, run_number):
+                raise RuntimeError('blabla')
+
+            ws_key = self._myProject.get_reduced_workspace(ipts_number, run_number)
+        else:
+            ws_key = data_key
+
+        print '[DB........BAT] workspace key = ', ws_key
+        out_ws_name = self._myProject.process_vanadium_strip_peak(ws_key, peak_fwhm, peak_pos_tolerance,
+                                                    background_type, is_high_background)
+
+        return True, out_ws_name

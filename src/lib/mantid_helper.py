@@ -1118,9 +1118,10 @@ def smooth_vanadium(input_workspace, output_workspace):
     raise NotImplementedError('1057...')
 
 
-def strip_vanadium_peaks(input_workspace, output_workspace=None):
+def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_pos_tol=0.05,
+                         background_type="Quadratic", is_high_background=True):
     """
-
+    blabla
     :param input_workspace:
     :param output_workspace:
     :return:
@@ -1134,8 +1135,23 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None):
         output_workspace = input_workspace + '_no_peak'
 
     # call mantid
-    # TODO/ISSUE/59/ - Find from SNSPowderReduction
-    raise NotImplementedError('1057...')
+    # TODO/ISSUE/59: Pylint warning! and catch exception!
+    print '[DB...BAT] WS = {0}, Out = {1}, FWHM = {2}, Tol = {3}, Type = {4}, High = {5}' \
+          ''.format(input_workspace, output_workspace, fwhm, peak_pos_tol, type(background_type),
+                    is_high_background)
+
+    if get_workspace_unit(input_workspace) != 'dSpacing':
+        mantidapi.ConvertUnits(InputWorkspace=input_workspace, OutputWorkspace=input_workspace,
+                               Target='dSpacing')
+
+    mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
+                                 OutputWorkspace=output_workspace,
+                                 FWHM=int(fwhm),
+                                 PeakPositionTolerance=peak_pos_tol,
+                                 BackgroundType=str(background_type),
+                                 HighBackground=is_high_background)
+
+    return output_workspace
 
 
 def workspace_does_exist(workspace_name):

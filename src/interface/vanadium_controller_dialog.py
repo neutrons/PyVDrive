@@ -20,9 +20,6 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
     mySmoothVanadiumSignal = QtCore.pyqtSignal(str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
 
-    # mySelectSignal = QtCore.pyqtSignal(str, list) # list of int
-    # myCancelSignal = QtCore.pyqtSignal(int)
-
     def __init__(self, parent):
         """ Set up main window
         """
@@ -72,6 +69,9 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
                      self.evt_smooth_param_changed)
 
+        # final
+        # TODO/ISSUE/59 - self.connect(self.ui.pushButton_quit)
+
         # define signal
         self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
         self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
@@ -103,6 +103,12 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         # set range of the sliders
         self.ui.horizontalSlider_smoothN.setRange(0, 50)
         self.ui.horizontalSlider_smoothOrder.setRange(0, 40)
+
+        # initial value
+        self.ui.lineEdit_vanPeakFWHM.setText('7')
+        self.ui.lineEdit_stripPeakTolerance.setText('0.05')
+        self.ui.comboBox_vanPeakBackgroundType.setCurrentIndex(1)
+        self.ui.checkBox_isHighBackground.setChecked(True)
 
         return
 
@@ -270,6 +276,88 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         """
         if self.ui.checkBox_interactiveSmoothing.isChecked():
             self.do_smooth_vanadium()
+
+        return
+
+    def load_settings(self):
+        """
+        Load QSettings from previous saved file
+        :return:
+        """
+        # FIXME/TODO/ISSUE/59 - Implement!!!
+        settings = QtCore.QSettings()
+
+        # directories
+        try:
+            spice_dir = settings.value('local_spice_dir', '')
+            self.ui.lineEdit_localSpiceDir.setText(str(spice_dir))
+            work_dir = settings.value('work_dir')
+            self.ui.lineEdit_workDir.setText(str(work_dir))
+
+            # experiment number
+            exp_num = settings.value('exp_number')
+            self.ui.lineEdit_exp.setText(str(exp_num))
+
+            # lattice parameters
+            lattice_a = settings.value('a')
+            self.ui.lineEdit_a.setText(str(lattice_a))
+            lattice_b = settings.value('b')
+            self.ui.lineEdit_b.setText(str(lattice_b))
+            lattice_c = settings.value('c')
+            self.ui.lineEdit_c.setText(str(lattice_c))
+            lattice_alpha = settings.value('alpha')
+            self.ui.lineEdit_alpha.setText(str(lattice_alpha))
+            lattice_beta = settings.value('beta')
+            self.ui.lineEdit_beta.setText(str(lattice_beta))
+            lattice_gamma = settings.value('gamma')
+            self.ui.lineEdit_gamma.setText(str(lattice_gamma))
+
+            # last project
+            last_1_project_path = str(settings.value('last1path'))
+            self.ui.label_last1Path.setText(last_1_project_path)
+
+        except TypeError as err:
+            self.pop_one_button_dialog(str(err))
+            return
+
+        return
+
+    def save_settings(self):
+        """
+        Save settings (parameter set) upon quiting
+        :return:
+        """
+        # FIXME/TODO/ISSUE/59 - Implement!!!
+        
+        settings = QtCore.QSettings()
+
+        # directories
+        local_spice_dir = str(self.ui.lineEdit_localSpiceDir.text())
+        settings.setValue("local_spice_dir", local_spice_dir)
+        work_dir = str(self.ui.lineEdit_workDir.text())
+        settings.setValue('work_dir', work_dir)
+
+        # experiment number
+        exp_num = str(self.ui.lineEdit_exp.text())
+        settings.setValue('exp_number', exp_num)
+
+        # lattice parameters
+        lattice_a = str(self.ui.lineEdit_a.text())
+        settings.setValue('a', lattice_a)
+        lattice_b = str(self.ui.lineEdit_b.text())
+        settings.setValue('b', lattice_b)
+        lattice_c = str(self.ui.lineEdit_c.text())
+        settings.setValue('c', lattice_c)
+        lattice_alpha = str(self.ui.lineEdit_alpha.text())
+        settings.setValue('alpha', lattice_alpha)
+        lattice_beta = str(self.ui.lineEdit_beta.text())
+        settings.setValue('beta', lattice_beta)
+        lattice_gamma = str(self.ui.lineEdit_gamma.text())
+        settings.setValue('gamma', lattice_gamma)
+
+        # last project
+        last_1_project_path = str(self.ui.label_last1Path.text())
+        settings.setValue('last1path', last_1_project_path)
 
         return
 

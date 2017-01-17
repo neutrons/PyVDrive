@@ -184,7 +184,7 @@ def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
         else:
             factor = -1
         for idx in range(len(int_list)-1):
-            if int_list[idx] * factor > increase[idx+1] * factor:
+            if int_list[idx] * factor > int_list[idx+1] * factor:
                 raise RuntimeError('The order is wrong.')
     # END-IF
 

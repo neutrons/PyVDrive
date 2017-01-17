@@ -31,6 +31,10 @@ class ProjectManager(object):
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
         self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+
+        # dictionary for loaded data referenced by IPTS and run number. value is the data key
+        self._loadedDataDict = dict()
+
         # dictionary for sample run mapping to vanadium run
         self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
         # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
@@ -59,6 +63,19 @@ class ProjectManager(object):
 
         self._dataFileDict[run_number] = (file_name, ipts_number)
         self._baseDataFileNameList.append(os.path.basename(file_name))
+
+        return
+
+    def add_reduced_workspace(self, ipts_number, run_number, ws_key):
+        """
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :param ws_key:
+        :return:
+        """
+        # TODO/ISSUE/59 - check
+        self._loadedDataDict[ipts_number, run_number] = ws_key
 
         return
 
@@ -476,6 +493,17 @@ class ProjectManager(object):
 
         return data_set
 
+    def get_reduced_workspace(self, ipts_number, run_number):
+        """
+        get the workspace KEY
+        :return:
+        """
+        # TODO/ISSUE/59 - Implement the part for data from reduction manager
+        if (ipts_number, run_number) in self._loadedDataDict:
+            return self._loadedDataDict[ipts_number, run_number]
+
+        raise NotImplementedError('Implement ASAP.')
+
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run
         :param run_number:
@@ -520,14 +548,21 @@ class ProjectManager(object):
         run_list.sort()
         return run_list
 
-    def getReducedRuns(self):
-        """ Get the the list of the reduced runs
-        
-        Return :: list of data file names 
+    def has_reduced_workspace(self, ipts_number, run_number):
         """
-        return self._myRunPdrDict.keys()
+        blabla
+        :return:
+        """
+        has_workspace = False
 
-    def has_run(self, run_number):
+        if self._reductionManager.has_run(run_number):
+            has_workspace = True
+        elif (ipts_number, run_number) in self._loadedDataDict:
+            has_workspace = True
+
+        return has_workspace
+
+    def has_run_information(self, run_number):
         """
         Purpose:
             Find out whether a run number is here
@@ -537,23 +572,12 @@ class ProjectManager(object):
 
         :return: boolean as has or not
         """
-        assert isinstance(run_number, int)
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         do_have = run_number in self._dataFileDict
 
         return do_have
-
-    def hasData(self, datafilename):
-        """ Check whether project has such data file 
-        """
-        if self._dataFileDict.count(datafilename) == 1:
-            # Check data set with full name
-            return True
-        elif self._baseDataFileNameList.count(datafilename) == 1:
-            # Check data set with base name
-            return True
-
-        return False
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -589,7 +613,7 @@ class ProjectManager(object):
         for run_number in sorted(run_number_list):
             assert isinstance(run_number, int),\
                 'run_number must be of type integer but not %s' % str(type(run_number))
-            if self.has_run(run_number) is False:
+            if self.has_run_information(run_number) is False:
                 # no run
                 raise RuntimeError('Run %d cannot be found.' % run_number)
             elif archivemanager.check_read_access(self.get_file_path(run_number)) is False:
@@ -631,6 +655,7 @@ class ProjectManager(object):
         :param use_workspace:
         :return:
         """
+        # TODO/ISSUE/59 - Rewrite by process_vanadium_strip_ and process_vanadium_smooth_
         # check
         if gsas_file is None and use_workspace is False:
             raise RuntimeError('Neither GSAS file is defined, Nor workspace is used.')
@@ -646,7 +671,10 @@ class ProjectManager(object):
                                                                           is_vdrive_bin=True, unit='dSpacing')
 
         # call mantid to strip vanadium peaks
-        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name)
+        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name, fwhm=peak_fwhm,
+                                                            peak_pos_tol=pos_tolerance,
+                                                            background_type=background_type,
+                                                            is_high_background=is_high_background)
 
         # smooth
         output_ws_name = mantid_helper.smooth_vanadium(input_workspace=output_ws_name)
@@ -657,6 +685,24 @@ class ProjectManager(object):
                                    local_dir=os.getcwd())
 
         return
+
+    def process_vanadium_strip_peak(self, workspace_name, peak_fwhm, pos_tolerance,
+                                    background_type, is_high_background):
+        """
+        blabla
+        :param workspace_name:
+        :param peak_fwhm:
+        :param pos_tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name, fwhm=peak_fwhm,
+                                                            peak_pos_tol=pos_tolerance,
+                                                            background_type=background_type,
+                                                            is_high_background=is_high_background)
+
+        return output_ws_name
     
     @property
     def reduction_manager(self):

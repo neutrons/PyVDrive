@@ -424,12 +424,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_calibration_file)
-
         self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
                      self.do_load_data)
-
         self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_switch_bank)
+        self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_switch_run)
 
         # save_to_buffer
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
@@ -1032,7 +1032,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
 
-        # TODO/NOW/ISSUE - Need to make the table to add the buffered peaks back
+        # TODO/NOW/ISSUE/FUTURE - Need to make the table to add the buffered peaks back
         pass
 
         # Re-plot
@@ -1088,6 +1088,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_peakPickerMode.setEnabled(False)
 
         return
+
+    def evt_switch_run(self):
+        """
+        in the event that a new run is set up
+        :return:
+        """
+        # TODO/ISSUE/59 - Implement
+
+        raise NotImplementedError('ASAP')
 
     def do_load_calibration_file(self):
         """

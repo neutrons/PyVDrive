@@ -602,23 +602,37 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
-    def plot_data(self, data_key, bank_id):
+    def plot_data(self, data_key, bank_id, clear_previous=False, is_workspace_name=False):
         """
         plot a spectrum in a workspace
         :param data_key: key to find the workspace
         :param bank_id:
         :return:
         """
-        # check inputs
-        if data_key not in self._reducedDataDict:
-            raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
+        # TODO/ISSUE/59 - More robust
 
-        # get data
-        vec_x = self._reducedDataDict[data_key][bank_id][0]
-        vec_y = self._reducedDataDict[data_key][bank_id][1]
+        if clear_previous:
+            self.ui.graphicsView_mainPlot.clear_all_lines()
+
+        # check inputs
+        if is_workspace_name:
+            # blabla
+            data_set = self._myController.get_data_from_workspace(data_key, bank_id=self._currBank)
+            vec_x = data_set[0]
+            vec_y = data_set[1]
+            label = 'Vanadium Peak Stripped'
+        else:
+            if data_key not in self._reducedDataDict:
+                raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
+
+            # get data
+            vec_x = self._reducedDataDict[data_key][bank_id][0]
+            vec_y = self._reducedDataDict[data_key][bank_id][1]
+
+            label = "Run {0} bank {1}".format(data_key, bank_id)
+        # END-IF-ELSE
 
         # plot
-        label = "Run {0} bank {1}".format(data_key, bank_id)
         line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
                                                              line_key=data_key)
 
@@ -824,20 +838,28 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         #       the validity of parameters
 
         # strip vanadium peaks
+        if self._currRunNumber is None:
+            data_key = str(self.ui.comboBox_runs.currentText())
+        else:
+            data_key = None
+
         status, ret_obj = self._myController.strip_vanadium_peaks(self._iptsNumber, self._currRunNumber,
                                                                   self._currBank, peak_fwhm, tolerance,
-                                                                  background_type, is_high_background)
+                                                                  background_type, is_high_background,
+                                                                  data_key)
         if status:
-            result_data_key = ret_obj
+            result_ws_name = ret_obj
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
             return
 
         # plot the data without vanadium peaks
-        self._vanStripPlotID = self.plot_data(data_key=result_data_key, bank_id=self._currBank)
+        #
+        self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
+                                              clear_previous=True, is_workspace_name=True)
 
-        self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_data_key
+        self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
 
         return
 
