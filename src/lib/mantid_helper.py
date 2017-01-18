@@ -1135,7 +1135,7 @@ def smooth_vanadium(input_workspace, output_workspace, workspace_index=None,
     else:
         # do for one specific workspace
         assert isinstance(workspace_index, int), 'blabla'
-        input_ws = mantid.AnalysisDataService.retrieve(input_workspace)
+        input_ws = ADS.retrieve(input_workspace)
         assert 0 <= workspace_index < input_ws.getNumberHistograms(), 'blabla'
         mantidapi.FFTSmooth(InputWorkspace=input_workspace,
                             OutputWorkspace=output_workspace,
