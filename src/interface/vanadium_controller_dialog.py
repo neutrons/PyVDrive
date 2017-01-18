@@ -27,6 +27,9 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         super(VanadiumProcessControlDialog, self).__init__(parent)
         self._myParent = parent
 
+        # stored default parameters
+        self._defaultDict = dict()
+
         # other class variables
         self._inInteractiveMode = False  # flag for being in interactive vanadium smoothing mode
 
@@ -70,6 +73,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.evt_smooth_param_changed)
 
         # final
+        self.connect(self.ui.pushButton_applyVanProcessResult, QtCore.SIGNAL('clicked()'),
+                     self.do_apply_result)
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
 
@@ -78,9 +83,6 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
-
-        # stored default parameters
-        self._defaultDict = dict()
 
         return
 
@@ -117,6 +119,14 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.do_restore_smooth_vanadium_parameters()
 
         return
+
+    def do_apply_result(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/59
+        # ASAP
 
     def do_quit(self):
         """

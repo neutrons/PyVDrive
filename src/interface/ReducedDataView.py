@@ -38,7 +38,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
 
         # current status
-        self._iptsNumber = 0
+        self._iptsNumber = None
         self._runNumberList = None
 
         self._currRunNumber = None
@@ -862,6 +862,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
                                               clear_previous=True, is_workspace_name=True)
 
+        print '[HOW TO RECORD?] ', self._iptsNumber, self._currBank, self._currBank
+
         self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
 
         return
@@ -878,6 +880,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
               ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
 
         # call the original data to for smoothing
+        print '[DB...BAT] Record: ', self._stripBufferDict
+
+
         status, ret_obj = self._myController.smooth_data(self._iptsNumber, self._currRunNumber, self._currBank,
                                                          smoother_type, param_n, param_order)
         if status:

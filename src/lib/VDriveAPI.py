@@ -1548,6 +1548,21 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def smooth_diffraction_data(self, workspace_key=None, bank_id=None,
+                                smoother_type='Butterworth', param_n=20, param_order=2):
+        """
+        :param workspace_key:
+        :param bank_id:
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :return:
+        """
+        # TODO/ISSUE/59 - Doc
+        self._myProject.smooth_spectra(workspace_key, bank_id, smoother_type, param_n, param_order)
+
+        return
+
     def strip_vanadium_peaks(self, ipts_number, run_number, bank_id, peak_fwhm,
                              peak_pos_tolerance, background_type, is_high_background,
                              data_key):

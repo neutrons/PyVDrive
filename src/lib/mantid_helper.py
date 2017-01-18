@@ -1099,7 +1099,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
 
 def smooth_vanadium(input_workspace, output_workspace, workspace_index=None,
                     smooth_filter='Butterworth',
-                    param_order=20, param_n=2):
+                    param_n=20, param_order=2):
     """
 
     :param input_workspace:
@@ -1123,7 +1123,10 @@ def smooth_vanadium(input_workspace, output_workspace, workspace_index=None,
         mtd_convert_units(input_workspace, 'TOF')
 
     # smooth
-    smooth_params = '{0}, {1}'.format(param_order, param_n)   # default '20, 2'
+    if smooth_filter == 'Zeroing':
+        smooth_params = '{0}'.format(param_n)
+    else:
+        smooth_params = '{0}, {1}'.format(param_n, param_order)   # default '20, 2'
 
     if workspace_index is None:
         mantidapi.FFTSmooth(InputWorkspace=input_workspace,
