@@ -1097,25 +1097,55 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     return True, ret_obj
 
 
-def smooth_vanadium(input_workspace, output_workspace):
+def smooth_vanadium(input_workspace, output_workspace, workspace_index=None,
+                    smooth_filter='Butterworth',
+                    param_order=20, param_n=2):
     """
 
     :param input_workspace:
     :param output_workspace:
+    :param workspace_index:
+    :param smooth_filter:
+    :param param_order:
+    :param param_n:
     :return:
     """
-    # call mantid
-    # TODO/ISSUE/59/ - Find from SNSPowderReduction
 
-    mantidapi.FFTSmooth(InputWorkspace=input_workspace,
-                        OutputWorkspace=output_workspace,
-                        WorkspaceIndex=ws_index,
-                        Filter=smooth_filter,
-                        Params=smooth_params,
-                        IgnoreXBins=True,
-                        AllSpectra=False)
+    # check inputs
+    assert smooth_filter in ['Butterworth', 'Zeroing'], 'Smooth filter {0} is not supported.'.format(smooth_filter)
+    assert workspace_does_exist(input_workspace), 'Input workspace {0} cannot be found in Mantid ADS.' \
+                                                  ''.format(input_workspace)
+    assert isinstance(param_order, int), 'Smoothing parameter "order" must be an integer.'
+    assert isinstance(param_n, int), 'Smoothing parameter "n" must be an integer.'
 
-    raise NotImplementedError('1057...')
+    # check input workspace's unit and convert to TOF if needed
+    if get_workspace_unit(input_workspace) != 'TOF':
+        mtd_convert_units(input_workspace, 'TOF')
+
+    # smooth
+    smooth_params = '{0}, {1}'.format(param_order, param_n)   # default '20, 2'
+
+    if workspace_index is None:
+        mantidapi.FFTSmooth(InputWorkspace=input_workspace,
+                            OutputWorkspace=output_workspace,
+                            Filter=smooth_filter,
+                            Params=smooth_params,
+                            IgnoreXBins=True,
+                            AllSpectra=True)
+    else:
+        # do for one specific workspace
+        assert isinstance(workspace_index, int), 'blabla'
+        input_ws = mantid.AnalysisDataService.retrieve(input_workspace)
+        assert 0 <= workspace_index < input_ws.getNumberHistograms(), 'blabla'
+        mantidapi.FFTSmooth(InputWorkspace=input_workspace,
+                            OutputWorkspace=output_workspace,
+                            WorkspaceIndex=workspace_index,
+                            Filter=smooth_filter,
+                            Params=smooth_params,
+                            IgnoreXBins=True,
+                            AllSpectra=False)
+
+    return output_workspace
 
 
 def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_pos_tol=0.05,
