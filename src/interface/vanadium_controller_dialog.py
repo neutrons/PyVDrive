@@ -70,7 +70,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.evt_smooth_param_changed)
 
         # final
-        # TODO/ISSUE/59 - self.connect(self.ui.pushButton_quit)
+        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
 
         # define signal
         self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
@@ -105,10 +106,26 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.ui.horizontalSlider_smoothOrder.setRange(0, 40)
 
         # initial value
-        self.ui.lineEdit_vanPeakFWHM.setText('7')
-        self.ui.lineEdit_stripPeakTolerance.setText('0.05')
-        self.ui.comboBox_vanPeakBackgroundType.setCurrentIndex(1)
-        self.ui.checkBox_isHighBackground.setChecked(True)
+        # self.ui.lineEdit_vanPeakFWHM.setText('7')
+        # self.ui.lineEdit_stripPeakTolerance.setText('0.05')
+        # self.ui.comboBox_vanPeakBackgroundType.setCurrentIndex(1)
+        # self.ui.checkBox_isHighBackground.setChecked(True)
+
+        # load setting
+        self.load_settings()
+        self.do_restore_peak_strip_parameters()
+        self.do_restore_smooth_vanadium_parameters()
+
+        return
+
+    def do_quit(self):
+        """
+        close the dialog box
+        :return:
+        """
+        self.save_settings()
+
+        self.close()
 
         return
 
@@ -284,41 +301,18 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         Load QSettings from previous saved file
         :return:
         """
-        # FIXME/TODO/ISSUE/59 - Implement!!!
         settings = QtCore.QSettings()
 
-        # directories
-        try:
-            spice_dir = settings.value('local_spice_dir', '')
-            self.ui.lineEdit_localSpiceDir.setText(str(spice_dir))
-            work_dir = settings.value('work_dir')
-            self.ui.lineEdit_workDir.setText(str(work_dir))
+        # strip vanadium peaks
+        self._defaultDict['FWHM'] = load_setting_integer(settings, 'FWHM', 7)
+        self._defaultDict['Tolerance'] = load_setting_float(settings, 'Tolerance', 0.05)
+        self._defaultDict['BackgroundType'] = load_setting_str(settings, 'BackgroundType', 'Quadratic')
+        self._defaultDict['IsHighBackground'] = load_setting_bool(settings, 'IsHightBackground', True)
 
-            # experiment number
-            exp_num = settings.value('exp_number')
-            self.ui.lineEdit_exp.setText(str(exp_num))
-
-            # lattice parameters
-            lattice_a = settings.value('a')
-            self.ui.lineEdit_a.setText(str(lattice_a))
-            lattice_b = settings.value('b')
-            self.ui.lineEdit_b.setText(str(lattice_b))
-            lattice_c = settings.value('c')
-            self.ui.lineEdit_c.setText(str(lattice_c))
-            lattice_alpha = settings.value('alpha')
-            self.ui.lineEdit_alpha.setText(str(lattice_alpha))
-            lattice_beta = settings.value('beta')
-            self.ui.lineEdit_beta.setText(str(lattice_beta))
-            lattice_gamma = settings.value('gamma')
-            self.ui.lineEdit_gamma.setText(str(lattice_gamma))
-
-            # last project
-            last_1_project_path = str(settings.value('last1path'))
-            self.ui.label_last1Path.setText(last_1_project_path)
-
-        except TypeError as err:
-            self.pop_one_button_dialog(str(err))
-            return
+        # smooth spectra
+        self._defaultDict['Order'] = load_setting_integer(settings, 'Order', 2)
+        self._defaultDict['n'] = load_setting_integer(settings, 'n', 10)
+        self._defaultDict['Smoother'] = load_setting_str(settings, 'Smoother', 'Butterworth')
 
         return
 
@@ -327,40 +321,95 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         Save settings (parameter set) upon quiting
         :return:
         """
-        # FIXME/TODO/ISSUE/59 - Implement!!!
-        
         settings = QtCore.QSettings()
 
-        # directories
-        local_spice_dir = str(self.ui.lineEdit_localSpiceDir.text())
-        settings.setValue("local_spice_dir", local_spice_dir)
-        work_dir = str(self.ui.lineEdit_workDir.text())
-        settings.setValue('work_dir', work_dir)
-
-        # experiment number
-        exp_num = str(self.ui.lineEdit_exp.text())
-        settings.setValue('exp_number', exp_num)
-
-        # lattice parameters
-        lattice_a = str(self.ui.lineEdit_a.text())
-        settings.setValue('a', lattice_a)
-        lattice_b = str(self.ui.lineEdit_b.text())
-        settings.setValue('b', lattice_b)
-        lattice_c = str(self.ui.lineEdit_c.text())
-        settings.setValue('c', lattice_c)
-        lattice_alpha = str(self.ui.lineEdit_alpha.text())
-        settings.setValue('alpha', lattice_alpha)
-        lattice_beta = str(self.ui.lineEdit_beta.text())
-        settings.setValue('beta', lattice_beta)
-        lattice_gamma = str(self.ui.lineEdit_gamma.text())
-        settings.setValue('gamma', lattice_gamma)
-
-        # last project
-        last_1_project_path = str(self.ui.label_last1Path.text())
-        settings.setValue('last1path', last_1_project_path)
+        # the default vanadium peak strip parameters
+        for value_name in self._defaultDict.keys():
+            settings.setValue(value_name, self._defaultDict[value_name])
 
         return
 
 
+def load_setting_bool(qsettings, param_name, default_value):
+    """
+    load setting as an integer
+    :param qsettings:
+    :param param_name:
+    :param default_value:
+    :return:
+    """
+    # check
+    assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
+                                                    ''.format(type(qsettings))
+
+    value_str = qsettings.value(param_name, default_value)
+
+    try:
+        bool_value = bool(str(value_str))
+    except TypeError:
+        raise RuntimeError('QSetting cannot cast {0} with value {1} to a boolean.'.format(param_name, value_str))
+
+    return bool_value
+
+
+def load_setting_integer(qsettings, param_name, default_value):
+    """
+    load setting as an integer
+    :param qsettings:
+    :param param_name:
+    :param default_value:
+    :return:
+    """
+    # check
+    assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
+                                                    ''.format(type(qsettings))
+
+    value_str = qsettings.value(param_name, default_value)
+
+    try:
+        int_value = int(str(value_str))
+    except TypeError:
+        raise RuntimeError('QSetting cannot cast {0} with value {1} to integer.'.format(param_name, value_str))
+
+    return int_value
+
+
+def load_setting_float(qsettings, param_name, default_value):
+    """
+    load setting as an integer
+    :param qsettings:
+    :param param_name:
+    :param default_value:
+    :return:
+    """
+    # check
+    assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
+                                                    ''.format(type(qsettings))
+
+    value_str = qsettings.value(param_name, default_value)
+
+    try:
+        float_value = float(str(value_str))
+    except TypeError:
+        raise RuntimeError('QSetting cannot cast {0} with value {1} to a float.'.format(param_name, value_str))
+
+    return float_value
+
+
+def load_setting_str(qsettings, param_name, default_value):
+    """
+    load setting as an integer
+    :param qsettings:
+    :param param_name:
+    :param default_value:
+    :return:
+    """
+    # check
+    assert isinstance(qsettings, QtCore.QSettings), 'Input settings must be a QSetting instance but not {0}.' \
+                                                    ''.format(type(qsettings))
+
+    value_str = qsettings.value(param_name, default_value)
+
+    return value_str
 
 

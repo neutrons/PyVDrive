@@ -605,18 +605,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def plot_data(self, data_key, bank_id, clear_previous=False, is_workspace_name=False):
         """
         plot a spectrum in a workspace
-        :param data_key: key to find the workspace
+        :param data_key: key to find the workspace or the workspace name
         :param bank_id:
+        :param clear_previous: flag to clear the plots on the current canvas
+        :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
         :return:
         """
-        # TODO/ISSUE/59 - More robust
-
+        # clear canvas
         if clear_previous:
+            # clear canvas and set X limit to 0. and 1.
             self.ui.graphicsView_mainPlot.clear_all_lines()
+            self.ui.graphicsView_mainPlot.setXYLimit(0, 1.)
 
         # check inputs
         if is_workspace_name:
-            # blabla
+            # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
             data_set = self._myController.get_data_from_workspace(data_key, bank_id=self._currBank)
             vec_x = data_set[0]
             vec_y = data_set[1]
