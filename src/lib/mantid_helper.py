@@ -446,8 +446,8 @@ def get_data_from_gsas(gsas_file_name):
     # load GSAS file
     load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
 
-    data_set_dict = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
-                                            start_bank_id=True)
+    data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
+                                                  start_bank_id=True)
 
     return data_set_dict
 
@@ -472,7 +472,7 @@ def get_data_banks(workspace_name, start_bank_id=1):
     return bank_list
 
 
-def get_data_from_workspace(workspace_name, bank_id, target_unit=None, point_data=True, start_bank_id=1):
+def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
     Requirements: a valid matrix workspace is given.
@@ -485,15 +485,16 @@ def get_data_from_workspace(workspace_name, bank_id, target_unit=None, point_dat
     :param start_bank_id:
     :return: a 2-tuple:
              (1) a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
+             (2) unit of the returned data
     """
     # check requirements by asserting
     assert isinstance(workspace_name, str) and isinstance(point_data, bool)
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
     assert isinstance(target_unit, str) or target_unit is None,\
         'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
-    assert isinstance(start_bank_id, int) and start_bank_id >= 0, 'Start-Bank-ID {0} must be a non-negetive ' \
-                                                                  'integer but not {1}'.format(start_bank_id,
-                                                                                               type(start_bank_id))
+    assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
+        'Start-Bank-ID {0} must be a non-negetive integer but not {1}.' \
+        ''.format(start_bank_id, type(start_bank_id))
 
     # check bank ID not being None
     workspace = ADS.retrieve(workspace_name)
@@ -1173,7 +1174,7 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     # call Mantid algorithm StripVanadiumPeaks
     assert isinstance(fwhm, int), 'FWHM {0} must be an integer but not {1}.'.format(fwhm, type(fwhm))
     assert isinstance(background_type, str), 'Background type {0} must be a string but not {1}.' \
-                                             ''.format(background_type, str(background_type))
+                                             ''.format(background_type, type(background_type))
     assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:

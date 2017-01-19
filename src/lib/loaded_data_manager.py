@@ -52,8 +52,8 @@ class LoadedDataManager(object):
         data_ws_name = self._workspaceDict[data_key]
 
         # get data
-        data_set_dict = mantid_helper.get_data_from_workspace(data_ws_name, target_unit, point_data=True,
-                                                              start_bank_id=1)
+        data_set_dict, unit = mantid_helper.get_data_from_workspace(data_ws_name, target_unit=target_unit,
+                                                                    point_data=True, start_bank_id=1)
 
         return data_set_dict
 

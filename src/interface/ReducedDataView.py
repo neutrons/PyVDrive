@@ -352,7 +352,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             status, run_info = self._myController.get_reduced_run_info(run_number)
             bank_id_list = run_info
         except ValueError as value_err:
-            raise NotImplementedError('Unable to get run information from run {0} due to {1}'.format(run_number, value_err))
+            raise NotImplementedError('Unable to get run information from run {0} due to {1}'
+                                      ''.format(run_number, value_err))
         self._currRunNumber = run_number
 
         if status is False:
@@ -619,13 +620,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # check inputs
         if is_workspace_name:
             # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-            status, ret_obj = self._myController.get_data_from_workspace(data_key, bank_id=self._currBank,
+            print 'Current bank: ', self._currBank
+            status, ret_obj = self._myController.get_data_from_workspace(data_key,
+                                                                         bank_id=self._currBank,
                                                                          target_unit=None,
                                                                          starting_bank_id=1)
             if not status:
                 err_msg = str(ret_obj)
                 GuiUtility.pop_dialog_error(self, err_msg)
                 return
+
+            print '[DB] Retuned object: ', ret_obj
 
             data_set = ret_obj[0][bank_id]
             vec_x = data_set[0]
@@ -848,8 +853,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param is_high_background:
         :return:
         """
-        print '[DB...BAT] Striping vanadium peak of current run {0} with {1}, {2}, {3}, {4}.' \
-              ''.format(self._currRunNumber, peak_fwhm, tolerance, background_type, is_high_background)
+        print '[DB...BAT] Striping vanadium peak of current run background type: {0} with type {1}.' \
+              ''.format(background_type, type(background_type))
+        # from signal, the string is of type unicode.
+        background_type = str(background_type)
 
         # note: as it is from a signal with defined parameters types, there is no need to check
         #       the validity of parameters
@@ -897,7 +904,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         print '[DB...BAT] Record: ', self._stripBufferDict
 
 
-        status, ret_obj = self._myController.smooth_data(self._iptsNumber, self._currRunNumber, self._currBank,
+        status, ret_obj = self._myController.smooth_diffraction_data(self._iptsNumber, self._currRunNumber, self._currBank,
                                                          smoother_type, param_n, param_order)
         if status:
             result_data_key = ret_obj

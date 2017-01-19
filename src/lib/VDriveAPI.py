@@ -590,13 +590,14 @@ class VDriveAPI(object):
                  The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
         """
         try:
-            data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
+            data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name,
                                                                              bank_id=bank_id,
+                                                                             target_unit=target_unit,
                                                                              start_bank_id=starting_bank_id)
         except RuntimeError as run_err:
             return False, str(run_err)
 
-        return True, data_set_dict
+        return True, (data_set_dict, curr_unit)
 
     def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN

@@ -423,8 +423,8 @@ class ReductionManager(object):
         reduced_ws_name = self.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
 
         # get data
-        data_set_dict = mantid_helper.get_data_from_workspace(reduced_ws_name, target_unit=unit,
-                                                              point_data=True, start_bank_id=True)
+        data_set_dict, unit = mantid_helper.get_data_from_workspace(reduced_ws_name, target_unit=unit,
+                                                                    point_data=True, start_bank_id=True)
         assert isinstance(data_set_dict, dict), 'Returned value from get_data_from_workspace must be a dictionary,' \
                                                 'but not %s.' % str(type(data_set_dict))
 
