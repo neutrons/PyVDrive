@@ -576,17 +576,27 @@ class VDriveAPI(object):
         return binned_dir
 
     @staticmethod
-    def get_data_from_workspace(workspace_name, bank_id):
+    def get_data_from_workspace(workspace_name, bank_id=None, target_unit='dSpacing', starting_bank_id=1):
         """
-        blabla
+        get data from a workspace
         :param workspace_name:
         :param bank_id:
-        :return:
+        :param target_unit:
+        :param starting_bank_id: lowest bank ID
+        :return: 2-tuple as (boolean, returned object); boolean as status of executing the method
+                 if status is False, returned object is a string for error message
+                 if status is True and Bank ID is None: returned object is a dictionary with all Bank IDs
+                 if status is True and Bank ID is not None: returned object is a dictionary with the specified bank ID.
+                 The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
         """
-        # TODO/ISSUE/59 - Make it more flexible
-        data_dict = mantid_helper.get_data_from_workspace(workspace_name, 'dSpacing')
+        try:
+            data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
+                                                                             bank_id=bank_id,
+                                                                             start_bank_id=starting_bank_id)
+        except RuntimeError as run_err:
+            return False, str(run_err)
 
-        return data_dict[bank_id]
+        return True, data_set_dict
 
     def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN

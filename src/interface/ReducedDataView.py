@@ -614,15 +614,25 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # clear canvas
         if clear_previous:
             # clear canvas and set X limit to 0. and 1.
-            self.ui.graphicsView_mainPlot.clear_all_lines()
-            self.ui.graphicsView_mainPlot.setXYLimit(0, 1.)
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
 
         # check inputs
         if is_workspace_name:
             # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-            data_set = self._myController.get_data_from_workspace(data_key, bank_id=self._currBank)
+            status, ret_obj = self._myController.get_data_from_workspace(data_key, bank_id=self._currBank,
+                                                                         target_unit=None,
+                                                                         starting_bank_id=1)
+            if not status:
+                err_msg = str(ret_obj)
+                GuiUtility.pop_dialog_error(self, err_msg)
+                return
+
+            data_set = ret_obj[0][bank_id]
             vec_x = data_set[0]
             vec_y = data_set[1]
+
+            current_unit = ret_obj[1]
+
             label = 'Vanadium Peak Stripped'
         else:
             if data_key not in self._reducedDataDict:
@@ -633,11 +643,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             vec_y = self._reducedDataDict[data_key][bank_id][1]
 
             label = "Run {0} bank {1}".format(data_key, bank_id)
+
+            current_unit = self._currUnit
         # END-IF-ELSE
 
         # plot
-        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
+        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
                                                              line_key=data_key)
+
+        self.ui.graphicsView_mainPlot.auto_rescale()
 
         return line_id
 

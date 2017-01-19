@@ -21,18 +21,52 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         # dictionary
         self._linesDict = dict()
 
+        # a record for min and max X and Y
+        self._maxX = None
+        self._maxY = None
+
+        return
+
+    def auto_rescale(self):
+        """
+        rescale the canvas in an automatic way
+        :return:
+        """
+        # TODO/FUTURE - Consider to move this method to its super class
+
+        # get right_x_bound and upper_y_bound
+        delta_x = self._maxX
+        delta_y = self._maxY
+
+        right_x_bound = self._maxX + 0.05 * delta_x
+        upper_y_bound = self._maxY + 0.05 * delta_y
+
+        self.setXYLimit(xmax=right_x_bound, ymax=upper_y_bound)
+
         return
 
     def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key):
         """
-
+        plot a 1-D data set
         :param vec_x:
         :param vec_y:
+        :param x_unit:
+        :param label:
+        :param line_key:
         :return:
         """
         line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
                                    x_label=x_unit, marker='.', color='red')
+
+        # register
         self._linesDict[line_key] = line_id
+
+        # record statistics
+        if self._maxX is None or vec_x[-1] > self._maxX:
+            self._maxX = vec_x[-1]
+
+        if self._maxY is None or np.max(vec_y) > self._maxY:
+            self._maxY = np.max(vec_y)
 
         return line_id
 
@@ -85,5 +119,22 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         # set the target dimension
         self._plotDimension = target_dim
         self._plotType = target_type
+
+        return
+
+    def reset_1d_plots(self):
+        """
+        reset all 1D plots
+        :return:
+        """
+        # clear all lines
+        self.clear_all_lines()
+
+        # clear dictionary
+        self._linesDict.clear()
+
+        # reset X and Y
+        self._maxX = None
+        self._maxY = None
 
         return
