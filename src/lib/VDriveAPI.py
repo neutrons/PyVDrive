@@ -1559,20 +1559,42 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def smooth_diffraction_data(self, workspace_key=None, bank_id=None,
-                                smoother_type='Butterworth', param_n=20, param_order=2):
+    def smooth_diffraction_data(self, workspace_name, bank_id=None,
+                                smoother_type='Butterworth', param_n=20, param_order=2,
+                                start_bank_id=1):
         """
-        :param workspace_key:
+        smooth spectra of focused diffraction data
+        :param workspace_name:
         :param bank_id:
         :param smoother_type:
         :param param_n:
         :param param_order:
+        :param start_bank_id:
         :return:
         """
-        # TODO/ISSUE/59 - Doc
-        self._myProject.smooth_spectra(workspace_key, bank_id, smoother_type, param_n, param_order)
+        try:
+            if bank_id is None:
+                # smooth all spectra
+                workspace_index = None
+            else:
+                # smooth one spectrum
+                assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
+                                                 ''.format(bank_id, type(bank_id))
+                assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
+                                                       ''.format(start_bank_id, type(start_bank_id))
 
-        return
+                workspace_index = bank_id - start_bank_id
+            # END-IF
+
+            smoothed_ws_name = self._myProject.smooth_spectra(workspace_name=workspace_name,
+                                                              workspace_index=workspace_index,
+                                                              smoother_type=smoother_type,
+                                                              param_n=param_n,
+                                                              param_order=param_order)
+        except RuntimeError as run_err:
+            return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
+
+        return True, smoothed_ws_name
 
     def strip_vanadium_peaks(self, ipts_number, run_number, bank_id, peak_fwhm,
                              peak_pos_tolerance, background_type, is_high_background,

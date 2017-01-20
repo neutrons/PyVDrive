@@ -842,8 +842,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    # FIXME/TODO/ISSUE/59: Starting to implementing all methods below!!!
-
     def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
         """
         process the signal to strip vanadium peaks
@@ -897,25 +895,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param param_order:
         :return:
         """
+        # convert smooth_type to string from unicode
+        smoother_type = str(smoother_type)
+
         print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
               ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
-
         # call the original data to for smoothing
         print '[DB...BAT] Record: ', self._stripBufferDict
 
-
         status, ret_obj = self._myController.smooth_diffraction_data(self._iptsNumber, self._currRunNumber, self._currBank,
-                                                         smoother_type, param_n, param_order)
+                                                                     smoother_type, param_n, param_order)
         if status:
-            result_data_key = ret_obj
-            self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_data_key
+            smoothed_ws_name = ret_obj
+            self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
+            return
 
         # plot data
         self.ui.graphicsView_mainPlot.reset()
-        self.plot_data(data_key=result_data_key, bank_id=self._currBank)
+        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank)
 
         return
 

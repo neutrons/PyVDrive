@@ -954,22 +954,24 @@ class ProjectManager(object):
 
         return
 
-    def smooth_spectra(self, workspace_key, bank_id, smoother_type, param_n, param_order):
+    @staticmethod
+    def smooth_spectra(workspace_name, workspace_index, smoother_type, param_n, param_order):
         """
-
-        :param workspace_key:
-        :param bank_id:
+        smooth focused diffraction spectra
+        :param workspace_name:
+        :param workspace_index:
         :param smoother_type:
         :param param_n:
         :param param_order:
-        :return:
+        :return: output workspace name
         """
-        mantid_helper.smooth_vanadium(input_workspace=input_ws_name, output_workspace=bb,
-                                      smooth_filter=smoother_type,
-                                      param_n=param_n,
-                                      param_order=param_order)
+        output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=workspace_name,
+                                                              smooth_filter=smoother_type,
+                                                              workspace_index=workspace_index,
+                                                              param_n=param_n,
+                                                              param_order=param_order)
 
-        return
+        return output_workspace_name
 
     def _generateFileName(self, runnumber, iptsstr):
         """ Generate a NeXus file name with full path with essential information
