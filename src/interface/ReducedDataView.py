@@ -57,6 +57,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # data structure to manage the fitting result
         self._stripBufferDict = dict()  # key = [self._iptsNumber, self._currRunNumber, self._currBank]
+        self._lastVanPeakStripWorkspace = None
+        self._smoothBufferDict = dict()
+        self._lastVanSmoothedWorkspace = None
         self._vanStripPlotID = None
         self._smoothedPlotID = None
 
@@ -603,11 +606,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
-    def plot_data(self, data_key, bank_id, clear_previous=False, is_workspace_name=False):
+    def plot_data(self, data_key, bank_id, label='', clear_previous=False, is_workspace_name=False):
         """
         plot a spectrum in a workspace
         :param data_key: key to find the workspace or the workspace name
         :param bank_id:
+        :param label:
         :param clear_previous: flag to clear the plots on the current canvas
         :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
         :return:
@@ -620,7 +624,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # check inputs
         if is_workspace_name:
             # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-            print 'Current bank: ', self._currBank
             status, ret_obj = self._myController.get_data_from_workspace(data_key,
                                                                          bank_id=self._currBank,
                                                                          target_unit=None,
@@ -630,15 +633,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, err_msg)
                 return
 
-            print '[DB] Retuned object: ', ret_obj
-
             data_set = ret_obj[0][bank_id]
             vec_x = data_set[0]
             vec_y = data_set[1]
 
             current_unit = ret_obj[1]
 
-            label = 'Vanadium Peak Stripped'
+            if len(label) == 0:
+                # label is not given
+                label = 'Data {0} Bank {1}'.format(data_key, bank_id)
+
         else:
             if data_key not in self._reducedDataDict:
                 raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
@@ -647,7 +651,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             vec_x = self._reducedDataDict[data_key][bank_id][0]
             vec_y = self._reducedDataDict[data_key][bank_id][1]
 
-            label = "Run {0} bank {1}".format(data_key, bank_id)
+            if len(label) == 0:
+                # label is not given
+                label = "Run {0} bank {1}".format(data_key, bank_id)
 
             current_unit = self._currUnit
         # END-IF-ELSE
@@ -879,11 +885,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # plot the data without vanadium peaks
         #
         self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
+                                              label='Vanadium peaks striped',
                                               clear_previous=True, is_workspace_name=True)
 
-        print '[HOW TO RECORD?] ', self._iptsNumber, self._currBank, self._currBank
-
-        self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
+        if self._iptsNumber is None:
+            self._lastVanPeakStripWorkspace = result_ws_name
+        else:
+            self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
 
         return
 
@@ -900,22 +908,34 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
               ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
-        # call the original data to for smoothing
-        print '[DB...BAT] Record: ', self._stripBufferDict
 
-        status, ret_obj = self._myController.smooth_diffraction_data(self._iptsNumber, self._currRunNumber, self._currBank,
-                                                                     smoother_type, param_n, param_order)
+        # get the input workspace
+        if self._iptsNumber is None:
+            van_peak_removed_ws = self._lastVanPeakStripWorkspace
+        else:
+            van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
+        status, ret_obj = self._myController.smooth_diffraction_data(workspace_name=van_peak_removed_ws,
+                                                                     bank_id=None,
+                                                                     smoother_type=smoother_type,
+                                                                     param_n=param_n,
+                                                                     param_order=param_order,
+                                                                     start_bank_id=1)
         if status:
             smoothed_ws_name = ret_obj
-            self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
+            if self._iptsNumber is None:
+                self._lastVanSmoothedWorkspace = smoothed_ws_name
+            else:
+                self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
             return
 
-        # plot data
-        self.ui.graphicsView_mainPlot.reset()
-        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank)
+        # plot data: the unit is changed to TOF due to Mantid's behavior
+        label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
+                ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
+        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, label=label, clear_previous=True,
+                       is_workspace_name=True)
 
         return
 

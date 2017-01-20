@@ -33,6 +33,9 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         # other class variables
         self._inInteractiveMode = False  # flag for being in interactive vanadium smoothing mode
 
+        # mutex
+        self._slidersMutex = False  # mutex for sliders
+
         # setup UI
         self.ui = van_ui.Ui_Dialog()
         self.ui.setupUi(self)
@@ -66,6 +69,8 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
                      self.do_set_smooth_order_range)
 
         self.connect(self.ui.lineEdit_smoothParameterN, QtCore.SIGNAL('textChanged(QString)'),
+                     self.evt_smooth_vanadium)
+        self.connect(self.ui.lineEdit_smoothParameterOrder, QtCore.SIGNAL('textChanged(QString)'),
                      self.evt_smooth_vanadium)
         self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
                      self.evt_smooth_param_changed)
@@ -230,7 +235,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         """
         # get smoothing parameter
         try:
-            smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentIndex())
+            smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentText())
             smoother_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
             smoother_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
         except RuntimeError:
@@ -301,6 +306,17 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         pressing the 'smooth vanadium' button
         :return:
         """
+        # change parameters
+        self._slidersMutex = True
+        param_n = gutil.parse_integer(self.ui.lineEdit_smoothParameterN, allow_blank=False)
+        self.ui.horizontalSlider_smoothN.setValue(param_n)
+
+        param_order = gutil.parse_integer(self.ui.lineEdit_smoothParameterOrder, allow_blank=False)
+        self.ui.horizontalSlider_smoothOrder.setValue(param_order)
+
+        self._slidersMutex = False
+
+        # smooth vanadium
         if self.ui.checkBox_interactiveSmoothing.isChecked():
             self.do_smooth_vanadium()
 

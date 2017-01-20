@@ -1068,8 +1068,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,
-                    smooth_filter='Butterworth',
-                    param_n=20, param_order=2):
+                    smooth_filter='Butterworth', param_n=20, param_order=2):
     """
     Use Mantid FFTSmooth to smooth vanadium diffraction data
     :except: RuntimeError if failed to execute. AssertionError if input is wrong
@@ -1093,7 +1092,7 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
 
     # get output workspace
     if output_workspace is None:
-        output_workspace = '{0}_smooth'.format(input_workspace)
+        output_workspace = '{0}_{1}_{2}_{3}'.format(input_workspace, smooth_filter, param_n, param_order)
 
     # check input workspace's unit and convert to TOF if needed
     if get_workspace_unit(input_workspace) != 'TOF':
@@ -1103,7 +1102,7 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
     if smooth_filter == 'Zeroing':
         smooth_params = '{0}'.format(param_n)
     else:
-        smooth_params = '{0}, {1}'.format(param_n, param_order)   # default '20, 2'
+        smooth_params = '{0},{1}'.format(param_n, param_order)   # default '20, 2'
 
     if workspace_index is None:
         try:
