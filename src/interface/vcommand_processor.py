@@ -98,7 +98,6 @@ class VdriveCommandProcessor(object):
             status, err_msg = self._process_auto_reduction(arg_dict)
         elif command == 'VPEAK':
             # process vanadium peak
-            # FIXME/TODO/ISSUE/59: Implement it!
             status, err_msg = self._process_vanadium_peak(arg_dict)
         else:
             raise RuntimeError('Impossible situation!')

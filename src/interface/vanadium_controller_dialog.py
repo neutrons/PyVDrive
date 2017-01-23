@@ -19,6 +19,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
     mySmoothVanadiumSignal = QtCore.pyqtSignal(str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
+    myApplyResultSignal = QtCore.pyqtSignal(str)  # signal to apply/save the smoothed vanadium
 
     def __init__(self, parent):
         """ Set up main window
@@ -127,11 +128,19 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
     def do_apply_result(self):
         """
-
+        apply the result to controller
         :return:
         """
-        # TODO/ISSUE/59
-        # ASAP
+        import os
+        default_dir = '/SNS/VULCAN/shared/CalibrationFiles/Instrument/Standards/Vanadium'
+        if not os.access(default_dir, os.W_OK):
+            default_dir = os.getcwd()
+
+        van_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Smoothed Vanadium File'), default_dir)
+
+        self.myApplyResultSignal.emit(van_file_name)
+
+        return
 
     def do_quit(self):
         """

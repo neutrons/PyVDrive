@@ -83,34 +83,58 @@ def delete_workspace(workspace):
     return
 
 
-def find_peaks(diff_data, peak_profile, auto):
-    """ Use FindPeaks() to find peaks in a given diffraction pattern
+def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
+               min_peak_height = 200,
+               peak_pos_list=None):
+    """
+    Use FindPeaks() to find peaks in a given diffraction pattern
+    :param diff_data: diffraction data in workspace
+    :param peak_profile: specified peak profile
+    :param auto: auto find peak profile or
+    :return:
+    """
+
+    """ Use
     :param diff_data:
     :param peak_profile:
     :param auto:
     :return: List of tuples for peak information. Tuple = (peak center, height, width)
     """
-    #mantidapi.FindPeaks(InputWorkspace=diff_data, # '82403_gda',
-    #                    WorkspaceIndex=1,
-    #                    BackgroundType='Quadratic',
-    #                    PeaksList='peaks')
+    # check inputs
+    assert ADS.doesExist(diff_data), 'Input workspace {0} does not exist in Mantid AnalysisDataService.' \
+                                     ''.format(diff_data)
+    matrix_workspace = ADS.retrieve(diff_data)
+    assert isinstance(ws_index, int) and 0 <= ws_index < matrix_workspace.getNumberHistograms(), \
+        'Workspace index {0} must be an integer in [0, {1}).'.format(ws_index, matrix_workspace.getNumberHistograms())
 
-    # TODO/NOW/ISSUE/57 - Make it work in the code! and more ...
+    # define output workspace name
+    result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
 
-    ws_index = 0
-    out_ws_name = '70269_gda_peaks'
-    min_peak_height = 200
-    peak_profile = 'Gaussian'
+    # call Mantid
+    arg_dict = {'InputWorkspace': diff_data,
+                'WorkspaceIndex': ws_index,
+                'HighBackground': is_high_background,
+                'PeaksList': result_peak_ws_name,
+                'MinimumPeakHeight': min_peak_height,
+                'PeakFunction': peak_profile,
+                'BackgroundType': background_type
+                }
+    mantidapi.FindPeaks(**arg_dict)
 
-    mantidapi.FindPeaks(InputWorkspace=diff_data,
-                        WorkspaceIndex=ws_index,
-                        HighBackground=False,
-                        PeaksList=out_ws_name,
-                        MinimumPeakHeight=min_peak_height,
-                        PeakFunction=peak_profile,
-                        BackgroundType='Linear')
+    # check
+    if ADS.doesExist(result_peak_ws_name):
+        peak_ws = mantidapi.AnalysisDataService.retrieve(result_peak_ws_name)
+    else:
+        raise RuntimeError('Failed to find peaks.')
 
-    peak_ws = mantidapi.AnalysisDataService.retrieve(out_ws_name)
+    # mantidapi.FindPeaks(InputWorkspace=diff_data,
+    #                     WorkspaceIndex=ws_index,
+    #                     HighBackground=False,
+    #                     PeaksList=out_ws_name,
+    #                     MinimumPeakHeight=min_peak_height,
+    #                     PeakFunction=peak_profile,
+    #                     BackgroundType='Linear')
+
 
     # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()

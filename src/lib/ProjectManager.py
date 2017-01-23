@@ -66,16 +66,25 @@ class ProjectManager(object):
 
         return
 
-    def add_reduced_workspace(self, ipts_number, run_number, ws_key):
+    def add_reduced_workspace(self, ipts_number, run_number, workspace_name):
         """
-        blabla
+        Add workspace containing reduced diffraction data to project
         :param ipts_number:
         :param run_number:
-        :param ws_key:
+        :param workspace_name:
         :return:
         """
-        # TODO/ISSUE/59 - check
-        self._loadedDataDict[ipts_number, run_number] = ws_key
+        # check inputs
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
+
+        # check workspace exising or not
+        if not mantid_helper.workspace_does_exist(workspace_name):
+            raise RuntimeError('Workspace {0} does not exist in Mantid ADS.'.format(workspace_name))
+
+        self._loadedDataDict[ipts_number, run_number] = workspace_name
 
         return
 
@@ -495,14 +504,23 @@ class ProjectManager(object):
 
     def get_reduced_workspace(self, ipts_number, run_number):
         """
-        get the workspace KEY
+        get the workspace KEY or name via IPTS number and run number
+        :except: RuntimeError if there is no workspace associated
+        :param ipts_number:
+        :param run_number:
         :return:
         """
-        # TODO/ISSUE/59 - Implement the part for data from reduction manager
-        if (ipts_number, run_number) in self._loadedDataDict:
-            return self._loadedDataDict[ipts_number, run_number]
+        workspace_name = None
 
-        raise NotImplementedError('Implement ASAP.')
+        if (ipts_number, run_number) in self._loadedDataDict:
+            workspace_name = self._loadedDataDict[ipts_number, run_number]
+        else:
+            workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=None, unit=None)
+
+        if workspace_name is None:
+            raise RuntimeError('There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
+
+        return workspace_name
 
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run
@@ -646,7 +664,10 @@ class ProjectManager(object):
 
         return
 
-    def process_vanadium_spectra(self, ipts_number, run_number, gsas_file=None, use_workspace=False):
+    def process_vanadium_spectra(self, ipts_number, run_number, gsas_file=None, use_workspace=False,
+                                 peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
+                                 is_high_background=True, smoother_filter_type='Butterworth',
+                                 param_n=20, param_order=2):
         """
         process vanadium including peak striping and smooth
         :param ipts_number:
@@ -655,14 +676,13 @@ class ProjectManager(object):
         :param use_workspace:
         :return:
         """
-        # TODO/ISSUE/59 - Rewrite by process_vanadium_strip_ and process_vanadium_smooth_
         # check
         if gsas_file is None and use_workspace is False:
             raise RuntimeError('Neither GSAS file is defined, Nor workspace is used.')
         elif gsas_file and use_workspace:
             raise RuntimeError('Both GSAS file is defined and workspace is used.')
 
-        # load file
+        # get workspace. if it is not loaded, then load it
         if gsas_file:
             data_key = self._loadedDataManager.load_binned_data(gsas_file, 'gsas')
             workspace_name = self._loadedDataManager.get_workspace_name(data_key)
@@ -670,18 +690,17 @@ class ProjectManager(object):
             workspace_name = self._reductionManager.get_reduced_workspace(run_number,
                                                                           is_vdrive_bin=True, unit='dSpacing')
 
-        # call mantid to strip vanadium peaks
-        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name, fwhm=peak_fwhm,
-                                                            peak_pos_tol=pos_tolerance,
-                                                            background_type=background_type,
-                                                            is_high_background=is_high_background)
+        # strip vanadium peaks
+        out_ws_1 = self.process_vanadium_strip_peak(workspace_name, peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
+                                                    background_type=background_type,
+                                                    is_high_background=is_high_background)
 
-        # smooth
-        output_ws_name = mantid_helper.smooth_vanadium(input_workspace=output_ws_name)
+        out_ws_2 = self.smooth_spectra(out_ws_1, workspace_index=None, smoother_type=smoother_filter_type,
+                                       param_n=param_n, param_order=param_order)
 
         # save
         # TODO/FIXME/ISSUE/59 - Need a better outcome
-        self.save_vanadium_to_file(ipts_number, run_number, output_ws_name, output_to_server=True,
+        self.save_vanadium_to_file(ipts_number, run_number, out_ws_2, output_to_server=True,
                                    local_dir=os.getcwd())
 
         return

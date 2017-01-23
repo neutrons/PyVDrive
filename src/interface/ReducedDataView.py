@@ -872,7 +872,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             data_key = None
 
         status, ret_obj = self._myController.strip_vanadium_peaks(self._iptsNumber, self._currRunNumber,
-                                                                  self._currBank, peak_fwhm, tolerance,
+                                                                  peak_fwhm, tolerance,
                                                                   background_type, is_high_background,
                                                                   data_key)
         if status:

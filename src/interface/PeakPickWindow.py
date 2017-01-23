@@ -1089,14 +1089,36 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
+    # TODO/ISSUE/TEST : newly implemented
     def evt_switch_run(self):
         """
         in the event that a new run is set up
         :return:
         """
-        # TODO/ISSUE/59 - Implement
+        # get the new run number or workspace name
+        new_run_str = str(self.ui.comboBox_runNumber.currentText())
+        try:
+            new_run_number = int(new_run_str)
+            new_workspace_name = None
+        except ValueError:
+            new_run_number = None
+            new_workspace_name = new_run_str
+        # END-TRY-EXCEPTION
 
-        raise NotImplementedError('ASAP')
+        bank_id = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # clear the current
+        self.ui.graphicsView_main.reset()
+
+        # plot
+        if new_workspace_name is None:
+            # use run number
+            self.load_plot_run(new_run_number)
+        else:
+            # use workspace name
+            self.load_plot_run(new_workspace_name)
+
+        return
 
     def do_load_calibration_file(self):
         """
@@ -1865,25 +1887,3 @@ def retrieve_peak_positions(peak_tup_list):
 
     return peak_pos_list
 
-# def main(argv):
-#     """ Main method for testing purpose
-#     """
-#     import mocks.mockvdriveapi as mocks
-#
-#     parent = None
-#     controller = mocks.MockVDriveAPI()
-#
-#     app = QtGui.QApplication(argv)
-#
-#     # my plot window app
-#     myapp = PeakPickerWindow(parent)
-#     myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
-#     myapp.set_controller(controller)
-#     myapp.show()
-#
-#     exit_code=app.exec_()
-#     sys.exit(exit_code)
-#
-#
-# if __name__ == "__main__":
-#     main(sys.argv)

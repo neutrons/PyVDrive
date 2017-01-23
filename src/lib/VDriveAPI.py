@@ -1596,32 +1596,38 @@ class VDriveAPI(object):
 
         return True, smoothed_ws_name
 
-    def strip_vanadium_peaks(self, ipts_number, run_number, bank_id, peak_fwhm,
+    def strip_vanadium_peaks(self, ipts_number, run_number, peak_fwhm,
                              peak_pos_tolerance, background_type, is_high_background,
-                             data_key):
+                             workspace_key):
         """
-
+        strip vanadium peaks.
+        This method supports 2 type of inputs
+         (1) IPTS and run number;
+         (2) workspace name
         :param ipts_number:
         :param run_number:
-        :param bank_id:
         :param peak_fwhm:
         :param peak_pos_tolerance:
         :param background_type:
         :param is_high_background:
-        :return:
+        :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
         """
-        # TODO/ISSUE/59 - Clean and check!
-        # check
-        if data_key is None:
+        # get workspace key
+        if workspace_key is None:
+            # get workspace (key) from IPTS number and run number
+            assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
+            assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
             if not self._myProject.has_reduced_workspace(ipts_number, run_number):
-                raise RuntimeError('blabla')
+                error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
+                                ''.format(ipts_number, run_number)
+                return False, error_message
 
             ws_key = self._myProject.get_reduced_workspace(ipts_number, run_number)
         else:
-            ws_key = data_key
+            ws_key = workspace_key
 
-        print '[DB........BAT] workspace key = ', ws_key
+        # call for strip vanadium peaks
         out_ws_name = self._myProject.process_vanadium_strip_peak(ws_key, peak_fwhm, peak_pos_tolerance,
-                                                    background_type, is_high_background)
+                                                                  background_type, is_high_background)
 
         return True, out_ws_name
