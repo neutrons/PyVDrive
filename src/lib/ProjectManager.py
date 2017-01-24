@@ -7,6 +7,7 @@ import mantid_helper
 import reductionmanager as prl
 import archivemanager
 import loaded_data_manager
+import vanadium_utility
 
 
 class ProjectManager(object):
@@ -27,6 +28,8 @@ class ProjectManager(object):
         self._loadedDataManager = loaded_data_manager.LoadedDataManager(self)
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
+        # vanadium processing manager
+        self._processVanadiumManager = vanadium_utility.VanadiumProcessingManager(self)
 
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
@@ -663,65 +666,6 @@ class ProjectManager(object):
         self._name = project_name
 
         return
-
-    def process_vanadium_spectra(self, ipts_number, run_number, gsas_file=None, use_workspace=False,
-                                 peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
-                                 is_high_background=True, smoother_filter_type='Butterworth',
-                                 param_n=20, param_order=2):
-        """
-        process vanadium including peak striping and smooth
-        :param ipts_number:
-        :param run_number:
-        :param gsas_file:
-        :param use_workspace:
-        :return:
-        """
-        # check
-        if gsas_file is None and use_workspace is False:
-            raise RuntimeError('Neither GSAS file is defined, Nor workspace is used.')
-        elif gsas_file and use_workspace:
-            raise RuntimeError('Both GSAS file is defined and workspace is used.')
-
-        # get workspace. if it is not loaded, then load it
-        if gsas_file:
-            data_key = self._loadedDataManager.load_binned_data(gsas_file, 'gsas')
-            workspace_name = self._loadedDataManager.get_workspace_name(data_key)
-        else:
-            workspace_name = self._reductionManager.get_reduced_workspace(run_number,
-                                                                          is_vdrive_bin=True, unit='dSpacing')
-
-        # strip vanadium peaks
-        out_ws_1 = self.process_vanadium_strip_peak(workspace_name, peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
-                                                    background_type=background_type,
-                                                    is_high_background=is_high_background)
-
-        out_ws_2 = self.smooth_spectra(out_ws_1, workspace_index=None, smoother_type=smoother_filter_type,
-                                       param_n=param_n, param_order=param_order)
-
-        # save
-        # TODO/FIXME/ISSUE/59 - Need a better outcome
-        self.save_vanadium_to_file(ipts_number, run_number, out_ws_2, output_to_server=True,
-                                   local_dir=os.getcwd())
-
-        return
-
-    def process_vanadium_strip_peak(self, workspace_name, peak_fwhm, pos_tolerance,
-                                    background_type, is_high_background):
-        """
-        blabla
-        :param workspace_name:
-        :param peak_fwhm:
-        :param pos_tolerance:
-        :param background_type:
-        :param is_high_background:
-        :return:
-        """
-        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name, fwhm=peak_fwhm,
-                                                            peak_pos_tol=pos_tolerance,
-                                                            background_type=background_type,
-                                                            is_high_background=is_high_background)
-
-        return output_ws_name
     
     @property
     def reduction_manager(self):
@@ -973,25 +917,6 @@ class ProjectManager(object):
 
         return
 
-    @staticmethod
-    def smooth_spectra(workspace_name, workspace_index, smoother_type, param_n, param_order):
-        """
-        smooth focused diffraction spectra
-        :param workspace_name:
-        :param workspace_index:
-        :param smoother_type:
-        :param param_n:
-        :param param_order:
-        :return: output workspace name
-        """
-        output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=workspace_name,
-                                                              smooth_filter=smoother_type,
-                                                              workspace_index=workspace_index,
-                                                              param_n=param_n,
-                                                              param_order=param_order)
-
-        return output_workspace_name
-
     def _generateFileName(self, runnumber, iptsstr):
         """ Generate a NeXus file name with full path with essential information
 
@@ -1013,6 +938,14 @@ class ProjectManager(object):
             print "[DB] Successfully generate an existing NeXus file with name %s." % (nxsfname)
 
         return nxsfname
+
+    @property
+    def vanadium_processing_manager(self):
+        """
+        blabla
+        :return:
+        """
+        return self._processVanadiumManager
 
 
 def get_data_key(file_name):

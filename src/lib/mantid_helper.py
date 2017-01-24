@@ -952,7 +952,7 @@ def mtd_normalize_by_current(event_ws_name):
     return
 
 
-def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
+def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
     """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
     Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
     Requirements:
@@ -985,7 +985,7 @@ def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_fi
                             BinFilename=binning_reference_file,
                             OutputWorkspace=final_ws_name,
                             GSSFilename=gss_parm_file,
-                            IPTS = ipts,
+                            IPTS=ipts,
                             GSSParmFilename=gss_parm_file)
 
     return

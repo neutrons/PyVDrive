@@ -1,4 +1,5 @@
 # import PyQt modules
+import os
 from PyQt4 import QtGui, QtCore
 
 # include this try/except block to remap QString needed when using IPython
@@ -89,6 +90,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.myUndoStripPeakSignal.connect(self._myParent.signal_undo_strip_van_peaks)
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
+        self.myApplyResultSignal.connect(self._myParent.signal_save_processed_vanadium)
 
         return
 
@@ -131,12 +133,16 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         apply the result to controller
         :return:
         """
-        import os
+        # get default directory
         default_dir = '/SNS/VULCAN/shared/CalibrationFiles/Instrument/Standards/Vanadium'
         if not os.access(default_dir, os.W_OK):
             default_dir = os.getcwd()
 
-        van_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Smoothed Vanadium File'), default_dir)
+        file_filter = 'GSAS (*.gda);;All (*.*)'
+        van_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Smoothed Vanadium File',
+                                                              default_dir, file_filter))
+        if len(van_file_name) == 0:
+            return
 
         self.myApplyResultSignal.emit(van_file_name)
 

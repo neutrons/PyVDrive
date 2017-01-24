@@ -1269,11 +1269,35 @@ class VDriveAPI(object):
         """
         try:
             # get reduced vanadium file
+
+
+
             van_ws_key = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
                                                 use_reduced_file=use_reduced_file)
 
             # process vanadium
-            self._myProject.process_vanadium_spectra(ipts_number, run_number, van_ws_key, use_workspace=True)
+
+            # get workspace. if it is not loaded, then load it
+            if workspace_key is not None and self._loadedDataManager.has_data(workspace_key):
+                # workspace is found in loaded data manager
+                workspace_name = self._loadedDataManager.get_workspace_name(workspace_key)
+            else:
+                # workspace is found in reduced data manager
+                workspace_name = self._reductionManager.get_reduced_workspace(run_number,
+                                                                              is_vdrive_bin=True,
+                                                                              unit='dSpacing')
+
+
+
+            self._myProject.process_vanadium_spectra(ipts_number, run_number, workspace_key=van_ws_key)
+
+            if do_shift:
+                # TODO/ISSUE/59 - Implement
+                blabla
+
+            if one_bank:
+                # TODO/ISSUE/59 - Implement
+                blabla
 
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)

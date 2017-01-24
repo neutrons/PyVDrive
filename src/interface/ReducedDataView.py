@@ -606,12 +606,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
-    def plot_data(self, data_key, bank_id, label='', clear_previous=False, is_workspace_name=False):
+    def plot_data(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False):
         """
         plot a spectrum in a workspace
         :param data_key: key to find the workspace or the workspace name
         :param bank_id:
         :param label:
+        :param title:
         :param clear_previous: flag to clear the plots on the current canvas
         :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
         :return:
@@ -660,7 +661,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # plot
         line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
-                                                             line_key=data_key)
+                                                             line_key=data_key, title=title)
 
         self.ui.graphicsView_mainPlot.auto_rescale()
 
@@ -848,6 +849,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def signal_save_processed_vanadium(self, output_file_name):
+        """
+        save GSAS file
+        :param output_file_name:
+        :return:
+        """
+        # TODO/ISSUE/59 - Implement!
+
     def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
         """
         process the signal to strip vanadium peaks
@@ -934,7 +943,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # plot data: the unit is changed to TOF due to Mantid's behavior
         label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
                 ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, label=label, clear_previous=True,
+        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=True,
                        is_workspace_name=True)
 
         return
