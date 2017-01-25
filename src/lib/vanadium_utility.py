@@ -17,6 +17,13 @@ class VanadiumProcessingManager(object):
 
         self._localOutputDirectory = os.getcwd()
 
+        self._rawMatrixWorkspace = None
+        self._peakStripWorkspace = None
+        self._smoothedWorkspace = None
+
+        self._iptsNumber = None
+        self._runNumber = None
+
         return
 
     def init_session(self, workspace_name, ipts_number, run_number):
@@ -27,9 +34,24 @@ class VanadiumProcessingManager(object):
         :param run_number:
         :return:
         """
-        # TODO/ISSUE/59 - TO BE CONTINUED FROM HERE.
+        # check inputs
+        if not mantid_helper.workspace_does_exist(workspace_name):
+            raise RuntimeError('Raw matrix workspace {0} does not exist.'.format(workspace_name))
+        assert isinstance(ipts_number, int), 'blabla'
+        assert isinstance(run_number), 'blabla'
 
-    def process_vanadium(self, ,
+        # set
+        self._rawMatrixWorkspace = workspace_name
+        self._iptsNumber = ipts_number
+        self._runNumber = run_number
+
+        # reset processed workspaces
+        self._peakStripWorkspace = None
+        self._smoothedWorkspace = None
+
+        return
+
+    def process_vanadium(self,
                          peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2):
