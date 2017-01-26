@@ -85,10 +85,12 @@ class VanadiumProcessingManager(object):
         out_ws_1 = self.strip_peaks(peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
                                     background_type=background_type,
                                     is_high_background=is_high_background)
+        assert isinstance(out_ws_1, str), 'Output must be a string'
 
         # smooth vanadium spectra
         out_ws_2 = self.smooth_spectra(workspace_index=None, smoother_type=smoother_filter_type,
                                        param_n=param_n, param_order=param_order)
+        assert isinstance(out_ws_2, str), 'Output must be a string'
 
         # save
         self.save_vanadium_to_file(to_archive=True, out_file_name=self._localOutputDirectory)
@@ -109,14 +111,6 @@ class VanadiumProcessingManager(object):
         assert self._runNumber is not None, 'Run number must be specified.'
         assert self._smoothedWorkspace is not None, 'Vanadium run {0} must have been processed.' \
                                                     ''.format(self._runNumber)
-
-        # append output directory
-        local_file_name = None
-
-        # if out_file_name is None:
-        #     base_name = '{0}-s.gda'.format(self._runNumber)
-        # else:
-        #     base_name = os.path.basename(local_file_name)
 
         # archive file name
         return_status = True

@@ -1223,7 +1223,7 @@ class VDriveAPI(object):
         :param ipts_number:
         :param run_number:
         :param use_reduced_file:
-        :return:
+        :return: 2-tuple.  boolean/string
         """
         van_file_name = None
 
@@ -1269,8 +1269,12 @@ class VDriveAPI(object):
         """
         try:
             # get reduced vanadium file
-            van_ws_key = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
-                                                use_reduced_file=use_reduced_file)
+            status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
+                                                     use_reduced_file=use_reduced_file)
+            if status:
+                van_ws_key = ret_str
+            else:
+                return False, 'Unable to load vanadium run {0} due to {1}.'.format(run_number, ret_str)
 
             # process vanadium
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
