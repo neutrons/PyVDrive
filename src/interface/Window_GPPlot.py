@@ -61,9 +61,9 @@ class Window_GPPlot(QMainWindow):
         self.connect(self.ui.pushButton_showVanadiumPeaks, QtCore.SIGNAL('clicked()'),
                 self.doShowVanadiumPeaks)
         self.connect(self.ui.pushButton_stripVPeaks, QtCore.SIGNAL('clicked()'),
-                self.doStripVanPeaks)
+                     self.doStripVanPeaks)
         self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
-                self.doSmoothVanadium)
+                     self.doSmoothVanadium)
 
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                 self.doQuit)
@@ -354,72 +354,12 @@ class Window_GPPlot(QMainWindow):
 
         return
 
-
     def doQuit(self):
         """ Quit
         """
         self.close()
 
         return
-
-
-    def doSmoothVanadium(self):
-        """ Smooth vanadium data
-        """
-        status, errmsg = self._myParent.getWorkflowObj().smoothVanadiumData(self._myProjectName, 
-                self._currRun)
-        if status is False:
-            raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
-
-        # get pre-smooth data
-        vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
-        vanvecx, vanvecy = vandatadict[self._currSpectrum]
-
-        # get smoothed but temporary data
-        smoothdatadict = self._myParent.getWorkflowObj().get_smoothed_vanadium(self._myProjectName, self._currRun)
-        smoothvecx, smoothvecy = smoothdatadict[self._currSpectrum]
-
-        # plot
-        self._clearPlot()
-        self._plot(vanvecx, vanvecy, label='vanadium', color='black', marker='.', overplot=True)
-        self._plot(smoothvecx, smoothvecy, label='smoothed', color='red', marker='None', overplot=True)
-
-        return
-
-    
-    def doStripVanPeaks(self):
-        """ Strip vanadium peaks
-        """
-        status, errmsg = self._myParent.getWorkflowObj().stripVanadiumPeaks(self._myProjectName, 
-                self._currRun)
-
-        if status is False:
-            raise NotImplementedError("Failed to strip vanadium peaks due to %s." % (errmsg))
-
-        reduceddatadict = self._myParent.getWorkflowObj().get_reduced_runs(self._myProjectName, self._currRun)
-        vandatadict = self._myParent.getWorkflowObj().get_processed_vanadium(self._myProjectName, self._currRun)
-        print "[DB] Type of reduced data  dict: ", str(type(reduceddatadict)), " keys: ", str(reduceddatadict.keys())
-        print "[DB] Type of vanadium data dict: ", str(type(vandatadict))    , " keys: ", str(vandatadict.keys())
-        print "[DB] Current spectrum = %d" % (self._currSpectrum)
-
-        origvecx, origvecy = reduceddatadict[self._currSpectrum]
-        vanvecx, vanvecy = vandatadict[self._currSpectrum]
-
-        print "[DB] doStripVanPeaks: OrigX.size = %d, OrigY.size=%d"%(len(origvecx), len(origvecy)), origvecx, origvecy
-        print "[DB] doStripVanPeaks: VanDX.size = %d, VanDY.size=%d"%(len(vanvecx), len(vanvecy)), vanvecx, vanvecy
-
-        diffvecx = vanvecx
-        diffvecy = origvecy - vanvecy
-        maxdiffy = max(diffvecy)
-        diffvecy = diffvecy - 1.5*maxdiffy
-
-        self._clearPlot()
-        self._plot(origvecx, origvecy, label='original', color='black', marker='.', overplot=False) 
-        self._plot(vanvecx, vanvecy, label='van peak stripped', color='red', marker='.', overplot=True)
-        self._plot(diffvecx, diffvecy, label='diff', color='green', marker='+', overplot=True)
-
-        return
-
 
     #---------------------------------------------------------------------------
     # Set up

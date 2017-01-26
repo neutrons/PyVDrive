@@ -395,17 +395,6 @@ class ReductionManager(object):
 
         return event_ws_name
 
-    def get_processed_vanadium(self, vanadium_run_number):
-        """ Get processed vanadium data (workspace name)
-        Purpose: Get process vanadium workspace (name) by vanadium run number
-        Requirements: vanadium run number is a valid integer and it is reduced
-        Guarantees: the workspace's name of the reduced vanadium is returned
-        :param vanadium_run_number:
-        :return:
-        """
-        # TODO/NEXT:
-        raise NotImplementedError('Implement ASAP!')
-
     def get_reduced_data(self, run_number, unit):
         """ Get data (x, y and e) of a reduced run in the specified unit
         Purpose: Get reduced data including all spectra
@@ -509,31 +498,6 @@ class ReductionManager(object):
             return_ws_name = tracker.dpsace_worksapce
 
         return return_ws_name
-
-    def get_smoothed_vanadium(self, van_run_number):
-        """
-        Purpose:
-            Get the smooth vanadium run (workspace) which has not been accepted.
-        Requirements:
-
-        Guarantees:
-
-        :param van_run_number:
-        :return:
-        """
-        # TODO/FIXME/ISSUE/55++ -- Required in next**2 step
-        # Check requirements
-        # assert isinstance(van_run_number, int)
-        # assert self.does_van_ws_exist(van_run_number)
-        #
-        # # Call method to smooth vnadium
-        # smooth_parameter = self._redctionParameter.vanadium_smooth_parameter
-        # temp_van_ws_name = self._workspaceManager.get_vanadium_workspace_name('smooth')
-        # mantid.SmoothVanadium(van_run_number, temp_van_ws_name, smooth_parameter)
-
-        temp_van_ws_name = 'Not Implemented Yet!'
-
-        return temp_van_ws_name
 
     def has_run(self, run_number):
         """

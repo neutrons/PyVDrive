@@ -1269,27 +1269,12 @@ class VDriveAPI(object):
         """
         try:
             # get reduced vanadium file
-
-
-
             van_ws_key = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
                                                 use_reduced_file=use_reduced_file)
 
             # process vanadium
-
-            # get workspace. if it is not loaded, then load it
-            if workspace_key is not None and self._loadedDataManager.has_data(workspace_key):
-                # workspace is found in loaded data manager
-                workspace_name = self._loadedDataManager.get_workspace_name(workspace_key)
-            else:
-                # workspace is found in reduced data manager
-                workspace_name = self._reductionManager.get_reduced_workspace(run_number,
-                                                                              is_vdrive_bin=True,
-                                                                              unit='dSpacing')
-
-
-
-            self._myProject.process_vanadium_spectra(ipts_number, run_number, workspace_key=van_ws_key)
+            self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
+            self._myProject.vanadium_processing_manager.process_vanadium()
 
             if do_shift:
                 # TODO/ISSUE/59 - Implement
@@ -1345,6 +1330,17 @@ class VDriveAPI(object):
         self._currentMTSLogFileName = log_file_name
 
         return
+
+    def save_processed_vanadium(self, ipts_number, run_number, output_file_name):
+        """
+        save the processed vanadium to a GSAS file
+        :param ipts_number:
+        :param run_number:
+        :param output_file_name:
+        :return: 2-tuple (boolean, str)
+        """
+        return self._myProject.vanadium_processing_manager.save_vanadium_to_file(
+            to_archive=True, output_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session

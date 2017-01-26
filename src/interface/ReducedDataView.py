@@ -855,7 +855,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param output_file_name:
         :return:
         """
-        # TODO/ISSUE/59 - Implement!
+        status, error_message = self._myController.save_processed_vanadium(self._iptsNumber, self._currRunNumber,
+                                                                           output_file_name)
+        if not status:
+            GuiUtility.pop_dialog_error(self, error_message)
+
+        return
 
     def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
         """

@@ -6,11 +6,11 @@ import mantid_helper
 
 class VanadiumProcessingManager(object):
     """
-    blabla
+    Controller of the workflow to process vanadium data for calibration purpose
     """
     def __init__(self, parent):
         """
-
+        initialization
         :param parent:
         """
         self._myParent = parent
@@ -26,6 +26,20 @@ class VanadiumProcessingManager(object):
 
         return
 
+    def get_peak_striped_vanadium(self):
+        """
+        get the vanadium workspace (name) that has peaks striped
+        :return:
+        """
+        return self._peakStripWorkspace
+
+    def get_smoothed_vanadium(self):
+        """
+        get the vanadium workspace (name) that has peaks striped and smoothed
+        :return:
+        """
+        return self._smoothedWorkspace
+
     def init_session(self, workspace_name, ipts_number, run_number):
         """
         initialize a new session to process vanadium
@@ -37,8 +51,10 @@ class VanadiumProcessingManager(object):
         # check inputs
         if not mantid_helper.workspace_does_exist(workspace_name):
             raise RuntimeError('Raw matrix workspace {0} does not exist.'.format(workspace_name))
-        assert isinstance(ipts_number, int), 'blabla'
-        assert isinstance(run_number), 'blabla'
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         # set
         self._rawMatrixWorkspace = workspace_name
@@ -51,54 +67,56 @@ class VanadiumProcessingManager(object):
 
         return
 
-    def process_vanadium(self,
-                         peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
+    def process_vanadium(self, peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2):
         """
-        process vanadium including peak striping and smooth
-        :param ipts_number:
-        :param run_number:
-        :param workspace_name: only this MATTERS with real input for write out
+        Process vanadium run including strip vanadium peaks and smooth
+        :param peak_fwhm:
+        :param peak_pos_tol:
+        :param background_type:
+        :param is_high_background:
+        :param smoother_filter_type:
+        :param param_n:
+        :param param_order:
         :return:
         """
         # strip vanadium peaks
-        out_ws_1 = self.strip_peaks(workspace_name, peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
+        out_ws_1 = self.strip_peaks(peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
                                     background_type=background_type,
                                     is_high_background=is_high_background)
 
-        out_ws_2 = self.smooth_spectra(out_ws_1, workspace_index=None, smoother_type=smoother_filter_type,
+        # smooth vanadium spectra
+        out_ws_2 = self.smooth_spectra(workspace_index=None, smoother_type=smoother_filter_type,
                                        param_n=param_n, param_order=param_order)
 
         # save
-        self.save_vanadium_to_file(ipts_number, run_number, out_ws_2, to_archive=True,
-                                   out_file_name=self._localOutputDirectory)
+        self.save_vanadium_to_file(to_archive=True, out_file_name=self._localOutputDirectory)
 
         return
 
-    @staticmethod
-    def save_vanadium_to_file(ipts_number, run_number, vanadium_workspace, to_archive=True,
-                              out_file_name=None):
+    def save_vanadium_to_file(self, to_archive=True, out_file_name=None):
         """
         save a processed vanadium (in workspace) to GSAS file
-        :param ipts_number:
-        :param run_number:
-        :param vanadium_workspace:
+        Note: IPTS number must be specified for being written into GSAS file;
+              run number must be specified for output file name
         :param to_archive
         :param out_file_name: if not None, then output locally
-        :return:
+        :return: tuple (boolean, str): status, error message
         """
-        # TODO/ISSUE/59/ - check inputs
+        # check inputs
+        assert self._iptsNumber is not None, 'IPTS number must be specified.'
+        assert self._runNumber is not None, 'Run number must be specified.'
+        assert self._smoothedWorkspace is not None, 'Vanadium run {0} must have been processed.' \
+                                                    ''.format(self._runNumber)
 
         # append output directory
-        base_name = None
-        archive_file_name = None
         local_file_name = None
 
-        if out_file_name is None:
-            base_name = '{0}-s.gda'.format(run_number)
-        else:
-            base_name = os.path.basename(local_file_name)
+        # if out_file_name is None:
+        #     base_name = '{0}-s.gda'.format(self._runNumber)
+        # else:
+        #     base_name = os.path.basename(local_file_name)
 
         # archive file name
         return_status = True
@@ -106,11 +124,11 @@ class VanadiumProcessingManager(object):
 
         # write to archive
         if to_archive:
-            base_name = '{0}-s.gda'.format(run_number)
+            base_name = '{0}-s.gda'.format(self._runNumber)
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
             archive_file_name = os.path.join(base_name, van_dir)
             if os.access(van_dir, os.W_OK):
-                mantid_helper.save_vulcan_gsas(vanadium_workspace, archive_file_name, ipts_number,
+                mantid_helper.save_vulcan_gsas(self._smoothedWorkspace, archive_file_name, self._iptsNumber,
                                                binning_reference_file='', gss_parm_file='')
             else:
                 archive_file_name = None
@@ -123,7 +141,7 @@ class VanadiumProcessingManager(object):
             # file name re-define & get directory of the output file
             if os.path.isdir(out_file_name):
                 local_dir = out_file_name
-                out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(run_number))
+                out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(self._runNumber))
             else:
                 local_dir = os.path.dirname(out_file_name)
                 if len(local_dir) == 0:
@@ -133,7 +151,7 @@ class VanadiumProcessingManager(object):
             # check whether the directory is writable
             if os.access(local_dir, os.W_OK):
                 if archive_file_name is None:
-                    mantid_helper.save_vulcan_gsas(vanadium_workspace, out_file_name, ipts_number,
+                    mantid_helper.save_vulcan_gsas(self._smoothedWorkspace, out_file_name, self._iptsNumber,
                                                    binning_reference_file='', gss_parm_file='')
                 else:
                     shutil.copy(archive_file_name, out_file_name)
@@ -144,41 +162,80 @@ class VanadiumProcessingManager(object):
 
         return return_status, error_msg
 
-    @staticmethod
-    def smooth_spectra(workspace_name, workspace_index, smoother_type, param_n, param_order):
+    def smooth_spectra(self, workspace_index, smoother_type, param_n, param_order, workspace_name=None):
         """
         smooth focused diffraction spectra
-        :param workspace_name:
+        :param workspace_name: if it is not None then the method is called as a stic method
         :param workspace_index:
         :param smoother_type:
         :param param_n:
         :param param_order:
         :return: output workspace name
         """
-        output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=workspace_name,
+        # about workspace_name
+        if workspace_name is None:
+            # using previously setup raw MatrixWorkspace
+            if self._peakStripWorkspace is None:
+                raise RuntimeError('{0} is not set up with raw MatrixWorkspace yet.'.format(self.__class__.__name__))
+            input_ws_name = self._peakStripWorkspace
+        else:
+            # using user specified workspace
+            # check whether the workspace exists
+            assert isinstance(workspace_name, str), 'User input workspace name {0} must be a string but not of type ' \
+                                                    '{1}.'.format(workspace_name, type(workspace_name))
+            if not mantid_helper.workspace_does_exist(workspace_name):
+                raise RuntimeError('User input workspace {0} does not exist in ADS.'.format(workspace_name))
+
+            input_ws_name = workspace_name
+        # END-IF-ELSE
+
+        # smooth vanadium spectra
+        output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
                                                               smooth_filter=smoother_type,
                                                               workspace_index=workspace_index,
                                                               param_n=param_n,
                                                               param_order=param_order)
 
+        # register the output workspace if this method is not called as a static
+        self._smoothedWorkspace = output_workspace_name
+
         return output_workspace_name
 
-
-    def strip_peaks(self, workspace_name, peak_fwhm, pos_tolerance,
-                    background_type, is_high_background):
+    def strip_peaks(self, peak_fwhm, pos_tolerance, background_type, is_high_background, workspace_name=None):
         """
-        blabla
-        :param workspace_name:
+        strip vanadium peaks
+        :param workspace_name: if specified, then this method will be used as a static method
         :param peak_fwhm:
         :param pos_tolerance:
         :param background_type:
         :param is_high_background:
         :return:
         """
-        # FIXME - Do we really need this method?
-        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=workspace_name, fwhm=peak_fwhm,
+        # about workspace_name
+        if workspace_name is None:
+            # using previously setup raw MatrixWorkspace
+            if self._rawMatrixWorkspace is None:
+                raise RuntimeError('{0} is not set up with raw MatrixWorkspace yet.'.format(self.__class__.__name__))
+            input_ws_name = self._rawMatrixWorkspace
+        else:
+            # using user specified workspace
+            # check whether the workspace exists
+            assert isinstance(workspace_name, str), 'User input workspace name {0} must be a string but not of type ' \
+                                                    '{1}.'.format(workspace_name, type(workspace_name))
+            if not mantid_helper.workspace_does_exist(workspace_name):
+                raise RuntimeError('User input workspace {0} does not exist in ADS.'.format(workspace_name))
+
+            input_ws_name = workspace_name
+        # END-IF-ELSE
+
+        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=input_ws_name,
+                                                            fwhm=peak_fwhm,
                                                             peak_pos_tol=pos_tolerance,
                                                             background_type=background_type,
                                                             is_high_background=is_high_background)
+
+        # register the output workspace if it is not called as a static
+        if output_ws_name is not None:
+            self._peakStripWorkspace = output_ws_name
 
         return output_ws_name
