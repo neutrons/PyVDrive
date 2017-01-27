@@ -1279,7 +1279,7 @@ class VDriveAPI(object):
 
             # process vanadium
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            self._myProject.vanadium_processing_manager.process_vanadium(save=False)
+            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
 
             if do_shift:
                 # TODO/ISSUE/59 - Implement
@@ -1290,7 +1290,6 @@ class VDriveAPI(object):
                 # TODO/TEST/ISSUE/NOW - Test & remove the debug data
                 self._myProject.vanadium_processing_manager.merge_processed_vanadium(save=True, to_archive=True,
                                                                                      local_file_name=local_output)
-
 
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
@@ -1348,7 +1347,7 @@ class VDriveAPI(object):
         :return: 2-tuple (boolean, str)
         """
         return self._myProject.vanadium_processing_manager.save_vanadium_to_file(
-            to_archive=True, output_file_name=output_file_name)
+            to_archive=False, out_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1617,11 +1616,9 @@ class VDriveAPI(object):
                 workspace_index = bank_id - start_bank_id
             # END-IF
 
-            smoothed_ws_name = self._myProject.smooth_spectra(workspace_name=workspace_name,
-                                                              workspace_index=workspace_index,
-                                                              smoother_type=smoother_type,
-                                                              param_n=param_n,
-                                                              param_order=param_order)
+            smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
+                workspace_index=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
+
         except RuntimeError as run_err:
             return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
 
@@ -1643,6 +1640,7 @@ class VDriveAPI(object):
         :param is_high_background:
         :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
         """
+        # TODO/FIXME/ISSUE/59 - Refactor with vanadium processing manager
         # get workspace key
         if workspace_key is None:
             # get workspace (key) from IPTS number and run number
@@ -1657,9 +1655,16 @@ class VDriveAPI(object):
         else:
             ws_key = workspace_key
 
+        print '[DB...BAT] workspace = ', ws_key
+
+        # TODO/FIXME/ISSUE/59 - check IPTS/run number with vanadium_processing_manager
+        # ... ...
+
+        # TODO: 2 approaches: if IPTS and run number are NONE, then use strip_peaks() as static method
+
         # call for strip vanadium peaks
-        out_ws_name = self._myProject.vanadium_processing_manager.process_vanadium_strip_peak(
-            ws_key, peak_fwhm, peak_pos_tolerance, background_type, is_high_background)
+        out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
+                                                                              background_type, is_high_background)
 
         return True, out_ws_name
 

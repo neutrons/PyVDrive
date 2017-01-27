@@ -969,22 +969,28 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :return:
     """
     # Check requirements
-    assert isinstance(source_ws_name, str)
+    assert isinstance(source_ws_name, str), 'source workspace name blabla'
     src_ws = retrieve_workspace(source_ws_name)
-    assert src_ws.getNumberHistograms() < 10
+    assert src_ws.getNumberHistograms() < 10, 'blabla'
     
-    assert isinstance(out_gss_file, str)
+    assert isinstance(out_gss_file, str), 'out gss blabla'
     assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-    assert isinstance(binning_reference_file, str)
-    assert os.path.exists(binning_reference_file)
-    assert isinstance(gss_parm_file, str)
+    assert isinstance(binning_reference_file, str), 'blabla333'
+    if len(binning_reference_file) > 0:
+        assert os.path.exists(binning_reference_file), 'blabla444'
+    assert isinstance(gss_parm_file, str), 'blabla555'
     
     final_ws_name = source_ws_name + '_IDL'
+
+    source_ws = ADS.retrieve(source_ws_name)
+    if not source_ws.isHistogramData():
+        mantidapi.ConvertToHistogram(InputWorkspace=source_ws_name,
+                                     OutputWorkspace=source_ws_name)
     
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
                             BinFilename=binning_reference_file,
                             OutputWorkspace=final_ws_name,
-                            GSSFilename=gss_parm_file,
+                            GSSFilename=out_gss_file,
                             IPTS=ipts,
                             GSSParmFilename=gss_parm_file)
 
