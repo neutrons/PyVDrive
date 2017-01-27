@@ -20,6 +20,7 @@ class VanadiumProcessingManager(object):
         self._rawMatrixWorkspace = None
         self._peakStripWorkspace = None
         self._smoothedWorkspace = None
+        self._oneBankWorkspace = None
 
         self._iptsNumber = None
         self._runNumber = None
@@ -64,12 +65,44 @@ class VanadiumProcessingManager(object):
         # reset processed workspaces
         self._peakStripWorkspace = None
         self._smoothedWorkspace = None
+        self._oneBankWorkspace = None
 
         return
 
+    def merge_processed_vanadium(self, save, to_archive=None, local_file_name=None):
+        """
+        merge process vanadium to single bank data and optionally saved
+        :except: RuntimeError() for being called too early
+        :param save:
+        :param to_archive:
+        :param local_file_name:
+        :return:
+        """
+        # check whether the data that has been smoothed
+        if self._smoothedWorkspace is None:
+            raise RuntimeError('Vanadium run {0} has not been processed yet.'.format(self._runNumber))
+
+        # merge
+        one_bank_name = self._rawMatrixWorkspace + '_1bank'
+        mantid_helper.sum_spectra(input_workspace=self._smoothedWorkspace, output_workspace=one_bank_name)
+        self._oneBankWorkspace = one_bank_name
+
+        # export
+        if save:
+            buffer_name = self._smoothedWorkspace
+            self._smoothedWorkspace = self._oneBankWorkspace
+            status, message = self.save_vanadium_to_file(to_archive, local_file_name)
+            self._smoothedWorkspace = buffer_name
+        else:
+            status = True
+            message = ''
+        # END-IF
+
+        return status, message
+
     def process_vanadium(self, peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
-                         param_n=20, param_order=2):
+                         param_n=20, param_order=2, save=True):
         """
         Process vanadium run including strip vanadium peaks and smooth
         :param peak_fwhm:
@@ -79,6 +112,7 @@ class VanadiumProcessingManager(object):
         :param smoother_filter_type:
         :param param_n:
         :param param_order:
+        :param save: flag to save the processed vanadium
         :return:
         """
         # strip vanadium peaks
@@ -93,7 +127,8 @@ class VanadiumProcessingManager(object):
         assert isinstance(out_ws_2, str), 'Output must be a string'
 
         # save
-        self.save_vanadium_to_file(to_archive=True, out_file_name=self._localOutputDirectory)
+        if save:
+            self.save_vanadium_to_file(to_archive=True, out_file_name=self._localOutputDirectory)
 
         return
 
@@ -233,3 +268,21 @@ class VanadiumProcessingManager(object):
             self._peakStripWorkspace = output_ws_name
 
         return output_ws_name
+
+    def undo_peak_strip(self):
+        """
+        undo peak strip
+        :return:
+        """
+        self._peakStripWorkspace = None
+
+        return
+
+    def undo_smooth(self):
+        """
+        undo spectra smoothing
+        :return:
+        """
+        self._smoothedWorkspace = None
+
+        return

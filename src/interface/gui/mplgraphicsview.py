@@ -613,6 +613,22 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
+    def auto_rescale(self):
+        """
+        rescale the canvas in an automatic way
+        :return:
+        """
+        # get right_x_bound and upper_y_bound
+        delta_x = self._maxX
+        delta_y = self._maxY
+
+        right_x_bound = self._maxX + 0.05 * delta_x
+        upper_y_bound = self._maxY + 0.05 * delta_y
+
+        self.setXYLimit(xmax=right_x_bound, ymax=upper_y_bound)
+
+        return
+
     def canvas(self):
         """ Get the canvas
         :return:

@@ -790,50 +790,6 @@ class ProjectManager(object):
 
         return status, err_msg
 
-    def save_time_segment(self, time_segment_list, ref_run_number, file_name):
-        """
-        :param time_segment_list:
-        :param ref_run_number:
-        :param file_name:
-        :return:
-        """
-        # TODO/ISSUE/51
-        # Check
-        assert isinstance(time_segment_list, list)
-        assert isinstance(ref_run_number, int) or ref_run_number is None
-        assert isinstance(file_name, str)
-
-        # Form Segments
-        run_start = self._mySlicingManager.get_run_start(ref_run_number, unit='second')
-
-        segment_list = list()
-        i_target = 1
-        for time_seg in time_segment_list:
-            if len(time_seg < 3):
-                tmp_target = '%d' % i_target
-                i_target += 1
-            else:
-                tmp_target = '%s' % str(time_seg[2])
-            tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
-            segment_list.append(tmp_seg)
-        # END-IF
-
-        segment_list.sort()
-
-        # Check validity
-        num_seg = len(segment_list)
-        if num_seg >= 2:
-            prev_stop = segment_list[0].stop
-            for index in xrange(1, num_seg):
-                if prev_stop >= segment_list[index].start:
-                    return False, 'Overlapping time segments!'
-        # END-IF
-
-        # Write to file
-        SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
-
-        return
-
     def set_focus_calibration_file(self, focus_cal_file):
         """
         Set the time-focus calibration to reduction manager.

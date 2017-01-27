@@ -806,7 +806,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         return
 
     def do_save_time_segments(self):
-        """ Save selected segment
+        """ Save selected segment to a file
         :return:
         """
         # Get splitters

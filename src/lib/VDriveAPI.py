@@ -1257,7 +1257,7 @@ class VDriveAPI(object):
         return True, van_ws_key
 
     def process_vanadium_run(self, ipts_number, run_number, use_reduced_file,
-                             one_bank=False, do_shift=False):
+                             one_bank=False, do_shift=False, local_output=None):
         """
         process vanadium runs
         :param ipts_number:
@@ -1265,6 +1265,7 @@ class VDriveAPI(object):
         :param use_reduced_file:
         :param one_bank:
         :param do_shift:
+        :param local_output:
         :return:
         """
         try:
@@ -1278,15 +1279,18 @@ class VDriveAPI(object):
 
             # process vanadium
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            self._myProject.vanadium_processing_manager.process_vanadium()
+            self._myProject.vanadium_processing_manager.process_vanadium(save=False)
 
             if do_shift:
                 # TODO/ISSUE/59 - Implement
                 blabla
 
             if one_bank:
-                # TODO/ISSUE/59 - Implement
-                blabla
+                # merge the result to 1 bank
+                # TODO/TEST/ISSUE/NOW - Test & remove the debug data
+                self._myProject.vanadium_processing_manager.merge_processed_vanadium(save=True, to_archive=True,
+                                                                                     local_file_name=local_output)
+
 
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
@@ -1400,14 +1404,17 @@ class VDriveAPI(object):
 
         return
 
-    def save_time_segment(self, time_segment_list, ref_run_number, file_name):
+    def save_time_segment(self, ipts_number, run_number, time_segment_list, file_name):
         """
+        save the time segments
+        :param ipts_number:
+        :param run_number:
         :param time_segment_list:
-        :param ref_run_number:
+        :param run_number:
         :param file_name:
         :return:
         """
-        chopper = self._myProject.get_chopper(ref_run_number)
+        chopper = self._myProject.get_chopper(run_number)
         chopper.save_time_segment(time_segment_list, file_name)
 
         return
@@ -1651,7 +1658,41 @@ class VDriveAPI(object):
             ws_key = workspace_key
 
         # call for strip vanadium peaks
-        out_ws_name = self._myProject.process_vanadium_strip_peak(ws_key, peak_fwhm, peak_pos_tolerance,
-                                                                  background_type, is_high_background)
+        out_ws_name = self._myProject.vanadium_processing_manager.process_vanadium_strip_peak(
+            ws_key, peak_fwhm, peak_pos_tolerance, background_type, is_high_background)
 
         return True, out_ws_name
+
+    def undo_vanadium_peak_strip(self, ipts_number=None, run_number=None):
+        """
+        undo the peak strip operation on vanadium peaks
+        :param ipts_number: if both IPTS and run number are defined, then
+        :param run_number:
+        :return:
+        """
+        if ipts_number is not None and run_number is not None:
+            if not self._myProject.vanadium_processing_manager.check_ipts_run(ipts_number, run_number):
+                raise RuntimeError('Current vanadium processing manager does not work on IPTS {0} Run {1}'
+                                   ''.format(ipts_number, run_number))
+        # END-IF
+
+        self._myProject.vanadium_processing_manager.undo_peak_strip()
+
+        return
+
+    def undo_vanadium_smoothing(self, ipts_number=None, run_number=None):
+        """
+        undo the smoothing operation on vanadium peaks
+        :param ipts_number: if both IPTS and run number are defined, then
+        :param run_number:
+        :return:
+        """
+        if ipts_number is not None and run_number is not None:
+            if not self._myProject.vanadium_processing_manager.check_ipts_run(ipts_number, run_number):
+                raise RuntimeError('Current vanadium processing manager does not work on IPTS {0} Run {1}'
+                                   ''.format(ipts_number, run_number))
+        # END-IF
+
+        self._myProject.vanadium_processing_manager.undo_smooth()
+
+        return

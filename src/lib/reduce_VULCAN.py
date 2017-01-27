@@ -679,11 +679,11 @@ class ReductionSetup(object):
     @normalized_by_vanadium.setter
     def normalized_by_vanadium(self, flag):
         """
-        blabla
+        set the flag whether the data is reduced by vanadium
         :param flag:
         :return:
         """
-        assert isinstance(flag, bool), 'blabla 322'
+        assert isinstance(flag, bool), 'Input flag {0} must be a boolean but not {1}.'.format(flag, type(flag))
 
         self._vanadiumFlag = flag
 
@@ -1185,17 +1185,23 @@ class ReduceVulcanData(object):
 
     def clear(self):
         """
-
+        clear the workspaces that contain the reduced data
         :return:
         """
-        # TODO/ISSUE/51 - Doc and check
+        error_message = ''
+
         for ws_name in self._reducedWorkspaceList:
             try:
                 mantidsimple.DeleteWorkspace(Workspace=ws_name)
-            except Exception:
-                pass
+            except RuntimeError as run_err:
+                error_message += 'Unable to delete workspace {0} due to {1}.\n'.format(ws_name, run_err)
 
+        # clear the list
         self._reducedWorkspaceList = list()
+
+        # print out error
+        if len(error_message) > 0:
+            print '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
 
         return
 
@@ -1504,11 +1510,17 @@ class ReduceVulcanData(object):
         :return:
         """
         # check inputs
-        assert isinstance(target_file, str), 'blabla 926A'
-        assert isinstance(sample_name_list, list), 'blabla 926A1'
-        assert isinstance(sample_title_list, list), 'blabla 926A2'
-        assert isinstance(sample_operation_list, list), 'blabla 926A3'
-        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list)
+        assert isinstance(target_file, str), 'Target file name {0} must be a string but not a {1}.' \
+                                             ''.format(target_file, type(target_file))
+        assert isinstance(sample_name_list, list), 'Sample name list {0} must be a list but not a {1}.' \
+                                                   ''.format(sample_name_list, type(sample_name_list))
+        assert isinstance(sample_title_list, list), 'Sample title list {0} must be a list but not a {1}.' \
+                                                    ''.format(sample_title_list, type(sample_title_list))
+        assert isinstance(sample_operation_list, list), 'Sample operation list {0} must be a list but not a {1}.' \
+                                                        ''.format(sample_operation_list, type(sample_operation_list))
+        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list), \
+            'Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) must have the same ' \
+            'size'.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list))
 
         # get file mode
         if os.path.exists(target_file):
@@ -2061,7 +2073,8 @@ class ReduceVulcanData(object):
         :param vanadium_tag:
         :return:
         """
-        assert isinstance(van_gda_file, str), 'blabla 951'
+        assert isinstance(van_gda_file, str), 'Vanadium GSAS file {0} must be a string but not a {1}.' \
+                                              ''.format(van_gda_file, type(van_gda_file))
 
         van_ws_name = 'Vanadium_{0}_{1}'.format(van_run_number, vanadium_tag)
         if not AnalysisDataService.doesExist(van_ws_name):
@@ -2071,11 +2084,10 @@ class ReduceVulcanData(object):
 
     def reduce_powder_diffraction_data(self):
         """
-        reduce powder diffraction data.
+        Reduce powder diffraction data.
+        required parameters:  ipts, run number, output dir
         :return: 2-tuples
         """
-        # required parameters:  ipts, runnumber, outputdir
-
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
             return True, 'No reduction as it is not required.'
@@ -2156,7 +2168,8 @@ class ReduceVulcanData(object):
         :return:
         """
         # check inputs and get input workspace
-        assert isinstance(reduced_gss_ws_name, str), 'blabla 912A'
+        assert isinstance(reduced_gss_ws_name, str), 'Reduced GSAS workspace name {0} must be a string but not a {1}.' \
+                                                     ''.format(reduced_gss_ws_name, type(reduced_gss_ws_name))
         reduced_gss_ws = AnalysisDataService.retrieve(reduced_gss_ws_name)
 
         # get vanadium information according to vanadium run number

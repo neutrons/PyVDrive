@@ -1,4 +1,3 @@
-# TODO/ISSUE/55 - Docs..
 import numpy as np
 import mplgraphicsview
 
@@ -9,7 +8,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
     """
     def __init__(self, parent):
         """
-
+        An extension to the MplGraphicsView for plotting reduced run
         :param parent:
         """
         super(GeneralRunView, self).__init__(parent)
@@ -24,24 +23,6 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         # a record for min and max X and Y
         self._maxX = None
         self._maxY = None
-
-        return
-
-    def auto_rescale(self):
-        """
-        rescale the canvas in an automatic way
-        :return:
-        """
-        # TODO/FUTURE - Consider to move this method to its super class
-
-        # get right_x_bound and upper_y_bound
-        delta_x = self._maxX
-        delta_y = self._maxY
-
-        right_x_bound = self._maxX + 0.05 * delta_x
-        upper_y_bound = self._maxY + 0.05 * delta_y
-
-        self.setXYLimit(xmax=right_x_bound, ymax=upper_y_bound)
 
         return
 
@@ -72,7 +53,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
     def plot_2d_contour(self, run_number_list, data_set_list):
         """
-
+        plot 2D contour figure
         :param run_number_list:
         :param data_set_list:
         :return:

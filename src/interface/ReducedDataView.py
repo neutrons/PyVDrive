@@ -330,7 +330,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get new bank ID
         new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
         if new_bank_str.isdigit() is False:
-            print '[DB] New bank ID %s is not an allowed integer.' % new_bank_str
+            print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
             return
 
         curr_bank_id = int(new_bank_str)
@@ -871,8 +871,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param is_high_background:
         :return:
         """
-        print '[DB...BAT] Striping vanadium peak of current run background type: {0} with type {1}.' \
-              ''.format(background_type, type(background_type))
         # from signal, the string is of type unicode.
         background_type = str(background_type)
 
@@ -920,9 +918,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
 
-        print '[DB...BAT] Smoothing vanadium run {0} bank {1} with smoother of type {2} and parameter {3}, {4}.' \
-              ''.format(self._currRunNumber, self._currBank, smoother_type, param_n, param_order)
-
         # get the input workspace
         if self._iptsNumber is None:
             van_peak_removed_ws = self._lastVanPeakStripWorkspace
@@ -958,8 +953,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         undo the strip vanadium peak action, i.e., delete the previous result and remove the plot
         :return:
         """
-        print '[DB...BAT] Undo Peak Striping.'
-
         if self._vanStripPlotID is None:
             print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
             return
@@ -967,6 +960,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # remove the plot
         self.ui.graphicsView_mainPlot.remove_line(line_id=self._vanStripPlotID)
         self._vanStripPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_peak_strip()
 
         return
 
@@ -977,8 +973,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         2. remove the smoothed plot
         :return:
         """
-        print '[DB...BAT] Undo Peak Smoothing.'
-
         # return if there is no such action before
         if self._smoothedPlotID is None:
             print '[INFO] There is no smoothed spectrum to undo.'
@@ -987,5 +981,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # remove the plot
         self.ui.graphicsView_mainPlot.remove_line(self._vanStripPlotID)
         self._smoothedPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_smoothing()
 
         return
