@@ -26,7 +26,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key):
+    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key, title=''):
         """
         plot a 1-D data set
         :param vec_x:
@@ -34,10 +34,12 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         :param x_unit:
         :param label:
         :param line_key:
+        :param title:
         :return:
         """
         line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
                                    x_label=x_unit, marker='.', color='red')
+        self.set_title(title)
 
         # register
         self._linesDict[line_key] = line_id

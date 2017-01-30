@@ -243,6 +243,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         launch the vanadium run processing dialog
         :return:
         """
+        # launch vanadium dialog window
         self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
         self._vanadiumProcessDialog.show()
 
@@ -262,7 +263,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             run_numbers = [int(self.ui.comboBox_runs.currentText())]
 
         over_plot = self.ui.checkBox_overPlot.isChecked()
-        # TODO/FIXME/1st: replace the following by a method as get_bank_ids() for 'All' case
+        # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
             self.plot_run(run_number, bank_id, over_plot)
