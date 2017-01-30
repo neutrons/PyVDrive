@@ -1206,7 +1206,7 @@ class VDriveAPI(object):
 
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file):
         """
-
+        Load vanadium runs
         :param ipts_number:
         :param run_number:
         :param use_reduced_file:
@@ -1325,7 +1325,7 @@ class VDriveAPI(object):
 
         return
 
-    def save_processed_vanadium(self, ipts_number, run_number, output_file_name):
+    def save_processed_vanadium(self, van_info_tuple, output_file_name):
         """
         save the processed vanadium to a GSAS file
         :param ipts_number:
@@ -1333,8 +1333,12 @@ class VDriveAPI(object):
         :param output_file_name:
         :return: 2-tuple (boolean, str)
         """
-        return self._myProject.vanadium_processing_manager.save_vanadium_to_file(
-            to_archive=False, out_file_name=output_file_name)
+        # TODO/FIXME/ISSUE/59 - parameter check
+        result = self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
+                                                                                   to_archive=False,
+                                                                                   out_file_name=output_file_name)
+
+        return result
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1594,7 +1598,7 @@ class VDriveAPI(object):
 
     def strip_vanadium_peaks(self, ipts_number, run_number, peak_fwhm,
                              peak_pos_tolerance, background_type, is_high_background,
-                             workspace_key):
+                             workspace_name):
         """
         strip vanadium peaks.
         This method supports 2 type of inputs
@@ -1606,11 +1610,11 @@ class VDriveAPI(object):
         :param peak_pos_tolerance:
         :param background_type:
         :param is_high_background:
+        :param workspace_name:
         :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
         """
-        # TODO/FIXME/ISSUE/59 - Refactor with vanadium processing manager
-        # get workspace key
-        if workspace_key is None:
+        # get workspace name
+        if workspace_name is None:
             # get workspace (key) from IPTS number and run number
             assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
             assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
@@ -1619,20 +1623,13 @@ class VDriveAPI(object):
                                 ''.format(ipts_number, run_number)
                 return False, error_message
 
-            ws_key = self._myProject.get_reduced_workspace(ipts_number, run_number)
-        else:
-            ws_key = workspace_key
-
-        print '[DB...BAT] workspace = ', ws_key
-
-        # TODO/FIXME/ISSUE/59 - check IPTS/run number with vanadium_processing_manager
-        # ... ...
-
-        # TODO: 2 approaches: if IPTS and run number are NONE, then use strip_peaks() as static method
+            workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
+        # END-IF
 
         # call for strip vanadium peaks
         out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
-                                                                              background_type, is_high_background)
+                                                                              background_type, is_high_background,
+                                                                              workspace_name=workspace_name)
 
         return True, out_ws_name
 

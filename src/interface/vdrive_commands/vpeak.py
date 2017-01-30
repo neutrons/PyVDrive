@@ -128,6 +128,13 @@ class VanadiumPeak(VDriveCommand):
 
         return self._myVanDataKey
 
+    def get_vanadium_run(self):
+        """
+        blabla
+        :return:
+        """
+        return self._vanRunNumber
+
     @property
     def to_merge_to_one_bank(self):
         """

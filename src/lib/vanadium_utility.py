@@ -135,7 +135,8 @@ class VanadiumProcessingManager(object):
 
         return
 
-    def save_vanadium_to_file(self, to_archive=True, out_file_name=None):
+    def save_vanadium_to_file(self, vanadium_tuple=None,
+                              to_archive=True, out_file_name=None):
         """
         save a processed vanadium (in workspace) to GSAS file
         Note: IPTS number must be specified for being written into GSAS file;
@@ -144,11 +145,25 @@ class VanadiumProcessingManager(object):
         :param out_file_name: if not None, then output locally
         :return: tuple (boolean, str): status, error message
         """
+        # TODO/ISSUE/59 - clean warnings
         # check inputs
-        assert self._iptsNumber is not None, 'IPTS number must be specified.'
-        assert self._runNumber is not None, 'Run number must be specified.'
-        assert self._smoothedWorkspace is not None, 'Vanadium run {0} must have been processed.' \
-                                                    ''.format(self._runNumber)
+        if vanadium_tuple is None:
+            # use the class variables of this instance
+            assert self._iptsNumber is not None, 'IPTS number must be specified.'
+            assert self._runNumber is not None, 'Run number must be specified.'
+            assert self._smoothedWorkspace is not None, 'Vanadium run {0} must have been processed.' \
+                                                        ''.format(self._runNumber)
+
+            workspace_name = self._smoothedWorkspace
+            ipts_number = self._iptsNumber
+            run_number = self._runNumber
+
+        else:
+            assert len(vanadium_tuple) == 3, 'blabla'
+            workspace_name, ipts_number, run_number = vanadium_tuple
+            assert isinstance(ipts_number, int), 'blabla'
+            assert isinstance(run_number, int), 'run number blabla'
+        # END-IF-ELSE
 
         # archive file name
         return_status = True
@@ -162,7 +177,7 @@ class VanadiumProcessingManager(object):
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
             archive_file_name = os.path.join(base_name, van_dir)
             if os.access(van_dir, os.W_OK):
-                mantid_helper.save_vulcan_gsas(self._smoothedWorkspace, archive_file_name, self._iptsNumber,
+                mantid_helper.save_vulcan_gsas(workspace_name, archive_file_name, ipts_number,
                                                binning_reference_file='', gss_parm_file='')
             else:
                 archive_file_name = None
@@ -177,20 +192,17 @@ class VanadiumProcessingManager(object):
             # file name re-define & get directory of the output file
             if os.path.isdir(out_file_name):
                 local_dir = out_file_name
-                out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(self._runNumber))
+                out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(run_number))
             else:
                 local_dir = os.path.dirname(out_file_name)
                 if len(local_dir) == 0:
                     local_dir = os.getcwd()
             # END-IF
 
-            print 'Check Point ----0002B: ', out_file_name, local_dir, self._smoothedWorkspace
-            print '                       ', self._iptsNumber
-
             # check whether the directory is writable
             if os.access(local_dir, os.W_OK):
                 if archive_file_name is None:
-                    mantid_helper.save_vulcan_gsas(self._smoothedWorkspace, out_file_name, self._iptsNumber,
+                    mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
                                                    binning_reference_file='', gss_parm_file='')
                 else:
                     shutil.copy(archive_file_name, out_file_name)

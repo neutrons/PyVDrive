@@ -215,7 +215,9 @@ class VdriveCommandProcessor(object):
             data_viewer.set_title('Processing vanadium')
             # get data (key), set to viewer and plot
             controller_data_key = processor.get_loaded_data()
-            viewer_data_key = data_viewer.add_data_set(controller_data_key)
+            ipts_number, run_number_list = processor.get_ipts_runs()
+            van_run_number = processor.get_vanadium_run()
+            viewer_data_key = data_viewer.add_data_set(ipts_number, van_run_number, controller_data_key)
             data_viewer.plot_data(viewer_data_key, bank_id=1)
         # END-IF
 

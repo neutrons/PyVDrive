@@ -36,6 +36,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
+        self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
 
         # current status
         self._iptsNumber = None
@@ -118,7 +119,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
 
-    def add_data_set(self, controller_data_key):
+    def add_data_set(self, ipts_number, run_number, controller_data_key):
         """
         add a new data set to this data viewer window
         :param controller_data_key:
@@ -127,6 +128,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # return if the controller data key exist
         if controller_data_key in self._reducedDataDict:
             return
+
+        self._dataIptsRunDict[controller_data_key] = ipts_number, run_number
 
         # show on the list: turn or and off mutex locks around change of the combo box contents
         self._mutexRunNumberList = True
@@ -246,6 +249,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # launch vanadium dialog window
         self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
         self._vanadiumProcessDialog.show()
+
+        # get current workspace
+        current_run_ws = str(self.ui.comboBox_runs.currentText())
+        ipts_number, run_number = self._dataIptsRunDict[current_run_ws]
+
+        self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
 
         return
 
@@ -850,14 +859,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def signal_save_processed_vanadium(self, output_file_name):
+    def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
         """
         save GSAS file
         :param output_file_name:
+        :param ipts_number:
+        :param run_number:
         :return:
         """
-        status, error_message = self._myController.save_processed_vanadium(self._iptsNumber, self._currRunNumber,
-                                                                           output_file_name)
+        van_info_tuple = (self._lastVanSmoothedWorkspace, ipts_number, run_number)
+        # convert string
+        output_file_name = str(output_file_name)
+
+        status, error_message = self._myController.save_processed_vanadium(van_info_tuple, output_file_name)
         if not status:
             GuiUtility.pop_dialog_error(self, error_message)
 

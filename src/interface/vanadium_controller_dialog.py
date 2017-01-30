@@ -20,7 +20,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
     mySmoothVanadiumSignal = QtCore.pyqtSignal(str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
-    myApplyResultSignal = QtCore.pyqtSignal(str)  # signal to apply/save the smoothed vanadium
+    myApplyResultSignal = QtCore.pyqtSignal(str, int, int)  # signal to apply/save the smoothed vanadium
 
     def __init__(self, parent):
         """ Set up main window
@@ -81,7 +81,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         # final
         self.connect(self.ui.pushButton_applyVanProcessResult, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_result)
+                     self.do_save_result)
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
 
@@ -125,26 +125,6 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self.load_settings()
         self.do_restore_peak_strip_parameters()
         self.do_restore_smooth_vanadium_parameters()
-
-        return
-
-    def do_apply_result(self):
-        """
-        apply the result to controller
-        :return:
-        """
-        # get default directory
-        default_dir = '/SNS/VULCAN/shared/CalibrationFiles/Instrument/Standards/Vanadium'
-        if not os.access(default_dir, os.W_OK):
-            default_dir = os.getcwd()
-
-        file_filter = 'GSAS (*.gda);;All (*.*)'
-        van_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Smoothed Vanadium File',
-                                                              default_dir, file_filter))
-        if len(van_file_name) == 0:
-            return
-
-        self.myApplyResultSignal.emit(van_file_name)
 
         return
 
@@ -195,6 +175,34 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         self._defaultDict['Tolerance'] = gutil.parse_integer(self.ui.lineEdit_vanPeakFWHM)
         self._defaultDict['BackgroundType'] = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         self._defaultDict['IsHighBackground'] = self.ui.checkBox_isHighBackground.isChecked()
+
+        return
+
+    def do_save_result(self):
+        """
+        apply the result to controller
+        :return:
+        """
+        # get IPTS number and run number
+        try:
+            ipts_number = gutil.parse_integer(self.ui.lineEdit_iptsNumber, allow_blank=False)
+            run_number = gutil.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
+        except RuntimeError as run_err:
+            gutil.pop_dialog_error(self, 'IPTS and run number must be specified in order to save for GSAS.')
+            return
+
+        # get default directory
+        default_dir = '/SNS/VULCAN/shared/CalibrationFiles/Instrument/Standards/Vanadium'
+        if not os.access(default_dir, os.W_OK):
+            default_dir = os.getcwd()
+
+        file_filter = 'GSAS (*.gda);;All (*.*)'
+        van_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Smoothed Vanadium File',
+                                                              default_dir, file_filter))
+        if len(van_file_name) == 0:
+            return
+
+        self.myApplyResultSignal.emit(van_file_name, ipts_number, run_number)
 
         return
 
@@ -367,6 +375,18 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
         # the default vanadium peak strip parameters
         for value_name in self._defaultDict.keys():
             settings.setValue(value_name, self._defaultDict[value_name])
+
+        return
+
+    def set_ipts_run(self, ipts_number, run_number):
+        """
+        set IPTS number and run number
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        self.ui.lineEdit_iptsNumber.setText(str(ipts_number))
+        self.ui.lineEdit_runNumber.setText(str(run_number))
 
         return
 
