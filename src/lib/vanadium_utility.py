@@ -169,8 +169,6 @@ class VanadiumProcessingManager(object):
         return_status = True
         error_msg = ''
 
-        print 'Check Point ----0001'
-
         # write to archive
         if to_archive:
             base_name = '{0}-s.gda'.format(self._runNumber)
@@ -185,8 +183,6 @@ class VanadiumProcessingManager(object):
                 error_msg += 'Failed to write {0} to archive due to permission error.\n'.format(archive_file_name)
         else:
             archive_file_name = None
-
-        print 'Check Point ----0002: ', error_msg
 
         if out_file_name:
             # file name re-define & get directory of the output file
@@ -211,8 +207,6 @@ class VanadiumProcessingManager(object):
                 error_msg += 'Failed to write {0} to local directory due to permission error.'.format(archive_file_name)
             # END-IF
         # END-IF
-
-        print 'Check Point ----0003: ', error_msg
 
         return return_status, error_msg
 
