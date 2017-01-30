@@ -90,8 +90,11 @@ class LoadedDataManager(object):
         :return: data key
         """
         # check inputs
-        assert isinstance(data_file_type, str) or data_file_type is None, 'blabla 1727'
-        assert isinstance(data_file_name, str), 'blabla 1727'
+        assert isinstance(data_file_type, str) or data_file_type is None, \
+            'Data file type {0} must be a string or None but not a {1}.' \
+            ''.format(data_file_type, type(data_file_type))
+        assert isinstance(data_file_name, str), 'Data file name {0} must be a string but not a {1}.' \
+                                                ''.format(data_file_name, type(data_file_name))
 
         # find out the type of the data file
         file_name, file_extension = os.path.splitext(data_file_name)

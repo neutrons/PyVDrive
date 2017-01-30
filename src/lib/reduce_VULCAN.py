@@ -870,9 +870,12 @@ class ReductionSetup(object):
         :return:
         """
         # check inputs
-        assert isinstance(standard, str), 'blabla 1142'
-        assert isinstance(directory, str), 'blabla 1142B'
-        assert isinstance(base_record_file, str), 'blabla 1142C'
+        assert isinstance(standard, str), 'Standard material {0} must be a string but not a {1}.' \
+                                          ''.format(standard, type(standard))
+        assert isinstance(directory, str), 'Standard directory {0} must be a string but not a {1}.' \
+                                           ''.format(directory, type(directory))
+        assert isinstance(base_record_file, str), 'Base AutoRecord file {0} must be a string but not a {1}.' \
+                                                  ''.format(base_record_file, type(base_record_file))
 
         self._standardSampleName = standard
         self._standardDirectory = directory
@@ -2174,7 +2177,7 @@ class ReduceVulcanData(object):
 
         # get vanadium information according to vanadium run number
         van_info_tuple = self._reductionSetup.get_vanadium_info()
-        assert van_info_tuple is not None, 'blabla 948'
+        assert van_info_tuple is not None, 'Vanadium information tuple cannot be None.'
         van_run_number, van_gda_file, vanadium_tag = van_info_tuple
         van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
 
@@ -2192,7 +2195,9 @@ class ReduceVulcanData(object):
         # check whether vanadium and sample run workspace have the same number of spectra
         num_spec = reduced_gss_ws.getNumberHistograms()
         if num_spec != van_ws.getNumberHistograms():
-            raise RuntimeError('blabla 1028')
+            raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
+                               '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
+                                                    van_ws.getNumberHistograms()))
 
         # normalize by vanadium
         # make the binning exactly the same because there is always some tiny difference between loaded GSAS
@@ -2347,7 +2352,7 @@ class MainUtility(object):
         help_str += "-r/record   : optional experiment record file name (writable only to auot reduction service).\n"
         help_str += "-R/record2  : experiment record file (can be modified by manual reduction).\n"
         help_str += "-d/dry      : dry run to check output status, file names and directories.\n"
-        help_str += '-f/focus    : focuss file.\n'
+        help_str += '-f/focus    : diffraction focus file.\n'
         help_str += '-c/charact  : characterization file.\n'
         help_str += '-b/bin      : binning file.\n'
 

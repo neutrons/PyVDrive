@@ -200,7 +200,6 @@ class VDriveAPI(object):
         # sort the list again with peak positions...
         peak_pos_list = ref_dict.keys()
         peak_pos_list.sort()
-        print '[DB] List of peak positions: ', peak_pos_list
         curr_list = None
         curr_pos = -1
         for peak_pos in peak_pos_list:
@@ -215,14 +214,11 @@ class VDriveAPI(object):
         # END-FOR
 
         # Convert from dictionary to list as 2-tuples
-
-        print '[DB-BAT] List of final reflections:', type(ref_dict)
         d_list = ref_dict.keys()
         d_list.sort(reverse=True)
         reflection_list = list()
         for peak_pos in d_list:
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
-            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
 
         return reflection_list
 
@@ -639,14 +635,10 @@ class VDriveAPI(object):
 
     def get_ipts_config(self, ipts=None):
         """
-
-        :param ipts:
+        get the IPTS configuration
+        :param ipts: IPTS number; if None, then it stands for the case as local data reduction
         :return:
         """
-        # TODO/NOW - Doc
-
-        print '[DB-BAT] IPTS config dict = ', self._iptsConfigDict
-
         if ipts is None:
             if len(self._iptsConfigDict) == 0:
                 return [None, None]
@@ -724,8 +716,6 @@ class VDriveAPI(object):
         :param standard_sns_file:
         :return:
         """
-        print '[DB...BAT] Archive key = ', archive_key
-
         # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
                                                                        standard_sns_file)
@@ -762,8 +752,6 @@ class VDriveAPI(object):
         # END-IF
         run_time_list.sort()
 
-        print '[DB....BAT] Run-Time List: Size = ', len(run_time_list)
-
         # return
         return run_time_list[0], run_time_list[-1]
 
@@ -798,13 +786,12 @@ class VDriveAPI(object):
 
     def get_runs(self, start_run=None, end_run=None):
         """
-
+        get the run (information) within a range
         :param start_run:
         :param end_run:
-        :return:
+        :return: 2-tuple.  boolean as status, list of run information
         """
         run_list = self._myProject.get_runs()
-        print '[DB...BAT] run_list: ', run_list
 
         # Determine index of start run and end run
         try:
@@ -1283,7 +1270,7 @@ class VDriveAPI(object):
 
             if do_shift:
                 # TODO/ISSUE/59 - Implement
-                blabla
+                self._myProject.vanadium_processing_manager.apply_shift(van_ws_key)
 
             if one_bank:
                 # merge the result to 1 bank
@@ -1526,37 +1513,18 @@ class VDriveAPI(object):
         :param van_run_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'blabla 134'
-        assert isinstance(van_run_number, int), 'blabla 135'
-        assert isinstance(run_number_list, list), 'blabla 135B'
+        assert isinstance(ipts_number, int), 'ITPS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not {1}.' \
+                                                ''.format(van_run_number, type(van_run_number))
+        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
         file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
         if not file_exist:
             return False, 'Unable to locate vanadium GSAS file'
 
         self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
-
-        return
-
-    def set_vanadium_calibration_files(self, run_numbers, vanadium_file_names):
-        """
-        Purpose:
-
-        Requirements:
-            1. run_numbers is list of integers
-            2. vanadium_file_names is a list of string
-            3. size of run_numbers is equal to size of vanadium file names
-        Guarantees:
-            1. vanadium calibration file is linked to run number in myProject
-        :param run_numbers:
-        :param vanadium_file_names:
-        :return:
-        """
-        # TODO/NOW/COMPLETE
-
-        # Check requirements
-
-        # Set pair by pair
 
         return
 

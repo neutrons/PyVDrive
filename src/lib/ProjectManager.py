@@ -218,7 +218,9 @@ class ProjectManager(object):
         :return:
         """
         # Check input
-        assert isinstance(data_key, int) or isinstance(data_key, str), 'blabla 1119'
+        assert isinstance(data_key, int) or isinstance(data_key, str), 'Data key {0} must be either an integer or a ' \
+                                                                       'string but not a {1}.' \
+                                                                       ''.format(data_key, type(data_key))
         assert isinstance(bank_number, int), 'Bank number must be an integer.'
         assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
         assert isinstance(profile, str), 'Peak profile must be a string.'
@@ -264,37 +266,6 @@ class ProjectManager(object):
         # END-IF-ELSE
 
         return run_chopper
-
-    def get_data(self, data_key=None, data_file_name=None):
-        """ Get whole data set as a dictionary.  Each entry is of a bank
-        Requirements: data key or data file name is specified
-        Guarantees:
-        :param data_key: data key generated in Vdrive project
-        :param data_file_name: full path data file
-        :return:
-        """
-        # # Check requirements
-        # assert (data_key is None and data_file_name is None) is False, \
-        #     'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
-        # assert (data_key is not None and data_file_name is not None) is False, \
-        #     'Both data key and data file name are given.'
-        #
-        # # check and convert to data key
-        # if data_file_name is not None:
-        #     assert isinstance(data_file_name, str), 'blabla'
-        #     # TODO: make this to a method ???
-        #     data_key = get_data_key(data_file_name)
-        # else:
-        #     assert isinstance(data_key, str), 'blabla'
-        #
-        # # check existence
-        # if data_key not in self._dataWorkspaceDict:
-        #     raise KeyError('data key %s does not exist.' % data_key)
-        #
-        # # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
-        # data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
-        #
-        # return True, data_set_dict
 
     def get_data_bank_list(self, data_key):
         """ Get bank information of a loaded data file (workspace)
@@ -571,7 +542,8 @@ class ProjectManager(object):
 
     def has_reduced_workspace(self, ipts_number, run_number):
         """
-        blabla
+        check whether a reduced workspace does exist in the workspaces managed by this ProjectManager.
+        the workspace should be either in reduction manager or extra _loadedDataDict
         :return:
         """
         has_workspace = False
@@ -847,8 +819,10 @@ class ProjectManager(object):
         :param van_run_number:
         :return: None
         """
-        assert isinstance(run_number_list, list), 'blabla 129'
-        assert isinstance(van_run_number, int), 'blabla 129B'
+        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
+        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
+                                                ''.format(van_run_number, type(van_run_number))
 
         for run_number in run_number_list:
             self._sampleRunVanadiumDict[run_number] = van_run_number
@@ -898,7 +872,7 @@ class ProjectManager(object):
     @property
     def vanadium_processing_manager(self):
         """
-        blabla
+        get the holder to the vanadium processing manager
         :return:
         """
         return self._processVanadiumManager
@@ -909,7 +883,7 @@ def get_data_key(file_name):
     :param file_name:
     :return:
     """
-    # TODO/NOW - Doc!
-    assert isinstance(file_name, str)
+    assert isinstance(file_name, str), 'Input file name {0} must be a string but not a {1}.' \
+                                       ''.format(file_name, type(file_name))
 
     return os.path.basename(file_name)

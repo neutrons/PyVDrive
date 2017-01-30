@@ -67,7 +67,7 @@ class IndicatorManager(object):
         self._autoLineID = 1
 
         self._lineManager = dict()
-        self._canvasLineKeyDict = dict()
+        self._canvasLineKeyDict = dict()  # dictionary for line-key on the canvas
         self._indicatorTypeDict = dict()  # value: 0 (horizontal), 1 (vertical), 2 (2-way)
 
         return
@@ -177,12 +177,14 @@ class IndicatorManager(object):
 
     def get_2way_data(self, line_id):
         """
-
+        get the indicator data for a 2-way indicator
         :param line_id:
-        :return:
+        :return: list of (2) vectors.
         """
-        assert line_id in self._indicatorTypeDict, 'blabla'
-        assert self._indicatorTypeDict[line_id] == 2, 'blabla'
+        assert line_id in self._indicatorTypeDict, 'Line ID {0} is not in the Indicator-Type-Dictionary. ' \
+                                                   'Candidates are {1}.'.format(line_id, self._indicatorTypeDict)
+        assert self._indicatorTypeDict[line_id] == 2, 'The type of the indicator must be 2 but not {0}.' \
+                                                      ''.format(self._indicatorTypeDict[line_id])
 
         vec_set = [self._lineManager[line_id][0:2], self._lineManager[line_id][2:4]]
 
