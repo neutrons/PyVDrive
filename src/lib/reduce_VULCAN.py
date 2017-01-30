@@ -679,11 +679,11 @@ class ReductionSetup(object):
     @normalized_by_vanadium.setter
     def normalized_by_vanadium(self, flag):
         """
-        blabla
+        set the flag whether the data is reduced by vanadium
         :param flag:
         :return:
         """
-        assert isinstance(flag, bool), 'blabla 322'
+        assert isinstance(flag, bool), 'Input flag {0} must be a boolean but not {1}.'.format(flag, type(flag))
 
         self._vanadiumFlag = flag
 
@@ -870,9 +870,12 @@ class ReductionSetup(object):
         :return:
         """
         # check inputs
-        assert isinstance(standard, str), 'blabla 1142'
-        assert isinstance(directory, str), 'blabla 1142B'
-        assert isinstance(base_record_file, str), 'blabla 1142C'
+        assert isinstance(standard, str), 'Standard material {0} must be a string but not a {1}.' \
+                                          ''.format(standard, type(standard))
+        assert isinstance(directory, str), 'Standard directory {0} must be a string but not a {1}.' \
+                                           ''.format(directory, type(directory))
+        assert isinstance(base_record_file, str), 'Base AutoRecord file {0} must be a string but not a {1}.' \
+                                                  ''.format(base_record_file, type(base_record_file))
 
         self._standardSampleName = standard
         self._standardDirectory = directory
@@ -1185,17 +1188,23 @@ class ReduceVulcanData(object):
 
     def clear(self):
         """
-
+        clear the workspaces that contain the reduced data
         :return:
         """
-        # TODO/ISSUE/51 - Doc and check
+        error_message = ''
+
         for ws_name in self._reducedWorkspaceList:
             try:
                 mantidsimple.DeleteWorkspace(Workspace=ws_name)
-            except Exception:
-                pass
+            except RuntimeError as run_err:
+                error_message += 'Unable to delete workspace {0} due to {1}.\n'.format(ws_name, run_err)
 
+        # clear the list
         self._reducedWorkspaceList = list()
+
+        # print out error
+        if len(error_message) > 0:
+            print '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
 
         return
 
@@ -1504,11 +1513,17 @@ class ReduceVulcanData(object):
         :return:
         """
         # check inputs
-        assert isinstance(target_file, str), 'blabla 926A'
-        assert isinstance(sample_name_list, list), 'blabla 926A1'
-        assert isinstance(sample_title_list, list), 'blabla 926A2'
-        assert isinstance(sample_operation_list, list), 'blabla 926A3'
-        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list)
+        assert isinstance(target_file, str), 'Target file name {0} must be a string but not a {1}.' \
+                                             ''.format(target_file, type(target_file))
+        assert isinstance(sample_name_list, list), 'Sample name list {0} must be a list but not a {1}.' \
+                                                   ''.format(sample_name_list, type(sample_name_list))
+        assert isinstance(sample_title_list, list), 'Sample title list {0} must be a list but not a {1}.' \
+                                                    ''.format(sample_title_list, type(sample_title_list))
+        assert isinstance(sample_operation_list, list), 'Sample operation list {0} must be a list but not a {1}.' \
+                                                        ''.format(sample_operation_list, type(sample_operation_list))
+        assert len(sample_name_list) == len(sample_title_list) and len(sample_name_list) == len(sample_operation_list), \
+            'Sample name list ({0}), sample title list ({1}) and sample operation list ({2}) must have the same ' \
+            'size'.format(len(sample_name_list), len(sample_title_list), len(sample_operation_list))
 
         # get file mode
         if os.path.exists(target_file):
@@ -2061,7 +2076,8 @@ class ReduceVulcanData(object):
         :param vanadium_tag:
         :return:
         """
-        assert isinstance(van_gda_file, str), 'blabla 951'
+        assert isinstance(van_gda_file, str), 'Vanadium GSAS file {0} must be a string but not a {1}.' \
+                                              ''.format(van_gda_file, type(van_gda_file))
 
         van_ws_name = 'Vanadium_{0}_{1}'.format(van_run_number, vanadium_tag)
         if not AnalysisDataService.doesExist(van_ws_name):
@@ -2071,11 +2087,10 @@ class ReduceVulcanData(object):
 
     def reduce_powder_diffraction_data(self):
         """
-        reduce powder diffraction data
+        Reduce powder diffraction data.
+        required parameters:  ipts, run number, output dir
         :return: 2-tuples
         """
-        # required parameters:  ipts, runnumber, outputdir
-
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
             return True, 'No reduction as it is not required.'
@@ -2138,28 +2153,8 @@ class ReduceVulcanData(object):
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
-            # FIXME/TODO/ISSUE/57 - Refactor!
-            t3 = self._reductionSetup.get_vanadium_info()
-            assert t3 is not None, 'blabla 948'
-            van_run_number, van_gda_file, vanadium_tag = t3
-            van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
-
-            gss_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-            van_ws = AnalysisDataService.retrieve(van_ws_name)
-
-            gda_vec_x = gss_ws.readX(0)
-            van_vec_x = van_ws.readX(0)
-            diff_vec = numpy.abs((van_vec_x-gda_vec_x)/gda_vec_x)
-            assert numpy.max(diff_vec) < 0.01, 'Vec X differs too much!'
-
-            num_spec = gss_ws.getNumberHistograms()
-            assert num_spec == van_ws.getNumberHistograms(), 'blabla 1028'
-
-            for ws_index in range(num_spec):
-                numpy.copyto(van_ws.dataX(ws_index), gss_ws.readX(ws_index))
-
-            gss_ws = gss_ws/van_ws
-            mantidsimple.SaveGSS(InputWorkspace=gss_ws, Filename='whatever')
+            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
         # END-IF (vanadium)
 
         # collect result
@@ -2169,6 +2164,56 @@ class ReduceVulcanData(object):
         self._reduceGood = True
 
         return True, message
+
+    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
+        """
+
+        :return:
+        """
+        # check inputs and get input workspace
+        assert isinstance(reduced_gss_ws_name, str), 'Reduced GSAS workspace name {0} must be a string but not a {1}.' \
+                                                     ''.format(reduced_gss_ws_name, type(reduced_gss_ws_name))
+        reduced_gss_ws = AnalysisDataService.retrieve(reduced_gss_ws_name)
+
+        # get vanadium information according to vanadium run number
+        van_info_tuple = self._reductionSetup.get_vanadium_info()
+        assert van_info_tuple is not None, 'Vanadium information tuple cannot be None.'
+        van_run_number, van_gda_file, vanadium_tag = van_info_tuple
+        van_ws_name = self.load_vanadium_gda(van_gda_file, van_run_number, vanadium_tag)
+
+        # get vanadium workspace
+        van_ws = AnalysisDataService.retrieve(van_ws_name)
+
+        # check whether the reduced GSAS workspace has the same binning with vanadium workspace
+        gda_vec_x = reduced_gss_ws.readX(0)
+        van_vec_x = van_ws.readX(0)
+        diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
+        if numpy.max(diff_vec) >= 0.01:
+            raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
+                               'differs too much!'.format(van_run_number, reduced_gss_ws_name))
+
+        # check whether vanadium and sample run workspace have the same number of spectra
+        num_spec = reduced_gss_ws.getNumberHistograms()
+        if num_spec != van_ws.getNumberHistograms():
+            raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
+                               '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
+                                                    van_ws.getNumberHistograms()))
+
+        # normalize by vanadium
+        # make the binning exactly the same because there is always some tiny difference between loaded GSAS
+        for ws_index in range(num_spec):
+            numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
+
+        # normalize and write out again
+        reduced_gss_ws = reduced_gss_ws / van_ws
+
+        mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_gss_ws,
+                                   OutputWorkspace=reduced_gss_ws_name,
+                                   GSSFilename=output_file_name,
+                                   IPTS=self._reductionSetup.get_ipts_number(),
+                                   GSSParmFilename="Vulcan.prm")
+
+        return
 
     def special_operation_auto_reduction_service(self):
         """
@@ -2307,7 +2352,7 @@ class MainUtility(object):
         help_str += "-r/record   : optional experiment record file name (writable only to auot reduction service).\n"
         help_str += "-R/record2  : experiment record file (can be modified by manual reduction).\n"
         help_str += "-d/dry      : dry run to check output status, file names and directories.\n"
-        help_str += '-f/focus    : focuss file.\n'
+        help_str += '-f/focus    : diffraction focus file.\n'
         help_str += '-c/charact  : characterization file.\n'
         help_str += '-b/bin      : binning file.\n'
 

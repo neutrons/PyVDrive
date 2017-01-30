@@ -602,7 +602,7 @@ class DataChopper(object):
         assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
                                            '' % (str(file_name), type(file_name))
         assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
-                                                    '' % type(segment_list)
+                                                    '' % type(time_segment_list)
 
         # get run start time
         run_start = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')

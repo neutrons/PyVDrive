@@ -7,6 +7,7 @@ import mantid_helper
 import reductionmanager as prl
 import archivemanager
 import loaded_data_manager
+import vanadium_utility
 
 
 class ProjectManager(object):
@@ -27,10 +28,16 @@ class ProjectManager(object):
         self._loadedDataManager = loaded_data_manager.LoadedDataManager(self)
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
+        # vanadium processing manager
+        self._processVanadiumManager = vanadium_utility.VanadiumProcessingManager(self)
 
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
         self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+
+        # dictionary for loaded data referenced by IPTS and run number. value is the data key
+        self._loadedDataDict = dict()
+
         # dictionary for sample run mapping to vanadium run
         self._sampleRunVanadiumDict = dict()  # Key: run number (int) / Value: vanadium run number (int)
         # vanadium GSAS file to vanadium run's mapping. Key = integer vanadium run number; Value = GSAS file name
@@ -59,6 +66,28 @@ class ProjectManager(object):
 
         self._dataFileDict[run_number] = (file_name, ipts_number)
         self._baseDataFileNameList.append(os.path.basename(file_name))
+
+        return
+
+    def add_reduced_workspace(self, ipts_number, run_number, workspace_name):
+        """
+        Add workspace containing reduced diffraction data to project
+        :param ipts_number:
+        :param run_number:
+        :param workspace_name:
+        :return:
+        """
+        # check inputs
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
+
+        # check workspace exising or not
+        if not mantid_helper.workspace_does_exist(workspace_name):
+            raise RuntimeError('Workspace {0} does not exist in Mantid ADS.'.format(workspace_name))
+
+        self._loadedDataDict[ipts_number, run_number] = workspace_name
 
         return
 
@@ -189,7 +218,9 @@ class ProjectManager(object):
         :return:
         """
         # Check input
-        assert isinstance(data_key, int) or isinstance(data_key, str), 'blabla 1119'
+        assert isinstance(data_key, int) or isinstance(data_key, str), 'Data key {0} must be either an integer or a ' \
+                                                                       'string but not a {1}.' \
+                                                                       ''.format(data_key, type(data_key))
         assert isinstance(bank_number, int), 'Bank number must be an integer.'
         assert isinstance(x_range, tuple) and len(x_range) == 2, 'X-range must be a 2-tuple.'
         assert isinstance(profile, str), 'Peak profile must be a string.'
@@ -235,37 +266,6 @@ class ProjectManager(object):
         # END-IF-ELSE
 
         return run_chopper
-
-    def get_data(self, data_key=None, data_file_name=None):
-        """ Get whole data set as a dictionary.  Each entry is of a bank
-        Requirements: data key or data file name is specified
-        Guarantees:
-        :param data_key: data key generated in Vdrive project
-        :param data_file_name: full path data file
-        :return:
-        """
-        # # Check requirements
-        # assert (data_key is None and data_file_name is None) is False, \
-        #     'Neither data key %s nor data file %s is given.' % (str(data_key), str(data_file_name))
-        # assert (data_key is not None and data_file_name is not None) is False, \
-        #     'Both data key and data file name are given.'
-        #
-        # # check and convert to data key
-        # if data_file_name is not None:
-        #     assert isinstance(data_file_name, str), 'blabla'
-        #     # TODO: make this to a method ???
-        #     data_key = get_data_key(data_file_name)
-        # else:
-        #     assert isinstance(data_key, str), 'blabla'
-        #
-        # # check existence
-        # if data_key not in self._dataWorkspaceDict:
-        #     raise KeyError('data key %s does not exist.' % data_key)
-        #
-        # # FIXME - data set dictionary can be retrieved from workspace long long time ago to save_to_buffer time
-        # data_set_dict = mantid_helper.get_data_from_workspace(self._dataWorkspaceDict[data_key], True)
-        #
-        # return True, data_set_dict
 
     def get_data_bank_list(self, data_key):
         """ Get bank information of a loaded data file (workspace)
@@ -476,6 +476,26 @@ class ProjectManager(object):
 
         return data_set
 
+    def get_reduced_workspace(self, ipts_number, run_number):
+        """
+        get the workspace KEY or name via IPTS number and run number
+        :except: RuntimeError if there is no workspace associated
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        workspace_name = None
+
+        if (ipts_number, run_number) in self._loadedDataDict:
+            workspace_name = self._loadedDataDict[ipts_number, run_number]
+        else:
+            workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=None, unit=None)
+
+        if workspace_name is None:
+            raise RuntimeError('There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
+
+        return workspace_name
+
     def get_reduced_run_history(self, run_number):
         """ Get the processing history of a reduced run
         :param run_number:
@@ -520,14 +540,22 @@ class ProjectManager(object):
         run_list.sort()
         return run_list
 
-    def getReducedRuns(self):
-        """ Get the the list of the reduced runs
-        
-        Return :: list of data file names 
+    def has_reduced_workspace(self, ipts_number, run_number):
         """
-        return self._myRunPdrDict.keys()
+        check whether a reduced workspace does exist in the workspaces managed by this ProjectManager.
+        the workspace should be either in reduction manager or extra _loadedDataDict
+        :return:
+        """
+        has_workspace = False
 
-    def has_run(self, run_number):
+        if self._reductionManager.has_run(run_number):
+            has_workspace = True
+        elif (ipts_number, run_number) in self._loadedDataDict:
+            has_workspace = True
+
+        return has_workspace
+
+    def has_run_information(self, run_number):
         """
         Purpose:
             Find out whether a run number is here
@@ -537,23 +565,12 @@ class ProjectManager(object):
 
         :return: boolean as has or not
         """
-        assert isinstance(run_number, int)
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         do_have = run_number in self._dataFileDict
 
         return do_have
-
-    def hasData(self, datafilename):
-        """ Check whether project has such data file 
-        """
-        if self._dataFileDict.count(datafilename) == 1:
-            # Check data set with full name
-            return True
-        elif self._baseDataFileNameList.count(datafilename) == 1:
-            # Check data set with base name
-            return True
-
-        return False
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -589,7 +606,7 @@ class ProjectManager(object):
         for run_number in sorted(run_number_list):
             assert isinstance(run_number, int),\
                 'run_number must be of type integer but not %s' % str(type(run_number))
-            if self.has_run(run_number) is False:
+            if self.has_run_information(run_number) is False:
                 # no run
                 raise RuntimeError('Run %d cannot be found.' % run_number)
             elif archivemanager.check_read_access(self.get_file_path(run_number)) is False:
@@ -619,36 +636,6 @@ class ProjectManager(object):
         """
         assert isinstance(project_name, str)
         self._name = project_name
-
-        return
-
-    def reduce_vanadium_runs(self):
-        """ Reduce vanadium runs
-        Purpose:
-            Get or reduce vanadium runs according to the runs that are flagged for reduction
-        Requirements:
-            There are some vanadium runs that can be found
-        Guarantees:
-            The corresponding vanadium runs are reduced with the proper binning parameters
-        :return:
-        """
-        # Check requirements
-        van_run_number_set = set()
-        for sample_run_number in self._sampleRunReductionFlagDict:
-            if self._sampleRunReductionFlagDict[sample_run_number] is True:
-                assert sample_run_number in self._sampleRunVanadiumDict
-                van_run_number = self._sampleRunVanadiumDict[sample_run_number]
-                van_run_number_set.add(van_run_number)
-        # END-FOR
-        assert len(van_run_number_set) > 0, 'There must be at least more than 1 vanadium runs for the sample runs.'
-
-        # Get binning parameters and decide whether to reduce or not
-        for van_run_number in van_run_number_set:
-            if self._vanadiumRunsManager.has(van_run_number) is False:
-                handler = self._reductionManager.reduce_sample_run(van_run_number)
-                self._vanadiumRunsManager.set_reduced_vanadium(handler)
-            # END-IF
-        # END-FOR
 
         return
     
@@ -695,7 +682,7 @@ class ProjectManager(object):
         :param record_file:
         :param sample_log_file:
         :param standard_sample_tuple: 3-tuple: (sample_name, sample_directory, sample_record_name)
-        :return:
+        :return: (boolean, message)
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
@@ -775,50 +762,6 @@ class ProjectManager(object):
 
         return status, err_msg
 
-    def save_time_segment(self, time_segment_list, ref_run_number, file_name):
-        """
-        :param time_segment_list:
-        :param ref_run_number:
-        :param file_name:
-        :return:
-        """
-        # TODO/ISSUE/51
-        # Check
-        assert isinstance(time_segment_list, list)
-        assert isinstance(ref_run_number, int) or ref_run_number is None
-        assert isinstance(file_name, str)
-
-        # Form Segments
-        run_start = self._mySlicingManager.get_run_start(ref_run_number, unit='second')
-
-        segment_list = list()
-        i_target = 1
-        for time_seg in time_segment_list:
-            if len(time_seg < 3):
-                tmp_target = '%d' % i_target
-                i_target += 1
-            else:
-                tmp_target = '%s' % str(time_seg[2])
-            tmp_seg = SampleLogHelper.TimeSegment(time_seg[0], time_seg[1], i_target)
-            segment_list.append(tmp_seg)
-        # END-IF
-
-        segment_list.sort()
-
-        # Check validity
-        num_seg = len(segment_list)
-        if num_seg >= 2:
-            prev_stop = segment_list[0].stop
-            for index in xrange(1, num_seg):
-                if prev_stop >= segment_list[index].start:
-                    return False, 'Overlapping time segments!'
-        # END-IF
-
-        # Write to file
-        SampleLogHelper.save_time_segments(file_name, segment_list, ref_run_number, run_start)
-
-        return
-
     def set_focus_calibration_file(self, focus_cal_file):
         """
         Set the time-focus calibration to reduction manager.
@@ -876,8 +819,10 @@ class ProjectManager(object):
         :param van_run_number:
         :return: None
         """
-        assert isinstance(run_number_list, list), 'blabla 129'
-        assert isinstance(van_run_number, int), 'blabla 129B'
+        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
+        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
+                                                ''.format(van_run_number, type(van_run_number))
 
         for run_number in run_number_list:
             self._sampleRunVanadiumDict[run_number] = van_run_number
@@ -924,13 +869,21 @@ class ProjectManager(object):
 
         return nxsfname
 
+    @property
+    def vanadium_processing_manager(self):
+        """
+        get the holder to the vanadium processing manager
+        :return:
+        """
+        return self._processVanadiumManager
+
 
 def get_data_key(file_name):
     """ Generate data key according to file name
     :param file_name:
     :return:
     """
-    # TODO/NOW - Doc!
-    assert isinstance(file_name, str)
+    assert isinstance(file_name, str), 'Input file name {0} must be a string but not a {1}.' \
+                                       ''.format(file_name, type(file_name))
 
     return os.path.basename(file_name)

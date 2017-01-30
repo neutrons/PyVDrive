@@ -1,4 +1,3 @@
-# TODO/ISSUE/55 - Docs..
 import numpy as np
 import mplgraphicsview
 
@@ -9,7 +8,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
     """
     def __init__(self, parent):
         """
-
+        An extension to the MplGraphicsView for plotting reduced run
         :param parent:
         """
         super(GeneralRunView, self).__init__(parent)
@@ -18,19 +17,45 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self._plotDimension = 1
         self._plotType = None
 
+        # dictionary
+        self._linesDict = dict()
+
+        # a record for min and max X and Y
+        self._maxX = None
+        self._maxY = None
+
         return
 
-    def plot_1d_data(self, vec_x, vec_y):
+    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key, title=''):
         """
-
+        plot a 1-D data set
         :param vec_x:
         :param vec_y:
+        :param x_unit:
+        :param label:
+        :param line_key:
+        :param title:
         :return:
         """
+        line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
+                                   x_label=x_unit, marker='.', color='red')
+        self.set_title(title)
+
+        # register
+        self._linesDict[line_key] = line_id
+
+        # record statistics
+        if self._maxX is None or vec_x[-1] > self._maxX:
+            self._maxX = vec_x[-1]
+
+        if self._maxY is None or np.max(vec_y) > self._maxY:
+            self._maxY = np.max(vec_y)
+
+        return line_id
 
     def plot_2d_contour(self, run_number_list, data_set_list):
         """
-
+        plot 2D contour figure
         :param run_number_list:
         :param data_set_list:
         :return:
@@ -77,5 +102,22 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         # set the target dimension
         self._plotDimension = target_dim
         self._plotType = target_type
+
+        return
+
+    def reset_1d_plots(self):
+        """
+        reset all 1D plots
+        :return:
+        """
+        # clear all lines
+        self.clear_all_lines()
+
+        # clear dictionary
+        self._linesDict.clear()
+
+        # reset X and Y
+        self._maxX = None
+        self._maxY = None
 
         return

@@ -15,6 +15,7 @@ except AttributeError:
         return s
         
 import gui.ui_GPView
+import vanadium_controller_dialog
 
 
 class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
@@ -25,14 +26,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        super(GeneralPurposedDataViewWindow, self).__init__(parent)
 
         # Parent & others
         self._myParent = parent
         self._myController = None
 
+        self._bankIDList = ['1', '2', 'All']
+
+        # Controlling data structure on lines that are plotted on graph
+        self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
+        self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
+
         # current status
-        self._iptsNumber = 0
+        self._iptsNumber = None
         self._runNumberList = None
 
         self._currRunNumber = None
@@ -45,15 +52,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._canvasDimension = 1
         self._plotType = None
 
-        self._bankIDList = ['1', '2', 'All']
-
-        # Controlling data structure on lines that are plotted on graph
-        self._linesDict = dict()  # key: tuple as run number and bank ID, value: line ID
-        self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
-
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
         self._mutexBankIDList = False
+
+        # data structure to manage the fitting result
+        self._stripBufferDict = dict()  # key = [self._iptsNumber, self._currRunNumber, self._currBank]
+        self._lastVanPeakStripWorkspace = None
+        self._smoothBufferDict = dict()
+        self._lastVanSmoothedWorkspace = None
+        self._vanStripPlotID = None
+        self._smoothedPlotID = None
 
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
@@ -91,6 +100,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_unit_changed)
 
+        # vanadium
+        self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_vanadium_dialog)
+
+        # sub window
+        self._vanadiumProcessDialog = None
+
         return
 
     def _init_widgets(self):
@@ -102,6 +118,68 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.addItem('1')
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
+
+    def add_data_set(self, ipts_number, run_number, controller_data_key):
+        """
+        add a new data set to this data viewer window
+        :param controller_data_key:
+        :return:
+        """
+        # return if the controller data key exist
+        if controller_data_key in self._reducedDataDict:
+            return
+
+        self._dataIptsRunDict[controller_data_key] = ipts_number, run_number
+
+        # show on the list: turn or and off mutex locks around change of the combo box contents
+        self._mutexRunNumberList = True
+        # clear existing runs
+        self.ui.comboBox_runs.addItem(str(controller_data_key))
+        # release mutex lock
+        self._mutexRunNumberList = False
+
+        # get reduced data set from controller
+        status, ret_obj = self._myController.get_reduced_data(controller_data_key,
+                                                              target_unit=self._currUnit)
+        # return if unable to get reduced data
+        if status is False:
+            raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
+                                                                                   ret_obj))
+        # add data set (arrays)
+        reduced_data_dict = ret_obj
+        assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+                                                    '' % type(reduced_data_dict)
+
+        # add the returned data objects to dictionary
+        self._reducedDataDict[controller_data_key] = reduced_data_dict
+
+        return controller_data_key
+
+    def add_run_numbers(self, run_number_list, clear_previous=False):
+        """
+        set run numbers to combo-box-run numbers
+        :param run_number_list:
+        :return:
+        """
+        assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
+                                                  '' % (str(run_number_list), type(run_number_list))
+
+        self._runNumberList = run_number_list[:]
+        self._runNumberList.sort()
+
+        # show on the list: turn or and off mutex locks around change of the combo box conents
+        self._mutexRunNumberList = True
+
+        # clear existing runs
+        if clear_previous:
+            self.ui.comboBox_runs.clear()
+        for run_number in self._runNumberList:
+            self.ui.comboBox_runs.addItem(str(run_number))
+
+        # release mutex lock
+        self._mutexRunNumberList = False
+
+        return
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -163,6 +241,23 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def do_launch_vanadium_dialog(self):
+        """
+        launch the vanadium run processing dialog
+        :return:
+        """
+        # launch vanadium dialog window
+        self._vanadiumProcessDialog = vanadium_controller_dialog.VanadiumProcessControlDialog(self)
+        self._vanadiumProcessDialog.show()
+
+        # get current workspace
+        current_run_ws = str(self.ui.comboBox_runs.currentText())
+        ipts_number, run_number = self._dataIptsRunDict[current_run_ws]
+
+        self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
+
+        return
+
     def doPlotRunSelected(self):
         """
         Plot the current run. The first choice is from the line edit. If it is blank,
@@ -177,7 +272,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             run_numbers = [int(self.ui.comboBox_runs.currentText())]
 
         over_plot = self.ui.checkBox_overPlot.isChecked()
-        # TODO/FIXME/1st: replace the following by a method as get_bank_ids() for 'All' case
+        # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
             self.plot_run(run_number, bank_id, over_plot)
@@ -245,7 +340,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get new bank ID
         new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
         if new_bank_str.isdigit() is False:
-            print '[DB] New bank ID %s is not an allowed integer.' % new_bank_str
+            print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
             return
 
         curr_bank_id = int(new_bank_str)
@@ -264,14 +359,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # Get the new run number
-        run_number = int(self.ui.comboBox_runs.currentText())
+        run_number = str(self.ui.comboBox_runs.currentText())
+        try:
+            run_number = int(run_number)
+            status, run_info = self._myController.get_reduced_run_info(run_number)
+            bank_id_list = run_info
+        except ValueError as value_err:
+            raise NotImplementedError('Unable to get run information from run {0} due to {1}'
+                                      ''.format(run_number, value_err))
         self._currRunNumber = run_number
-        status, run_info = self._myController.get_reduced_run_info(run_number)
+
         if status is False:
             GuiUtility.pop_dialog_error(self, run_info)
 
         # Re-set the spectra list combo box
-        bank_id_list = run_info
+
         if len(bank_id_list) != len(self._bankIDList) - 1:
             # different number of banks
             self.ui.comboBox_spectraList.clear()
@@ -306,9 +408,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Reset current unit
         self._currUnit = new_unit
-
-        # Clear the line dictionary
-        self._linesDict = dict()
 
         # Clear previous image and re-plot
         self.ui.graphicsView_mainPlot.clear_all_lines()
@@ -370,7 +469,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 return
             else:
                 # FIXME/TODO/ISSUE/55+ Make it robust
-                assert isinstance(ret_obj, dict), 'blabla xxx'
+                assert isinstance(ret_obj, dict), 'Returned object from get_reduced_chopped_data() must be a ' \
+                                                  'dictionary but not a {0}.'.format(type(ret_obj))
                 bank_data = ret_obj[bank_id-1]
                 vec_x = bank_data[0]
                 vec_y = bank_data[1]
@@ -465,7 +565,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """
         get reduced data in vectors of X and Y
-        :param run_number:
+        :param run_number: data key or run number
         :param bank_id:
         :param bank_id_from_1:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
@@ -516,6 +616,67 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
+    def plot_data(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False):
+        """
+        plot a spectrum in a workspace
+        :param data_key: key to find the workspace or the workspace name
+        :param bank_id:
+        :param label:
+        :param title:
+        :param clear_previous: flag to clear the plots on the current canvas
+        :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
+        :return:
+        """
+        # clear canvas
+        if clear_previous:
+            # clear canvas and set X limit to 0. and 1.
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        # check inputs
+        if is_workspace_name:
+            # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
+            status, ret_obj = self._myController.get_data_from_workspace(data_key,
+                                                                         bank_id=self._currBank,
+                                                                         target_unit=None,
+                                                                         starting_bank_id=1)
+            if not status:
+                err_msg = str(ret_obj)
+                GuiUtility.pop_dialog_error(self, err_msg)
+                return
+
+            data_set = ret_obj[0][bank_id]
+            vec_x = data_set[0]
+            vec_y = data_set[1]
+
+            current_unit = ret_obj[1]
+
+            if len(label) == 0:
+                # label is not given
+                label = 'Data {0} Bank {1}'.format(data_key, bank_id)
+
+        else:
+            if data_key not in self._reducedDataDict:
+                raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
+
+            # get data
+            vec_x = self._reducedDataDict[data_key][bank_id][0]
+            vec_y = self._reducedDataDict[data_key][bank_id][1]
+
+            if len(label) == 0:
+                # label is not given
+                label = "Run {0} bank {1}".format(data_key, bank_id)
+
+            current_unit = self._currUnit
+        # END-IF-ELSE
+
+        # plot
+        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
+                                                             line_key=data_key, title=title)
+
+        self.ui.graphicsView_mainPlot.auto_rescale()
+
+        return line_id
+
     def plot_run(self, run_number, bank_id, over_plot=False):
         """
         Plot a run on graph
@@ -548,17 +709,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._currRunNumber = run_number
         self._currBank = bank_id
 
-        # if previous image is not supposed to keep, then clear the holder
-        if over_plot is False:
-            self._linesDict = dict()
-
         # Plot the run
+        # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
         label = "run %d bank %d" % (run_number, bank_id)
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
         line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
                                                             x_label=self._currUnit, marker='.', color='red')
-        self._linesDict[(run_number, bank_id)] = line_id
+        # self._linesDict[(run_number, bank_id)] = line_id
 
         # Change label
         self.ui.label_currentRun.setText(str(run_number))
@@ -675,31 +833,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_run_numbers(self, run_number_list, clear_previous=False):
+    def set_title(self, title):
         """
-        set run numbers to combo-box-run numbers
-        :param run_number_list:
+        blalba
+        :param title:
         :return:
         """
-        assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
-                                                  '' % (str(run_number_list), type(run_number_list))
-
-        self._runNumberList = run_number_list[:]
-        self._runNumberList.sort()
-
-        # show on the list: turn or and off mutex locks around change of the combo box conents
-        self._mutexRunNumberList = True
-
-        # clear existing runs
-        if clear_previous:
-            self.ui.comboBox_runs.clear()
-        for run_number in self._runNumberList:
-            self.ui.comboBox_runs.addItem(str(run_number))
-
-        # release mutex lock
-        self._mutexRunNumberList = False
-
-        return
+        self.ui.label_currentRun.setText(title)
 
     def setup(self, controller):
         """ Set up the GUI from controller
@@ -716,5 +856,148 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_runs.clear()
         for run_number in reduced_run_number_list:
             self.ui.comboBox_runs.addItem(str(run_number))
+
+        return
+
+    def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
+        """
+        save GSAS file
+        :param output_file_name:
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        van_info_tuple = (self._lastVanSmoothedWorkspace, ipts_number, run_number)
+        # convert string
+        output_file_name = str(output_file_name)
+
+        status, error_message = self._myController.save_processed_vanadium(van_info_tuple, output_file_name)
+        if not status:
+            GuiUtility.pop_dialog_error(self, error_message)
+
+        return
+
+    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
+        """
+        process the signal to strip vanadium peaks
+        :param peak_fwhm:
+        :param tolerance:
+        :param background_type:
+        :param is_high_background:
+        :return:
+        """
+        # from signal, the string is of type unicode.
+        background_type = str(background_type)
+
+        # note: as it is from a signal with defined parameters types, there is no need to check
+        #       the validity of parameters
+
+        # strip vanadium peaks
+        if self._currRunNumber is None:
+            data_key = str(self.ui.comboBox_runs.currentText())
+        else:
+            data_key = None
+
+        status, ret_obj = self._myController.strip_vanadium_peaks(self._iptsNumber, self._currRunNumber,
+                                                                  peak_fwhm, tolerance,
+                                                                  background_type, is_high_background,
+                                                                  data_key)
+        if status:
+            result_ws_name = ret_obj
+        else:
+            err_msg = ret_obj
+            GuiUtility.pop_dialog_error(self, err_msg)
+            return
+
+        # plot the data without vanadium peaks
+        #
+        self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
+                                              label='Vanadium peaks striped',
+                                              clear_previous=True, is_workspace_name=True)
+
+        if self._iptsNumber is None:
+            self._lastVanPeakStripWorkspace = result_ws_name
+        else:
+            self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
+
+        return
+
+    def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
+        """
+        process the signal to smooth vanadium spectra
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :return:
+        """
+        # convert smooth_type to string from unicode
+        smoother_type = str(smoother_type)
+
+        # get the input workspace
+        if self._iptsNumber is None:
+            van_peak_removed_ws = self._lastVanPeakStripWorkspace
+        else:
+            van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
+        status, ret_obj = self._myController.smooth_diffraction_data(workspace_name=van_peak_removed_ws,
+                                                                     bank_id=None,
+                                                                     smoother_type=smoother_type,
+                                                                     param_n=param_n,
+                                                                     param_order=param_order,
+                                                                     start_bank_id=1)
+        if status:
+            smoothed_ws_name = ret_obj
+            if self._iptsNumber is None:
+                self._lastVanSmoothedWorkspace = smoothed_ws_name
+            else:
+                self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
+        else:
+            err_msg = ret_obj
+            GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
+            return
+
+        # plot data: the unit is changed to TOF due to Mantid's behavior
+        label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
+                ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
+        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=True,
+                       is_workspace_name=True)
+
+        return
+
+    def signal_undo_strip_van_peaks(self):
+        """
+        undo the strip vanadium peak action, i.e., delete the previous result and remove the plot
+        :return:
+        """
+        if self._vanStripPlotID is None:
+            print '[INFO] There is no vanadium-peak-removed spectrum to remove from canvas.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(line_id=self._vanStripPlotID)
+        self._vanStripPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_peak_strip()
+
+        return
+
+    def signal_undo_smooth_vanadium(self):
+        """
+        undo the smoothing operation on the spectrum including
+        1. delete the result
+        2. remove the smoothed plot
+        :return:
+        """
+        # return if there is no such action before
+        if self._smoothedPlotID is None:
+            print '[INFO] There is no smoothed spectrum to undo.'
+            return
+
+        # remove the plot
+        self.ui.graphicsView_mainPlot.remove_line(self._vanStripPlotID)
+        self._smoothedPlotID = None
+
+        # undo in the controller
+        self._myController.undo_vanadium_smoothing()
 
         return

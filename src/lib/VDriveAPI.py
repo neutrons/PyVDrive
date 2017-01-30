@@ -200,7 +200,6 @@ class VDriveAPI(object):
         # sort the list again with peak positions...
         peak_pos_list = ref_dict.keys()
         peak_pos_list.sort()
-        print '[DB] List of peak positions: ', peak_pos_list
         curr_list = None
         curr_pos = -1
         for peak_pos in peak_pos_list:
@@ -215,14 +214,11 @@ class VDriveAPI(object):
         # END-FOR
 
         # Convert from dictionary to list as 2-tuples
-
-        print '[DB-BAT] List of final reflections:', type(ref_dict)
         d_list = ref_dict.keys()
         d_list.sort(reverse=True)
         reflection_list = list()
         for peak_pos in d_list:
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
-            print '[DB-BAT] d = %f\treflections: %s' % (peak_pos, str(ref_dict[peak_pos]))
 
         return reflection_list
 
@@ -575,6 +571,30 @@ class VDriveAPI(object):
 
         return binned_dir
 
+    @staticmethod
+    def get_data_from_workspace(workspace_name, bank_id=None, target_unit='dSpacing', starting_bank_id=1):
+        """
+        get data from a workspace
+        :param workspace_name:
+        :param bank_id:
+        :param target_unit:
+        :param starting_bank_id: lowest bank ID
+        :return: 2-tuple as (boolean, returned object); boolean as status of executing the method
+                 if status is False, returned object is a string for error message
+                 if status is True and Bank ID is None: returned object is a dictionary with all Bank IDs
+                 if status is True and Bank ID is not None: returned object is a dictionary with the specified bank ID.
+                 The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
+        """
+        try:
+            data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name,
+                                                                             bank_id=bank_id,
+                                                                             target_unit=target_unit,
+                                                                             start_bank_id=starting_bank_id)
+        except RuntimeError as run_err:
+            return False, str(run_err)
+
+        return True, (data_set_dict, curr_unit)
+
     def get_data_root_directory(self, throw=False):
         """ Get root data directory such as /SNS/VULCAN
         :return: data root directory, such as /SNS/VULCAN/ or None if throw is False
@@ -615,14 +635,10 @@ class VDriveAPI(object):
 
     def get_ipts_config(self, ipts=None):
         """
-
-        :param ipts:
+        get the IPTS configuration
+        :param ipts: IPTS number; if None, then it stands for the case as local data reduction
         :return:
         """
-        # TODO/NOW - Doc
-
-        print '[DB-BAT] IPTS config dict = ', self._iptsConfigDict
-
         if ipts is None:
             if len(self._iptsConfigDict) == 0:
                 return [None, None]
@@ -700,8 +716,6 @@ class VDriveAPI(object):
         :param standard_sns_file:
         :return:
         """
-        print '[DB...BAT] Archive key = ', archive_key
-
         # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
                                                                        standard_sns_file)
@@ -738,8 +752,6 @@ class VDriveAPI(object):
         # END-IF
         run_time_list.sort()
 
-        print '[DB....BAT] Run-Time List: Size = ', len(run_time_list)
-
         # return
         return run_time_list[0], run_time_list[-1]
 
@@ -774,13 +786,12 @@ class VDriveAPI(object):
 
     def get_runs(self, start_run=None, end_run=None):
         """
-
+        get the run (information) within a range
         :param start_run:
         :param end_run:
-        :return:
+        :return: 2-tuple.  boolean as status, list of run information
         """
         run_list = self._myProject.get_runs()
-        print '[DB...BAT] run_list: ', run_list
 
         # Determine index of start run and end run
         try:
@@ -1193,6 +1204,85 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
+    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file):
+        """
+        Load vanadium runs
+        :param ipts_number:
+        :param run_number:
+        :param use_reduced_file:
+        :return: 2-tuple.  boolean/string
+        """
+        van_file_name = None
+
+        # highest priority: load data from
+        if use_reduced_file:
+            # search reduced GSAS file
+            try:
+                van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+            except RuntimeError as run_err:
+                print '[WARNING]: {0}'.format(run_err)
+                van_file_name = None
+        # END-IF
+
+        if van_file_name is None:
+            # if vanadium gsas file is not found, reduce it
+            nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+            self._myProject.add_run(run_number, nxs_file, ipts_number)
+            reduced, message = self._myProject.reduce_runs([run_number], output_directory=self._myWorkDir,
+                                                           vanadium=False)
+            if not reduced:
+                return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
+                              ''.format(run_number, ipts_number, message)
+            else:
+                van_ws_key = self._myProject.reduction_manager.get_reduced_run(ipts_number, run_number)
+            # END-IF
+        else:
+            # load vanadium file
+            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
+            self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
+
+        return True, van_ws_key
+
+    def process_vanadium_run(self, ipts_number, run_number, use_reduced_file,
+                             one_bank=False, do_shift=False, local_output=None):
+        """
+        process vanadium runs
+        :param ipts_number:
+        :param run_number:
+        :param use_reduced_file:
+        :param one_bank:
+        :param do_shift:
+        :param local_output:
+        :return:
+        """
+        try:
+            # get reduced vanadium file
+            status, ret_str = self.load_vanadium_run(ipts_number=ipts_number, run_number=run_number,
+                                                     use_reduced_file=use_reduced_file)
+            if status:
+                van_ws_key = ret_str
+            else:
+                return False, 'Unable to load vanadium run {0} due to {1}.'.format(run_number, ret_str)
+
+            # process vanadium
+            self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
+            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
+
+            if do_shift:
+                # TODO/ISSUE/59 - Implement
+                self._myProject.vanadium_processing_manager.apply_shift(van_ws_key)
+
+            if one_bank:
+                # merge the result to 1 bank
+                # TODO/TEST/ISSUE/NOW - Test & remove the debug data
+                self._myProject.vanadium_processing_manager.merge_processed_vanadium(save=True, to_archive=True,
+                                                                                     local_file_name=local_output)
+
+        except RuntimeError as run_err:
+            return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
+
+        return True, 'Vanadium process is successful.'
+
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
         Read (partially) MTS file
@@ -1234,6 +1324,21 @@ class VDriveAPI(object):
         self._currentMTSLogFileName = log_file_name
 
         return
+
+    def save_processed_vanadium(self, van_info_tuple, output_file_name):
+        """
+        save the processed vanadium to a GSAS file
+        :param ipts_number:
+        :param run_number:
+        :param output_file_name:
+        :return: 2-tuple (boolean, str)
+        """
+        # TODO/FIXME/ISSUE/59 - parameter check
+        result = self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
+                                                                                   to_archive=False,
+                                                                                   out_file_name=output_file_name)
+
+        return result
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1289,14 +1394,17 @@ class VDriveAPI(object):
 
         return
 
-    def save_time_segment(self, time_segment_list, ref_run_number, file_name):
+    def save_time_segment(self, ipts_number, run_number, time_segment_list, file_name):
         """
+        save the time segments
+        :param ipts_number:
+        :param run_number:
         :param time_segment_list:
-        :param ref_run_number:
+        :param run_number:
         :param file_name:
         :return:
         """
-        chopper = self._myProject.get_chopper(ref_run_number)
+        chopper = self._myProject.get_chopper(run_number)
         chopper.save_time_segment(time_segment_list, file_name)
 
         return
@@ -1408,37 +1516,18 @@ class VDriveAPI(object):
         :param van_run_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'blabla 134'
-        assert isinstance(van_run_number, int), 'blabla 135'
-        assert isinstance(run_number_list, list), 'blabla 135B'
+        assert isinstance(ipts_number, int), 'ITPS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(van_run_number, int), 'Vanadium run number {0} must be an integer but not {1}.' \
+                                                ''.format(van_run_number, type(van_run_number))
+        assert isinstance(run_number_list, list), 'Run number list {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
         file_exist, van_file_name = self._myArchiveManager.locate_vanadium_gsas_file(ipts_number, van_run_number)
         if not file_exist:
             return False, 'Unable to locate vanadium GSAS file'
 
         self._myProject.set_vanadium_runs(run_number_list, van_run_number, van_file_name)
-
-        return
-
-    def set_vanadium_calibration_files(self, run_numbers, vanadium_file_names):
-        """
-        Purpose:
-
-        Requirements:
-            1. run_numbers is list of integers
-            2. vanadium_file_names is a list of string
-            3. size of run_numbers is equal to size of vanadium file names
-        Guarantees:
-            1. vanadium calibration file is linked to run number in myProject
-        :param run_numbers:
-        :param vanadium_file_names:
-        :return:
-        """
-        # TODO/NOW/COMPLETE
-
-        # Check requirements
-
-        # Set pair by pair
 
         return
 
@@ -1471,3 +1560,109 @@ class VDriveAPI(object):
             self._myWorkDir = work_dir
 
         return True, ''
+
+    def smooth_diffraction_data(self, workspace_name, bank_id=None,
+                                smoother_type='Butterworth', param_n=20, param_order=2,
+                                start_bank_id=1):
+        """
+        smooth spectra of focused diffraction data
+        :param workspace_name:
+        :param bank_id:
+        :param smoother_type:
+        :param param_n:
+        :param param_order:
+        :param start_bank_id:
+        :return:
+        """
+        try:
+            if bank_id is None:
+                # smooth all spectra
+                workspace_index = None
+            else:
+                # smooth one spectrum
+                assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
+                                                 ''.format(bank_id, type(bank_id))
+                assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
+                                                       ''.format(start_bank_id, type(start_bank_id))
+
+                workspace_index = bank_id - start_bank_id
+            # END-IF
+
+            smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
+                workspace_index=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
+
+        except RuntimeError as run_err:
+            return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
+
+        return True, smoothed_ws_name
+
+    def strip_vanadium_peaks(self, ipts_number, run_number, peak_fwhm,
+                             peak_pos_tolerance, background_type, is_high_background,
+                             workspace_name):
+        """
+        strip vanadium peaks.
+        This method supports 2 type of inputs
+         (1) IPTS and run number;
+         (2) workspace name
+        :param ipts_number:
+        :param run_number:
+        :param peak_fwhm:
+        :param peak_pos_tolerance:
+        :param background_type:
+        :param is_high_background:
+        :param workspace_name:
+        :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
+        """
+        # get workspace name
+        if workspace_name is None:
+            # get workspace (key) from IPTS number and run number
+            assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
+            assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
+            if not self._myProject.has_reduced_workspace(ipts_number, run_number):
+                error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
+                                ''.format(ipts_number, run_number)
+                return False, error_message
+
+            workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
+        # END-IF
+
+        # call for strip vanadium peaks
+        out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
+                                                                              background_type, is_high_background,
+                                                                              workspace_name=workspace_name)
+
+        return True, out_ws_name
+
+    def undo_vanadium_peak_strip(self, ipts_number=None, run_number=None):
+        """
+        undo the peak strip operation on vanadium peaks
+        :param ipts_number: if both IPTS and run number are defined, then
+        :param run_number:
+        :return:
+        """
+        if ipts_number is not None and run_number is not None:
+            if not self._myProject.vanadium_processing_manager.check_ipts_run(ipts_number, run_number):
+                raise RuntimeError('Current vanadium processing manager does not work on IPTS {0} Run {1}'
+                                   ''.format(ipts_number, run_number))
+        # END-IF
+
+        self._myProject.vanadium_processing_manager.undo_peak_strip()
+
+        return
+
+    def undo_vanadium_smoothing(self, ipts_number=None, run_number=None):
+        """
+        undo the smoothing operation on vanadium peaks
+        :param ipts_number: if both IPTS and run number are defined, then
+        :param run_number:
+        :return:
+        """
+        if ipts_number is not None and run_number is not None:
+            if not self._myProject.vanadium_processing_manager.check_ipts_run(ipts_number, run_number):
+                raise RuntimeError('Current vanadium processing manager does not work on IPTS {0} Run {1}'
+                                   ''.format(ipts_number, run_number))
+        # END-IF
+
+        self._myProject.vanadium_processing_manager.undo_smooth()
+
+        return

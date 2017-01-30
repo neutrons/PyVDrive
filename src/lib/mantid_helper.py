@@ -83,34 +83,58 @@ def delete_workspace(workspace):
     return
 
 
-def find_peaks(diff_data, peak_profile, auto):
-    """ Use FindPeaks() to find peaks in a given diffraction pattern
+def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
+               min_peak_height = 200,
+               peak_pos_list=None):
+    """
+    Use FindPeaks() to find peaks in a given diffraction pattern
+    :param diff_data: diffraction data in workspace
+    :param peak_profile: specified peak profile
+    :param auto: auto find peak profile or
+    :return:
+    """
+
+    """ Use
     :param diff_data:
     :param peak_profile:
     :param auto:
     :return: List of tuples for peak information. Tuple = (peak center, height, width)
     """
-    #mantidapi.FindPeaks(InputWorkspace=diff_data, # '82403_gda',
-    #                    WorkspaceIndex=1,
-    #                    BackgroundType='Quadratic',
-    #                    PeaksList='peaks')
+    # check inputs
+    assert ADS.doesExist(diff_data), 'Input workspace {0} does not exist in Mantid AnalysisDataService.' \
+                                     ''.format(diff_data)
+    matrix_workspace = ADS.retrieve(diff_data)
+    assert isinstance(ws_index, int) and 0 <= ws_index < matrix_workspace.getNumberHistograms(), \
+        'Workspace index {0} must be an integer in [0, {1}).'.format(ws_index, matrix_workspace.getNumberHistograms())
 
-    # TODO/NOW/ISSUE/57 - Make it work in the code! and more ...
+    # define output workspace name
+    result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
 
-    ws_index = 0
-    out_ws_name = '70269_gda_peaks'
-    min_peak_height = 200
-    peak_profile = 'Gaussian'
+    # call Mantid
+    arg_dict = {'InputWorkspace': diff_data,
+                'WorkspaceIndex': ws_index,
+                'HighBackground': is_high_background,
+                'PeaksList': result_peak_ws_name,
+                'MinimumPeakHeight': min_peak_height,
+                'PeakFunction': peak_profile,
+                'BackgroundType': background_type
+                }
+    mantidapi.FindPeaks(**arg_dict)
 
-    mantidapi.FindPeaks(InputWorkspace=diff_data,
-                        WorkspaceIndex=ws_index,
-                        HighBackground=False,
-                        PeaksList=out_ws_name,
-                        MinimumPeakHeight=min_peak_height,
-                        PeakFunction=peak_profile,
-                        BackgroundType='Linear')
+    # check
+    if ADS.doesExist(result_peak_ws_name):
+        peak_ws = mantidapi.AnalysisDataService.retrieve(result_peak_ws_name)
+    else:
+        raise RuntimeError('Failed to find peaks.')
 
-    peak_ws = mantidapi.AnalysisDataService.retrieve(out_ws_name)
+    # mantidapi.FindPeaks(InputWorkspace=diff_data,
+    #                     WorkspaceIndex=ws_index,
+    #                     HighBackground=False,
+    #                     PeaksList=out_ws_name,
+    #                     MinimumPeakHeight=min_peak_height,
+    #                     PeakFunction=peak_profile,
+    #                     BackgroundType='Linear')
+
 
     # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()
@@ -437,7 +461,8 @@ def get_data_from_gsas(gsas_file_name):
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
     # check input
-    assert isinstance(gsas_file_name, str), 'blabla 1710'
+    assert isinstance(gsas_file_name, str), 'Input GSAS file name {0} must be an integer but not a {1}.' \
+                                            ''.format(gsas_file_name, type(gsas_file_name))
 
     # get output workspace name
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
@@ -445,8 +470,8 @@ def get_data_from_gsas(gsas_file_name):
     # load GSAS file
     load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
 
-    data_set_dict = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
-                                            start_bank_id=True)
+    data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
+                                                  start_bank_id=True)
 
     return data_set_dict
 
@@ -459,7 +484,8 @@ def get_data_banks(workspace_name, start_bank_id=1):
     :return:
     """
     # Requirements
-    assert isinstance(workspace_name, str), 'blabla 610Night'
+    assert isinstance(workspace_name, str), 'Input workspace name {0} must be a string but not a {1}.' \
+                                            ''.format(workspace_name, type(workspace_name))
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
 
     workspace = retrieve_workspace(workspace_name)
@@ -470,61 +496,103 @@ def get_data_banks(workspace_name, start_bank_id=1):
     return bank_list
 
 
-def get_data_from_workspace(workspace_name, target_unit, point_data=True, start_bank_id=1):
+def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
-    Requirements: a valid matrix workspace is given
-    Guarantees: transform all the data to 1-dimension arrays.
+    Requirements: a valid matrix workspace is given.
+    Guarantees: transform all the data to 1-dimension arrays.   If the current unit is not same as target unit,
+                then the workspace's unit will be converted
     :param workspace_name:
-    :param target_unit:
+    :param bank_id: integer, ID of the bank to get data from; If left None, then return all banks
+    :param target_unit: TOF or dSpacing or None (i.e., using current one)
     :param point_data: If point data is true, then the output arrays must have equal sizes of x and y arrays
-    :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
+    :param start_bank_id:
+    :return: a 2-tuple:
+             (1) a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
+             (2) unit of the returned data
     """
-    # Requirements
+    # check requirements by asserting
     assert isinstance(workspace_name, str) and isinstance(point_data, bool)
     assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+    assert isinstance(target_unit, str) or target_unit is None,\
+        'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
+    assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
+        'Start-Bank-ID {0} must be a non-negetive integer but not {1}.' \
+        ''.format(start_bank_id, type(start_bank_id))
 
-    assert isinstance(target_unit, str) and target_unit in ['TOF', 'dSpacing'], 'blabla 1104'
+    # check bank ID not being None
+    workspace = ADS.retrieve(workspace_name)
+    if bank_id is not None:
+        assert isinstance(bank_id, int), 'Bank ID {0} must be None or integer but not {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        required_workspace_index = bank_id - start_bank_id
+        if not 0 <= required_workspace_index < workspace.getNumberHistograms():
+            raise RuntimeError('Bank ID {0}, aka workspace index {1} is out of spectra of workspace {2}.'
+                               ''.format(bank_id, required_workspace_index, workspace_name))
+    else:
+        required_workspace_index = None
+    # END-IF-ELSE
 
     # get unit
     current_unit = get_workspace_unit(workspace_name)
-    if current_unit != target_unit:
-        mantidapi.ConvertUnit(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
-                              Target=target_unit)
+    if current_unit != target_unit and target_unit is not None:
+        # convert unit if the specified target unit is different
+        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+                               Target=target_unit)
+        current_unit = target_unit
+    # END-IF
 
     # Convert to point data
-    workspace = mantid.AnalysisDataService.retrieve(workspace_name)
+    workspace = ADS.retrieve(workspace_name)
     if point_data is True and workspace.isHistogramData():
         mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
                                      OutputWorkspace=workspace_name)
+    # END-IF
 
     # Set up variables
     data_set_dict = dict()
     workspace = retrieve_workspace(workspace_name)
     
-    # Get data
-    num_spec = workspace.getNumberHistograms()
-    
-    for i_ws in xrange(num_spec):
-        vec_x = workspace.readX(i_ws)
+    # Get data: 2 cases as 1 bank or all banks
+    if bank_id is None:
+        # all banks
+        num_spec = workspace.getNumberHistograms()
+        for i_ws in xrange(num_spec):
+            vec_x = workspace.readX(i_ws)
+            size_x = len(vec_x)
+            vec_y = workspace.readY(i_ws)
+            size_y = len(vec_y)
+            vec_e = workspace.readE(i_ws)
+
+            data_x = numpy.ndarray((size_x,), 'float')
+            data_y = numpy.ndarray((size_y,), 'float')
+            data_e = numpy.ndarray((size_y,), 'float')
+
+            data_x[:] = vec_x[:]
+            data_y[:] = vec_y[:]
+            data_e[:] = vec_e[:]
+
+            data_set_dict[i_ws + start_bank_id] = (data_x, data_y, data_e)
+        # END-FOR
+    else:
+        # specific bank
+        vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
-        vec_y = workspace.readY(i_ws)
+        vec_y = workspace.readY(required_workspace_index)
         size_y = len(vec_y)
-        vec_e = workspace.readE(i_ws)
-    
+        vec_e = workspace.readE(required_workspace_index)
+
         data_x = numpy.ndarray((size_x,), 'float')
         data_y = numpy.ndarray((size_y,), 'float')
         data_e = numpy.ndarray((size_y,), 'float')
-    
+
         data_x[:] = vec_x[:]
         data_y[:] = vec_y[:]
         data_e[:] = vec_e[:]
+
+        data_set_dict[bank_id] = (data_x, data_y, data_e)
     
-        data_set_dict[i_ws + start_bank_id] = (data_x, data_y, data_e)
-    
-    # END-FOR
-    
-    return data_set_dict
+    return data_set_dict, current_unit
 
 
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
@@ -595,7 +663,7 @@ def get_workspace_unit(workspace_name):
     :return:
     """
     assert isinstance(workspace_name, str) and len(workspace_name) > 0
-    assert ADS.doesExist(workspace_name), 'blabla %s not' % workspace_name
+    assert ADS.doesExist(workspace_name), 'Workspace {0} cannot be found in ADS.'.format(workspace_name)
 
     workspace = ADS.retrieve(workspace_name)
 
@@ -624,7 +692,7 @@ def retrieve_workspace(ws_name):
     assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
                                                                                                   str(type(ws_name)))
 
-    if mantid.AnalysisDataService.doesExist(ws_name) is False:
+    if ADS.doesExist(ws_name) is False:
         return None
 
     return mantidapi.AnalysisDataService.retrieve(ws_name)
@@ -763,80 +831,6 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 
 
-def mtd_align_and_focus(event_ws_name, reduction_parameters, group_ws_name, offset_ws_name, cal_ws_name):
-    """ Align and focus raw event workspaces: the original workspace will be replaced
-    Purpose:
-        Run Mantid.AlignAndFocus() by current parameters
-    Requirements:
-        Input event_wksp is not None
-        Output workspace name is string
-        All requirements for align and focus in Mantid is satisifed
-    Guarantees:
-        Event workspace is reduced
-    :param event_ws_name:
-    :param reduction_parameters:
-    :param group_ws_name:
-    :param offset_ws_name:
-    :return: focused event workspace
-    """
-    # FIXME/TODO/NOW/40 Make PowderReductionParameters a new module
-    from reductionmanager import PowderReductionParameters
-
-    # Check requirement
-    assert isinstance(event_ws_name, str)
-    event_ws = retrieve_workspace(event_ws_name)
-    
-    assert event_ws.id() == EVENT_WORKSPACE_ID, \
-        'Input must be an EventWorkspace for align and focus. Current input is %s' % event_ws.id()
-    assert isinstance(reduction_parameters, PowderReductionParameters), \
-        'Input parameter must be of an instance of PowderReductionParameters'
-    
-    assert isinstance(group_ws_name, str)
-    assert workspace_does_exist(group_ws_name)
-    assert isinstance(offset_ws_name, str)
-    assert workspace_does_exist(offset_ws_name)
-    
-    # Execute algorithm AlignAndFocusPowder()
-    # Unused properties: DMin, DMax, TMin, TMax, MaskBinTable,
-    user_geometry_dict = dict()
-    if reduction_parameters.min_tof is None or reduction_parameters.max_tof is None:
-        # if TOF range is not set up, use default min and max
-        user_geometry_dict['DMin'] = 0.5
-        user_geometry_dict['DMax'] = 5.5
-    
-    # FIXME - Need to find out what it is in __snspowderreduction
-    mantidapi.AlignAndFocusPowder(InputWorkspace=event_ws_name,
-                                  OutputWorkspace=event_ws_name,   # in-place align and focus
-                                  GroupingWorkspace=group_ws_name,
-                                  OffsetsWorkspace=offset_ws_name,
-                                  CalibrationWorkspace=cal_ws_name,
-                                  MaskWorkspace=None,  # FIXME - NO SURE THIS WILL WORK!
-                                  Params=reduction_parameters.form_binning_parameter(),
-                                  PreserveEvents=reduction_parameters.preserve_events,
-                                  RemovePromptPulseWidth=0,  # Fixed to 0
-                                  CompressTolerance=reduction_parameters.compress_tolerance,
-                                  # 0.01 as default
-                                  Dspacing=True,            # fix the option
-                                  UnwrapRef=0,              # do not use = 0
-                                  LowResRef=0,              # do not use  = 0
-                                  CropWavelengthMin=0,      # no in use = 0
-                                  CropWavelengthMax=0,
-                                  LowResSpectrumOffset=-1,  # powgen's option. not used by vulcan
-                                  PrimaryFlightPath=43.753999999999998,
-                                  SpectrumIDs='1,2',
-                                  L2='2.00944,2.00944',
-                                  Polar='90.122,90.122',
-                                  Azimuthal='0,0',
-                                  ReductionProperties='__snspowderreduction',
-                                  **user_geometry_dict)
-    
-    # Check
-    out_ws = retrieve_workspace(event_ws_name)
-    assert out_ws is not None
-    
-    return True
-
-
 def mtd_compress_events(event_ws_name, tolerance=0.01):
     """ Call Mantid's CompressEvents algorithm
     :param event_ws_name:
@@ -863,7 +857,7 @@ def mtd_convert_units(ws_name, target_unit):
     """
     Convert the unit of a workspace.
     Guarantees: if the original workspace is point data, then the output must be point data
-    :param event_ws_name:
+    :param ws_name:
     :param target_unit:
     :return:
     """
@@ -958,7 +952,7 @@ def mtd_normalize_by_current(event_ws_name):
     return
 
 
-def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
+def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
     """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
     Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
     Requirements:
@@ -975,23 +969,29 @@ def mtd_save_vulcan_gss(source_ws_name, out_gss_file, ipts, binning_reference_fi
     :return:
     """
     # Check requirements
-    assert isinstance(source_ws_name, str)
+    assert isinstance(source_ws_name, str), 'source workspace name blabla'
     src_ws = retrieve_workspace(source_ws_name)
-    assert src_ws.getNumberHistograms() < 10
+    assert src_ws.getNumberHistograms() < 10, 'blabla'
     
-    assert isinstance(out_gss_file, str)
+    assert isinstance(out_gss_file, str), 'out gss blabla'
     assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-    assert isinstance(binning_reference_file, str)
-    assert os.path.exists(binning_reference_file)
-    assert isinstance(gss_parm_file, str)
+    assert isinstance(binning_reference_file, str), 'blabla333'
+    if len(binning_reference_file) > 0:
+        assert os.path.exists(binning_reference_file), 'blabla444'
+    assert isinstance(gss_parm_file, str), 'blabla555'
     
     final_ws_name = source_ws_name + '_IDL'
+
+    source_ws = ADS.retrieve(source_ws_name)
+    if not source_ws.isHistogramData():
+        mantidapi.ConvertToHistogram(InputWorkspace=source_ws_name,
+                                     OutputWorkspace=source_ws_name)
     
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
                             BinFilename=binning_reference_file,
                             OutputWorkspace=final_ws_name,
-                            GSSFilename=gss_parm_file,
-                            IPTS = ipts,
+                            GSSFilename=out_gss_file,
+                            IPTS=ipts,
                             GSSParmFilename=gss_parm_file)
 
     return
@@ -1097,6 +1097,129 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     return True, ret_obj
 
 
+def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,
+                    smooth_filter='Butterworth', param_n=20, param_order=2):
+    """
+    Use Mantid FFTSmooth to smooth vanadium diffraction data
+    :except: RuntimeError if failed to execute. AssertionError if input is wrong
+
+    :param input_workspace:
+    :param output_workspace:
+    :param workspace_index:
+    :param smooth_filter:
+    :param param_order:
+    :param param_n:
+    :return: output workspace name if
+    """
+    # check inputs
+    assert smooth_filter in ['Butterworth', 'Zeroing'], 'Smooth filter {0} is not supported.'.format(smooth_filter)
+    assert isinstance(input_workspace, str), 'Input workspace name {0} must be a string but not a {1}.' \
+                                             ''.format(input_workspace, type(input_workspace))
+    assert workspace_does_exist(input_workspace), 'Input workspace {0} cannot be found in Mantid ADS.' \
+                                                  ''.format(input_workspace)
+    assert isinstance(param_order, int), 'Smoothing parameter "order" must be an integer.'
+    assert isinstance(param_n, int), 'Smoothing parameter "n" must be an integer.'
+
+    # get output workspace
+    if output_workspace is None:
+        output_workspace = '{0}_{1}_{2}_{3}'.format(input_workspace, smooth_filter, param_n, param_order)
+
+    # check input workspace's unit and convert to TOF if needed
+    if get_workspace_unit(input_workspace) != 'TOF':
+        mtd_convert_units(input_workspace, 'TOF')
+
+    # smooth
+    if smooth_filter == 'Zeroing':
+        smooth_params = '{0}'.format(param_n)
+    else:
+        smooth_params = '{0},{1}'.format(param_n, param_order)   # default '20, 2'
+
+    if workspace_index is None:
+        try:
+            mantidapi.FFTSmooth(InputWorkspace=input_workspace,
+                                OutputWorkspace=output_workspace,
+                                Filter=smooth_filter,
+                                Params=smooth_params,
+                                IgnoreXBins=True,
+                                AllSpectra=True)
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to smooth all spectra of workspace {0} due to {1}.'
+                               ''.format(input_workspace, run_err))
+    else:
+        # do for one specific workspace
+        assert isinstance(workspace_index, int), 'Workspace index {0} must be an integer but not a {1}.' \
+                                                 ''.format(workspace_index, type(workspace_index))
+        input_ws = ADS.retrieve(input_workspace)
+        if not 0 <= workspace_index < input_ws.getNumberHistograms():
+            raise RuntimeError('Workspace index {0} is out of range [0, {0}).'
+                               ''.format(workspace_index, input_ws.getNumberHistograms()))
+        try:
+            mantidapi.FFTSmooth(InputWorkspace=input_workspace,
+                                OutputWorkspace=output_workspace,
+                                WorkspaceIndex=workspace_index,
+                                Filter=smooth_filter,
+                                Params=smooth_params,
+                                IgnoreXBins=True,
+                                AllSpectra=False)
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to smooth spectrum {2} of workspace {0} due to {1}.'
+                               ''.format(input_workspace, run_err, workspace_index))
+    # END-IF-ELSE
+
+    return output_workspace
+
+
+def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_pos_tol=0.05,
+                         background_type="Quadratic", is_high_background=True):
+    """
+    Strip vanadium peaks
+    :except: run time error
+
+    :param input_workspace:
+    :param output_workspace:
+    :param fwhm: integer peak FWHM
+    :param peak_pos_tol: float peak position tolerance
+    :param background_type:
+    :param is_high_background:
+    :return: output workspace's name, indicating it successfully strips vanadium peaks.
+    """
+    # check inputs
+    assert isinstance(input_workspace, str), 'Input workspace {0} must be a string but not a {1}.' \
+                                             ''.format(input_workspace, type(input_workspace))
+    if not workspace_does_exist(input_workspace):
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_workspace))
+
+    if output_workspace is None:
+        output_workspace = input_workspace + '_no_peak'
+
+    # make sure that the input workspace is in unit dSpacing
+    try:
+        if get_workspace_unit(input_workspace) != 'dSpacing':
+            mantidapi.ConvertUnits(InputWorkspace=input_workspace, OutputWorkspace=input_workspace,
+                                   Target='dSpacing')
+    except RuntimeError as run_err:
+        raise RuntimeError('Unable to convert workspace {0} to dSpacing due to {1}.'.format(input_workspace), run_err)
+
+    # call Mantid algorithm StripVanadiumPeaks
+    assert isinstance(fwhm, int), 'FWHM {0} must be an integer but not {1}.'.format(fwhm, type(fwhm))
+    assert isinstance(background_type, str), 'Background type {0} must be a string but not {1}.' \
+                                             ''.format(background_type, type(background_type))
+    assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
+                                                       'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
+    try:
+        mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
+                                     OutputWorkspace=output_workspace,
+                                     FWHM=fwhm,
+                                     PeakPositionTolerance=peak_pos_tol,
+                                     BackgroundType=background_type,
+                                     HighBackground=is_high_background)
+    except RuntimeError as run_err:
+        raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
+                           ''.format(input_workspace, run_err))
+
+    return output_workspace
+
+
 def workspace_does_exist(workspace_name):
     """ Check whether a workspace exists in analysis data service by its name
     Requirements: input workspace name must be a non-empty string
@@ -1108,7 +1231,7 @@ def workspace_does_exist(workspace_name):
     assert len(workspace_name) > 0, 'It is impossible to for a workspace with empty string as name.'
 
     #
-    does_exist = mantid.AnalysisDataService.doesExist(workspace_name)
+    does_exist = ADS.doesExist(workspace_name)
 
     return does_exist
 

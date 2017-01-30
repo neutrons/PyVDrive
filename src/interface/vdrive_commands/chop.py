@@ -48,20 +48,61 @@ class VdriveChop(VDriveCommand):
         
         return
 
-    def chop_data_by_log(self):
+    def chop_data_by_log(self, run_number, start_time, stop_time, log_name, min_log_value, max_log_value,
+                         log_step_value, reduce_flag, output_dir, dry_run):
         """
-
+        chop data by log value
+        :param run_number:
+        :param start_time:
+        :param stop_time:
+        :param log_name:
+        :param min_log_value:
+        :param max_log_value:
+        :param log_step_value:
+        :param reduce_flag:
+        :param output_dir:
+        :param dry_run:
         :return:
         """
-        # run_number=run_number,
-        #                                                 start_time=None,
-        #                                                 stop_time=None,
-        #                                                 log_name=log_name,
-        #                                                 log_value_stepl=delta_log_value,
-        #                                                 reduce_flag=output_to_gsas,
-        #                                                 output_dir=output_dir,
-        #                                                 dry_run=is_dry_run)
-        # TODO/ISSUE/55 - Implement!
+        # TODO/ISSUE/59 - Test
+        # check inputs
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            ''.format(run_number, type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.'.format(output_dir, type(output_dir))
+
+        # dry run: return input options
+        if dry_run:
+            outputs = 'Slice IPTS-{0} Run {1} by log {2}  with ({3}, {4}, {5}) ' \
+                      'within wall time ({6}, {7})'.format(self._iptsNumber, run_number, log_name,
+                                                           min_log_value, log_step_value, max_log_value,
+                                                           start_time, stop_time)
+            if reduce_flag:
+                outputs += '\n\tand reduce (to GSAS) '
+            else:
+                outputs += '\n\tand save to NeXus files '
+            outputs += 'to directory %s' % output_dir
+
+            if not os.access(output_dir, os.W_OK):
+                outputs += '\n[WARNING] Output directory %s is not writable!' % output_dir
+            return True, outputs
+        # END-IF (dry run)
+
+        # generate data slicer by log value
+        status, ret_obj = self._controller.generate_data_slicer_by_log(run_number, start_time, stop_time,
+                                                                          log_name, min_log_value, log_step_value,
+                                                                          max_log_value)
+        if not status:
+            error_msg = str(ret_obj)
+            return False, 'Unable to generate data slicer by time due to %s.' % error_msg
+        else:
+            slicer_key = ret_obj
+
+        # chop and reduce
+        status, message = self._controller.slice_data(run_number, slicer_key,
+                                                      reduce_data=reduce_flag, output_dir=output_dir)
+
+        return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir,
                           dry_run):
@@ -111,41 +152,6 @@ class VdriveChop(VDriveCommand):
                                                       reduce_data=reduce_flag, output_dir=output_dir)
 
         return status, message
-        # # load file
-        # nxs_file_name = self._dataFileDict[run_number][0]
-        # ws_name = os.path.basename(nxs_file_name).split('.')[0]
-        # mantid_helper.load_nexus(nxs_file_name, ws_name, meta_data_only=False)
-        #
-        # # generate event filter
-        # split_ws_name = 'TimeSplitters_%07d' % run_number
-        # info_ws_name = 'TimeInfoTable_%07d' % run_number
-        # status, ret_obj = mantid_helper.generate_event_filters_by_time(ws_name, split_ws_name, info_ws_name,
-        #                                                                start_time, stop_time, time_interval,
-        #                                                                time_unit='Seconds')
-        # if not status:
-        #     error_message = str(ret_obj)
-        #     return False, error_message
-        #
-        # if reduce_flag:
-        #     # reduce to GSAS and etc
-        #     reduce_setup = reduce_VULCAN.ReductionSetup()
-        #     reduce_setup.set_event_file(nxs_file_name)
-        #     reduce_setup.set_output_dir(output_dir)
-        #     reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-        #     reduce_setup.is_full_reduction = False
-        #
-        #     # add splitter workspace and splitter information workspace
-        #     reduce_setup.set_splitters(split_ws_name, info_ws_name)
-        #
-        #     reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-        #     status, message = reducer.chop_reduce()
-        #
-        # else:
-        #     # just split the workspace and saved in memory
-        #     # TODO/FIXME/NOW - TOF correction should be left to user to specify
-        #     mantid_helper.split_event_data(ws_name, split_ws_name, info_ws_name, ws_name, False)
-
-        return True, message
 
     def exec_cmd(self):
         """

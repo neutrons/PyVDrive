@@ -424,12 +424,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # load files
         self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_calibration_file)
-
         self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
                      self.do_load_data)
-
         self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_switch_bank)
+        self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_switch_run)
 
         # save_to_buffer
         self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
@@ -1032,7 +1032,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.ui.graphicsView_main.reset()
         self.ui.graphicsView_main.clear_all_lines()
 
-        # TODO/NOW/ISSUE - Need to make the table to add the buffered peaks back
+        # TODO/NOW/ISSUE/FUTURE - Need to make the table to add the buffered peaks back
         pass
 
         # Re-plot
@@ -1086,6 +1086,37 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.pushButton_findPeaks.setEnabled(False)
             self.ui.pushButton_groupAutoPickPeaks.setEnabled(False)
             self.ui.pushButton_peakPickerMode.setEnabled(False)
+
+        return
+
+    # TODO/ISSUE/TEST : newly implemented
+    def evt_switch_run(self):
+        """
+        in the event that a new run is set up
+        :return:
+        """
+        # get the new run number or workspace name
+        new_run_str = str(self.ui.comboBox_runNumber.currentText())
+        try:
+            new_run_number = int(new_run_str)
+            new_workspace_name = None
+        except ValueError:
+            new_run_number = None
+            new_workspace_name = new_run_str
+        # END-TRY-EXCEPTION
+
+        bank_id = int(self.ui.comboBox_bankNumbers.currentText())
+
+        # clear the current
+        self.ui.graphicsView_main.reset()
+
+        # plot
+        if new_workspace_name is None:
+            # use run number
+            self.load_plot_run(new_run_number)
+        else:
+            # use workspace name
+            self.load_plot_run(new_workspace_name)
 
         return
 
@@ -1856,25 +1887,3 @@ def retrieve_peak_positions(peak_tup_list):
 
     return peak_pos_list
 
-# def main(argv):
-#     """ Main method for testing purpose
-#     """
-#     import mocks.mockvdriveapi as mocks
-#
-#     parent = None
-#     controller = mocks.MockVDriveAPI()
-#
-#     app = QtGui.QApplication(argv)
-#
-#     # my plot window app
-#     myapp = PeakPickerWindow(parent)
-#     myapp.set_data_dir('/home/wzz/Projects/PyVDrive/tests/reduction/')
-#     myapp.set_controller(controller)
-#     myapp.show()
-#
-#     exit_code=app.exec_()
-#     sys.exit(exit_code)
-#
-#
-# if __name__ == "__main__":
-#     main(sys.argv)
