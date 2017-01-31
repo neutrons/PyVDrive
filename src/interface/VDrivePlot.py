@@ -34,6 +34,7 @@ if config.DEBUG:
     import workspaceviewer
 
 """ import PyVDrive library """
+import PyVDrive
 import PyVDrive.lib.VDriveAPI as VdriveAPI
 
 __author__ = 'wzz'
@@ -63,7 +64,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Define status variables
         # new work flow
-        self._myWorkflow = VdriveAPI.VDriveAPI('VULCAN')
+        template_data_dir = PyVDrive.__path__[0]
+
+        self._myWorkflow = VdriveAPI.VDriveAPI('VULCAN', template_data_dir)
         self._numSnapViews = 6
 
         # Initialize widgets

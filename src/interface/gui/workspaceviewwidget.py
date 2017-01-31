@@ -49,6 +49,8 @@ class WorkspaceViewWidget(QtGui.QWidget):
         # define event handling methods
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                      self.do_plot_workspace)
+        self.connect(self.ui.pushButton_toIPython, QtCore.SIGNAL('clicked()'),
+                     self.do_write_to_console)
         self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
                      self.do_clear_canvas)
         self.connect(self.ui.pushButton_fitCanvas, QtCore.SIGNAL('clicked()'),
@@ -88,6 +90,24 @@ class WorkspaceViewWidget(QtGui.QWidget):
         for workspace_name in selected_workspace_name_list:
             # data_set = controller.get_data_from_workspace(workspace_name)
             self.ui.graphicsView_general.plot_workspace(workspace_name)
+
+        return
+
+    def do_write_to_console(self):
+        """
+        write the workspace name to IPython console
+        :return:
+        """
+        # get workspace name
+        ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+
+        # output string
+        ipython_str = ''
+        for ws_name in ws_name_list:
+            ipython_str += '"{0}"    '.format(ws_name)
+
+        # export the ipython
+        self.ui.widget_ipython.write_command(ipython_str)
 
         return
 
@@ -226,6 +246,7 @@ class WorkspaceViewWidget(QtGui.QWidget):
         """
         workspace_names = AnalysisDataService.getObjectNames()
 
+        self.ui.tableWidget_dataStructure.remove_all_rows()
         error_message = ''
         for ws_name in workspace_names:
             try:

@@ -16,6 +16,43 @@ from mantid.api import AnalysisDataService as ADS
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
+def align_bins(source_workspace, template_workspace):
+    """
+
+    :param source_workspace:
+    :param template_workspace:
+    :return:
+    """
+    # TODO/ISSUE/59 - Implement
+
+
+def check_point_data_log_binning(ws_name):
+    """
+    check bin size with standard deviation
+    :param ws_name:
+    :return:
+    """
+    # TODO/ISSUE/62 - Implement
+    """
+    hvws = ConvertToPointData(InputWorkspace=vws)
+    vec_x = hvws.readX(0)
+
+    bins = (vec_x[1:] - vec_x[:-1])/vec_x[:-1]
+
+    numpy.max(bins)
+    Out[79]: 0.0010161263007356822
+
+    numpy.min(bins)
+    Out[80]: 0.00098337714404597818
+
+    numpy.average(bins)
+    Out[81]: 0.0010000465080256334
+
+    numpy.std(bins)
+    Out[82]: 3.5452890505581033e-06
+    """
+
+
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
     convert SplittersWorkspace to vectors of time and target workspace index
@@ -750,7 +787,7 @@ def is_event_workspace(workspace_name):
     return event_ws.id() == EVENT_WORKSPACE_ID
 
 
-def load_gsas_file(gss_file_name, out_ws_name):
+def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     """ Load GSAS file and set instrument information as 2-bank VULCAN and convert units to d-spacing
     Requirements: GSAS file name is a full path; output workspace name is a string;
     Guarantees:
@@ -758,6 +795,8 @@ def load_gsas_file(gss_file_name, out_ws_name):
     :param out_ws_name:
     :return: output workspace name
     """
+    # TODO/ISSUE/62 - Implement feature with standard_bin_workspace...
+
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
     assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))

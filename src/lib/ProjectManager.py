@@ -572,6 +572,17 @@ class ProjectManager(object):
 
         return do_have
 
+    def load_standard_binning_workspace(self, data_directory):
+        """
+
+        :return:
+        """
+        # TODO/NOW/ISSUE/62 - Implement!
+
+        template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
+        print os.path.exists(template_file_name)
+
+
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
         :param save_dict:

@@ -8,9 +8,8 @@
 #####
 import os
 import pandas as pd
-import shutil
 
-import ProjectManager as vp
+import ProjectManager as ProjectMrg
 import archivemanager
 import vdrivehelper
 import mantid_helper
@@ -28,7 +27,7 @@ class VDriveAPI(object):
     It is a pure python layer that does not consider GUI.
     VDrivePlot is a GUI application built upon this class
     """
-    def __init__(self, instrument_name):
+    def __init__(self, instrument_name, module_location=None):
         """
         Initialization
         Purpose:
@@ -54,7 +53,14 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = vp.ProjectManager('New Project')
+        self._myProject = ProjectMrg.ProjectManager('New Project')
+
+        # construct the data location
+        if module_location is not None:
+            template_data_dir = os.path.join(module_location, 'data')
+        else:
+            template_data_dir = None
+        self._myProject.load_standard_binning_workspace(template_data_dir)
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.

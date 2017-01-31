@@ -1,0 +1,4 @@
+mantid_bin_vs_vdrive_bin.png: 
+	compare the binning in GSAS files from Mantid and Vdrive.
+	math = diff_bin_size / vdrive_bin_size
+				
