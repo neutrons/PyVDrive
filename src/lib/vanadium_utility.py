@@ -141,11 +141,11 @@ class VanadiumProcessingManager(object):
         save a processed vanadium (in workspace) to GSAS file
         Note: IPTS number must be specified for being written into GSAS file;
               run number must be specified for output file name
+        :param vanadium_tuple: None or 3-tuple for vanadium workspace name/IPTS number/run number
         :param to_archive
         :param out_file_name: if not None, then output locally
         :return: tuple (boolean, str): status, error message
         """
-        # TODO/ISSUE/59 - clean warnings
         # check inputs
         if vanadium_tuple is None:
             # use the class variables of this instance
@@ -159,10 +159,13 @@ class VanadiumProcessingManager(object):
             run_number = self._runNumber
 
         else:
-            assert len(vanadium_tuple) == 3, 'blabla'
+            assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
+                                             ''.format(len(vanadium_tuple))
             workspace_name, ipts_number, run_number = vanadium_tuple
-            assert isinstance(ipts_number, int), 'blabla'
-            assert isinstance(run_number, int), 'run number blabla'
+            assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+                                                 ''.format(ipts_number, type(ipts_number))
+            assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
+                                                ''.format(run_number, type(run_number))
         # END-IF-ELSE
 
         # archive file name

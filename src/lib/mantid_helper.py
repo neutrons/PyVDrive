@@ -16,14 +16,17 @@ from mantid.api import AnalysisDataService as ADS
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
-def align_bins(source_workspace, template_workspace):
+def align_bins(src_workspace_name, template_workspace_name):
     """
-
-    :param source_workspace:
-    :param template_workspace:
+    Align X bins in order to make up the trivial difference of binning between MatrixWorkspace,
+    which is caused by numerical error
+    :param src_workspace_name:
+    :param template_workspace_name:
     :return:
     """
-    # TODO/ISSUE/59 - Implement
+    # check and get workspace
+    assert isinstance(src_workspace_name, str), '...'
+
 
 
 def check_point_data_log_binning(ws_name):
@@ -1257,6 +1260,24 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
                            ''.format(input_workspace, run_err))
 
     return output_workspace
+
+
+def sum_spectra(input_workspace, output_workspace):
+    """
+    sum spectra
+    :param input_workspace:
+    :param output_workspace:
+    :return:
+    """
+    # check
+    assert isinstance(input_workspace, str), 'Input workspace must be string'
+    assert isinstance(output_workspace, str), 'Output workspace must be string'
+
+    # call Mantid
+    mantidapi.SumSpectra(InputWorkspsace=input_workspace,
+                         OutputWorkspace=output_workspace)
+
+    return
 
 
 def workspace_does_exist(workspace_name):
