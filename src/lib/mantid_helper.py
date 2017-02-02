@@ -25,35 +25,67 @@ def align_bins(src_workspace_name, template_workspace_name):
     :return:
     """
     # check and get workspace
-    assert isinstance(src_workspace_name, str), '...'
+    assert isinstance(src_workspace_name, str), 'Name of workspace to align {0} must be a string but not a {1}.' \
+                                                ''.format(src_workspace_name, type(src_workspace_name))
+    assert isinstance(template_workspace_name, str), 'Name of binning template workspace {0} must be a string ' \
+                                                     'but not a {1}.'.format(template_workspace_name,
+                                                                             type(template_workspace_name))
+
+    align_ws = ADS.retrieve(src_workspace_name)
+    template_ws = ADS.retrieve(template_workspace_name)
+
+    if template_ws.isPointData() or align_ws.isPointData():
+        raise RuntimeError('Neither template workspace nor ready-to-align workspace can be PointData.')
+
+    # get template X
+    num_histograms = align_ws.getNumberHistograms()
+    template_vec_x = template_ws.readX(0)
+    for i_ws in range(num_histograms):
+        array_x = align_ws.dataX(i_ws)
+        if len(array_x) != len(template_vec_x):
+            raise RuntimeError('Template workspace and workspace to align bins do not have same number of bins.')
+        numpy.copyto(template_vec_x, array_x)
+    # END-FOR
+
+    return
 
 
-
-def check_point_data_log_binning(ws_name):
+def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-5):
     """
-    check bin size with standard deviation
+    check bin size with standard deviation for a PointData MatrixWorkspace
     :param ws_name:
-    :return:
+    :param standard_bin_size: standard logarithm bin size 0.01
+    :param tolerance: maximum standard deviation
+    :return: 2-tuple. boolean/str as True/False and message
     """
-    # TODO/ISSUE/62 - Implement
-    """
-    hvws = ConvertToPointData(InputWorkspace=vws)
-    vec_x = hvws.readX(0)
+    # check input & get workspace
+    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
 
+    workspace = retrieve_workspace(ws_name)
+
+    # convert to PointData if necessary
+    if workspace.isHistogram():
+        # convert to PointData
+        temp_ws_name = workspace + '_temp123'
+        mantidapi.ConvertToPointData(InputWorkspace=temp_ws_name, OutputWorskpace=temp_ws_name)
+        temp_ws = retrieve_workspace(temp_ws_name)
+        vec_x = temp_ws.readX(0)
+    else:
+        vec_x = workspace.readX(0)
+        temp_ws_name = None
+
+    # check logarithm binning
     bins = (vec_x[1:] - vec_x[:-1])/vec_x[:-1]
+    bin_size = numpy.average(bins)
+    bin_std = numpy.std(bins)
 
-    numpy.max(bins)
-    Out[79]: 0.0010161263007356822
+    if abs(bin_size - standard_bin_size) > 1.E-7:
+        return False, 'Bin size {0} != standard bin size {1}'.format(bin_size, standard_bin_size)
 
-    numpy.min(bins)
-    Out[80]: 0.00098337714404597818
+    if bin_std > tolerance:
+        return False, 'Standard deviation of bin sizes {0} is beyond tolerance {1}.'.format(bin_std, tolerance)
 
-    numpy.average(bins)
-    Out[81]: 0.0010000465080256334
-
-    numpy.std(bins)
-    Out[82]: 3.5452890505581033e-06
-    """
+    return True, ''
 
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
