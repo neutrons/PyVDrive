@@ -577,11 +577,14 @@ class ProjectManager(object):
 
         :return:
         """
-        # TODO/NOW/ISSUE/62 - Implement!
+        # TODO/NOW/ISSUE/62 - Clean!
 
         template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
         print os.path.exists(template_file_name)
 
+        self._vdriveBinTemplateName = 'VDriveBinTemplate'
+
+        mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -887,6 +890,15 @@ class ProjectManager(object):
         :return:
         """
         return self._processVanadiumManager
+
+    @property
+    def vdrive_bin_template(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/62 - BLABLA
+        return self._vdriveBinTemplateName
 
 
 def get_data_key(file_name):

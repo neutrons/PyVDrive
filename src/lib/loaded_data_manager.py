@@ -115,7 +115,8 @@ class LoadedDataManager(object):
             data_ws_name = os.path.basename(file_name) + '_gsas'
 
             # load data
-            data_key = mantid_helper.load_gsas_file(data_file_name, data_ws_name)
+            data_key = mantid_helper.load_gsas_file(data_file_name, data_ws_name,
+                                                    standard_bin_workspace=self._myParent.vdrive_bin_template)
         else:
             raise RuntimeError('Unable to support %s file.' % data_file_type)
 

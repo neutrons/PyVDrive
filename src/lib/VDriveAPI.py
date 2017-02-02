@@ -978,6 +978,7 @@ class VDriveAPI(object):
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
+            print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
@@ -986,6 +987,7 @@ class VDriveAPI(object):
 
         else:
             # manual reduction: Reduce runs
+            print '[INFO] Reduce Runs: {0}.'.format(runs_to_reduce)
             try:
                 status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
@@ -1000,6 +1002,8 @@ class VDriveAPI(object):
             except AssertionError as re:
                 status = False
                 ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
+            # END-TRY-EXCEPT
+        # END-IF-ELSE
 
         return status, ret_obj
 

@@ -2,6 +2,7 @@
 import os
 import shutil
 import mantid_helper
+from reduce_VULCAN import align_bins
 
 
 class VanadiumProcessingManager(object):
@@ -249,6 +250,13 @@ class VanadiumProcessingManager(object):
 
         # register the output workspace if this method is not called as a static
         self._smoothedWorkspace = output_workspace_name
+
+        # check the workspace whether it can be aligned
+        if mantid_helper.match_bins():
+            align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
+        else:
+            # TODO/ISSUE/62 - check
+            raise blabla
 
         return output_workspace_name
 

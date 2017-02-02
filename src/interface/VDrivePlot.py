@@ -638,6 +638,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Reduction
         self.ui.radioButton_binStandard.setChecked(True)
+        self.ui.checkBox_outGSAS.setChecked(True)
 
         # View
         self.ui.radioButton_viewInTOF.setChecked(True)

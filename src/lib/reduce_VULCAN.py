@@ -264,6 +264,17 @@ class ReductionSetup(object):
 
         return
 
+    def __str__(self):
+        """
+        prettily formatted string for output
+        :return:
+        """
+        pretty = ''
+        pretty += 'Main GSAS dir   : {0}\n'.format(self._mainGSASDir)
+        pretty += 'Main GSAS output: {0}\n'.format(self._mainGSASName)
+
+        return pretty
+
     @staticmethod
     def change_output_directory(original_directory, user_specified_dir=None):
         """ Purpose:
@@ -1313,12 +1324,17 @@ class ReduceVulcanData(object):
             else:
                 gsas_file_name = os.path.join(chop_dir, '%d.gda' % (ws_index + 1))
 
+            # save to VULCAN GSAS and add a property as Note
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                        OutputWorkspace=vdrive_bin_ws_name,
                                        GSSFilename=gsas_file_name,
                                        IPTS=self._reductionSetup.get_ipts_number(),
                                        GSSParmFilename="Vulcan.prm")
+
+            # Add special property to output workspace
+            final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+            final_ws.getRun().addProperty('VDriveBin', True, replace=True)
 
             # update message
             message += '%d-th: %s\n' % (i_ws, gsas_file_name)
@@ -1466,6 +1482,7 @@ class ReduceVulcanData(object):
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file
+        print '[DB] Abut to reduce powder diffraction data for {0}'.format(self._reductionSetup)
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
         if not is_reduce_good:
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
@@ -2093,6 +2110,7 @@ class ReduceVulcanData(object):
         """
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
+            print '[INFO] No reduction is required.'
             return True, 'No reduction as it is not required.'
 
         # reduce data
@@ -2149,6 +2167,10 @@ class ReduceVulcanData(object):
                                    GSSFilename=gsas_file_name,
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
+        # Add special property to output workspace
+        final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+        final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
         self._reducedDataFiles.append(gsas_file_name)
 
@@ -2184,25 +2206,33 @@ class ReduceVulcanData(object):
         # get vanadium workspace
         van_ws = AnalysisDataService.retrieve(van_ws_name)
 
-        # check whether the reduced GSAS workspace has the same binning with vanadium workspace
-        gda_vec_x = reduced_gss_ws.readX(0)
-        van_vec_x = van_ws.readX(0)
-        diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
-        if numpy.max(diff_vec) >= 0.01:
-            raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
-                               'differs too much!'.format(van_run_number, reduced_gss_ws_name))
+        check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
+        if not check_result:
+            print '[INFO] ', message
 
-        # check whether vanadium and sample run workspace have the same number of spectra
-        num_spec = reduced_gss_ws.getNumberHistograms()
-        if num_spec != van_ws.getNumberHistograms():
-            raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
-                               '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
-                                                    van_ws.getNumberHistograms()))
+        align_bins(van_ws_name, reduced_gss_ws_name)
 
-        # normalize by vanadium
-        # make the binning exactly the same because there is always some tiny difference between loaded GSAS
-        for ws_index in range(num_spec):
-            numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
+        print '[INFO] ', reduced_gss_ws_name, reduced_gss_ws.run().getProperty('VDriveBin')
+
+        # # check whether the reduced GSAS workspace has the same binning with vanadium workspace
+        # gda_vec_x = reduced_gss_ws.readX(0)
+        # van_vec_x = van_ws.readX(0)
+        # diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
+        # if numpy.max(diff_vec) >= 0.01:
+        #     raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
+        #                        'differs too much!'.format(van_run_number, reduced_gss_ws_name))
+        #
+        # # check whether vanadium and sample run workspace have the same number of spectra
+        # num_spec = reduced_gss_ws.getNumberHistograms()
+        # if num_spec != van_ws.getNumberHistograms():
+        #     raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
+        #                        '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
+        #                                             van_ws.getNumberHistograms()))
+        #
+        # # normalize by vanadium
+        # # make the binning exactly the same because there is always some tiny difference between loaded GSAS
+        # for ws_index in range(num_spec):
+        #     numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
 
         # normalize and write out again
         reduced_gss_ws = reduced_gss_ws / van_ws
@@ -2232,6 +2262,82 @@ class ReduceVulcanData(object):
         self.generate_1d_plot()
 
         return True, ''
+
+
+def align_bins(src_workspace_name, template_workspace_name):
+    """
+    Align X bins in order to make up the trivial difference of binning between MatrixWorkspace,
+    which is caused by numerical error
+    :param src_workspace_name:
+    :param template_workspace_name:
+    :return:
+    """
+    # check and get workspace
+    assert isinstance(src_workspace_name, str), 'Name of workspace to align {0} must be a string but not a {1}.' \
+                                                ''.format(src_workspace_name, type(src_workspace_name))
+    assert isinstance(template_workspace_name, str), 'Name of binning template workspace {0} must be a string ' \
+                                                     'but not a {1}.'.format(template_workspace_name,
+                                                                             type(template_workspace_name))
+
+    align_ws = AnalysisDataService.retrieve(src_workspace_name)
+    template_ws = AnalysisDataService.retrieve(template_workspace_name)
+
+    if not (template_ws.isHistogramData() and align_ws.isHistogramData()):
+        raise RuntimeError('Neither template workspace nor ready-to-align workspace can be PointData.')
+
+    # get template X
+    num_histograms = align_ws.getNumberHistograms()
+    template_vec_x = template_ws.readX(0)
+    for i_ws in range(num_histograms):
+        array_x = align_ws.dataX(i_ws)
+        if len(array_x) != len(template_vec_x):
+            raise RuntimeError('Template workspace and workspace to align bins do not have same number of bins.')
+        numpy.copyto(array_x, template_vec_x)
+    # END-FOR
+
+    return
+
+
+def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-5):
+    """
+    check bin size with standard deviation for a PointData MatrixWorkspace
+    :param ws_name:
+    :param standard_bin_size: standard logarithm bin size 0.01
+    :param tolerance: maximum standard deviation
+    :return: 2-tuple. boolean/str as True/False and message
+    """
+    # check input & get workspace
+    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
+
+    workspace = AnalysisDataService.retrieve(ws_name)
+
+    # convert to PointData if necessary
+    if workspace.isHistogramData():
+        # convert to PointData
+        temp_ws_name = ws_name + '_temp123'
+        mantidsimple.ConvertToPointData(InputWorkspace=ws_name, OutputWorkspace=temp_ws_name)
+        temp_ws = AnalysisDataService.retrieve(temp_ws_name)
+        vec_x = temp_ws.readX(0)
+    else:
+        vec_x = workspace.readX(0)
+        temp_ws_name = None
+
+    # check logarithm binning
+    bins = (vec_x[1:] - vec_x[:-1])/vec_x[:-1]
+    bin_size = numpy.average(bins)
+    bin_std = numpy.std(bins)
+
+    if abs(bin_size - standard_bin_size) > 1.E-7:
+        return False, 'Bin size {0} != standard bin size {1}'.format(bin_size, standard_bin_size)
+
+    if bin_std > tolerance:
+        return False, 'Standard deviation of bin sizes {0} is beyond tolerance {1}.'.format(bin_std, tolerance)
+
+    # delete temp
+    if temp_ws_name is not None:
+        mantidsimple.DeleteWorkspace(Workspace=temp_ws_name)
+
+    return True, ''
 
 
 class MainUtility(object):

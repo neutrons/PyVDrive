@@ -16,78 +16,6 @@ from mantid.api import AnalysisDataService as ADS
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
-def align_bins(src_workspace_name, template_workspace_name):
-    """
-    Align X bins in order to make up the trivial difference of binning between MatrixWorkspace,
-    which is caused by numerical error
-    :param src_workspace_name:
-    :param template_workspace_name:
-    :return:
-    """
-    # check and get workspace
-    assert isinstance(src_workspace_name, str), 'Name of workspace to align {0} must be a string but not a {1}.' \
-                                                ''.format(src_workspace_name, type(src_workspace_name))
-    assert isinstance(template_workspace_name, str), 'Name of binning template workspace {0} must be a string ' \
-                                                     'but not a {1}.'.format(template_workspace_name,
-                                                                             type(template_workspace_name))
-
-    align_ws = ADS.retrieve(src_workspace_name)
-    template_ws = ADS.retrieve(template_workspace_name)
-
-    if template_ws.isPointData() or align_ws.isPointData():
-        raise RuntimeError('Neither template workspace nor ready-to-align workspace can be PointData.')
-
-    # get template X
-    num_histograms = align_ws.getNumberHistograms()
-    template_vec_x = template_ws.readX(0)
-    for i_ws in range(num_histograms):
-        array_x = align_ws.dataX(i_ws)
-        if len(array_x) != len(template_vec_x):
-            raise RuntimeError('Template workspace and workspace to align bins do not have same number of bins.')
-        numpy.copyto(template_vec_x, array_x)
-    # END-FOR
-
-    return
-
-
-def check_point_data_log_binning(ws_name, standard_bin_size=0.01, tolerance=1.E-5):
-    """
-    check bin size with standard deviation for a PointData MatrixWorkspace
-    :param ws_name:
-    :param standard_bin_size: standard logarithm bin size 0.01
-    :param tolerance: maximum standard deviation
-    :return: 2-tuple. boolean/str as True/False and message
-    """
-    # check input & get workspace
-    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
-
-    workspace = retrieve_workspace(ws_name)
-
-    # convert to PointData if necessary
-    if workspace.isHistogram():
-        # convert to PointData
-        temp_ws_name = workspace + '_temp123'
-        mantidapi.ConvertToPointData(InputWorkspace=temp_ws_name, OutputWorskpace=temp_ws_name)
-        temp_ws = retrieve_workspace(temp_ws_name)
-        vec_x = temp_ws.readX(0)
-    else:
-        vec_x = workspace.readX(0)
-        temp_ws_name = None
-
-    # check logarithm binning
-    bins = (vec_x[1:] - vec_x[:-1])/vec_x[:-1]
-    bin_size = numpy.average(bins)
-    bin_std = numpy.std(bins)
-
-    if abs(bin_size - standard_bin_size) > 1.E-7:
-        return False, 'Bin size {0} != standard bin size {1}'.format(bin_size, standard_bin_size)
-
-    if bin_std > tolerance:
-        return False, 'Standard deviation of bin sizes {0} is beyond tolerance {1}.'.format(bin_std, tolerance)
-
-    return True, ''
-
-
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
     convert SplittersWorkspace to vectors of time and target workspace index
@@ -828,9 +756,11 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
+    :param standard_bin_workspace:
     :return: output workspace name
     """
     # TODO/ISSUE/62 - Implement feature with standard_bin_workspace...
+    from reduce_VULCAN import align_bins
 
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
@@ -852,9 +782,10 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         raise RuntimeError('It is not implemented for cases more than 2 spectra.')
 
     # convert unit and to point data
+    align_bins(out_ws_name, standard_bin_workspace)
     mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                            Target='dSpacing')
-    mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
+    # mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
 
     return out_ws_name
 
@@ -903,6 +834,11 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     assert workspace_does_exist(cal_ws_name), 'Calibration worksapce does not exist.'
 
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
+
+
+def match_bins():
+    # TODO/ISSUE/62 - Implement
+    return True
 
 
 def mtd_compress_events(event_ws_name, tolerance=0.01):
@@ -1042,6 +978,7 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
+    # TODO/ISSUE/62 - Replace all blabla by words making sense
     # Check requirements
     assert isinstance(source_ws_name, str), 'source workspace name blabla'
     src_ws = retrieve_workspace(source_ws_name)
@@ -1053,20 +990,29 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     if len(binning_reference_file) > 0:
         assert os.path.exists(binning_reference_file), 'blabla444'
     assert isinstance(gss_parm_file, str), 'blabla555'
-    
-    final_ws_name = source_ws_name + '_IDL'
+
+    # using a new workspace if and only if it is required to be re-binned
+    if len(binning_reference_file) > 0:
+        final_ws_name = source_ws_name + '_IDL'
+    else:
+        final_ws_name = source_ws_name
 
     source_ws = ADS.retrieve(source_ws_name)
     if not source_ws.isHistogramData():
         mantidapi.ConvertToHistogram(InputWorkspace=source_ws_name,
                                      OutputWorkspace=source_ws_name)
-    
+
+    # Save to GSAS
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
                             BinFilename=binning_reference_file,
                             OutputWorkspace=final_ws_name,
                             GSSFilename=out_gss_file,
                             IPTS=ipts,
                             GSSParmFilename=gss_parm_file)
+
+    # Add special property to output workspace
+    final_ws = ADS.retrieve(final_ws_name)
+    final_ws.getRun().addProperty('VDriveBin', True, replace=True)
 
     return
 
