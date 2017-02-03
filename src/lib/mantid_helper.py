@@ -1,6 +1,6 @@
 import sys
 import os
-import math
+import random
 import numpy
 
 # Import mantid directory
@@ -533,25 +533,38 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         required_workspace_index = None
     # END-IF-ELSE
 
+    # define a temporary workspace name
+    use_temp = False
+    temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
+
     # get unit
     current_unit = get_workspace_unit(workspace_name)
     if current_unit != target_unit and target_unit is not None:
         # convert unit if the specified target unit is different
-        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
                                Target=target_unit)
         current_unit = target_unit
+        use_temp = True
     # END-IF
 
     # Convert to point data
     workspace = ADS.retrieve(workspace_name)
-    if point_data is True and workspace.isHistogramData():
-        mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
-                                     OutputWorkspace=workspace_name)
+    if point_data and workspace.isHistogramData():
+        if use_temp:
+            input_ws_name = temp_ws_name
+        else:
+            input_ws_name = workspace_name
+            use_temp = True
+        mantidapi.ConvertToPointData(InputWorkspace=input_ws_name,
+                                     OutputWorkspace=temp_ws_name)
     # END-IF
 
     # Set up variables
     data_set_dict = dict()
-    workspace = retrieve_workspace(workspace_name)
+    if use_temp:
+        workspace = retrieve_workspace(temp_ws_name)
+    else:
+        workspace = retrieve_workspace(workspace_name)
     
     # Get data: 2 cases as 1 bank or all banks
     if bank_id is None:
@@ -591,6 +604,10 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         data_e[:] = vec_e[:]
 
         data_set_dict[bank_id] = (data_x, data_y, data_e)
+
+    # clean the temporary workspace
+    if use_temp:
+        delete_workspace(temp_ws_name)
     
     return data_set_dict, current_unit
 
@@ -750,14 +767,18 @@ def is_event_workspace(workspace_name):
     return event_ws.id() == EVENT_WORKSPACE_ID
 
 
-def load_gsas_file(gss_file_name, out_ws_name):
+def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     """ Load GSAS file and set instrument information as 2-bank VULCAN and convert units to d-spacing
     Requirements: GSAS file name is a full path; output workspace name is a string;
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
+    :param standard_bin_workspace:
     :return: output workspace name
     """
+    # TODO/ISSUE/62 - Implement feature with standard_bin_workspace...
+    from reduce_VULCAN import align_bins
+
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
     assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
@@ -778,9 +799,10 @@ def load_gsas_file(gss_file_name, out_ws_name):
         raise RuntimeError('It is not implemented for cases more than 2 spectra.')
 
     # convert unit and to point data
+    align_bins(out_ws_name, standard_bin_workspace)
     mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                            Target='dSpacing')
-    mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
+    # mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
 
     return out_ws_name
 
@@ -829,6 +851,11 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     assert workspace_does_exist(cal_ws_name), 'Calibration worksapce does not exist.'
 
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
+
+
+def match_bins():
+    # TODO/ISSUE/62 - Implement
+    return True
 
 
 def mtd_compress_events(event_ws_name, tolerance=0.01):
@@ -968,6 +995,7 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
+    # TODO/ISSUE/62 - Replace all blabla by words making sense
     # Check requirements
     assert isinstance(source_ws_name, str), 'source workspace name blabla'
     src_ws = retrieve_workspace(source_ws_name)
@@ -979,20 +1007,29 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     if len(binning_reference_file) > 0:
         assert os.path.exists(binning_reference_file), 'blabla444'
     assert isinstance(gss_parm_file, str), 'blabla555'
-    
-    final_ws_name = source_ws_name + '_IDL'
+
+    # using a new workspace if and only if it is required to be re-binned
+    if len(binning_reference_file) > 0:
+        final_ws_name = source_ws_name + '_IDL'
+    else:
+        final_ws_name = source_ws_name
 
     source_ws = ADS.retrieve(source_ws_name)
     if not source_ws.isHistogramData():
         mantidapi.ConvertToHistogram(InputWorkspace=source_ws_name,
                                      OutputWorkspace=source_ws_name)
-    
+
+    # Save to GSAS
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
                             BinFilename=binning_reference_file,
                             OutputWorkspace=final_ws_name,
                             GSSFilename=out_gss_file,
                             IPTS=ipts,
                             GSSParmFilename=gss_parm_file)
+
+    # Add special property to output workspace
+    final_ws = ADS.retrieve(final_ws_name)
+    final_ws.getRun().addProperty('VDriveBin', True, replace=True)
 
     return
 
@@ -1207,17 +1244,40 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:
+        # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
         mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
                                      OutputWorkspace=output_workspace,
                                      FWHM=fwhm,
                                      PeakPositionTolerance=peak_pos_tol,
                                      BackgroundType=background_type,
                                      HighBackground=is_high_background)
+
+        # peakless_ws = ADS.retrieve(output_workspace)
+        # print '[DB...BAT] Peakless WS: ', peakless_ws.isHistogramData(), peakless_ws.getAxis(0).getUnit().unitID()
+
     except RuntimeError as run_err:
         raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
                            ''.format(input_workspace, run_err))
 
     return output_workspace
+
+
+def sum_spectra(input_workspace, output_workspace):
+    """
+    sum spectra
+    :param input_workspace:
+    :param output_workspace:
+    :return:
+    """
+    # check
+    assert isinstance(input_workspace, str), 'Input workspace must be string'
+    assert isinstance(output_workspace, str), 'Output workspace must be string'
+
+    # call Mantid
+    mantidapi.SumSpectra(InputWorkspsace=input_workspace,
+                         OutputWorkspace=output_workspace)
+
+    return
 
 
 def workspace_does_exist(workspace_name):

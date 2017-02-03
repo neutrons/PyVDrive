@@ -133,12 +133,14 @@ class VulcanGuiReduction(object):
 
         arg_dict = {'binning': bin_par}
         arg_dict.update(output_option_dict)
+        arg_dict['output_directory'] = self.controller.get_working_dir()
 
         if bin_by_pixel:
             # binning by pixel
             raise NotImplementedError('Binning by pixels is not implemented yet!')
         else:
             # regular binning
+            print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
             status, ret_obj = self.controller.reduce_data_set(**arg_dict)
 
         if status is False:

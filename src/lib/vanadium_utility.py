@@ -2,6 +2,7 @@
 import os
 import shutil
 import mantid_helper
+from reduce_VULCAN import align_bins
 
 
 class VanadiumProcessingManager(object):
@@ -141,11 +142,11 @@ class VanadiumProcessingManager(object):
         save a processed vanadium (in workspace) to GSAS file
         Note: IPTS number must be specified for being written into GSAS file;
               run number must be specified for output file name
+        :param vanadium_tuple: None or 3-tuple for vanadium workspace name/IPTS number/run number
         :param to_archive
         :param out_file_name: if not None, then output locally
         :return: tuple (boolean, str): status, error message
         """
-        # TODO/ISSUE/59 - clean warnings
         # check inputs
         if vanadium_tuple is None:
             # use the class variables of this instance
@@ -159,17 +160,18 @@ class VanadiumProcessingManager(object):
             run_number = self._runNumber
 
         else:
-            assert len(vanadium_tuple) == 3, 'blabla'
+            assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
+                                             ''.format(len(vanadium_tuple))
             workspace_name, ipts_number, run_number = vanadium_tuple
-            assert isinstance(ipts_number, int), 'blabla'
-            assert isinstance(run_number, int), 'run number blabla'
+            assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+                                                 ''.format(ipts_number, type(ipts_number))
+            assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
+                                                ''.format(run_number, type(run_number))
         # END-IF-ELSE
 
         # archive file name
         return_status = True
         error_msg = ''
-
-        print 'Check Point ----0001'
 
         # write to archive
         if to_archive:
@@ -185,8 +187,6 @@ class VanadiumProcessingManager(object):
                 error_msg += 'Failed to write {0} to archive due to permission error.\n'.format(archive_file_name)
         else:
             archive_file_name = None
-
-        print 'Check Point ----0002: ', error_msg
 
         if out_file_name:
             # file name re-define & get directory of the output file
@@ -211,8 +211,6 @@ class VanadiumProcessingManager(object):
                 error_msg += 'Failed to write {0} to local directory due to permission error.'.format(archive_file_name)
             # END-IF
         # END-IF
-
-        print 'Check Point ----0003: ', error_msg
 
         return return_status, error_msg
 
@@ -252,6 +250,13 @@ class VanadiumProcessingManager(object):
 
         # register the output workspace if this method is not called as a static
         self._smoothedWorkspace = output_workspace_name
+
+        # check the workspace whether it can be aligned
+        if mantid_helper.match_bins():
+            align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
+        else:
+            # TODO/ISSUE/62 - check
+            raise blabla
 
         return output_workspace_name
 

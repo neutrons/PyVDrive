@@ -551,7 +551,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get number of groups
         group_id_list = sorted(self._autoPeakGroup.get_group_ids())
         num_groups = len(group_id_list)
-        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
 
         # add peak to table
         for group_id in group_id_list:
@@ -585,8 +584,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get number of groups
         num_groups = self.ui.graphicsView_main.get_number_peaks_groups()
 
-        print '[DB...BAT] It is about to adding %d peak groups' % num_groups
-
         for i_grp in xrange(num_groups):
             # get peak group
             group = self.ui.graphicsView_main.get_peaks_group(i_grp)
@@ -609,8 +606,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
                 # peak group without any peak
                 return
 
-            #  print '[DB...KILL]: Peak-tuple List:', peak_tup_list
-
             for peak_tup in peak_tup_list:
                 peak_center = peak_tup[0]
                 print 'Peak center = ', peak_center, 'of type', type(peak_center)
@@ -621,15 +616,16 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                            centre=peak_center,
                                                            width=width,
                                                            group_id=group_id)
-            # clone to PeakPickWindow's
-            print '[DB] It is about to store peaks group to somewhere!'
+            # END-IF
+            # clone to PeakPickWindow
+            # TODO/issue/NOW - shall I implement above?
 
             # make the group quit the edit mode
             self.ui.graphicsView_main.edit_group(group_id, False)
         # END-FOR
 
         # quit peak editing mode
-        # TODO/NOW - this is a dirty solution.  need to have it solved by edit_group(...)
+        # TODO/FIXME/NOW/ISSUE/62 - this is a dirty solution.  need to have it solved by edit_group(...)
         self.ui.graphicsView_main._inEditGroupList = list()
 
         return
@@ -708,7 +704,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             peak_width = peak_info_tup[1]
             self.ui.graphicsView_main.plot_peak_indicator(peak_pos)
         # END-FOR
-        print '[DB...BAT] Current peak indicators on canvas:', self.ui.graphicsView_main._shownPeakIDList
 
         return
 
@@ -967,7 +962,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self.ui.tableWidget_peakParameter.remove_all_rows()
 
         # Write peaks to table only for the current bank and store the rest to buffer
-        print '[DB] There are %d peaks to add to current bank %s.' % (len(peak_list), str(self._currentBankNumber))
         for peak_info in peak_list:
             # check
             assert isinstance(peak_info, list)
@@ -1250,9 +1244,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # Set the mutex flag
         self._isDataLoaded = False
 
-        print '[DB...BAT] Load and Plot: load run number %s and data key %s.' % (str(run_number),
-                                                                                 str(data_key))
-
         # Update widgets, including run number, bank IDs (bank ID starts from 1)
         self._evtLockComboBankNumber = True
 
@@ -1359,16 +1350,15 @@ class PeakPickerWindow(QtGui.QMainWindow):
             Save the peak positions and other parameters to controller
         :return:
         """
+        # TODO/TEST/NOW
+
         # Check requirements
-        assert self._myController is not None
+        assert self._myController is not None, 'My controller cannot be None'
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
         out_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
                                                               self._dataDirectory, file_filter))
-
-        # TODO/FIXME/NOW
-        print '[DB...BAT] Current bank number = ', self._currentRunNumber
 
         # Get the peaks from buffer
         print 'Get buffered peaks of bank %d' % self._currentBankNumber
@@ -1382,7 +1372,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
             # get a list from the peak
             peak_i = self.ui.tableWidget_peakParameter.get_peak(i_peak)
             peak_list.append(peak_i)
-            print '[DB-BAT-22527]', type(peak_i), peak_i
         peak_bank_dict[self._currentBankNumber] = peak_list
 
         # Check
@@ -1493,7 +1482,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # get single peaks from canvas
         raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
-        print '[DB...BAT] Peak to group: ', raw_peak_pos_list
 
         # call controller method to set group boundary
         peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
@@ -1616,8 +1604,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Delete a peak from menu at where the cursor is pointed to
         :return:
         """
-        # TODO: Implement and Doc
-        print '[DB...BAT] Delete peak around x = %f' % self._currMousePosX
+        # TODO/FIXME/ISSUE/62 - Complete and test!
 
         # find out where the peak is
         temp_peak_pos = self._currMousePosX

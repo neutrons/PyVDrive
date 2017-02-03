@@ -129,6 +129,7 @@ class ProjectManager(object):
         else:
             # just chop the files and save to Nexus
             data_file = self.get_file_path(run_number)
+            # TODO/FIXME/ISSUE/62 - chop_data() is not in a good shape
             self._reductionManager.chop_data(data_file, chopper, slicer_key, output_dir)
 
             status = True
@@ -228,7 +229,7 @@ class ProjectManager(object):
 
         # locate the workspace
         if self._reductionManager.has_run(data_key):
-            data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=False)
+            data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=True)
         elif self._loadedDataManager.has_data(data_key):
             data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
         else:
@@ -425,11 +426,12 @@ class ProjectManager(object):
 
         return run_number_list
 
-    def get_reduced_runs(self):
-        """ Get the run/run numbers of the reduced runs
-        :return: list of strings
-        """
-        return self._reductionManager.get_reduced_runs()
+    # removed
+    # def get_reduced_runs(self):
+    #     """ Get the run/run numbers of the reduced runs
+    #     :return: list of strings
+    #     """
+    #     return self._reductionManager.get_reduced_runs()
 
     def get_reduced_data(self, run_id, target_unit, reduced_data_file=None):
         """ Get reduced data
@@ -489,7 +491,7 @@ class ProjectManager(object):
         if (ipts_number, run_number) in self._loadedDataDict:
             workspace_name = self._loadedDataDict[ipts_number, run_number]
         else:
-            workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=None, unit=None)
+            workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
 
         if workspace_name is None:
             raise RuntimeError('There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
@@ -515,7 +517,7 @@ class ProjectManager(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True, unit='TOF')
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -571,6 +573,20 @@ class ProjectManager(object):
         do_have = run_number in self._dataFileDict
 
         return do_have
+
+    def load_standard_binning_workspace(self, data_directory):
+        """
+
+        :return:
+        """
+        # TODO/NOW/ISSUE/62 - Clean!
+
+        template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
+        print os.path.exists(template_file_name)
+
+        self._vdriveBinTemplateName = 'VDriveBinTemplate'
+
+        mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -861,11 +877,11 @@ class ProjectManager(object):
 
         # Build file name with path
         # FIXME : VULCAN only now!
-        nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs'%(ipts, run, run))
+        nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts, run, run))
         if os.path.exists(nxsfname) is False:
-            print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % (nxsfname)
+            print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % nxsfname
         else:
-            print "[DB] Successfully generate an existing NeXus file with name %s." % (nxsfname)
+            print "[DB] Successfully generate an existing NeXus file with name %s." % nxsfname
 
         return nxsfname
 
@@ -876,6 +892,15 @@ class ProjectManager(object):
         :return:
         """
         return self._processVanadiumManager
+
+    @property
+    def vdrive_bin_template(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/62 - BLABLA
+        return self._vdriveBinTemplateName
 
 
 def get_data_key(file_name):

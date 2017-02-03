@@ -8,9 +8,8 @@
 #####
 import os
 import pandas as pd
-import shutil
 
-import ProjectManager as vp
+import ProjectManager as ProjectMrg
 import archivemanager
 import vdrivehelper
 import mantid_helper
@@ -28,7 +27,7 @@ class VDriveAPI(object):
     It is a pure python layer that does not consider GUI.
     VDrivePlot is a GUI application built upon this class
     """
-    def __init__(self, instrument_name):
+    def __init__(self, instrument_name, module_location=None):
         """
         Initialization
         Purpose:
@@ -54,7 +53,14 @@ class VDriveAPI(object):
         self._myInstrument = instrument_name
 
         # initialize (1) vdrive project for reducing data, (2) data archiving manager, and (3) slicing manager
-        self._myProject = vp.ProjectManager('New Project')
+        self._myProject = ProjectMrg.ProjectManager('New Project')
+
+        # construct the data location
+        if module_location is not None:
+            template_data_dir = os.path.join(module_location, 'data')
+        else:
+            template_data_dir = None
+        self._myProject.load_standard_binning_workspace(template_data_dir)
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.
@@ -511,11 +517,12 @@ class VDriveAPI(object):
 
         return True, info
 
-    def get_reduced_runs(self):
+    def get_reduced_runs(self, with_ipts=True):
         """ Get the runs (run numbers) that have been reduced successfully
+        :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
         :return: list of strings?
         """
-        return self._myProject.get_reduced_runs()
+        return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
     def get_slicer(self, run_number, slicer_id):
         """
@@ -972,6 +979,7 @@ class VDriveAPI(object):
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
+            print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
@@ -980,6 +988,7 @@ class VDriveAPI(object):
 
         else:
             # manual reduction: Reduce runs
+            print '[INFO] Reduce Runs: {0}.'.format(runs_to_reduce)
             try:
                 status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
@@ -994,6 +1003,8 @@ class VDriveAPI(object):
             except AssertionError as re:
                 status = False
                 ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
+            # END-TRY-EXCEPT
+        # END-IF-ELSE
 
         return status, ret_obj
 

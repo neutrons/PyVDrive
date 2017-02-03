@@ -145,7 +145,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         elif self._myPeakSelectionMode == PeakAdditionState.MultiMode:
             # multi-peak-indication mode:
             group_id = self._myPeakGroupManager.get_group_id(pos_x)
-            print '[DB] Group-ID = %d vs. current Group ID %s' % (group_id, self._currGroupID)
 
             if group_id < 0:
                 # unable to add a peak, then possibly to add a group
@@ -451,15 +450,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         pk_group = self._myPeakGroupManager.get_group(group_id)
         assert isinstance(pk_group, peaksmanager.GroupedPeaksInfo)
 
-        # debug output
-        print '[DB...BAT] removing peak group: ', str(pk_group)
-
         # get all the indicator IDs from peak group and remove from canvas
         self.remove_indicator(pk_group.left_boundary_id)
         self.remove_indicator(pk_group.right_boundary_id)
         for peak_tup in pk_group.get_peaks():
             peak_id = peak_tup[1]
-            print '[DB...BAT] Remove ID %d' % peak_id
             self.remove_indicator(peak_id)
 
         # remove the indicator IDs from PeaksGroup by setting to -1
@@ -596,7 +591,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # find the nearby peak
         index = bisect.bisect_left(peak_tup_list, (curr_position, -1))
-        # print '[DB...BAT] cursor @ ', curr_position, 'index = ', index, '  peak list: ', peak_tup_list
         index = max(0, index)
 
         # use the dynamic resolution
@@ -719,7 +713,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         abs_move_y = abs(event.ydata - self._mouseY)
         if abs_move_x < resolution_x and abs_move_y < resolution_y:
             # movement is too small to require operation
-            # print '[DB...BAT] returned due to small step.  prev: ', self._mouseX, ' current: ', event.xdata
             return
 
         # Now it is the time to process
