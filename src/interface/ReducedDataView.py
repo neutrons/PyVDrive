@@ -355,14 +355,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Get new bank ID
         new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
-        if new_bank_str.isdigit() is False:
+        if new_bank_str.isdigit() is False and new_bank_str != 'All':
             print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
             return
 
-        curr_bank_id = int(new_bank_str)
-        keep_prev = self.ui.checkBox_overPlot.isChecked()
-        if self._currRunNumber is not None:
-            self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
+        if new_bank_str == 'All':
+            # TODO/ISSUE/33 - Implement
+            blabla()
+        else:
+            curr_bank_id = int(new_bank_str)
+            keep_prev = self.ui.checkBox_overPlot.isChecked()
+            if self._currRunNumber is not None:
+                self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
 
         return
 
