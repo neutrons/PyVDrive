@@ -78,7 +78,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
                      self.do_plot_next_run)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                     self.doPlotRunSelected)
+                     self.do_plot_selected_run)
 
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
         #         self.do_plot_all_runs)
@@ -122,6 +122,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def add_data_set(self, ipts_number, run_number, controller_data_key):
         """
         add a new data set to this data viewer window
+        :param ipts_number:
+        :param run_number:
         :param controller_data_key:
         :return:
         """
@@ -155,17 +157,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return controller_data_key
 
-    def add_run_numbers(self, run_number_list, clear_previous=False):
+    def add_run_numbers(self, run_tup_list, clear_previous=False):
         """
         set run numbers to combo-box-run numbers
-        :param run_number_list:
+        :param run_tup_list: a list of 2-tuples as (run number, IPTS number)
+        :param clear_previous:
         :return:
         """
-        assert isinstance(run_number_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
-                                                  '' % (str(run_number_list), type(run_number_list))
+        assert isinstance(run_tup_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
+                                               '' % (str(run_tup_list), type(run_tup_list))
 
-        self._runNumberList = run_number_list[:]
-        self._runNumberList.sort()
+        # self._runNumberList = run_tup_list[:]
+        # self._runNumberList.sort()
+
+        # sort and add
+        run_tup_list.sort()
 
         # show on the list: turn or and off mutex locks around change of the combo box conents
         self._mutexRunNumberList = True
@@ -173,8 +179,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # clear existing runs
         if clear_previous:
             self.ui.comboBox_runs.clear()
-        for run_number in self._runNumberList:
+            self._runNumberList = list()
+
+        # add run number of combo-box and dictionary
+        for run_tup in run_tup_list:
+            run_number, ipts_number = run_tup
             self.ui.comboBox_runs.addItem(str(run_number))
+            self._dataIptsRunDict[run_number] = ipts_number, run_number
+            self._runNumberList.append(run_number)
 
         # release mutex lock
         self._mutexRunNumberList = False
@@ -251,14 +263,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._vanadiumProcessDialog.show()
 
         # get current workspace
-        current_run_ws = str(self.ui.comboBox_runs.currentText())
-        ipts_number, run_number = self._dataIptsRunDict[current_run_ws]
+        current_run_str = str(self.ui.comboBox_runs.currentText())
+        if current_run_str.isdigit():
+            current_run = int(current_run_str)
+        else:
+            current_run = current_run_str
+        ipts_number, run_number = self._dataIptsRunDict[current_run]
 
         self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
 
         return
 
-    def doPlotRunSelected(self):
+    def do_plot_selected_run(self):
         """
         Plot the current run. The first choice is from the line edit. If it is blank,
         then from combo box
@@ -575,7 +591,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # get new data
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
-                                                                  search_archive=True)
+                                                                  search_archive=False)
 
             # return if unable to get reduced data
             if status is False:
@@ -854,8 +870,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         reduced_run_number_list = self._myController.get_reduced_runs()
         reduced_run_number_list.sort()
         self.ui.comboBox_runs.clear()
-        for run_number in reduced_run_number_list:
+        for run_number, ipts_number in reduced_run_number_list:
             self.ui.comboBox_runs.addItem(str(run_number))
+            self._dataIptsRunDict[run_number] = ipts_number, run_number
 
         return
 
@@ -891,14 +908,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # note: as it is from a signal with defined parameters types, there is no need to check
         #       the validity of parameters
+        current_run_str = str(self.ui.comboBox_runs.currentText())
+        if current_run_str.isdigit():
+            current_run_number = int(current_run_str)
+            ipts_number, run_number = self._dataIptsRunDict[current_run_number]
+            data_key = None
+        else:
+            data_key = current_run_str
+            ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
-        if self._currRunNumber is None:
-            data_key = str(self.ui.comboBox_runs.currentText())
-        else:
-            data_key = None
-
-        status, ret_obj = self._myController.strip_vanadium_peaks(self._iptsNumber, self._currRunNumber,
+        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number,
                                                                   peak_fwhm, tolerance,
                                                                   background_type, is_high_background,
                                                                   data_key)

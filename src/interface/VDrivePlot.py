@@ -467,7 +467,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # END-IF
 
         # update to current reduction status
-        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(), clear_previous=True)
+        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
+                                                    clear_previous=True)
 
         # show the window if it exists and return
         self._reducedDataViewWindow.show()
@@ -483,7 +484,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         try:
             remove_run = GuiUtility.parse_integer(self.ui.lineEdit_runsToDelete)
         except ValueError as ve:
-            GuiUtility.pop_dialog_error(str(ve))
+            GuiUtility.pop_dialog_error(self, str(ve))
             return
 
         # determine the rows for the runs to delete

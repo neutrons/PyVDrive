@@ -1,6 +1,6 @@
 import sys
 import os
-import math
+import random
 import numpy
 
 # Import mantid directory
@@ -533,25 +533,38 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         required_workspace_index = None
     # END-IF-ELSE
 
+    # define a temporary workspace name
+    use_temp = False
+    temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
+
     # get unit
     current_unit = get_workspace_unit(workspace_name)
     if current_unit != target_unit and target_unit is not None:
         # convert unit if the specified target unit is different
-        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
                                Target=target_unit)
         current_unit = target_unit
+        use_temp = True
     # END-IF
 
     # Convert to point data
     workspace = ADS.retrieve(workspace_name)
-    if point_data is True and workspace.isHistogramData():
-        mantidapi.ConvertToPointData(InputWorkspace=workspace_name,
-                                     OutputWorkspace=workspace_name)
+    if point_data and workspace.isHistogramData():
+        if use_temp:
+            input_ws_name = temp_ws_name
+        else:
+            input_ws_name = workspace_name
+            use_temp = True
+        mantidapi.ConvertToPointData(InputWorkspace=input_ws_name,
+                                     OutputWorkspace=temp_ws_name)
     # END-IF
 
     # Set up variables
     data_set_dict = dict()
-    workspace = retrieve_workspace(workspace_name)
+    if use_temp:
+        workspace = retrieve_workspace(temp_ws_name)
+    else:
+        workspace = retrieve_workspace(workspace_name)
     
     # Get data: 2 cases as 1 bank or all banks
     if bank_id is None:
@@ -591,6 +604,10 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         data_e[:] = vec_e[:]
 
         data_set_dict[bank_id] = (data_x, data_y, data_e)
+
+    # clean the temporary workspace
+    if use_temp:
+        delete_workspace(temp_ws_name)
     
     return data_set_dict, current_unit
 
@@ -1227,12 +1244,17 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:
+        # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
         mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
                                      OutputWorkspace=output_workspace,
                                      FWHM=fwhm,
                                      PeakPositionTolerance=peak_pos_tol,
                                      BackgroundType=background_type,
                                      HighBackground=is_high_background)
+
+        # peakless_ws = ADS.retrieve(output_workspace)
+        # print '[DB...BAT] Peakless WS: ', peakless_ws.isHistogramData(), peakless_ws.getAxis(0).getUnit().unitID()
+
     except RuntimeError as run_err:
         raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
                            ''.format(input_workspace, run_err))

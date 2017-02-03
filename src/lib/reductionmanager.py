@@ -17,7 +17,7 @@ class DataReductionTracker(object):
     NormaliseByCurrent = 3
     CalibratedByVanadium = 4
 
-    def __init__(self, run_number):
+    def __init__(self, run_number, ipts_number):
         """
         Purpose:
             Initialize an object of DataReductionTracer
@@ -28,12 +28,14 @@ class DataReductionTracker(object):
         :return:
         """
         # Check requirements
-        assert isinstance(run_number, int)
+        assert isinstance(run_number, int), 'blabla'
+        assert isinstance(ipts_number, int), 'blabla'
 
         # set up
         self._runNumber = run_number
         # FIXME - it is not clear whether it is better to use vanadium file name or vanadium run number
         self._vanadiumCalibrationRunNumber = None
+        self._iptsNumber = ipts_number
 
         # Workspaces' names
         # event workspaces
@@ -124,6 +126,15 @@ class DataReductionTracker(object):
         return gsas_file
 
     @property
+    def ipts_number(self):
+        """
+
+        :return:
+        """
+        # blabla
+        return self._iptsNumber
+
+    @property
     def is_chopped_run(self):
         """
         check whether the reduction is about a chopped run
@@ -201,7 +212,6 @@ class DataReductionTracker(object):
         :return:
         """
         return self._runNumber
-
 
     @property
     def vdrive_workspace(self):
@@ -340,7 +350,7 @@ class ReductionManager(object):
 
         return
 
-    def chop_data(self, run_number, data_file, chop_manager, slice_key, output_dir, tof_correction=False):
+    def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir, tof_correction=False):
         """
         chop data from a source event file and then save the result to Nexus files.
         There is no focusing type of reduction is evolved.
@@ -358,6 +368,7 @@ class ReductionManager(object):
             ''.format(chop_manager.__class__.__name__)
         assert isinstance(run_number, int), 'Run number must be an integer but not of type {0}.' \
                                             ''.format(type(run_number))
+        assert isinstance(ipts_number, int), 'blabla'
 
         # get splitters workspace
         split_ws_name, info_ws_name = chop_manager.get_split_workspace(slice_key)
@@ -376,7 +387,7 @@ class ReductionManager(object):
             error_msg = ret_obj
             return False, error_msg
 
-        self.init_tracker(run_number=run_number, slicer_key=slice_key)
+        self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
         self._reductionTrackDict[run_number, slice_key].set_chopped_workspaces(chopped_ws_name_list)
 
         return True, None
@@ -449,7 +460,7 @@ class ReductionManager(object):
 
         return None
 
-    def get_reduced_runs(self):
+    def get_reduced_runs(self, with_ipts=False):
         """
         Get the runs that have been reduced. It is just for information
         :return:  a list of run numbers
@@ -458,11 +469,18 @@ class ReductionManager(object):
         for run_number in self._reductionTrackDict.keys():
             tracker = self._reductionTrackDict[run_number]
             if tracker.is_reduced is True:
-                return_list.append(run_number)
+                if with_ipts:
+                    new_item = run_number, tracker.ipts_number
+                else:
+                    new_item = run_number
+
+                return_list.append(new_item)
+            # END-IF
+        # END-FOR
 
         return return_list
 
-    def get_reduced_workspace(self, run_number, is_vdrive_bin, unit='TOF'):
+    def get_reduced_workspace(self, run_number, is_vdrive_bin=True, unit='TOF'):
         """ Get the reduced matrix workspace
         Requirements:
             1. Specified run is correctly reduced;
@@ -507,13 +525,14 @@ class ReductionManager(object):
         """
         return run_number in self._reductionTrackDict
 
-    def init_tracker(self, run_number, slicer_key=None):
+    def init_tracker(self, ipts_number, run_number, slicer_key=None):
         """ Initialize tracker
         :param run_number:
         :param slicer_key: if not specified, then the reduction is without chopping
         :return:
         """
         # Check requirements
+        assert isinstance(ipts_number, int) or ipts_number is None, 'blabla'
         assert isinstance(run_number, int), 'Run number %s must be integer but not %s' % (str(run_number),
                                                                                           str(type(run_number)))
 
@@ -524,7 +543,7 @@ class ReductionManager(object):
             tracker_key = run_number, slicer_key
 
         if tracker_key not in self._reductionTrackDict:
-            new_tracker = DataReductionTracker(run_number)
+            new_tracker = DataReductionTracker(run_number, ipts_number)
             new_tracker.set_slicer_key(slicer_key)
             self._reductionTrackDict[tracker_key] = new_tracker
         else:
@@ -575,7 +594,7 @@ class ReductionManager(object):
             return False, message
 
         # get the reduced file names and workspaces and add to reduction tracker dictionary
-        self.init_tracker(run_number, slicer_key)
+        self.init_tracker(ipts_number, run_number, slicer_key)
 
         self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
         self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
@@ -635,7 +654,7 @@ class ReductionManager(object):
 
         # record reduction tracker
         if reduce_good:
-            self.init_tracker(run_number)
+            self.init_tracker(ipts_number, run_number)
 
             if vanadium:
                 self._reductionTrackDict[run_number].is_corrected_by_vanadium = True

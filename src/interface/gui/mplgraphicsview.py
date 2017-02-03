@@ -620,6 +620,7 @@ class MplGraphicsView(QtGui.QWidget):
         rescale the canvas in an automatic way
         :return:
         """
+        # TODO/ISSUE/62/GENERAL - How about the definition of _maxX, _maxY,..., ...
         # get right_x_bound and upper_y_bound
         delta_x = self._maxX
         delta_y = self._maxY
@@ -627,7 +628,21 @@ class MplGraphicsView(QtGui.QWidget):
         right_x_bound = self._maxX + 0.05 * delta_x
         upper_y_bound = self._maxY + 0.05 * delta_y
 
-        self.setXYLimit(xmax=right_x_bound, ymax=upper_y_bound)
+        # set optionally xmin
+        curr_x_min, curr_x_max = self.getXLimit()
+        if curr_x_min > right_x_bound:
+            left_x_bound = 0.
+        else:
+            left_x_bound = None
+
+        # FIXME - This is not good!
+        curr_y_min, curr_y_max = self.getYLimit()
+        if curr_y_min > upper_y_bound:
+            lower_y_bound = 0.
+        else:
+            lower_y_bound = None
+
+        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin= lower_y_bound, ymax=upper_y_bound)
 
         return
 
