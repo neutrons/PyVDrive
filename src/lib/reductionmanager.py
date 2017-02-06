@@ -391,7 +391,9 @@ class ReductionManager(object):
             return False, error_msg
 
         self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-        self._reductionTrackDict[run_number, slice_key].set_chopped_workspaces(chopped_ws_name_list)
+        if ret_obj is not None:
+            self._reductionTrackDict[run_number, slice_key].set_chopped_workspaces(chopped_ws_name_list)
+        # TODO/ISSUE/33 - Consider to record saved NeXus file names
 
         return True, None
 
@@ -596,15 +598,14 @@ class ReductionManager(object):
         reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
         reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
-        status, message = reducer.execute_chop_reduction(clear_workspaces=False)
-        if not status:
-            return False, message
+        reducer.execute_chop_reduction(clear_workspaces=False)
 
         # get the reduced file names and workspaces and add to reduction tracker dictionary
         self.init_tracker(ipts_number, run_number, slicer_key)
 
-        self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
-        self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
+        # TODO/ISSUE/33 - Add these two methods to trace the reduction result of chopped data
+        # self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
+        # self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
 
         return True, None
 

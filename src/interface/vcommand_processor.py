@@ -140,7 +140,6 @@ class VdriveCommandProcessor(object):
 
         # execute
         status, message = self._process_command(processor, arg_dict)
-        print '[DB...BAT] ', status, message
 
         # get information from VdriveChop
         self._chopIPTSNumber, self._chopRunNumberList = processor.get_ipts_runs()
@@ -149,6 +148,7 @@ class VdriveCommandProcessor(object):
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
             log_window.load_run(self._chopRunNumberList[0])
+            log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
         # END-IF
 
         return status, message

@@ -1,5 +1,5 @@
 import numpy as np
-
+from PyQt4 import  QtGui
 import mplgraphicsview
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
@@ -9,6 +9,10 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
     """
     Class ... extends ...
     for specific needs of the graphics view for interactive plotting of sample log,
+
+    Note:
+    1. each chopper-slicer picker is a vertical indicator
+       (ideally as a picker is moving, a 2-way indicator can be shown on the canvas
     """
     def __init__(self, parent):
         """
@@ -17,6 +21,18 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         """
         # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
+
+        # collection of indicator IDs that are on canvas
+        self._currentLogPickerList = list()   # list of indicator IDs.
+        self._pickerRangeDict = dict()  # dictionary for picker range. key: position, value: indicator IDs
+
+        # resolution to find
+        self._resolutionRatio = 0.001  # resolution to check mouse position
+        self._pickerRangeRatio = 0.01  # picker range = (X_max - X_min) * ratio
+        self._currXLimit = (0., 1.)  # 2-tuple as left X limit and right X limit
+
+        # mode
+        self._inPickMode = False
 
         # current plot IDs
         self._currPlotID = None
@@ -29,6 +45,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # container for segments plot
         self._splitterSegmentsList = list()
+
+        #
+        self._myCanvas.mpl_connect('button_press_event', self.on_mouse_press_event)
+        self._myCanvas.mpl_connect('button_release_event', self.on_mouse_release_event)
+        self._myCanvas.mpl_connect('motion_notify_event', self.on_mouse_motion)
 
         return
 
@@ -58,6 +79,103 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         y_max = max(np.array(y_max_list))
 
         return x_min, x_max, y_min, y_max
+
+    def menu_add_picker(self):
+        """
+        blabla
+        :return:
+        """
+        # TODO/ISSUE/33 - Add the outcome to dictionary to manage
+        self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
+
+        return
+
+    def menu_delete_picker(self, event):
+        """
+        blabla
+        :param event:
+        :return:
+        """
+        # TODO/ISSUE/33 - Implement!
+
+        print '[DB] X range: ', self.getXLimit()
+
+        return
+
+    def on_mouse_press_event(self, event):
+        """
+        determine whether the mode is on
+        right button:
+            pop out menu if it is relevant
+        left button:
+            get star to
+        :param event:
+        :return:
+        """
+
+        return
+
+    def on_mouse_release_event(self, event):
+        """
+        left button:
+            release the hold-picker mode
+        :param event:
+        :return:
+        """
+        # determine button and position
+        button = event.button
+
+        self._currMousePosX = event.xdata
+        self._currMousePosY = event.ydata
+
+        # TODO/ISSUE/33 - Check mode. return if no in manual-pick mode
+
+        if button == 1:
+            # left button
+            pass
+
+        elif button == 3:
+            # right button
+
+            # need to find out whether the cursor is 'on' an indicator
+            # TODO/ISSUE/33 --| implement above
+
+            # Pop-out menu
+            self.menu = QtGui.QMenu(self)
+
+            action1 = QtGui.QAction('Add Picker', self)
+            action1.triggered.connect(self.menu_add_picker)
+            self.menu.addAction(action1)
+
+            # TODO/ISSUE/33 - Only available if the cursor is ON a picker
+            action2 = QtGui.QAction('Delete Picker', self)
+            action2.triggered.connect(self.menu_delete_picker)
+            self.menu.addAction(action2)
+
+            # add other required actions
+            self.menu.popup(QtGui.QCursor.pos())
+        # END-IF
+
+        return
+
+    def on_mouse_motion(self, event):
+        """
+        pick
+        :param event:
+        :return:
+        """
+        # TODO/ISSUE/33 - Implement this method
+        # return if not in manual mode
+
+
+        # check whether the _pickerRangeDict need to re-write
+
+
+        # if button not being hold, check mouse cursor position and select/deselect the picker
+
+        # if button is hold and a picker is selected, then move the picker
+
+        return
 
     def plot_sample_log(self, vec_x, vec_y, sample_log_name):
         """ Purpose: plot sample log

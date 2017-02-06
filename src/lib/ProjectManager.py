@@ -596,7 +596,7 @@ class ProjectManager(object):
         :param save_dict:
         :return:
         """
-        assert isinstance(save_dict, dict)
+        assert isinstance(save_dict, dict), 'blabla'
 
         # Set
         self._name = save_dict['name']

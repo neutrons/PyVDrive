@@ -66,8 +66,8 @@ class IndicatorManager(object):
         # Auto line ID
         self._autoLineID = 1
 
-        self._lineManager = dict()
-        self._canvasLineKeyDict = dict()  # dictionary for line-key on the canvas
+        self._lineManager = dict()  # key: indicator ID, value: 5-tuple about indicator's position and type
+        self._canvasLineKeyDict = dict()  # key: indicator ID, value: line-key on the canvas
         self._indicatorTypeDict = dict()  # value: 0 (horizontal), 1 (vertical), 2 (2-way)
 
         return

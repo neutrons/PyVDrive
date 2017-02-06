@@ -1119,7 +1119,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     :param tof_correction:
     :param output_directory:
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
-    :return:
+    :return: 2-tuple.  [1] boolean (success or fail) [2] None (no reduced workspace), List of strings or Error message
     """
     # Check requirements
     assert workspace_does_exist(split_ws_name)
@@ -1167,7 +1167,17 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
         chopped_ws_name_list = ret_list[2]
-        assert num_split_ws == len(chopped_ws_name_list)
+        # check the workspace name
+        for i_w, ws_name in enumerate(chopped_ws_name_list):
+            if len(ws_name) == 0:
+                chopped_ws_name_list.pop(i_w)
+            elif ADS.doesExist(ws_name) is False:
+                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
+        # END-FOR
+        assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
+                                                          'chopped workspaces names {1} ({2}).' \
+                                                          ''.format(num_split_ws, len(chopped_ws_name_list),
+                                                                    chopped_ws_name_list)
     except IndexError:
         return False, 'Failed to split data by FilterEvents.'
 
@@ -1175,6 +1185,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
 
     # Save result
+    # TODO/ISSUE/33 - Shall return NeXus file?
     if output_directory is not None:
         for chopped_ws_name in chopped_ws_name_list:
             file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
@@ -1188,7 +1199,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
 
     # Output
     if delete_split_ws:
-        ret_obj = False
+        ret_obj = None
     else:
         ret_obj = (chopped_ws_name_list, ret_list[3:])
 

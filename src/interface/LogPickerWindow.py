@@ -37,6 +37,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # parent
         self._myParent = parent
+        self._mutexLockSwitchSliceMethod = False
 
         # set up UI
         self.ui = VdriveLogPicker.Ui_MainWindow()
@@ -46,10 +47,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Defining widget handling methods
-        self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
-                     self.do_select_ipts)
-        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-                     self.do_quit_no_save)
         self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
                      self.do_save_time_segments)
         self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
@@ -67,11 +64,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
                      self.evt_re_plot_mts_log)
 
-        self.connect(self.ui.radioButton_useNexus, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_set_log_options)
-        self.connect(self.ui.radioButton_useLogFile, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_set_log_options)
-
         self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
                      self.load_log_names)
 
@@ -82,10 +74,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.evt_switch_slicer_method)
         self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
                      self.evt_switch_slicer_method)
-        self._mutexLockSwitchSliceMethod = False
-
         self.connect(self.ui.pushButton_slicer, QtCore.SIGNAL('clicked()'),
                      self.do_chop)
+        self.connect(self.ui.pushButton_viewReduced, QtCore.SIGNAL('clicked()'),
+                     self.do_view_reduced_data)
 
         # Further operation
         self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
@@ -94,8 +86,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # automatic slicer setup
         self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
                      self.do_setup_uniform_slicer)
-        self.connect(self.ui.pushButton_setSlicerRange, QtCore.SIGNAL('clicked()'),
-                     self.do_show_slicer)
+        self.connect(self.ui.checkBox_showSlicer, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_show_slicer)
 
         # manual slicer picker
         self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
@@ -134,7 +126,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # menu actions
         self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
-                     self.do_quit_no_save)
+                     self.evt_quit_no_save)
 
         # Event handling for pickers
         self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
@@ -211,9 +203,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.radioButton_noExpand.setChecked(True)
         # set up the check boxes
         self.ui.checkBox_hideSingleValueLog.setChecked(True)
-        # radio buttons
-        self.ui.radioButton_useNexus.setChecked(True)
-        self.ui.radioButton_useLogFile.setChecked(False)
 
         # type of slicer picker
         self.ui.radioButton_timeSlicer.setChecked(True)
@@ -243,6 +232,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.comboBox_logFrameUnit.setCurrentIndex(0)
         # initial value for number of points on
         self.ui.lineEdit_logFrameSize.setText('5000')
+
+        # check boxes
+        self.ui.checkBox_showSlicer.setChecked(True)
 
         return
 
@@ -292,17 +284,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # get the run and raw file
         raw_file_name = None
-        if self.ui.radioButton_useNexus.isChecked():
-            try:
-                run_number = int(self.ui.lineEdit_runNumber.text())
-                status, info_tup = self.get_controller().get_run_info(run_number)
-                if status:
-                    raw_file_name = info_tup[0]
-            except ValueError as val_error:
-                raise RuntimeError('Unable to find out run number')
-        else:
-            # TODO/ISSUE/NEXT - Find out how to generalize the current data structure for external log file
-            raise NotImplementedError('Coming Soon!')
+        try:
+            run_number = int(self.ui.lineEdit_runNumber.text())
+            status, info_tup = self.get_controller().get_run_info(run_number)
+            if status:
+                raw_file_name = info_tup[0]
+        except ValueError as val_error:
+            raise RuntimeError('Unable to find out run number due to {0}'.format(val_error))
 
         # pop up the dialog
         self._quickChopDialog = QuickChopDialog.QuickChopDialog(self, self._currRunNumber, raw_file_name)
@@ -676,7 +664,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_quit_no_save(self):
+    def evt_quit_no_save(self):
         """
         Cancelled
         :return:
@@ -773,15 +761,12 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_show_slicer(self):
+    def evt_show_slicer(self):
         """
         Show or hide the set up mantid-generated slicers on the canvas
         :return:
         """
-        # find out the mode
-        mode_str = str(self.ui.pushButton_setSlicerRange.text())
-
-        if mode_str == 'Show':
+        if self.ui.checkBox_showSlicer.isChecked():
             # show the slicers
             status, ret_obj = self.get_controller().get_slicer(self._currRunNumber, self._currSlicerKey)
             if status:
@@ -790,18 +775,24 @@ class WindowLogPicker(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, str(ret_obj))
                 return
             self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
-            # change the push button text
-            self.ui.pushButton_setSlicerRange.setText('Hide')
-
-        elif mode_str == 'Hide':
-            # hide the slicers
-            self.ui.graphicsView_main.remove_slicers()
-            # change the push button text
-            self.ui.pushButton_setSlicerRange.setText('Show')
 
         else:
-            # un-supported case
-            raise RuntimeError('Show/hide slicer button does not support mode %s.' % mode_str)
+            # hide the slicers
+            self.ui.graphicsView_main.remove_slicers()
+
+        return
+
+    def do_view_reduced_data(self):
+        """
+        launch the window to view reduced data
+        :return:
+        """
+        view_window = self._myParent.do_view_reduction()
+
+        # TODO/ISSUE/33 - Figure out how to set up view window
+        # ws_name_list = self.get_controller().get_chopped_data(self._currRunNumber, self._currSlicerKey,
+        #                                                       workspace_name=True)
+        # view_window.add_workspaces(ws_name_list)
 
         return
 
@@ -853,51 +844,6 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.plot_nexus_log(self._currLogName)
         else:
             self.plot_mts_log(self._currLogName, reset_canvas=True)
-
-        return
-
-    def do_select_ipts(self):
-        """
-        :return:
-        """
-        import AddRunsIPTS as IptsDialog
-
-        # Launch window
-        child_window = IptsDialog.AddRunsByIPTSDialog(self)
-
-        # init set up
-        if self._iptsNumber is not None:
-            child_window.set_ipts_number(self._addedIPTSNumber)
-
-        child_window.set_data_root_dir(self._myParent.get_controller().get_data_root_directory())
-        r = child_window.exec_()
-
-        # set the close one
-        ipts_run_number = child_window.get_ipts_number()
-
-        print ipts_run_number
-        print type(ipts_run_number)
-
-        return
-
-    def do_set_log_options(self):
-        """
-        Get the different options for set log
-        :return:
-        """
-        if self.ui.radioButton_useNexus.isChecked():
-            # enable to load run from Nexus/standard Vulcan run
-            self.ui.pushButton_loadRunSampleLog.setEnabled(True)
-            self.ui.pushButton_readLogFile.setEnabled(False)
-
-        elif self.ui.radioButton_useLogFile.isChecked():
-            # enable to load Vulcan sample environment log file
-            self.ui.pushButton_loadRunSampleLog.setEnabled(False)
-            self.ui.pushButton_readLogFile.setEnabled(True)
-
-        else:
-            # false set up
-            raise RuntimeError('Error setup to have both radio button (Nexus/log file) disabled.')
 
         return
 
@@ -966,6 +912,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # set up message
         self.ui.label_slicerSetupInfo.setText(message)
+
+        # possibly show the slicer?
+        if self.ui.checkBox_showSlicer.isChecked():
+            self.evt_show_slicer()
 
         return
 
@@ -1382,7 +1332,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         return
 
     def on_mouse_release_event(self, event):
-        """ If the left button is released and prevoiusly in IN_PICKER_MOVING mode,
+        """ If the left button is released and previously in IN_PICKER_MOVING mode,
         then the mode is over
 
         Note: double click (event.dblclick) does not correspond to any mouse release event
