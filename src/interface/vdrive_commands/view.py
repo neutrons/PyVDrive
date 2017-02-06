@@ -164,7 +164,7 @@ class VdriveView(VDriveCommand):
 
     def get_reduced_data_directory(self):
         """
-        blabla
+        get the direcotry where the reduced data is
         :return:
         """
         return self._reducedDataDir

@@ -28,8 +28,10 @@ class DataReductionTracker(object):
         :return:
         """
         # Check requirements
-        assert isinstance(run_number, int), 'blabla'
-        assert isinstance(ipts_number, int), 'blabla'
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
 
         # set up
         self._runNumber = run_number
@@ -128,10 +130,9 @@ class DataReductionTracker(object):
     @property
     def ipts_number(self):
         """
-
+        get the IPTS number set to this run number
         :return:
         """
-        # blabla
         return self._iptsNumber
 
     @property
@@ -354,6 +355,7 @@ class ReductionManager(object):
         """
         chop data from a source event file and then save the result to Nexus files.
         There is no focusing type of reduction is evolved.
+        :param ipts_number:
         :param run_number
         :param data_file:
         :param chop_manager:
@@ -368,7 +370,8 @@ class ReductionManager(object):
             ''.format(chop_manager.__class__.__name__)
         assert isinstance(run_number, int), 'Run number must be an integer but not of type {0}.' \
                                             ''.format(type(run_number))
-        assert isinstance(ipts_number, int), 'blabla'
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
 
         # get splitters workspace
         split_ws_name, info_ws_name = chop_manager.get_split_workspace(slice_key)
@@ -532,7 +535,8 @@ class ReductionManager(object):
         :return:
         """
         # Check requirements
-        assert isinstance(ipts_number, int) or ipts_number is None, 'blabla'
+        assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0}  must be an integer or None but ' \
+                                                                    'not a {1}.'.format(ipts_number, type(ipts_number))
         assert isinstance(run_number, int), 'Run number %s must be integer but not %s' % (str(run_number),
                                                                                           str(type(run_number)))
 
@@ -541,6 +545,9 @@ class ReductionManager(object):
             tracker_key = run_number
         else:
             tracker_key = run_number, slicer_key
+
+        if ipts_number is None:
+            raise NotImplementedError('Figure out how to track a reduction without a good IPTS number!')
 
         if tracker_key not in self._reductionTrackDict:
             new_tracker = DataReductionTracker(run_number, ipts_number)

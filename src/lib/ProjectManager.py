@@ -49,6 +49,9 @@ class ProjectManager(object):
         # dictionary for sample run number to be flagged to reduce.
         self._sampleRunReductionFlagDict = dict()  # Key: run number. Value: boolean flag for reduction
 
+        # name of the workspace for VDRIVE bins tempate
+        self._vdriveBinTemplateName = None
+
         return
 
     def add_run(self, run_number, file_name, ipts_number):
@@ -128,9 +131,22 @@ class ProjectManager(object):
 
         else:
             # just chop the files and save to Nexus
-            data_file = self.get_file_path(run_number)
-            # TODO/FIXME/ISSUE/62 - chop_data() is not in a good shape
-            self._reductionManager.chop_data(data_file, chopper, slicer_key, output_dir)
+            try:
+                data_file = self.get_file_path(run_number)
+                ipts_number = self.get_ipts_number(run_number)
+            except RuntimeError as run_error:
+                return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
+                              ''.format(run_number, run_error)
+            self._reductionManager.chop_data(ipts_number=ipts_number,
+                                             run_number=run_number,
+                                             data_file=data_file,
+                                             chop_manager=self._chopManagerDict[run_number],
+                                             slice_key=slicer_key,
+                                             output_dir=output_dir,
+                                             tof_correction=False)
+
+            # def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir,
+            #               tof_correction=False):
 
             status = True
             message = 'Run %d is chopped and reduced. ' % run_number
@@ -370,18 +386,20 @@ class ProjectManager(object):
 
         return file_path
 
-    def get_workspace_name(self, data_key):
-        """ Get workspace name
-        :param data_key:
+    def get_ipts_number(self, run_number):
+        """
+        get the IPTS number of a run
+        :param run_number:
         :return:
         """
-        # TODO/NOW - Doc and Check requirements
+        assert isinstance(run_number, int) and run_number >= 0
 
-        assert data_key in self._dataWorkspaceDict, 'There is no workspace for data key %s. ' \
-                                                    'Candidates are %s.' % (str(data_key),
-                                                                            str(self._dataWorkspaceDict.keys()))
+        if run_number in self._dataFileDict:
+            ipts_number = self._dataFileDict[run_number][1]
+        else:
+            raise RuntimeError('Run %d does not exist in this project.' % run_number)
 
-        return self._dataWorkspaceDict[data_key]
+        return ipts_number
 
     def getBaseDataPath(self):
         """ Get the base data path of the project
@@ -425,13 +443,6 @@ class ProjectManager(object):
                 run_number_list.append(run_number)
 
         return run_number_list
-
-    # removed
-    # def get_reduced_runs(self):
-    #     """ Get the run/run numbers of the reduced runs
-    #     :return: list of strings
-    #     """
-    #     return self._reductionManager.get_reduced_runs()
 
     def get_reduced_data(self, run_id, target_unit, reduced_data_file=None):
         """ Get reduced data
@@ -497,14 +508,6 @@ class ProjectManager(object):
             raise RuntimeError('There is no reduced workspace for IPTS {0} Run {1}'.format(ipts_number, run_number))
 
         return workspace_name
-
-    def get_reduced_run_history(self, run_number):
-        """ Get the processing history of a reduced run
-        :param run_number:
-        :return:
-        """
-        # TODO/NOW/1st: think of how to implement!
-        return ReductionHistory
 
     def get_reduced_run_information(self, run_number):
         """
@@ -576,17 +579,17 @@ class ProjectManager(object):
 
     def load_standard_binning_workspace(self, data_directory):
         """
-
+        Load the standard binning NeXus file to a workspace
         :return:
         """
-        # TODO/NOW/ISSUE/62 - Clean!
-
         template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
         print os.path.exists(template_file_name)
 
         self._vdriveBinTemplateName = 'VDriveBinTemplate'
 
         mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
+
+        return
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -744,39 +747,26 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
-    def save_session(self, out_file_name):
-        """ Save session to a dictionary
-        :param out_file_name:
-        :return:
-        """
-        # Save to a dictionary
-        save_dict = dict()
-        save_dict['name'] = self._name
-        save_dict['dataFileDict'] = self._dataFileDict
-        save_dict['baseDataFileNameList'] = self._baseDataFileNameList
-        save_dict['baseDataPath'] = self._baseDataPath
-
-        # Return if out_file_name is None
-        if out_file_name is None:
-            return save_dict
-
-        assert isinstance(out_file_name, str)
-        futil.save_xml(save_dict, out_file_name)
-
-        return None
-
-    def save_splitter_workspace(self, run_number, sample_log_name, file_name):
-        """
-        Save SplittersWorkspace to standard text file
-        :param run_number:
-        :param sample_log_name:
-        :param file_name:
-        :return:
-        """
-        # TODO/ISSUE/51
-        status, err_msg = self._mySlicingManager.save_splitter_ws(run_number, sample_log_name, file_name)
-
-        return status, err_msg
+    # def save_session(self, out_file_name):
+    #     """ Save session to a dictionary
+    #     :param out_file_name:
+    #     :return:
+    #     """
+    #     # Save to a dictionary
+    #     save_dict = dict()
+    #     save_dict['name'] = self._name
+    #     save_dict['dataFileDict'] = self._dataFileDict
+    #     save_dict['baseDataFileNameList'] = self._baseDataFileNameList
+    #     save_dict['baseDataPath'] = self._baseDataPath
+    #
+    #     # Return if out_file_name is None
+    #     if out_file_name is None:
+    #         return save_dict
+    #
+    #     assert isinstance(out_file_name, str)
+    #     futil.save_xml(save_dict, out_file_name)
+    #
+    #     return None
 
     def set_focus_calibration_file(self, focus_cal_file):
         """
@@ -863,27 +853,27 @@ class ProjectManager(object):
 
         return
 
-    def _generateFileName(self, runnumber, iptsstr):
-        """ Generate a NeXus file name with full path with essential information
-
-        Arguments:
-         - runnumber :: integer run number
-         - iptsstr   :: string for IPTS.  It can be either an integer or in format as IPTS-####. 
-        """
-        # Parse run number and IPTS number
-        run = int(runnumber)
-        iptsstr = str(iptsstr).lower().split('ipts-')[-1]
-        ipts = int(iptsstr)
-
-        # Build file name with path
-        # FIXME : VULCAN only now!
-        nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts, run, run))
-        if os.path.exists(nxsfname) is False:
-            print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % nxsfname
-        else:
-            print "[DB] Successfully generate an existing NeXus file with name %s." % nxsfname
-
-        return nxsfname
+    # def _generateFileName(self, runnumber, iptsstr):
+    #     """ Generate a NeXus file name with full path with essential information
+    #
+    #     Arguments:
+    #      - runnumber :: integer run number
+    #      - iptsstr   :: string for IPTS.  It can be either an integer or in format as IPTS-####.
+    #     """
+    #     # Parse run number and IPTS number
+    #     run = int(runnumber)
+    #     iptsstr = str(iptsstr).lower().split('ipts-')[-1]
+    #     ipts = int(iptsstr)
+    #
+    #     # Build file name with path
+    #     # FIXME : VULCAN only now!
+    #     nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts, run, run))
+    #     if os.path.exists(nxsfname) is False:
+    #         print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % nxsfname
+    #     else:
+    #         print "[DB] Successfully generate an existing NeXus file with name %s." % nxsfname
+    #
+    #     return nxsfname
 
     @property
     def vanadium_processing_manager(self):
@@ -896,10 +886,9 @@ class ProjectManager(object):
     @property
     def vdrive_bin_template(self):
         """
-
+        get the VDRIVE binning template workspace name
         :return:
         """
-        # TODO/ISSUE/62 - BLABLA
         return self._vdriveBinTemplateName
 
 

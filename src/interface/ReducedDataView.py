@@ -360,13 +360,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         if new_bank_str == 'All':
-            # TODO/ISSUE/33 - Implement
-            blabla()
+            # plot all the banks
+            bank_id_list = self._bankIDList[:]
         else:
+            # plot one bak
             curr_bank_id = int(new_bank_str)
-            keep_prev = self.ui.checkBox_overPlot.isChecked()
+            bank_id_list = [curr_bank_id]
+        # END-IF
+
+        # plot all the selected banks
+        for b_index, bank_id in enumerate(bank_id_list):
+            keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
             if self._currRunNumber is not None:
-                self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
+                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev)
+            # END-IF
+        # END-FOR
 
         return
 

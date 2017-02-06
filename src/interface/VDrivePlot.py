@@ -676,12 +676,17 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
     def add_runs_trees(self, ipts_number, ipts_dir, run_tuple_list):
         """
-        Add runs to VDrivePlot main GUI
+        Add IPTS number and run numbers to the TreeViews in VDrivePlot main GUI
+        :param ipts_number:
+        :param ipts_dir:
         :param run_tuple_list:
         :return: 2-tuple: boolean, string (error message)
         """
         # check validity
-        # TODO/NOW : check and doc!
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be a integer.'.format(ipts_number)
+        assert isinstance(ipts_dir, str), 'Data directory {0} must be a string.'.format(ipts_dir)
+        assert isinstance(run_tuple_list, list), 'Run number list should be a list but not a {0}.' \
+                                                 ''.format(type(run_tuple_list))
 
         # Set to tree
         if ipts_number == 0:

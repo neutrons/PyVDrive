@@ -252,11 +252,14 @@ class VanadiumProcessingManager(object):
         self._smoothedWorkspace = output_workspace_name
 
         # check the workspace whether it can be aligned
-        if mantid_helper.match_bins():
+        align_able, diff_reason = mantid_helper.check_bins_can_align(output_workspace_name, self._myParent.vdrive_bin_template)
+        if align_able:
+            # align bins
             align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
         else:
-            # TODO/ISSUE/62 - check
-            raise blabla
+            # the bins are not matching
+            raise RuntimeError('Workspace {0} cannot be aligned to template workspace {1} due to {2}'
+                               ''.format(output_workspace_name, self._myParent.vdrive_bin_template, diff_reason))
 
         return output_workspace_name
 

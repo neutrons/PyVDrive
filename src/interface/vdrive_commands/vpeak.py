@@ -1,4 +1,3 @@
-import os
 from procss_vcommand import VDriveCommand
 
 
@@ -130,7 +129,7 @@ class VanadiumPeak(VDriveCommand):
 
     def get_vanadium_run(self):
         """
-        blabla
+        get the vanadium run number from command
         :return:
         """
         return self._vanRunNumber

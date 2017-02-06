@@ -853,9 +853,65 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 
 
-def match_bins():
-    # TODO/ISSUE/62 - Implement
-    return True
+def check_bins_can_align(workspace_name, template_workspace_name):
+    """
+    match the bins of workspace to the template workspace
+    :param workspace_name:
+    :param template_workspace_name:
+    :return: 2-tuple (boolean as align-able, string for reason
+    """
+    # TODO/TEST/33
+    # get workspace
+    try:
+        target_workspace = ADS.retrieve(workspace_name)
+        template_workspace = ADS.retrieve(template_workspace_name)
+    except KeyError as key_err:
+        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
+                      ''.format(workspace_name, template_workspace_name, key_err)
+
+    # check number of spectra
+    num_template_hist = template_workspace.getNumberHistograms()
+    num_target_hist = target_workspace.getNumberHistograms()
+
+    if num_template_hist == 1:
+        single_template_bin = True
+    elif num_template_hist == num_target_hist:
+        single_template_bin = False
+    else:
+        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
+                      ''.format(workspace_name, template_workspace_name)
+
+    # mapping
+    if single_template_bin:
+        template_vec_x = template_workspace.readX(0)
+    else:
+        template_vec_x = None
+
+    for i_ws in range(num_target_hist):
+        # get vector X of template and target
+        if template_vec_x is None:
+            template_vec_x = template_workspace.readX(i_ws)
+        target_vec_x = target_workspace.readX(i_ws)
+
+        # check number of bins
+        if len(template_vec_x) != len(target_vec_x):
+            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
+                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
+                                                 len(template_vec_x), len(target_vec_x))
+
+        # check difference in bins
+        sum_vec_target = numpy.sum(target_vec_x)
+        sum_vec_template = numpy.sum(template_vec_x)
+
+        diff_vec = target_vec_x - template_vec_x
+        diff_vec_square = diff_vec**2
+        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
+
+        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
+            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
+    # END-FOR
+
+    return True, ''
 
 
 def mtd_compress_events(event_ws_name, tolerance=0.01):
@@ -995,18 +1051,23 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
-    # TODO/ISSUE/62 - Replace all blabla by words making sense
     # Check requirements
-    assert isinstance(source_ws_name, str), 'source workspace name blabla'
+    assert isinstance(source_ws_name, str), 'source workspace name {0} must be a string but not {1}.' \
+                                            ''.format(source_ws_name, type(source_ws_name))
     src_ws = retrieve_workspace(source_ws_name)
-    assert src_ws.getNumberHistograms() < 10, 'blabla'
+    assert src_ws.getNumberHistograms() < 10, 'Source workspace {0} cannot have more than 10 histograms ({1}).' \
+                                              ''.format(source_ws_name, src_ws.getNumberHistograms())
     
-    assert isinstance(out_gss_file, str), 'out gss blabla'
+    assert isinstance(out_gss_file, str), 'Output GSAS file name {0} must be a string but not a {1}.' \
+                                          ''.format(out_gss_file, type(out_gss_file))
     assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-    assert isinstance(binning_reference_file, str), 'blabla333'
+    assert isinstance(binning_reference_file, str), 'Binning referece file name {0} must be a string but not a {1}.' \
+                                                    ''.format(binning_reference_file, type(binning_reference_file))
     if len(binning_reference_file) > 0:
-        assert os.path.exists(binning_reference_file), 'blabla444'
-    assert isinstance(gss_parm_file, str), 'blabla555'
+        assert os.path.exists(binning_reference_file), 'Binning reference file {0} does not exist.' \
+                                                       ''.format(binning_reference_file)
+    assert isinstance(gss_parm_file, str), 'GSAS parmm file name {0} must be a string but not a {1}.' \
+                                           ''.format(gss_parm_file, type(gss_parm_file))
 
     # using a new workspace if and only if it is required to be re-binned
     if len(binning_reference_file) > 0:
