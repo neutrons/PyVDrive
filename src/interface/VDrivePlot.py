@@ -30,8 +30,7 @@ from vcommand_processor import VdriveCommandProcessor
 import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
-if config.DEBUG:
-    import workspaceviewer
+
 
 """ import PyVDrive library """
 import PyVDrive

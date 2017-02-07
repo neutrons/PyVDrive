@@ -143,9 +143,10 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         self.init_setup(self.TableSetupList)
 
         # Set up column width
-        self.setColumnWidth(0, 90)
-        self.setColumnWidth(1, 90)
-        self.setColumnWidth(2, 25)
+        self.setColumnWidth(0, 200)
+        self.setColumnWidth(1, 200)
+        self.setColumnWidth(2, 100)
+        self.setColumnWidth(3, 100)
 
         # Set up the column index for start, stop and select
         self._colIndexStart = self.TableSetupList.index(('Start', 'float'))

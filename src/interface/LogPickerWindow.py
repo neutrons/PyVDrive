@@ -35,6 +35,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         # call base
         QtGui.QMainWindow.__init__(self)
 
+        # child windows
+        self._manualSlicerDialog = None
+
         # parent
         self._myParent = parent
         self._mutexLockSwitchSliceMethod = False
@@ -47,8 +50,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Defining widget handling methods
-        self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
-                     self.do_save_time_segments)
+        # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_time_segments)
         self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_load_run)
         self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
@@ -80,8 +83,8 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.do_view_reduced_data)
 
         # Further operation
-        self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
-                     self.do_highlight_selected)
+        # self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
+        #              self.do_highlight_selected)
 
         # automatic slicer setup
         self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
@@ -90,22 +93,24 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.evt_show_slicer)
 
         # manual slicer picker
-        self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
-                     self.do_picker_add)
-        self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
-                     self.do_picker_abort)
-        self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
-                     self.do_picker_set)
-        self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
-                     self.do_enter_select_picker_mode)
+        # self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
+        #              self.do_picker_add)
+        # self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
+        #              self.do_picker_abort)
+        # self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
+        #              self.do_picker_set)
+        # self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
+        #              self.do_enter_select_picker_mode)
         self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
                      self.do_picker_process)
+        self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
+                     self.do_show_manual_slicer_table)
 
         # Slicer table
-        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-                     self.do_select_time_segments)
-        self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
-                     self.do_deselect_time_segments)
+        # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+        #              self.do_select_time_segments)
+        # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+        #              self.do_deselect_time_segments)
 
         # Canvas
         self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
@@ -128,13 +133,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
                      self.evt_quit_no_save)
 
-        # Event handling for pickers
-        self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
-                                                        self.on_mouse_press_event)
-        self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
-                                                        self.on_mouse_release_event)
-        self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
-                                                        self.on_mouse_motion)
+        # # Event handling for pickers
+        # TODO/ISSUE/44 - Move part of them down to Figure class
+        # self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
+        #                                                 self.on_mouse_press_event)
+        # self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
+        #                                                 self.on_mouse_release_event)
+        # self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
+        #                                                 self.on_mouse_motion)
 
         self._mtsFileLoaderWindow = None
 
@@ -153,7 +159,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._logNameList = list()
         self._sampleLogDict = dict()
 
-        self._currentPickerID = None
+        # self._currentPickerID = None
         self._myPickerMode = OUT_PICKER
         self._currMousePosX = 0.
         self._currMousePosY = 0.
@@ -193,8 +199,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         Initialize widgets
         :return:
         """
-        # slice segments table
-        self.ui.tableWidget_segments.setup()
+        # graphic view
+        self.ui.graphicsView_main.set_parent_window(self)
+
         # ipts-run selection tree
         self.ui.treeView_iptsRun.set_main_window(self)
         # about plotting
@@ -254,6 +261,15 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.lineEdit_maxSlicerLogValue.setEnabled(False)
             self.ui.comboBox_logChangeDirection.setEnabled(False)
 
+            # hide some label
+            self.ui.label_minValue.setHidden(True)
+            # TODO/ISSUE/33 - add more to hide/show label and line edit
+            # self.ui.label_maxValue
+            # self.ui.label_
+
+            # set up graphic view's mode
+            self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
+
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # log value slicer
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
@@ -270,10 +286,22 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.lineEdit_minSlicerLogValue.setText('%.4f' % y_min)
             self.ui.lineEdit_maxSlicerLogValue.setText('%.4f' % y_max)
 
+            # show some label
+            self.ui.label_minValue.setHidden(False)
+            # TODO/ISSUE/33 - add more to hide/show label and line edit
+            # self.ui.label_maxValue
+            # self.ui.label_
+
+            # set up graphic view's mode
+            self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
+
         else:
             # manual slicer
             self.ui.groupBox_sliceSetupAuto.setEnabled(False)
             self.ui.groupBox_slicerSetupManual.setEnabled(True)
+
+            # set up graphic view's mode
+            self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
 
         return
 
@@ -673,53 +701,54 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_picker_abort(self):
-        """
-        Abort the action to add a picker
-        :return:
-        """
-        # Guide user from enable/disable widgets
-        self.ui.pushButton_addPicker.setEnabled(True)
-        self.ui.pushButton_setPicker.setDisabled(True)
-        self.ui.pushButton_abortPicker.setDisabled(True)
-        self.ui.pushButton_selectPicker.setEnabled(True)
+    # def do_picker_abort(self):
+    #     """
+    #     Abort the action to add a picker
+    #     :return:
+    #     """
+    #     # Guide user from enable/disable widgets
+    #     self.ui.pushButton_addPicker.setEnabled(True)
+    #     self.ui.pushButton_setPicker.setDisabled(True)
+    #     self.ui.pushButton_abortPicker.setDisabled(True)
+    #     self.ui.pushButton_selectPicker.setEnabled(True)
+    #
+    #     # Delete the current picker
+    #     self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
+    #     self._myPickerIDList.pop(self._currentPickerID)
+    #     # self._currentPickerID = None
+    #
+    #     self._myPickerMode = OUT_PICKER
+    #
+    #     return
 
-        # Delete the current picker
-        self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
-        self._myPickerIDList.pop(self._currentPickerID)
-        self._currentPickerID = None
-
-        self._myPickerMode = OUT_PICKER
-
-        return
-
-    def do_picker_add(self):
-        """
-        Add picker
-        :return:
-        """
-        # Add a picker
-        indicator_id = self.ui.graphicsView_main.add_vertical_indicator(color='red')
-
-        # Guide user
-        self.ui.pushButton_setPicker.setEnabled(True)
-        self.ui.pushButton_abortPicker.setEnabled(True)
-        self.ui.pushButton_addPicker.setDisabled(True)
-        self.ui.pushButton_deletePicker.setDisabled(True)
-        self.ui.pushButton_selectPicker.setDisabled(True)
-
-        # Change status
-        self._currentPickerID = indicator_id
-        self._myPickerMode = IN_PICKER
-        self._myPickerIDList.append(indicator_id)
-
-        return
+    # def do_picker_add(self):
+    #     """
+    #     Add picker
+    #     :return:
+    #     """
+    #     # Add a picker
+    #     indicator_id = self.ui.graphicsView_main.add_vertical_indicator(color='red')
+    #
+    #     # Guide user
+    #     self.ui.pushButton_setPicker.setEnabled(True)
+    #     self.ui.pushButton_abortPicker.setEnabled(True)
+    #     self.ui.pushButton_addPicker.setDisabled(True)
+    #     self.ui.pushButton_deletePicker.setDisabled(True)
+    #     self.ui.pushButton_selectPicker.setDisabled(True)
+    #
+    #     # Change status
+    #     # self._currentPickerID = indicator_id
+    #     self._myPickerMode = IN_PICKER
+    #     self._myPickerIDList.append(indicator_id)
+    #
+    #     return
 
     def do_picker_process(self):
         """
         Process pickers by sorting and fill the stop time
         :return:
         """
+        # TODO/ISSUE/33 - This method will be modified to an event-handlng method for picker updating
         # Deselect all rows
         num_rows = self.ui.tableWidget_segments.rowCount()
         for i_row in xrange(num_rows):
@@ -733,31 +762,49 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_picker_set(self):
+    # def do_picker_set(self):
+    #     """
+    #     Add the (open) picker to list
+    #     :return:
+    #     """
+    #     # Fix the current picker
+    #     x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
+    #     current_time = x
+    #
+    #     # Change the color
+    #     self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
+    #
+    #     # Guide user
+    #     self.ui.pushButton_abortPicker.setDisabled(True)
+    #     self.ui.pushButton_addPicker.setEnabled(True)
+    #     self.ui.pushButton_deletePicker.setEnabled(True)
+    #     self.ui.pushButton_setPicker.setDisabled(True)
+    #     self.ui.pushButton_selectPicker.setEnabled(True)
+    #
+    #     # Change status
+    #     self._myPickerMode = OUT_PICKER
+    #     # self._currentPickerID = None
+    #
+    #     # Set to table
+    #     self.ui.tableWidget_segments.append_start_time(current_time)
+    #
+    #     return
+
+    def do_show_manual_slicer_table(self):
         """
-        Add the (open) picker to list
+
         :return:
         """
-        # Fix the current picker
-        x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
-        current_time = x
+        import ManualSlicerSetupDialog
 
-        # Change the color
-        self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
+        if self._manualSlicerDialog is None:
+            self._manualSlicerDialog = ManualSlicerSetupDialog.ManualSlicerSetupTableDialog(self)
+            self._manualSlicerDialog.setWindowTitle('New!')
+        else:
+            self._manualSlicerDialog.setHidden(False)
+            self._manualSlicerDialog.setWindowTitle('From Hide')
 
-        # Guide user
-        self.ui.pushButton_abortPicker.setDisabled(True)
-        self.ui.pushButton_addPicker.setEnabled(True)
-        self.ui.pushButton_deletePicker.setEnabled(True)
-        self.ui.pushButton_setPicker.setDisabled(True)
-        self.ui.pushButton_selectPicker.setEnabled(True)
-
-        # Change status
-        self._myPickerMode = OUT_PICKER
-        self._currentPickerID = None
-
-        # Set to table
-        self.ui.tableWidget_segments.append_start_time(current_time)
+        self._manualSlicerDialog.show()
 
         return
 
@@ -934,12 +981,22 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def evt_rewrite_manual_table(self, slicers_list):
+        """
+
+        :param slicers_list:
+        :return:
+        """
+        # print '[DB...BAT] Input slicers', slicers_list
+
+        self._manualSlicerDialog.write_table(slicers_list)
+
     def evt_switch_slicer_method(self):
         """
 
         :return:
         """
-        # TODO/ISSUE/NOW: doc
+        # TODO/ISSUE/44: doc
 
         if self._mutexLockSwitchSliceMethod:
             return
@@ -1285,13 +1342,13 @@ class WindowLogPicker(QtGui.QMainWindow):
             select_picker_pos = picker_pos_list[next_index]
 
         # Add the information to graphics
-        self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
+        # self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
         self._myPickerMode = IN_PICKER_MOVING
 
         return
 
     def menu_quit_picker_selection(self):
-        """ Quit picker-selecion mode
+        """ Quit picker-selection mode
         :return:
         """
         print 'Cancel picker selection'

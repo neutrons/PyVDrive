@@ -173,6 +173,10 @@ class IndicatorManager(object):
         :param my_id:
         :return:
         """
+        if my_id not in self._indicatorTypeDict:
+            raise KeyError('Input indicator ID {0} is not in IndicatorTypeDict. Current keys are {1}'
+                           ''.format(my_id, self._indicatorTypeDict.keys()))
+
         return self._indicatorTypeDict[my_id]
 
     def get_2way_data(self, line_id):
@@ -845,7 +849,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def set_indicator_position(self, line_id, pos_x, pos_y):
         """ Set the indicator to new position
-        :param line_id:
+        :param line_id: indicator ID
         :param pos_x:
         :param pos_y:
         :return:
@@ -972,7 +976,7 @@ class MplGraphicsView(QtGui.QWidget):
             # 2-way
             raise RuntimeError('Implement 2-way as soon as possible!')
 
-        return
+        return 1.E100, 1.E100
 
     def getLineStyleList(self):
         """
