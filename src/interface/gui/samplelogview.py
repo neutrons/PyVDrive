@@ -22,6 +22,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
 
+        # GUI property
+        self.menu = None
+
         # collection of indicator IDs that are on canvas
         self._currentLogPickerList = list()   # list of indicator IDs.
         self._pickerRangeDict = dict()  # dictionary for picker range. key: position, value: indicator IDs
@@ -29,13 +32,19 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # resolution to find
         self._resolutionRatio = 0.001  # resolution to check mouse position
         self._pickerRangeRatio = 0.01  # picker range = (X_max - X_min) * ratio
+        self._pickerRange = None  # picker range
         self._currXLimit = (0., 1.)  # 2-tuple as left X limit and right X limit
 
-        # mode
-        self._inPickMode = False
+        # manual slicer picker mode
+        self._inManualPickingMode = False
+        # mouse mode
+        self._mouseLeftButtonHold = False
 
         # current plot IDs
         self._currPlotID = None
+        self._currentSelectedPicker = None
+        self._currMousePosX = None
+        self._currMousePosY = None
 
         # register dictionaries
         self._sizeRegister = dict()
@@ -46,7 +55,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # container for segments plot
         self._splitterSegmentsList = list()
 
-        #
+        # define the event handling methods
         self._myCanvas.mpl_connect('button_press_event', self.on_mouse_press_event)
         self._myCanvas.mpl_connect('button_release_event', self.on_mouse_release_event)
         self._myCanvas.mpl_connect('motion_notify_event', self.on_mouse_motion)
@@ -82,23 +91,54 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
     def menu_add_picker(self):
         """
-        blabla
+        add a picker (an indicator)
         :return:
         """
-        # TODO/ISSUE/33 - Add the outcome to dictionary to manage
-        self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
+        # add a picker
+        indicator_id = self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
+        # add to dictionary
+        self._currentLogPickerList.append(indicator_id)
+        # add the picker to the dictionary
+        self._pickerRangeDict[self._currMousePosX] = indicator_id
+
+        # left_bound = self._currMousePosX - self._currentPickerRange * 0.5
+        # right_bound = self._currMousePosX + self._currentPickerRange * 0.5
+        # self._pickerRangeDict[left_bound] = indicator_id
+        # self._pickerR
 
         return
 
-    def menu_delete_picker(self, event):
+    def _remove_picker_from_range_dictionary(self, value_to_remove):
         """
-        blabla
+        remove an entry in the dictionary by value
+        :param value_to_remove:
+        :return:
+        """
+        self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in self._pickerRangeDict.items() \
+                if picker_id != value_to_remove}
+
+        return
+
+    def menu_delete_picker(self):
+        """
+        delete the selected picker
         :param event:
         :return:
         """
-        # TODO/ISSUE/33 - Implement!
+        # check
+        if self._currentSelectedPicker is None:
+            raise RuntimeError('The prerequisite to delete a picker is to have an already-selected picker.')
 
-        print '[DB] X range: ', self.getXLimit()
+        # remove the picker from the list
+        p_index = self._currentLogPickerList.index(self._currentSelectedPicker)
+        self._currentLogPickerList.pop(p_index)
+        # remove from dictionary
+        self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
+        # remove from canvas
+        self.remove_indicator(self._currentSelectedPicker)
+
+        # reset
+        self._currentSelectedPicker = None
 
         return
 
@@ -108,10 +148,41 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         right button:
             pop out menu if it is relevant
         left button:
-            get star to
+            get start to
         :param event:
         :return:
         """
+        # only respond when in manual picking mode
+        if not self._inManualPickingMode:
+            return
+
+        button = event.button
+        self._currMousePosX = event.xdata
+
+        if button == 1:
+            # left button: if a picker is selected then enter on hold mode
+            if self._currentSelectedPicker is not None:
+                self._mouseLeftButtonHold = True
+
+        elif button == 3:
+            # right button: pop-out menu
+            self.menu = QtGui.QMenu(self)
+
+            if self._currentSelectedPicker is None:
+                # no picker is selected
+                action1 = QtGui.QAction('Add Picker', self)
+                action1.triggered.connect(self.menu_add_picker)
+                self.menu.addAction(action1)
+
+            else:
+                # some picker is selected
+                action2 = QtGui.QAction('Delete Picker', self)
+                action2.triggered.connect(self.menu_delete_picker)
+                self.menu.addAction(action2)
+
+            # add other required actions
+            self.menu.popup(QtGui.QCursor.pos())
+        # END-IF-ELSE
 
         return
 
@@ -122,50 +193,70 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         :param event:
         :return:
         """
+        # do not respond if it is not in manual picker setup mode
+        if not self._inManualPickingMode:
+            return
+
         # determine button and position
         button = event.button
-
-        self._currMousePosX = event.xdata
-        self._currMousePosY = event.ydata
-
-        # TODO/ISSUE/33 - Check mode. return if no in manual-pick mode
+        # self._currMousePosX = event.xdata
+        # self._currMousePosY = event.ydata
 
         if button == 1:
-            # left button
-            pass
-
-        elif button == 3:
-            # right button
-
-            # need to find out whether the cursor is 'on' an indicator
-            # TODO/ISSUE/33 --| implement above
-
-            # Pop-out menu
-            self.menu = QtGui.QMenu(self)
-
-            action1 = QtGui.QAction('Add Picker', self)
-            action1.triggered.connect(self.menu_add_picker)
-            self.menu.addAction(action1)
-
-            # TODO/ISSUE/33 - Only available if the cursor is ON a picker
-            action2 = QtGui.QAction('Delete Picker', self)
-            action2.triggered.connect(self.menu_delete_picker)
-            self.menu.addAction(action2)
-
-            # add other required actions
-            self.menu.popup(QtGui.QCursor.pos())
+            # left button: terminate on hold
+            self._mouseLeftButtonHold = False
         # END-IF
 
         return
 
     def on_mouse_motion(self, event):
         """
-        pick
+        If left-button is on hold (and thus a picker is selected, them move the picker)
+        otherwise, check whether the cursor is close to any picker enough to select it or far away enough to deselect
+                previously selected
         :param event:
         :return:
         """
-        # TODO/ISSUE/33 - Implement this method
         # return if not in manual mode
+        if not self._inManualPickingMode:
+            return
+
+        # determine button and position
+        button = event.button
+        self._currMousePosX = event.xdata
+        self._currMousePosY = event.ydata
+
+        # determine the right position and left position with update of
+        if self._currXLimit != self.getXLimit():
+            self._currXLimit = self.getXLimit()
+            delta_x = self._currXLimit[1] - self._currXLimit[0]
+            self._pickerRange = delta_x * self._pickerRangeRatio * 0.5
+
+        # check status
+        if self._mouseLeftButtonHold:
+            # mouse button is hold with a picker is selected
+            assert self._currentSelectedPicker is not None, 'In mouse-left-button-hold mode, a picker must be selected.'
+
+            # check whether the selected picker can move
+            left_bound = self._leftPickerLimit + self._pickerRange
+            right_bound = self._rightPikcerLimit - self._pickerRange
+            if left_bound < self._currMousePosX < right_bound:
+                # free to move
+                self.move_indicator(self._currentSelectedPicker, new_x=self._currMousePosX)
+                self._currentSelectedPickerPos = self._currMousePosX
+            else:
+                # unable to move anymore: quit the hold and select to move mode
+                self.deselect_picker(self._currentSelectedPicker)
+                self._mouseLeftButtonHold = False
+            # END-IF-ELSE
+        else:
+            # mouse button is not hold so need to find out whether the mouse cursor in in a range
+            # TODO/ISSUE/33 - CONTINUE FROM HERE!
+            blabla
+
+            # check whether the new position is too close to another picker
+
+
 
 
         # check whether the _pickerRangeDict need to re-write
@@ -272,6 +363,27 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # resize canvas
         self.setXYLimit(xmin=canvas_x_min, xmax=canvas_x_max, ymin=canvas_y_min, ymax=canvas_y_max)
+
+        return
+
+    def set_manual_slicer_setup_mode(self, mode_on):
+        """
+        set the canvas in the mode to set up slicer manually
+        :param mode_on:
+        :return:
+        """
+        assert isinstance(mode_on, bool), 'Mode on/off {0} must be a boolean but not a {1}.' \
+                                          ''.format(mode_on, type(mode_on))
+        self._inManualPickingMode = mode_on
+
+        # reset all the current-on-select variables
+        if not mode_on:
+            if self._currentSelectedPicker is not None:
+                # de-select picker
+                self.deselect_pikcer(self._currentSelectedPicker)
+                self._currentSelectedPicker = None
+            self._currMousePosX = None
+            self._currMousePosY = None
 
         return
 
