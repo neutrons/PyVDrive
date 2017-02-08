@@ -1,4 +1,5 @@
 import numpy as np
+import bisect
 from PyQt4 import QtGui, QtCore
 import mplgraphicsview
 
@@ -24,6 +25,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         """
         # Base class constructor
         mplgraphicsview.MplGraphicsView.__init__(self, parent)
+
+        # parent window (logical parent)
+        self._myParent = None
 
         # GUI property
         self.menu = None
@@ -69,6 +73,81 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def _calculate_distance_to_nearest_indicator(self, pos_x):
+        """
+        calculate the distance between given position X to its nearest indicator
+        :param pos_x:
+        :return: 2-tuple.  nearest distance and indicator ID of the nearest indicator
+        """
+        def nearest_data(array, x):
+            """
+            find out the nearest value in a sorted array against given X
+            :param array:
+            :param x:
+            :return: distance and the index of the nearest item in the array
+            """
+            right_index = bisect.bisect_left(array, x)
+            left_index = right_index - 1
+
+            if left_index < 0:
+                # left to Index=0
+                nearest_index = 0
+                distance = array[0] - x
+            elif right_index == len(array):
+                # right to Index=-1
+                nearest_index = left_index
+                distance = x - array[left_index]
+            else:
+                dist_left = x - array[left_index]
+                dist_right = array[right_index] - x
+                if dist_left < dist_right:
+                    nearest_index = left_index
+                    distance = dist_left
+                else:
+                    nearest_index = right_index
+                    distance = dist_right
+            # END-IF-ELSE
+
+            return distance, nearest_index
+        # END-DEF
+
+        # return very large number if there is no indicator on canvas
+        if len(self._pickerRangeDict) == 0:
+            return 1.E22, -1
+
+        # get the indicator positions
+        picker_pos_list = self._pickerRangeDict.keys()
+        picker_pos_list.sort()
+
+        nearest_picker_distance, nearest_item_index = nearest_data(picker_pos_list, pos_x)
+        nearest_picker_position = picker_pos_list[nearest_item_index]
+        nearest_picker_id = self._pickerRangeDict[nearest_picker_position]
+
+        return nearest_picker_distance, nearest_picker_id
+
+    def _remove_picker_from_range_dictionary(self, value_to_remove):
+        """
+        remove an entry in the dictionary by value
+        :param value_to_remove:
+        :return:
+        """
+        self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in
+                                 self._pickerRangeDict.items() if picker_id != value_to_remove}
+
+        return
+
+    def deselect_picker(self):
+        """
+        de-select the picker by changing its color and reset the flat
+        :return:
+        """
+        assert self._currentSelectedPicker is not None, 'There is no picker that is selected to de-select.'
+
+        self.update_indicator(self._currentSelectedPicker, 'red')
+        self._currentSelectedPicker = None
+
+        return
+
     def get_data_range(self):
         """ Get data range from the 1D plots on canvas
         :return: 4-tuples as min_x, max_x, min_y, max_y
@@ -98,11 +177,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
     def get_pickers_positions(self):
         """
-
-        :return:
+        get the positions of all pickers on canvas
+        :return: a list of floats
         """
-        # TODO/ISSUE/44 - Docs
-
         picker_pos_list = list()
         for p_id in self._currentLogPickerList:
             pos = self.get_indicator_position(p_id)[0]
@@ -114,7 +191,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
     def menu_add_picker(self):
         """
-        add a picker (an indicator)
+        add a picker (an indicator) and update the list of pickers' positions to parent
         :return:
         """
         # add a picker
@@ -124,31 +201,15 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # add the picker to the dictionary
         self._pickerRangeDict[self._currMousePosX] = indicator_id
 
+        # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
-
-        # left_bound = self._currMousePosX - self._currentPickerRange * 0.5
-        # right_bound = self._currMousePosX + self._currentPickerRange * 0.5
-        # self._pickerRangeDict[left_bound] = indicator_id
-        # self._pickerR
-
-        return
-
-    def _remove_picker_from_range_dictionary(self, value_to_remove):
-        """
-        remove an entry in the dictionary by value
-        :param value_to_remove:
-        :return:
-        """
-        self._pickerRangeDict = {pos_x: picker_id for pos_x, picker_id in self._pickerRangeDict.items() \
-                if picker_id != value_to_remove}
 
         return
 
     def menu_delete_picker(self):
         """
         delete the selected picker
-        :param event:
         :return:
         """
         # check
@@ -165,6 +226,10 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # reset
         self._currentSelectedPicker = None
+
+        # update the new list to parent window
+        picker_pos_list = self.get_pickers_positions()
+        self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
         return
 
@@ -225,11 +290,9 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         # determine button and position
         button = event.button
-        # self._currMousePosX = event.xdata
-        # self._currMousePosY = event.ydata
 
         if button == 1:
-            # left button: terminate on hold
+            # left button: terminate the state for being on hold
             self._mouseLeftButtonHold = False
 
         # END-IF
@@ -280,7 +343,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                 self._remove_picker_from_range_dictionary(self._currentSelectedPicker)
                 self._pickerRangeDict[self._currMousePosX] = self._currentSelectedPicker
 
-                # update table
+                # update the pickers' positions with parent window
                 picker_pos_list = self.get_pickers_positions()
                 self.mySlicerUpdatedSignal.emit(picker_pos_list)
 
@@ -300,115 +363,52 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             elif self._currentSelectedPicker is not None:
                 # in the range: deselect picker
                 self.deselect_picker()
-
-            # check whether the new position is too close to another picker
-
-        # check whether the _pickerRangeDict need to re-write
-
-
-        # if button not being hold, check mouse cursor position and select/deselect the picker
-
-        # if button is hold and a picker is selected, then move the picker
-
-        return
-
-    def deselect_picker(self):
-        """
-
-        :return:
-        """
-        assert self._currentSelectedPicker is not None, 'blabla'
-
-        self.update_indicator(self._currentSelectedPicker, 'red')
-        self._currentSelectedPicker = None
+            # END-IF-ELSE
+        # END-IF-ELSE
 
         return
 
     def select_picker(self, picker_id):
         """
-
+        select a slicer picker (indicator) on the canvas
         :param picker_id:
         :return:
         """
+        # return if it is the same picker that is already chosen
         if self._currentSelectedPicker == picker_id:
-            # same picker
             return
 
+        # previously selected: de-select
         if self._currentSelectedPicker is not None:
-            # previously selected: de-select
             self.deselect_picker()
 
         # select current on
         self._currentSelectedPicker = picker_id
         self.update_indicator(self._currentSelectedPicker, color='blue')
 
-        # define the picker to the left and right
-        # TODO/ISSUE/44 - Docs!
+        # define the pickers to its left and right for boundary
         curr_picker_pos = self.get_indicator_position(picker_id)[0]
         picker_pos_list = sorted(self._pickerRangeDict.keys())
-        #   print '[DB...BAT] Pickers positions list: ', picker_pos_list, ' <----| index value ', curr_picker_pos
         pos_index = picker_pos_list.index(curr_picker_pos)
 
+        # get the data range for the left most or right most boundary
         x_min, x_max, y_min, y_max = self.get_data_range()
 
+        # determine left boundary
         if pos_index == 0:
-            self._leftPickerLimit = x_min
+            # left most indicator. set the boundary to data's min X
+            self._leftPickerLimit = x_min - self._pickerRange
         else:
             self._leftPickerLimit = picker_pos_list[pos_index-1]
 
+        # determine the right boundary
         if pos_index == len(picker_pos_list) - 1:
-            # right most
-            self._rightPickerLimit = x_max
+            # right most indicator. set the boundary to data's max X
+            self._rightPickerLimit = x_max + self._pickerRange
         else:
             self._rightPickerLimit = picker_pos_list[pos_index+1]
 
         return
-
-    def _calculate_distance_to_nearest_indicator(self, pos_x):
-        """
-
-        :param x:
-        :return: 2-tuple.  nearest distance and indicator ID of the nearest indicator
-        """
-        # TODO/ISSUE/44 - Doc
-        import bisect
-
-        def nearest_data(array, x):
-            right_index = bisect.bisect_left(array, x)
-            left_index = right_index - 1
-
-            if left_index < 0:
-                # left to Index=0
-                nearest_index = 0
-                distance = array[0] - x
-            elif right_index == len(array):
-                # right to Index=-1
-                nearest_index = left_index
-                distance = x - array[left_index]
-            else:
-                dist_left = x - array[left_index]
-                dist_right = array[right_index] - x
-                if dist_left < dist_right:
-                    nearest_index = left_index
-                    distance = dist_left
-                else:
-                    nearest_index = right_index
-                    distance = dist_right
-            # END-IF-ELSE
-
-            return distance, nearest_index
-
-        if len(self._pickerRangeDict) == 0:
-            return 1.E22, -1
-
-        picker_pos_list = self._pickerRangeDict.keys()
-        picker_pos_list.sort()
-
-        nearest_picker_distance, nearest_item_index = nearest_data(picker_pos_list, pos_x)
-        nearest_picker_position = picker_pos_list[nearest_item_index]
-        nearest_picker_id = self._pickerRangeDict[nearest_picker_position]
-
-        return nearest_picker_distance, nearest_picker_id
 
     def plot_sample_log(self, vec_x, vec_y, sample_log_name):
         """ Purpose: plot sample log
@@ -510,7 +510,7 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
     def set_parent_window(self, parent_window):
         """
-
+        set the parent window (logically parent but not widget in the UI)
         :param parent_window:
         :return:
         """
@@ -520,7 +520,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         self.mySlicerUpdatedSignal.connect(self._myParent.evt_rewrite_manual_table)
 
         return
-
 
     def set_manual_slicer_setup_mode(self, mode_on):
         """
@@ -598,6 +597,3 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
                         '' % (len(vec_target_ws), MAX_SEGMENT_TO_SHOW)
 
         return status, error_msg
-
-# END-DEFINITION
-
