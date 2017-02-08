@@ -261,11 +261,15 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.lineEdit_maxSlicerLogValue.setEnabled(False)
             self.ui.comboBox_logChangeDirection.setEnabled(False)
 
-            # hide some label
+            # hide some labels and line edits
             self.ui.label_minValue.setHidden(True)
-            # TODO/ISSUE/33 - add more to hide/show label and line edit
-            # self.ui.label_maxValue
-            # self.ui.label_
+            self.ui.label_maxValue.setHidden(True)
+            self.ui.label_direction.setHidden(True)
+            self.ui.lineEdit_minSlicerLogValue.setHidden(True)
+            self.ui.lineEdit_maxSlicerLogValue.setHidden(True)
+            self.ui.comboBox_logChangeDirection.setHidden(True)
+
+            self.ui.label_step.setText('Time Step')
 
             # set up graphic view's mode
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
@@ -286,14 +290,17 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.lineEdit_minSlicerLogValue.setText('%.4f' % y_min)
             self.ui.lineEdit_maxSlicerLogValue.setText('%.4f' % y_max)
 
-            # show some label
+            # show some labels and line edits
             self.ui.label_minValue.setHidden(False)
-            # TODO/ISSUE/33 - add more to hide/show label and line edit
-            # self.ui.label_maxValue
-            # self.ui.label_
-
+            self.ui.label_maxValue.setHidden(False)
+            self.ui.label_direction.setHidden(False)
+            self.ui.lineEdit_minSlicerLogValue.setHidden(False)
+            self.ui.lineEdit_maxSlicerLogValue.setHidden(False)
+            self.ui.comboBox_logChangeDirection.setHidden(False)
             # set up graphic view's mode
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(False)
+
+            self.ui.label_step.setText('Log Value Step')
 
         else:
             # manual slicer
@@ -836,40 +843,22 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         view_window = self._myParent.do_view_reduction()
 
-        # TODO/ISSUE/33 - Figure out how to set up view window
-        # ws_name_list = self.get_controller().get_chopped_data(self._currRunNumber, self._currSlicerKey,
-        #                                                       workspace_name=True)
-        # view_window.add_workspaces(ws_name_list)
-
-        return
-
-    def do_save_time_segments(self):
-        """ Save selected segment to a file
-        :return:
-        """
-        # Get splitters
-        try:
-            split_tup_list = self.ui.tableWidget_segments.get_splitter_list()
-        except RuntimeError as e:
-            GuiUtility.pop_dialog_error(self, str(e))
-            return
-
-        # pop a dialog for the name of the slicer
-        slicer_name, status = QtGui.QInputDialog.getText(self, 'Input Slicer Name', 'Enter slicer name:')
-        # return if not given
-        if status is False:
-            return
+        # get chopped and reduced workspaces from controller
+        status, ret_obj = self.get_controller().get_workspaces(self._currRunNumber,
+                                                               slice_key=self._currSlicerKey,
+                                                               reduced=True)
+        if status:
+            chopped_workspace_list = ret_obj
         else:
-            slicer_name = str(slicer_name)
-            print '[DB...BAT] Slicer name: ', slicer_name
+            GuiUtility.pop_dialog_error(self, 'Unable to get chopped and reduced workspaces.'
+                                              'for run {0} with slicer {1} due to {2}.'
+                                              ''.format(self._currRunNumber, self._currSlicerKey,
+                                                        ret_obj))
+            return
+        # END-IF-ELSE
 
-        # Call parent method
-        if self._myParent is not None:
-            self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
-                                                                  relative_time=True,
-                                                                  time_segment_list=split_tup_list,
-                                                                  slice_tag=slicer_name)
-        # END-IF
+        # TODO/ISSUE/33 - Figure out how to set up view window: make it work!
+        view_window.add_workspaces(chopped_workspace_list)
 
         return
 

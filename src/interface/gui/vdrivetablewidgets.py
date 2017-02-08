@@ -6,7 +6,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
     """
     TableSetupList = [('Start', 'float'),
                       ('Stop', 'float'),
-                      ('Target', 'int'),
+                      ('Target', 'str'),
                       ('', 'checkbox')]
 
     def __init__(self, parent):
@@ -22,14 +22,25 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return
 
-    def append_start_time(self, time_stamp):
+    def append_time_slicer(self, start_time, stop_time=None, target=None):
         """
-
-        :param time_stamp:
+        append a time slicer to the table
+        :param start_time:
+        :param stop_time:
+        :param target:
         :return:
         """
-        num_rows = self.rowCount()
-        row_value_list = [time_stamp, '', num_rows, False]
+        # check input
+        assert isinstance(start_time, float), 'Starting time {0} must be a float but not a {1}.' \
+                                              ''.format(start_time, type(start_time))
+        if stop_time is None:
+            stop_time = ''
+
+        if target is None:
+            target = str(self.rowCount())
+
+        # add a new row
+        row_value_list = [start_time, stop_time, target, False]
         self.append_row(row_value_list)
 
         return
@@ -98,8 +109,10 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         :return: 2-tuple as (bool, str)
         """
         # Check
-        assert isinstance(row_number, int)
-        assert isinstance(time_segments, list)
+        assert isinstance(row_number, int), 'Input row number {0} must be an integer but not a {1}.' \
+                                            ''.format(row_number, type(row_number))
+        assert isinstance(time_segments, list), 'Input time segment {0} must be a list but not a {1}.' \
+                                                ''.format(time_segments, type(time_segments))
 
         num_rows = self.rowCount()
         if row_number < 0 or row_number >= num_rows:
@@ -132,6 +145,29 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         assert isinstance(flag, bool)
 
         self.update_cell_value(row_index, self._colIndexSelect, flag)
+
+        return
+
+    def set_time_slicers(self, time_slicer_list):
+        """
+        clear the current table and set new time slicers (in a list) to this table
+        :param time_slicer_list: list of times (in float)
+        :return:
+        """
+        # check inputs
+        assert isinstance(time_slicer_list, list) and len(time_slicer_list) > 0, \
+            'Input time slicers {0} must be a non-empty list but not a {1}.' \
+            ''.format(time_slicer_list, type(time_slicer_list))
+
+        # clear the current table
+        self.remove_all_rows()
+
+        # set time
+        for i_time in range(len(time_slicer_list)-1):
+            start_time = time_slicer_list[i_time]
+            stop_time = time_slicer_list[i_time + 1]
+            self.append_row([start_time, stop_time, i_time, False])
+        # END-FOR
 
         return
 
