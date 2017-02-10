@@ -187,7 +187,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         # Set up the column index for start, stop and select
         self._colIndexStart = self.TableSetupList.index(('Start', 'float'))
         self._colIndexStop = self.TableSetupList.index(('Stop', 'float'))
-        self._colIndexTargetWS = self.TableSetupList.index(('Target', 'int'))
+        self._colIndexTargetWS = self.TableSetupList.index(('Target', 'str'))
         self._colIndexSelect = self.TableSetupList.index(('', 'checkbox'))
 
         return

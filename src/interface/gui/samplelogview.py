@@ -532,7 +532,15 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         self._inManualPickingMode = mode_on
 
         # reset all the current-on-select variables
-        if not mode_on:
+        if mode_on:
+            # TODO/ISSUE/33 - Add 2 pickers/indicators at Time[0] and Time[-1] if the table is empty
+            pass
+
+            # TODO/ISSUE/33 - Add pickers to if pickers are hidden!
+            pass
+
+        else:
+            # TODO/ISSUE/33 - Hide all the pickers
             if self._currentSelectedPicker is not None:
                 # de-select picker
                 self.deselect_pikcer(self._currentSelectedPicker)

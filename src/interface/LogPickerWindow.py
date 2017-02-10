@@ -310,6 +310,9 @@ class WindowLogPicker(QtGui.QMainWindow):
             # set up graphic view's mode
             self.ui.graphicsView_main.set_manual_slicer_setup_mode(True)
 
+            # set up and launch ManualSlicerSetupDialog
+            self.do_show_manual_slicer_table()
+
         return
 
     def do_chop(self):
@@ -844,6 +847,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         view_window = self._myParent.do_view_reduction()
 
         # get chopped and reduced workspaces from controller
+        # TODO/ISSUE/33 - Implement get_workspace()
         status, ret_obj = self.get_controller().get_workspaces(self._currRunNumber,
                                                                slice_key=self._currSlicerKey,
                                                                reduced=True)
@@ -979,6 +983,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # print '[DB...BAT] Input slicers', slicers_list
 
         self._manualSlicerDialog.write_table(slicers_list)
+
+        return
 
     def evt_switch_slicer_method(self):
         """

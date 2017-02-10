@@ -1,11 +1,11 @@
-#import PyQt modules
-from PyQt4 import QtGui, QtCore, Qt
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import pyqtSignal
 
-#include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
 
 import gui.ui_ManualSlicerTable
 import gui.GuiUtility as GuiUtil
@@ -15,6 +15,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
     """
     extended dialog to work with the manual event slicers (in time) table
     """
+    myApplySlicerSignal = pyqtSignal(str, list)  # slicer name, slicer list
+    mySaveSlicerSignal = pyqtSignal(str, list)  # file name, slicer list
+
     def __init__(self, parent):
         """
         initialization
@@ -30,13 +33,15 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # define widgets' event handling
         self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_slicers_to_file)
+                     self.do_apply_slicers)
 
         self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
                      self.do_save_slicers_to_file)
 
         self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
                      self.do_hide_window)
+
+        # define handler to signals
 
         return
 
@@ -83,6 +88,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # Call parent method to generate random event slicer (splitters workspace or table)
         if self._myParent is not None:
+            # TODO/ISSUE/33 - Let _myParent to handle this! send a signal to parent with list!
             self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
                                                                   relative_time=True,
                                                                   time_segment_list=split_tup_list,
@@ -121,6 +127,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # Call parent method
         if self._myParent is not None:
+            # TODO/ISSUE/33 - Let _myParent to handle this! send a signal to parent with list!
             self.controller.save_time_slicers(split_tup_list, file_name)
         # END-IF
 
