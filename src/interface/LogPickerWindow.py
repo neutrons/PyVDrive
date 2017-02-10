@@ -982,11 +982,10 @@ class WindowLogPicker(QtGui.QMainWindow):
 
     def evt_switch_slicer_method(self):
         """
-
+        handling the change of slicing method
         :return:
         """
-        # TODO/ISSUE/44: doc
-
+        # return if mutex is on to avoid nested calling for this event handling method
         if self._mutexLockSwitchSliceMethod:
             return
 
@@ -994,7 +993,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._mutexLockSwitchSliceMethod = True
 
         # Only 1 situation requires
-
         self._set_main_slice_method()
 
         # Unlock
