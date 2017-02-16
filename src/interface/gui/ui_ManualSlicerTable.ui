@@ -32,11 +32,29 @@
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout_7">
+     <item row="0" column="2">
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
      <item row="0" column="0">
       <widget class="QPushButton" name="pushButton_selectAll">
        <property name="font">
         <font>
          <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
         </font>
        </property>
        <property name="text">
@@ -44,7 +62,7 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="4">
+     <item row="0" column="6">
       <widget class="QPushButton" name="pushButton_hide">
        <property name="text">
         <string>Hide</string>
@@ -52,6 +70,19 @@
       </widget>
      </item>
      <item row="0" column="3">
+      <widget class="QPushButton" name="pushButton_applyTimeSegs">
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Apply</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
       <widget class="QPushButton" name="pushButton_saveTimeSegs">
        <property name="font">
         <font>
@@ -69,25 +100,30 @@
        <property name="font">
         <font>
          <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>De-select All</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="pushButton_applyTimeSegs">
-       <property name="font">
-        <font>
          <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
        <property name="text">
-        <string>Apply</string>
+        <string>Rename Target</string>
        </property>
       </widget>
+     </item>
+     <item row="0" column="5">
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Preferred</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>
