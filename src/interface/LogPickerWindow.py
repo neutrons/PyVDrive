@@ -356,69 +356,18 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def do_select_time_segments(self):
+    def generate_manual_slicer(self, split_tup_list, slicer_name):
         """
-        mark all time segments in table to be selected in the table
+        call the controller to generate an aribrary event slicer
+        :param split_tup_list:
+        :param slicer_name:
         :return:
         """
-        num_rows = self.ui.tableWidget_segments.rowCount()
-        for i_row in xrange(num_rows):
-            self.ui.tableWidget_segments.select_row(i_row, True)
-
-        return
-
-    def do_deselect_time_segments(self):
-        """
-        Mark all time segments in the table to be deselected
-        :return:
-        """
-        num_rows = self.ui.tableWidget_segments.rowCount()
-        for i_row in xrange(num_rows):
-            self.ui.tableWidget_segments.select_row(i_row, False)
-
-        return
-
-    def do_highlight_selected(self):
-        """
-        Highlight the selected region of the log value
-        :return:
-        """
-        # Clear the highlight lines
-        if str(self.ui.pushButton_highlight.text()) == 'Clear':
-            # Delete all lines
-            for highlight_id in self._myHighLightedLineList:
-                self.ui.graphicsView_main.remove_line(highlight_id)
-
-            # Reset button text
-            self.ui.pushButton_highlight.setText('Highlight')
-            self._myHighLightedLineList = list()
-
-            return
-
-        # Add highlighted lines
-        # Collect selected time segments
-        source_time_segments, row_number_list = \
-            self.ui.tableWidget_segments.get_selected_time_segments(True)
-
-        # Name of current sample log
-        log_name = str(self.ui.comboBox_logNames.currentText()).split('(')[0].strip()
-
-        for i in xrange(len(source_time_segments)):
-            time_segment = source_time_segments[i]
-            status, ret_obj = self._myParent.get_controller().get_sample_log_values(
-                self._currRunNumber, log_name, time_segment[0], time_segment[1], True)
-            if status is False:
-                GuiUtility.pop_dialog_error(self, ret_obj)
-            else:
-                vec_times, vec_value = ret_obj
-                highlight_id = self.ui.graphicsView_main.add_plot_1d(vec_times, vec_value, color='red', marker='.')
-                self._myHighLightedLineList.append(highlight_id)
-        # END-FOR
-
-        # Reset
-        self.ui.pushButton_highlight.setText('Clear')
-
-        return
+        print '[DB...BAT] run number: ', self._currRunNumber, ', slicer name: ', slicer_name, 'tup list: ', split_tup_list
+        self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                              relative_time=True,
+                                                              time_segment_list=split_tup_list,
+                                                              slice_tag=slicer_name)
 
     def get_controller(self):
         """
@@ -542,7 +491,7 @@ class WindowLogPicker(QtGui.QMainWindow):
             self._currRunNumber = run_number
             self._sampleLogDict[self._currRunNumber] = dict()
 
-        except RuntimeError as err:
+        except NotImplementedError as err:
             GuiUtility.pop_dialog_error(self,
                                         'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return

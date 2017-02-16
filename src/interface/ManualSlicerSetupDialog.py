@@ -41,6 +41,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
                      self.do_hide_window)
 
+        self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_set_target)
+
         # define handler to signals
 
         return
@@ -88,11 +91,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # Call parent method to generate random event slicer (splitters workspace or table)
         if self._myParent is not None:
-            # TODO/ISSUE/33 - Let _myParent to handle this! send a signal to parent with list!
-            self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
-                                                                  relative_time=True,
-                                                                  time_segment_list=split_tup_list,
-                                                                  slice_tag=slicer_name)
+            self._myParent.generate_manual_slicer(split_tup_list, slicer_name=slicer_name)
         # END-IF
 
         return
@@ -130,6 +129,31 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
             # TODO/ISSUE/33 - Let _myParent to handle this! send a signal to parent with list!
             self.controller.save_time_slicers(split_tup_list, file_name)
         # END-IF
+
+        return
+
+    def do_set_target(self):
+        """
+        set the target workspace/index to the slicers in case some of them will be merged
+        :return:
+        """
+        # check whether any rows are selected
+        row_list = self.ui.tableWidget_segments.get_selected_rows(True)
+        if len(row_list) == 0:
+            GuiUtil.pop_dialog_information(self, 'No row is selected to set target.')
+            return
+
+        # get the name of the target
+        # pop a dialog for the name of the slicer
+        target, status = QtGui.QInputDialog.getText(self, 'Input Target',
+                                                         'Enter chopping target for selected rows:')
+        # return if rejected with
+        if status is False:
+            return
+        else:
+            target = str(target)
+
+        self.ui.tableWidget_segments.rename_chop_target(row_list, target)
 
         return
 

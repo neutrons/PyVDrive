@@ -339,7 +339,9 @@ class VDriveAPI(object):
         """
         # get the chopper
         chopper = self._myProject.get_chopper(run_number)
-        slice_tag = chopper.generate_events_filter_manual(time_segment_list, relative_time=relative_time,
+        slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
+                                                          split_list=time_segment_list,
+                                                          relative_time=relative_time,
                                                           splitter_tag=slice_tag)
 
         return slice_tag

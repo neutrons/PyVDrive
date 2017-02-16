@@ -171,6 +171,18 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return
 
+    def rename_chop_target(self, row_number_list, target):
+        """
+        rename the target (workspace/index) of the chopped data of selected rows
+        :param row_number_list:
+        :param target:
+        :return:
+        """
+        for i_row in row_number_list:
+            self.update_cell_value(i_row, self._colIndexTargetWS, target)
+
+        return
+
     def setup(self):
         """
         Init setup

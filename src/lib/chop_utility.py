@@ -1,6 +1,7 @@
 # Classes to process sample log and chopping
 
 import os
+import random
 import mantid_helper
 
 
@@ -254,7 +255,8 @@ class DataChopper(object):
                                               '' % str(type(splitter_tag))
 
         # Check split list
-        assert isinstance(split_list, list)
+        assert isinstance(split_list, list), 'Splitters {0} must be given by list but not {1}.' \
+                                             ''.format(split_list, type(split_list))
 
         # Generate split workspace
         status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
@@ -739,4 +741,11 @@ def parse_time_segments(file_name):
     return True, (ref_run, run_start, segment_list)
 
 
-
+def get_standard_manual_tag(run_number):
+    """
+    if the tag for a manual splicer is not given, then it will be named under a routine
+    :param run_number:
+    :return:
+    """
+    random_index = random.randint(1, 1000)
+    return 'manual_slicer_{0}_{1}'.format(run_number, random_index)

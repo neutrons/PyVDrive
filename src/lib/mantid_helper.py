@@ -5,7 +5,7 @@ import numpy
 
 # Import mantid directory
 sys.path.append('/opt/mantidnightly/bin/')
-sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
+# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')  # Mantid directory for local debugging
 
 import mantid
 import mantid.api
@@ -215,7 +215,7 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle='relative',
                               OutputWorkspace=splitters_ws_name)
 
-    # TODO/NOW
+    # TODO/ISSUE/33 - Finish it!
     print '[NOT FINISHED YET!]'
 
     return True, (splitters_ws_name, info_ws_name)
@@ -814,6 +814,7 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     :param meta_data_only:
     :return: 2-tuple
     """
+    print '[DB...BAT] Mantid: ', mantidapi
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,

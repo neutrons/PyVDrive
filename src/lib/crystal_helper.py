@@ -4,7 +4,7 @@ import sys
 
 # Import mantid directory
 sys.path.append('/opt/mantidnightly/bin/')
-sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
+#sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
 
 import mantid
 import mantid.geometry
