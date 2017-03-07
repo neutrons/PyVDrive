@@ -85,8 +85,8 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
-            'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'TAG',
-            'BinFoler', 'Mytofbmax', 'Mytobmin']
+                     'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'TAG',
+                     'BinFoler', 'Mytofbmax', 'Mytobmin']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -162,10 +162,7 @@ class VBin(procss_vcommand.VDriveCommand):
             TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
             TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
             """
-            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            # TODO/NOW/ISSUE/FIXME/57 - Using a debug directory now!!! remove it before releasing!
             standard_dir = os.getcwd()
-
             if material_type == 'si':
                 material_type = 'Si'
                 standard_dir = os.path.join(standard_dir, 'Si')
@@ -192,34 +189,45 @@ class VBin(procss_vcommand.VDriveCommand):
             tof_max = None
 
         # scan the runs with data archive manager and add the runs to project
-        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
-                                                                                             run_number_list)
+        if use_chop_data:
+            # reducing chopped data
+            # set vanadium runs
+            if van_run is not None:
+                self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+            status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+                                                               vanadium=(van_run is not None),
+                                                               standard_sample_tuple=standard_tuple,
+                                                               binning_parameter=binning_parameters,
+                                                               output_to_fullprof=output_fullprof)
 
-        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.add_runs_to_project(run_info_list)
+        else:
+            # reduce regular data
+            archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                                 run_number_list)
 
-        # set flag
-        run_number_list = list()
-        for run_info in run_info_list:
-            run_number_list.append(run_info['run'])
-        self._controller.set_runs_to_reduce(run_number_list)
+            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+            self._controller.add_runs_to_project(run_info_list)
 
-        # set vanadium runs
-        if van_run is not None:
-            self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+            # set vanadium runs
+            if van_run is not None:
+                self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
 
-        output_dir = os.getcwd()
+            # set flag
+            run_number_list = list()
+            for run_info in run_info_list:
+                run_number_list.append(run_info['run'])
+            self._controller.set_runs_to_reduce(run_number_list)
 
-        # reduce
-        status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
-                                                           vanadium=(van_run is not None),
-                                                           standard_sample_tuple=standard_tuple)
+            output_dir = os.getcwd()
 
-        # # process standards
-        # if process_standard is not None:
-        #     assert len(run_number_list) == 1, 'It is not allowed to process several standards {0} simultaneously.' \
-        #                                       ''.format(process_standard)
-        #     self._controller.process_reduced_standard(run_number_list[0], process_standard)
+            # reduce by regular runs
+            # TODO/FIXME/NOW - Binning parameters
+            status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+                                                               vanadium=(van_run is not None),
+                                                               standard_sample_tuple=standard_tuple,
+                                                               binning_parameter=binning_parameters)
+
+        # END-IF-ELSE
 
         return status, str(ret_obj)
 
