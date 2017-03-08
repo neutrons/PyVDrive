@@ -255,8 +255,9 @@ class VdriveChop(VDriveCommand):
                                                          reduce_flag=output_to_gsas,
                                                          output_dir=output_dir,
                                                          dry_run=is_dry_run)
-            else:
+            elif log_name is not None:
                 # chop by log value
+                # FIXME/TODO/ISSUE/33 - how to get delta_log_value?
                 status, message = self.chop_data_by_log(run_number=run_number,
                                                         start_time=None,
                                                         stop_time=None,
@@ -265,6 +266,11 @@ class VdriveChop(VDriveCommand):
                                                         reduce_flag=output_to_gsas,
                                                         output_dir=output_dir,
                                                         dry_run=is_dry_run)
+            else:
+                # do nothing but launch log window
+                status = True
+                message = 'pop'
+                return status, message
             # END-IF-ELSE
 
             final_success = final_success and status

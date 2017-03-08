@@ -153,6 +153,23 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
+    def _process_merge(self, arg_dict):
+        """
+        process command MERGE
+        :param arg_dict:
+        :return:
+        """
+        # create a new VdriveMerge instance
+        try:
+            processor = vdrive_commands.vmerge.VdriveMerge(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
+
+        # execute
+        status, message = self._process_command(processor, arg_dict)
+
+        return status, message
+
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -229,9 +246,14 @@ class VdriveCommandProcessor(object):
          :param arg_dict:
          :return:
          """
-        processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
+        try:
+            processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
 
-        return self._process_command(processor, arg_dict)
+        status, message = self._process_command(processor, arg_dict)
+
+        return status, message
 
     @staticmethod
     def _process_command(command_processor, arg_dict):
