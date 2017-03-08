@@ -86,7 +86,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
             'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'TAG',
-            'BinFoler', 'Mytofbmax', 'Mytobmin']
+            'BinFoler', 'Mytofbmax', 'Mytofbmin']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -113,6 +113,9 @@ class VBin(procss_vcommand.VDriveCommand):
         """
         Execute command: override
         """
+        # TODO/FIXME What is SKIPXML
+        # FOCUS_EW: TODO/FIXME : anything interesting?
+
         # check whether the any non-supported args
         input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
@@ -120,7 +123,7 @@ class VBin(procss_vcommand.VDriveCommand):
                 raise KeyError('VBIN argument %s is not recognized.' % arg_key)
         # END-FOF
 
-        # check and set ipts
+        # check and set IPTS
         self.set_ipts()
 
         # RUNS or CHOPRUN
@@ -135,15 +138,8 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             use_chop_data = False
 
-        # bin with
-        if 'BINW' in input_args:
-            bin_width = float(self._commandArgsDict['BINW'])
-        else:
-            bin_width = 0.005
-
-        # TODO/FIXME What is SKIPXML
-
-        # FOCUS_EW: TODO/FIXME : anything interesting?
+        # binning parameters
+        use_default_binning, binning_parameters = self.parse_binning()
 
         # RUNV
         if 'RUNV' in input_args:
@@ -153,43 +149,14 @@ class VBin(procss_vcommand.VDriveCommand):
             van_run = None
 
         # TAG
-        if 'TAG' in input_args:
-            # process material type
-            material_type = self._commandArgsDict['TAG']
-            material_type = material_type.lower()
-            """
-            for example
-            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
-            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
-            """
-            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            # TODO/NOW/ISSUE/FIXME/57 - Using a debug directory now!!! remove it before releasing!
-            standard_dir = os.getcwd()
-
-            if material_type == 'si':
-                material_type = 'Si'
-                standard_dir = os.path.join(standard_dir, 'Si')
-                standard_file = 'SiRecord.txt'
-            elif material_type == 'v':
-                material_type = 'Vanadium'
-                standard_dir = os.path.join(standard_dir, 'Vanadium')
-                standard_file = 'VRecord.txt'
-            else:
-                return False, 'Unable to process unsupported TAG {0}.'.format(material_type)
-
-            standard_tuple = material_type, standard_dir, standard_file
-        else:
-            standard_tuple = None
+        standard_tuple = self.process_tag()
 
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
             output_fullprof = False
 
-        if 'Mytofbmax' in input_args:
-            tof_max = float(self._commandArgsDict['Mytofbmax'])
-        else:
-            tof_max = None
+
 
         # scan the runs with data archive manager and add the runs to project
         archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
@@ -246,4 +213,75 @@ class VBin(procss_vcommand.VDriveCommand):
 
         return help_str
 
+    def parse_binning(self):
+        """
+        process binning parameters configuration from inputs
+        :return:
+        """
+        binning_parameters = None
 
+        if not ('BINW' in self._commandArgsDict or 'Mytofbmax' in self._commandArgsDict
+                or 'Mytofbmin' in self._commandArgsDict):
+            # using default binning parameters as VDRIVE standard
+            use_default_binning = True
+
+        elif 'BINW' in self._commandArgsDict and abs(self._commandArgsDict['BINW'] - 0.005) < 1.0E-7:
+            # Bin width is same as default
+            use_default_binning = True
+
+        else:
+            use_default_binning = False
+            if 'BINW' in self._commandArgsDict:
+                bin_width = float(self._commandArgsDict['BINW'])
+            else:
+                bin_width = 0.005  # set to default in case only TOF range is customized
+
+            if 'Mytofbmax' in self._commandArgsDict:
+                tof_max = float(self._commandArgsDict['Mytofbmax'])
+            else:
+                tof_max = None
+
+            if 'Mytofbmin' in self._commandArgsDict:
+                tof_min = float(self._commandArgsDict['Mytofbmin'])
+            else:
+                tof_min = None
+
+            binning_parameters = (tof_min, bin_width, tof_max)
+        # END-IF-ELSE
+
+        return use_default_binning, binning_parameters
+
+    def process_tag(self):
+        """
+        process for 'TAG'
+        :return: standard_tuple = material_type, standard_dir, standard_file
+        """
+        if 'TAG' in self._commandArgsDict:
+            # process material type
+            material_type = self._commandArgsDict['TAG']
+            material_type = material_type.lower()
+            """
+            for example
+            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+            """
+            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
+            # TODO/NOW/ISSUE/FIXME/57 - Using a debug directory now!!! remove it before releasing!
+            standard_dir = os.getcwd()
+
+            if material_type == 'si':
+                material_type = 'Si'
+                standard_dir = os.path.join(standard_dir, 'Si')
+                standard_file = 'SiRecord.txt'
+            elif material_type == 'v':
+                material_type = 'Vanadium'
+                standard_dir = os.path.join(standard_dir, 'Vanadium')
+                standard_file = 'VRecord.txt'
+            else:
+                return False, 'Unable to process unsupported TAG {0}.'.format(material_type)
+
+            standard_tuple = material_type, standard_dir, standard_file
+        else:
+            standard_tuple = None
+
+        return standard_tuple
