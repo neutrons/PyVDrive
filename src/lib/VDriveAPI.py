@@ -936,7 +936,8 @@ class VDriveAPI(object):
     def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, fullprof=False,
-                        standard_sample_tuple=None):
+                        standard_sample_tuple=None, binning_parameters=None,
+                        merge=False):
         """
         Reduce a set of data
         Purpose:
@@ -959,6 +960,8 @@ class VDriveAPI(object):
         :param gsas: boolean flag to produce GSAS files from reduced runs
         :param fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
+        :param binning_parameters: None for default and otherwise using user specified
+        :param merge: If true, then merge the run together by calling SNSPowderReduction
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1000,7 +1003,9 @@ class VDriveAPI(object):
                                                               fullprof=fullprof,
                                                               record_file=record,
                                                               sample_log_file=logs,
-                                                              standard_sample_tuple=standard_sample_tuple)
+                                                              standard_sample_tuple=standard_sample_tuple,
+                                                              merge=merge,
+                                                              binning_parameters=binning_parameters)
 
             except AssertionError as re:
                 status = False

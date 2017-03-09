@@ -668,7 +668,8 @@ class ProjectManager(object):
 
     def reduce_runs(self, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
-                    sample_log_file=False, standard_sample_tuple=None):
+                    sample_log_file=False, standard_sample_tuple=None,
+                    merge=False, binning_parameters=None):
         """
         Reduce a set of runs with selected options
         Purpose:
@@ -715,58 +716,72 @@ class ProjectManager(object):
 
         vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
 
-        for run_number in run_number_list:
-            # get IPTS and files
-            full_event_file_path, ipts_number = self._dataFileDict[run_number]
+        if not merge:
+            # reduce runs one by one
+            for run_number in run_number_list:
+                # get IPTS and files
+                full_event_file_path, ipts_number = self._dataFileDict[run_number]
 
-            # vanadium
-            if vanadium:
-                try:
-                    van_run = self._sampleRunVanadiumDict[run_number]
-                    van_gda = self._vanadiumGSASFileDict[van_run]
-                    vanadium_tuple = van_run, van_gda, vanadium_tag
-                except KeyError:
-                    reduce_all_success = False
-                    message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
-                    continue
-            else:
-                vanadium_tuple = None
-            # END-IF (vanadium)
+                # vanadium
+                if vanadium:
+                    try:
+                        van_run = self._sampleRunVanadiumDict[run_number]
+                        van_gda = self._vanadiumGSASFileDict[van_run]
+                        vanadium_tuple = van_run, van_gda, vanadium_tag
+                    except KeyError:
+                        reduce_all_success = False
+                        message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
+                        continue
+                else:
+                    vanadium_tuple = None
+                # END-IF (vanadium)
+
+                # reduce
+                status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
+                                                                        output_directory, vanadium=vanadium,
+                                                                        vanadium_tuple=vanadium_tuple, gsas=gsas,
+                                                                        standard_sample_tuple=standard_sample_tuple,
+                                                                        binning_parameters=binning_parameters)
+
+                reduce_all_success = reduce_all_success and status
+                if not status:
+                    message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
+            # END-FOR
+        else:
+            # merge runs
+            common_van_run = None
+            common_van_gda = None
+            ipts_run_list = list()
+
+            # get information for all runs to merge and the vanadium run to them
+            for run_number in run_number_list:
+                # get IPTS and files
+                full_event_file_path, ipts_number = self._dataFileDict[run_number]
+
+                ipts_run_list.append((ipts_number, run_number, full_event_file_path))
+
+                # vanadium
+                if vanadium:
+                    try:
+                        van_run = self._sampleRunVanadiumDict[run_number]
+                        van_gda = self._vanadiumGSASFileDict[van_run]
+                        vanadium_tuple = van_run, van_gda, vanadium_tag
+                    except KeyError:
+                        return False, 'Vanadium for run {0} cannot be located.'.format(run_number)
+
+                    if common_van_gda is None:
+                        common_van_run = van_run
+                        common_van_gda = van_gda
+                    elif van_run != common_van_run:
+                        return False, 'Runs to merge do not have same vanadium to normalize'
+                # END-IF (vanadium)
+            # END-FOR
 
             # reduce
-            status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
-                                                                    output_directory, vanadium=vanadium,
-                                                                    vanadium_tuple=vanadium_tuple, gsas=gsas,
-                                                                    standard_sample_tuple=standard_sample_tuple)
+            FROM HERE!
 
-            reduce_all_success = reduce_all_success and status
-            if not status:
-                message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
-
-        # END-FOR
 
         return reduce_all_success, message
-
-    # def save_session(self, out_file_name):
-    #     """ Save session to a dictionary
-    #     :param out_file_name:
-    #     :return:
-    #     """
-    #     # Save to a dictionary
-    #     save_dict = dict()
-    #     save_dict['name'] = self._name
-    #     save_dict['dataFileDict'] = self._dataFileDict
-    #     save_dict['baseDataFileNameList'] = self._baseDataFileNameList
-    #     save_dict['baseDataPath'] = self._baseDataPath
-    #
-    #     # Return if out_file_name is None
-    #     if out_file_name is None:
-    #         return save_dict
-    #
-    #     assert isinstance(out_file_name, str)
-    #     futil.save_xml(save_dict, out_file_name)
-    #
-    #     return None
 
     def set_focus_calibration_file(self, focus_cal_file):
         """

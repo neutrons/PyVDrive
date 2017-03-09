@@ -67,13 +67,36 @@ class VdriveMerge(VDriveCommand):
         output_directory = self.parse_output_directory()
 
         # set up
-        self._controller.setup_merge(ipts_number=self._iptsNumber, runs=to_merge_runs, save_dir=output_directory)
-        run_info_list = self._controller.get_runs(run_number_list=to_merge_runs)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                             run_number_list)
 
-        # reduce
-        self._controller.add_runs_to_project(run_info_list, self._iptsNumber)
-        reduce_id = self._controller.reduce_data_set(merge=True)
-        self._controller.export_gsas_file(registry=reduce_id, output_dir=output_directory)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.add_runs_to_project(run_info_list)
+
+        # # set vanadium runs
+        # TODO/FUTURE: Optionally add support of vanadium run
+        # if van_run is not None:
+        #     self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+
+        # TODO/FUTURE: Optionally add support of 'TAG'
+        standard_tuple = None
+
+        # TODO/FUTURE: Optionally add support of user-specified binning parameters
+        binning_parameters = None
+
+        # set flag
+        run_number_list = list()
+        for run_info in run_info_list:
+            run_number_list.append(run_info['run'])
+        self._controller.set_runs_to_reduce(run_number_list)
+
+        # reduce by regular runs
+        # TODO/FIXME/NOW - Binning parameters
+        status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_directory,
+                                                           vanadium=None,
+                                                           standard_sample_tuple=standard_tuple,
+                                                           binning_parameter=binning_parameters,
+                                                           merge=True)
 
         pass
 
@@ -115,9 +138,11 @@ class VdriveMerge(VDriveCommand):
 
         :return:
         """
-        # TODO/FIXME/ISSUE/33/NOW - make more check
+        if 'OUTPUT' in self._commandArgsDict and 'CHOPRUN' in self._commandArgsDict:
+            # specify too many
+            raise RuntimeError('It is not permitted to specify both OUTPUT and CHOPRUN')
 
-        if 'OUTPUT' in self._commandArgsDict:
+        elif 'OUTPUT' in self._commandArgsDict:
             output_directory = self._commandArgsDict['OUTPUT']
 
         elif 'CHOPRUN' in self._commandArgsDict:
@@ -126,8 +151,8 @@ class VdriveMerge(VDriveCommand):
             output_directory = self.generate_data_save_dir(chop_run)
 
         else:
-            raise RuntimeError('MERGE command requires input of argument {0}. Error message: {1}.'
-                               ''.format('RUNFILE and CHOPRUN', err))
+            raise RuntimeError('MERGE command requires input of argument {0}.'
+                               ''.format('RUNFILE and CHOPRUN'))
 
         return output_directory
 

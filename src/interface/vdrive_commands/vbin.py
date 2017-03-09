@@ -86,7 +86,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'TAG',
-                     'BinFoler', 'Mytofbmax', 'Mytofbmin']
+                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -96,6 +96,7 @@ class VBin(procss_vcommand.VDriveCommand):
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
         'OneBank': 'Add 2 bank data together (=1).',
         'Tag': '"Si/V" for instrument calibration.',
+        'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin'
     }
 
     def __init__(self, controller, command_args):
@@ -151,6 +152,9 @@ class VBin(procss_vcommand.VDriveCommand):
         # TAG
         standard_tuple = self.process_tag()
 
+        # output directory
+        output_dir = os.getcwd()
+
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
@@ -186,14 +190,13 @@ class VBin(procss_vcommand.VDriveCommand):
                 run_number_list.append(run_info['run'])
             self._controller.set_runs_to_reduce(run_number_list)
 
-            output_dir = os.getcwd()
-
             # reduce by regular runs
             # TODO/FIXME/NOW - Binning parameters
             status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
-                                                               binning_parameter=binning_parameters)
+                                                               binning_parameter=binning_parameters,
+                                                               merge=False)
 
         # END-IF-ELSE
 
