@@ -160,7 +160,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def add_run_numbers(self, run_tup_list, clear_previous=False):
         """
         set run numbers to combo-box-run numbers
-        :param run_tup_list: a list of 2-tuples as (run number, IPTS number)
+        :param run_tup_list: a list of 2-tuples as (run number, IPTS number) or just a list of integers (run number)
         :param clear_previous:
         :return:
         """
@@ -183,6 +183,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # add run number of combo-box and dictionary
         for run_tup in run_tup_list:
+            assert isinstance(run_tup, tuple) and len(run_tup) == 2,\
+                'Run tuple must contain just run number and ipts number but not {0}'.format(run_tup)
             run_number, ipts_number = run_tup
             self.ui.comboBox_runs.addItem(str(run_number))
             self._dataIptsRunDict[run_number] = ipts_number, run_number
@@ -604,6 +606,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=False)
+
+            #
+            # TODO/ISSUE/33 - See below!
+            ret_obj = str(ret_obj) + '\n' + 'NOW YOU MAY CONSIDER TO FIND THE DATA FROM ARCHIVE AND LOAD IT!'
 
             # return if unable to get reduced data
             if status is False:

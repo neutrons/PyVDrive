@@ -70,7 +70,7 @@ class VDriveCommand(object):
         for arg_key in input_args:
             if arg_key not in supported_arg_list:
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
-                                'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list))
+                                'arguments are %s.' % (self._commandName, arg_key, str(supported_arg_list))
                 print error_message
                 raise CommandKeyError(error_message)
         # END-FOF

@@ -485,7 +485,7 @@ class VDriveAPI(object):
             # get data from project
             data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
         except RuntimeError as run_err:
-            return False, 'Unable to get data due to {0}'.format(run_err)
+            return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
 
         return True, data_set_dict
 
@@ -933,7 +933,7 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
+    def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,

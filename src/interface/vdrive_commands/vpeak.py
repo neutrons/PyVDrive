@@ -54,7 +54,10 @@ class VanadiumPeak(VDriveCommand):
             return False, 'RUNV must be specified!'
 
         # parse IPTS
-        self.set_ipts()
+        try:
+            self.set_ipts()
+        except RuntimeError as run_err:
+            return False, 'Caused by {0}'.format(run_err)
 
         # parse the parameters
         self._vanRunNumber = int(self._commandArgsDict['RUNV'])

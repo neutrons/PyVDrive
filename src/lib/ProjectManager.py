@@ -765,7 +765,6 @@ class ProjectManager(object):
                     try:
                         van_run = self._sampleRunVanadiumDict[run_number]
                         van_gda = self._vanadiumGSASFileDict[van_run]
-                        vanadium_tuple = van_run, van_gda, vanadium_tag
                     except KeyError:
                         return False, 'Vanadium for run {0} cannot be located.'.format(run_number)
 
@@ -777,9 +776,16 @@ class ProjectManager(object):
                 # END-IF (vanadium)
             # END-FOR
 
-            # reduce
-            FROM HERE!
+            vanadium_tuple = common_van_run, common_van_gda, vanadium_tag
 
+            # reduce
+            status,  message = self._reductionManager.merge_reduce_runs(ipts_run_list,
+                                                                        output_dir=output_directory,
+                                                                        vanadium_info=vanadium_tuple, gsas=gsas,
+                                                                        standard_sample_tuple=standard_sample_tuple,
+                                                                        binning_parameters=binning_parameters)
+
+        # END-IF-ELSE(merge or not)
 
         return reduce_all_success, message
 

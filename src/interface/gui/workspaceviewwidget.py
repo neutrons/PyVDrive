@@ -268,12 +268,13 @@ class WorkspaceViewWidget(QtGui.QWidget):
         try:
             main_window.get_reserved_commands
         except AttributeError as att_err:
-            raise AttributeError('Parent window does not have required method get_reserved_command')
+            raise AttributeError('Parent window does not have required method get_reserved_command. FYI: {0}'
+                                 ''.format(att_err))
 
         # set
         self._myMainWindow = main_window
-
-        self.Reserved_Command_List.extend(main_window.get_reserved_commands())
+        reserved_command_list = main_window.get_reserved_commands()
+        self.Reserved_Command_List.extend(reserved_command_list)
 
         return
 

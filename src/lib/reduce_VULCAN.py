@@ -241,6 +241,10 @@ class ReductionSetup(object):
         self._characterFileName = None
         self._vulcanBinsFileName = None
 
+        # binning parameters
+        self._binningParameters = None
+        self._defaultBinSize = -0.001
+
         # flag whether the run is an alignment run or not
         self._isAlignmentRun = None
         self._reducedWorkspaceName = None
@@ -640,15 +644,21 @@ class ReductionSetup(object):
 
         return
 
-    def set_focus_file(self, file_name):
+    def set_binning_parameters(self, min_tof, max_tof, bin_size):
         """
-        set the diffraction focusing calibration file name
-        :param file_name:
+
+        :param min_tof:
+        :param max_tof:
+        :param bin_size:
         :return:
         """
-        assert isinstance(file_name, str), 'Input arg type error.'
+        # check: blabla
+        # TODO/ISSUE/NOW
 
-        self._focusFileName = file_name
+        if bin_size is None:
+            bin_size = self._defaultBinSize
+
+        self._binningParameters = (min_tof, -1 * abs(bin_size), max_tof)
 
         return
 
@@ -661,6 +671,18 @@ class ReductionSetup(object):
         assert isinstance(file_name, str), 'Input arg type error.'
 
         self._characterFileName = file_name
+
+        return
+
+    def set_focus_file(self, file_name):
+        """
+        set the diffraction focusing calibration file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._focusFileName = file_name
 
         return
 

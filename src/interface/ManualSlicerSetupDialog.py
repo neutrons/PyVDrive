@@ -45,6 +45,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
                      self.do_set_target)
 
         # define handler to signals
+        # bla bla
 
         return
 

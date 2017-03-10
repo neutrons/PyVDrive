@@ -58,9 +58,14 @@ class VdriveCommandProcessor(object):
         assert isinstance(command, str), 'Command %s must be a string but not %s.' \
                                          '' % (str(command),  str(type(command)))
 
+        # support command case insensitive
+        raw_command = command
+        command = command.upper()
+
+        # check command's validity
         if command not in self._commandList:
-            return False, 'Command %s is not in supported command list, which includes %s' \
-                          '' % (str(self._commandList), str(self._commandList))
+            return False, 'Command %s is not in supported command list: %s' \
+                          '' % (raw_command, str(self._commandList))
 
         # command body
         assert isinstance(command_args, list)
@@ -76,7 +81,9 @@ class VdriveCommandProcessor(object):
         for index, term in enumerate(command_args):
             items = term.split('=', 1)
             if len(items) == 2:
-                arg_dict[items[0]] = items[1]
+                # force command argument to be UPPER case in order to support case-insensitive syntax
+                command_arg = items[0].upper()
+                arg_dict[command_arg] = items[1]
             else:
                 err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
                 print '[DB...ERROR] ', err_msg
@@ -186,6 +193,9 @@ class VdriveCommandProcessor(object):
         status, message = self._process_command(processor, arg_dict)
         if not status:
             return status, message
+        elif len(message) > 0:
+            # this is for help
+            return status, message
 
         view_window = self._mainWindow.do_view_reduction()
         view_window.set_ipts_number(processor.get_ipts_number())
@@ -193,7 +203,7 @@ class VdriveCommandProcessor(object):
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
-            view_window.add_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_tuple_list())
             # plot
             view_window.plot_run(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
@@ -205,7 +215,7 @@ class VdriveCommandProcessor(object):
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
-            view_window.add_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_tuple_list())
             view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
         # END-FOR
 
@@ -287,7 +297,7 @@ class VdriveCommandProcessor(object):
             return True, help_msg
 
         if args == '-H':
-            msg = 'Supported commands: %s.' % str(self._commandList)
+            msg = 'Supported arguments: %s.' % str(self._commandList)
             return True, msg
 
-        return False, 'Arguments are not supported!'
+        return False, 'Arguments {0} are not supported!'.format(args)

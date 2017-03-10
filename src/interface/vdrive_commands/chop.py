@@ -9,7 +9,8 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'dbin', 'loadframe', 'bin', 'pickdate', 'OUTPUT', 'DRYRUN']
+    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'BIN', 'PICKDATA', 'OUTPUT', 'DRYRUN',
+                     'PULSETIME']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -341,6 +342,17 @@ class VdriveChop(VDriveCommand):
 
         return help_str
 
+    def parse_pick_data(self, file_name):
+        """
+
+        :param file_name:
+        :return:
+        """
+        # TODO/ISSUE/NOW/33 - Implement parse pick data file
+        #
+
+        return
+
 """
 CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
 1. dbin is the chop step size in seconds;
@@ -354,6 +366,40 @@ CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
     /SNS/VULCAN/IPTS-1000/shared/logs).
 5. If no sample environment is chosen or justchop=1 keyword is selected,
     no sample environment data synchronization will be executed.
+
+PICKDATA FILE
+801266555.006	801266615.006
+801266615.006	801266675.006
+801266675.006	801266735.006
+801266735.006	801266795.006
+801266795.006	801266855.006
+801266875.610	801266898.41
+801266898.41	801266921.741
+801266921.741	801266945.073
+801266945.073	801266968.404
+801266972.223	801266995.002
+801266995.002	801267016.939
+801267016.939	801267038.877
+801267038.877	801267060.814
+801267065.202	801267087.998
+801267087.998	801267111.666
+801267111.666	801267135.335
+801267135.335	801267159.003
+801267163.796	801267186.596
+801267186.596	801267217.133
+801267217.133	801267247.669
+801267247.669	801267278.206
+801267280.60	801267301.000
+801267301.000	801267326.873
+801267326.873	801267352.745
+801267352.745	801267378.618
+801267379.81	801267402.607
+801267402.607	801267428.407
+801267428.407	801267454.208
+801267454.208	801267480.008
+801267480.008	801267505.008
+801267505.008	801267530.008
+
 """
 
 

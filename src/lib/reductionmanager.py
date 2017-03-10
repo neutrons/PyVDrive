@@ -610,7 +610,7 @@ class ReductionManager(object):
         return True, None
 
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
-                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None):
+                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
         """
         Reduce run with selected options
         Purpose:
@@ -623,6 +623,8 @@ class ReductionManager(object):
         :param vanadium:
         :param vanadium_tuple:
         :param gsas:
+        :param standard_sample_tuple:
+        :param binning_parameters:
         :return:
         """
         # set up reduction options
@@ -633,6 +635,8 @@ class ReductionManager(object):
         reduction_setup.set_run_number(run_number)
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
+        if binning_parameters is not None:
+            reduction_setup.set_mantid_binning(binning_parameters)
 
         # vanadium
         reduction_setup.normalized_by_vanadium = vanadium

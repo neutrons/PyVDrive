@@ -98,7 +98,7 @@ class VdriveMerge(VDriveCommand):
                                                            binning_parameter=binning_parameters,
                                                            merge=True)
 
-        pass
+        return status, str(ret_obj)
 
     def generate_data_save_dir(self, chop_run):
         """
@@ -230,4 +230,13 @@ Example of the tab delimited runfile.txt:
 ----------------------------
 Additional keywords:
 NONE
+
+
+TODO/ISSUE/NOW/33: Test the following use case
+
+Example 2:
+VDRIVEMERGE,IPTS=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/SHARED/RUNFILE.TXT",CHOPRUN=2
+
+Parse: "77868	78277"  (spaced by tab)
+
 """

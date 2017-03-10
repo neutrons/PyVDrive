@@ -1140,7 +1140,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Get reserved commands from VDrive command processor
         :return:
         """
-        return self._vdriveCommandProcessor.get_vdrive_commands()
+        # all commands are upper case.  make them also to be lower case too
+        command_list = self._vdriveCommandProcessor.get_vdrive_commands()
+        lower_case_commands = list()
+        for command in command_list:
+            lower_case_commands.append(command.lower())
+
+        # merge them
+        command_list.extend(lower_case_commands)
+
+        return command_list
 
     def get_controller(self):
         """
