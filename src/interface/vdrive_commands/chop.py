@@ -17,9 +17,11 @@ class VdriveChop(VDriveCommand):
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
 
-        'dbin': 'time step for binning interval',
-        'loadframe': 'chop load frame data',
-        'bin': 'If bin=1, chopped data will be reduced to GSAS files',
+        'DBIN': 'time step for binning interval',
+        'LOADFRAME': 'chop load frame data',
+        'FURNACE': '',
+        'PICKDATA': 'Name of a plain text 2-column data file for start and stop time for splitters.',
+        'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
 
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
@@ -154,6 +156,18 @@ class VdriveChop(VDriveCommand):
 
         return status, message
 
+    def chop_data_manually(run_number, slicer_list, reduce_flag, output_dir, is_dry_run):
+        """
+
+        :param slicer_list:
+        :param reduce_flag:
+        :param output_dir:
+        :param is_dry_run:
+        :return:
+        """
+        # TODO/ISSUE/33/NOW - From here
+        raise
+
     def exec_cmd(self):
         """
         Execute input command (override)
@@ -207,25 +221,54 @@ class VdriveChop(VDriveCommand):
             )
 
         # parse other optional parameters
-        if 'dbin' in self._commandArgsDict:
-            time_step = float(self._commandArgsDict['dbin'])
+        if 'DBIN' in self._commandArgsDict:
+            time_step = float(self._commandArgsDict['DBIN'])
         else:
             time_step = None
 
-        if 'loadframe' in self._commandArgsDict:
+        if 'LOADFRAME' in self._commandArgsDict:
             use_load_frame = True
         else:
             use_load_frame = False
 
-        if 'bin' in self._commandArgsDict:
-            output_to_gsas = True
+        if 'Furnace' in self._commandArgsDict:
+            use_furnace = True
         else:
-            output_to_gsas = False
+            use_furnace = False
+
+        if 'PICKDATA' in self._commandArgsDict:
+            user_slice_file = self._commandArgsDict['PICKDATA']
+        else:
+            user_slice_file = False
 
         if use_load_frame:
             log_name = 'Load Frame'
         else:
             log_name = None
+
+        # check log type
+        log_sum = 0
+        if time_step is not None:
+            log_sum += 1
+        if use_load_frame:
+            log_sum += 1
+        if use_furnace:
+            log_sum += 1
+        if user_slice_file is not None:
+            log_sum += 1
+
+        if log_sum > 1:
+            # too many choices: return with False
+            return False, 'Only 1 option in DBIN, LOADFRAME, FURNACE and PICKDATA can be chosen.'
+        elif log_sum == 0:
+            # no choice, just pop out the window
+            return True, 'pop'
+
+        # about output
+        if 'BIN' in self._commandArgsDict:
+            output_to_gsas = True
+        else:
+            output_to_gsas = False
 
         if 'OUTPUT' in self._commandArgsDict:
             # use user defined
@@ -267,6 +310,16 @@ class VdriveChop(VDriveCommand):
                                                         reduce_flag=output_to_gsas,
                                                         output_dir=output_dir,
                                                         dry_run=is_dry_run)
+            elif user_slice_file is not None:
+                # chop by user specified time splitters
+                # FIXME/TODO/ISSUE/33 - Need to wait for Mantid
+                slicer_list = self.parse_pick_data(user_slice_file)
+                status, message = self.chop_data_manually(run_number=run_number,
+                                                          slicer_list=slicer_list,
+                                                          reduce_flag=output_to_gsas,
+                                                          output_dir=output_dir,
+                                                          is_dry_run=is_dry_run)
+
             else:
                 # do nothing but launch log window
                 status = True
@@ -345,13 +398,42 @@ class VdriveChop(VDriveCommand):
     def parse_pick_data(self, file_name):
         """
 
+        :exception: RuntimeError for unabling to import the file
         :param file_name:
         :return:
         """
-        # TODO/ISSUE/NOW/33 - Implement parse pick data file
-        #
+        # check file existence
+        assert isinstance(file_name, str), 'File name {0} must be a string but not a {1}.' \
+                                           ''.format(file_name, type(file_name))
+        try:
+            in_file = open(file_name, 'r')
+            lines = in_file.readlines()
+            in_file.close()
+        except OSError as os_err:
+            raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
 
-        return
+        split_list = list()
+        for raw_line in lines:
+            # clean the line
+            line = raw_line.strip()
+            if len(line) == 0:
+                continue
+
+            # split
+            terms = line.split()
+            if len(terms) < 2:
+                continue
+
+            try:
+                start_time = float(terms[0])
+                stop_time = float(terms[1])
+                split_list.append((start_time, stop_time))
+            except ValueError:
+                # ignore if the line does not contain 2 floats
+                continue
+        # END-FOR
+
+        return split_list
 
 """
 CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
