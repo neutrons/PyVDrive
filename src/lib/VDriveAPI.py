@@ -1284,11 +1284,10 @@ class VDriveAPI(object):
 
             # process vanadium
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
-
             if do_shift:
-                # TODO/ISSUE/59 - Implement
-                self._myProject.vanadium_processing_manager.apply_shift(van_ws_key)
+                # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
+                self._myProject.vanadium_processing_manager.apply_shift()
+            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
 
             if one_bank:
                 # merge the result to 1 bank

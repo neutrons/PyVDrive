@@ -4,15 +4,15 @@ from procss_vcommand import VDriveCommand
 class VanadiumPeak(VDriveCommand):
     """ process vanadium peaks
     """
-    SupportedArgs = ['IPTS', 'RUNV', 'HELP', 'Nsmooth', 'OneBank', 'Shift', 'OUTPUT']
+    SupportedArgs = ['IPTS', 'RUNV', 'HELP', 'NSMOOTH', 'ONEBANK', 'SHIFT', 'OUTPUT']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
         'HELP': 'Launch General Plot Viewer',
-        'OneBank': 'Add 2 bank data together (=1).',
-        'Shift': 'the chopper center is shift to large lambda aggressively.',
-        'Nsmooth': 'the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.',
+        'ONEBANK': 'Add 2 bank data together (=1).',
+        'SHIFT': 'the chopper center is shift to large lambda aggressively.',
+        'NSMOOTH': 'the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.',
         'OUTPUT': 'the directory where the smooth vanadium gsas file will be saved other than default.'
     }
 
@@ -63,11 +63,11 @@ class VanadiumPeak(VDriveCommand):
         self._vanRunNumber = int(self._commandArgsDict['RUNV'])
         assert self._vanRunNumber > 0, 'Vanadium run number {0} cannot be non-positive.'.format(self._vanRunNumber)
 
-        if 'OneBank' in self._commandArgsDict:
-            self._mergeToOneBank = bool(int(self._commandArgsDict['OneBank']))
+        if 'ONEBANK' in self._commandArgsDict:
+            self._mergeToOneBank = bool(int(self._commandArgsDict['ONEBANK']))
 
-        if 'Shift' in self._commandArgsDict:
-            self._doShift = bool(int(self._commandArgsDict['Shift']))
+        if 'SHIFT' in self._commandArgsDict:
+            self._doShift = bool(int(self._commandArgsDict['SHIFT']))
 
         if 'HELP' in self._commandArgsDict:
             do_launch_gui = bool(int(self._commandArgsDict['HELP']))

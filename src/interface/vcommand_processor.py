@@ -246,6 +246,11 @@ class VdriveCommandProcessor(object):
             van_run_number = processor.get_vanadium_run()
             viewer_data_key = data_viewer.add_data_set(ipts_number, van_run_number, controller_data_key)
             data_viewer.plot_data(viewer_data_key, bank_id=1)
+
+            if processor.to_shift:
+                data_viewer.set_vanadium_fwhm(2)
+            else:
+                data_viewer.set_vanadium_fwhm(7)
         # END-IF
 
         return status, message

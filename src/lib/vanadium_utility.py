@@ -26,6 +26,17 @@ class VanadiumProcessingManager(object):
         self._iptsNumber = None
         self._runNumber = None
 
+        self._defaultFWHM = 7
+
+        return
+
+    def apply_shift(self):
+        """
+        apply shift-of-wavelength to the vanadium to process
+        :return:
+        """
+        self._defaultFWHM = 2
+
         return
 
     def get_peak_striped_vanadium(self):
@@ -68,6 +79,9 @@ class VanadiumProcessingManager(object):
         self._smoothedWorkspace = None
         self._oneBankWorkspace = None
 
+        # default FWHM
+        self._defaultFWHM = 7  # non-shift case
+
         return
 
     def merge_processed_vanadium(self, save, to_archive=None, local_file_name=None):
@@ -101,7 +115,7 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
-    def process_vanadium(self, peak_fwhm=7, peak_pos_tol=0.01, background_type='Quadratic',
+    def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
                          param_n=20, param_order=2, save=True):
         """
@@ -117,6 +131,8 @@ class VanadiumProcessingManager(object):
         :return:
         """
         # strip vanadium peaks
+        if peak_fwhm is None:
+            peak_fwhm = self._defaultFWHM
         out_ws_1 = self.strip_peaks(peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
                                     background_type=background_type,
                                     is_high_background=is_high_background)

@@ -390,6 +390,16 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         return
 
+    def set_peak_fwhm(self, peak_fwhm):
+        """
+        set vanadium peak's FWHM
+        :param peak_fwhm:
+        :return:
+        """
+        self.ui.lineEdit_vanPeakFWHM.setText('{0}'.format(peak_fwhm))
+
+        return
+
 
 def load_setting_bool(qsettings, param_name, default_value):
     """

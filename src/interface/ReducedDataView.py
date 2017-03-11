@@ -64,6 +64,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._vanStripPlotID = None
         self._smoothedPlotID = None
 
+        # about vanadium process
+        self._vanadiumFWHM = None
+
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -273,6 +276,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         ipts_number, run_number = self._dataIptsRunDict[current_run]
 
         self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
+
+        # FWHM
+        if self._vanadiumFWHM is not None:
+            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
 
         return
 
@@ -874,6 +881,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         self.ui.label_currentRun.setText(title)
+
+        return
+
+    def set_vanadium_fwhm(self, fwhm):
+        """
+        set vanadium peak's FWHM
+        :param fwhm:
+        :return:
+        """
+        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'blabla'
+
+        self._vanadiumFWHM = fwhm
+
+        return
 
     def setup(self, controller):
         """ Set up the GUI from controller
