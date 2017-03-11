@@ -733,7 +733,7 @@ def parse_time_segments(file_name):
                 new_segment = TimeSegment(start_time, stop_time, target_id)
                 segment_list.append(new_segment)
             except ValueError as e:
-                print '[Warning] Line "%s" has wrong type of vlaue for start/stop.' % line
+                print '[Warning] Line "%s" has wrong type of value for start/stop.' % line
                 continue
         # END-IF (#)
     # END-FOR

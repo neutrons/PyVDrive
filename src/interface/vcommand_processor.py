@@ -45,6 +45,49 @@ class VdriveCommandProcessor(object):
         """
         return self._commandList[:]
 
+    @staticmethod
+    def parse_command_arguments(command, command_args):
+        """
+        parse command arguments and store to a dictionary, whose key is argument key and
+        value is argument value
+        a valid argument is in format as: key=value
+        and two arguments are separated by a comma ','
+        :param command:
+        :param command_args:
+        :return:
+        """
+        # TODO/FIXME/ISSUE/NOW/33 - How to deal with a file with space inside???
+        #  '/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT'
+
+
+        arg_dict = dict()
+        for index, term in enumerate(command_args):
+            items = term.split('=', 1)
+            if len(items) == 2:
+                # force command argument to be UPPER case in order to support case-insensitive syntax
+                command_arg = items[0].upper()
+
+                # special treatment for typical user type
+                if command_arg == 'ITPS':
+                    print '[WARNING] Argument ITPS is not supported. Auto correct it to IPTS.'
+                    command_arg = 'IPTS'
+
+                # process argument value. replace all the ', "
+                arg_value = items[1]
+                arg_value = arg_value.replace('\'', '')
+                arg_value = arg_value.replace('"', '')
+
+                # set
+                arg_dict[command_arg] = arg_value
+            else:
+                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
+                print '[DB...ERROR] ', err_msg
+                return False, err_msg
+            # END-IF
+        # END-FOR
+
+        return arg_dict
+
     def process_commands(self, command, command_args):
         """
         Process commands string
@@ -75,21 +118,8 @@ class VdriveCommandProcessor(object):
             status, err_msg = self._process_vdrive(command_args)
             return status, err_msg
 
-        # process regular VDRIVE command
-        # parse command arguments to dictionary
-        arg_dict = dict()
-        for index, term in enumerate(command_args):
-            items = term.split('=', 1)
-            if len(items) == 2:
-                # force command argument to be UPPER case in order to support case-insensitive syntax
-                command_arg = items[0].upper()
-                arg_dict[command_arg] = items[1]
-            else:
-                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
-                print '[DB...ERROR] ', err_msg
-                return False, err_msg
-            # END-IF
-        # END-FOR
+        # process regular VDRIVE command by parsing command arguments and store them to a dictionary
+        arg_dict = self.parse_command_arguments(command, command_args)
 
         # call the specific command class builder
         if command == 'CHOP':
@@ -117,13 +147,11 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        print '[DB...BAT] Am I reached 2'
         try:
             processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
         except vdrive_commands.procss_vcommand.CommandKeyError as com_err:
             return False, 'Command argument error: %s.' % str(com_err)
 
-        print '[DB...BAT] Am I reached 3'
         if len(arg_dict) == 0:
             status = True
             err_msg = processor.get_help()

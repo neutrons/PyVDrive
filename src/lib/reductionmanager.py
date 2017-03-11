@@ -654,7 +654,7 @@ class ReductionManager(object):
         # process on standards
         if standard_sample_tuple:
             assert isinstance(standard_sample_tuple, tuple) and len(standard_sample_tuple) == 3,\
-                'Input standard sample-tuple must be a tuple with length 3.'
+                'Input standard sample-tuple must be a tuple with length 3 but not a {0}.'.format(standard_sample_tuple)
             standard_sample, standard_dir, standard_record_file = standard_sample_tuple
             reduction_setup.is_standard = True
             reduction_setup.set_standard_sample(standard_sample, standard_dir, standard_record_file)

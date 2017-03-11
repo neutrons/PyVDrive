@@ -195,7 +195,7 @@ class VBin(procss_vcommand.VDriveCommand):
             status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
-                                                               binning_parameter=binning_parameters,
+                                                               binning_parameters=binning_parameters,
                                                                merge=False)
 
         # END-IF-ELSE
@@ -266,20 +266,22 @@ class VBin(procss_vcommand.VDriveCommand):
     def process_tag(self):
         """
         process for 'TAG'
+        for example
+            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+
         :return: standard_tuple = material_type, standard_dir, standard_file
         """
         if 'TAG' in self._commandArgsDict:
             # process material type
             material_type = self._commandArgsDict['TAG']
             material_type = material_type.lower()
-            """
-            for example
-            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
-            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
-            """
+
             standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            # TODO/NOW/ISSUE/FIXME/57 - Using a debug directory now!!! remove it before releasing!
-            standard_dir = os.getcwd()
+            if os.access(standard_dir, os.W_OK) is False:
+                # if standard VDRIVE default directory is not writable, then use the local one
+                # very likely the current PyVdrive is running in a testing mode.
+                standard_dir = os.getcwd()
 
             if material_type == 'si':
                 material_type = 'Si'

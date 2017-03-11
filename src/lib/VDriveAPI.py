@@ -1426,7 +1426,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
+    def slice_data(self, run_number, slicer_id, reduce_data, output_dir, export_log_type='loadframe'):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:

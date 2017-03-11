@@ -9,8 +9,8 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'BIN', 'PICKDATA', 'OUTPUT', 'DRYRUN',
-                     'PULSETIME']
+    SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
+                     'DRYRUN', 'PULSETIME']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -18,11 +18,10 @@ class VdriveChop(VDriveCommand):
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
 
         'DBIN': 'time step for binning interval',
-        'LOADFRAME': 'chop load frame data',
-        'FURNACE': '',
         'PICKDATA': 'Name of a plain text 2-column data file for start and stop time for splitters.',
+        'LOADFRAME': 'Chop LoadFrame log (MTSLoadFrame) along with',
+        'FURNACE': 'Chop Furnace log (MTSFurnace) along with',
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
-
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
     }
@@ -151,12 +150,13 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
+        # FIXME/TODO/ISSUE/NOW/ - add workflow of 'loadframe' or 'furnace'
         status, message = self._controller.slice_data(run_number, slicer_key,
                                                       reduce_data=reduce_flag, output_dir=output_dir)
 
         return status, message
 
-    def chop_data_manually(run_number, slicer_list, reduce_flag, output_dir, is_dry_run):
+    def chop_data_manually(self, run_number, slicer_list, reduce_flag, output_dir, is_dry_run):
         """
 
         :param slicer_list:
@@ -220,47 +220,36 @@ class VdriveChop(VDriveCommand):
                 str(run_start), str(type(run_start)), str(run_end), str(type(run_end))
             )
 
-        # parse other optional parameters
+        # chopping method: by constant time or input
+        # how to deal with sample logs
+        if 'LOADFRAME' in self._commandArgsDict:
+            chop_load_frame = True
+        else:
+            chop_load_frame = False
+        if 'Furnace' in self._commandArgsDict:
+            chop_furnace_log = True
+        else:
+            chop_furnace_log = False
+        if chop_furnace_log and chop_load_frame:
+            return False, 'Only 1 option in LOADFRAME and FURNACE can be chosen.'
+
         if 'DBIN' in self._commandArgsDict:
             time_step = float(self._commandArgsDict['DBIN'])
         else:
             time_step = None
-
-        if 'LOADFRAME' in self._commandArgsDict:
-            use_load_frame = True
-        else:
-            use_load_frame = False
-
-        if 'Furnace' in self._commandArgsDict:
-            use_furnace = True
-        else:
-            use_furnace = False
-
         if 'PICKDATA' in self._commandArgsDict:
             user_slice_file = self._commandArgsDict['PICKDATA']
         else:
             user_slice_file = False
-
-        if use_load_frame:
-            log_name = 'Load Frame'
+        # check
+        if time_step and user_slice_file:
+            return False, 'Only 1 option in DBIN and PICKDATA can be chosen.'
+        elif time_step is None and not user_slice_file:
+            message = 'pop'
         else:
-            log_name = None
+            message = None
 
-        # check log type
-        log_sum = 0
-        if time_step is not None:
-            log_sum += 1
-        if use_load_frame:
-            log_sum += 1
-        if use_furnace:
-            log_sum += 1
-        if user_slice_file is not None:
-            log_sum += 1
-
-        if log_sum > 1:
-            # too many choices: return with False
-            return False, 'Only 1 option in DBIN, LOADFRAME, FURNACE and PICKDATA can be chosen.'
-        elif log_sum == 0:
+        if message == 'pop':
             # no choice, just pop out the window
             return True, 'pop'
 
@@ -299,17 +288,17 @@ class VdriveChop(VDriveCommand):
                                                          reduce_flag=output_to_gsas,
                                                          output_dir=output_dir,
                                                          dry_run=is_dry_run)
-            elif log_name is not None:
-                # chop by log value
-                # FIXME/TODO/ISSUE/33 - how to get delta_log_value?
-                status, message = self.chop_data_by_log(run_number=run_number,
-                                                        start_time=None,
-                                                        stop_time=None,
-                                                        log_name=log_name,
-                                                        log_value_stepl=delta_log_value,
-                                                        reduce_flag=output_to_gsas,
-                                                        output_dir=output_dir,
-                                                        dry_run=is_dry_run)
+            # elif log_name is not None:
+            #     # chop by log value
+            #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
+            #     status, message = self.chop_data_by_log(run_number=run_number,
+            #                                             start_time=None,
+            #                                             stop_time=None,
+            #                                             log_name=log_name,
+            #                                             log_value_stepl=delta_log_value,
+            #                                             reduce_flag=output_to_gsas,
+            #                                             output_dir=output_dir,
+            #                                             dry_run=is_dry_run)
             elif user_slice_file is not None:
                 # chop by user specified time splitters
                 # FIXME/TODO/ISSUE/33 - Need to wait for Mantid
@@ -448,6 +437,10 @@ CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1
     /SNS/VULCAN/IPTS-1000/shared/logs).
 5. If no sample environment is chosen or justchop=1 keyword is selected,
     no sample environment data synchronization will be executed.
+
+
+Current Example:
+CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT",BIN=1,LOADFRAME=1,PULSETIME=1
 
 PICKDATA FILE
 801266555.006	801266615.006

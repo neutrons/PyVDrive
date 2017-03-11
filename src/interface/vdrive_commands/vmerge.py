@@ -217,6 +217,22 @@ class VdriveMerge(VDriveCommand):
         return merge_run_dict
 
 
+# TODO/FIXME/NOW/ISSUE/33 - Make following work!
+# 1. accept vdrivemerge as well merge
+# 2. see the error message below
+""" Error Message
+"Run: merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2"
+
+VDRIVE command merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2 is executed successfully.
+Failed to execute VDRIVE command due to Run number list cannot be of type <type 'dict'>..
+  File "<ipython-input-4-9e445d9a41ff>", line 1
+    "Run: merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2"
+                                                                                        ^
+SyntaxError: invalid syntax
+"""
+
+
+
 """
 MERGE, IPTS=1000, RUNFILE="/SNS/VULCAN/IPTS-1000/shared/runfile.txt", CHOPRUN=2
 The combined data are saved to /SNS/VULCAN/IPTS-1000/shared/chopped_data/2/ To bin the data combined by VDRIVEMERGE:
