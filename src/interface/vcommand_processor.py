@@ -56,12 +56,15 @@ class VdriveCommandProcessor(object):
         :param command_args:
         :return:
         """
-        # TODO/FIXME/ISSUE/NOW/33 - How to deal with a file with space inside???
-        #  '/SNS/VULCAN/IPTS-13183/SHARED/VARIABLECHOP_SERRATION_2ND SERIES_4.TXT'
-
-
         arg_dict = dict()
         for index, term in enumerate(command_args):
+            print '[DB] Input: ', term
+
+            term = term.strip()
+            if len(term) == 0:
+                # empty string. might appear at the end of the command
+                continue
+
             items = term.split('=', 1)
             if len(items) == 2:
                 # force command argument to be UPPER case in order to support case-insensitive syntax
@@ -80,7 +83,7 @@ class VdriveCommandProcessor(object):
                 # set
                 arg_dict[command_arg] = arg_value
             else:
-                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
+                err_msg = 'command %s %d-th term <%s> is not valid. Must have a = sign!' % (command, index, term)
                 print '[DB...ERROR] ', err_msg
                 return False, err_msg
             # END-IF

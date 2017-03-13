@@ -487,9 +487,12 @@ class ReductionSetup(object):
         if throw_not_set:
             if self._splitterWsName is None or self._splitterInfoName is None:
                 raise RuntimeError('Splitters (workspaces) have not been set.')
-            if not (AnalysisDataService.doesExist(self._splitterWsName)
-                    and AnalysisDataService.doesExist(self._splitterInfoName)):
-                raise RuntimeError('Splitters (workspaces) do not exist.')
+            if not AnalysisDataService.doesExist(self._splitterWsName):
+                raise RuntimeError('Splitters workspace {0} cannot be found in ADS.'.format(self._splitterWsName))
+            if not AnalysisDataService.doesExist(self._splitterInfoName):
+                print '[WARNING] Splitters information workspace {0} do not exist.'.format(self._splitterInfoName)
+                self._splitterInfoName = None
+        # END-IF
 
         return self._splitterWsName, self._splitterInfoName
 
@@ -1284,6 +1287,7 @@ class ReduceVulcanData(object):
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
         # call SNSPowderReduction for chopping and
+        # TODO/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
                                         CalibrationFile=self._reductionSetup.get_focus_file(),
@@ -1297,8 +1301,7 @@ class ReduceVulcanData(object):
                                         FrequencyLogNames="skf1.speed",
                                         WaveLengthLogNames="skf12.lambda",
                                         SplittersWorkspace=split_ws_name,
-                                        SplitInformationWorkspace=split_info_table
-                                        )
+                                        SplitInformationWorkspace=split_info_table)
 
         # create GSAS file for split workspaces
         # convert the chopped data to GSAS file in VULCAN's special bin
@@ -1317,6 +1320,9 @@ class ReduceVulcanData(object):
             use_special_name = False
 
         chopped_ws_name_list = list()
+
+        print '[DB...BAT] Output workspace number: ', num_split_ws
+
         for i_ws in range(num_split_ws):
             # get the split workspace's name
             ws_index = int(info_table.cell(i_ws, 0))

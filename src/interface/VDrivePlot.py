@@ -930,7 +930,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                                               log_path, file_filter))
 
         # Load log
-        log_name_list = self.load_sample_run(log_file_name, smart=True)
+        log_name_list, run_info_str = self.load_sample_run(log_file_name, smart=True)
         log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
@@ -1091,11 +1091,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # split
         # need to strip the space around command
-        vdrive_command = vdrive_command.replace(' ', '')
+        # vdrive_command = vdrive_command.replace(' ', '')
 
         # split the command from arguments
         command_script = vdrive_command.split(',')
-        command = command_script[0]
+        command = command_script[0].strip()
         status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])
 
         return status, err_msg
@@ -1197,7 +1197,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
         else:
             log_name_list = ret_value
 
-        return log_name_list
+        # get run information
+        run_info_str = self._myWorkflow.get_run_experiment_information(run_number)
+
+        return log_name_list, run_info_str
 
     def menu_save_project(self):
         """

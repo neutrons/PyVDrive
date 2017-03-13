@@ -451,6 +451,11 @@ class MplGraphicsView(QtGui.QWidget):
         :param show_legend:
         :return:
         """
+        # check whether the input is empty
+        if len(vec_y) == 0:
+            print '[WARNING] Input is an empty vector set'
+            return False
+
         line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
                                               line_width, show_legend)
 

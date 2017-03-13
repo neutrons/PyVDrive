@@ -12,6 +12,10 @@
 
 from procss_vcommand import VDriveCommand
 
+# TODO/ISSUE/NOW/33/FIXME - Following example:
+# view,IPTS=13183,choprun=68607
+# VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1
+
 
 class VdriveView(VDriveCommand):
     """

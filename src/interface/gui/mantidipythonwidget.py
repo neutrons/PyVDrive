@@ -122,11 +122,13 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         # main application is workspace viewer
         is_reserved = False
-        print '[DB...] Now test reserved command for %s' % script
+        # print '[DB...] Now test reserved command for %s' % script
         if self._mainApplication.is_reserved_command(script):
             is_reserved = True
             exec_message = self._mainApplication.execute_reserved_command(script)
-            source = '\"Run: %s\"' % script
+            script_transformed = script[:]
+            script_transformed = script_transformed.replace('"', "'")
+            source = '\"Run: %s\"' % script_transformed
         else:
             exec_message = None
 

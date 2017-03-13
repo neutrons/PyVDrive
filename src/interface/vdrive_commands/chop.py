@@ -10,7 +10,7 @@ class VdriveChop(VDriveCommand):
     Process command MERGE
     """
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME']
+                     'DRYRUN', 'PULSETIME', 'INFO']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -107,7 +107,7 @@ class VdriveChop(VDriveCommand):
         return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir,
-                          dry_run):
+                          dry_run, chop_loadframe_log, chop_furnace_log):
         """
         Chop data by time interval
         :param run_number:
@@ -117,6 +117,8 @@ class VdriveChop(VDriveCommand):
         :param reduce_flag: flag to reduce the data afterwards
         :param output_dir:
         :param dry_run:
+        :param chop_loadframe_log:
+        :param chop_furnace_log:
         :return:
         """
         # check inputs
@@ -151,22 +153,75 @@ class VdriveChop(VDriveCommand):
 
         # chop and reduce
         # FIXME/TODO/ISSUE/NOW/ - add workflow of 'loadframe' or 'furnace'
+        if chop_loadframe_log:
+            exp_log_type = 'loadframe'
+        elif chop_furnace_log:
+            exp_log_type = 'furnace'
+        else:
+            exp_log_type = None
+
         status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir)
+                                                      reduce_data=reduce_flag, output_dir=output_dir,
+                                                      export_log_type=exp_log_type)
 
         return status, message
 
-    def chop_data_manually(self, run_number, slicer_list, reduce_flag, output_dir, is_dry_run):
+    def chop_data_manually(self, run_number, slicer_list, reduce_flag, output_dir, epoch_time, dry_run,
+                           chop_loadframe_log, chop_furnace_log):
         """
 
         :param slicer_list:
         :param reduce_flag:
         :param output_dir:
-        :param is_dry_run:
+        :param dry_run:
         :return:
         """
-        # TODO/ISSUE/33/NOW - From here
-        raise
+        # TODO/FIXME/NOW/ISSUE/33 - Make this work!  Idea: create a matrix workspace ---> clean and test
+        # check inputs
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            '' % (str(run_number), type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+
+        # dry run: return input options
+        if dry_run:
+            outputs = 'Slice IPTS-%d Run %d by user-specified slicers ' % (self._iptsNumber, run_number)
+            for slicer in slicer_list:
+                outputs += '{0:.10f}, {1:.10f},\n'.format(slicer[0], slicer[1])
+            if reduce_flag:
+                outputs += 'and reduce (to GSAS) '
+            else:
+                outputs += 'and save to NeXus files '
+            outputs += 'to directory %s' % output_dir
+
+            if not os.access(output_dir, os.W_OK):
+                outputs += '\n[WARNING] Output directory %s is not writable!' % output_dir
+
+            return True, outputs
+        # END-IF (dry run)
+
+        # generate data slicer
+        status, slicer_key = self._controller.gen_data_slice_manual(run_number,
+                                                                    relative_time=not epoch_time,
+                                                                    time_segment_list=slicer_list,
+                                                                    slice_tag=None)
+
+        if not status:
+            error_msg = str(slicer_key)
+            return False, 'Unable to generate data slicer by time due to %s.' % error_msg
+
+        # chop and reduce
+        if chop_loadframe_log:
+            exp_log_type = 'loadframe'
+        elif chop_furnace_log:
+            exp_log_type = 'furnace'
+        else:
+            exp_log_type = None
+        status, message = self._controller.slice_data(run_number, slicer_key,
+                                                      reduce_data=reduce_flag, output_dir=output_dir,
+                                                      export_log_type=exp_log_type)
+
+        return status, message
 
     def exec_cmd(self):
         """
@@ -208,6 +263,11 @@ class VdriveChop(VDriveCommand):
             # pop out the window
             return True, 'pop'
 
+        if 'INFO' in self._commandArgsDict:
+            # get the chopping-help information
+            # TODO/ISSUE/33/ - organize some information
+            pass
+
         if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
             # dry run
             is_dry_run = True
@@ -241,6 +301,11 @@ class VdriveChop(VDriveCommand):
             user_slice_file = self._commandArgsDict['PICKDATA']
         else:
             user_slice_file = False
+        if 'PULSETIME' in self._commandArgsDict:
+            pulse_time = int(self._commandArgsDict['PULSETIME'])
+        else:
+            pulse_time = 1
+
         # check
         if time_step and user_slice_file:
             return False, 'Only 1 option in DBIN and PICKDATA can be chosen.'
@@ -287,7 +352,9 @@ class VdriveChop(VDriveCommand):
                                                          time_interval=time_step,
                                                          reduce_flag=output_to_gsas,
                                                          output_dir=output_dir,
-                                                         dry_run=is_dry_run)
+                                                         dry_run=is_dry_run,
+                                                         chop_loadframe_log=chop_load_frame,
+                                                         chop_furnace_log=chop_furnace_log)
             # elif log_name is not None:
             #     # chop by log value
             #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
@@ -307,7 +374,10 @@ class VdriveChop(VDriveCommand):
                                                           slicer_list=slicer_list,
                                                           reduce_flag=output_to_gsas,
                                                           output_dir=output_dir,
-                                                          is_dry_run=is_dry_run)
+                                                          dry_run=is_dry_run,
+                                                          epoch_time=(pulse_time == 1),
+                                                          chop_loadframe_log=chop_load_frame,
+                                                          chop_furnace_log=chop_furnace_log)
 
             else:
                 # do nothing but launch log window

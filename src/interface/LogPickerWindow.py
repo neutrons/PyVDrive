@@ -484,12 +484,15 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Get sample logs
         try:
             log_name_with_size = True
-            self._logNameList = self._myParent.load_sample_run(run_number, log_name_with_size)
+            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, log_name_with_size)
             self._logNameList.sort()
 
             # Update class variables, add a new entry to sample log value holder
             self._currRunNumber = run_number
             self._sampleLogDict[self._currRunNumber] = dict()
+
+            # set run information
+            self.ui.label_runInformation.setText(run_info_str)
 
         except NotImplementedError as err:
             GuiUtility.pop_dialog_error(self,

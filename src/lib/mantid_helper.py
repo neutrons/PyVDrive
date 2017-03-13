@@ -159,7 +159,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     return peak_list
 
 
-def generate_event_filters_arbitrary(split_list, relative_time, tag):
+def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, auto_target):
     """ Generate event filter (splitters workspace) by arbitrary time stamps
     :param split_list:
     :param relative_time:
@@ -168,6 +168,8 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
         1. status (boolean)
         2. 2-tuple as splitter workspace's name and information (table) workspace's name
     """
+    print '[DB...BAT] Workspace Name: ', ws_name
+
     # check
     if relative_time is False:
         raise RuntimeError('It has not been implemented for absolute time stamp!')
@@ -182,41 +184,94 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     splitters_ws_name = tag
     info_ws_name = tag + '_Info'
 
-    # create matrix workspace for splitter
-    time_list = list()
-    ws_list = list()
+    # TODO/FIXME/ISSUE/33+FUTURE: This is a temporary solution until SNSPowderReduction supports TableWorkspace
+    my_arg_dict = dict()
+    my_arg_dict['InputWorkspace'] = ws_name
+    my_arg_dict['OutputWorkspace'] = splitters_ws_name
+    my_arg_dict['InformationWorkspace'] = info_ws_name
+    my_arg_dict['TimeInterval'] = 3600*100  # 100 hours to generate a single line splitters workspace
 
-    # convert tuple list to time list and ws index list
+    mantidapi.GenerateEventsFilter(**my_arg_dict)
+
+    splitter_ws = retrieve_workspace(splitters_ws_name)
+    info_ws = retrieve_workspace(info_ws_name)
+
     for index, split_tup in enumerate(split_list):
-        # get start time and stop time
-        start_time = split_tup[0]
-        stop_time = split_tup[1]
-        ws_index = split_tup[2]
-        print '[DB...BAT] stop time = ', stop_time
+        start_time = mantid.kernel.DateAndTime(int(split_tup[0]*1.E9)).totalNanoseconds()
+        stop_time = mantid.kernel.DateAndTime(int(split_tup[1]*1.E9)).totalNanoseconds()
+        if len(split_tup) >= 3:
+            target = split_tup[2]
+        elif auto_target:
+            # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
+            target = index + 1
+        else:
+            # not allowing auto target, then must have a coding error
+            raise RuntimeError('Splitter tuple has only 2 entries!')
+        # END-IF
+        if index < splitter_ws.rowCount():
+            splitter_ws.setCell(index, 0, start_time)
+            splitter_ws.setCell(index, 1, stop_time)
+            splitter_ws.setCell(index, 2, target)
+        else:
+            splitter_ws.addRow([start_time, stop_time, target])
+            info_ws.addRow([index, ''])
 
-        # append to list
-        if index == 0:
-            # add start time
-            time_list.append(start_time)
-        elif start_time > time_list[-1] + 1.0E-15:
-            # add gap
-            time_list.append(start_time)
-            ws_list.append(-1)
-        # add stop time
-        time_list.append(stop_time)
-        ws_list.append(ws_index)
     # END-FOR
 
-    # convert list to numpy vector
-    time_vec = numpy.array(time_list)
-    ws_vec = numpy.array(ws_list)
+    # # create matrix workspace for splitter
+    # time_list = list()
+    # ws_list = list()
+    #
+    # # convert tuple list to time list and ws index list
+    # for index, split_tup in enumerate(split_list):
+    #     # get start time and stop time
+    #     start_time = split_tup[0]
+    #     stop_time = split_tup[1]
+    #     if len(split_tup) >= 3:
+    #         ws_index = split_tup[2]
+    #     elif auto_target:
+    #         # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
+    #         ws_index = index
+    #     else:
+    #         # not allowing auto target, then must have a coding error
+    #         raise RuntimeError('Splitter tuple has only 2 entries!')
+    #     # END-IF
+    #
+    #     # append to list
+    #     if index == 0:
+    #         # add start time
+    #         time_list.append(start_time)
+    #     elif start_time > time_list[-1] + 1.0E-15:
+    #         # add gap
+    #         time_list.append(start_time)
+    #         ws_list.append(-1)
+    #     # add stop time
+    #     time_list.append(stop_time)
+    #     ws_list.append(ws_index)
+    # # END-FOR
+    #
+    # # convert list to numpy vector
+    # time_vec = numpy.array(time_list)
+    # ws_vec = numpy.array(ws_list)
+    #
+    # # create workspace
+    # title = 'User specified splitters'
+    # if relative_time:
+    #     title += '. Use relative time to run start'
+    # else:
+    #     title += '. Use epoch time (absolute time).'
+    # mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle=title,
+    #                           OutputWorkspace=splitters_ws_name)
 
-    # create workspace
-    mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle='relative',
-                              OutputWorkspace=splitters_ws_name)
-
-    # TODO/ISSUE/33 - Finish it!
-    print '[NOT FINISHED YET!]'
+    # split_table_ws = mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=splitters_ws_name)
+    # split_table_ws.addColumn('float', 'start')
+    # split_table_ws.addColumn('float', 'stop')
+    # split_table_ws.addColumn('str', 'target')
+    #
+    # split_table_ws.addRow([0., 100., '1'])
+    # split_table_ws.addRow([200., 300., '2'])
+    # split_table_ws.addRow([400., 600., '3'])
+    # split_table_ws.addRow([600., 650., '4'])
 
     return True, (splitters_ws_name, info_ws_name)
 
@@ -353,6 +408,27 @@ def get_run_start(workspace, time_unit):
     return run_start
 
 
+def get_sample_log_tsp(src_workspace, sample_log_name):
+    """
+    get the reference to the sample log
+    :param src_workspace:
+    :return:
+    """
+    workspace = retrieve_workspace(src_workspace)
+    if workspace is None:
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(sample_log_name))
+
+    run = workspace.run()
+    assert isinstance(sample_log_name, str), 'blabla'
+    if run.hasProperty(sample_log_name):
+        property = run.getProperty(sample_log_name)
+    else:
+        raise RuntimeError('Workspace {0} does not have property {1}. Property list: {2}.'
+                           ''.format(src_workspace, sample_log_name, get_sample_log_names(src_workspace)))
+
+    return property
+
+
 def get_sample_log_info(src_workspace):
     """ Ger sample log information including size of log and name of log
     :param src_workspace: workspace which the sample logs are from
@@ -361,12 +437,14 @@ def get_sample_log_info(src_workspace):
     run = src_workspace.run()
 
     prop_info_list = list()
-    for p in run.getProperties():
-        p_name = p.name
-        if isinstance(p, mantid.kernel.FloatTimeSeriesProperty) is False:
-            continue
-        size = p.size()
-        prop_info_list.append((size, p_name))
+    for property_i in run.getProperties():
+        if isinstance(property_i, mantid.kernel.FloatTimeSeriesProperty) or \
+                isinstance(property_i, mantid.kernel.Int32TimeSeriesProperty) or \
+                isinstance(property_i, mantid.kernel.Int64TimeSeriesProperty):
+            p_name = property_i.name
+            size = property_i.size()
+            prop_info_list.append((size, p_name))
+    # END-FOR
 
     prop_info_list.sort()
 

@@ -339,12 +339,13 @@ class VDriveAPI(object):
         """
         # get the chopper
         chopper = self._myProject.get_chopper(run_number)
-        slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
-                                                          split_list=time_segment_list,
-                                                          relative_time=relative_time,
-                                                          splitter_tag=slice_tag)
 
-        return slice_tag
+        status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
+                                                                  split_list=time_segment_list,
+                                                                  relative_time=relative_time,
+                                                                  splitter_tag=slice_tag)
+
+        return status, slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
@@ -820,6 +821,20 @@ class VDriveAPI(object):
 
         return True, ret_list
 
+    def get_run_experiment_information(self, run_number):
+        """
+        get run information such as start, stop time, IPTS name and etc
+        :param run_number:
+        :return:
+        """
+        # check input and find Chopper (helper object)
+        assert run_number is not None, 'Run number cannot be None.'
+        chopper = self._myProject.get_chopper(run_number)
+
+        exp_info = chopper.get_experiment_information()
+
+        return exp_info
+
     def get_sample_log_names(self, run_number, smart=False):
         """
         Get names of sample log with time series property
@@ -833,6 +848,8 @@ class VDriveAPI(object):
         sample_name_list = chopper.get_sample_log_names(smart)
 
         return True, sample_name_list
+
+
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """

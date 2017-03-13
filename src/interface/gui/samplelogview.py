@@ -582,7 +582,14 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             # get start time and stop time's index
             i_start = (np.abs(vec_x - x_start)).argmin()
             i_stop = (np.abs(vec_x - x_stop)).argmin()
-            print '[DB...DEVELOP] Range: %d to %d  (%f to %f)' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+            if i_start == i_stop:
+                # empty!
+                print '[DB...WARNING] Range: %d to %d  (%f to %f) cannot generate any vector. ' \
+                      '' % (i_start, i_stop, vec_x[i_start], vec_x[i_stop])
+                continue
+            elif i_start > i_stop:
+                raise RuntimeError('It is impossible to have start index {0} > stop index {1}'
+                                   ''.format(i_start, i_stop))
 
             # get the partial for plot
             vec_x_i = vec_x[i_start:i_stop]

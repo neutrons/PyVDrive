@@ -259,9 +259,11 @@ class DataChopper(object):
                                              ''.format(split_list, type(split_list))
 
         # Generate split workspace
-        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(split_list,
+        status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
+                                                                         split_list,
                                                                          relative_time=True,
-                                                                         tag=splitter_tag)
+                                                                         tag=splitter_tag,
+                                                                         auto_target=True)
         if status:
             split_ws_name, info_ws_name = ret_obj
         else:
@@ -272,7 +274,28 @@ class DataChopper(object):
         self._chopSetupDict[splitter_tag] = {'splitter': split_ws_name,
                                              'info': info_ws_name}
 
-        return True, ret_obj
+        return True, splitter_tag
+
+    def get_experiment_information(self):
+        """
+        get experiment information
+        :return:
+        """
+        # Check
+        if self._mtdWorkspaceName is None:
+            raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
+
+        info_str = 'Run {0}:\t'.format(self._myRunNumber)  #, self._mtdWorkspaceName)
+
+        # get proton charge
+        proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
+        pc_times = proton_charge_property.times
+
+        info_str += 'run start: {0} ({1:.9f});\n\t\trun stop:  {2} ({3:.9f})' \
+                    ''.format(pc_times[0], 1.E-9*pc_times[0].totalNanoseconds(),
+                              pc_times[-1], 1.E-9*pc_times[-1].totalNanoseconds())
+
+        return info_str
 
     def get_log_workspace(self, run_number):
         """
