@@ -424,7 +424,8 @@ class VDriveAPI(object):
         :param run_number:
         :param chop_seq:
         :param search_archive: flag to search the chopped data from archive under
-            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/
+            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/ or
+            /SNS/VULCAN/IPTS-ipts/shared/binned_data/run/
         :return: 2-tuple [1] boolean (data found) [2] data dictionary
         """
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'

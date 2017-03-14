@@ -135,9 +135,11 @@ class DataArchiveManager(object):
         """
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
 
-        chop_data_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % ipts_number
+        # it could be in either .../ChoppedData/... or in .../binned_data/
+        chop_data_dir_1 = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(ipts_number)
+        chop_data_dir_2 = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % ipts_number
 
-        return DataArchiveManager.get_data_chopped_gsas([chop_data_dir], run_number, chop_seq)
+        return DataArchiveManager.get_data_chopped_gsas([chop_data_dir_1, chop_data_dir_2], run_number, chop_seq)
 
     @staticmethod
     def get_data_archive_gsas(ipts_number, run_number):

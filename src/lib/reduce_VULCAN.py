@@ -1491,7 +1491,6 @@ class ReduceVulcanData(object):
 
         return everything_is_right, message, chopped_ws_name_list
 
-
     def create_chop_dir(self):
         """
         create directory for chopped data
@@ -1499,7 +1498,11 @@ class ReduceVulcanData(object):
         """
         # get output file name with creating necessary directory
         try:
-            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+            # output destination: ChoppedData/binned_data
+            # FIXME/TODO/ISSUE/Ke - Choppeddata or binned_data?
+            # parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/' % self._reductionSetup.get_ipts_number()
+
             if not os.path.exists(parent_dir):
                 os.mkdir(parent_dir)
             chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
@@ -1508,6 +1511,7 @@ class ReduceVulcanData(object):
             if os.access(chop_dir, os.W_OK) is False:
                 raise OSError('It is very likely that standard chopped directory {0} was created by other users.'
                               ''.format(chop_dir))
+
         except OSError as os_err:
             # mostly because permission to write
             print '[WARNING] Unable to write to shared folder. Reason: {0}'.format(os_err)
@@ -1519,8 +1523,9 @@ class ReduceVulcanData(object):
                                     '%d' % self._reductionSetup.get_run_number())
             if not os.path.exists(chop_dir):
                 os.mkdir(chop_dir)
-                # END
+        # END
 
+        # set chop_dir to class variable
         self._choppedDataDirectory = chop_dir
 
         return

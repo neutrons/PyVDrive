@@ -412,7 +412,9 @@ class VdriveChop(VDriveCommand):
                           '' % ipts_root_dir)
 
         # check and create directory ../../ChoppedData/
-        chop_dir = os.path.join(ipts_root_dir, 'ChoppedData')
+        # TODO/FIXME/ISSUE/Ke: ChoppedData or binned_data
+        # chop_dir = os.path.join(ipts_root_dir, 'ChoppedData')
+        chop_dir = os.path.join(ipts_root_dir, 'binned_data')
         if os.path.exists(chop_dir):
             if not os.access(chop_dir, os.W_OK):
                 raise OSError('User has no writing permission to directory %s for chopped data.'
