@@ -254,7 +254,11 @@ class ProjectManager(object):
         #
         if peak_positions is None:
             # find peaks in an automatic way
-            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name, peak_profile=profile, auto=True)
+            peak_info_list = mantid_helper.find_peaks(diff_data=data_ws_name,
+                                                      ws_index=bank_number-1,
+                                                      peak_profile=profile,
+                                                      is_high_background=True,
+                                                      background_type='Linear')
         else:
             # # find the peaks with list
             peak_info_list = mantid_helper.find_peaks(data_ws_name, bank_number, x_range, peak_positions,

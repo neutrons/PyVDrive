@@ -304,7 +304,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_xMax">
+             <widget class="QLineEdit" name="lineEdit_xMin">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -325,7 +325,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_xMin">
+             <widget class="QLineEdit" name="lineEdit_xMax">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1017,6 +1017,11 @@
        </item>
        <item row="1" column="2">
         <widget class="QPushButton" name="pushButton_hidePeaks">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="text">
           <string>Hide Peaks</string>
          </property>
@@ -1029,6 +1034,11 @@
            <width>600</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Delete the selected peaks from peak table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1044,7 +1054,7 @@
           <enum>Qt::Horizontal</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Preferred</enum>
+          <enum>QSizePolicy::Ignored</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1060,7 +1070,7 @@
           <enum>Qt::Horizontal</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Preferred</enum>
+          <enum>QSizePolicy::Ignored</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -1074,7 +1084,7 @@
         <widget class="QPushButton" name="pushButton_readPeakFile">
          <property name="font">
           <font>
-           <pointsize>11</pointsize>
+           <pointsize>10</pointsize>
           </font>
          </property>
          <property name="toolTip">
@@ -1108,6 +1118,11 @@
        </item>
        <item row="0" column="0">
         <widget class="QPushButton" name="pushButton_save">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;It will save all the peaks to a text file with GSAS standard by pushing this button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -1118,6 +1133,11 @@
        </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="pushButton_showPeaksInTable">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Highlight selected peaks in the left table&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -1134,6 +1154,11 @@
            <height>16777215</height>
           </size>
          </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sort peaks by peak positions&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -1149,6 +1174,11 @@
            <width>600</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
          <property name="text">
           <string>Edit</string>
@@ -1180,18 +1210,6 @@
      </item>
      <item>
       <layout class="QGridLayout" name="gridLayout_7">
-       <item row="0" column="1">
-        <widget class="QCheckBox" name="checkBox_showAllBanksPeaks">
-         <property name="font">
-          <font>
-           <pointsize>9</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Show All Banks</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QCheckBox" name="checkBox_selectPeaks">
          <property name="maximumSize">
@@ -1210,12 +1228,24 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="checkBox_showAllBanksPeaks">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Show All Banks</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
       <widget class="PeakParameterTable" name="tableWidget_peakParameter">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>

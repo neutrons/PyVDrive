@@ -83,6 +83,7 @@ def delete_workspace(workspace):
     return
 
 
+# TODO/ISSUE/FIXME/CLEAN/33 !
 def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
                min_peak_height = 200,
                peak_pos_list=None):
