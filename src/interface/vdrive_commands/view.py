@@ -120,6 +120,8 @@ class VdriveView(VDriveCommand):
         # TODO/ISSUE/33/NOW - Make this work!
         # 'NORM'
 
+        # TODO/ISSUE/33/NOW - Default is TOF.  Also need to determine dSpacing or TOF according to MinV or MaxV
+
         return True, ''
 
     @property

@@ -434,7 +434,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Get the data sets and replace them with new unit
         for run_number in self._reducedDataDict.keys():
+            # try reduced data first
+            # FIXME/ISSUE/TODO/33 - Shall I generalize the approach to get reduced data???
+            # self.get_reduced_data()
+
             status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
+            if not status:
+                # try archive
+                status, ret_obj = self._myController.get_reduced_data(run_number, new_unit,
+                                                                      self._iptsNumber,
+                                                                      search_archive=True)
             if status is False:
                 GuiUtility.pop_dialog_error(self, 'Unable to get run %d with new unit %s due to %s.' % (
                     run_number, new_unit, ret_obj
@@ -609,18 +618,23 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # Get data (run)
         if run_number not in self._reducedDataDict:
-            # get new data
+            # get new data from memory
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=False)
 
-            #
-            # TODO/ISSUE/33 - See below!
-            ret_obj = str(ret_obj) + '\n' + 'NOW YOU MAY CONSIDER TO FIND THE DATA FROM ARCHIVE AND LOAD IT!'
+            if not status:
+                # or archive
+                status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                                      ipts_number=self._iptsNumber,
+                                                                      search_archive=True)
+
+            # END-IF
 
             # return if unable to get reduced data
             if status is False:
-                return status, str(ret_obj)
+                error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+                return status, error_message
 
             # check returned data dictionary and set
             reduced_data_dict = ret_obj
@@ -733,7 +747,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Check requirements
         assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
                                                                                               str(type(run_number)))
-        assert run_number > 0
+        assert run_number > 0, 'bla bla'
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id

@@ -126,19 +126,28 @@ class VdriveCommandProcessor(object):
 
         # call the specific command class builder
         if command == 'CHOP':
+            # chop
             status, err_msg = self._process_chop(arg_dict)
-        elif command == 'VBIN':
+        elif command == 'VBIN' or command == 'VDRIVEBIN':
+            # bin
             status, err_msg = self._process_vbin(arg_dict)
+
         elif command == 'VDRIVEVIEW' or command == 'VIEW':
+            # view
             status, err_msg = self._process_view(arg_dict)
+
         elif command == 'MERGE':
+            # merge
             status, err_msg = self._process_merge(arg_dict)
+
         elif command == 'AUTO':
             # auto reduction command
             status, err_msg = self._process_auto_reduction(arg_dict)
+
         elif command == 'VPEAK':
             # process vanadium peak
             status, err_msg = self._process_vanadium_peak(arg_dict)
+
         else:
             raise RuntimeError('Impossible situation!')
 
