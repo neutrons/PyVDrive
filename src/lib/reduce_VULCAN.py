@@ -1382,6 +1382,31 @@ class ReduceVulcanData(object):
 
         return everything_is_right, message, chopped_ws_name_list
 
+    def get_sub_splitters(self, split_start_index, split_stop_index):
+        """
+        chop splitters workspace to sub one
+        :param split_stop_index:
+        :return:
+        """
+        # get splitting workspace
+        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        split_ws = AnalysisDataService.retrieve(split_ws_name)
+
+        # split
+        if isinstance(split_ws, mantid.dataobjects.SplittersWorkspace):
+            # splitters workspace
+            raise RuntimeError('It is not supported to split on a SplittersWorkspace')
+        elif isinstance(split_ws, mantid.api.MatrixWorkspace):
+            # Matrix workspace
+            raise RuntimeError('Implement splitting matrix workspace ASAP.')
+        elif isinstance(split_ws, mantid.api.ITableWorkspace):
+            # Table workspace
+            raise RuntimeError('Next to implement!')
+        else:
+            raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
+
+        return
+
     def chop_and_reduce_large_output(self, split_ws_name, split_info_table):
         """
         chop and reduce in the special case of large amount of output.
@@ -1390,6 +1415,15 @@ class ReduceVulcanData(object):
         :param split_info_table:
         :return:
         """
+
+        # TODO/FIXME/NOW
+
+        1. SNSPowderReduction  ... wsname = VULCAN_RUNNUMBER
+        2. SortEvents
+        3. Filter
+
+        REDO THE FOLLOWING ....
+
         num_outputs = self.get_number_chopped_ws(split_ws_name)
 
         num_loops = num_outputs / 20
