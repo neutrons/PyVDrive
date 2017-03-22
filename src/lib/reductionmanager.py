@@ -573,6 +573,8 @@ class ReductionManager(object):
         :param output_dir:
         :return:
         """
+        import reduce_adv_chop
+
         # check inputs
         assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer ' \
                                              'but not {1}.'.format(ipts_number, type(ipts_number))
@@ -597,7 +599,9 @@ class ReductionManager(object):
         # add splitter workspace and splitter information workspace
         reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
-        reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+        #  reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+        reducer = reduce_adv_chop.AdvancedChopReduce(reduce_setup)
+
         reducer.execute_chop_reduction(clear_workspaces=False)
 
         # get the reduced file names and workspaces and add to reduction tracker dictionary
