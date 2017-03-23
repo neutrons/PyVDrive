@@ -1970,11 +1970,12 @@ class ReduceVulcanData(object):
 
         return
 
-    def generate_sliced_logs(self, ws_name_list, log_type):
+    def generate_sliced_logs(self, ws_name_list, log_type, append=False):
         """
         generate sliced logs
         :param ws_name_list:
         :param log_type: either loadframe or furnace
+        :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
         # check
@@ -2123,14 +2124,29 @@ class ReduceVulcanData(object):
         # END-FOR (workspace)
 
         # export to csv file
+        # start file
         pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+        if append and os.path.exists(start_file_name):
+            with open(start_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
 
+        # mean file
         pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+        if os.path.exists(mean_file_name) and append:
+            with open(mean_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
 
+        # end file
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+        if os.path.exists(end_file_name) and append:
+            with open(end_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
 
         print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
                                                                           end_file_name)

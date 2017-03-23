@@ -152,7 +152,6 @@ class VdriveChop(VDriveCommand):
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
 
         # chop and reduce
-        # FIXME/TODO/ISSUE/NOW/ - add workflow of 'loadframe' or 'furnace'
         if chop_loadframe_log:
             exp_log_type = 'loadframe'
         elif chop_furnace_log:

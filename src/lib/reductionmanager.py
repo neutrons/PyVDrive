@@ -374,16 +374,13 @@ class ReductionManager(object):
                                              ''.format(ipts_number, type(ipts_number))
 
         # get splitters workspace
-        split_ws_name, info_ws_name = chop_manager.get_split_workspace(slice_key)
+        #
 
         # split event data
-        status, ret_obj = mantid_helper.split_event_data(raw_file_name=data_file,
-                                                         split_ws_name=split_ws_name,
-                                                         info_table_name=info_ws_name,
-                                                         target_ws_name=None,
-                                                         tof_correction=tof_correction,
-                                                         output_directory=output_dir,
-                                                         delete_split_ws=True)
+        status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
+                                                 splice_key=slice_key,
+                                                 output_directory=output_dir)
+
         if status:
             chopped_ws_name_list = ret_obj
         else:

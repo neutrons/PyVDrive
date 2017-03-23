@@ -4,6 +4,7 @@ import os
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
+import chop_utility
 import reduce_VULCAN
 
 
@@ -281,10 +282,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 gsas_index += 1
             # END-FOR
 
-            break  # debug break
+            # export sample logs!
+            # create the log files
+            self.generate_sliced_logs(chopped_ws_name_list, self._chopExportedLogType, append=(i_loop > 0))
+
+            # delete all the workspaces!
+            for ws_name in chopped_ws_name_list:
+                mantidsimple.DeleteWorkspace(Workspace=ws_name)
+
         # END-FOR (loop)
 
-        return everything_is_right, 'NOT FINISHED... NEED TO EXPORT LOG AND ETC'
+        return everything_is_right, message
     
     def create_chop_dir(self, reduced_data=True):
         """

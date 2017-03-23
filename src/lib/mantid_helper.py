@@ -73,6 +73,38 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     return vec_times, vec_ws
 
 
+def create_table_workspace(table_ws_name, column_def_list):
+    """
+
+    :param table_ws_name:
+    :param column_def_list:
+    :return:
+    """
+    mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=table_ws_name)
+    table_ws = retrieve_workspace(table_ws_name)
+    for col_tup in column_def_list:
+        data_type = col_tup[0]
+        col_name = col_tup[1]
+        table_ws.addColumn(data_type, col_name)
+
+    return
+
+
+def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
+    """
+
+    :param vec_x:
+    :param vec_y:
+    :param vec_e:
+    :param output_ws_name:
+    :return:
+    """
+    mantidapi.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
+                              OutputWorkspace=output_ws_name)
+
+    return
+
+
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:
@@ -1218,6 +1250,88 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
     load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
 
+    # process TOF correction
+    if tof_correction is True:
+        correction = 'Elastic'
+    else:
+        correction = 'None'
+
+    # process the target workspace name
+    if target_ws_name is None:
+        target_ws_name = event_ws_name + '_split'
+    else:
+        assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
+                                                '' % (str(target_ws_name), type(target_ws_name))
+
+    # split workspace
+    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
+                                      SplitterWorkspace=split_ws_name,
+                                      InformationWorkspace=info_table_name,
+                                      OutputWorkspaceBaseName=target_ws_name,
+                                      FilterByPulseTime=False,
+                                      GroupWorkspaces=True,
+                                      CorrectionToSample=correction,
+                                      SplitSampleLogs=True,
+                                      OutputWorkspaceIndexedFrom1=True
+                                      )
+
+    try:
+        correction_ws = ret_list[0]
+        num_split_ws = ret_list[1]
+        chopped_ws_name_list = ret_list[2]
+        # check the workspace name
+        for i_w, ws_name in enumerate(chopped_ws_name_list):
+            if len(ws_name) == 0:
+                chopped_ws_name_list.pop(i_w)
+            elif ADS.doesExist(ws_name) is False:
+                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
+        # END-FOR
+        assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
+                                                          'chopped workspaces names {1} ({2}).' \
+                                                          ''.format(num_split_ws, len(chopped_ws_name_list),
+                                                                    chopped_ws_name_list)
+    except IndexError:
+        return False, 'Failed to split data by FilterEvents.'
+
+    if len(ret_list) != 3 + len(chopped_ws_name_list):
+        return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+
+    # Save result
+    # TODO/ISSUE/33 - Shall return NeXus file?
+    if output_directory is not None:
+        for chopped_ws_name in chopped_ws_name_list:
+            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+            mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
+
+    # Clear
+    delete_workspace(correction_ws)
+    if delete_split_ws:
+        for chopped_ws_name in chopped_ws_name_list:
+            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+
+    # Output
+    if delete_split_ws:
+        ret_obj = None
+    else:
+        ret_obj = (chopped_ws_name_list, ret_list[3:])
+
+    return True, ret_obj
+
+
+# TODO/FIXME/ISSUE/NOW - Refactor with split_event_data()
+def split_event_workspace(event_ws_name, split_ws_name, info_table_name, target_ws_name, tof_correction,
+                          output_directory, delete_split_ws):
+    """
+
+    :param event_ws_name:
+    :param split_ws_name:
+    :param info_table_name:
+    :param target_ws_name:
+    :param tof_correction:
+    :param output_directory:
+    :param delete_split_ws:
+    :return:
+    """
     # process TOF correction
     if tof_correction is True:
         correction = 'Elastic'
