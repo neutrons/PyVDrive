@@ -284,6 +284,7 @@ class VdriveCommandProcessor(object):
             controller_data_key = processor.get_loaded_data()
             ipts_number, run_number_list = processor.get_ipts_runs()
             van_run_number = processor.get_vanadium_run()
+            # TODO/FUTURE/BETTER:QUALITY - shall we merge add_data_set() to add_run_numbers()???
             viewer_data_key = data_viewer.add_data_set(ipts_number, van_run_number, controller_data_key)
             data_viewer.plot_data(viewer_data_key, bank_id=1)
 

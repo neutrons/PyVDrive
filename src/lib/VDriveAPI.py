@@ -396,6 +396,19 @@ class VDriveAPI(object):
 
         return status, slicer_key
 
+    def get_chopped_data_info(self, run_number, slice_key, reduced):
+        """
+        get information of chopped data
+        :param run_number:
+        :param slice_key:
+        :param reduced:
+        :return: a dictionary
+        """
+        # TODO/ISSUE/33/ASAP/NOW
+        tracker = self._myProject.reduction_manager.get_tracker(run_number, slice_key)  # go to take a look at reductionmanager.py
+
+        return tracker.information()
+
     def get_instrument_name(self):
         """
         Instrument's name
@@ -419,7 +432,7 @@ class VDriveAPI(object):
 
     def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
         """
-        sequence to look for chopped data
+        Find chopped data (in GSAS) in archive or user specified directories
         :param ipts_number:
         :param run_number:
         :param chop_seq:

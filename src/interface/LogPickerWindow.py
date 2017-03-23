@@ -101,8 +101,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         #              self.do_picker_set)
         # self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
         #              self.do_enter_select_picker_mode)
-        self.connect(self.ui.pushButton_processPickers, QtCore.SIGNAL('clicked()'),
-                     self.do_picker_process)
         self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
                      self.do_show_manual_slicer_table)
 
@@ -356,59 +354,44 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def generate_manual_slicer(self, split_tup_list, slicer_name):
-        """
-        call the controller to generate an aribrary event slicer
-        :param split_tup_list:
-        :param slicer_name:
+    def do_load_mts_log(self):
+        """ Load MTS log file
+
         :return:
         """
-        print '[DB...BAT] run number: ', self._currRunNumber, ', slicer name: ', slicer_name, 'tup list: ', split_tup_list
-        self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
-                                                              relative_time=True,
-                                                              time_segment_list=split_tup_list,
-                                                              slice_tag=slicer_name)
+        # get file and match
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+        assert mts_log_file in self._mtsLogFormat, 'MTS log format has not key for log file %s. Current keys are' \
+                                                   '%s.' % (mts_log_file, str(self._mtsLogFormat.keys()))
 
-    def get_controller(self):
-        """
-        Get the workflow controller
-        :return:
-        """
-        return self._myParent.get_controller()
-
-    def get_data_size_to_load(self):
-        """
-        read the frame size with unit.  convert to the
-        :return: number of points to load
-        """
-        # block
+        # block ID and set up average step size
         block_index = int(self.ui.comboBox_blockList.currentText())
-        assert self._currentBlockIndex is None or block_index == self._currentBlockIndex, \
-            'Block index on GUI is different from the stored value.'
 
-        # unit
-        unit = str(self.ui.comboBox_logFrameUnit.currentText())
-        assert unit == self._currentFrameUnit, 'target unit %s is not same as current frame unit %s.' \
-                                               '' % (unit, self._currentFrameUnit)
+        # get this dictionary
+        mts_log_dict = self._mtsLogFormat[mts_log_file]
 
-        # get increment value
-        if unit == 'points':
-            delta = int(self.ui.lineEdit_logFrameSize.text())
-        elif unit == 'seconds':
-            delta = float(self.ui.lineEdit_logFrameSize.text())
-        else:
-            raise AttributeError('Frame unit %s is not supported.' % unit)
+        print '[DB...BAT] mts log dict: ', mts_log_dict
 
-        # get stop point
-        if self._currentFrameUnit == 'seconds':
-            # convert delta (second) to delta (points)
-            delta_points = int(delta/self._avgFrameStep)
-            assert delta_points >= 1
-        else:
-            # use the original value
-            delta_points = delta
+        duration = mts_log_dict['duration'][block_index][1] - mts_log_dict['duration'][block_index][0]
+        num_points = mts_log_dict['data'][block_index][1] - mts_log_dict['data'][block_index][0]
+        self._averagePointsPerSecond = int(num_points / duration)
+        assert self._averagePointsPerSecond > 1, 'Number of data points per seconds %d must be large than 0.' \
+                                                 '' % self._averagePointsPerSecond
 
-        return delta_points
+        # get delta points
+        delta_points = self.get_data_size_to_load()
+
+        # set up start and stop
+        self._currentStartPoint = 0
+        self._currentStopPoint = self._currentStartPoint + delta_points
+        self._blockIndex = block_index
+
+        # load
+        self.load_plot_mts_log(reset_canvas=True)
+
+        self._currLogType = 'mts'
+
+        return
 
     def do_load_next_log_frame(self):
         """
@@ -513,93 +496,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def load_log_names(self):
-        """
-        Load log names to combo box comboBox_logNames
-        :return:
-        """
-        # get configuration
-        hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
-
-        # lock event response
-        self._mutexLockLogNameComboBox = True
-
-        # clear box
-        self.ui.comboBox_logNames.clear()
-
-        # add sample logs to combo box
-        for log_name in self._logNameList:
-            # check whether to add
-            if hide_1value_log and log_name.count('(') > 0:
-                log_size = int(log_name.split('(')[1].split(')')[0])
-                if log_size == 1:
-                    continue
-            # add log
-            self.ui.comboBox_logNames.addItem(str(log_name))
-        # END-FOR
-        self.ui.comboBox_logNames.setCurrentIndex(0)
-
-        # release
-        self._mutexLockLogNameComboBox = False
-
-        return
-
-    def load_plot_mts_log(self, reset_canvas):
-        """
-        Load and plot MTS log.  The log loaded and plot may the only a part of the complete log
-        :param reset_canvas: if true, then reset canvas
-        :return:
-        """
-        # get the file
-        mts_log_file = str(self.ui.lineEdit_logFileName.text())
-
-        # load MTS log file
-        self._myParent.get_controller().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
-                                                     self._blockIndex,
-                                                     self._currentStartPoint, self._currentStopPoint)
-
-        # get the log name
-        log_names = sorted(self._myParent.get_controller().get_mts_log_headers(mts_log_file))
-        assert isinstance(log_names, list)
-        # move Time to last position
-        if 'Time' in log_names:
-            log_names.remove('Time')
-            log_names.append('Time')
-
-        # lock
-        self._mutexLockLogNameComboBox = True
-
-        self.ui.comboBox_logNames.clear()
-        for log_name in log_names:
-            self.ui.comboBox_logNames.addItem(log_name)
-
-        self.ui.comboBox_logNames.setCurrentIndex(0)
-        curr_log_name = str(self.ui.comboBox_logNames.currentText())
-
-        # unlock
-        self._mutexLockLogNameComboBox = False
-
-        # plot
-        extra_message = 'Total data points = %d' % (
-            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][1] -
-            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][0])
-        self.plot_mts_log(curr_log_name, reset_canvas, extra_message)
-
-        return
-
-    def do_enter_select_picker_mode(self):
-        """ Enter picker selection mode
-        :return:
-        """
-        if self._myPickerMode == IN_PICKER_MOVING:
-            GuiUtility.pop_dialog_error(self, 'Canvas is in log-picker moving mode.  '
-                                              'It is not allowed to enter picker-selection mode.')
-            return
-
-        self._myPickerMode = IN_PICKER_SELECTION
-
-        return
-
     def do_load_next_log(self):
         """ Load next log
         :return:
@@ -654,15 +550,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def evt_quit_no_save(self):
-        """
-        Cancelled
-        :return:
-        """
-        self.close()
-
-        return
-
     # def do_picker_abort(self):
     #     """
     #     Abort the action to add a picker
@@ -705,24 +592,7 @@ class WindowLogPicker(QtGui.QMainWindow):
     #
     #     return
 
-    def do_picker_process(self):
-        """
-        Process pickers by sorting and fill the stop time
-        :return:
-        """
-        # TODO/ISSUE/33 - This method will be modified to an event-handlng method for picker updating
-        # Deselect all rows
-        num_rows = self.ui.tableWidget_segments.rowCount()
-        for i_row in xrange(num_rows):
-            self.ui.tableWidget_segments.select_row(i_row, False)
 
-        # Sort by start time
-        self.ui.tableWidget_segments.sort_by_start_time()
-
-        # Fill the stop by time by next star time
-        self.ui.tableWidget_segments.fill_stop_time()
-
-        return
 
     # def do_picker_set(self):
     #     """
@@ -770,27 +640,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    def evt_show_slicer(self):
-        """
-        Show or hide the set up mantid-generated slicers on the canvas
-        :return:
-        """
-        if self.ui.checkBox_showSlicer.isChecked():
-            # show the slicers
-            status, ret_obj = self.get_controller().get_slicer(self._currRunNumber, self._currSlicerKey)
-            if status:
-                slicer_time_vec, slicer_ws_vec = ret_obj
-            else:
-                GuiUtility.pop_dialog_error(self, str(ret_obj))
-                return
-            self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
-
-        else:
-            # hide the slicers
-            self.ui.graphicsView_main.remove_slicers()
-
-        return
-
     def do_view_reduced_data(self):
         """
         launch the window to view reduced data
@@ -800,9 +649,9 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # get chopped and reduced workspaces from controller
         # TODO/ISSUE/33 - Implement get_workspace()
-        status, ret_obj = self.get_controller().get_workspaces(self._currRunNumber,
-                                                               slice_key=self._currSlicerKey,
-                                                               reduced=True)
+        status, ret_obj = self.get_controller().get_chopped_data_info(self._currRunNumber,
+                                                                      slice_key=self._currSlicerKey,
+                                                                      reduced=True)
         if status:
             chopped_workspace_list = ret_obj
         else:
@@ -995,6 +844,188 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
+    def evt_show_slicer(self):
+        """
+        Show or hide the set up mantid-generated slicers on the canvas
+        :return:
+        """
+        if self.ui.checkBox_showSlicer.isChecked():
+            # show the slicers
+            status, ret_obj = self.get_controller().get_slicer(self._currRunNumber, self._currSlicerKey)
+            if status:
+                slicer_time_vec, slicer_ws_vec = ret_obj
+            else:
+                GuiUtility.pop_dialog_error(self, str(ret_obj))
+                return
+            self.ui.graphicsView_main.show_slicers(slicer_time_vec, slicer_ws_vec)
+
+        else:
+            # hide the slicers
+            self.ui.graphicsView_main.remove_slicers()
+
+        return
+
+    def evt_quit_no_save(self):
+        """
+        Cancelled
+        :return:
+        """
+        self.close()
+
+        return
+
+    def generate_manual_slicer(self, split_tup_list, slicer_name):
+        """
+        call the controller to generate an arbitrary event slicer
+        :param split_tup_list:
+        :param slicer_name:
+        :return:
+        """
+        status, ret_obj = self._myParent.get_controller().gen_data_slice_manual(run_number=self._currRunNumber,
+                                                                                relative_time=True,
+                                                                                time_segment_list=split_tup_list,
+                                                                                slice_tag=slicer_name)
+
+        if status:
+            self._currSlicerKey = ret_obj
+        else:
+            GuiUtility.pop_dialog_error(self, 'Failed to generate arbitrary data slicer due to {0}.'.format(ret_obj))
+
+        return
+
+    def get_controller(self):
+        """
+        Get the workflow controller
+        :return:
+        """
+        return self._myParent.get_controller()
+
+    def get_data_size_to_load(self):
+        """
+        read the frame size with unit.  convert to the
+        :return: number of points to load
+        """
+        # block
+        block_index = int(self.ui.comboBox_blockList.currentText())
+        assert self._currentBlockIndex is None or block_index == self._currentBlockIndex, \
+            'Block index on GUI is different from the stored value.'
+
+        # unit
+        unit = str(self.ui.comboBox_logFrameUnit.currentText())
+        assert unit == self._currentFrameUnit, 'target unit %s is not same as current frame unit %s.' \
+                                               '' % (unit, self._currentFrameUnit)
+
+        # get increment value
+        if unit == 'points':
+            delta = int(self.ui.lineEdit_logFrameSize.text())
+        elif unit == 'seconds':
+            delta = float(self.ui.lineEdit_logFrameSize.text())
+        else:
+            raise AttributeError('Frame unit %s is not supported.' % unit)
+
+        # get stop point
+        if self._currentFrameUnit == 'seconds':
+            # convert delta (second) to delta (points)
+            delta_points = int(delta/self._avgFrameStep)
+            assert delta_points >= 1
+        else:
+            # use the original value
+            delta_points = delta
+
+        return delta_points
+
+    def load_log_names(self):
+        """
+        Load log names to combo box comboBox_logNames
+        :return:
+        """
+        # get configuration
+        hide_1value_log = self.ui.checkBox_hideSingleValueLog.isChecked()
+
+        # lock event response
+        self._mutexLockLogNameComboBox = True
+
+        # clear box
+        self.ui.comboBox_logNames.clear()
+
+        # add sample logs to combo box
+        for log_name in self._logNameList:
+            # check whether to add
+            if hide_1value_log and log_name.count('(') > 0:
+                log_size = int(log_name.split('(')[1].split(')')[0])
+                if log_size == 1:
+                    continue
+            # add log
+            self.ui.comboBox_logNames.addItem(str(log_name))
+        # END-FOR
+        self.ui.comboBox_logNames.setCurrentIndex(0)
+
+        # release
+        self._mutexLockLogNameComboBox = False
+
+        return
+
+    def load_plot_mts_log(self, reset_canvas):
+        """
+        Load and plot MTS log.  The log loaded and plot may the only a part of the complete log
+        :param reset_canvas: if true, then reset canvas
+        :return:
+        """
+        # get the file
+        mts_log_file = str(self.ui.lineEdit_logFileName.text())
+
+        # load MTS log file
+        self._myParent.get_controller().read_mts_log(mts_log_file, self._mtsLogFormat[mts_log_file],
+                                                     self._blockIndex,
+                                                     self._currentStartPoint, self._currentStopPoint)
+
+        # get the log name
+        log_names = sorted(self._myParent.get_controller().get_mts_log_headers(mts_log_file))
+        assert isinstance(log_names, list)
+        # move Time to last position
+        if 'Time' in log_names:
+            log_names.remove('Time')
+            log_names.append('Time')
+
+        # lock
+        self._mutexLockLogNameComboBox = True
+
+        self.ui.comboBox_logNames.clear()
+        for log_name in log_names:
+            self.ui.comboBox_logNames.addItem(log_name)
+
+        self.ui.comboBox_logNames.setCurrentIndex(0)
+        curr_log_name = str(self.ui.comboBox_logNames.currentText())
+
+        # unlock
+        self._mutexLockLogNameComboBox = False
+
+        # plot
+        extra_message = 'Total data points = %d' % (
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][1] -
+            self._mtsLogFormat[mts_log_file]['data'][self._blockIndex][0])
+        self.plot_mts_log(curr_log_name, reset_canvas, extra_message)
+
+        return
+
+    def load_run(self, run_number):
+        """
+        load a NeXus file by run number
+        :param run_number:
+        :return:
+        """
+        # check
+        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
+                                                                                              type(run_number))
+
+        # set
+        self.ui.lineEdit_runNumber.setText(str(run_number))
+
+        # and load
+        self.do_load_run()
+
+        return
+
     def plot_mts_log(self, log_name, reset_canvas, extra_message=None):
         """
 
@@ -1135,297 +1166,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return plot_x, plot_y
 
-    def highlight_picker(self, picker_id, flag, color='red'):
-        """
-        Highlight (by changing color) of the picker selected
-        :param picker_id:
-        :return:
-        """
-        if flag is False:
-            if picker_id is None:
-                for pid in self._myPickerIDList:
-                    self.ui.graphicsView_main.update_indicator(pid, 'black')
-            else:
-                self.ui.graphicsView_main.update_indicator(picker_id, 'black')
-        else:
-            for pid in self._myPickerIDList:
-                if pid == picker_id:
-                    self.ui.graphicsView_main.update_indicator(pid, color)
-                else:
-                    self.ui.graphicsView_main.update_indicator(pid, 'black')
-            # END-FOR
-        # END-IF-ELSE
-
-        return
-
-    def do_load_mts_log(self):
-        """ Load MTS log file
-
-        :return:
-        """
-        # get file and match
-        mts_log_file = str(self.ui.lineEdit_logFileName.text())
-        assert mts_log_file in self._mtsLogFormat, 'MTS log format has not key for log file %s. Current keys are' \
-                                                   '%s.' % (mts_log_file, str(self._mtsLogFormat.keys()))
-
-        # block ID and set up average step size
-        block_index = int(self.ui.comboBox_blockList.currentText())
-
-        # get this dictionary
-        mts_log_dict = self._mtsLogFormat[mts_log_file]
-
-        print '[DB...BAT] mts log dict: ', mts_log_dict
-
-        duration = mts_log_dict['duration'][block_index][1] - mts_log_dict['duration'][block_index][0]
-        num_points = mts_log_dict['data'][block_index][1] - mts_log_dict['data'][block_index][0]
-        self._averagePointsPerSecond = int(num_points / duration)
-        assert self._averagePointsPerSecond > 1, 'Number of data points per seconds %d must be large than 0.' \
-                                                 '' % self._averagePointsPerSecond
-
-        # get delta points
-        delta_points = self.get_data_size_to_load()
-
-        # set up start and stop
-        self._currentStartPoint = 0
-        self._currentStopPoint = self._currentStartPoint + delta_points
-        self._blockIndex = block_index
-
-        # load
-        self.load_plot_mts_log(reset_canvas=True)
-
-        self._currLogType = 'mts'
-
-        return
-
-    def load_run(self, run_number):
-        """
-        load a NeXus file by run number
-        :param run_number:
-        :return:
-        """
-        # check
-        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
-                                                                                              type(run_number))
-
-        # set
-        self.ui.lineEdit_runNumber.setText(str(run_number))
-
-        # and load
-        self.do_load_run()
-
-        return
-
-    def locate_picker(self, x_pos, ratio=0.2):
-        """ Locate a picker with the new x
-        :param x_pos:
-        :param ratio:
-        :return: 2-tuple (Boolean, Object)
-        """
-        # Check
-        if len(self._myPickerIDList) == 0:
-            return False, 'No picker to select!'
-
-        assert isinstance(ratio, float)
-        assert (ratio > 0.01) and (ratio <= 0.5)
-
-        x_lim = self.ui.graphicsView_main.getXLimit()
-
-        # Get the vector of x positions of indicator and
-        vec_pos = [x_lim[0]]
-        for ind_id in self._myPickerIDList:
-            picker_x, picker_y = self.ui.graphicsView_main.get_indicator_position(ind_id)
-            vec_pos.append(picker_x)
-        # END-FOR
-        vec_pos.append(x_lim[1])
-        sorted_vec_pos = sorted(vec_pos)
-
-        # Search
-        post_index = numpy.searchsorted(sorted_vec_pos, x_pos)
-        if post_index == 0:
-            return False, 'Position %f is out of canvas left boundary %f. It is weird!' % (x_pos, vec_pos[0])
-        elif post_index >= len(vec_pos):
-            return False, 'Position %f is out of canvas right boundary %f. It is weird!' % (x_pos, vec_pos[-1])
-
-        pre_index = post_index - 1
-        dx = sorted_vec_pos[post_index] - sorted_vec_pos[pre_index]
-        return_index = -1
-        if sorted_vec_pos[pre_index] <= x_pos <= sorted_vec_pos[pre_index] + dx * ratio:
-            return_index = pre_index
-        elif sorted_vec_pos[post_index] - dx * ratio <= x_pos <= sorted_vec_pos[post_index]:
-            return_index = post_index
-        if return_index >= 0:
-            nearest_picker_x = sorted_vec_pos[return_index]
-            raw_index = vec_pos.index(nearest_picker_x)
-        else:
-            raw_index = return_index
-
-        # correct for index=0 is boundary
-        raw_index -= 1
-
-        return raw_index
-
-    def menu_select_nearest_picker(self):
-        """ Select nearest picker
-        :return:
-        """
-        # Get all the pickers' position
-        picker_pos_list = self.ui.tableWidget_segments.get_start_times()
-
-        # Find the nearest picker
-        picker_pos_list.append(self._currMousePosX)
-        picker_pos_list.sort()
-        index = picker_pos_list.index(self._currMousePosX)
-
-        prev_index = index - 1
-        next_index = index + 1
-
-        select_picker_pos = picker_pos_list[prev_index]
-
-        if next_index < len(picker_pos_list) and \
-            abs(picker_pos_list[next_index] - self._currMousePosX) < \
-                        abs(picker_pos_list[prev_index] - self._currMousePosX):
-            select_picker_pos = picker_pos_list[next_index]
-
-        # Add the information to graphics
-        # self._currentPickerID = self.ui.graphicsView_main.get_indicator_key(select_picker_pos, None)
-        self._myPickerMode = IN_PICKER_MOVING
-
-        return
-
-    def menu_quit_picker_selection(self):
-        """ Quit picker-selection mode
-        :return:
-        """
-        print 'Cancel picker selection'
-        self._myPickerMode = OUT_PICKER
-
-        return
-
-    def on_mouse_press_event(self, event):
-        """ If in the picking up mode, as mouse's left button is pressed down,
-        the indicator/picker
-        is in the moving mode
-
-        event.button has 3 values:
-         1: left
-         2: middle
-         3: right
-        and double click event is a subcategory to press_event
-        """
-        # Get event data
-        x = event.xdata
-        y = event.ydata
-        button = event.button
-        print "[DB] Button %d is (pressed) down at (%s, %s)." % (button, str(x), str(y))
-        if event.dblclick:
-            print '[DB... double click (press)] ', event.dblclick, type(event.dblclick)
-
-        # Select situation
-        if x is None or y is None:
-            # mouse is out of canvas, return
-            return
-
-        if button == 1:
-            # left button
-            if self._myPickerMode == IN_PICKER:
-                # allowed status to in picker-moving status
-                self._myPickerMode = IN_PICKER_MOVING
-
-        return
-
-    def on_mouse_release_event(self, event):
-        """ If the left button is released and previously in IN_PICKER_MOVING mode,
-        then the mode is over
-
-        Note: double click (event.dblclick) does not correspond to any mouse release event
-
-        """
-        button = event.button
-
-        self._currMousePosX = event.xdata
-        self._currMousePosY = event.ydata
-
-        if button == 1:
-            if self._myPickerMode == IN_PICKER_MOVING:
-                self._myPickerMode = IN_PICKER
-
-        elif button == 3:
-            if self._myPickerMode == IN_PICKER_SELECTION:
-                # Pop-out menu
-                self.ui.menu = QtGui.QMenu(self)
-
-                action1 = QtGui.QAction('Select', self)
-                action1.triggered.connect(self.menu_select_nearest_picker)
-                self.ui.menu.addAction(action1)
-
-                action2 = QtGui.QAction('Cancel', self)
-                action2.triggered.connect(self.menu_quit_picker_selection)
-                self.ui.menu.addAction(action2)
-
-                # add other required actions
-                self.ui.menu.popup(QtGui.QCursor.pos())
-
-        return
-
-    def on_mouse_motion(self, event):
-        """ Event handling in case mouse is moving
-        """
-        new_x = event.xdata
-        new_y = event.ydata
-
-        # Outside of canvas, no response
-        if (new_x is None) or (new_y is None):
-            return
-
-        # Calculate the relative displacement
-        dx = new_x - self._currMousePosX
-        dy = new_y - self._currMousePosY
-
-        x_min, x_max = self.ui.graphicsView_main.getXLimit()
-        mouse_resolution_x = (x_max - x_min) * 0.001
-        y_min, y_max = self.ui.graphicsView_main.getYLimit()
-        mouse_resolution_y = (y_max - y_min) * 0.001
-
-        if self._myPickerMode == IN_PICKER_MOVING:
-            # Respond to motion of mouse and move the indicator
-            if abs(dx) > mouse_resolution_x or abs(dy) > mouse_resolution_y:
-                # it is considered that the mouse is moved
-                self._currMousePosX = new_x
-                self._currMousePosY = new_y
-                # self.ui.graphicsView_main.move_indicator(self._currentPickerID, dx, dy)
-
-                self.ui.graphicsView_main.set_indicator_position(self._currentPickerID, new_x, new_y)
-            # END-IF(dx, dy)
-
-        elif self._myPickerMode == IN_PICKER_SELECTION:
-            # Highlight (change color) a picker and set the picker/indicator in active mode
-            if abs(dx) > mouse_resolution_x:
-                # Consider the picker by time only
-                picker_list_index = self.locate_picker(x_pos=new_x, ratio=0.2)
-                """
-                if picker_list_index == -2:
-                    pass
-                    # print 'Middle of nowhere'
-                elif picker_list_index == -1:
-                    pass
-                    # print 'Left boundary'
-                elif picker_list_index == len(self._myPickerIDList):
-                    pass
-                    # print 'Right boundary'
-                else:
-                    pass
-                    # print 'Pick indicator %d of %d' % (picker_list_index, len(self._myPickerIDList))
-                """
-                self.highlight_picker(picker_id=None, flag=False)
-                if 0 <= picker_list_index < len(self._myPickerIDList):
-                    picker_id = self._myPickerIDList[picker_list_index]
-                    self.highlight_picker(picker_id, True)
-            # END-IF
-
-        # END-IF (PickerMode)
-
-        return
-
     def set_run(self, run_number):
         """
         Set run
@@ -1477,23 +1217,3 @@ class WindowLogPicker(QtGui.QMainWindow):
             self.ui.comboBox_blockList.addItems(str(block_index))
 
         return
-
-
-def testmain(argv):
-    """ Main method for testing purpose
-    """
-    parent = None
-
-    app = QtGui.QApplication(argv)
-
-    # my plot window app
-    myapp = WindowLogPicker(parent)
-    myapp.show()
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)
-
-    return
-
-if __name__ == "__main__":
-    testmain(sys.argv)

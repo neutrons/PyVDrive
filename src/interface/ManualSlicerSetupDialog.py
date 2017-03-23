@@ -158,6 +158,25 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         return
 
+    def do_picker_process(self):
+        """
+        Process pickers by sorting and fill the stop time
+        :return:
+        """
+        # TODO/ISSUE/33 - This method will be modified to an event-handlng method for picker updating
+        # Deselect all rows
+        num_rows = self.ui.tableWidget_segments.rowCount()
+        for i_row in xrange(num_rows):
+            self.ui.tableWidget_segments.select_row(i_row, False)
+
+        # Sort by start time
+        self.ui.tableWidget_segments.sort_by_start_time()
+
+        # Fill the stop by time by next star time
+        self.ui.tableWidget_segments.fill_stop_time()
+
+        return
+
     def get_slicers(self):
         """
         return the slicers as

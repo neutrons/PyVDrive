@@ -559,6 +559,17 @@ class ReductionManager(object):
 
         return
 
+    def get_tracker(self, run_number, slicer_key):
+        """
+
+        :param run_number:
+        :param slicer_key:
+        :return:
+        """
+        # TODO/ISSUE/33/ASAP/NOW
+        tracker_key = run_number, slicer_key
+        return self._reductionTrackDict[tracker_key]
+
     def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key, output_dir):
         """
         reduce chopped data to GSAS file
@@ -604,9 +615,9 @@ class ReductionManager(object):
         # get the reduced file names and workspaces and add to reduction tracker dictionary
         self.init_tracker(ipts_number, run_number, slicer_key)
 
-        # TODO/ISSUE/33 - Add these two methods to trace the reduction result of chopped data
-        # self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
-        # self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
+        # TODO/ISSUE/33/NOW/ASAP - Add these two methods to trace the reduction result of chopped data
+        self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
+        self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
 
         return True, None
 

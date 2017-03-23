@@ -32,7 +32,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._myParent = parent
         self._myController = None
 
-        self._bankIDList = ['1', '2', 'All']
+        self._bankIDList = [1, 2]
 
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
@@ -122,6 +122,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
 
+        return
+
     def add_data_set(self, ipts_number, run_number, controller_data_key):
         """
         add a new data set to this data viewer window
@@ -145,7 +147,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # get reduced data set from controller
         status, ret_obj = self._myController.get_reduced_data(controller_data_key,
-                                                              target_unit=self._currUnit)
+                                                              target_unit=self._currUnit,
+                                                              search_archive=True)
         # return if unable to get reduced data
         if status is False:
             raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
@@ -167,11 +170,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param clear_previous:
         :return:
         """
+        # check inputs
         assert isinstance(run_tup_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
                                                '' % (str(run_tup_list), type(run_tup_list))
-
-        # self._runNumberList = run_tup_list[:]
-        # self._runNumberList.sort()
 
         # sort and add
         run_tup_list.sort()
@@ -381,6 +382,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         for b_index, bank_id in enumerate(bank_id_list):
             keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
             if self._currRunNumber is not None:
+                if isinstance(bank_id, str):
+                    raise RuntimeError('bank ID {0} is string!'.format(bank_id))
                 self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev)
             # END-IF
         # END-FOR
@@ -420,7 +423,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             # reset current bank ID list
             self._bankIDList = bank_id_list[:]
-            self._bankIDList.append('All')
+        # END-IF
 
         return
 
@@ -622,14 +625,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=False)
+            print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
 
             if not status:
                 # or archive
                 status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                       ipts_number=self._iptsNumber,
                                                                       search_archive=True)
-
             # END-IF
+            print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
 
             # return if unable to get reduced data
             if status is False:
@@ -781,7 +785,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # set combo box value correct
         self._mutexBankIDList = True
-        combo_index = self._bankIDList.index(str(bank_id))
+        try:
+            combo_index = self._bankIDList.index(bank_id)
+        except AttributeError as att_err:
+            print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                  ''.format(bank_id, type(bank_id), self._bankIDList)
+            raise att_err
         self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
         self._mutexBankIDList = False
 

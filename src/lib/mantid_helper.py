@@ -217,94 +217,40 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     splitters_ws_name = tag
     info_ws_name = tag + '_Info'
 
-    # TODO/FIXME/ISSUE/33+FUTURE: This is a temporary solution until SNSPowderReduction supports TableWorkspace
-    my_arg_dict = dict()
-    my_arg_dict['InputWorkspace'] = ws_name
-    my_arg_dict['OutputWorkspace'] = splitters_ws_name
-    my_arg_dict['InformationWorkspace'] = info_ws_name
-    my_arg_dict['TimeInterval'] = 3600*100  # 100 hours to generate a single line splitters workspace
+    # use table workspace (relative time in default)
+    create_table_workspace(splitters_ws_name, [('float', 'start'), ('float', 'stop'), ('str', 'target')])
+    create_table_workspace(info_ws_name, [('str', 'target'), ('str', 'description')])
 
-    mantidapi.GenerateEventsFilter(**my_arg_dict)
-
+    # get handler on splitters workspace and info workspace
     splitter_ws = retrieve_workspace(splitters_ws_name)
     info_ws = retrieve_workspace(info_ws_name)
+    target_set = set()
 
     for index, split_tup in enumerate(split_list):
-        start_time = mantid.kernel.DateAndTime(int(split_tup[0]*1.E9)).totalNanoseconds()
-        stop_time = mantid.kernel.DateAndTime(int(split_tup[1]*1.E9)).totalNanoseconds()
+        print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
+        start_time = split_tup[0]
+        stop_time = split_tup[1]
+
         if len(split_tup) >= 3:
-            target = split_tup[2]
+            # user specified target
+            target = str(split_tup[2])
         elif auto_target:
             # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
             target = index + 1
         else:
             # not allowing auto target, then must have a coding error
             raise RuntimeError('Splitter tuple has only 2 entries!')
+
+        # add splitter
+        splitter_ws.addRow([start_time, stop_time, target])
+
+        # add information
+        if target not in target_set:
+            info_ws.addRow([target, ''])
+            target_set.add(target)
         # END-IF
-        if index < splitter_ws.rowCount():
-            splitter_ws.setCell(index, 0, start_time)
-            splitter_ws.setCell(index, 1, stop_time)
-            splitter_ws.setCell(index, 2, target)
-        else:
-            splitter_ws.addRow([start_time, stop_time, target])
-            info_ws.addRow([index, ''])
 
     # END-FOR
-
-    # # create matrix workspace for splitter
-    # time_list = list()
-    # ws_list = list()
-    #
-    # # convert tuple list to time list and ws index list
-    # for index, split_tup in enumerate(split_list):
-    #     # get start time and stop time
-    #     start_time = split_tup[0]
-    #     stop_time = split_tup[1]
-    #     if len(split_tup) >= 3:
-    #         ws_index = split_tup[2]
-    #     elif auto_target:
-    #         # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
-    #         ws_index = index
-    #     else:
-    #         # not allowing auto target, then must have a coding error
-    #         raise RuntimeError('Splitter tuple has only 2 entries!')
-    #     # END-IF
-    #
-    #     # append to list
-    #     if index == 0:
-    #         # add start time
-    #         time_list.append(start_time)
-    #     elif start_time > time_list[-1] + 1.0E-15:
-    #         # add gap
-    #         time_list.append(start_time)
-    #         ws_list.append(-1)
-    #     # add stop time
-    #     time_list.append(stop_time)
-    #     ws_list.append(ws_index)
-    # # END-FOR
-    #
-    # # convert list to numpy vector
-    # time_vec = numpy.array(time_list)
-    # ws_vec = numpy.array(ws_list)
-    #
-    # # create workspace
-    # title = 'User specified splitters'
-    # if relative_time:
-    #     title += '. Use relative time to run start'
-    # else:
-    #     title += '. Use epoch time (absolute time).'
-    # mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle=title,
-    #                           OutputWorkspace=splitters_ws_name)
-
-    # split_table_ws = mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=splitters_ws_name)
-    # split_table_ws.addColumn('float', 'start')
-    # split_table_ws.addColumn('float', 'stop')
-    # split_table_ws.addColumn('str', 'target')
-    #
-    # split_table_ws.addRow([0., 100., '1'])
-    # split_table_ws.addRow([200., 300., '2'])
-    # split_table_ws.addRow([400., 600., '3'])
-    # split_table_ws.addRow([600., 650., '4'])
 
     return True, (splitters_ws_name, info_ws_name)
 
