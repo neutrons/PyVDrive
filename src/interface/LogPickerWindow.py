@@ -648,22 +648,17 @@ class WindowLogPicker(QtGui.QMainWindow):
         view_window = self._myParent.do_view_reduction()
 
         # get chopped and reduced workspaces from controller
-        # TODO/ISSUE/33 - Implement get_workspace()
-        status, ret_obj = self.get_controller().get_chopped_data_info(self._currRunNumber,
-                                                                      slice_key=self._currSlicerKey,
-                                                                      reduced=True)
-        if status:
-            chopped_workspace_list = ret_obj
-        else:
-            GuiUtility.pop_dialog_error(self, 'Unable to get chopped and reduced workspaces.'
-                                              'for run {0} with slicer {1} due to {2}.'
-                                              ''.format(self._currRunNumber, self._currSlicerKey,
-                                                        ret_obj))
-            return
-        # END-IF-ELSE
+        try:
+            info_dict = self.get_controller().get_chopped_data_info(self._currRunNumber,
+                                                                    slice_key=self._currSlicerKey,
+                                                                    reduced=True)
+            chopped_workspace_list = info_dict['workspaces']
+            view_window.add_workspaces(chopped_workspace_list)
 
-        # TODO/ISSUE/33 - Figure out how to set up view window: make it work!
-        view_window.add_workspaces(chopped_workspace_list)
+        except RuntimeError as run_err:
+            error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \
+                        ''.format(self._currRunNumber, self._currSlicerKey, run_err)
+            GuiUtility.pop_dialog_error(self, error_msg)
 
         return
 

@@ -55,16 +55,15 @@ class DataReductionTracker(object):
         self._correctedByVanadium = False
 
         # reduced file list
-        self._reducedFiles = list()
+        self._reducedFiles = None
 
         # variables about chopped workspaces
         self._slicerKey = None   # None stands for the reduction is without chopping
         self._choppedWorkspaceNameList = None
-        self._choppedWorkspaceNameList = None
 
         return
 
-    def add_reduced_files(self, file_name_list):
+    def set_reduced_files(self, file_name_list, append):
         """
         add reduced file
         :param file_name_list:
@@ -73,7 +72,10 @@ class DataReductionTracker(object):
         assert isinstance(file_name_list, list), 'Input file names must be in a list but not {0}.' \
                                                  ''.format(type(file_name_list))
 
-        self._reducedFiles.extend(file_name_list[:])
+        if not append or self._reducedFiles is None:
+            self._reducedFiles = file_name_list[:]
+        else:
+            self._reducedFiles.extend(file_name_list[:])
 
         return
 
@@ -107,6 +109,28 @@ class DataReductionTracker(object):
         assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
         # Set
         self._eventWorkspace = value
+
+    def get_information(self):
+        """
+        construct information about the chopped workspace
+        :return:
+        """
+        info_dict = dict()
+        info_dict['run'] = self._runNumber
+        info_dict['reduced'] = self._isReduced
+        if self._slicerKey is None:
+            # regular reduced data
+            info_dict['slicer_key'] = None
+        else:
+            # chopped run
+            info_dict['slicer_key'] = self._slicerKey
+            info_dict['workspaces'] = self._choppedWorkspaceNameList[:]
+            if self._reducedFiles is not None:
+                info_dict['files'] = self._reducedFiles[:]
+            else:
+                info_dict['files'] = None
+
+        return
 
     def get_reduced_gsas(self):
         """
@@ -230,17 +254,21 @@ class DataReductionTracker(object):
         """
         return self._tofWorkspace
 
-    def set_chopped_workspaces(self, workspace_name_list):
+    def set_chopped_workspaces(self, workspace_name_list, append):
         """
         set the chopped workspaces' names
         :param workspace_name_list:
+        :param append: append chopped workspaces
         :return:
         """
         # check inputs
         assert isinstance(workspace_name_list, list), 'Input list of workspaces names must be list but not a {0}.' \
                                                       ''.format(type(workspace_name_list))
 
-        self._choppedWorkspaceNameList = workspace_name_list
+        if self._choppedWorkspaceNameList is None or not append:
+            self._choppedWorkspaceNameList = workspace_name_list[:]
+        else:
+            self._choppedWorkspaceNameList.extend(workspace_name_list)
 
         return
 
@@ -561,14 +589,20 @@ class ReductionManager(object):
 
     def get_tracker(self, run_number, slicer_key):
         """
-
+        get a reduction tracker
         :param run_number:
         :param slicer_key:
         :return:
         """
-        # TODO/ISSUE/33/ASAP/NOW
+        # construct a tracker key
         tracker_key = run_number, slicer_key
-        return self._reductionTrackDict[tracker_key]
+        if tracker_key in self._reductionTrackDict:
+            tracker = self._reductionTrackDict[tracker_key]
+        else:
+            raise RuntimeError('Unable to locate tracker with run: {0} slicer: {1}.  Existing keys are {2}'
+                               ''.format(run_number, slicer_key, self._reductionTrackDict.keys()))
+
+        return tracker
 
     def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key, output_dir):
         """
@@ -615,7 +649,7 @@ class ReductionManager(object):
         # get the reduced file names and workspaces and add to reduction tracker dictionary
         self.init_tracker(ipts_number, run_number, slicer_key)
 
-        # TODO/ISSUE/33/NOW/ASAP - Add these two methods to trace the reduction result of chopped data
+        # TEST/ISSUE/33/
         self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
         self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
 
@@ -684,7 +718,7 @@ class ReductionManager(object):
                 self._reductionTrackDict[run_number].is_corrected_by_vanadium = True
 
             # set reduced files
-            self._reductionTrackDict[run_number].add_reduced_files(reducer.get_reduced_files())
+            self._reductionTrackDict[run_number].set_reduced_files(reducer.get_reduced_files())
             # set workspaces
             status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             if status:
@@ -695,6 +729,46 @@ class ReductionManager(object):
         # END-IF
 
         return reduce_good, message
+
+    def set_chopped_reduced_workspaces(self, run_number, slicer_key, workspace_name_list, append=False, compress=False):
+        """
+        set the chopped and reduced workspaces to reduction manager
+        :param run_number:
+        :param slicer_key:
+        :param workspace_name_list:
+        :param append:
+        :param compress: if compress, then merge all the 2-bank workspace together   NOTE: using ConjoinWorkspaces???
+        :return:
+        """
+        # get tracker
+        tracker = self.get_tracker(run_number, slicer_key)
+
+        # add files
+        assert isinstance(tracker, DataReductionTracker), 'Must be a DataReductionTracker'
+        tracker.set_chopped_workspaces(workspace_name_list, append=True)
+
+        if compress:
+            tracker.make_compressed_reduced_workspace(workspace_name_list)
+
+        return
+
+    def set_chopped_reduced_files(self, run_number, slicer_key, gsas_file_list, append):
+        """
+        set the reduced file
+        :param run_number:
+        :param slicer_key:
+        :param gsas_file_list:
+        :param append:
+        :return:
+        """
+        # get tracker
+        tracker = self.get_tracker(run_number, slicer_key)
+        assert isinstance(tracker, DataReductionTracker), 'Must be a DataReductionTracker'
+
+        # add files
+        tracker.set_reduced_files(gsas_file_list, append)
+
+        return
 
     def set_reduced_workspaces(self, run_number, vdrive_bin_ws, tof_ws, dspace_ws):
         """

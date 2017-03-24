@@ -404,10 +404,16 @@ class VDriveAPI(object):
         :param reduced:
         :return: a dictionary
         """
-        # TODO/ISSUE/33/ASAP/NOW
-        tracker = self._myProject.reduction_manager.get_tracker(run_number, slice_key)  # go to take a look at reductionmanager.py
+        # TEST/ISSUE/33/s
+        if reduced:
+            # reduced data. should be found at reductionmanager.py
+            tracker = self._myProject.reduction_manager.get_tracker(run_number, slice_key)
+            info_dict = tracker.get_information()
+        else:
+            # jus chopped but not reduced
+            raise RuntimeError('Need a use case or scenario to implement this part')
 
-        return tracker.information()
+        return info_dict
 
     def get_instrument_name(self):
         """
