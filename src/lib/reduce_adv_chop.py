@@ -37,7 +37,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
         # call SNSPowderReduction for chopping and
-        # TODO/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
+        # TODO/FIXME/ASAP/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
                                         CalibrationFile=self._reductionSetup.get_focus_file(),
@@ -102,6 +102,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             vdrive_bin_ws_name = reduced_ws_name
 
             # it might be tricky to give out the name of GSAS
+            # TODO/ISSUE/FIXME/NOW/33 ----- Try to figure out how not to write to special name!!!
+            chop_dir = '/SNS/users/wzz/Projects/workspace/Neutron_Day/chopped'
             if use_special_name:
                 gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
                                                                        ws_index+1))

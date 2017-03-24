@@ -719,7 +719,7 @@ class ReductionManager(object):
                 self._reductionTrackDict[run_number].is_corrected_by_vanadium = True
 
             # set reduced files
-            self._reductionTrackDict[run_number].set_reduced_files(reducer.get_reduced_files())
+            self._reductionTrackDict[run_number].set_reduced_files(reducer.get_reduced_files(), append=False)
             # set workspaces
             status, ret_obj = reducer.get_reduced_workspaces(chopped=False)
             if status:

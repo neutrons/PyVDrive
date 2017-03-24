@@ -330,6 +330,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
+            print '[DB] is_workspace = ', is_workspace
             self.plot_run(run_number, bank_id, over_plot, is_workspace)
 
         return
@@ -479,9 +480,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
             if not status:
                 # try archive
+                if isinstance(run_number, str):
+                    is_workspace=True
+                else:
+                    is_workspace=False
                 status, ret_obj = self._myController.get_reduced_data(run_number, new_unit,
                                                                       self._iptsNumber,
-                                                                      search_archive=True)
+                                                                      search_archive=True,
+                                                                      is_workspace=is_workspace)
             if status is False:
                 GuiUtility.pop_dialog_error(self, 'Unable to get run %d with new unit %s due to %s.' % (
                     run_number, new_unit, ret_obj
@@ -624,7 +630,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         data_set_list = list()
 
         for run_number in self._runNumberList:
-            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
+            if isinstance(run_number, str) and run_number.isdigit() is False:
+                is_workspace = True
+            else:
+                is_workspace = False
+            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1, is_workspace=is_workspace)
             if status:
                 run_number_list.append(run_number)
                 data_set_list.append(ret_obj)
@@ -646,7 +656,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True, is_workspace=False):
+    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """
         get reduced data in vectors of X and Y
         :param run_number: data key or run number
@@ -658,10 +668,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get data (run)
         if run_number not in self._reducedDataDict:
             # get new data from memory
+            if isinstance(run_number, str):
+                is_workspace = True
+            else:
+                is_workspace = False
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=False,
-                                                                  is_workspace=True)
+                                                                  is_workspace=is_workspace)
             print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
 
             if not status:

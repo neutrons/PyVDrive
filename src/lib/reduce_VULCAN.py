@@ -50,7 +50,7 @@ import sys
 import numpy
 import pandas as pd
 
-sys.path.append("/opt/mantidnightly/bin")
+# sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -1534,8 +1534,10 @@ class ReduceVulcanData(object):
             try:
                 shutil.copy(gsas_file, standard_dir)
             except IOError as io_err:
-                raise RuntimeError('Unable to write standard GSAS file to '
-                                   '{0} due to {1}'.format(standard_dir, io_err))
+                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}'.format(standard_dir, io_err)
+            except OSError as os_err:
+                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}'.format(standard_dir, os_err)
+
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
