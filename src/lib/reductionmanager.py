@@ -750,6 +750,16 @@ class ReductionManager(object):
 
         if compress:
             tracker.make_compressed_reduced_workspace(workspace_name_list)
+            # TODO/ISSUE/33/ASAP
+            """ use the following
+            LoadGSS(Filename='77149/50.gda', OutputWorkspace='ws50')
+            LoadGSS(Filename='77149/60.gda', OutputWorkspace='ws60')
+            LoadGSS(Filename='77149/70.gda', OutputWorkspace='ws70')
+            ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws60', CheckOverlapping=False)
+            ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws70', CheckOverlapping=False)
+            EditInstrumentGeometry(Workspace='ws50', PrimaryFlightPath=50, L2='1,1,1,1,1,1', Polar='90,270,90,270,90,270')
+            ConvertUnits(InputWorkspace='ws50', OutputWorkspace='ws50_d', Target='dSpacing', ConvertFromPointData=False)
+            """
 
         return
 
