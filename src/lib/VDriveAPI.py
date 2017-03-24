@@ -485,7 +485,7 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False):
+    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False, is_workspace=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
@@ -496,6 +496,7 @@ class VDriveAPI(object):
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
+        # TODO/ISSUE/33 - Clean
         try:
             # get GSAS file name
             if search_archive and isinstance(run_id, int):
@@ -504,7 +505,11 @@ class VDriveAPI(object):
                 gsas_file = None
 
             # get data from project
-            data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+            if is_workspace:
+                # data_set_dict, current_unit
+                data_set_dict, current_unit = mantid_helper.get_data_from_workspace(run_id)
+            else:
+                data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
         except RuntimeError as run_err:
             return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
 
@@ -530,7 +535,9 @@ class VDriveAPI(object):
             # given data key
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                info = self._myProject.get_data_bank_list(data_key)
+                # FIXME shall use this! info = self._myProject.get_data_bank_list(data_key)
+                # TODO/ISSUE/NOW : broken fake
+                info = [1, 2]
             except AssertionError as e:
                 return False, str(e)
 

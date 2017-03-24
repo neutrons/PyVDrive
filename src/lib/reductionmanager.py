@@ -130,7 +130,7 @@ class DataReductionTracker(object):
             else:
                 info_dict['files'] = None
 
-        return
+        return info_dict
 
     def get_reduced_gsas(self):
         """
@@ -262,8 +262,8 @@ class DataReductionTracker(object):
         :return:
         """
         # check inputs
-        assert isinstance(workspace_name_list, list), 'Input list of workspaces names must be list but not a {0}.' \
-                                                      ''.format(type(workspace_name_list))
+        assert isinstance(workspace_name_list, list), 'Input list of workspaces names {1} must be list but not a {1}.' \
+                                                      ''.format(workspace_name_list, type(workspace_name_list))
 
         if self._choppedWorkspaceNameList is None or not append:
             self._choppedWorkspaceNameList = workspace_name_list[:]
@@ -650,8 +650,9 @@ class ReductionManager(object):
         self.init_tracker(ipts_number, run_number, slicer_key)
 
         # TEST/ISSUE/33/
-        self.set_chopped_reduced_workspaces(run_number, slicer_key, reducer.get_reduced_workspaces(chopped=True))
-        self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files())
+        reduced, workspace_name_list = reducer.get_reduced_workspaces(chopped=True)
+        self.set_chopped_reduced_workspaces(run_number, slicer_key, workspace_name_list, append=True)
+        self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files(), append=True)
 
         return True, None
 

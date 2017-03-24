@@ -2065,9 +2065,20 @@ class ReduceVulcanData(object):
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
                         sample_log = workspace_i.run().getProperty(log_name).value
-                        start_value = sample_log[0]
-                        mean_value = sample_log.mean()
-                        end_value = sample_log[-1]
+                        if len(sample_log) > 0:
+                            start_value = sample_log[0]
+                            mean_value = sample_log.mean()
+                            end_value = sample_log[-1]
+                        else:
+                            # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+                            # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+                            # axis 0 with size 0
+                            error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+                                            'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
+                            print error_message
+                            start_value = 0.
+                            mean_value = 0.
+                            end_value = 0.
                     elif mts_name == 'TimeStamp':
                         # time stamp
                         start_value = mean_value = end_value = float(time_stamp)

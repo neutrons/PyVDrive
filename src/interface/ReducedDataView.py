@@ -199,6 +199,29 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def add_workspaces(self, workspace_name_list, clear_previous=True):
+        """
+        add (CHOPPED) workspaces
+        :param workspace_name_list:
+        :return:
+        """
+        # TODO/ISSUE/NOW/33 More work on this
+        self._mutexRunNumberList = True
+
+        # clear existing runs
+        if clear_previous:
+            self.ui.comboBox_runs.clear()
+            self._runNumberList = list()
+
+        # add run number of combo-box and dictionary
+        for workspace_name in workspace_name_list:
+            self.ui.comboBox_runs.addItem(workspace_name)
+            self._dataIptsRunDict[workspace_name] = None
+            self._runNumberList.append(workspace_name)
+
+        # release mutex lock
+        self._mutexRunNumberList = False
+
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
         Purpose: Change the X limits of the figure
@@ -291,17 +314,23 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # Get run numbers
+        is_workspace = False
         runs_str = str(self.ui.lineEdit_runs.text()).strip()
         if len(runs_str) > 0:
             run_numbers = self.parse_runs_list(runs_str)
         else:
-            run_numbers = [int(self.ui.comboBox_runs.currentText())]
+            run_number_str = str(self.ui.comboBox_runs.currentText())
+            if run_number_str.isdigit():
+                run_numbers = [int(run_number_str)]
+            else:
+                run_numbers = [run_number_str]
+                is_workspace = True
 
         over_plot = self.ui.checkBox_overPlot.isChecked()
         # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
-            self.plot_run(run_number, bank_id, over_plot)
+            self.plot_run(run_number, bank_id, over_plot, is_workspace)
 
         return
 
@@ -384,7 +413,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             if self._currRunNumber is not None:
                 if isinstance(bank_id, str):
                     raise RuntimeError('bank ID {0} is string!'.format(bank_id))
-                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev)
+                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev,
+                              is_workspace=isinstance(self._currRunNumber, str))
             # END-IF
         # END-FOR
 
@@ -401,12 +431,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get the new run number
         run_number = str(self.ui.comboBox_runs.currentText())
         try:
-            run_number = int(run_number)
-            status, run_info = self._myController.get_reduced_run_info(run_number)
-            bank_id_list = run_info
+            if run_number.isdigit():
+                run_number = int(run_number)
+                status, run_info = self._myController.get_reduced_run_info(run_number)
+            else:
+                # is workspace
+                status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
         except ValueError as value_err:
             raise NotImplementedError('Unable to get run information from run {0} due to {1}'
                                       ''.format(run_number, value_err))
+        bank_id_list = run_info
+
         self._currRunNumber = run_number
 
         if status is False:
@@ -611,12 +646,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
+    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True, is_workspace=False):
         """
         get reduced data in vectors of X and Y
         :param run_number: data key or run number
         :param bank_id:
         :param bank_id_from_1:
+        :param is_workspace:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
         """
         # Get data (run)
@@ -624,7 +660,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # get new data from memory
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
-                                                                  search_archive=False)
+                                                                  search_archive=False,
+                                                                  is_workspace=True)
             print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
 
             if not status:
@@ -736,7 +773,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return line_id
 
-    def plot_run(self, run_number, bank_id, over_plot=False):
+    def plot_run(self, run_number, bank_id, over_plot=False, is_workspace=False):
         """
         Plot a run on graph
         Requirements:
@@ -746,18 +783,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_number:
         :param bank_id:
         :param over_plot:
+        :param is_workspace
         :return:
         """
         # Check requirements
-        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
-                                                                                              str(type(run_number)))
+        assert isinstance(run_number, int) or is_workspace, 'Run number %s must be an integer but not %s.' \
+                                                            '' % (str(run_number), str(type(run_number)))
         assert run_number > 0, 'bla bla'
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
 
         # Get data (run)
-        status, ret_obj = self.get_reduced_data(run_number, bank_id)
+        status, ret_obj = self.get_reduced_data(run_number, bank_id, is_workspace)
         if status:
             vec_x, vec_y = ret_obj
         else:
@@ -770,7 +808,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Plot the run
         # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
-        label = "run %d bank %d" % (run_number, bank_id)
+        label = "run {0} bank {1}".format(run_number, bank_id)
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
         line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
@@ -794,7 +832,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
         self._mutexBankIDList = False
 
-        self.ui.label_currentRun.setText('Run %d' % run_number)
+        self.ui.label_currentRun.setText('Run {0}'.format(run_number))
 
         return
 
