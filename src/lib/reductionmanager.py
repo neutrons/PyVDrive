@@ -46,6 +46,9 @@ class DataReductionTracker(object):
         self._tofWorkspace = None
         self._dspaceWorkspace = None
 
+        # compressed chopped workspace name
+        self._compressedChoppedWorkspaceName = None
+
         # status flag
         self._isReduced = False
 
@@ -109,6 +112,18 @@ class DataReductionTracker(object):
         assert isinstance(value, str), 'Input workspace name must be string but not %s.' % str(type(value))
         # Set
         self._eventWorkspace = value
+
+    def get_compressed_ws_name(self):
+        """
+        get compressed workspace name
+        if the name is not set up yet, then make it and set
+        :return:
+        """
+        if self._compressedChoppedWorkspaceName is None:
+            # not set yet.
+            self._compressedChoppedWorkspaceName = 'Chopped_{0}_Slicer_{1}.'.format(self._runNumber, self._slicerKey)
+
+        return self._compressedChoppedWorkspaceName
 
     def get_information(self):
         """
@@ -420,6 +435,8 @@ class ReductionManager(object):
             self._reductionTrackDict[run_number, slice_key].set_chopped_workspaces(chopped_ws_name_list)
         # TODO/ISSUE/33 - Consider to record saved NeXus file names
 
+        tracker = self.get_tracker()
+
         return True, None
 
     def get_event_workspace_name(self, run_number):
@@ -559,7 +576,7 @@ class ReductionManager(object):
         """ Initialize tracker
         :param run_number:
         :param slicer_key: if not specified, then the reduction is without chopping
-        :return:
+        :return: a DataReductionTracker object that is just created and initialized
         """
         # Check requirements
         assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0}  must be an integer or None but ' \
@@ -585,7 +602,7 @@ class ReductionManager(object):
             assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker),\
                 'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
 
-        return
+        return new_tracker
 
     def get_tracker(self, run_number, slicer_key):
         """
@@ -749,17 +766,9 @@ class ReductionManager(object):
         tracker.set_chopped_workspaces(workspace_name_list, append=True)
 
         if compress:
-            tracker.make_compressed_reduced_workspace(workspace_name_list)
-            # TODO/ISSUE/33/ASAP
-            """ use the following
-            LoadGSS(Filename='77149/50.gda', OutputWorkspace='ws50')
-            LoadGSS(Filename='77149/60.gda', OutputWorkspace='ws60')
-            LoadGSS(Filename='77149/70.gda', OutputWorkspace='ws70')
-            ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws60', CheckOverlapping=False)
-            ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws70', CheckOverlapping=False)
-            EditInstrumentGeometry(Workspace='ws50', PrimaryFlightPath=50, L2='1,1,1,1,1,1', Polar='90,270,90,270,90,270')
-            ConvertUnits(InputWorkspace='ws50', OutputWorkspace='ws50_d', Target='dSpacing', ConvertFromPointData=False)
-            """
+            target_ws_name = tracker.get_compressed_ws_name()
+            mantid_helper.make_compressed_reduced_workspace(workspace_name_list, target_workspace_name=target_ws_name)
+
 
         return
 

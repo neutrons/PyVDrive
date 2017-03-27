@@ -972,6 +972,101 @@ def check_bins_can_align(workspace_name, template_workspace_name):
     return True, ''
 
 
+def make_compressed_reduced_workspace(self, workspace_name_list, target_workspace_name):
+    """
+    add the all the workspaces given by their names to a target workspace with certain geometry
+    prototype:
+        ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws60', CheckOverlapping=False)
+        ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws70', CheckOverlapping=False)
+    :param self:
+    :param workspace_name_list:
+    :return:
+    """
+    # check inputs
+    assert isinstance(target_workspace_name, str), 'Target workspace name {0} must be a string but not a {1}.' \
+                                                   ''.format(target_workspace_name, type(target_workspace_name))
+    assert isinstance(workspace_name_list, list), 'Workspace names {0} must be given as a list but not a {1}.' \
+                                                  ''.format(workspace_name_list, type(workspace_name_list))
+    if len(workspace_name_list) == 0:
+        raise RuntimeError('Workspace name list is empty!')
+
+    # get the workspace to get merged to
+    # TODO/TEST/ISSUE/NOW - Need to verify
+    if ADS.doesExist(target_workspace_name) is False:
+        mantidapi.CloneWorkspace(InputWorkspace=workspace_name_list[0], OutputWorkspace=target_workspace_name)
+        # add a new property to the target workspace for more information
+        target_ws = retrieve_workspace(target_workspace_name)
+        num_banks = target_ws.getNumberHistograms()
+        target_ws.getRun().addProperty('Number of banks', num_banks, '', True)
+    else:
+        target_ws = retrieve_workspace(target_workspace_name)
+        num_banks = int(target_ws.run().getProperty('Number of banks').value)
+
+    # then do conjoin the workspace
+    for i_workspace in range(1, len(workspace_name_list)):
+        # check whether the input workspace has the same number of banks
+        src_ws = retrieve_workspace(workspace_name_list[i_workspace])
+        src_ws_banks = src_ws.getNumberHistograms()
+        if src_ws_banks != target_ws:
+            raise RuntimeError('Unable to conjoin workspace {0} to target workspace {1} due to unmatched '
+                               'bank number ({2}).'.format(workspace_name_list[i_workspace], target_workspace_name,
+                                                           src_ws_banks))
+
+        # conjoin workspaces
+        mantidapi.ConjoinWorkspaces(InputWorkspace1=target_workspace_name,
+                                    InputWorkspace2=workspace_name_list[i_workspace],
+                                    CheckOverlapping=False)
+    # END-IF
+
+    return target_workspace_name
+
+
+def edit_compressed_chopped_workspace_geometry(ws_name):
+    """
+    set the geometry to the compressed workspace for chopped workspace
+    prototype:
+        EditInstrumentGeometry(Workspace='ws50', PrimaryFlightPath=50, L2='1,1,1,1,1,1', Polar='90,270,90,270,90,270')
+    :param ws_name:
+    :return:
+    """
+    # define constants
+    VULCAN_L1 = 50.
+    VULCAN_1BANK_L2 = 2.
+    VULCAN_1BANK_POLAR = 90.
+    VULCAN_2BANK_1_L2 = 2.
+    VULCAN_2BANK_1_POLAR = 90.
+    VULCAN_2BANK_2_L2 = 2.
+    VULCAN_2BANK_2_POLAR = 270.
+
+    # get workspace and check
+    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
+    workspace = retrieve_workspace(ws_name)
+    if workspace is None:
+        raise RuntimeError('Chopped workspace {0} (name) cannot be found in ADS.'.format(ws_name))
+
+    # check the number of banks
+    num_banks = int(workspace.run().getProperty('Number of banks').value)
+    num_spectra = workspace.getNumberHistograms()
+    if num_banks == 1:
+        l2_list = [VULCAN_1BANK_L2] * num_spectra
+        polar_list = [VULCAN_1BANK_POLAR] * num_spectra
+    elif num_banks == 2:
+        if num_spectra % 2 != 0:
+            raise RuntimeError('It is impossible to have odd number of spectra in 2-bank compressed chopped workspace.')
+        l2_list = [VULCAN_2BANK_1_L2, VULCAN_2BANK_2_L2] * (num_spectra/2)
+        polar_list = [VULCAN_2BANK_1_POLAR,  VULCAN_2BANK_2_POLAR] * (num_spectra/2)
+    else:
+        raise RuntimeError('{0}-bank is not supported.'.format(num_spectra))
+
+    # edit instrument geometry
+    mantidapi.EditInstrumentGeometry(Workspace=ws_name,
+                                     PrimaryFlightPath=VULCAN_L1,
+                                     L2=str(l2_list).replace('[', '').replace(']',''),
+                                     Polar=str(polar_list).replace('[', '').replace(']',''))
+
+    return
+
+
 def mtd_compress_events(event_ws_name, tolerance=0.01):
     """ Call Mantid's CompressEvents algorithm
     :param event_ws_name:
