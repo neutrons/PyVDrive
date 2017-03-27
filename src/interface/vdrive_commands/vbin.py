@@ -291,8 +291,18 @@ class VBin(procss_vcommand.VDriveCommand):
                 material_type = 'Vanadium'
                 standard_dir = os.path.join(standard_dir, 'Vanadium')
                 standard_file = 'VRecord.txt'
+            elif material_type == 'c':
+                material_type = 'C'
+                standard_dir = os.path.join(standard_dir, 'C')
+                standard_file = 'CRecord.txt'
+            elif material_type == 'ceo2':
+                material_type = 'CeO3'
+                standard_dir = os.path.join(standard_dir, 'CeO2')
+                standard_file = 'CeO2Record.txt'
             else:
-                return False, 'Unable to process unsupported TAG {0}.'.format(material_type)
+                # create arbitrary tag
+                # TODO/ISSUE/NOW/FIXME - Implement how to create arbitrary tag! - add a new method in vulcan_util.py
+                raise RuntimeError('Unable to process unsupported TAG {0}.'.format(material_type))
 
             standard_tuple = material_type, standard_dir, standard_file
         else:

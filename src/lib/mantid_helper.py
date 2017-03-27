@@ -15,6 +15,15 @@ from mantid.api import AnalysisDataService as ADS
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
+# define constants
+VULCAN_L1 = 43.754
+VULCAN_1BANK_L2 = 2.009436
+VULCAN_1BANK_POLAR = 90.1120
+VULCAN_2BANK_1_L2 = 2.009436
+VULCAN_2BANK_1_POLAR = 90.
+VULCAN_2BANK_2_L2 = 2.009436
+VULCAN_2BANK_2_POLAR = 360. - 90.1120
+
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
@@ -972,13 +981,12 @@ def check_bins_can_align(workspace_name, template_workspace_name):
     return True, ''
 
 
-def make_compressed_reduced_workspace(self, workspace_name_list, target_workspace_name):
+def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name):
     """
     add the all the workspaces given by their names to a target workspace with certain geometry
     prototype:
         ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws60', CheckOverlapping=False)
         ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws70', CheckOverlapping=False)
-    :param self:
     :param workspace_name_list:
     :return:
     """
@@ -1007,7 +1015,7 @@ def make_compressed_reduced_workspace(self, workspace_name_list, target_workspac
         # check whether the input workspace has the same number of banks
         src_ws = retrieve_workspace(workspace_name_list[i_workspace])
         src_ws_banks = src_ws.getNumberHistograms()
-        if src_ws_banks != target_ws:
+        if src_ws_banks != num_banks:
             raise RuntimeError('Unable to conjoin workspace {0} to target workspace {1} due to unmatched '
                                'bank number ({2}).'.format(workspace_name_list[i_workspace], target_workspace_name,
                                                            src_ws_banks))
@@ -1029,15 +1037,6 @@ def edit_compressed_chopped_workspace_geometry(ws_name):
     :param ws_name:
     :return:
     """
-    # define constants
-    VULCAN_L1 = 50.
-    VULCAN_1BANK_L2 = 2.
-    VULCAN_1BANK_POLAR = 90.
-    VULCAN_2BANK_1_L2 = 2.
-    VULCAN_2BANK_1_POLAR = 90.
-    VULCAN_2BANK_2_L2 = 2.
-    VULCAN_2BANK_2_POLAR = 270.
-
     # get workspace and check
     assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
     workspace = retrieve_workspace(ws_name)

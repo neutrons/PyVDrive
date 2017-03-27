@@ -314,6 +314,16 @@ class DataReductionTracker(object):
 
         return
 
+    def set_reduction_status(self, status, message, chopped_data):
+        """
+        set the reduction status
+        :param status:
+        :param message:
+        :return:
+        """
+        print '[IMPLEMENT ASASP]'
+        # TODO/ISSUE/33/NOW  - Implement
+
     def set_slicer_key(self, slicer_key):
         """
         set slicer key to the
@@ -601,6 +611,7 @@ class ReductionManager(object):
             # existing tracker: double check
             assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker),\
                 'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
+            new_tracker = self._reductionTrackDict[tracker_key]
 
         return new_tracker
 
@@ -658,20 +669,24 @@ class ReductionManager(object):
         # add splitter workspace and splitter information workspace
         reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
-        #  reducer = reduce_VULCAN.ReduceVulcanData(reduce_setup)
+        # set up reducer
         reducer = reduce_adv_chop.AdvancedChopReduce(reduce_setup)
 
-        reducer.execute_chop_reduction(clear_workspaces=False)
+        # set up reduction tracker
+        tracker = self.init_tracker(ipts_number, run_number, slicer_key)
 
-        # get the reduced file names and workspaces and add to reduction tracker dictionary
-        self.init_tracker(ipts_number, run_number, slicer_key)
+        # reduce data
+        status, message = reducer.execute_chop_reduction(clear_workspaces=False)
+
+        # set up the reduced file names and workspaces and add to reduction tracker dictionary
+        tracker.set_reduction_status(status, message, True)
 
         # TEST/ISSUE/33/
         reduced, workspace_name_list = reducer.get_reduced_workspaces(chopped=True)
         self.set_chopped_reduced_workspaces(run_number, slicer_key, workspace_name_list, append=True)
         self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files(), append=True)
 
-        return True, None
+        return status, message
 
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
                    vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
@@ -768,7 +783,6 @@ class ReductionManager(object):
         if compress:
             target_ws_name = tracker.get_compressed_ws_name()
             mantid_helper.make_compressed_reduced_workspace(workspace_name_list, target_workspace_name=target_ws_name)
-
 
         return
 

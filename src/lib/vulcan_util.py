@@ -5,6 +5,31 @@ import os
 import pandas as pd
 
 
+
+def export_vanadium_intensity_to_file(van_nexus_file):
+    """
+    export a vanadium to intensity file
+    :param van_nexus_file:
+    :return:
+    """
+    import mantid_helper
+
+    # TODO/ISSUE/NOW/ASAP - Clean and implement
+    mantid_helper.load_nexus(data_file_name=van_nexus_file, output_ws_name='whatever', meta_data_only=False)
+    event_ws = mantid_helper.retrieve_workspace('whatever')
+
+    # Parse to intensity file
+    int_buf = ''
+    num_spec = event_ws.getNumberHistograms()
+    det_count = 0
+    for i_ws in range(num_spec):
+        num_events = event_ws.getEventList(i_ws).getEventList(0)
+        int_buf += format_gsas()
+        "{0:>16}".format(s)
+
+    return
+
+
 def get_vulcan_record(ipts_number, auto):
     """
     Get ITPS number

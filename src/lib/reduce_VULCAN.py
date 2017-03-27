@@ -1523,7 +1523,6 @@ class ReduceVulcanData(object):
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file
-        print '[DB] Abut to reduce powder diffraction data for {0}'.format(self._reductionSetup)
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
         if not is_reduce_good:
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
@@ -1534,10 +1533,11 @@ class ReduceVulcanData(object):
             try:
                 shutil.copy(gsas_file, standard_dir)
             except IOError as io_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}'.format(standard_dir, io_err)
+                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}' \
+                      ''.format(standard_dir, io_err)
             except OSError as os_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}'.format(standard_dir, os_err)
-
+                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}' \
+                      ''.format(standard_dir, os_err)
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
