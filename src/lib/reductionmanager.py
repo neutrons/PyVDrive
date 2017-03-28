@@ -726,9 +726,10 @@ class ReductionManager(object):
             reduction_setup.set_vanadium(van_run, van_gda, vanadium_tag)
 
         # outputs
-        reduction_setup.set_output_dir(output_directory)
-        if gsas:
-            reduction_setup.set_gsas_dir(output_directory, True)
+        if output_directory is not None:
+            reduction_setup.set_output_dir(output_directory)
+            if gsas:
+                reduction_setup.set_gsas_dir(output_directory, True)
 
         # process on standards
         if standard_sample_tuple:
