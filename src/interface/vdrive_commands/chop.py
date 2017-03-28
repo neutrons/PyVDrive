@@ -168,14 +168,18 @@ class VdriveChop(VDriveCommand):
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, output_dir, epoch_time, dry_run,
                            chop_loadframe_log, chop_furnace_log):
         """
-
+        chop and/or reduce data with arbitrary slicers
+        :param run_number:
         :param slicer_list:
         :param reduce_flag:
         :param output_dir:
+        :param epoch_time:
         :param dry_run:
+        :param chop_loadframe_log:
+        :param chop_furnace_log:
         :return:
         """
-        # TODO/FIXME/NOW/ISSUE/33 - Make this work!  Idea: create a matrix workspace ---> clean and test
+        # TODO/TEST/NOW/ISSUE/33 -
         # check inputs
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
