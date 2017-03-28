@@ -299,13 +299,40 @@ class VBin(procss_vcommand.VDriveCommand):
                 material_type = 'CeO3'
                 standard_dir = os.path.join(standard_dir, 'CeO2')
                 standard_file = 'CeO2Record.txt'
-            else:
+            elif len(material_type) > 0:
                 # create arbitrary tag
-                # TODO/ISSUE/NOW/FIXME - Implement how to create arbitrary tag! - add a new method in vulcan_util.py
-                raise RuntimeError('Unable to process unsupported TAG {0}.'.format(material_type))
+                # use the user specified TAG as the type of material
+                material_type = self._commandArgsDict['TAG']
+                standard_dir = os.path.join(standard_dir, material_type)
+                standard_file = '{0}Record.txt'.format(material_type)
+                self._create_standard_directory(standard_dir)
+            else:
+                raise RuntimeError('TAG cannot be an empty string.')
+            # END-IF-ELSE
 
             standard_tuple = material_type, standard_dir, standard_file
         else:
             standard_tuple = None
 
         return standard_tuple
+
+    @staticmethod
+    def _create_standard_directory(tag_dir):
+        """
+        create a directory for standard
+        :param tag_dir:
+        :return:
+        """
+        assert isinstance(tag_dir, str), 'Standard directory {0} must be a string but not a {1}.' \
+                                         ''.format(tag_dir, type(tag_dir))
+        try:
+            os.mkdir(tag_dir)
+        except IOError as io_error:
+            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, io_error))
+        except OSError as os_error:
+            raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, os_error))
+
+        # change access control
+        os.chmod(tag_dir, 0664)
+
+        return

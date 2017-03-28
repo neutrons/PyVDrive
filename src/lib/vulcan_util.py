@@ -2,21 +2,39 @@
 # Utility methods for VULCAN
 ####
 import os
+import math
 import pandas as pd
+import mantid_helper
 
 
-
-def export_vanadium_intensity_to_file(van_nexus_file):
+def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
     """
-    export a vanadium to intensity file
+    export a vanadium to intensity file, whic is of GSAS format
     :param van_nexus_file:
+    :param gsas_van_int_file:
     :return:
     """
-    import mantid_helper
+    # check
+    assert isinstance(van_nexus_file, str), 'Vanadium NeXus file {0} must be a string but not a {1}.' \
+                                            ''.format(van_nexus_file, type(van_nexus_file))
+    if os.path.exists(van_nexus_file) is False:
+        raise RuntimeError('Given vanadium NeXus path {0} is incorrect.'.format(van_nexus_file))
 
-    # TODO/ISSUE/NOW/ASAP - Clean and implement
-    mantid_helper.load_nexus(data_file_name=van_nexus_file, output_ws_name='whatever', meta_data_only=False)
-    event_ws = mantid_helper.retrieve_workspace('whatever')
+    assert isinstance(gsas_van_int_file, str), 'Target GSAS vanadium intensity file {0} must be a string but not a ' \
+                                               '{1}.'.format(gsas_van_int_file, type(gsas_van_int_file))
+
+    # write to file
+    try:
+        int_file = open(gsas_van_int_file, 'w')
+    except IOError as io_err:
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, io_err))
+    except OSError as os_err:
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, os_err))
+
+    # load data file
+    out_file_name = os.path.basename(van_nexus_file).split('.')[0]
+    mantid_helper.load_nexus(data_file_name=van_nexus_file, output_ws_name=out_file_name, meta_data_only=False)
+    event_ws = mantid_helper.retrieve_workspace(out_file_name)
 
     # Parse to intensity file
     int_buf = ''
@@ -24,11 +42,50 @@ def export_vanadium_intensity_to_file(van_nexus_file):
     det_count = 0
     for i_ws in range(num_spec):
         num_events = event_ws.getEventList(i_ws).getEventList(0)
-        int_buf += format_gsas()
-        "{0:>16}".format(s)
+        # format to float with 8 significant digit
+        format_event_str = format_float_number(num_events, 8)
+        int_buf += '{0:>16}'.format(format_event_str)
+        # start a new line at 8th detector's count
+        if det_count == 7:
+            int_buf += '\n'
+            int_buf = 0
+        else:
+            int_buf += 1
+    # END-FOR
 
     return
 
+
+def format_float_number(value, significant_digits):
+    """
+    format a number (integer or float) into a string with specified significant digit
+    :param value:
+    :param significant_digits:
+    :return:
+    """
+    # TODO/TEST/NOW/ISSUE
+
+    # check input
+    assert isinstance(value, int), 'Input value {0} must be integer but cannot be {1}.'.format(value, type(value))
+    assert isinstance(significant_digits, int) and significant_digits > 0,\
+        'Significant digit {0} must be a positive integer but not a {1}.' \
+        ''.format(significant_digits, type(significant_digits))
+
+    # make sure the input is a float
+    value = float(value)
+    if abs(value) < math.pow(10., significant_digits):
+        # contain decimal point
+        format_str = '{0:.7f}'.format(value)
+        assert format_str.count('.') == 1, 'If value is within {0}, decimal points must be in {1}.' \
+                                           ''.format(math.pow(10., significant_digits), format_str)
+        # trim to significant digits
+        format_str = format_str[:significant_digits+1]
+    else:
+        raise RuntimeError('Not implemented!')
+        # write a script to go through all the .int file in VULCAN's vanadium directory to find any number larger than 10^8
+        # TODO/ISSUE/NOW/ASAP --| implement above idea
+
+    return format_str
 
 def get_vulcan_record(ipts_number, auto):
     """
