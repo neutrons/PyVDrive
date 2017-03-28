@@ -10,6 +10,7 @@ import mantid_helper
 def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
     """
     export a vanadium to intensity file, whic is of GSAS format
+    NOTE: THIS IS VERY INSTRUMENT GEOMETRY SENSITIVE!
     :param van_nexus_file:
     :param gsas_van_int_file:
     :return:
@@ -38,20 +39,33 @@ def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
 
     # Parse to intensity file
     int_buf = ''
-    num_spec = event_ws.getNumberHistograms()
+    # num_spec = event_ws.getNumberHistograms()
     det_count = 0
-    for i_ws in range(num_spec):
-        num_events = event_ws.getEventList(i_ws).getEventList(0)
-        # format to float with 8 significant digit
-        format_event_str = format_float_number(num_events, 8)
-        int_buf += '{0:>16}'.format(format_event_str)
-        # start a new line at 8th detector's count
-        if det_count == 7:
-            int_buf += '\n'
-            int_buf = 0
-        else:
-            int_buf += 1
+
+    for row_index in range(0, 1224 + 1, 8):
+        pack_index_west = range(0, 2464 + 1, 1232)
+        pack_index_east = range(3696, 6160 + 1, 1232)
+        pack_index_both = pack_index_west + pack_index_east
+        for pack_index in pack_index_both:
+            for i_ws in range(8):
+                ws_index = row_index + pack_index + i_ws
+
+                num_events = event_ws.getEventList(ws_index).getNumberEvents()
+                # format to float with 8 significant digit
+                format_event_str = format_float_number(num_events, 8)
+
+                int_buf += '{0:>16}'.format(format_event_str)
+                # start a new line at 8th detector's count
+                if det_count == 8 * 6 - 1:
+                    int_buf += '\n'
+                    det_count = 0
+                else:
+                    det_count += 1
+                    # END-FOR
     # END-FOR
+
+    int_file.write(int_buf)
+    int_file.close()
 
     return
 
@@ -63,8 +77,6 @@ def format_float_number(value, significant_digits):
     :param significant_digits:
     :return:
     """
-    # TODO/TEST/NOW/ISSUE
-
     # check input
     assert isinstance(value, int), 'Input value {0} must be integer but cannot be {1}.'.format(value, type(value))
     assert isinstance(significant_digits, int) and significant_digits > 0,\
@@ -81,11 +93,11 @@ def format_float_number(value, significant_digits):
         # trim to significant digits
         format_str = format_str[:significant_digits+1]
     else:
-        raise RuntimeError('Not implemented!')
-        # write a script to go through all the .int file in VULCAN's vanadium directory to find any number larger than 10^8
-        # TODO/ISSUE/NOW/ASAP --| implement above idea
+        # number is larger than 10^8, which is not likely to happen.
+        raise RuntimeError('Not implemented because it is not thought possible!')
 
     return format_str
+
 
 def get_vulcan_record(ipts_number, auto):
     """
@@ -585,3 +597,8 @@ class AutoVanadiumCalibrationLocator(object):
 
         return False, msg
 
+
+if __name__ == '__main__':
+    van_file = '/SNS/VULCAN/IPTS-18420/0/136771/NeXus/VULCAN_136771_event.nxs'
+    out_name = '/tmp/van136771.int'
+    export_vanadium_intensity_to_file(van_file, out_name)

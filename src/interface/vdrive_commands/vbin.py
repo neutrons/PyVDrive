@@ -1,5 +1,6 @@
 import os
 import procss_vcommand
+import PyVDrive.lib.vulcan_util as vulcan_util
 
 # VDRIVEBIN, i.e., VBIN
 # 
@@ -153,7 +154,10 @@ class VBin(procss_vcommand.VDriveCommand):
         standard_tuple = self.process_tag()
 
         # output directory
-        output_dir = os.getcwd()
+        if 'OUTPUT' in input_args:
+            output_dir = self._commandArgsDict['OUTPUT']
+        else:
+            output_dir = None
 
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
@@ -199,6 +203,20 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                merge=False)
 
         # END-IF-ELSE
+
+        print '[DB...BAT] Standard tuple: ', standard_tuple
+
+        # process special tag for vanadium
+        if standard_tuple is not None and standard_tuple[0] == 'Vanadium':
+            for run_number in run_number_list:
+                standard_dir = standard_tuple[1]
+                nexus_file_name = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs'.format(self._iptsNumber, run_number)
+                intensity_file_name = os.path.join(standard_dir, '{0}.int'.format(run_number))
+                print '[DB...BAT] Export GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
+                vulcan_util.export_vanadium_intensity_to_file(van_nexus_file=nexus_file_name,
+                                                              gsas_van_int_file=intensity_file_name)
+            # END-FOR
+        # END-IF
 
         return status, str(ret_obj)
 
@@ -305,12 +323,15 @@ class VBin(procss_vcommand.VDriveCommand):
                 material_type = self._commandArgsDict['TAG']
                 standard_dir = os.path.join(standard_dir, material_type)
                 standard_file = '{0}Record.txt'.format(material_type)
-                self._create_standard_directory(standard_dir)
             else:
                 raise RuntimeError('TAG cannot be an empty string.')
             # END-IF-ELSE
 
             standard_tuple = material_type, standard_dir, standard_file
+
+            # create workspace if not existing
+            if os.path.exists(standard_dir) is False:
+                self._create_standard_directory(standard_dir)
         else:
             standard_tuple = None
 
@@ -333,6 +354,6 @@ class VBin(procss_vcommand.VDriveCommand):
             raise RuntimeError('Unable to create directory {0} due to {1}'.format(tag_dir, os_error))
 
         # change access control
-        os.chmod(tag_dir, 0664)
+        os.chmod(tag_dir, 0777)
 
         return

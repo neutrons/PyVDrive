@@ -117,7 +117,7 @@ class VanadiumProcessingManager(object):
 
     def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
-                         param_n=20, param_order=2, save=True):
+                         param_n=20, param_order=2, save=True, output_dir=None):
         """
         Process vanadium run including strip vanadium peaks and smooth
         :param peak_fwhm:
@@ -144,13 +144,21 @@ class VanadiumProcessingManager(object):
         assert isinstance(out_ws_2, str), 'Output must be a string'
 
         # save
+        message = 'Vanadium {0} has peaks removed and is smoothed. '
+        if output_dir is None:
+            # if output directory is not given, use the default
+            output_dir = self._localOutputDirectory
         if save:
-            print '[DB...BAT] Save GSAS file to ', self._localOutputDirectory
-            status, message = self.save_vanadium_to_file(to_archive=True, out_file_name=self._localOutputDirectory)
-            if not status:
-                print '[ERROR] {0}'.format(message)
+            status, sub_message = self.save_vanadium_to_file(to_archive=True, out_file_name=output_dir)
+            if status:
+                message += 'Processed vanadium is saved to {0}. '.format(output_dir)
+            else:
+                message += 'Processed vanadium failed to be written to {0} due to {1}.' \
+                           ''.format(self._localOutputDirectory, sub_message)
+        else:
+            status = True
 
-        return
+        return status, message
 
     def save_vanadium_to_file(self, vanadium_tuple=None,
                               to_archive=True, out_file_name=None):

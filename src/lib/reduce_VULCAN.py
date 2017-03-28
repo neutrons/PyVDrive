@@ -1607,6 +1607,10 @@ class ReduceVulcanData(object):
             message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
                                                                         str(run_err))
             return False, message
+        except ValueError as value_err:
+            message = 'Exporting experiment record to {0} failed due to {1}.' \
+                      ''.format(self._reductionSetup.get_record_file(), value_err)
+            return False, message
 
         # Set up the mode for global access
         file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])

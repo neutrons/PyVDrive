@@ -1331,7 +1331,8 @@ class VDriveAPI(object):
             if do_shift:
                 # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
                 self._myProject.vanadium_processing_manager.apply_shift()
-            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
+            status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
+                                                                                           output_dir=local_output)
 
             if one_bank:
                 # merge the result to 1 bank
@@ -1342,7 +1343,10 @@ class VDriveAPI(object):
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
 
-        return True, 'Vanadium process is successful.'
+        if status:
+            message = 'Vanadium process is successful.' + message
+
+        return status, message
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """

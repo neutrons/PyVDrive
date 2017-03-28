@@ -74,6 +74,11 @@ class VanadiumPeak(VDriveCommand):
         else:
             do_launch_gui = False
 
+        if 'OUTPUT' in self._commandArgsDict:
+            local_output_dir = str(self._commandArgsDict['OUTPUT'])
+        else:
+            local_output_dir = None
+
         # return to pop
         if do_launch_gui:
             # launch GUI.  load vanadium data now!
@@ -91,7 +96,10 @@ class VanadiumPeak(VDriveCommand):
                                                                 run_number=self._vanRunNumber,
                                                                 use_reduced_file=True,
                                                                 one_bank=self._mergeToOneBank,
-                                                                do_shift=self._doShift)
+                                                                do_shift=self._doShift,
+                                                                local_output=local_output_dir)
+
+        print '[DB] VPEAK output', status, ret_obj
 
         return status, ret_obj
 
