@@ -99,6 +99,30 @@ def format_float_number(value, significant_digits):
     return format_str
 
 
+def get_default_binned_directory(ipts_number, check_write_and_throw=False):
+    """
+    get VDRIVE default directory for binned data
+    :param ipts_number: IPTS number in integer
+    :param check_write_and_throw: check whether the user has write permission and thus throw if not
+    :return:
+    """
+    # check
+    assert isinstance(ipts_number, int), 'IPTS number {0}  must be an integer but not a {1}.' \
+                                         ''.format(ipts_number, type(ipts_number))
+
+    # get directory
+    binned_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned/'.format(ipts_number)
+
+    # check write permission
+    if check_write_and_throw:
+        if os.path.exists(binned_dir) is False:
+            raise RuntimeError('VULCAN binned data directory {0} does not exist.'.format(binned_dir))
+        if os.access(binned_dir, os.W_OK) is False:
+            raise RuntimeError('User has no write permission to directory {0}.'.format(binned_dir))
+
+    return binned_dir
+
+
 def get_vulcan_record(ipts_number, auto):
     """
     Get ITPS number

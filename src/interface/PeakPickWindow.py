@@ -1485,10 +1485,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # get single peaks from canvas
         raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
+        # TODO/DEBUG/FIXME/ - Find out why do grouping a few time can cause duplicate peaks in table
+        print '[DB...#33] Number of raw peaks = {0} with peak positions: {1}.' \
+              ''.format(len(raw_peak_pos_list), raw_peak_pos_list)
 
         # call controller method to set group boundary
         peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
-        assert isinstance(peak_group, peak_util.PeakGroupCollection)
+        assert isinstance(peak_group, peak_util.PeakGroupCollection),\
+            'Peak group {0} must be a PeakGroupCollection instance but not a {1}.'.format(peak_group, type(peak_group))
 
         self.clear_group_highlight()
 

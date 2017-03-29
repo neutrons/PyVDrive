@@ -40,7 +40,7 @@ class GroupPeakDialog(QtGui.QMainWindow):
 
     def do_add_peak_return(self):
         """
-
+        add grouped peaks and then close window
         :return:
         """
         self._parentWindow.add_grouped_peaks()
@@ -51,7 +51,7 @@ class GroupPeakDialog(QtGui.QMainWindow):
 
     def do_cancel_return(self):
         """
-
+        do not record the result of peak picking and close the window
         :return:
         """
         self._parentWindow.clear_group_highlight()
@@ -62,7 +62,7 @@ class GroupPeakDialog(QtGui.QMainWindow):
 
     def do_group_peaks(self):
         """
-
+        group selected peaks
         :return:
         """
         # get the resolution

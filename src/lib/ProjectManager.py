@@ -698,7 +698,7 @@ class ProjectManager(object):
         Focus and process the selected data sets to powder diffraction data
         for GSAS/Fullprof/ format
         :param run_number_list:
-        :param output_directory:
+        :param output_directory: output directory. if not given (None) then set it up to instrument default?
         :param background:
         :param vanadium:
         :param gsas:

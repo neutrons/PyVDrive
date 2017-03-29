@@ -157,7 +157,7 @@ class VBin(procss_vcommand.VDriveCommand):
         if 'OUTPUT' in input_args:
             output_dir = self._commandArgsDict['OUTPUT']
         else:
-            output_dir = None
+            output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
 
         if 'FullProf' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1

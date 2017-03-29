@@ -2291,12 +2291,29 @@ class ReduceVulcanData(object):
                                   AlignBins=False)
 
         vdrive_bin_ws_name = 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
+
+        output_access_error = False
+        orig_gsas_name = gsas_file_name
+        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            # gsas file does exist and cannot be modified: write to a temporary account
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+        elif not os.path.exists(gsas_file_name) and os.access(os.path.dirname(gsas_file_name), os.W_OK) is False:
+            # gsas file does not exist and use has no write permit to directory: write to a temporary account
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+
+        # save to vuclan GSAS
         mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
                                    BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                    OutputWorkspace=vdrive_bin_ws_name,
                                    GSSFilename=gsas_file_name,
                                    IPTS=self._reductionSetup.get_ipts_number(),
                                    GSSParmFilename="Vulcan.prm")
+
+        # set up the output file's permit for other users to modify
+        os.chmod(gsas_file_name, 0774)
+
         # Add special property to output workspace
         final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
         final_ws.getRun().addProperty('VDriveBin', True, replace=True)
@@ -2305,7 +2322,7 @@ class ReduceVulcanData(object):
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
-            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
             self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
         # END-IF (vanadium)
 
@@ -2314,6 +2331,11 @@ class ReduceVulcanData(object):
         self._reducedWorkspaceMtd = tof_ws_name
         self._reducedWorkspaceVDrive = vdrive_bin_ws_name
         self._reduceGood = True
+
+        # return with False
+        if output_access_error:
+            return False, 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.' \
+                          ''.format(orig_gsas_name, gsas_file_name)
 
         return True, message
 
