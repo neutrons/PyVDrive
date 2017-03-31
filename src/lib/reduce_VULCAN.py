@@ -1524,11 +1524,13 @@ class ReduceVulcanData(object):
 
         # reduce and write to GSAS file
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
-        if not is_reduce_good:
+        if not is_reduce_good and msg_gsas.count('Code001') == 0:
+            # error code: Code001 does not mean a bad reduction
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
         if self._reductionSetup.is_standard:
             # standard sample for VULCAN
             gsas_file = self.get_reduced_files()[0]
+            print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
@@ -2304,12 +2306,25 @@ class ReduceVulcanData(object):
             output_access_error = True
 
         # save to vuclan GSAS
-        mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                   BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                   OutputWorkspace=vdrive_bin_ws_name,
-                                   GSSFilename=gsas_file_name,
-                                   IPTS=self._reductionSetup.get_ipts_number(),
-                                   GSSParmFilename="Vulcan.prm")
+        try:
+            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                       OutputWorkspace=vdrive_bin_ws_name,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFilename="Vulcan.prm")
+        except ValueError as value_err:
+            # write again to a temporary directory
+            print '[ValueError]: {0}.'.format(value_err)
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                       OutputWorkspace=vdrive_bin_ws_name,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFilename="Vulcan.prm")
+
 
         # set up the output file's permit for other users to modify
         os.chmod(gsas_file_name, 0774)

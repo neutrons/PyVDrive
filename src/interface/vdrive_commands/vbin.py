@@ -204,9 +204,8 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # END-IF-ELSE
 
-        print '[DB...BAT] Standard tuple: ', standard_tuple
-
         # process special tag for vanadium
+        print '[DB...BAT] Standard tuple: ', standard_tuple
         if standard_tuple is not None and standard_tuple[0] == 'Vanadium':
             for run_number in run_number_list:
                 standard_dir = standard_tuple[1]

@@ -710,7 +710,7 @@ class ProjectManager(object):
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
-            raise RuntimeError('It is not allowed to process multiple standard samples in a single call.')
+            raise RuntimeError('It is not allowed to process multiple standard samples in a single call.'.format(run_number_list))
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'

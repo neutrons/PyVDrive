@@ -111,7 +111,7 @@ def get_default_binned_directory(ipts_number, check_write_and_throw=False):
                                          ''.format(ipts_number, type(ipts_number))
 
     # get directory
-    binned_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned/'.format(ipts_number)
+    binned_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(ipts_number)
 
     # check write permission
     if check_write_and_throw:
