@@ -146,26 +146,6 @@ class DataChopper(object):
 
         return
 
-    def chop_data_regular(self, split_ws_name, info_ws_name, data_file, tof_correction, output_dir):
-        """
-        chop data in a regular way
-        :param split_ws_name:
-        :param info_ws_name:
-        :param data_file:
-        :param tof_correction:
-        :param output_dir:
-        :return:
-        """
-        status, ret_obj = mantid_helper.split_event_data(raw_file_name=data_file,
-                                                         split_ws_name=split_ws_name,
-                                                         info_table_name=info_ws_name,
-                                                         target_ws_name=None,
-                                                         tof_correction=tof_correction,
-                                                         output_directory=output_dir,
-                                                         delete_split_ws=True)
-
-        return status, ret_obj
-
     def chop_data_large_number_targets(self, split_ws_name, info_ws_name, data_file, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws):
         """
@@ -231,10 +211,17 @@ class DataChopper(object):
         MAX_CHOPPED_WORKSPACE_IN_MEM = 40
         if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
             # chop event workspace with regular method
-            status, ret_obj = self.chop_data_regular(split_ws_name, info_ws_name,
-                                                     data_file=raw_file_name,
-                                                     tof_correction=do_tof_correction,
-                                                     output_dir=output_directory)
+            # status, ret_obj = self.chop_data_regular(split_ws_name, info_ws_name,
+            #                                          data_file=raw_file_name,
+            #                                          tof_correction=do_tof_correction,
+            #                                          output_dir=output_directory)
+            status, ret_obj = mantid_helper.split_event_data(raw_file_name=raw_file_name,
+                                                             split_ws_name=split_ws_name,
+                                                             info_table_name=info_ws_name,
+                                                             target_ws_name=None,
+                                                             tof_correction=do_tof_correction,
+                                                             output_directory=output_directory,
+                                                             delete_split_ws=True)
         else:
             # chop event workspace to too many target workspaces which cannot be hold in memory
             # simultaneously
@@ -242,7 +229,8 @@ class DataChopper(object):
                                                                   data_file=raw_file_name,
                                                                   tof_correction=do_tof_correction,
                                                                   output_dir=output_directory,
-                                                                  is_epoch_time=is_epoch_time)
+                                                                  is_epoch_time=is_epoch_time,
+                                                                  num_target_ws=number_target_ws)
 
         # raise NotImplementedError('chop_data() requires refactor!')
         #
@@ -305,7 +293,7 @@ class DataChopper(object):
         # for ws_name in ws_name_list:
         #     mantid_helper.save_event_workspace(ws_name, out_file_name)
 
-        return
+        return status, ret_obj
 
     def delete_slicer_by_id(self, slicer_tag):
         """

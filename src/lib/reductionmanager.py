@@ -431,21 +431,23 @@ class ReductionManager(object):
 
         # split event data
         status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
-                                                 splice_key=slice_key,
+                                                 slice_key=slice_key,
                                                  output_directory=output_dir)
 
         if status:
-            chopped_ws_name_list = ret_obj
+            chopped_ws_name_list = ret_obj['workspaces']
+            chopped_file_list = ret_obj['files']
         else:
             error_msg = ret_obj
             return False, error_msg
 
-        self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-        if ret_obj is not None:
-            self._reductionTrackDict[run_number, slice_key].set_chopped_workspaces(chopped_ws_name_list)
-        # TODO/ISSUE/33 - Consider to record saved NeXus file names
-
-        tracker = self.get_tracker()
+        tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+        tracker.is_chopped_run = True
+        tracker.is_reduced = False
+        tracker.is_chopped = True
+        if chopped_ws_name_list is not None:
+            tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+        tracker.set_chopped_nexus_files(chopped_file_list, append=True)
 
         return True, None
 

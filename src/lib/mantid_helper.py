@@ -1271,7 +1271,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     :param tof_correction:
     :param output_directory:
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
-    :return: 2-tuple.  [1] boolean (success or fail) [2] None (no reduced workspace), List of strings or Error message
+    :return: 2-tuple.  [1] boolean (success or fail) [2] dictionary or Error message
     """
     # Check requirements
     assert workspace_does_exist(split_ws_name)
@@ -1337,25 +1337,31 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
 
     # Save result
-    # TODO/ISSUE/33 - Shall return NeXus file?
     if output_directory is not None:
+        output_file_list = list()
         for chopped_ws_name in chopped_ws_name_list:
             file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
+            output_file_list.append(file_name)
+    else:
+        output_file_list = None
 
     # Clear
     delete_workspace(correction_ws)
     if delete_split_ws:
         for chopped_ws_name in chopped_ws_name_list:
             mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+        chopped_ws_name_list = None
 
     # Output
-    if delete_split_ws:
-        ret_obj = None
-    else:
-        ret_obj = (chopped_ws_name_list, ret_list[3:])
+    chop_dict = {'workspaces': chopped_ws_name_list,
+                 'files': output_file_list}
+    # if delete_split_ws:
+    #     ret_obj = None
+    # else:
+    #     ret_obj = (chopped_ws_name_list, ret_list[3:])
 
-    return True, ret_obj
+    return True, chop_dict
 
 
 # TODO/FIXME/ISSUE/NOW - Refactor with split_event_data()
