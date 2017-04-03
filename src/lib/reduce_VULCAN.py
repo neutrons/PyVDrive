@@ -2061,7 +2061,12 @@ class ReduceVulcanData(object):
             assert run_start == run_start_i, '"run_start" of all the split workspaces should be same!'
 
             # get difference in REAL starting time (proton_charge[0])
-            real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            try:
+                real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            except IndexError:
+                print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
+                continue
+
             time_stamp = real_start_time_i.total_nanoseconds()
             # time (step) in seconds
             diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9

@@ -172,7 +172,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # if the number of output workspaces are too much, it could cause severe memory issue.
         num_outputs = self.get_number_chopped_ws(split_ws_name)
-        NUM_TARGET_WS_IN_MEM = 80
+        NUM_TARGET_WS_IN_MEM = 40
         num_loops = num_outputs / NUM_TARGET_WS_IN_MEM
 
         message = 'Output GSAS files include:\n'
@@ -183,7 +183,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         gsas_index = 1
         everything_is_right = True
 
-        # TODO/FIXME/NOT TRUE
+        # TODO/FIXME/NOT TRUE/shall use the real run start time from workspace
         split_ws = AnalysisDataService.retrieve(split_ws_name)
         run_start_time_ns = int(split_ws.cell(0, 0))
 
@@ -198,6 +198,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # do regular reduction
             results = mantidsimple.SNSPowderReduction(**sns_arg_dict)
             chopped_ws_name_list = list()
+            vulcan_bin_ws_list = list()
             for item in results:
                 if isinstance(item, ITableWorkspace):
                     # ignore
@@ -227,12 +228,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     everything_is_right = False
 
                 # convert unit and save for VULCAN-specific GSAS
-                tof_ws_name = '{0}_TOF'.format(chopped_ws_name)
+                tof_ws_name = '{0}_Vulcan_{1}'.format(os.path.basename(sns_arg_dict['Filename']).split('.')[0],
+                                                      gsas_index)
                 mantidsimple.ConvertUnits(InputWorkspace=chopped_ws_name,
                                           OutputWorkspace=tof_ws_name,
                                           Target="TOF",
                                           EMode="Elastic",
                                           AlignBins=False)
+                vulcan_bin_ws_list.append(tof_ws_name)
 
                 # overwrite the original file
                 vdrive_bin_ws_name = chopped_ws_name
@@ -261,9 +264,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # create the log files
             self.generate_sliced_logs(chopped_ws_name_list, self._chopExportedLogType, append=(i_loop > 0))
 
-            # # TODO/FIXME/DEBUG: Remove this after debugging
-            if True and i_loop == 3:
-                break
+            # TODO/ISSUE/Now/ - Need to delete the other reduced workspaces too, ???_TOF
+            for ws_name in vulcan_bin_ws_list:
+                pass
 
             # delete all the workspaces!
             for ws_name in chopped_ws_name_list:

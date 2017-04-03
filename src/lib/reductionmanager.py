@@ -321,8 +321,12 @@ class DataReductionTracker(object):
         :param message:
         :return:
         """
-        print '[IMPLEMENT ASASP]'
-        # TODO/ISSUE/33/NOW  - Implement
+        # TODO/ISSUE/NOW - More class parameters and type check!
+        self._myStatus = status
+        self._myReductionDetails = message
+        self._isChoppedData = chopped_data
+
+        return
 
     def set_slicer_key(self, slicer_key):
         """

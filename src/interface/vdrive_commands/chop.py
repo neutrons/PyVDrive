@@ -372,15 +372,18 @@ class VdriveChop(VDriveCommand):
             elif user_slice_file is not None:
                 # chop by user specified time splitters
                 # FIXME/TODO/ISSUE/33 - Need to wait for Mantid
-                slicer_list = self.parse_pick_data(user_slice_file)
-                status, message = self.chop_data_manually(run_number=run_number,
-                                                          slicer_list=slicer_list,
-                                                          reduce_flag=output_to_gsas,
-                                                          output_dir=output_dir,
-                                                          dry_run=is_dry_run,
-                                                          epoch_time=(pulse_time == 1),
-                                                          chop_loadframe_log=chop_load_frame,
-                                                          chop_furnace_log=chop_furnace_log)
+                try:
+                    slicer_list = self.parse_pick_data(user_slice_file)
+                    status, message = self.chop_data_manually(run_number=run_number,
+                                                              slicer_list=slicer_list,
+                                                              reduce_flag=output_to_gsas,
+                                                              output_dir=output_dir,
+                                                              dry_run=is_dry_run,
+                                                              epoch_time=(pulse_time == 1),
+                                                              chop_loadframe_log=chop_load_frame,
+                                                              chop_furnace_log=chop_furnace_log)
+                except RuntimeError as run_err:
+                    return False, 'Failed to chop: {0}'.format(run_err)
 
             else:
                 # do nothing but launch log window
@@ -459,7 +462,8 @@ class VdriveChop(VDriveCommand):
 
         return help_str
 
-    def parse_pick_data(self, file_name):
+    @staticmethod
+    def parse_pick_data(file_name):
         """
 
         :exception: RuntimeError for unabling to import the file

@@ -245,7 +245,7 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
             target = str(split_tup[2])
         elif auto_target:
             # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
-            target = index + 1
+            target = '{0}'.format(index + 1)
         else:
             # not allowing auto target, then must have a coding error
             raise RuntimeError('Splitter tuple has only 2 entries!')
