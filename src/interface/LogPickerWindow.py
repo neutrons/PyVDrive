@@ -3,7 +3,7 @@
 # Window for set up log slicing splitters
 #
 ########################################################################
-import sys
+import os
 import numpy
 
 from PyQt4 import QtCore, QtGui
@@ -104,7 +104,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
                      self.do_show_manual_slicer_table)
         self.connect(self.ui.pushButton_loadSlicerFile, QtCore.SIGNAL('clicked()'),
-                # TODO/ISSUE/33/NOW - Implement!
                      self.do_import_slicer_file)
 
         # Slicer table
@@ -346,6 +345,52 @@ class WindowLogPicker(QtGui.QMainWindow):
             GuiUtility.pop_dialog_information(self, message)
         else:
             GuiUtility.pop_dialog_error(self, message)
+
+        return
+
+    def do_import_slicer_file(self):
+        """ Import an ASCII file which contains the slicers.
+        The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
+        :return:
+        """
+        # TODO/FIXME/FUTURE - This method should be generalized with other slicer file parser
+
+        # get file
+        default_dir = os.getcwd()
+        slicer_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
+                                                                 'All Files (*.*)'))
+        if len(slicer_file_name) == 0:
+            # return if operation is cancelled
+            return
+
+        # parse file
+        slicer_file = open(slicer_file_name, 'r')
+        raw_lines = slicer_file.readline()
+        slicer_file.close()
+
+        slicer_list = list()
+        for line in raw_lines:
+            line = line.strip()
+            if len(line) == 0 or line[0] == '#':
+                continue
+
+            terms = line.split()
+            if len(terms) < 3:
+                continue
+            start_time = float(terms[0])
+            stop_time = float(terms[1])
+            target_ws = str(terms[2])
+            slicer_list.append((start_time, stop_time, target_ws))
+        # END-FOR
+
+        # get run start time in second
+        run_start_s = 
+
+        # set to figure
+        for slicer in slicer_list:
+            start_time, stop_time, target = slicer
+            self.ui.graphicsView_main.add_picker(start_time - run_start_s)
+            self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
 
         return
 

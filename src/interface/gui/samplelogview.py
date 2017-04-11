@@ -194,8 +194,27 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         add a picker (an indicator) and update the list of pickers' positions to parent
         :return:
         """
+        self.add_picker(self._currMousePosX)
+        # # add a picker
+        # indicator_id = self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
+        # # add to dictionary
+        # self._currentLogPickerList.append(indicator_id)
+        # # add the picker to the dictionary
+        # self._pickerRangeDict[self._currMousePosX] = indicator_id
+        #
+        # # update the new list to parent window
+        # picker_pos_list = self.get_pickers_positions()
+        # self.mySlicerUpdatedSignal.emit(picker_pos_list)
+
+        return
+
+    def add_picker(self, pos_x):
+        """
+        add a log picker
+        :return:
+        """
         # add a picker
-        indicator_id = self.add_vertical_indicator(self._currMousePosX, color='red', line_width='2')
+        indicator_id = self.add_vertical_indicator(pos_x, color='red', line_width='2')
         # add to dictionary
         self._currentLogPickerList.append(indicator_id)
         # add the picker to the dictionary
@@ -204,8 +223,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()
         self.mySlicerUpdatedSignal.emit(picker_pos_list)
-
-        return
 
     def menu_delete_picker(self):
         """
