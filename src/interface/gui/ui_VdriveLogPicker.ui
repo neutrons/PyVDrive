@@ -497,7 +497,7 @@
             <string>Manual Slicer Picker</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_11">
-            <item row="0" column="0">
+            <item row="1" column="0">
              <widget class="QPushButton" name="pushButton_showManualSlicerTable">
               <property name="font">
                <font>
@@ -506,6 +506,18 @@
               </property>
               <property name="text">
                <string>Show Table</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QPushButton" name="pushButton_loadSlicerFile">
+              <property name="font">
+               <font>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Load From File</string>
               </property>
              </widget>
             </item>

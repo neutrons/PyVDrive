@@ -103,6 +103,9 @@ class WindowLogPicker(QtGui.QMainWindow):
         #              self.do_enter_select_picker_mode)
         self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
                      self.do_show_manual_slicer_table)
+        self.connect(self.ui.pushButton_loadSlicerFile, QtCore.SIGNAL('clicked()'),
+                # TODO/ISSUE/33/NOW - Implement!
+                     self.do_import_slicer_file)
 
         # Slicer table
         # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
@@ -132,14 +135,6 @@ class WindowLogPicker(QtGui.QMainWindow):
                      self.evt_quit_no_save)
 
         # # Event handling for pickers
-        # TODO/ISSUE/44 - Move part of them down to Figure class
-        # self.ui.graphicsView_main._myCanvas.mpl_connect('button_press_event',
-        #                                                 self.on_mouse_press_event)
-        # self.ui.graphicsView_main._myCanvas.mpl_connect('button_release_event',
-        #                                                 self.on_mouse_release_event)
-        # self.ui.graphicsView_main._myCanvas.mpl_connect('motion_notify_event',
-        #                                                 self.on_mouse_motion)
-
         self._mtsFileLoaderWindow = None
 
         # child windows
