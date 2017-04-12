@@ -51,6 +51,7 @@ class DataReductionTracker(object):
 
         # status flag
         self._isReduced = False
+        self._isChopped = False
 
         # initialize states of reduction beyond
         self._badPulseRemoved = False
@@ -175,6 +176,24 @@ class DataReductionTracker(object):
         return self._iptsNumber
 
     @property
+    def is_chopped(self):
+        """
+        check whether the reduction is about a chopped run
+        :return:
+        """
+        return self._isChopped
+
+    @is_chopped.setter
+    def is_chopped(self, status):
+        """
+        set the state that the run is chopped
+        :return:
+        """
+        self._isChopped = status
+
+        return
+
+    @property
     def is_chopped_run(self):
         """
         check whether the reduction is about a chopped run
@@ -284,6 +303,13 @@ class DataReductionTracker(object):
             self._choppedWorkspaceNameList = workspace_name_list[:]
         else:
             self._choppedWorkspaceNameList.extend(workspace_name_list)
+
+        return
+
+    def set_chopped_nexus_files(self, chopped_file_list, append=True):
+        """
+        """
+        # TODO/FIXME/ISSUE/33 - Make it work
 
         return
 
@@ -446,7 +472,7 @@ class ReductionManager(object):
             return False, error_msg
 
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-        tracker.is_chopped_run = True
+        # tracker.is_chopped_run = True
         tracker.is_reduced = False
         tracker.is_chopped = True
         if chopped_ws_name_list is not None:

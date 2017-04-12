@@ -384,7 +384,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # END-FOR
 
         # get run start time in second
-        run_start_s = 
+        run_start_s = int(self.ui.label_runStartEpoch.text())
 
         # set to figure
         for slicer in slicer_list:
