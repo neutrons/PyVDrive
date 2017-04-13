@@ -218,7 +218,7 @@ class DataArchiveManager(object):
 
         return raw_event_file_name
 
-    def get_experiment_run_info(self, archive_key, start_run=None, end_run=None):
+    def get_experiment_run_info(self, archive_key, run_number_list=None):
         """ Get the information of all runs from an IPTS that has been scanned before
         Purpose:
             Get data path information for all runs of an IPTS number
@@ -228,8 +228,7 @@ class DataArchiveManager(object):
             Experimental run information including run number, creation time and full file path will be returned
 
         :param archive_key:
-        :param start_run:
-        :param end_run:
+        :param run_number_list
         :return: list of dictionary, each of which is the information of a run
         """
         # check the validity of the archive key
@@ -240,10 +239,11 @@ class DataArchiveManager(object):
             '' % (str(archive_key), str(self._iptsInfoDict.keys()))
 
         # Get run information
-        if start_run is None and end_run is None:
+        if run_number_list is None:
+            # all of them
             run_dict_list = self._iptsInfoDict[archive_key].values()
         else:
-            run_dict_list = self.get_partial_run_info(archive_key, start_run, end_run)
+            run_dict_list = self.get_partial_run_info(archive_key, run_number_list)
         # END-IF
 
         return run_dict_list
@@ -344,7 +344,7 @@ class DataArchiveManager(object):
 
         return ipts, run_number
 
-    def get_partial_run_info(self, archive_key, start_run, end_run):
+    def get_partial_run_info(self, archive_key, run_number_list):
         """
         Get a subset of runs (with all information) by specified range of run numbers
         :param archive_key:
@@ -353,21 +353,17 @@ class DataArchiveManager(object):
         :return:
         """
         # check
-        assert isinstance(archive_key, str), 'Archive key %s must be a string but not %d.' \
-                                             '' % (str(archive_key), type(archive_key))
-        assert isinstance(start_run, int) and isinstance(end_run, int) and start_run <= end_run, \
-            'start run %s (%s vs int) must be less or equal to end run %s (%d vs int).' \
-            '' % (str(start_run), type(start_run), str(end_run), type(end_run))
+        assert isinstance(archive_key, str) or isinstance(archive_key, int), 'Archive key %s must be a string or integer but not %s.' % (str(archive_key), type(archive_key))
+        assert isinstance(run_number_list, list), 'bla bla 333'
 
         # get partial list
         partial_list = list()
-        for run_number in sorted(self._iptsInfoDict[archive_key].keys()):
-            run_dict = self._iptsInfoDict[archive_key][run_number]
-            if start_run <= run_number <= end_run:
+        for run_number in run_number_list:
+            if run_number in self._iptsInfoDict[archive_key]:
+                run_dict = self._iptsInfoDict[archive_key][run_number]
                 partial_list.append(run_dict)
-            elif run_number > end_run:
-                # quit the loop as searching is finished
-                break
+            else:
+                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.'.format(run_number)
 
         return partial_list
 

@@ -2265,6 +2265,12 @@ class ReduceVulcanData(object):
                     return False, message
             # END-IF
 
+            # check output
+            out_dir = self._reductionSetup.get_gsas_dir()
+            if os.path.exists(out_dir) is False:
+                return False, 'Output directory "{0}" does not exist.'.format(out_dir)
+
+
             mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,

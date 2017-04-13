@@ -623,7 +623,8 @@ class ProjectManager(object):
         :return: None
         """
         # Check requirements
-        assert isinstance(run_number_list, list)
+        assert isinstance(run_number_list, list), 'blabla'
+        print '[INFO] Mark runs {0} to reduce.'.format(run_number_list)
 
         # Mark each runs
         for run_number in sorted(run_number_list):
@@ -640,6 +641,21 @@ class ProjectManager(object):
                 # mark runs to reduce
                 self._sampleRunReductionFlagDict[run_number] = True
         # END-FOR
+
+        return
+
+    def mark_runs_reduced(self, run_number_list, reduction_state_list=None):
+        """ Mark some runs to have been reduced 
+        """
+        # TODO/NOW/FIXME/33 - Implement more for the reduction state
+        assert isinstance(run_number_list, list), 'blabla'
+
+        for run_number in run_number_list:
+            if run_number in self._sampleRunReductionFlagDict:
+                self._sampleRunReductionFlagDict[run_number] = False
+                print '[Info] Run {0} is in ReductionFlagDict.'.format(run_number)
+            else:
+                print '[Warning] Run {0} is not in ReductionFlagDict. It cannot be marked as being reduced.'.format(run_number)
 
         return
 
@@ -710,7 +726,7 @@ class ProjectManager(object):
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
-            raise RuntimeError('It is not allowed to process multiple standard samples in a single call.'.format(run_number_list))
+            raise RuntimeError('It is not allowed to process multiple standard samples {0} in a single call.'.format(run_number_list))
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'

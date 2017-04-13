@@ -1057,6 +1057,10 @@ class VDriveAPI(object):
             # END-TRY-EXCEPT
         # END-IF-ELSE
 
+        # mark the runs be reduced so that they will not be reduced again next time.
+        reduction_state_list = None
+        self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
+
         return status, ret_obj
 
     def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):

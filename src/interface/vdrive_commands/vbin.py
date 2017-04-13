@@ -178,10 +178,12 @@ class VBin(procss_vcommand.VDriveCommand):
 
         else:
             # reduce regular data
+            print '[DB...BAT] VBIN CHK P1 run number list: {0}'.format(run_number_list)
             archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
                                                                                                  run_number_list)
 
-            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key, run_number_list)
+            print '[DB...BAT] VBIN CHK P2 run info list: {0}'.format(run_info_list)
             self._controller.add_runs_to_project(run_info_list)
 
             # set vanadium runs
@@ -192,6 +194,7 @@ class VBin(procss_vcommand.VDriveCommand):
             run_number_list = list()
             for run_info in run_info_list:
                 run_number_list.append(run_info['run'])
+            print '[DB...BAT] VBIN run number list: {0}'.format(run_number_list)
             self._controller.set_runs_to_reduce(run_number_list)
 
             # reduce by regular runs
