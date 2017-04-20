@@ -45,6 +45,52 @@ class VdriveCommandProcessor(object):
         """
         return self._commandList[:]
 
+    @staticmethod
+    def parse_command_arguments(command, command_args):
+        """
+        parse command arguments and store to a dictionary, whose key is argument key and
+        value is argument value
+        a valid argument is in format as: key=value
+        and two arguments are separated by a comma ','
+        :param command:
+        :param command_args:
+        :return:
+        """
+        arg_dict = dict()
+        for index, term in enumerate(command_args):
+            print '[DB] Input: ', term
+
+            term = term.strip()
+            if len(term) == 0:
+                # empty string. might appear at the end of the command
+                continue
+
+            items = term.split('=', 1)
+            if len(items) == 2:
+                # force command argument to be UPPER case in order to support case-insensitive syntax
+                command_arg = items[0].upper()
+
+                # special treatment for typical user type
+                if command_arg == 'ITPS':
+                    print '[WARNING] Argument ITPS is not supported. Auto correct it to IPTS.'
+                    command_arg = 'IPTS'
+
+                # process argument value. replace all the ', "
+                arg_value = items[1]
+                arg_value = arg_value.replace('\'', '')
+                arg_value = arg_value.replace('"', '')
+
+                # set
+                arg_dict[command_arg] = arg_value
+            else:
+                err_msg = 'command %s %d-th term <%s> is not valid. Must have a = sign!' % (command, index, term)
+                print '[DB...ERROR] ', err_msg
+                return False, err_msg
+            # END-IF
+        # END-FOR
+
+        return arg_dict
+
     def process_commands(self, command, command_args):
         """
         Process commands string
@@ -58,9 +104,14 @@ class VdriveCommandProcessor(object):
         assert isinstance(command, str), 'Command %s must be a string but not %s.' \
                                          '' % (str(command),  str(type(command)))
 
+        # support command case insensitive
+        raw_command = command
+        command = command.upper()
+
+        # check command's validity
         if command not in self._commandList:
-            return False, 'Command %s is not in supported command list, which includes %s' \
-                          '' % (str(self._commandList), str(self._commandList))
+            return False, 'Command %s is not in supported command list: %s' \
+                          '' % (raw_command, str(self._commandList))
 
         # command body
         assert isinstance(command_args, list)
@@ -70,35 +121,33 @@ class VdriveCommandProcessor(object):
             status, err_msg = self._process_vdrive(command_args)
             return status, err_msg
 
-        # process regular VDRIVE command
-        # parse command arguments to dictionary
-        arg_dict = dict()
-        for index, term in enumerate(command_args):
-            items = term.split('=', 1)
-            if len(items) == 2:
-                arg_dict[items[0]] = items[1]
-            else:
-                err_msg = 'Command %s %d-th term <%s> is not valid.' % (command, index, term)
-                print '[DB...ERROR] ', err_msg
-                return False, err_msg
-            # END-IF
-        # END-FOR
+        # process regular VDRIVE command by parsing command arguments and store them to a dictionary
+        arg_dict = self.parse_command_arguments(command, command_args)
 
         # call the specific command class builder
         if command == 'CHOP':
+            # chop
             status, err_msg = self._process_chop(arg_dict)
-        elif command == 'VBIN':
+        elif command == 'VBIN' or command == 'VDRIVEBIN':
+            # bin
             status, err_msg = self._process_vbin(arg_dict)
+
         elif command == 'VDRIVEVIEW' or command == 'VIEW':
+            # view
             status, err_msg = self._process_view(arg_dict)
+
         elif command == 'MERGE':
+            # merge
             status, err_msg = self._process_merge(arg_dict)
+
         elif command == 'AUTO':
             # auto reduction command
             status, err_msg = self._process_auto_reduction(arg_dict)
+
         elif command == 'VPEAK':
             # process vanadium peak
             status, err_msg = self._process_vanadium_peak(arg_dict)
+
         else:
             raise RuntimeError('Impossible situation!')
 
@@ -110,13 +159,11 @@ class VdriveCommandProcessor(object):
         :param arg_dict:
         :return:
         """
-        print '[DB...BAT] Am I reached 2'
         try:
             processor = vdrive_commands.vbin.AutoReduce(self._myController, arg_dict)
         except vdrive_commands.procss_vcommand.CommandKeyError as com_err:
             return False, 'Command argument error: %s.' % str(com_err)
 
-        print '[DB...BAT] Am I reached 3'
         if len(arg_dict) == 0:
             status = True
             err_msg = processor.get_help()
@@ -140,7 +187,6 @@ class VdriveCommandProcessor(object):
 
         # execute
         status, message = self._process_command(processor, arg_dict)
-        print '[DB...BAT] ', status, message
 
         # get information from VdriveChop
         self._chopIPTSNumber, self._chopRunNumberList = processor.get_ipts_runs()
@@ -149,7 +195,25 @@ class VdriveCommandProcessor(object):
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
             log_window.load_run(self._chopRunNumberList[0])
+            log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
         # END-IF
+
+        return status, message
+
+    def _process_merge(self, arg_dict):
+        """
+        process command MERGE
+        :param arg_dict:
+        :return:
+        """
+        # create a new VdriveMerge instance
+        try:
+            processor = vdrive_commands.vmerge.VdriveMerge(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
+
+        # execute
+        status, message = self._process_command(processor, arg_dict)
 
         return status, message
 
@@ -169,6 +233,9 @@ class VdriveCommandProcessor(object):
         status, message = self._process_command(processor, arg_dict)
         if not status:
             return status, message
+        elif len(message) > 0:
+            # this is for help
+            return status, message
 
         view_window = self._mainWindow.do_view_reduction()
         view_window.set_ipts_number(processor.get_ipts_number())
@@ -176,7 +243,7 @@ class VdriveCommandProcessor(object):
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
-            view_window.add_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_tuple_list())
             # plot
             view_window.plot_run(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
@@ -188,7 +255,7 @@ class VdriveCommandProcessor(object):
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
-            view_window.add_run_numbers(processor.get_run_number_list())
+            view_window.add_run_numbers(processor.get_run_tuple_list())
             view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
         # END-FOR
 
@@ -217,8 +284,14 @@ class VdriveCommandProcessor(object):
             controller_data_key = processor.get_loaded_data()
             ipts_number, run_number_list = processor.get_ipts_runs()
             van_run_number = processor.get_vanadium_run()
+            # TODO/FUTURE/BETTER:QUALITY - shall we merge add_data_set() to add_run_numbers()???
             viewer_data_key = data_viewer.add_data_set(ipts_number, van_run_number, controller_data_key)
             data_viewer.plot_data(viewer_data_key, bank_id=1)
+
+            if processor.to_shift:
+                data_viewer.set_vanadium_fwhm(2)
+            else:
+                data_viewer.set_vanadium_fwhm(7)
         # END-IF
 
         return status, message
@@ -229,9 +302,14 @@ class VdriveCommandProcessor(object):
          :param arg_dict:
          :return:
          """
-        processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
+        try:
+            processor = vdrive_commands.vbin.VBin(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
 
-        return self._process_command(processor, arg_dict)
+        status, message = self._process_command(processor, arg_dict)
+
+        return status, message
 
     @staticmethod
     def _process_command(command_processor, arg_dict):
@@ -265,7 +343,7 @@ class VdriveCommandProcessor(object):
             return True, help_msg
 
         if args == '-H':
-            msg = 'Supported commands: %s.' % str(self._commandList)
+            msg = 'Supported arguments: %s.' % str(self._commandList)
             return True, msg
 
-        return False, 'Arguments are not supported!'
+        return False, 'Arguments {0} are not supported!'.format(args)

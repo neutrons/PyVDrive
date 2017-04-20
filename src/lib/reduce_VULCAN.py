@@ -50,7 +50,7 @@ import sys
 import numpy
 import pandas as pd
 
-sys.path.append("/opt/mantidnightly/bin")
+# sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -197,6 +197,8 @@ MTS_Header_List = [
     ('EuroTherm2SP', 'eurotherm2.sp'),
     ('EuroTherm2Temp', 'eurotherm2.temp')]
 
+Furnace_Header_List = ["furnace.temp1", "furnace.temp2", "furnace.power"]
+
 
 # Generic DAQ log output.  first: head title; second: unit
 Generic_DAQ_List = [("TimeStamp", ""),
@@ -241,6 +243,10 @@ class ReductionSetup(object):
         self._characterFileName = None
         self._vulcanBinsFileName = None
 
+        # binning parameters
+        self._binningParameters = None
+        self._defaultBinSize = -0.001
+
         # flag whether the run is an alignment run or not
         self._isAlignmentRun = None
         self._reducedWorkspaceName = None
@@ -261,6 +267,9 @@ class ReductionSetup(object):
         # vanadium related
         self._vanadiumFlag = False
         self._vanadium3Tuple = None
+
+        # about chopping
+        self._choppedSampleLogType = 'loadframe'
 
         return
 
@@ -478,9 +487,12 @@ class ReductionSetup(object):
         if throw_not_set:
             if self._splitterWsName is None or self._splitterInfoName is None:
                 raise RuntimeError('Splitters (workspaces) have not been set.')
-            if not (AnalysisDataService.doesExist(self._splitterWsName)
-                    and AnalysisDataService.doesExist(self._splitterInfoName)):
-                raise RuntimeError('Splitters (workspaces) do not exist.')
+            if not AnalysisDataService.doesExist(self._splitterWsName):
+                raise RuntimeError('Splitters workspace {0} cannot be found in ADS.'.format(self._splitterWsName))
+            if not AnalysisDataService.doesExist(self._splitterInfoName):
+                print '[WARNING] Splitters information workspace {0} do not exist.'.format(self._splitterInfoName)
+                self._splitterInfoName = None
+        # END-IF
 
         return self._splitterWsName, self._splitterInfoName
 
@@ -640,15 +652,21 @@ class ReductionSetup(object):
 
         return
 
-    def set_focus_file(self, file_name):
+    def set_binning_parameters(self, min_tof, max_tof, bin_size):
         """
-        set the diffraction focusing calibration file name
-        :param file_name:
+
+        :param min_tof:
+        :param max_tof:
+        :param bin_size:
         :return:
         """
-        assert isinstance(file_name, str), 'Input arg type error.'
+        # check: blabla
+        # TODO/ISSUE/NOW
 
-        self._focusFileName = file_name
+        if bin_size is None:
+            bin_size = self._defaultBinSize
+
+        self._binningParameters = (min_tof, -1 * abs(bin_size), max_tof)
 
         return
 
@@ -661,6 +679,18 @@ class ReductionSetup(object):
         assert isinstance(file_name, str), 'Input arg type error.'
 
         self._characterFileName = file_name
+
+        return
+
+    def set_focus_file(self, file_name):
+        """
+        set the diffraction focusing calibration file name
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str), 'Input arg type error.'
+
+        self._focusFileName = file_name
 
         return
 
@@ -1180,6 +1210,7 @@ class ReduceVulcanData(object):
         self._reducedDataFiles = list()
 
         self._choppedDataDirectory = None
+        self._chopExportedLogType = 'loadframe'
 
         return
 
@@ -1219,159 +1250,192 @@ class ReduceVulcanData(object):
 
         return
 
-    def chop_reduce(self, chop_dir=None):
+    @staticmethod
+    def get_target_split_ws_index(table_ws):
         """
-        Chop and reduce
+
+        :param table_ws:
         :return:
         """
-        def get_target_split_ws_index(table_ws):
-            """
-
-            :param table_ws:
-            :return:
-            """
-            target_set = set()
-            if table_ws.__class__.__name__.count('SplittersWorkspace') == 1:
-                # splitters workspace
-                for i_row in range(table_ws.rowCount()):
-                    target_ws_index = int(table_ws.cell(i_row, 2))
-                    target_set.add(target_ws_index)
+        target_set = set()
+        if table_ws.__class__.__name__.count('SplittersWorkspace') == 1:
+            # splitters workspace
+            for i_row in range(table_ws.rowCount()):
+                target_ws_index = int(table_ws.cell(i_row, 2))
+                target_set.add(target_ws_index)
                 # END-FOR
-            # END-IF
+        # END-IF
 
-            return sorted(list(target_set))
+        return sorted(list(target_set))
 
-        # check whether it is good to go
-        assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
-        # configure the ReductionSetup
-        self._reductionSetup.process_configurations()
+    # def chop_and_reduce_large_output(self, split_ws_name, split_info_table):
+    #     """
+    #     Chop and reduce in the special case of large amount of output.
+    #     Calling SNSPowderReduction() will have to re-load the data, which is time consuming.  Therefore,
+    #     the workflow is to
+    #     1. reduce the event data by SNSPowderReduction to 2-spectrum event workspace, whose events are not compressed
+    #     2. chop the reduced workspace with limited amount of slicers a time
+    #     :param split_ws_name:
+    #     :param split_info_table:
+    #     :return:
+    #     """
+    #     # construct reduction argument diction
+    #     sns_arg_dict = dict()
+    #     sns_arg_dict['Filename'] = self._reductionSetup.get_event_file()
+    #     sns_arg_dict['CalibrationFile'] = self._reductionSetup.get_focus_file()
+    #     sns_arg_dict['CharacterizationRunsFile'] = self._reductionSetup.get_characterization_file()
+    #     sns_arg_dict['PreserveEvents'] = True
+    #     sns_arg_dict['Binning'] = '-0.001'
+    #     sns_arg_dict['SaveAS'] = "",
+    #     sns_arg_dict['OutputDirectory'] = self._reductionSetup.get_gsas_dir(),
+    #     sns_arg_dict['NormalizeByCurrent'] = False,
+    #     sns_arg_dict['FilterBadPulses'] = 0,
+    #     sns_arg_dict['CompressTOFTolerance'] = 0.  # do not compress TOF events for further chopping
+    #     sns_arg_dict['FrequencyLogNames'] = "skf1.speed"
+    #     sns_arg_dict['WaveLengthLogNames'] = "skf12.lambda"
+    #
+    #     # do regular reduction
+    #     result = mantidsimple.SNSPowderReduction(**sns_arg_dict)
+    #     print '[DB] Reduction output = ', result
+    #
+    #     # then it is the time to splitting
+    #     reduce_success, reduced_result_tup = self.get_reduced_workspaces(chopped=False)
+    #     if not reduce_success:
+    #         return False, 'Failed to reduce data file {0}'.format(sns_arg_dict['Filename']), None
+    #
+    #     # get raw reduced workspace
+    #     reduced_raw_ws_name = result[0]
+    #
+    #     # if the number of output workspaces are too much, it could cause severe memory issue.
+    #     num_outputs = self.get_number_chopped_ws(split_ws_name)
+    #     NUM_SPLITTERS = 20
+    #     num_loops = num_outputs / NUM_SPLITTERS
+    #
+    #     # create chopped data directory
+    #     chop_dir = self.create_chop_dir()
+    #
+    #     message = ''
+    #
+    #     if num_outputs % NUM_SPLITTERS > 0:
+    #         num_loops += 1
+    #
+    #     gsas_index = 1
+    #     for i_loop in range(num_loops):
+    #         # get the partial splitters workspaces
+    #         sub_split_ws = self.get_sub_splitters(i_loop * NUM_SPLITTERS, (i_loop + 1) * NUM_SPLITTERS)
+    #         result = mantidsimple.FilterEvents(InputWorkspace=reduced_ws_name,
+    #                                            SplitterWorkspace=sub_split_ws,
+    #                                            InformationWorkspace=split_info_table,
+    #                                            FilterByPulseTime=True,
+    #                                            OutputWorkspaceIndexedFrom1=False,
+    #                                            CorrectionToSample="None",
+    #                                            SpectrumWithoutDetector="Skip",
+    #                                            SplitSampleLogs=False,
+    #                                            OutputTOFCorrectionWorkspace=reduced_ws_name)
+    #         # TODO/FIXME/ISSUE/NOW/ It doesn't work!
+    #         print '[DB...BAT] Filter Events Result: ', result
+    #         chopped_ws_name_list = result[1]
+    #
+    #         # convert the chopped workspaces to VULCAN-style GSAS file
+    #         for chopped_ws_name in chopped_ws_name_list:
+    #             # get the split workspace's name
+    #
+    #             # check whether the proposed-chopped workspace does exist
+    #             if AnalysisDataService.doesExist(chopped_ws_name):
+    #                 pass
+    #             else:
+    #                 # there won't be a workspace produced if there is no neutron event within the range.
+    #                 message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(reduced_ws_name)
+    #                 everything_is_right = False
+    #
+    #             # convert unit and save for VULCAN-specific GSAS
+    #             tof_ws_name = '{0}_TOF'.format(chopped_ws_name)
+    #             mantidsimple.ConvertUnits(InputWorkspace=chopped_ws_name,
+    #                                       OutputWorkspace=tof_ws_name,
+    #                                       Target="TOF",
+    #                                       EMode="Elastic",
+    #                                       AlignBins=False)
+    #
+    #             # overwrite the original file
+    #             vdrive_bin_ws_name = chopped_ws_name
+    #
+    #             # it might be tricky to give out the name of GSAS
+    #             gsas_file_name = os.path.join(chop_dir, '%d.gda'.format(gsas_index))
+    #
+    #             # save to VULCAN GSAS and add a property as Note
+    #             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+    #                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+    #                                        OutputWorkspace=vdrive_bin_ws_name,
+    #                                        GSSFilename=gsas_file_name,
+    #                                        IPTS=self._reductionSetup.get_ipts_number(),
+    #                                        GSSParmFilename="Vulcan.prm")
+    #
+    #             # Add special property to output workspace
+    #             final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+    #             final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+    #
+    #             # update message
+    #             message += '%d-th: %s\n' % (gsas_index, gsas_file_name)
+    #             gsas_index += 1
+    #         # END-FOR
+    #
+    #         # mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
+    #         #                                 PreserveEvents=True,
+    #         #                                 CalibrationFile=self._reductionSetup.get_focus_file(),
+    #         #                                 CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
+    #         #                                 Binning="-0.001",
+    #         #                                 SaveAS="",
+    #         #                                 OutputDirectory=self._reductionSetup.get_gsas_dir(),
+    #         #                                 NormalizeByCurrent=False,
+    #         #                                 FilterBadPulses=0,
+    #         #                                 CompressTOFTolerance=0.,
+    #         #                                 FrequencyLogNames="skf1.speed",
+    #         #                                 WaveLengthLogNames="skf12.lambda",
+    #         #                                 SplittersWorkspace=sub_split_ws,
+    #         #                                 SplitInformationWorkspace=split_info_table)
+    #
+    #     # END-FOR
+    #
+    #     return everything_is_right, message, chopped_ws_name_list
 
-        # get the chopped data directory if not specified
-        if chop_dir is None:
-            chop_dir = self._reductionSetup.get_reduced_data_dir()
-
-        message = 'Output GSAS files include:\n'
-
-        # get splitters workspaces
-        split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
-
-        # call SNSPowderReduction for chopping and
-        mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
-                                        PreserveEvents=True,
-                                        CalibrationFile=self._reductionSetup.get_focus_file(),
-                                        CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
-                                        Binning="-0.001",
-                                        SaveAS="",
-                                        OutputDirectory=self._reductionSetup.get_gsas_dir(),
-                                        NormalizeByCurrent=False,
-                                        FilterBadPulses=0,
-                                        CompressTOFTolerance=0.,
-                                        FrequencyLogNames="skf1.speed",
-                                        WaveLengthLogNames="skf12.lambda",
-                                        SplittersWorkspace=split_ws_name,
-                                        SplitInformationWorkspace=split_info_table
-                                        )
-
-        # create GSAS file for split workspaces
-        # convert the chopped data to GSAS file in VULCAN's special bin
-        info_table = AnalysisDataService.retrieve(split_info_table)
-        num_split_ws = info_table.rowCount()
-
-        target_chop_index_list = get_target_split_ws_index(split_ws_name)
-
-        everything_is_right = True
-
-        # find out a naming issue
-        run_str = '%d' % self._reductionSetup.get_run_number()
-        if chop_dir.count(run_str) == 0:
-            use_special_name = True
-        else:
-            use_special_name = False
-
-        chopped_ws_name_list = list()
-        for i_ws in range(num_split_ws):
-            # get the split workspace's name
-            ws_index = int(info_table.cell(i_ws, 0))
-            reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
-
-            # check whether the proposed-chopped workspace does exist
-            if AnalysisDataService.doesExist(reduced_ws_name):
-                chopped_ws_name_list.append(reduced_ws_name)
-            else:
-                # there won't be a workspace produced if there is no neutron event within the range.
-                if ws_index in target_chop_index_list:
-                    message += 'Reduced workspace %s does not exist. Investigate it!\n' % reduced_ws_name
-                    everything_is_right = False
-                else:
-                    message += 'Input reduced workspace %s does not exist, maybe no neutron.\n' % reduced_ws_name
-                continue
-
-            # convert unit and save for VULCAN-specific GSAS
-            tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
-            mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                      OutputWorkspace=tof_ws_name,
-                                      Target="TOF",
-                                      EMode="Elastic",
-                                      AlignBins=False)
-
-            # overwrite the original file
-            vdrive_bin_ws_name = reduced_ws_name
-
-            # it might be tricky to give out the name of GSAS
-            if use_special_name:
-                gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
-                                                                       ws_index+1))
-            else:
-                gsas_file_name = os.path.join(chop_dir, '%d.gda' % (ws_index + 1))
-
-            # save to VULCAN GSAS and add a property as Note
-            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                       OutputWorkspace=vdrive_bin_ws_name,
-                                       GSSFilename=gsas_file_name,
-                                       IPTS=self._reductionSetup.get_ipts_number(),
-                                       GSSParmFilename="Vulcan.prm")
-
-            # Add special property to output workspace
-            final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-            final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-            # update message
-            message += '%d-th: %s\n' % (i_ws, gsas_file_name)
-
-        # END-FOR
-
-        return everything_is_right, message, chopped_ws_name_list
-
-    def create_chop_dir(self):
-        """
-        create directory for chopped data
-        :return:
-        """
-        # get output file name with creating necessary directory
-        try:
-            parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
-            if not os.path.exists(parent_dir):
-                os.mkdir(parent_dir)
-            chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-        except OSError as os_err:
-            # mostly because permission to write
-            print '[WARNING] Unable to write to shared folder due to %s.' % str(os_err)
-
-            # get local directory
-            if not os.path.exists(self._reductionSetup.output_directory):
-                os.mkdir(self._reductionSetup.output_directory)
-            chop_dir = os.path.join(self._reductionSetup.output_directory,
-                                    '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-                # END
-
-        self._choppedDataDirectory = chop_dir
-
-        return
+    # def create_chop_dir(self):
+    #     """
+    #     create directory for chopped data
+    #     :return:
+    #     """
+    #     # get output file name with creating necessary directory
+    #     try:
+    #         # output destination: ChoppedData/binned_data
+    #         # FIXME/TODO/ISSUE/Ke - Choppeddata or binned_data?
+    #         # parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+    #         parent_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/' % self._reductionSetup.get_ipts_number()
+    #
+    #         if not os.path.exists(parent_dir):
+    #             os.mkdir(parent_dir)
+    #         chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
+    #         if not os.path.exists(chop_dir):
+    #             os.mkdir(chop_dir)
+    #         if os.access(chop_dir, os.W_OK) is False:
+    #             raise OSError('It is very likely that standard chopped directory {0} was created by other users.'
+    #                           ''.format(chop_dir))
+    #
+    #     except OSError as os_err:
+    #         # mostly because permission to write
+    #         print '[WARNING] Unable to write to shared folder. Reason: {0}'.format(os_err)
+    #
+    #         # get local directory
+    #         if not os.path.exists(self._reductionSetup.output_directory):
+    #             os.mkdir(self._reductionSetup.output_directory)
+    #         chop_dir = os.path.join(self._reductionSetup.output_directory,
+    #                                 '%d' % self._reductionSetup.get_run_number())
+    #         if not os.path.exists(chop_dir):
+    #             os.mkdir(chop_dir)
+    #     # END
+    #
+    #     # set chop_dir to class variable
+    #     self._choppedDataDirectory = chop_dir
+    #
+    #     return
 
     def dry_run(self):
         """
@@ -1440,29 +1504,6 @@ class ReduceVulcanData(object):
 
         return
 
-    def execute_chop_reduction(self, clear_workspaces=True):
-        """
-        Execute the chopping and reduction including exporting the log files with chopped data
-        :return:
-        """
-        # create output directory
-        self.create_chop_dir()
-
-        # chop and reduce
-        status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
-
-        # create the log files
-        self.generate_sliced_logs(output_ws_list)
-
-        # clear workspace? or later
-        if clear_workspaces:
-            for ws_name in output_ws_list:
-                mantidsimple.DeleteWorkspace(Workspace=ws_name)
-        else:
-            self._reducedWorkspaceList.extend(output_ws_list)
-
-        return
-
     def execute_vulcan_reduction(self):
         """
         Execute the command for reduce, including
@@ -1482,19 +1523,23 @@ class ReduceVulcanData(object):
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file
-        print '[DB] Abut to reduce powder diffraction data for {0}'.format(self._reductionSetup)
         is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
-        if not is_reduce_good:
+        if not is_reduce_good and msg_gsas.count('Code001') == 0:
+            # error code: Code001 does not mean a bad reduction
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
         if self._reductionSetup.is_standard:
             # standard sample for VULCAN
             gsas_file = self.get_reduced_files()[0]
+            print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
             except IOError as io_err:
-                raise RuntimeError('Unable to write standard GSAS file to '
-                                   '{0} due to {1}'.format(standard_dir, io_err))
+                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}' \
+                      ''.format(standard_dir, io_err)
+            except OSError as os_err:
+                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}' \
+                      ''.format(standard_dir, os_err)
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
@@ -1563,6 +1608,10 @@ class ReduceVulcanData(object):
         except RuntimeError as run_err:
             message = 'Exporting experiment record to %s due to %s.' % (self._reductionSetup.get_record_file(),
                                                                         str(run_err))
+            return False, message
+        except ValueError as value_err:
+            message = 'Exporting experiment record to {0} failed due to {1}.' \
+                      ''.format(self._reductionSetup.get_record_file(), value_err)
             return False, message
 
         # Set up the mode for global access
@@ -1749,8 +1798,7 @@ class ReduceVulcanData(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         furnace_log_file_name = os.path.join(output_directory, "furnace%d.txt" % run_number)
-        sample_log_names = ["furnace.temp1", "furnace.temp2", "furnace.power"]
-        self.generate_csv_log(furnace_log_file_name, sample_log_names, None)
+        self.generate_csv_log(furnace_log_file_name, Furnace_Header_List, None)
 
         return
 
@@ -1930,15 +1978,23 @@ class ReduceVulcanData(object):
 
         return
 
-    def generate_sliced_logs(self, ws_name_list):
+    def generate_sliced_logs(self, ws_name_list, log_type, append=False):
         """
         generate sliced logs
         :param ws_name_list:
+        :param log_type: either loadframe or furnace
+        :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
         # check
         assert isinstance(ws_name_list, list) and len(ws_name_list) > 0, 'Workspace name list must be a non-' \
                                                                          'empty list'
+        if log_type != 'loadframe' and log_type != 'furnace':
+            raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
+                               'It must be either furnace or loadframe'.format(log_type, type(log_type)))
+        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
+
+        # get workspaces and properties
         ws_name_list.sort()
 
         # get the properties' names list
@@ -1950,8 +2006,6 @@ class ReduceVulcanData(object):
             p_name = sample_log.name
             property_name_list.append(p_name)
         property_name_list.sort()
-
-        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
 
         # start value
         start_file_name = os.path.join(self._choppedDataDirectory,
@@ -1967,17 +2021,35 @@ class ReduceVulcanData(object):
         mean_series_dict = dict()
         end_series_dict = dict()
         mts_columns = list()
-        for entry in MTS_Header_List:
-            pd_series = pd.Series()
-            mts_name, log_name = entry
-            start_series_dict[mts_name] = pd_series
-            mean_series_dict[mts_name] = pd_series
-            end_series_dict[mts_name] = pd_series
-            mts_columns.append(mts_name)
 
-            if log_name not in property_name_list:
-                print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
-        # END-FOR
+        if log_type == 'loadframe':
+            # loadframe
+            for entry in MTS_Header_List:
+                pd_series = pd.Series()
+                mts_name, log_name = entry
+                start_series_dict[mts_name] = pd_series
+                mean_series_dict[mts_name] = pd_series
+                end_series_dict[mts_name] = pd_series
+                mts_columns.append(mts_name)
+
+                if log_name not in property_name_list:
+                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+            # END-FOR
+        else:
+            # furnace
+            for entry in Furnace_Header_List:
+                pd_series = pd.Series()
+                mts_name = entry
+                log_name = entry
+                start_series_dict[mts_name] = pd_series
+                mean_series_dict[mts_name] = pd_series
+                end_series_dict[mts_name] = pd_series
+                mts_columns.append(mts_name)
+
+                if log_name not in property_name_list:
+                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+            # END-FOR
+        # END-IF-ELSE
 
         # go through workspaces
         for i_ws, ws_name in enumerate(ws_name_list):
@@ -1989,51 +2061,116 @@ class ReduceVulcanData(object):
             assert run_start == run_start_i, '"run_start" of all the split workspaces should be same!'
 
             # get difference in REAL starting time (proton_charge[0])
-            real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            try:
+                real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            except IndexError:
+                print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
+                continue
+
             time_stamp = real_start_time_i.total_nanoseconds()
             # time (step) in seconds
             diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9
 
-            for entry in MTS_Header_List:
-                mts_name, log_name = entry
-                if len(log_name) > 0 and log_name in property_name_list:
-                    # regular log
-                    sample_log = workspace_i.run().getProperty(log_name).value
-                    start_value = sample_log[0]
-                    mean_value = sample_log.mean()
-                    end_value = sample_log[-1]
-                elif mts_name == 'TimeStamp':
-                    # time stamp
-                    start_value = mean_value = end_value = float(time_stamp)
-                elif mts_name == 'Time [sec]':
-                    # time step
-                    start_value = mean_value = end_value = diff_time
-                elif len(log_name) > 0:
-                    # sample log does not exist in NeXus file. warned before. ignore!
-                    start_value = mean_value = end_value = 0.
-                else:
-                    # unknown
-                    print '[ERROR] MTS log name %s is cannot be found.' % mts_name
-                    start_value = mean_value = end_value = 0.
-                # END-IF-ELSE
+            if log_type == 'loadframe':
+                # loadframe
+                for entry in MTS_Header_List:
+                    mts_name, log_name = entry
+                    if len(log_name) > 0 and log_name in property_name_list:
+                        # regular log
+                        sample_log = workspace_i.run().getProperty(log_name).value
+                        if len(sample_log) > 0:
+                            start_value = sample_log[0]
+                            mean_value = sample_log.mean()
+                            end_value = sample_log[-1]
+                        else:
+                            # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+                            # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+                            # axis 0 with size 0
+                            error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+                                            'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
+                            print error_message
+                            start_value = 0.
+                            mean_value = 0.
+                            end_value = 0.
+                    elif mts_name == 'TimeStamp':
+                        # time stamp
+                        start_value = mean_value = end_value = float(time_stamp)
+                    elif mts_name == 'Time [sec]':
+                        # time step
+                        start_value = mean_value = end_value = diff_time
+                    elif len(log_name) > 0:
+                        # sample log does not exist in NeXus file. warned before. ignore!
+                        start_value = mean_value = end_value = 0.
+                    else:
+                        # unknown
+                        print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                        start_value = mean_value = end_value = 0.
+                    # END-IF-ELSE
 
-                pd_index = float(i_ws + 1)
-                start_series_dict[mts_name].set_value(pd_index, start_value)
-                mean_series_dict[mts_name].set_value(pd_index, mean_value)
-                end_series_dict[mts_name].set_value(pd_index, end_value)
+                    pd_index = float(i_ws + 1)
+                    start_series_dict[mts_name].set_value(pd_index, start_value)
+                    mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                    end_series_dict[mts_name].set_value(pd_index, end_value)
 
-            # END-FOR (entry)
+                # END-FOR (entry)
+            else:
+                # furnace
+                for entry in Furnace_Header_List:
+                    mts_name = entry
+                    log_name = mts_name
+                    if len(log_name) > 0 and log_name in property_name_list:
+                        # regular log
+                        sample_log = workspace_i.run().getProperty(log_name).value
+                        start_value = sample_log[0]
+                        mean_value = sample_log.mean()
+                        end_value = sample_log[-1]
+                    elif mts_name == 'TimeStamp':
+                        # time stamp
+                        start_value = mean_value = end_value = float(time_stamp)
+                    elif mts_name == 'Time [sec]':
+                        # time step
+                        start_value = mean_value = end_value = diff_time
+                    elif len(log_name) > 0:
+                        # sample log does not exist in NeXus file. warned before. ignore!
+                        start_value = mean_value = end_value = 0.
+                    else:
+                        # unknown
+                        print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                        start_value = mean_value = end_value = 0.
+                    # END-IF-ELSE
+
+                    pd_index = float(i_ws + 1)
+                    start_series_dict[mts_name].set_value(pd_index, start_value)
+                    mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                    end_series_dict[mts_name].set_value(pd_index, end_value)
+                # END-FOR
+            # END-IF-ELSE
         # END-FOR (workspace)
 
         # export to csv file
+        # start file
         pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+        if append and os.path.exists(start_file_name):
+            with open(start_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
 
+        # mean file
         pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+        if os.path.exists(mean_file_name) and append:
+            with open(mean_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
 
+        # end file
         pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
-        pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+        if os.path.exists(end_file_name) and append:
+            with open(end_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
 
         print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
                                                                           end_file_name)
@@ -2128,6 +2265,12 @@ class ReduceVulcanData(object):
                     return False, message
             # END-IF
 
+            # check output
+            out_dir = self._reductionSetup.get_gsas_dir()
+            if os.path.exists(out_dir) is False:
+                return False, 'Output directory "{0}" does not exist.'.format(out_dir)
+
+
             mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,
@@ -2161,12 +2304,42 @@ class ReduceVulcanData(object):
                                   AlignBins=False)
 
         vdrive_bin_ws_name = 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
-        mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                   BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                   OutputWorkspace=vdrive_bin_ws_name,
-                                   GSSFilename=gsas_file_name,
-                                   IPTS=self._reductionSetup.get_ipts_number(),
-                                   GSSParmFilename="Vulcan.prm")
+
+        output_access_error = False
+        orig_gsas_name = gsas_file_name
+        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            # gsas file does exist and cannot be modified: write to a temporary account
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+        elif not os.path.exists(gsas_file_name) and os.access(os.path.dirname(gsas_file_name), os.W_OK) is False:
+            # gsas file does not exist and use has no write permit to directory: write to a temporary account
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+
+        # save to vuclan GSAS
+        try:
+            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                       OutputWorkspace=vdrive_bin_ws_name,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFilename="Vulcan.prm")
+        except ValueError as value_err:
+            # write again to a temporary directory
+            print '[ValueError]: {0}.'.format(value_err)
+            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+            output_access_error = True
+            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                       OutputWorkspace=vdrive_bin_ws_name,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFilename="Vulcan.prm")
+
+
+        # set up the output file's permit for other users to modify
+        os.chmod(gsas_file_name, 0774)
+
         # Add special property to output workspace
         final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
         final_ws.getRun().addProperty('VDriveBin', True, replace=True)
@@ -2175,7 +2348,7 @@ class ReduceVulcanData(object):
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
-            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
             self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
         # END-IF (vanadium)
 
@@ -2184,6 +2357,11 @@ class ReduceVulcanData(object):
         self._reducedWorkspaceMtd = tof_ws_name
         self._reducedWorkspaceVDrive = vdrive_bin_ws_name
         self._reduceGood = True
+
+        # return with False
+        if output_access_error:
+            return False, 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.' \
+                          ''.format(orig_gsas_name, gsas_file_name)
 
         return True, message
 

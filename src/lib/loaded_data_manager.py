@@ -44,6 +44,12 @@ class LoadedDataManager(object):
         :param target_unit: unit of returned data
         :return:
         """
+        # make input unit more flexible
+        if target_unit.lower() == 'd-spacing':
+            target_unit = 'dSpacing'
+        elif target_unit.lower() == 'tof':
+            target_unit = 'TOF'
+
         # Check requirements
         assert isinstance(target_unit, str) and target_unit in ['TOF', 'dSpacing'],\
             'Target unit {0} is not supported.'.format(target_unit)

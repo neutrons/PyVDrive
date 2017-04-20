@@ -30,8 +30,7 @@ from vcommand_processor import VdriveCommandProcessor
 import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
-if config.DEBUG:
-    import workspaceviewer
+
 
 """ import PyVDrive library """
 import PyVDrive
@@ -676,12 +675,17 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
     def add_runs_trees(self, ipts_number, ipts_dir, run_tuple_list):
         """
-        Add runs to VDrivePlot main GUI
+        Add IPTS number and run numbers to the TreeViews in VDrivePlot main GUI
+        :param ipts_number:
+        :param ipts_dir:
         :param run_tuple_list:
         :return: 2-tuple: boolean, string (error message)
         """
         # check validity
-        # TODO/NOW : check and doc!
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be a integer.'.format(ipts_number)
+        assert isinstance(ipts_dir, str), 'Data directory {0} must be a string.'.format(ipts_dir)
+        assert isinstance(run_tuple_list, list), 'Run number list should be a list but not a {0}.' \
+                                                 ''.format(type(run_tuple_list))
 
         # Set to tree
         if ipts_number == 0:
@@ -926,7 +930,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                                               log_path, file_filter))
 
         # Load log
-        log_name_list = self.load_sample_run(log_file_name, smart=True)
+        log_name_list, run_info_str = self.load_sample_run(log_file_name, smart=True)
         log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
@@ -1087,11 +1091,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # split
         # need to strip the space around command
-        vdrive_command = vdrive_command.replace(' ', '')
+        # vdrive_command = vdrive_command.replace(' ', '')
 
         # split the command from arguments
         command_script = vdrive_command.split(',')
-        command = command_script[0]
+        command = command_script[0].strip()
         status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])
 
         return status, err_msg
@@ -1136,7 +1140,16 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Get reserved commands from VDrive command processor
         :return:
         """
-        return self._vdriveCommandProcessor.get_vdrive_commands()
+        # all commands are upper case.  make them also to be lower case too
+        command_list = self._vdriveCommandProcessor.get_vdrive_commands()
+        lower_case_commands = list()
+        for command in command_list:
+            lower_case_commands.append(command.lower())
+
+        # merge them
+        command_list.extend(lower_case_commands)
+
+        return command_list
 
     def get_controller(self):
         """
@@ -1184,7 +1197,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
         else:
             log_name_list = ret_value
 
-        return log_name_list
+        # get run information
+        run_info_str = self._myWorkflow.get_run_experiment_information(run_number)
+
+        return log_name_list, run_info_str
 
     def menu_save_project(self):
         """

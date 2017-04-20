@@ -4,8 +4,8 @@ import random
 import numpy
 
 # Import mantid directory
-sys.path.append('/opt/mantidnightly/bin/')
-sys.path.append('/Users/wzz/MantidBuild/debug/bin/')
+# sys.path.append('/opt/mantidnightly/bin/')
+# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')  # Mantid directory for local debugging
 
 import mantid
 import mantid.api
@@ -14,6 +14,15 @@ import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
+
+# define constants
+VULCAN_L1 = 43.754
+VULCAN_1BANK_L2 = 2.009436
+VULCAN_1BANK_POLAR = 90.1120
+VULCAN_2BANK_1_L2 = 2.009436
+VULCAN_2BANK_1_POLAR = 90.
+VULCAN_2BANK_2_L2 = 2.009436
+VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
@@ -73,6 +82,38 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     return vec_times, vec_ws
 
 
+def create_table_workspace(table_ws_name, column_def_list):
+    """
+
+    :param table_ws_name:
+    :param column_def_list:
+    :return:
+    """
+    mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=table_ws_name)
+    table_ws = retrieve_workspace(table_ws_name)
+    for col_tup in column_def_list:
+        data_type = col_tup[0]
+        col_name = col_tup[1]
+        table_ws.addColumn(data_type, col_name)
+
+    return
+
+
+def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
+    """
+
+    :param vec_x:
+    :param vec_y:
+    :param vec_e:
+    :param output_ws_name:
+    :return:
+    """
+    mantidapi.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
+                              OutputWorkspace=output_ws_name)
+
+    return
+
+
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:
@@ -83,6 +124,7 @@ def delete_workspace(workspace):
     return
 
 
+# TODO/ISSUE/FIXME/CLEAN/33 !
 def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
                min_peak_height = 200,
                peak_pos_list=None):
@@ -159,7 +201,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     return peak_list
 
 
-def generate_event_filters_arbitrary(split_list, relative_time, tag):
+def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, auto_target):
     """ Generate event filter (splitters workspace) by arbitrary time stamps
     :param split_list:
     :param relative_time:
@@ -168,6 +210,8 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
         1. status (boolean)
         2. 2-tuple as splitter workspace's name and information (table) workspace's name
     """
+    print '[DB...BAT] Workspace Name: ', ws_name
+
     # check
     if relative_time is False:
         raise RuntimeError('It has not been implemented for absolute time stamp!')
@@ -182,41 +226,40 @@ def generate_event_filters_arbitrary(split_list, relative_time, tag):
     splitters_ws_name = tag
     info_ws_name = tag + '_Info'
 
-    # create matrix workspace for splitter
-    time_list = list()
-    ws_list = list()
+    # use table workspace (relative time in default)
+    create_table_workspace(splitters_ws_name, [('float', 'start'), ('float', 'stop'), ('str', 'target')])
+    create_table_workspace(info_ws_name, [('str', 'target'), ('str', 'description')])
 
-    # convert tuple list to time list and ws index list
+    # get handler on splitters workspace and info workspace
+    splitter_ws = retrieve_workspace(splitters_ws_name)
+    info_ws = retrieve_workspace(info_ws_name)
+    target_set = set()
+
     for index, split_tup in enumerate(split_list):
-        # get start time and stop time
+        print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
         start_time = split_tup[0]
         stop_time = split_tup[1]
-        ws_index = split_tup[2]
-        print '[DB...BAT] stop time = ', stop_time
 
-        # append to list
-        if index == 0:
-            # add start time
-            time_list.append(start_time)
-        elif start_time > time_list[-1] + 1.0E-15:
-            # add gap
-            time_list.append(start_time)
-            ws_list.append(-1)
-        # add stop time
-        time_list.append(stop_time)
-        ws_list.append(ws_index)
+        if len(split_tup) >= 3:
+            # user specified target
+            target = str(split_tup[2])
+        elif auto_target:
+            # in some case, such as VDRIVE chopper file, only contains start and stop time. then use sequence number
+            target = '{0}'.format(index + 1)
+        else:
+            # not allowing auto target, then must have a coding error
+            raise RuntimeError('Splitter tuple has only 2 entries!')
+
+        # add splitter
+        splitter_ws.addRow([start_time, stop_time, target])
+
+        # add information
+        if target not in target_set:
+            info_ws.addRow([target, ''])
+            target_set.add(target)
+        # END-IF
+
     # END-FOR
-
-    # convert list to numpy vector
-    time_vec = numpy.array(time_list)
-    ws_vec = numpy.array(ws_list)
-
-    # create workspace
-    mantidapi.CreateWorkspace(DataX=time_vec, DataY=ws_vec, NSpec=1, WorkspaceTitle='relative',
-                              OutputWorkspace=splitters_ws_name)
-
-    # TODO/NOW
-    print '[NOT FINISHED YET!]'
 
     return True, (splitters_ws_name, info_ws_name)
 
@@ -353,6 +396,27 @@ def get_run_start(workspace, time_unit):
     return run_start
 
 
+def get_sample_log_tsp(src_workspace, sample_log_name):
+    """
+    get the reference to the sample log
+    :param src_workspace:
+    :return:
+    """
+    workspace = retrieve_workspace(src_workspace)
+    if workspace is None:
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(sample_log_name))
+
+    run = workspace.run()
+    assert isinstance(sample_log_name, str), 'blabla'
+    if run.hasProperty(sample_log_name):
+        property = run.getProperty(sample_log_name)
+    else:
+        raise RuntimeError('Workspace {0} does not have property {1}. Property list: {2}.'
+                           ''.format(src_workspace, sample_log_name, get_sample_log_names(src_workspace)))
+
+    return property
+
+
 def get_sample_log_info(src_workspace):
     """ Ger sample log information including size of log and name of log
     :param src_workspace: workspace which the sample logs are from
@@ -361,12 +425,14 @@ def get_sample_log_info(src_workspace):
     run = src_workspace.run()
 
     prop_info_list = list()
-    for p in run.getProperties():
-        p_name = p.name
-        if isinstance(p, mantid.kernel.FloatTimeSeriesProperty) is False:
-            continue
-        size = p.size()
-        prop_info_list.append((size, p_name))
+    for property_i in run.getProperties():
+        if isinstance(property_i, mantid.kernel.FloatTimeSeriesProperty) or \
+                isinstance(property_i, mantid.kernel.Int32TimeSeriesProperty) or \
+                isinstance(property_i, mantid.kernel.Int64TimeSeriesProperty):
+            p_name = property_i.name
+            size = property_i.size()
+            prop_info_list.append((size, p_name))
+    # END-FOR
 
     prop_info_list.sort()
 
@@ -814,6 +880,7 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     :param meta_data_only:
     :return: 2-tuple
     """
+    print '[DB...BAT] Mantid: ', mantidapi
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,
@@ -853,9 +920,150 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 
 
-def match_bins():
-    # TODO/ISSUE/62 - Implement
-    return True
+def check_bins_can_align(workspace_name, template_workspace_name):
+    """
+    match the bins of workspace to the template workspace
+    :param workspace_name:
+    :param template_workspace_name:
+    :return: 2-tuple (boolean as align-able, string for reason
+    """
+    # TODO/TEST/33
+    # get workspace
+    try:
+        target_workspace = ADS.retrieve(workspace_name)
+        template_workspace = ADS.retrieve(template_workspace_name)
+    except KeyError as key_err:
+        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
+                      ''.format(workspace_name, template_workspace_name, key_err)
+
+    # check number of spectra
+    num_template_hist = template_workspace.getNumberHistograms()
+    num_target_hist = target_workspace.getNumberHistograms()
+
+    if num_template_hist == 1:
+        single_template_bin = True
+    elif num_template_hist == num_target_hist:
+        single_template_bin = False
+    else:
+        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
+                      ''.format(workspace_name, template_workspace_name)
+
+    # mapping
+    if single_template_bin:
+        template_vec_x = template_workspace.readX(0)
+    else:
+        template_vec_x = None
+
+    for i_ws in range(num_target_hist):
+        # get vector X of template and target
+        if template_vec_x is None:
+            template_vec_x = template_workspace.readX(i_ws)
+        target_vec_x = target_workspace.readX(i_ws)
+
+        # check number of bins
+        if len(template_vec_x) != len(target_vec_x):
+            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
+                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
+                                                 len(template_vec_x), len(target_vec_x))
+
+        # check difference in bins
+        sum_vec_target = numpy.sum(target_vec_x)
+        sum_vec_template = numpy.sum(template_vec_x)
+
+        diff_vec = target_vec_x - template_vec_x
+        diff_vec_square = diff_vec**2
+        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
+
+        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
+            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
+    # END-FOR
+
+    return True, ''
+
+
+def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name):
+    """
+    add the all the workspaces given by their names to a target workspace with certain geometry
+    prototype:
+        ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws60', CheckOverlapping=False)
+        ConjoinWorkspaces(InputWorkspace1='ws50', InputWorkspace2='ws70', CheckOverlapping=False)
+    :param workspace_name_list:
+    :return:
+    """
+    # check inputs
+    assert isinstance(target_workspace_name, str), 'Target workspace name {0} must be a string but not a {1}.' \
+                                                   ''.format(target_workspace_name, type(target_workspace_name))
+    assert isinstance(workspace_name_list, list), 'Workspace names {0} must be given as a list but not a {1}.' \
+                                                  ''.format(workspace_name_list, type(workspace_name_list))
+    if len(workspace_name_list) == 0:
+        raise RuntimeError('Workspace name list is empty!')
+
+    # get the workspace to get merged to
+    # TODO/TEST/ISSUE/NOW - Need to verify
+    if ADS.doesExist(target_workspace_name) is False:
+        mantidapi.CloneWorkspace(InputWorkspace=workspace_name_list[0], OutputWorkspace=target_workspace_name)
+        # add a new property to the target workspace for more information
+        target_ws = retrieve_workspace(target_workspace_name)
+        num_banks = target_ws.getNumberHistograms()
+        target_ws.getRun().addProperty('Number of banks', num_banks, '', True)
+    else:
+        target_ws = retrieve_workspace(target_workspace_name)
+        num_banks = int(target_ws.run().getProperty('Number of banks').value)
+
+    # then do conjoin the workspace
+    for i_workspace in range(1, len(workspace_name_list)):
+        # check whether the input workspace has the same number of banks
+        src_ws = retrieve_workspace(workspace_name_list[i_workspace])
+        src_ws_banks = src_ws.getNumberHistograms()
+        if src_ws_banks != num_banks:
+            raise RuntimeError('Unable to conjoin workspace {0} to target workspace {1} due to unmatched '
+                               'bank number ({2}).'.format(workspace_name_list[i_workspace], target_workspace_name,
+                                                           src_ws_banks))
+
+        # conjoin workspaces
+        mantidapi.ConjoinWorkspaces(InputWorkspace1=target_workspace_name,
+                                    InputWorkspace2=workspace_name_list[i_workspace],
+                                    CheckOverlapping=False)
+    # END-IF
+
+    return target_workspace_name
+
+
+def edit_compressed_chopped_workspace_geometry(ws_name):
+    """
+    set the geometry to the compressed workspace for chopped workspace
+    prototype:
+        EditInstrumentGeometry(Workspace='ws50', PrimaryFlightPath=50, L2='1,1,1,1,1,1', Polar='90,270,90,270,90,270')
+    :param ws_name:
+    :return:
+    """
+    # get workspace and check
+    assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}'.format(ws_name, type(ws_name))
+    workspace = retrieve_workspace(ws_name)
+    if workspace is None:
+        raise RuntimeError('Chopped workspace {0} (name) cannot be found in ADS.'.format(ws_name))
+
+    # check the number of banks
+    num_banks = int(workspace.run().getProperty('Number of banks').value)
+    num_spectra = workspace.getNumberHistograms()
+    if num_banks == 1:
+        l2_list = [VULCAN_1BANK_L2] * num_spectra
+        polar_list = [VULCAN_1BANK_POLAR] * num_spectra
+    elif num_banks == 2:
+        if num_spectra % 2 != 0:
+            raise RuntimeError('It is impossible to have odd number of spectra in 2-bank compressed chopped workspace.')
+        l2_list = [VULCAN_2BANK_1_L2, VULCAN_2BANK_2_L2] * (num_spectra/2)
+        polar_list = [VULCAN_2BANK_1_POLAR,  VULCAN_2BANK_2_POLAR] * (num_spectra/2)
+    else:
+        raise RuntimeError('{0}-bank is not supported.'.format(num_spectra))
+
+    # edit instrument geometry
+    mantidapi.EditInstrumentGeometry(Workspace=ws_name,
+                                     PrimaryFlightPath=VULCAN_L1,
+                                     L2=str(l2_list).replace('[', '').replace(']',''),
+                                     Polar=str(polar_list).replace('[', '').replace(']',''))
+
+    return
 
 
 def mtd_compress_events(event_ws_name, tolerance=0.01):
@@ -995,18 +1203,23 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
-    # TODO/ISSUE/62 - Replace all blabla by words making sense
     # Check requirements
-    assert isinstance(source_ws_name, str), 'source workspace name blabla'
+    assert isinstance(source_ws_name, str), 'source workspace name {0} must be a string but not {1}.' \
+                                            ''.format(source_ws_name, type(source_ws_name))
     src_ws = retrieve_workspace(source_ws_name)
-    assert src_ws.getNumberHistograms() < 10, 'blabla'
+    assert src_ws.getNumberHistograms() < 10, 'Source workspace {0} cannot have more than 10 histograms ({1}).' \
+                                              ''.format(source_ws_name, src_ws.getNumberHistograms())
     
-    assert isinstance(out_gss_file, str), 'out gss blabla'
+    assert isinstance(out_gss_file, str), 'Output GSAS file name {0} must be a string but not a {1}.' \
+                                          ''.format(out_gss_file, type(out_gss_file))
     assert isinstance(ipts, int), 'IPTS number must be an integer but not %s.' % str(type(ipts))
-    assert isinstance(binning_reference_file, str), 'blabla333'
+    assert isinstance(binning_reference_file, str), 'Binning referece file name {0} must be a string but not a {1}.' \
+                                                    ''.format(binning_reference_file, type(binning_reference_file))
     if len(binning_reference_file) > 0:
-        assert os.path.exists(binning_reference_file), 'blabla444'
-    assert isinstance(gss_parm_file, str), 'blabla555'
+        assert os.path.exists(binning_reference_file), 'Binning reference file {0} does not exist.' \
+                                                       ''.format(binning_reference_file)
+    assert isinstance(gss_parm_file, str), 'GSAS parmm file name {0} must be a string but not a {1}.' \
+                                           ''.format(gss_parm_file, type(gss_parm_file))
 
     # using a new workspace if and only if it is required to be re-binned
     if len(binning_reference_file) > 0:
@@ -1058,7 +1271,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
     :param tof_correction:
     :param output_directory:
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
-    :return:
+    :return: 2-tuple.  [1] boolean (success or fail) [2] dictionary or Error message
     """
     # Check requirements
     assert workspace_does_exist(split_ws_name)
@@ -1106,7 +1319,17 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
         chopped_ws_name_list = ret_list[2]
-        assert num_split_ws == len(chopped_ws_name_list)
+        # check the workspace name
+        for i_w, ws_name in enumerate(chopped_ws_name_list):
+            if len(ws_name) == 0:
+                chopped_ws_name_list.pop(i_w)
+            elif ADS.doesExist(ws_name) is False:
+                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
+        # END-FOR
+        assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
+                                                          'chopped workspaces names {1} ({2}).' \
+                                                          ''.format(num_split_ws, len(chopped_ws_name_list),
+                                                                    chopped_ws_name_list)
     except IndexError:
         return False, 'Failed to split data by FilterEvents.'
 
@@ -1114,6 +1337,95 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
 
     # Save result
+    if output_directory is not None:
+        output_file_list = list()
+        for chopped_ws_name in chopped_ws_name_list:
+            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+            mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
+            output_file_list.append(file_name)
+    else:
+        output_file_list = None
+
+    # Clear
+    delete_workspace(correction_ws)
+    if delete_split_ws:
+        for chopped_ws_name in chopped_ws_name_list:
+            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+        chopped_ws_name_list = None
+
+    # Output
+    chop_dict = {'workspaces': chopped_ws_name_list,
+                 'files': output_file_list}
+    # if delete_split_ws:
+    #     ret_obj = None
+    # else:
+    #     ret_obj = (chopped_ws_name_list, ret_list[3:])
+
+    return True, chop_dict
+
+
+# TODO/FIXME/ISSUE/NOW - Refactor with split_event_data()
+def split_event_workspace(event_ws_name, split_ws_name, info_table_name, target_ws_name, tof_correction,
+                          output_directory, delete_split_ws):
+    """
+
+    :param event_ws_name:
+    :param split_ws_name:
+    :param info_table_name:
+    :param target_ws_name:
+    :param tof_correction:
+    :param output_directory:
+    :param delete_split_ws:
+    :return:
+    """
+    # process TOF correction
+    if tof_correction is True:
+        correction = 'Elastic'
+    else:
+        correction = 'None'
+
+    # process the target workspace name
+    if target_ws_name is None:
+        target_ws_name = event_ws_name + '_split'
+    else:
+        assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
+                                                '' % (str(target_ws_name), type(target_ws_name))
+
+    # split workspace
+    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
+                                      SplitterWorkspace=split_ws_name,
+                                      InformationWorkspace=info_table_name,
+                                      OutputWorkspaceBaseName=target_ws_name,
+                                      FilterByPulseTime=False,
+                                      GroupWorkspaces=True,
+                                      CorrectionToSample=correction,
+                                      SplitSampleLogs=True,
+                                      OutputWorkspaceIndexedFrom1=True
+                                      )
+
+    try:
+        correction_ws = ret_list[0]
+        num_split_ws = ret_list[1]
+        chopped_ws_name_list = ret_list[2]
+        # check the workspace name
+        for i_w, ws_name in enumerate(chopped_ws_name_list):
+            if len(ws_name) == 0:
+                chopped_ws_name_list.pop(i_w)
+            elif ADS.doesExist(ws_name) is False:
+                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
+        # END-FOR
+        assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
+                                                          'chopped workspaces names {1} ({2}).' \
+                                                          ''.format(num_split_ws, len(chopped_ws_name_list),
+                                                                    chopped_ws_name_list)
+    except IndexError:
+        return False, 'Failed to split data by FilterEvents.'
+
+    if len(ret_list) != 3 + len(chopped_ws_name_list):
+        return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+
+    # Save result
+    # TODO/ISSUE/33 - Shall return NeXus file?
     if output_directory is not None:
         for chopped_ws_name in chopped_ws_name_list:
             file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
@@ -1127,7 +1439,7 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
 
     # Output
     if delete_split_ws:
-        ret_obj = False
+        ret_obj = None
     else:
         ret_obj = (chopped_ws_name_list, ret_list[3:])
 

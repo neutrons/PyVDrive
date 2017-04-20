@@ -339,10 +339,13 @@ class VDriveAPI(object):
         """
         # get the chopper
         chopper = self._myProject.get_chopper(run_number)
-        slice_tag = chopper.generate_events_filter_manual(time_segment_list, relative_time=relative_time,
-                                                          splitter_tag=slice_tag)
 
-        return slice_tag
+        status, slice_tag = chopper.generate_events_filter_manual(run_number=run_number,
+                                                                  split_list=time_segment_list,
+                                                                  relative_time=relative_time,
+                                                                  splitter_tag=slice_tag)
+
+        return status, slice_tag
 
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
         """
@@ -393,6 +396,25 @@ class VDriveAPI(object):
 
         return status, slicer_key
 
+    def get_chopped_data_info(self, run_number, slice_key, reduced):
+        """
+        get information of chopped data
+        :param run_number:
+        :param slice_key:
+        :param reduced:
+        :return: a dictionary
+        """
+        # TEST/ISSUE/33/s
+        if reduced:
+            # reduced data. should be found at reductionmanager.py
+            tracker = self._myProject.reduction_manager.get_tracker(run_number, slice_key)
+            info_dict = tracker.get_information()
+        else:
+            # jus chopped but not reduced
+            raise RuntimeError('Need a use case or scenario to implement this part')
+
+        return info_dict
+
     def get_instrument_name(self):
         """
         Instrument's name
@@ -416,12 +438,13 @@ class VDriveAPI(object):
 
     def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
         """
-        sequence to look for chopped data
+        Find chopped data (in GSAS) in archive or user specified directories
         :param ipts_number:
         :param run_number:
         :param chop_seq:
         :param search_archive: flag to search the chopped data from archive under
-            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/
+            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/ or
+            /SNS/VULCAN/IPTS-ipts/shared/binned_data/run/
         :return: 2-tuple [1] boolean (data found) [2] data dictionary
         """
         assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
@@ -462,7 +485,7 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False):
+    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False, is_workspace=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
@@ -473,6 +496,7 @@ class VDriveAPI(object):
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
+        # TODO/ISSUE/33 - Clean
         try:
             # get GSAS file name
             if search_archive and isinstance(run_id, int):
@@ -481,9 +505,13 @@ class VDriveAPI(object):
                 gsas_file = None
 
             # get data from project
-            data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+            if is_workspace:
+                # data_set_dict, current_unit
+                data_set_dict, current_unit = mantid_helper.get_data_from_workspace(run_id)
+            else:
+                data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
         except RuntimeError as run_err:
-            return False, 'Unable to get data due to {0}'.format(run_err)
+            return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
 
         return True, data_set_dict
 
@@ -507,7 +535,9 @@ class VDriveAPI(object):
             # given data key
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                info = self._myProject.get_data_bank_list(data_key)
+                # FIXME shall use this! info = self._myProject.get_data_bank_list(data_key)
+                # TODO/ISSUE/NOW : broken fake
+                info = [1, 2]
             except AssertionError as e:
                 return False, str(e)
 
@@ -691,7 +721,7 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def get_archived_runs(self, archive_key, begin_run, end_run):
+    def get_archived_runs(self, archive_key, range(begin_run, end_run+1)):
         """
         Get runs from archived data
         :param archive_key:
@@ -818,6 +848,20 @@ class VDriveAPI(object):
 
         return True, ret_list
 
+    def get_run_experiment_information(self, run_number):
+        """
+        get run information such as start, stop time, IPTS name and etc
+        :param run_number:
+        :return:
+        """
+        # check input and find Chopper (helper object)
+        assert run_number is not None, 'Run number cannot be None.'
+        chopper = self._myProject.get_chopper(run_number)
+
+        exp_info = chopper.get_experiment_information()
+
+        return exp_info
+
     def get_sample_log_names(self, run_number, smart=False):
         """
         Get names of sample log with time series property
@@ -831,6 +875,8 @@ class VDriveAPI(object):
         sample_name_list = chopper.get_sample_log_names(smart)
 
         return True, sample_name_list
+
+
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
@@ -931,10 +977,11 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_data_set(self, auto_reduce, output_directory, binning=None, background=False,
+    def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, fullprof=False,
-                        standard_sample_tuple=None):
+                        standard_sample_tuple=None, binning_parameters=None,
+                        merge=False):
         """
         Reduce a set of data
         Purpose:
@@ -957,6 +1004,8 @@ class VDriveAPI(object):
         :param gsas: boolean flag to produce GSAS files from reduced runs
         :param fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
+        :param binning_parameters: None for default and otherwise using user specified
+        :param merge: If true, then merge the run together by calling SNSPowderReduction
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -998,13 +1047,19 @@ class VDriveAPI(object):
                                                               fullprof=fullprof,
                                                               record_file=record,
                                                               sample_log_file=logs,
-                                                              standard_sample_tuple=standard_sample_tuple)
+                                                              standard_sample_tuple=standard_sample_tuple,
+                                                              merge=merge,
+                                                              binning_parameters=binning_parameters)
 
             except AssertionError as re:
                 status = False
                 ret_obj = '[ERROR] Assertion error from reduce_runs due to %s' % str(re)
             # END-TRY-EXCEPT
         # END-IF-ELSE
+
+        # mark the runs be reduced so that they will not be reduced again next time.
+        reduction_state_list = None
+        self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
 
         return status, ret_obj
 
@@ -1277,11 +1332,11 @@ class VDriveAPI(object):
 
             # process vanadium
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
-            self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank)
-
             if do_shift:
-                # TODO/ISSUE/59 - Implement
-                self._myProject.vanadium_processing_manager.apply_shift(van_ws_key)
+                # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
+                self._myProject.vanadium_processing_manager.apply_shift()
+            status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
+                                                                                           output_dir=local_output)
 
             if one_bank:
                 # merge the result to 1 bank
@@ -1292,7 +1347,10 @@ class VDriveAPI(object):
         except RuntimeError as run_err:
             return False, 'Unable to process vanadium run {0} due to \n\t{1}.'.format(run_number, run_err)
 
-        return True, 'Vanadium process is successful.'
+        if status:
+            message = 'Vanadium process is successful.' + message
+
+        return status, message
 
     def read_mts_log(self, log_file_name, format_dict, block_index, start_point_index, end_point_index):
         """
@@ -1339,17 +1397,17 @@ class VDriveAPI(object):
     def save_processed_vanadium(self, van_info_tuple, output_file_name):
         """
         save the processed vanadium to a GSAS file
-        :param ipts_number:
-        :param run_number:
+        :param van_info_tuple:
         :param output_file_name:
         :return: 2-tuple (boolean, str)
         """
-        # TODO/FIXME/ISSUE/59 - parameter check
-        result = self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
-                                                                                   to_archive=False,
-                                                                                   out_file_name=output_file_name)
+        assert isinstance(output_file_name, str), 'Output file name must be a string'
+        assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
+                                                  ''.format(van_info_tuple, type(van_info_tuple))
 
-        return result
+        return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
+                                                                                 to_archive=False,
+                                                                                 out_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1420,7 +1478,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, slicer_id, reduce_data, output_dir):
+    def slice_data(self, run_number, slicer_id, reduce_data, output_dir, export_log_type='loadframe'):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:

@@ -4,8 +4,11 @@ import inspect
 import sys
 import os
 
-sys.path.append('/opt/mantidnightly/bin/')
-sys.path.append(os.path.join(os.path.expanduser('~/MantidBuild/debug/bin/')))
+# sys.path.append('/opt/mantidnightly/bin/')
+sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin')
+
+sys.path.append(os.getcwd())
+# sys.path.append(os.path.join(os.path.expanduser('~/MantidBuild/debug/bin/')))
 
 
 # IPython monkey patches the  pygments.lexer.RegexLexer.get_tokens_unprocessed method
@@ -121,11 +124,13 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         # main application is workspace viewer
         is_reserved = False
-        print '[DB...] Now test reserved command for %s' % script
+        # print '[DB...] Now test reserved command for %s' % script
         if self._mainApplication.is_reserved_command(script):
             is_reserved = True
             exec_message = self._mainApplication.execute_reserved_command(script)
-            source = '\"Run: %s\"' % script
+            script_transformed = script[:]
+            script_transformed = script_transformed.replace('"', "'")
+            source = '\"Run: %s\"' % script_transformed
         else:
             exec_message = None
 

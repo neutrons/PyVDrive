@@ -12,6 +12,10 @@
 
 from procss_vcommand import VDriveCommand
 
+# TODO/ISSUE/NOW/33/FIXME - Following example:
+# view,IPTS=13183,choprun=68607
+# VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1
+
 
 class VdriveView(VDriveCommand):
     """
@@ -108,6 +112,16 @@ class VdriveView(VDriveCommand):
             # at least 2D
             self._figureDimension = 2
 
+        # min and max value
+        # TODO/FIXME/NOW/33 - Make these supported!
+        # if 'MinV', 'MaxV',
+
+        # Normalized?
+        # TODO/ISSUE/33/NOW - Make this work!
+        # 'NORM'
+
+        # TODO/ISSUE/33/NOW - Default is TOF.  Also need to determine dSpacing or TOF according to MinV or MaxV
+
         return True, ''
 
     @property
@@ -141,6 +155,28 @@ class VdriveView(VDriveCommand):
         """
         return self._choppedRunSeqList[:]
 
+    def get_help(self):
+        """
+        get help
+        :return:
+        """
+        help_str = 'VIEW: bla bla\n'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        # examples
+        help_str += 'Examples:\n'
+        help_str += '> VIEW,IPTS=14094,RUNS=96450,RUNE=96451\n'
+        help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
+
+        return help_str
+
     def get_ipts_number(self):
         """
         get the IPTS number
@@ -155,16 +191,23 @@ class VdriveView(VDriveCommand):
         """
         return self._runNumberList[0]
 
-    def get_run_number_list(self):
+    def get_run_tuple_list(self):
         """
-        for output 2D or 3D, it is required to return multiple
+        for output 2D or 3D, it is required to return multiple.. including run number and IPTS number
         :return:
         """
-        return self._runNumberList[:]
+        run_tup_list = list()
+        for run_number in self._runNumberList:
+            run_tup_list.append((run_number, self._iptsNumber))
+
+        # sort
+        run_tup_list.sort()
+
+        return run_tup_list
 
     def get_reduced_data_directory(self):
         """
-        blabla
+        get the direcotry where the reduced data is
         :return:
         """
         return self._reducedDataDir

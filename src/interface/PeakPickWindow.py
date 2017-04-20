@@ -484,6 +484,9 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # group
         self._autoPeakGroup = None
 
+        # data directory
+        self._dataDirectory = None
+
         return
 
     def _init_widgets_setup(self):
@@ -1482,10 +1485,14 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # get single peaks from canvas
         raw_peak_pos_list = self.ui.graphicsView_main.get_ungrouped_peaks()
+        # TODO/DEBUG/FIXME/ - Find out why do grouping a few time can cause duplicate peaks in table
+        print '[DB...#33] Number of raw peaks = {0} with peak positions: {1}.' \
+              ''.format(len(raw_peak_pos_list), raw_peak_pos_list)
 
         # call controller method to set group boundary
         peak_group = peak_util.group_peaks_to_fit(raw_peak_pos_list, resolution, num_fwhm)
-        assert isinstance(peak_group, peak_util.PeakGroupCollection)
+        assert isinstance(peak_group, peak_util.PeakGroupCollection),\
+            'Peak group {0} must be a PeakGroupCollection instance but not a {1}.'.format(peak_group, type(peak_group))
 
         self.clear_group_highlight()
 
@@ -1585,9 +1592,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
         Guarantees: all 3 indicator line will be deleted; peak selection mode will be reset
         :return:
         """
-        # TODO/NOW - Doc and assertion
-        # Check requirements
-
         # Delete all 3 indicators line
         for indicator_id in self._indicatorIDList:
             self.ui.graphicsView_main.remove_indicator(indicator_id)
@@ -1609,7 +1613,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # find out where the peak is
         temp_peak_pos = self._currMousePosX
 
-        nearest_peak_index = self.locate_peak(temp_peak_pos, resolution)
+        nearest_peak_index = self.locate_peak(temp_peak_pos, mouse_resolution)
         if nearest_peak_index is not None:
             self.ui.graphicsView_main.delete_peak(nearest_peak_index)
         else:
@@ -1679,69 +1683,6 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         return
 
-    # NOT USED AT ALL!
-    # def on_mouse_release_event(self, event):
-    #     """ If the left button is released and previously in IN_PICKER_MOVING mode,
-    #     then the mode is over
-    #     """
-    #     button = event.button
-    #
-    #     if button == 1:
-    #         # left button click
-    #         if self._inEditMode and self._peakPickerMode == PeakPickerMode.QuickMode:
-    #             # quit edit mode: add a peak indicator
-    #             pos_x = event.xdata
-    #             if pos_x is None:
-    #                 return
-    #             else:
-    #                 self.ui.graphicsView_main.add_single_peak(pos_x)
-    #
-    #         else:
-    #             self._inEditMode = False
-    #
-    #     elif button == 3:
-    #         # right button click: pop out menu
-    #         self.ui.menu = QtGui.QMenu(self)
-    #
-    #         action_add = QtGui.QAction('Add Peak', self)
-    #         action_add.triggered.connect(self.menu_add_peak)
-    #         self.ui.menu.addAction(action_add)
-    #
-    #         if self._peakSelectionMode == 'MoveCentre':
-    #             # in peak centre moving mode
-    #             action_switch = QtGui.QAction('Change Peak Width', self)
-    #             action_switch.triggered.connect(self.menu_switch_mode)
-    #             self.ui.menu.addAction(action_switch)
-    #
-    #             action_cancel = QtGui.QAction('Cancel', self)
-    #             action_cancel.triggered.connect(self.menu_cancel_selection)
-    #             self.ui.menu.addAction(action_cancel)
-    #
-    #         elif self._peakSelectionMode == 'ChangeWidth':
-    #             # in peak width determining  mode
-    #             action_switch = QtGui.QAction('Move Peak Centre', self)
-    #             action_switch.triggered.connect(self.menu_switch_mode)
-    #             self.ui.menu.addAction(action_switch)
-    #
-    #             action_cancel = QtGui.QAction('Cancel', self)
-    #             action_cancel.triggered.connect(self.menu_cancel_selection)
-    #             self.ui.menu.addAction(action_cancel)
-    #
-    #         else:
-    #             # others
-    #             action_select = QtGui.QAction('Select Peak', self)
-    #             action_select.triggered.connect(self.menu_select_peak)
-    #             self.ui.menu.addAction(action_select)
-    #
-    #             action_delete = QtGui.QAction('Delete Peak', self)
-    #             action_delete.triggered.connect(self.menu_delete_peak)
-    #             self.ui.menu.addAction(action_delete)
-    #
-    #         # pop up menu at cursor
-    #         self.ui.menu.popup(QtGui.QCursor.pos())
-    #
-    #     return
-
     def on_mouse_motion(self, event):
         """ Event handling in case mouse is moving
         """
@@ -1786,11 +1727,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         return
 
     def move_peak_boundary(self, pos_x):
-        """ Move the boundary of the peak
+        """ Move the boundary of the peak to position
         :param pos_x:
         :return:
         """
-        # TODO/NOW - Doc and assertion
+        # check inputs
+        assert isinstance(pos_x, float), 'X-position {0} must be a float but not a {1}.'.format(pos_x, type(pos_x))
 
         # Find out how to expand
         if pos_x < self._currMousePosX:
@@ -1800,15 +1742,17 @@ class PeakPickerWindow(QtGui.QMainWindow):
             right_bound = pos_x
             left_bound = 2*self._currMousePosX - pos_x
 
-        # Left
+        # left peak (indicator) to x-position
         left_id = self._indicatorIDList[1]
         dx = left_bound - self._indicatorPositionList[1]
         self.ui.graphicsView_main.move_indicator(left_id, dx, 0)
 
+        # right peak (indicator) to x-position
         right_id = self._indicatorIDList[2]
         dx = right_bound -  self._indicatorPositionList[2]
         self.ui.graphicsView_main.move_indicator(right_id, dx, 0)
 
+        # update
         self._indicatorPositionList[1] = left_bound
         self._indicatorPositionList[2] = right_bound
 
@@ -1820,8 +1764,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :param pos_x:
         :return:
         """
-        # TODO/NOW - doc and assertion
         # Check
+        assert isinstance(pos_x, float), 'X-position {0} must be a float but not a {1}.'.format(pos_x, type(pos_x))
 
         # Find dx
         dx = pos_x - self._currMousePosX
@@ -1844,8 +1788,12 @@ class PeakPickerWindow(QtGui.QMainWindow):
         :param data_dir:
         :return:
         """
-        # TODO/NOW: Doc, Assertion, ...
+        # check inputs
+        assert isinstance(data_dir, str), 'Input data directory {0} must be a string but not a {1}.' \
+                                          ''.format(data_dir, type(data_dir))
+        assert os.path.exists(data_dir), 'Data directory {0} cannot be found.'.format(data_dir)
 
+        # set up
         self._dataDirectory = data_dir
 
         return

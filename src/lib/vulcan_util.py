@@ -2,7 +2,125 @@
 # Utility methods for VULCAN
 ####
 import os
+import math
 import pandas as pd
+import mantid_helper
+
+
+def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
+    """
+    export a vanadium to intensity file, whic is of GSAS format
+    NOTE: THIS IS VERY INSTRUMENT GEOMETRY SENSITIVE!
+    :param van_nexus_file:
+    :param gsas_van_int_file:
+    :return:
+    """
+    # check
+    assert isinstance(van_nexus_file, str), 'Vanadium NeXus file {0} must be a string but not a {1}.' \
+                                            ''.format(van_nexus_file, type(van_nexus_file))
+    if os.path.exists(van_nexus_file) is False:
+        raise RuntimeError('Given vanadium NeXus path {0} is incorrect.'.format(van_nexus_file))
+
+    assert isinstance(gsas_van_int_file, str), 'Target GSAS vanadium intensity file {0} must be a string but not a ' \
+                                               '{1}.'.format(gsas_van_int_file, type(gsas_van_int_file))
+
+    # write to file
+    try:
+        int_file = open(gsas_van_int_file, 'w')
+    except IOError as io_err:
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, io_err))
+    except OSError as os_err:
+        raise RuntimeError('Unable to write to file {0} due to {1}'.format(gsas_van_int_file, os_err))
+
+    # load data file
+    out_file_name = os.path.basename(van_nexus_file).split('.')[0]
+    mantid_helper.load_nexus(data_file_name=van_nexus_file, output_ws_name=out_file_name, meta_data_only=False)
+    event_ws = mantid_helper.retrieve_workspace(out_file_name)
+
+    # Parse to intensity file
+    int_buf = ''
+    # num_spec = event_ws.getNumberHistograms()
+    det_count = 0
+
+    for row_index in range(0, 1224 + 1, 8):
+        pack_index_west = range(0, 2464 + 1, 1232)
+        pack_index_east = range(3696, 6160 + 1, 1232)
+        pack_index_both = pack_index_west + pack_index_east
+        for pack_index in pack_index_both:
+            for i_ws in range(8):
+                ws_index = row_index + pack_index + i_ws
+
+                num_events = event_ws.getEventList(ws_index).getNumberEvents()
+                # format to float with 8 significant digit
+                format_event_str = format_float_number(num_events, 8)
+
+                int_buf += '{0:>16}'.format(format_event_str)
+                # start a new line at 8th detector's count
+                if det_count == 8 * 6 - 1:
+                    int_buf += '\n'
+                    det_count = 0
+                else:
+                    det_count += 1
+                    # END-FOR
+    # END-FOR
+
+    int_file.write(int_buf)
+    int_file.close()
+
+    return
+
+
+def format_float_number(value, significant_digits):
+    """
+    format a number (integer or float) into a string with specified significant digit
+    :param value:
+    :param significant_digits:
+    :return:
+    """
+    # check input
+    assert isinstance(value, int), 'Input value {0} must be integer but cannot be {1}.'.format(value, type(value))
+    assert isinstance(significant_digits, int) and significant_digits > 0,\
+        'Significant digit {0} must be a positive integer but not a {1}.' \
+        ''.format(significant_digits, type(significant_digits))
+
+    # make sure the input is a float
+    value = float(value)
+    if abs(value) < math.pow(10., significant_digits):
+        # contain decimal point
+        format_str = '{0:.7f}'.format(value)
+        assert format_str.count('.') == 1, 'If value is within {0}, decimal points must be in {1}.' \
+                                           ''.format(math.pow(10., significant_digits), format_str)
+        # trim to significant digits
+        format_str = format_str[:significant_digits+1]
+    else:
+        # number is larger than 10^8, which is not likely to happen.
+        raise RuntimeError('Not implemented because it is not thought possible!')
+
+    return format_str
+
+
+def get_default_binned_directory(ipts_number, check_write_and_throw=False):
+    """
+    get VDRIVE default directory for binned data
+    :param ipts_number: IPTS number in integer
+    :param check_write_and_throw: check whether the user has write permission and thus throw if not
+    :return:
+    """
+    # check
+    assert isinstance(ipts_number, int), 'IPTS number {0}  must be an integer but not a {1}.' \
+                                         ''.format(ipts_number, type(ipts_number))
+
+    # get directory
+    binned_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(ipts_number)
+
+    # check write permission
+    if check_write_and_throw:
+        if os.path.exists(binned_dir) is False:
+            raise RuntimeError('VULCAN binned data directory {0} does not exist.'.format(binned_dir))
+        if os.access(binned_dir, os.W_OK) is False:
+            raise RuntimeError('User has no write permission to directory {0}.'.format(binned_dir))
+
+    return binned_dir
 
 
 def get_vulcan_record(ipts_number, auto):
@@ -503,3 +621,8 @@ class AutoVanadiumCalibrationLocator(object):
 
         return False, msg
 
+
+if __name__ == '__main__':
+    van_file = '/SNS/VULCAN/IPTS-18420/0/136771/NeXus/VULCAN_136771_event.nxs'
+    out_name = '/tmp/van136771.int'
+    export_vanadium_intensity_to_file(van_file, out_name)

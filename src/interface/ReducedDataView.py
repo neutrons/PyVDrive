@@ -32,7 +32,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._myParent = parent
         self._myController = None
 
-        self._bankIDList = ['1', '2', 'All']
+        self._bankIDList = [1, 2]
 
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
@@ -63,6 +63,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._lastVanSmoothedWorkspace = None
         self._vanStripPlotID = None
         self._smoothedPlotID = None
+
+        # about vanadium process
+        self._vanadiumFWHM = None
 
         # set up UI
         self.ui = gui.ui_GPView.Ui_MainWindow()
@@ -119,6 +122,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
 
+        return
+
     def add_data_set(self, ipts_number, run_number, controller_data_key):
         """
         add a new data set to this data viewer window
@@ -142,7 +147,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # get reduced data set from controller
         status, ret_obj = self._myController.get_reduced_data(controller_data_key,
-                                                              target_unit=self._currUnit)
+                                                              target_unit=self._currUnit,
+                                                              search_archive=True)
         # return if unable to get reduced data
         if status is False:
             raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
@@ -160,15 +166,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def add_run_numbers(self, run_tup_list, clear_previous=False):
         """
         set run numbers to combo-box-run numbers
-        :param run_tup_list: a list of 2-tuples as (run number, IPTS number)
+        :param run_tup_list: a list of 2-tuples as (run number, IPTS number) or just a list of integers (run number)
         :param clear_previous:
         :return:
         """
+        # check inputs
         assert isinstance(run_tup_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
                                                '' % (str(run_tup_list), type(run_tup_list))
-
-        # self._runNumberList = run_tup_list[:]
-        # self._runNumberList.sort()
 
         # sort and add
         run_tup_list.sort()
@@ -183,6 +187,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # add run number of combo-box and dictionary
         for run_tup in run_tup_list:
+            assert isinstance(run_tup, tuple) and len(run_tup) == 2,\
+                'Run tuple must contain just run number and ipts number but not {0}'.format(run_tup)
             run_number, ipts_number = run_tup
             self.ui.comboBox_runs.addItem(str(run_number))
             self._dataIptsRunDict[run_number] = ipts_number, run_number
@@ -192,6 +198,29 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         return
+
+    def add_workspaces(self, workspace_name_list, clear_previous=True):
+        """
+        add (CHOPPED) workspaces
+        :param workspace_name_list:
+        :return:
+        """
+        # TODO/ISSUE/NOW/33 More work on this
+        self._mutexRunNumberList = True
+
+        # clear existing runs
+        if clear_previous:
+            self.ui.comboBox_runs.clear()
+            self._runNumberList = list()
+
+        # add run number of combo-box and dictionary
+        for workspace_name in workspace_name_list:
+            self.ui.comboBox_runs.addItem(workspace_name)
+            self._dataIptsRunDict[workspace_name] = None
+            self._runNumberList.append(workspace_name)
+
+        # release mutex lock
+        self._mutexRunNumberList = False
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -272,6 +301,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
 
+        # FWHM
+        if self._vanadiumFWHM is not None:
+            self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+
         return
 
     def do_plot_selected_run(self):
@@ -281,17 +314,24 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # Get run numbers
+        is_workspace = False
         runs_str = str(self.ui.lineEdit_runs.text()).strip()
         if len(runs_str) > 0:
             run_numbers = self.parse_runs_list(runs_str)
         else:
-            run_numbers = [int(self.ui.comboBox_runs.currentText())]
+            run_number_str = str(self.ui.comboBox_runs.currentText())
+            if run_number_str.isdigit():
+                run_numbers = [int(run_number_str)]
+            else:
+                run_numbers = [run_number_str]
+                is_workspace = True
 
         over_plot = self.ui.checkBox_overPlot.isChecked()
         # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
-            self.plot_run(run_number, bank_id, over_plot)
+            print '[DB] is_workspace = ', is_workspace
+            self.plot_run(run_number, bank_id, over_plot, is_workspace)
 
         return
 
@@ -355,14 +395,29 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Get new bank ID
         new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
-        if new_bank_str.isdigit() is False:
+        if new_bank_str.isdigit() is False and new_bank_str != 'All':
             print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
             return
 
-        curr_bank_id = int(new_bank_str)
-        keep_prev = self.ui.checkBox_overPlot.isChecked()
-        if self._currRunNumber is not None:
-            self.plot_run(run_number=self._currRunNumber, bank_id=curr_bank_id, over_plot=keep_prev)
+        if new_bank_str == 'All':
+            # plot all the banks
+            bank_id_list = self._bankIDList[:]
+        else:
+            # plot one bak
+            curr_bank_id = int(new_bank_str)
+            bank_id_list = [curr_bank_id]
+        # END-IF
+
+        # plot all the selected banks
+        for b_index, bank_id in enumerate(bank_id_list):
+            keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
+            if self._currRunNumber is not None:
+                if isinstance(bank_id, str):
+                    raise RuntimeError('bank ID {0} is string!'.format(bank_id))
+                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev,
+                              is_workspace=isinstance(self._currRunNumber, str))
+            # END-IF
+        # END-FOR
 
         return
 
@@ -377,12 +432,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Get the new run number
         run_number = str(self.ui.comboBox_runs.currentText())
         try:
-            run_number = int(run_number)
-            status, run_info = self._myController.get_reduced_run_info(run_number)
-            bank_id_list = run_info
+            if run_number.isdigit():
+                run_number = int(run_number)
+                status, run_info = self._myController.get_reduced_run_info(run_number)
+            else:
+                # is workspace
+                status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
         except ValueError as value_err:
             raise NotImplementedError('Unable to get run information from run {0} due to {1}'
                                       ''.format(run_number, value_err))
+        bank_id_list = run_info
+
         self._currRunNumber = run_number
 
         if status is False:
@@ -399,7 +459,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             # reset current bank ID list
             self._bankIDList = bank_id_list[:]
-            self._bankIDList.append('All')
+        # END-IF
 
         return
 
@@ -413,7 +473,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Get the data sets and replace them with new unit
         for run_number in self._reducedDataDict.keys():
+            # try reduced data first
+            # FIXME/ISSUE/TODO/33 - Shall I generalize the approach to get reduced data???
+            # self.get_reduced_data()
+
             status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
+            if not status:
+                # try archive
+                if isinstance(run_number, str):
+                    is_workspace=True
+                else:
+                    is_workspace=False
+                status, ret_obj = self._myController.get_reduced_data(run_number, new_unit,
+                                                                      self._iptsNumber,
+                                                                      search_archive=True,
+                                                                      is_workspace=is_workspace)
             if status is False:
                 GuiUtility.pop_dialog_error(self, 'Unable to get run %d with new unit %s due to %s.' % (
                     run_number, new_unit, ret_obj
@@ -556,7 +630,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         data_set_list = list()
 
         for run_number in self._runNumberList:
-            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
+            if isinstance(run_number, str) and run_number.isdigit() is False:
+                is_workspace = True
+            else:
+                is_workspace = False
+            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1, is_workspace=is_workspace)
             if status:
                 run_number_list.append(run_number)
                 data_set_list.append(ret_obj)
@@ -584,18 +662,34 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_number: data key or run number
         :param bank_id:
         :param bank_id_from_1:
+        :param is_workspace:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
         """
         # Get data (run)
         if run_number not in self._reducedDataDict:
-            # get new data
+            # get new data from memory
+            if isinstance(run_number, str):
+                is_workspace = True
+            else:
+                is_workspace = False
             status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                                   ipts_number=self._iptsNumber,
-                                                                  search_archive=False)
+                                                                  search_archive=False,
+                                                                  is_workspace=is_workspace)
+            print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
+
+            if not status:
+                # or archive
+                status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                                      ipts_number=self._iptsNumber,
+                                                                      search_archive=True)
+            # END-IF
+            print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
 
             # return if unable to get reduced data
             if status is False:
-                return status, str(ret_obj)
+                error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+                return status, error_message
 
             # check returned data dictionary and set
             reduced_data_dict = ret_obj
@@ -693,7 +787,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return line_id
 
-    def plot_run(self, run_number, bank_id, over_plot=False):
+    def plot_run(self, run_number, bank_id, over_plot=False, is_workspace=False):
         """
         Plot a run on graph
         Requirements:
@@ -703,18 +797,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_number:
         :param bank_id:
         :param over_plot:
+        :param is_workspace
         :return:
         """
         # Check requirements
-        assert isinstance(run_number, int), 'Run number %s must be an integer but not %s.' % (str(run_number),
-                                                                                              str(type(run_number)))
-        assert run_number > 0
+        assert isinstance(run_number, int) or is_workspace, 'Run number %s must be an integer but not %s.' \
+                                                            '' % (str(run_number), str(type(run_number)))
+        assert run_number > 0, 'bla bla'
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
 
         # Get data (run)
-        status, ret_obj = self.get_reduced_data(run_number, bank_id)
+        status, ret_obj = self.get_reduced_data(run_number, bank_id, is_workspace)
         if status:
             vec_x, vec_y = ret_obj
         else:
@@ -727,7 +822,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Plot the run
         # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
-        label = "run %d bank %d" % (run_number, bank_id)
+        label = "run {0} bank {1}".format(run_number, bank_id)
         if over_plot is False:
             self.ui.graphicsView_mainPlot.clear_all_lines()
         line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
@@ -742,11 +837,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # set combo box value correct
         self._mutexBankIDList = True
-        combo_index = self._bankIDList.index(str(bank_id))
+        try:
+            combo_index = self._bankIDList.index(bank_id)
+        except AttributeError as att_err:
+            print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                  ''.format(bank_id, type(bank_id), self._bankIDList)
+            raise att_err
         self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
         self._mutexBankIDList = False
 
-        self.ui.label_currentRun.setText('Run %d' % run_number)
+        self.ui.label_currentRun.setText('Run {0}'.format(run_number))
 
         return
 
@@ -856,6 +956,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         self.ui.label_currentRun.setText(title)
+
+        return
+
+    def set_vanadium_fwhm(self, fwhm):
+        """
+        set vanadium peak's FWHM
+        :param fwhm:
+        :return:
+        """
+        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'blabla'
+
+        self._vanadiumFWHM = fwhm
+
+        return
 
     def setup(self, controller):
         """ Set up the GUI from controller

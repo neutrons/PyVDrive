@@ -66,8 +66,8 @@ class IndicatorManager(object):
         # Auto line ID
         self._autoLineID = 1
 
-        self._lineManager = dict()
-        self._canvasLineKeyDict = dict()  # dictionary for line-key on the canvas
+        self._lineManager = dict()  # key: indicator ID, value: 5-tuple about indicator's position and type
+        self._canvasLineKeyDict = dict()  # key: indicator ID, value: line-key on the canvas
         self._indicatorTypeDict = dict()  # value: 0 (horizontal), 1 (vertical), 2 (2-way)
 
         return
@@ -173,6 +173,10 @@ class IndicatorManager(object):
         :param my_id:
         :return:
         """
+        if my_id not in self._indicatorTypeDict:
+            raise KeyError('Input indicator ID {0} is not in IndicatorTypeDict. Current keys are {1}'
+                           ''.format(my_id, self._indicatorTypeDict.keys()))
+
         return self._indicatorTypeDict[my_id]
 
     def get_2way_data(self, line_id):
@@ -447,6 +451,11 @@ class MplGraphicsView(QtGui.QWidget):
         :param show_legend:
         :return:
         """
+        # check whether the input is empty
+        if len(vec_y) == 0:
+            print '[WARNING] Input is an empty vector set'
+            return False
+
         line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
                                               line_width, show_legend)
 
@@ -845,7 +854,7 @@ class MplGraphicsView(QtGui.QWidget):
 
     def set_indicator_position(self, line_id, pos_x, pos_y):
         """ Set the indicator to new position
-        :param line_id:
+        :param line_id: indicator ID
         :param pos_x:
         :param pos_y:
         :return:
@@ -972,7 +981,7 @@ class MplGraphicsView(QtGui.QWidget):
             # 2-way
             raise RuntimeError('Implement 2-way as soon as possible!')
 
-        return
+        return 1.E100, 1.E100
 
     def getLineStyleList(self):
         """

@@ -50,6 +50,7 @@ class VDriveCommand(object):
 
         # set arguments to command arguments dictionary: it is only set once here
         self._commandArgsDict = command_args
+        print '[DB...BAT] Command Args: {0}'.format(command_args)
 
         # other command variables
         self._iptsNumber = None   # IPTS
@@ -70,7 +71,7 @@ class VDriveCommand(object):
         for arg_key in input_args:
             if arg_key not in supported_arg_list:
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
-                                'commands are %s.' % (self._commandName, arg_key, str(supported_arg_list))
+                                'arguments are %s.' % (self._commandName, arg_key, str(supported_arg_list))
                 print error_message
                 raise CommandKeyError(error_message)
         # END-FOF
@@ -110,6 +111,8 @@ class VDriveCommand(object):
             raise RuntimeError('RUNS is not found.')
         except (ValueError, TypeError):
             raise RuntimeError('RUNS {0} is not an integer.'.format(run_numbers_str))
+
+        print '[DB...BAT] Parse Run Numbers: Input = {0}, Output = {1}.'.format(self._commandArgsDict['RUNS'], run_number_list)
 
         return run_number_list
 

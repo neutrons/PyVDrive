@@ -8,6 +8,14 @@ class VdriveMerge(VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUNFILE', 'CHOPRUN']
 
+    ArgsDocDict = {
+        'IPTS': 'IPTS number',
+        'RUNFILE': 'Name of the file containing runs to merge.',
+        'CHOPRUN': '',
+        'RUNLIST': 'Run number to merge',
+        'OUTPUT': 'Directory to which the reduced merged data is saved.'
+    }
+
     def __init__(self, controller, command_args):
         """ Initialization
         """
@@ -17,33 +25,80 @@ class VdriveMerge(VDriveCommand):
         
         return
 
+    @staticmethod
+    def convert_to_list(list_str):
+        """
+        list in format of string. with separation as &
+        :param list_str:
+        :return:
+        """
+        assert isinstance(list_str, str), 'Input must be a string'
+
+        # remove all the space
+        list_str = list_str.replace(' ', '')
+
+        # split
+        terms = list_str.split('&')
+        if len(terms) < 2:
+            raise RuntimeError('There must be at least 2 run numbers given.')
+
+        run_number_list = list()
+        for term in terms:
+            try:
+                run = int(term)
+            except ValueError as value_err:
+                raise RuntimeError('In given run numbers, {0} is not a valid integer.'.format(term))
+            if run < 0:
+                raise RuntimeError('blabla')
+            run_number_list.append(run)
+
+        return run_number_list
+
     def exec_cmd(self):
         """ Execute input command
         """
         # parse
         self.set_ipts()
 
-        try:
-            run_file = str(self._commandArgsDict['RUNFILE'])
-            chop_run = str(self._commandArgsDict['CHOPRUN'])
+        # get run numbers to
+        run_number_list = self.parse_run_numbers()
 
-        except KeyError as err:
-            raise RuntimeError('MERGE command requires input of argument %s.' % 'RUNFILE and CHOPRUN')
-
-        # parse run file
-        to_merge_runs = self.read_merge_run_file(run_file)
-        dir_2_save = self.generate_data_save_dir(chop_run)
+        # output directory
+        output_directory = self.parse_output_directory()
 
         # set up
-        self._controller.setup_merge(ipts_number=self._iptsNumber, runs=to_merge_runs, save_dir=dir_2_save)
-        run_info_list = self._controller.get_runs(run_number_list=to_merge_runs)
+        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                             run_number_list)
 
-        # reduce
-        self._controller.add_runs_to_project(run_info_list, self._iptsNumber)
-        reduce_id = self._controller.reduce_data_set(merge=True)
-        self._controller.export_gsas_file(registry=reduce_id, output_dir=dir_2_save)
+        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+        self._controller.add_runs_to_project(run_info_list)
 
-        pass
+        # # set vanadium runs
+        # TODO/FUTURE: Optionally add support of vanadium run
+        # if van_run is not None:
+        #     self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+
+        # TODO/FUTURE: Optionally add support of 'TAG'
+        standard_tuple = None
+
+        # TODO/FUTURE: Optionally add support of user-specified binning parameters
+        binning_parameters = None
+
+        # set flag
+        run_number_list = list()
+        for run_info in run_info_list:
+            run_number_list.append(run_info['run'])
+        self._controller.set_runs_to_reduce(run_number_list)
+
+        # reduce by regular runs
+        # TODO/FIXME/NOW - Binning parameters
+        status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_directory,
+                                                           vanadium=None,
+                                                           standard_sample_tuple=standard_tuple,
+                                                           binning_parameter=binning_parameters,
+                                                           merge=True)
+
+        return status, str(ret_obj)
 
     def generate_data_save_dir(self, chop_run):
         """
@@ -53,9 +108,71 @@ class VdriveMerge(VDriveCommand):
         """
         assert isinstance(chop_run, str), 'Parameter chop_run (%s) must be a string but not a %s.' \
                                           '' % (str(chop_run), chop_run.__class__.__name__)
-        dir = '/SNS/VULCAN/IPTS-%d/shared/chopped_data/%s/' % (self._iptsNumber, chop_run)
+        chop_run_dir = '/SNS/VULCAN/IPTS-%d/shared/chopped_data/%s/' % (self._iptsNumber, chop_run)
 
-        return dir
+        return chop_run_dir
+
+    def get_help(self):
+        """
+        get help
+        :return:
+        """
+        help_str = 'MERGE: Merge runs and reduce the merged data.\n'
+
+        for arg_str in self.SupportedArgs:
+            help_str += '  %-10s: ' % arg_str
+            if arg_str in self.ArgsDocDict:
+                help_str += '%s\n' % self.ArgsDocDict[arg_str]
+            else:
+                help_str += '\n'
+        # END-FOR
+
+        # examples
+        help_str += 'Examples:\n'
+        help_str += '> MERGE, IPTS=18420, RUN=135318 & 135775\n'
+
+        return help_str
+
+    def parse_output_directory(self):
+        """
+
+        :return:
+        """
+        if 'OUTPUT' in self._commandArgsDict and 'CHOPRUN' in self._commandArgsDict:
+            # specify too many
+            raise RuntimeError('It is not permitted to specify both OUTPUT and CHOPRUN')
+
+        elif 'OUTPUT' in self._commandArgsDict:
+            output_directory = self._commandArgsDict['OUTPUT']
+
+        elif 'CHOPRUN' in self._commandArgsDict:
+            chop_run = str(self._commandArgsDict['CHOPRUN'])
+            # parse run file
+            output_directory = self.generate_data_save_dir(chop_run)
+
+        else:
+            raise RuntimeError('MERGE command requires input of argument {0}.'
+                               ''.format('RUNFILE and CHOPRUN'))
+
+        return output_directory
+
+    def parse_run_numbers(self):
+        """
+        parse run numbers from command's input
+        :return:
+        """
+        if 'RUNFILE' in self._commandArgsDict and 'RUNLIST' in self._commandArgsDict:
+            raise RuntimeError('RUNFILE and RUNLIST  cannot be specified simultaneously.')
+        elif 'RUNFILE' not in self._commandArgsDict and 'RUNLIST' not in self._commandArgsDict:
+            raise RuntimeError('Either RUNFILE or RUNLIST must be specified.')
+
+        if 'RUNFILE' in self._commandArgsDict:
+            run_file = str(self._commandArgsDict['RUNFILE'])
+            to_merge_runs = self.read_merge_run_file(run_file)
+        else:
+            to_merge_runs = self.convert_to_list(str(self._commandArgsDict['RUNLIST']))
+
+        return to_merge_runs
 
     @staticmethod
     def read_merge_run_file(run_file_name):
@@ -66,7 +183,7 @@ class VdriveMerge(VDriveCommand):
         assert os.path.exists(run_file_name), 'RUNFILE %s cannot be found or accessed.' % run_file_name
 
         # import run-merge file
-        run_file = file.open(run_file_name, 'r')
+        run_file = open(run_file_name, 'r')
         lines = run_file.readlines()
         run_file.close()
 
@@ -100,6 +217,22 @@ class VdriveMerge(VDriveCommand):
         return merge_run_dict
 
 
+# TODO/FIXME/NOW/ISSUE/33 - Make following work!
+# 1. accept vdrivemerge as well merge
+# 2. see the error message below
+""" Error Message
+"Run: merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2"
+
+VDRIVE command merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2 is executed successfully.
+Failed to execute VDRIVE command due to Run number list cannot be of type <type 'dict'>..
+  File "<ipython-input-4-9e445d9a41ff>", line 1
+    "Run: merge,ipts=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/shared/runfile.txt",choprun=2"
+                                                                                        ^
+SyntaxError: invalid syntax
+"""
+
+
+
 """
 MERGE, IPTS=1000, RUNFILE="/SNS/VULCAN/IPTS-1000/shared/runfile.txt", CHOPRUN=2
 The combined data are saved to /SNS/VULCAN/IPTS-1000/shared/chopped_data/2/ To bin the data combined by VDRIVEMERGE:
@@ -113,4 +246,13 @@ Example of the tab delimited runfile.txt:
 ----------------------------
 Additional keywords:
 NONE
+
+
+TODO/ISSUE/NOW/33: Test the following use case
+
+Example 2:
+VDRIVEMERGE,IPTS=13585,RUNFILE="/SNS/VULCAN/IPTS-13585/SHARED/RUNFILE.TXT",CHOPRUN=2
+
+Parse: "77868	78277"  (spaced by tab)
+
 """
