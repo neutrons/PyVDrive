@@ -721,7 +721,7 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def get_archived_runs(self, archive_key, begin_run, end_run):
+    def get_archived_runs(self, archive_key, range(begin_run, end_run+1)):
         """
         Get runs from archived data
         :param archive_key:
