@@ -619,6 +619,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # END-IF
 
         # update the color of the
+        # TODO/ISSUE/65 - Need better documentation here!
         if peak_id == self._highlightPeakID:
             # no change
             pass
@@ -1038,27 +1039,28 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
                 self._menu.addAction(action_del_peak)
 
-            # add actions to add group boundaries
-            if self._addedLeftBoundary:
-                # next boundary to add must be a right boundary
-                action_add_right_bound = QtGui.QAction('Add right boundary', self)
-                action_add_right_bound.triggered.connect(self.menu_add_right_group_boundary)
-                self._menu.addAction(action_add_right_bound)
-            else:
-                # next boundary to add must be a left boundary
-                action_add_left_bound = QtGui.QAction('Add left boundary', self)
-                action_add_left_bound.triggered.connect(self.menu_add_left_group_boundary)
-                self._menu.addAction(action_add_left_bound)
+            # NOTE: The following 3 actions are disabled as they are rarely used and confusing
+            # # add actions to add group boundaries
+            # if self._addedLeftBoundary:
+            #     # next boundary to add must be a right boundary
+            #     action_add_right_bound = QtGui.QAction('Add right boundary', self)
+            #     action_add_right_bound.triggered.connect(self.menu_add_right_group_boundary)
+            #     self._menu.addAction(action_add_right_bound)
+            # else:
+            #     # next boundary to add must be a left boundary
+            #     action_add_left_bound = QtGui.QAction('Add left boundary', self)
+            #     action_add_left_bound.triggered.connect(self.menu_add_left_group_boundary)
+            #     self._menu.addAction(action_add_left_bound)
 
-            # add action to undo work to add boundary
-            action_cancel = QtGui.QAction('Cancel boundary', self)
-            action_cancel.triggered.connect(self.menu_undo_boundary)
-            self._menu.addAction(action_cancel)
+            # # add action to undo work to add boundary
+            # action_cancel = QtGui.QAction('Cancel boundary', self)
+            # action_cancel.triggered.connect(self.menu_undo_boundary)
+            # self._menu.addAction(action_cancel)
 
-            # add action to reset all the grouping effort
-            action_reset = QtGui.QAction('Reset grouping', self)
-            action_reset.triggered.connect(self.menu_reset_grouping)
-            self._menu.addAction(action_reset)
+            # # add action to reset all the grouping effort
+            # action_reset = QtGui.QAction('Reset grouping', self)
+            # action_reset.triggered.connect(self.menu_reset_grouping)
+            # self._menu.addAction(action_reset)
 
             # pop
             self._menu.popup(QtGui.QCursor.pos())
@@ -1283,9 +1285,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         return
 
     """
-
-
-
     menu_reset_grouping
     """
 
