@@ -721,7 +721,7 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def get_archived_runs(self, archive_key, range(begin_run, end_run+1)):
+    def get_archived_runs(self, archive_key, begin_run, end_run):
         """
         Get runs from archived data
         :param archive_key:
@@ -732,7 +732,7 @@ class VDriveAPI(object):
         # check input
         assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
                                              '' % (str(archive_key), type(archive_key))
-        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, begin_run, end_run)
+        run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, range(begin_run, end_run+1))
 
         if len(run_info_dict_list) > 0:
             status = True
@@ -798,7 +798,7 @@ class VDriveAPI(object):
         :param run_number:
         :return:
         """
-        return self._myArchiveManager.get_ipts_number(run_number=run_number, throw=False)
+        return self._myArchiveManager.get_ipts_number(run_number=run_number)
 
     def get_run_info(self, run_number):
         """ Get a run's information
