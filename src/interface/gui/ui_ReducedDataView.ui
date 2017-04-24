@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1317</width>
-    <height>832</height>
+    <height>883</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,11 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>10</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -71,13 +76,16 @@
           </layout>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioButton">
+          <widget class="QRadioButton" name="radioButton_fromMemory">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
              <weight>75</weight>
              <bold>true</bold>
             </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Get the data from PyVDrive reduced data in this session&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
             <string>From PyVDrive</string>
@@ -120,7 +128,7 @@
            <item row="1" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
-              <widget class="QPushButton" name="pushButton_2">
+              <widget class="QPushButton" name="pushButton_setReducedRunMem">
                <property name="font">
                 <font>
                  <pointsize>10</pointsize>
@@ -132,11 +140,14 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="checkBox_2">
+              <widget class="QCheckBox" name="checkBox_choppedDataMem">
                <property name="font">
                 <font>
                  <pointsize>10</pointsize>
                 </font>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt;&quot;&gt;If specified, then the chopped data will be loaded.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt;&quot;&gt;Otherwise, the reduced data of the complete run will be loaded.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Chopped Data</string>
@@ -148,7 +159,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioButton_2">
+          <widget class="QRadioButton" name="radioButton_fromArchive">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -156,8 +167,11 @@
              <bold>true</bold>
             </font>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:400;&quot;&gt;Search and load reduced data (GSAS file) from archive &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="text">
-            <string>From Archive</string>
+            <string>From Archive (/SNS/VULCAN/...)</string>
            </property>
           </widget>
          </item>
@@ -182,7 +196,7 @@
             </widget>
            </item>
            <item row="0" column="2">
-            <widget class="QLineEdit" name="lineEdit_3">
+            <widget class="QLineEdit" name="lineEdit_iptsNumber">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -197,7 +211,7 @@
             </widget>
            </item>
            <item row="0" column="3">
-            <widget class="QPushButton" name="pushButton_4">
+            <widget class="QPushButton" name="pushButton_loadArchivedGSAS">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -209,11 +223,14 @@
             </widget>
            </item>
            <item row="1" column="3">
-            <widget class="QCheckBox" name="checkBox_3">
+            <widget class="QCheckBox" name="checkBox_loadChoppedArchive">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
               </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;If specified, PyVDrive will search /SNS/VULCAN/IPTS-12345/shared/binned/{RUN_NUMBER} for chopped data&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string>Chopped Data</string>
@@ -239,7 +256,7 @@
             </widget>
            </item>
            <item row="1" column="2">
-            <widget class="QLineEdit" name="lineEdit_runs">
+            <widget class="QLineEdit" name="lineEdit_run">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -272,7 +289,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioButton_3">
+          <widget class="QRadioButton" name="radioButton_anyGSAS">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
@@ -286,8 +303,8 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_4">
-           <item>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="0" column="0">
             <spacer name="horizontalSpacer_3">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -303,8 +320,41 @@
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="QLineEdit" name="lineEdit_4">
+           <item row="0" column="3">
+            <widget class="QPushButton" name="pushButton_loadAnyGSAS">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Load</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="pushButton_browseAnyGSAS">
+             <property name="maximumSize">
+              <size>
+               <width>20</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;Browse any GSAS file&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>...</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_gsasFileName">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -321,33 +371,25 @@
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_5">
-             <property name="maximumSize">
-              <size>
-               <width>20</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
+           <item row="1" column="3">
+            <widget class="QCheckBox" name="checkBox_loadChoppedAny">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt;&quot;&gt;If specified, then load the data from a directory with certain sequence&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>...</string>
+              <string>chopped Data</string>
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_6">
+           <item row="1" column="1">
+            <widget class="QLabel" name="label_9">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
               </font>
              </property>
              <property name="text">
-              <string>Load</string>
+              <string/>
              </property>
             </widget>
            </item>
@@ -388,7 +430,13 @@
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QComboBox" name="comboBox"/>
+            <widget class="QComboBox" name="comboBox_chopSeq">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -403,6 +451,21 @@
            </property>
            <property name="text">
             <string>Plot</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_overPlot">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+             <weight>50</weight>
+             <italic>true</italic>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Keep Previous</string>
            </property>
           </widget>
          </item>
@@ -433,13 +496,6 @@
             </widget>
            </item>
           </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="checkBox_overPlot">
-           <property name="text">
-            <string>Keep Previous</string>
-           </property>
-          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_allFillPlot">
@@ -720,7 +776,7 @@
      <x>0</x>
      <y>0</y>
      <width>1317</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

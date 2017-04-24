@@ -14,7 +14,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_GPView
+import gui.ui_ReducedDataView
 import vanadium_controller_dialog
 
 
@@ -68,7 +68,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._vanadiumFWHM = None
 
         # set up UI
-        self.ui = gui.ui_GPView.Ui_MainWindow()
+        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # initialize widgets
@@ -107,6 +107,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
                      self.do_launch_vanadium_dialog)
 
+        # widgets to load reduced data
+        self.connect(self.ui.pushButton_setReducedRunMem, QtCore.SIGNAL('clicked()'),
+                     self.do_set_reduced_from_memory)
+        self.connect(self.ui.pushButton_loadArchivedGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_set_reduced_from_archive)
+        self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_local_gsas)
+        self.connect(self.ui.pushButton_loadAnyGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_local_gsas)
+
         # sub window
         self._vanadiumProcessDialog = None
 
@@ -117,10 +127,220 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Initialize some widgets
         :return:
         """
-        # bank list
+        # bank list:
+        # TODO/NOW/ISSUE - Need to reformed!
         self.ui.comboBox_spectraList.addItem('1')
         self.ui.comboBox_spectraList.addItem('2')
         self.ui.comboBox_spectraList.addItem('All')
+
+        # default to load data from memory
+        self.ui.radioButton_fromMemory.setChecked(True)
+        self.ui.radioButton_fromArchive.setChecked(False)
+        self.ui.radioButton_anyGSAS.setChecked(True)
+
+        return
+
+    def event_load_options(self):
+        """
+        handling event that the run loads option is changed
+        :return:
+        """
+        if self.ui.radioButton_fromMemory.isChecked():
+            # enable group 1 widgets
+            self.set_group1_enabled(True)
+            self.set_group2_enabled(False)
+            self.set_group3_enabled(False)
+        elif self.ui.radioButton_fromArchive.isChecked():
+            # enable group 2 widgets
+            self.set_group1_enabled(True)
+            self.set_group2_enabled(False)
+            self.set_group3_enabled(False)
+        elif self.ui.radioButton_anyGSAS.isChecked():
+            # enable group 3 widgets
+            self.set_group1_enabled(True)
+            self.set_group2_enabled(False)
+            self.set_group3_enabled(False)
+        else:
+            # impossible situation
+            raise RuntimeError('One of these 3 radio buttons must be selected!')
+
+        return
+
+    def set_group1_enabled(self, enabled):
+        """
+        set the group of widgets to load run from PyVdrive reduced in memory
+        :param enabled:
+        :return:
+        """
+        self.ui.comboBox_runs.setEnabled(enabled)
+        self.ui.pushButton_setReducedRunMem.setEnabled(enabled)
+        self.ui.checkBox_choppedDataMem.setEnabled(enabled)
+
+        return
+
+    def set_group2_enabled(self, enabled):
+        """
+        set the group of widgets to load run from archived reduced data
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_iptsNumber.setEnabled(enabled)
+        self.ui.pushButton_loadArchivedGSAS.setEnabled(enabled)
+        self.ui.lineEdit_run.setEnabled(enabled)
+        self.ui.checkBox_loadChoppedArchive(enabled)
+
+        return
+
+    def set_group3_enabled(self, enabled):
+        """
+        set the group of widgets to load run from arbitrary reduced data
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_gsasFileName.setEnabled(enabled)
+        self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
+        self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
+        self.ui.checkBox_loadChoppedAny(enabled)
+
+        return
+
+    def label_loaded_data(self, run_number, is_chopped, chop_seq_list):
+        """
+        make a label of loaded data to plot
+        :param run_number:
+        :param is_chopped:
+        :param chop_seq_list:
+        :return:
+        """
+        label_str = 'Run {0}'.format(run_number)
+        if is_chopped:
+            assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
+            chop_seq_list = chop_seq_list.sort()
+            label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
+
+        self.ui.label_currentRun.setText(label_str)
+
+        return
+
+    def set_chopped_sequence(self, seq_list):
+        """
+        set the chopped sequence to the sequence combo box
+        :param seq_list:
+        :return:
+        """
+        # check input
+        assert isinstance(seq_list, list) and len(seq_list) > 0, \
+            'Sequence {0} must be a non-empty list. Now input is of type {1}'.format(seq_list, type(seq_list))
+
+        # clear
+        self.ui.comboBox_chopSeq.clear()
+
+        # add sequence
+        for seq in sorted(seq_list):
+            self.ui.comboBox_chopSeq.addItem(str(seq))
+
+        return
+
+    def do_set_reduced_from_memory(self):
+        """
+        set the load
+        :return:
+        """
+        # get information
+        self._currRunNumber = int(self.ui.comboBox_runs.currentText())
+        is_chopped_data = self.ui.checkBox_choppedDataMem.isChecked()
+
+        # pre-load the data
+        if is_chopped_data:
+            # get the data handler from PyVDrive-reduced data (in memory)
+            data_key = self._myController.get_reduced_chopped_data(self._currRunNumber)
+            seq_list = data_key['chopped sequence']
+            self.set_chopped_sequence(seq_list)
+        else:
+            # get the original reduced data
+            data_key = self._myController.get_reduced_data(self._currRunNumber)
+            seq_list = None
+
+        # set the label
+        self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+
+        return
+
+
+    def do_load_archived_gsas(self):
+        """
+
+        :return:
+        """
+        # read from input
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+        is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
+
+        # load
+        data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+
+        # set sequence list
+        if is_chopped_data:
+            seq_list = data_key['chopped sequence']
+        else:
+            seq_list = None
+
+        # set the label
+        self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+
+        return
+
+    def do_browse_local_gsas(self):
+        """
+        browse GSAS file or chopped GSAS files via local HDD
+        :return:
+        """
+        # get setup
+        is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
+        default_dir = self._myController.get_working_directory()
+
+        # get GSAS file or gsas files
+        if is_chopped_data:
+            # get the directory of chopped data
+            chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
+                                                                        default_dir))
+            self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
+        else:
+            # get the data file
+            gsas_filter = 'GSAS(*.gda);;GSAS (*.gsa);;All Files(*.*)'
+            gsas_file_name = QtGui.QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
+            self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
+
+        return
+
+    def do_load_local_gsas(self):
+        """
+        load gsas or sequence of GSAS files
+        :return:
+        """
+        # get GSAS file path
+        gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+        if os.path.isdir(gsas_path):
+            # input is a directory
+            data_info = self._myController.load_gsas_chopped(gsas_path)
+            seq_list = data_info['chopped sequence']
+            self.set_chopped_sequence(seq_list)
+        else:
+            # input is a file
+            data_info = self._myController.load_gsas_file(gsas_path)
+            seq_list = None
+            self.clear_chopped_sequence()
+
+        # get run number from all the information
+        run_number = self.guess_run_number(gsas_path)
+        if run_number is None:
+            run_number = 0
+        self._currRunNumber = run_number
+
+        # set the label
+
+        self.label_loaded_data(self._currRunNumber, os.path.isdir(gsas_path), seq_list)
 
         return
 
@@ -313,22 +533,29 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         then from combo box
         :return:
         """
-        # Get run numbers
-        is_workspace = False
-        runs_str = str(self.ui.lineEdit_runs.text()).strip()
-        if len(runs_str) > 0:
-            run_numbers = self.parse_runs_list(runs_str)
-        else:
-            run_number_str = str(self.ui.comboBox_runs.currentText())
-            if run_number_str.isdigit():
-                run_numbers = [int(run_number_str)]
-            else:
-                run_numbers = [run_number_str]
-                is_workspace = True
+        # TODO/ISSUE/NOW - A new way to plot
+        # select runs from
+        comboBox_chopSeq
+        comboBox_spectraList
+        # run number, file location or etc are from memory
 
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
+        #
+        # # Get run numbers
+        # is_workspace = False
+        # runs_str = str(self.ui.lineEdit_runs.text()).strip()
+        # if len(runs_str) > 0:
+        #     run_numbers = self.parse_runs_list(runs_str)
+        # else:
+        #     run_number_str = str(self.ui.comboBox_runs.currentText())
+        #     if run_number_str.isdigit():
+        #         run_numbers = [int(run_number_str)]
+        #     else:
+        #         run_numbers = [run_number_str]
+        #         is_workspace = True
+        #
+        # over_plot = self.ui.checkBox_overPlot.isChecked()
+        # # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
+        # bank_id = int(self.ui.comboBox_spectraList.currentText())
         for run_number in run_numbers:
             print '[DB] is_workspace = ', is_workspace
             self.plot_run(run_number, bank_id, over_plot, is_workspace)
