@@ -111,11 +111,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_setReducedRunMem, QtCore.SIGNAL('clicked()'),
                      self.do_set_reduced_from_memory)
         self.connect(self.ui.pushButton_loadArchivedGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_set_reduced_from_archive)
+                     self.do_load_archived_gsas)
         self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
                      self.do_browse_local_gsas)
         self.connect(self.ui.pushButton_loadAnyGSAS, QtCore.SIGNAL('clicked()'),
                      self.do_load_local_gsas)
+
+        self.connect(self.ui.radioButton_fromMemory, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
+        self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
+        self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
 
         # sub window
         self._vanadiumProcessDialog = None
@@ -127,16 +134,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Initialize some widgets
         :return:
         """
-        # bank list:
-        # TODO/NOW/ISSUE - Need to reformed!
-        self.ui.comboBox_spectraList.addItem('1')
-        self.ui.comboBox_spectraList.addItem('2')
-        self.ui.comboBox_spectraList.addItem('All')
+        # # bank list:
+        # # TODO/NOW/ISSUE - Need to reformed!
+        # self.ui.comboBox_spectraList.addItem('1')
+        # self.ui.comboBox_spectraList.addItem('2')
+        # self.ui.comboBox_spectraList.addItem('All')
 
         # default to load data from memory
         self.ui.radioButton_fromMemory.setChecked(True)
         self.ui.radioButton_fromArchive.setChecked(False)
-        self.ui.radioButton_anyGSAS.setChecked(True)
+        self.ui.radioButton_anyGSAS.setChecked(False)
+
+        self.set_group1_enabled(True)
+        self.set_group2_enabled(False)
+        self.set_group3_enabled(False)
 
         return
 
@@ -152,17 +163,26 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self.set_group3_enabled(False)
         elif self.ui.radioButton_fromArchive.isChecked():
             # enable group 2 widgets
-            self.set_group1_enabled(True)
-            self.set_group2_enabled(False)
+            self.set_group1_enabled(False)
+            self.set_group2_enabled(True)
             self.set_group3_enabled(False)
         elif self.ui.radioButton_anyGSAS.isChecked():
             # enable group 3 widgets
-            self.set_group1_enabled(True)
+            self.set_group1_enabled(False)
             self.set_group2_enabled(False)
-            self.set_group3_enabled(False)
+            self.set_group3_enabled(True)
         else:
             # impossible situation
             raise RuntimeError('One of these 3 radio buttons must be selected!')
+
+        return
+
+    def clear_chopped_sequence(self):
+        """
+        blabla
+        :return:
+        """
+        self.ui.comboBox_chopSeq.clear()
 
         return
 
@@ -187,7 +207,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.lineEdit_iptsNumber.setEnabled(enabled)
         self.ui.pushButton_loadArchivedGSAS.setEnabled(enabled)
         self.ui.lineEdit_run.setEnabled(enabled)
-        self.ui.checkBox_loadChoppedArchive(enabled)
+        self.ui.checkBox_loadChoppedArchive.setEnabled(enabled)
 
         return
 
@@ -200,7 +220,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.lineEdit_gsasFileName.setEnabled(enabled)
         self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
         self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
-        self.ui.checkBox_loadChoppedAny(enabled)
+        self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
 
         return
 
@@ -266,7 +286,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-
     def do_load_archived_gsas(self):
         """
 
@@ -298,7 +317,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # get setup
         is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
-        default_dir = self._myController.get_working_directory()
+        default_dir = self._myController.get_working_dir()
 
         # get GSAS file or gsas files
         if is_chopped_data:
@@ -321,6 +340,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # get GSAS file path
         gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+        if len(gsas_path) == 0:
+            # check
+            GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
+            return
+
         if os.path.isdir(gsas_path):
             # input is a directory
             data_info = self._myController.load_gsas_chopped(gsas_path)
@@ -328,9 +352,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self.set_chopped_sequence(seq_list)
         else:
             # input is a file
-            data_info = self._myController.load_gsas_file(gsas_path)
+            data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
             seq_list = None
+            self._myController.get_run_info(run_number=None, data_key=data_key)
             self.clear_chopped_sequence()
+            self._currDataKey = data_key
 
         # get run number from all the information
         run_number = self.guess_run_number(gsas_path)
@@ -339,7 +365,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._currRunNumber = run_number
 
         # set the label
-
         self.label_loaded_data(self._currRunNumber, os.path.isdir(gsas_path), seq_list)
 
         return
@@ -1362,3 +1387,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._myController.undo_vanadium_smoothing()
 
         return
+
+    @staticmethod
+    def guess_run_number(gsas_path):
+        """
+        guess the run number from a file
+        :param gsas_path:
+        :return:
+        """
+        # Example:        / home / wzz / Projects / workspaces / VDrive / beta_test / 98237 - s.gda
+        # TODO/ISSUE/NOW/65 - Implement it
+        return None

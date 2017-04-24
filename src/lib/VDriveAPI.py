@@ -800,17 +800,22 @@ class VDriveAPI(object):
         """
         return self._myArchiveManager.get_ipts_number(run_number=run_number)
 
-    def get_run_info(self, run_number):
+    def get_run_info(self, run_number, data_key=None):
         """ Get a run's information
         :param run_number:
         :return: 2-tuple as (boolean, 2-tuple (file path, ipts)
         """
-        assert isinstance(run_number, int)
+        # TODO/ISSUE/65 - Expand this method to get information from loaded GSAS data too
+        assert isinstance(run_number, int), 'blabla'
 
-        try:
-            run_info_tuple = self._myProject.get_run_info(run_number)
-        except RuntimeError as re:
-            return False, str(re)
+        if run_number is not None:
+            try:
+                run_info_tuple = self._myProject.get_run_info(run_number)
+            except RuntimeError as re:
+                return False, str(re)
+        elif data_key is not None:
+            blabla
+
 
         return True, run_info_tuple
 
@@ -908,7 +913,6 @@ class VDriveAPI(object):
         Purpose: import a gsas peak file
         Requirements: peak file is a valid file name
         Guarantees: all peaks are imported
-        :param self:
         :param peak_file_name:
         :return:
         """
@@ -922,9 +926,22 @@ class VDriveAPI(object):
 
         return peak_list
 
+    def load_chooped_diffraction_files(self, direcotry, file_type):
+        """
+
+        :param direcotry:
+        :param file_type:
+        :return:
+        """
+        # TODO/FIXME/NOW/65... SEE 'loaded_data_manager.py'
+        self._myProject.data_loading_manager.load_chopped_binned_data
+
+        return
+
     def load_diffraction_file(self, file_name, file_type):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
+        a.k.a. load_gsas_data
         :param file_name
         :param file_type:
         :return:

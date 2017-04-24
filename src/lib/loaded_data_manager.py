@@ -130,3 +130,12 @@ class LoadedDataManager(object):
         self._workspaceDict[data_key] = data_ws_name
 
         return data_key
+
+    def load_chopped_binned_data(self):
+        """
+        blabla
+        :return:
+        """
+        # TODO/ISSUE/65/NOW - Make it work!
+
+        return

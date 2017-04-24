@@ -122,6 +122,12 @@ class MantidIPythonWidget(RichIPythonWidget):
         # interpret command: command is in self.input_buffer
         script = str(self.input_buffer).strip()
 
+        # convert previous command "Run: vbin, ipts=18420, runs=139148, tag='C', output='\tmp'" to a property command
+        if script.startswith('"Run: '):
+            print 'THIS CAN BE A RESERVED COMMAND'
+            # TODO/ISSUE/NOW/65
+        raise NotImplementedError('FROM HERE!')
+
         # main application is workspace viewer
         is_reserved = False
         # print '[DB...] Now test reserved command for %s' % script
