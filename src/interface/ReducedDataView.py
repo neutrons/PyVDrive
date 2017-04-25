@@ -43,11 +43,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._runNumberList = None
 
         self._currRunNumber = None
+        self._currDataKey = None
         self._currBank = 1
         self._currUnit = 'TOF'
 
         self._choppedRunNumber = 0
         self._choppedSequenceList = None
+        # data managing dictionary for chopped data. key is the sequence, value is data key
+        self._choppedDataDict = None
 
         self._canvasDimension = 1
         self._plotType = None
@@ -134,12 +137,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Initialize some widgets
         :return:
         """
-        # # bank list:
-        # # TODO/NOW/ISSUE - Need to reformed!
-        # self.ui.comboBox_spectraList.addItem('1')
-        # self.ui.comboBox_spectraList.addItem('2')
-        # self.ui.comboBox_spectraList.addItem('All')
-
         # default to load data from memory
         self.ui.radioButton_fromMemory.setChecked(True)
         self.ui.radioButton_fromArchive.setChecked(False)
@@ -148,6 +145,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.set_group1_enabled(True)
         self.set_group2_enabled(False)
         self.set_group3_enabled(False)
+
+        return
+
+    def set_banks(self, bank_list):
+        """
+        set banks list
+        :return:
+        """
+        # check inputs
+        assert isinstance(bank_list, list) and len(bank_list) > 0, 'List of banks {0} must be a non-empty list but ' \
+                                                                   'not a {1}.'
+        bank_list.sort()
+        for bank in bank_list:
+            self.ui.comboBox_spectraList.addItem(str(bank))
+        self.ui.comboBox_spectraList.addItem('All')
 
         return
 
@@ -347,16 +359,22 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         if os.path.isdir(gsas_path):
             # input is a directory
-            data_info = self._myController.load_gsas_chopped(gsas_path)
-            seq_list = data_info['chopped sequence']
+            data_key_dict = self._myController.load_chopped_binned_data(gsas_path, 'gsas')
+            self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
+            seq_list = sorted(self._choppedDataDict.keys())
             self.set_chopped_sequence(seq_list)
+            bank_list = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
         else:
             # input is a file
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
-            seq_list = None
-            self._myController.get_run_info(run_number=None, data_key=data_key)
-            self.clear_chopped_sequence()
             self._currDataKey = data_key
+            bank_list = self._myController.get_run_info(run_number=None, data_key=data_key)
+            seq_list = None
+            self.clear_chopped_sequence()
+        # END-IF-ELSE
+
+        # set bank list to widget/combobox
+        self.set_banks(bank_list)
 
         # get run number from all the information
         run_number = self.guess_run_number(gsas_path)
@@ -558,7 +576,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         then from combo box
         :return:
         """
-        # TODO/ISSUE/NOW - A new way to plot
+        if self.ui.comboBox_chopSeq.size() == 0:
+            # non-chopped data
+            pass
+        else:
+            # chopped data
+
+        # TODO/ISSUE/NOW/65 - A new way to plot
         # select runs from
         comboBox_chopSeq
         comboBox_spectraList
@@ -907,6 +931,28 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error(self, error_msg)
 
         return
+
+    @staticmethod
+    def get_chopped_sequence(data_key_dict):
+        """
+        get the chopped data's sequence inferred from the file names
+        :param data_key_dict:
+        :return:
+        """
+        # check inputs
+        assert isinstance(data_key_dict, dict), 'Data key dictionary {0} must be a dictionary but not a {1}.' \
+                                                ''.format(data_key_dict, type(data_key_dict))
+
+        # get data sequence
+        chop_seq_dict = dict()
+        for data_key in data_key_dict.keys():
+            file_name = data_key_dict[data_key]
+            base_name = os.path.basename(file_name)
+            seq_index = base_name.split('.')[0]
+            chop_seq_dict[seq_index] = data_key
+        # END-FOR
+
+        return data_key_dict
 
     def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """

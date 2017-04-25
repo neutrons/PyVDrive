@@ -926,17 +926,16 @@ class VDriveAPI(object):
 
         return peak_list
 
-    def load_chooped_diffraction_files(self, direcotry, file_type):
+    def load_chopped_diffraction_files(self, direcotry, file_type):
         """
-
+        loaded chopped and reduced diffraction files
         :param direcotry:
         :param file_type:
         :return:
         """
-        # TODO/FIXME/NOW/65... SEE 'loaded_data_manager.py'
-        self._myProject.data_loading_manager.load_chopped_binned_data
+        chopped_key_dict = self._myProject.data_loading_manager.load_chopped_binned_data(direcotry, file_type)
 
-        return
+        return chopped_key_dict
 
     def load_diffraction_file(self, file_name, file_type):
         """ Load reduced diffraction file to analysis project

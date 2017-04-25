@@ -136,6 +136,8 @@ class LoadedDataManager(object):
     def load_chopped_binned_data(self, chopped_data_dir, file_format='gsas'):
         """
         load chopped and binned data (in GSAS format) for a diretory
+        :param chopped_data_dir:
+        :param file_format:
         :return:
         """
         # check inputs
