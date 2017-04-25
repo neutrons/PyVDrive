@@ -1,4 +1,6 @@
 import os
+from os import listdir
+from os.path import isfile, join
 import mantid_helper
 
 
@@ -131,11 +133,44 @@ class LoadedDataManager(object):
 
         return data_key
 
-    def load_chopped_binned_data(self):
+    def load_chopped_binned_data(self, chopped_data_dir, file_format='gsas'):
         """
-        blabla
+        load chopped and binned data (in GSAS format) for a diretory
         :return:
         """
-        # TODO/ISSUE/65/NOW - Make it work!
+        # check inputs
+        assert isinstance(chopped_data_dir, str), 'Direcotry {0} must be given as a string but not a {1}.' \
+                                                  ''.format(chopped_data_dir, str(chopped_data_dir))
+        if not os.path.exists(chopped_data_dir):
+            raise RuntimeError('Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
 
-        return
+        assert isinstance(file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
+
+        # list the files in a directory
+        file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
+
+        allowed_posfix = list()
+        if file_format == 'gsas':
+            allowed_posfix.extend(['.gda', '.gss', '.gsa'])
+
+        reduced_file_list = list()
+        for file_name in file_list:
+            # get the file's extension
+            file_extension = file_name.lower().split('.')[-1]
+            file_extension = '.' + file_extension
+            # check and add if the file is of the right type
+            if file_extension in allowed_posfix:
+                reduced_file_list.append(file_name)
+        # END-IF
+
+        # sort file
+        reduced_file_list.sort()
+
+        # load file
+        data_key_dict = dict()
+        for file_name in reduced_file_list:
+            data_key = self.load_binned_data(data_file_name=file_name, data_file_type=file_format)
+            data_key_dict[data_key] = file_name
+        # END-FOR
+
+        return data_key_dict

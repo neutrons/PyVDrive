@@ -124,9 +124,13 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         # convert previous command "Run: vbin, ipts=18420, runs=139148, tag='C', output='\tmp'" to a property command
         if script.startswith('"Run: '):
-            print 'THIS CAN BE A RESERVED COMMAND'
-            # TODO/ISSUE/NOW/65
-        raise NotImplementedError('FROM HERE!')
+            # strip "Run: and " away
+            script = script.split('Run: ')[1]
+            if script[-1] == '"':
+                script = script[:-1]
+        elif script.startswith('Run: '):
+            # strip Run: away
+            script = script.split('Run: ')[1]
 
         # main application is workspace viewer
         is_reserved = False

@@ -1392,9 +1392,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def guess_run_number(gsas_path):
         """
         guess the run number from a file
-        :param gsas_path:
-        :return:
-        """
         # Example:        / home / wzz / Projects / workspaces / VDrive / beta_test / 98237 - s.gda
-        # TODO/ISSUE/NOW/65 - Implement it
-        return None
+        :param gsas_path:
+        :return: integer or None
+        """
+        # get the GSAS file name
+        gsas_file_name = os.path.basename(gsas_path)
+
+        # get the first integer out of the file name
+        run_number_str = ''
+        for s in gsas_file_name:
+            if s.isdigit():
+                run_number_str += s
+            elif len(run_number_str) > 0:
+                # break when encounter the first non-digit letter
+                break
+        # END-FOR
+
+        # convert string to integer
+        if len(run_number_str) > 0:
+            run_number = int(run_number_str)
+        else:
+            run_number = None
+
+        return run_number
