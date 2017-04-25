@@ -155,10 +155,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # check inputs
         assert isinstance(bank_list, list) and len(bank_list) > 0, 'List of banks {0} must be a non-empty list but ' \
-                                                                   'not a {1}.'
+                                                                   'not a {1}.'.format(bank_list, type(bank_list))
+
+        # reset bank list in GUI and registers
         bank_list.sort()
+        self._bankIDList = list()
+        self.ui.comboBox_spectraList.clear()
         for bank in bank_list:
             self.ui.comboBox_spectraList.addItem(str(bank))
+            self._bankIDList.append(bank)
+
         self.ui.comboBox_spectraList.addItem('All')
 
         return
@@ -247,7 +253,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         label_str = 'Run {0}'.format(run_number)
         if is_chopped:
             assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
-            chop_seq_list = chop_seq_list.sort()
+            chop_seq_list.sort()
             label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
 
         self.ui.label_currentRun.setText(label_str)
@@ -359,16 +365,24 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         if os.path.isdir(gsas_path):
             # input is a directory
-            data_key_dict = self._myController.load_chopped_binned_data(gsas_path, 'gsas')
+            data_key_dict = self._myController.load_chopped_diffraction_files(gsas_path, 'gsas')
             self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
             seq_list = sorted(self._choppedDataDict.keys())
             self.set_chopped_sequence(seq_list)
-            bank_list = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
+            status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
+            if not status:
+                GuiUtility.pop_dialog_error(self, ret_obj)
+                return
+            bank_list = ret_obj
         else:
             # input is a file
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
             self._currDataKey = data_key
-            bank_list = self._myController.get_run_info(run_number=None, data_key=data_key)
+            status, ret_obj = self._myController.get_run_info(run_number=None, data_key=data_key)
+            if not status:
+                GuiUtility.pop_dialog_error(self, ret_obj)
+                return
+            bank_list = ret_obj
             seq_list = None
             self.clear_chopped_sequence()
         # END-IF-ELSE
@@ -576,38 +590,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         then from combo box
         :return:
         """
-        if self.ui.comboBox_chopSeq.size() == 0:
-            # non-chopped data
-            pass
+        # get bank to chop
+        bank_id_str = str(self.ui.comboBox_spectraList.currentText())
+        if bank_id_str.isdigit():
+            bank_id = int(bank_id_str)
+            bank_id_list = [bank_id]
         else:
+            # plot all banks
+            bank_id_list = self._bankIDList[:]
+
+        # over plot existing
+        over_plot = self.ui.checkBox_overPlot.isChecked()
+
+        # possible chop sequence
+        if self.ui.comboBox_chopSeq.count() > 0:
             # chopped data
+            # TODO/ISSUE/NOW/65 - A new way to plot
+            # select runs from
+            data_key = str(self.ui.comboBox_chopSeq.currentText())
 
-        # TODO/ISSUE/NOW/65 - A new way to plot
-        # select runs from
-        comboBox_chopSeq
-        comboBox_spectraList
-        # run number, file location or etc are from memory
-
-        #
-        # # Get run numbers
-        # is_workspace = False
-        # runs_str = str(self.ui.lineEdit_runs.text()).strip()
-        # if len(runs_str) > 0:
-        #     run_numbers = self.parse_runs_list(runs_str)
-        # else:
-        #     run_number_str = str(self.ui.comboBox_runs.currentText())
-        #     if run_number_str.isdigit():
-        #         run_numbers = [int(run_number_str)]
-        #     else:
-        #         run_numbers = [run_number_str]
-        #         is_workspace = True
-        #
-        # over_plot = self.ui.checkBox_overPlot.isChecked()
-        # # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
-        # bank_id = int(self.ui.comboBox_spectraList.currentText())
-        for run_number in run_numbers:
-            print '[DB] is_workspace = ', is_workspace
-            self.plot_run(run_number, bank_id, over_plot, is_workspace)
+        else:
+            for index, bank_id in enumerate(bank_id_list):
+                if self._currDataKey:
+                    # FIXME/ISSUE/FUTURE/TODO - blindly assume current data key is workspace name is risky
+                    if index == 0:
+                        clear_canvas = not over_plot
+                    else:
+                        clear_canvas = False
+                    self.plot_data(self._currDataKey, bank_id, label='Bank {0}'.format(bank_id),
+                                   title='data key: {0}'.format(self._currDataKey),
+                                   clear_previous=clear_canvas, is_workspace_name=True)
+                else:
+                    for run_number in run_numbers:
+                        print '[DB] is_workspace = ', is_workspace
+                        self.plot_run(run_number, bank_id, over_plot, is_workspace)
+            # END-IF
 
         return
 
@@ -669,31 +686,35 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._mutexBankIDList:
             return
 
-        # Get new bank ID
-        new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
-        if new_bank_str.isdigit() is False and new_bank_str != 'All':
-            print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
-            return
+        self.do_plot_selected_run()
 
-        if new_bank_str == 'All':
-            # plot all the banks
-            bank_id_list = self._bankIDList[:]
-        else:
-            # plot one bak
-            curr_bank_id = int(new_bank_str)
-            bank_id_list = [curr_bank_id]
-        # END-IF
-
-        # plot all the selected banks
-        for b_index, bank_id in enumerate(bank_id_list):
-            keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
-            if self._currRunNumber is not None:
-                if isinstance(bank_id, str):
-                    raise RuntimeError('bank ID {0} is string!'.format(bank_id))
-                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev,
-                              is_workspace=isinstance(self._currRunNumber, str))
-            # END-IF
-        # END-FOR
+        # # Get new bank ID
+        # new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
+        # if new_bank_str.isdigit() is False and new_bank_str != 'All':
+        #     print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
+        #     return
+        #
+        # if new_bank_str == 'All':
+        #     # plot all the banks
+        #     bank_id_list = self._bankIDList[:]
+        # else:
+        #     # plot one bak
+        #     curr_bank_id = int(new_bank_str)
+        #     bank_id_list = [curr_bank_id]
+        # # END-IF
+        #
+        # # plot all the selected banks
+        # for b_index, bank_id in enumerate(bank_id_list):
+        #     keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
+        #     if self._currDataKey is not None:
+        #         ... ...
+        #     if self._currRunNumber is not None:
+        #         if isinstance(bank_id, str):
+        #             raise RuntimeError('bank ID {0} is string!'.format(bank_id))
+        #         self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev,
+        #                       is_workspace=isinstance(self._currRunNumber, str))
+        #     # END-IF
+        # # END-FOR
 
         return
 
@@ -1044,13 +1065,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if is_workspace_name:
             # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
             status, ret_obj = self._myController.get_data_from_workspace(data_key,
-                                                                         bank_id=self._currBank,
+                                                                         bank_id=bank_id,
                                                                          target_unit=None,
                                                                          starting_bank_id=1)
             if not status:
                 err_msg = str(ret_obj)
                 GuiUtility.pop_dialog_error(self, err_msg)
                 return
+
+            print '[DB...BAT] returned data set keys: {0}.'.format(ret_obj[0].keys())
 
             data_set = ret_obj[0][bank_id]
             vec_x = data_set[0]
@@ -1078,8 +1101,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # END-IF-ELSE
 
         # plot
+        bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
+
         line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
-                                                             line_key=data_key, title=title)
+                                                             line_key=data_key, title=title, line_color=bank_color)
 
         self.ui.graphicsView_mainPlot.auto_rescale()
 

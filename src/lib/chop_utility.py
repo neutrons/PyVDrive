@@ -180,7 +180,9 @@ class DataChopper(object):
                                                   split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
                                                   split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
                                                   run_start_ns=run_start_ns)
-            mantid_helper.split_event_workspace(raw_ws_name, sub_split_ws_name, info_ws_name, output_dir, clear_memory)
+            target_ws_name = 'tempxxx'
+            mantid_helper.split_event_workspace(raw_ws_name, sub_split_ws_name, info_ws_name, target_ws_name,
+                                                False, output_dir, clear_memory)
         # END-FOR
 
         return True, None

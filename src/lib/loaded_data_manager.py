@@ -31,6 +31,9 @@ class LoadedDataManager(object):
         assert isinstance(data_key, str) or isinstance(data_key, int),\
             'Data key {0} must be a string or integer but not {1}.'.format(data_key, type(data_key))
 
+        if data_key not in self._workspaceDict:
+            raise RuntimeError('Data key {0} does not exist. Existing data key for workspaces are {1}.'
+                               ''.format(data_key, str(data_key)))
         workspace_name = self._workspaceDict[data_key]
 
         # get the list of banks starting from bank 1
@@ -162,6 +165,7 @@ class LoadedDataManager(object):
             file_extension = '.' + file_extension
             # check and add if the file is of the right type
             if file_extension in allowed_posfix:
+                file_name = os.path.join(chopped_data_dir, file_name)
                 reduced_file_list.append(file_name)
         # END-IF
 

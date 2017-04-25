@@ -524,6 +524,8 @@ class VDriveAPI(object):
         :param data_key:
         :return: list of bank ID
         """
+        # TODO/ISSUE/NOW/65 - What is the difference between get_reduced_run_info and get_run_info???
+
         if isinstance(run_number, int):
             # given run number
             try:
@@ -805,17 +807,33 @@ class VDriveAPI(object):
         :param run_number:
         :return: 2-tuple as (boolean, 2-tuple (file path, ipts)
         """
-        # TODO/ISSUE/65 - Expand this method to get information from loaded GSAS data too
-        assert isinstance(run_number, int), 'blabla'
+        # check
+        if run_number is None and data_key is None:
+            raise RuntimeError('Either run number or data key must be given.')
+        elif run_number is not None and data_key is not None:
+            raise RuntimeError('Only one of run number and data key can be given.')
+        elif run_number is not None:
+            assert isinstance(run_number, int), 'run number {0} must be an integer but not {1}' \
+                                                ''.format(run_number, type(run_number))
+        else:
+            assert isinstance(data_key, str), 'blabla'
 
+        # get information
         if run_number is not None:
+            # get information from _myProject's reduced data
             try:
                 run_info_tuple = self._myProject.get_run_info(run_number)
             except RuntimeError as re:
                 return False, str(re)
         elif data_key is not None:
-            blabla
-
+            # get detailed information from a loaded GSAS file
+            try:
+                bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+            except RuntimeError as run_err:
+                return False, str(run_err)
+            return True, bank_list
+        else:
+            raise NotImplementedError('Impossible')
 
         return True, run_info_tuple
 
