@@ -819,11 +819,14 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """ Collect parameters and launch Peak-picker window
         :return:
         """
-        # TODO/NOW/1st collect parameters' values to set up the peak-picker window
-        self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
-        self._peakPickerWindow.set_controller(self._myWorkflow)
+        # create PeakPickerWindow if it is not initialized
+        if self._peakPickerWindow is None:
+            self._peakPickerWindow = PeakPickWindow.PeakPickerWindow(self)
+            self._peakPickerWindow.set_controller(self._myWorkflow)
+            self._myChildWindows.append(self._peakPickerWindow)
+
+        # show it!
         self._peakPickerWindow.show()
-        self._myChildWindows.append(self._peakPickerWindow)
 
         return
 
@@ -1253,24 +1256,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
     def menu_setup_auto_vanadium_file(self):
         """
-        TODO/NOW/later... Implement!
-        # TODO/NOW/40: suggest to call this setup in menu (self.ui.actionAuto_Vanadium)
+        set up the auto-seek vanadium file
         :return:
         """
-
-        #if os.path.exists(self._calibCriteriaFile) is False:
-        #    self._calibCriteriaFile = str(
-        #        QtGui.QFileDialog.getOpenFileName(self, 'Get Vanadium Criteria', '/SNS/VULCAN/')
-        #    )
-        #    if self._calibCriteriaFile is None or len(self._calibCriteriaFile) == 0:
-        #        return
-
-        # Launch second dialog to select the criteria from table
-
-        # default directory for log file /SNS/VULCAN/shared/CalibrationFile/Instrument/Standard/Vanadium/VRecord.txt
-        import ui.Dialog_SetupVanCalibrationRules as vanSetup
-        setupdialog = vanSetup.SetupVanCalibRuleDialog(self)
-        setupdialog.exec_()
+        import VanCalibrationRulesSetup as vanSetup
+        setup_dialog = vanSetup.SetupVanCalibRuleDialog(self)
+        setup_dialog.exec_()
 
         return
 

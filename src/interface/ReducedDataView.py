@@ -364,7 +364,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         if os.path.isdir(gsas_path):
-            # input is a directory
+            # input is a directory: load chopped data series
             data_key_dict = self._myController.load_chopped_diffraction_files(gsas_path, 'gsas')
             self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
             seq_list = sorted(self._choppedDataDict.keys())
@@ -375,7 +375,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 return
             bank_list = ret_obj
         else:
-            # input is a file
+            # input is a file: load a single GSAS file
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
             self._currDataKey = data_key
             status, ret_obj = self._myController.get_run_info(run_number=None, data_key=data_key)
@@ -385,6 +385,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             bank_list = ret_obj
             seq_list = None
             self.clear_chopped_sequence()
+            # clear the chopped data dictionary
+            self._choppedDataDict.clear()
         # END-IF-ELSE
 
         # set bank list to widget/combobox
@@ -604,27 +606,65 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # possible chop sequence
         if self.ui.comboBox_chopSeq.count() > 0:
-            # chopped data
-            # TODO/ISSUE/NOW/65 - A new way to plot
-            # select runs from
-            data_key = str(self.ui.comboBox_chopSeq.currentText())
+            # chopped data by selecting data key from the chop sequence
+            chop_seq = str(self.ui.comboBox_chopSeq.currentText())
+            if len(self._choppedDataDict) > 0:
+                # chopped data loaded from reduced files
+                data_key = chop_seq
+                self.plot_loaded_data(data_key, bank_id_list, over_plot)
+            else:
+                # chopped data in the memory
+                chop_seq_i = int(chop_seq)
+                # TODO/ISSUE/65 - Need to find out during test!
 
         else:
-            for index, bank_id in enumerate(bank_id_list):
-                if self._currDataKey:
-                    # FIXME/ISSUE/FUTURE/TODO - blindly assume current data key is workspace name is risky
-                    if index == 0:
-                        clear_canvas = not over_plot
-                    else:
-                        clear_canvas = False
-                    self.plot_data(self._currDataKey, bank_id, label='Bank {0}'.format(bank_id),
-                                   title='data key: {0}'.format(self._currDataKey),
-                                   clear_previous=clear_canvas, is_workspace_name=True)
-                else:
-                    for run_number in run_numbers:
-                        print '[DB] is_workspace = ', is_workspace
-                        self.plot_run(run_number, bank_id, over_plot, is_workspace)
+            # plot a single run
+            if self._currDataKey:
+                # loaded GSAS data
+                self.plot_loaded_data(self._currDataKey, bank_id_list, over_plot)
+            else:
+                # plot reduced GSAS data in memory
+                self.plot_reduced_data(run_number)
+                # TODO/ISSUE/65 - Need to find out during test!
             # END-IF
+
+        return
+
+    def plot_reduced_data(self, run_number, bank_id_list, over_plot):
+        """
+
+        :param run_number:
+        :param bank_id_list:
+        :param over_plot:
+        :return:
+        """
+        for index, bank_id in enumerate(bank_id_list):
+            self.plot_run(run_number, bank_id, over_plot, is_workspace=True)
+
+        return
+
+    def plot_loaded_data(self, data_key, bank_id_list, over_plot):
+        """
+        plot loaded GSAS data
+        :param data_key:
+        :param bank_id_list:
+        :param over_plot:
+        :return:
+        """
+        # check input
+        assert isinstance(data_key, str), 'Data key {0} must be a string but not a {1}.'.format(data_key, str(data_key))
+
+        # plot
+        for index, bank_id in enumerate(bank_id_list):
+            if index == 0:
+                clear_canvas = not over_plot
+            else:
+                clear_canvas = False
+            # FIXME/ISSUE/FUTURE/TODO - blindly assume current data key is workspace name is risky
+            self.plot_data(self._currDataKey, bank_id, label='Bank {0}'.format(bank_id),
+                           title='data key: {0}'.format(self._currDataKey),
+                           clear_previous=clear_canvas, is_workspace_name=True)
+        # END-FOR
 
         return
 
@@ -1045,7 +1085,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return True, (vec_x, vec_y)
 
-    def plot_data(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False):
+    def plot_data(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False,
+                  color=None):
         """
         plot a spectrum in a workspace
         :param data_key: key to find the workspace or the workspace name
@@ -1056,6 +1097,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
         :return:
         """
+        # check input
+        if color is not None:
+            assert isinstance(color, str), 'Color {0} must be either None or string but not a {1}.' \
+                                           ''.format(color, type(color))
+
         # clear canvas
         if clear_previous:
             # clear canvas and set X limit to 0. and 1.
@@ -1370,7 +1416,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         #
         self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
                                               label='Vanadium peaks striped',
-                                              clear_previous=True, is_workspace_name=True)
+                                              clear_previous=False, is_workspace_name=True,
+                                              color='green')
 
         if self._iptsNumber is None:
             self._lastVanPeakStripWorkspace = result_ws_name
@@ -1415,8 +1462,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # plot data: the unit is changed to TOF due to Mantid's behavior
         label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
                 ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=True,
-                       is_workspace_name=True)
+        # TODO/ISSUE/65 - Find out how to keep the previous raw vanadium data
+        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=False,
+                       is_workspace_name=True, color='black')
 
         return
 

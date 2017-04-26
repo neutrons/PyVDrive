@@ -618,8 +618,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # END-IF
 
-        # update the color of the
-        # TODO/ISSUE/65 - Need better documentation here!
+        # highlight or de-highlight the peak indicator by updating its color
+        # if the mouse is moving around a peak, then highlight it red
+        # if the mouse is moving far from a peak, which is previously highlighted, then color it to blue
         if peak_id == self._highlightPeakID:
             # no change
             pass
@@ -631,7 +632,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._highlightPeakID = -1
 
         else:
-            # move toward a peak
+            # move around a peak
             self.update_indicator(peak_id, 'red')
             # de-highlight the previously highlighted peak
             if self._highlightPeakID >= 0:
@@ -1314,13 +1315,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def menu_reset_grouping(self):
-        """
-        reset the previously grouped peaks
-        :return:
-        """
-        # TODO/NOW/ISSUE44
-
     def menu_show_info(self):
         """
 
@@ -1330,13 +1324,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         print '[DB] Current Item = %d of type %d in Group %d.' % (item_id, item_type, group_id)
 
         return
-
-    def menu_undo_boundary(self):
-        """
-        
-        :return:
-        """
-        # TODO/NOW/Issue44
 
     def plot_diffraction_pattern(self, vec_x, vec_y, title=None, key=None):
         """

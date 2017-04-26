@@ -534,13 +534,12 @@ class VDriveAPI(object):
                 return False, str(e)
 
         elif run_number is None and isinstance(data_key, str):
-            # given data key
+            # given data key: mostly from loaded GSAS
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                # FIXME shall use this! info = self._myProject.get_data_bank_list(data_key)
-                # TODO/ISSUE/NOW : broken fake
-                info = [1, 2]
-            except AssertionError as e:
+                bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+                info = bank_list
+            except AssertionError as assert_err:
                 return False, str(e)
 
         else:
@@ -898,8 +897,6 @@ class VDriveAPI(object):
         sample_name_list = chopper.get_sample_log_names(smart)
 
         return True, sample_name_list
-
-
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
@@ -1546,26 +1543,6 @@ class VDriveAPI(object):
         self._myProject.set_focus_calibration_file(calibration_file)
 
         return
-
-    # def set_ipts(self, ipts_number):
-    #     """ Set IPTS to the workflow
-    #     Purpose
-    #
-    #     Requirement:
-    #
-    #     Guarantees:
-    #
-    #     :param ipts_number: integer for IPTS number
-    #     :return:
-    #     """
-    #     # Requirements
-    #     assert isinstance(ipts_number, int), 'IPTS number %s must be an integer but not %s.' \
-    #                                          '' % (str(ipts_number), type(ipts_number))
-    #     assert ipts_number >= 0, 'ITPS number must be a non-negative integer but not %d.' % ipts_number
-    #
-    #     self._myArchiveManager.set_ipts_number(ipts_number)
-    #
-    #     return True, ''
 
     def set_ipts_config(self, ipts_number, data_dir, binned_data_dir):
         """
