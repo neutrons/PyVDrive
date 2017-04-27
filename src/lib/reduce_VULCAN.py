@@ -2316,7 +2316,13 @@ class ReduceVulcanData(object):
             gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
             output_access_error = True
 
-        # save to vuclan GSAS
+        # check whether the file is writable
+        gsas_dir = os.path.dirname(gsas_file_name)
+        if os.access(gsas_dir, os.W_OK) is False:
+            raise RuntimeError('Unable to write GSAS file {0} as user has no write permission to directory {1}.'
+                               ''.format(gsas_file_name, gsas_dir))
+
+        # save to Vuclan GSAS
         try:
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
@@ -2335,7 +2341,6 @@ class ReduceVulcanData(object):
                                        GSSFilename=gsas_file_name,
                                        IPTS=self._reductionSetup.get_ipts_number(),
                                        GSSParmFilename="Vulcan.prm")
-
 
         # set up the output file's permit for other users to modify
         os.chmod(gsas_file_name, 0774)

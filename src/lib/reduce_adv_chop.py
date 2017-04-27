@@ -10,11 +10,12 @@ import reduce_VULCAN
 
 class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     """
-    blabla
+    Advanced data chopping and reduction control class, which is derived from 
+    standard Vulcan reduction control class
     """
     def __init__(self, reduce_setup):
         """
-        blabla
+        initialization
         :param reduce_setup:
         """
         super(AdvancedChopReduce, self).__init__(reduce_setup)
@@ -38,6 +39,21 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # call SNSPowderReduction for chopping and
         # TODO/FIXME/ASAP/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
+
+
+        args = dict()
+        args['PreserveEvents']=True
+        args['CalibrationFile']=self._reductionSetup.get_focus_file()
+        args['CharacterizationRunsFile']=self._reductionSetup.get_characterization_file()
+        args['Binning']="-0.001"
+        args['SaveAS']=""
+        args['OutputDirectory']=self._reductionSetup.get_gsas_dir()
+        args['NormalizeByCurrent']=False
+        args['FilterBadPulses']=0
+        args['CompressTOFTolerance']=0.
+        args['FrequencyLogNames']="skf1.speed"
+        args['WaveLengthLogNames']="skf12.lambda"
+
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
                                         CalibrationFile=self._reductionSetup.get_focus_file(),

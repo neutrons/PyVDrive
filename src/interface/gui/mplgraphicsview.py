@@ -1527,11 +1527,14 @@ class Qt4MplCanvas(FigureCanvas):
 
     def set_title(self, title, color):
         """
-
+        set the tile to an axis
         :param title:
+        :param color
         :return:
         """
-        # TODO/NOW - doc & etc
+        # check input
+        assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
+        assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(title))
 
         self.axes.set_title(title, loc='center', color=color)
 
