@@ -234,3 +234,27 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._reducedDataDir
+
+    @property
+    def unit(self):
+        """
+        get unit of output data
+        :return:
+        """
+        return self._unit
+
+    @property
+    def x_min(self):
+        """
+        get minimum X to plot
+        :return:
+        """
+        return self._minX
+
+    @property
+    def x_max(self):
+        """
+        get maximum X to plot
+        :return:
+        """
+        return self._maxX
