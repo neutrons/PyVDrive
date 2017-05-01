@@ -403,7 +403,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def add_data_set(self, ipts_number, run_number, controller_data_key):
+    def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
         add a new data set to this data viewer window
         :param ipts_number:
@@ -425,8 +425,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         # get reduced data set from controller
+        if unit is None:
+            unit = self._currUnit
+        else:
+            self._currUnit = unit
         status, ret_obj = self._myController.get_reduced_data(controller_data_key,
-                                                              target_unit=self._currUnit,
+                                                              target_unit=unit,
                                                               search_archive=True)
         # return if unable to get reduced data
         if status is False:
@@ -805,22 +809,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Purpose: Re-plot the current plots with new unit
         :return:
         """
-        # Check
+        # TODO/ISSUE/NOW - In cleanup
+
+        # new unit
         new_unit = str(self.ui.comboBox_unit.currentText())
+        # Reset current unit
+        self._currUnit = new_unit
 
-        # Get the data sets and replace them with new unit
+        # Clear previous image and re-plot
+        self.ui.graphicsView_mainPlot.clear_all_lines()
+
+        # Get the data sets that are currently plot and replace them with new unit
         for run_number in self._reducedDataDict.keys():
-            # try reduced data first
-            # FIXME/ISSUE/TODO/33 - Shall I generalize the approach to get reduced data???
-            # self.get_reduced_data()
-
-            status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
+            # try to get data from previously loaded/reduced data
+            status, ret_obj = self._myController.get_reduced_data(run_id=run_number,
+                                                                  target_unit=new_unit)
             if not status:
                 # try archive
                 if isinstance(run_number, str):
-                    is_workspace=True
+                    is_workspace = True
                 else:
-                    is_workspace=False
+                    is_workspace = False
                 status, ret_obj = self._myController.get_reduced_data(run_number, new_unit,
                                                                       self._iptsNumber,
                                                                       search_archive=True,
@@ -831,15 +840,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 ))
                 return
             self._reducedDataDict[run_number] = ret_obj
+
+            self.plot_run(run_number, self._currBank, over_plot=True, is_workspace=is_workspace)
         # END-FOR
-
-        # Reset current unit
-        self._currUnit = new_unit
-
-        # Clear previous image and re-plot
-        self.ui.graphicsView_mainPlot.clear_all_lines()
-        for run_number in self._reducedDataDict.keys():
-            self.plot_run(run_number, self._currBank, over_plot=True)
 
         return
 
@@ -1095,6 +1098,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param title:
         :param clear_previous: flag to clear the plots on the current canvas
         :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
+        :param color:
         :return:
         """
         # check input
@@ -1119,11 +1123,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 GuiUtility.pop_dialog_error(self, err_msg)
                 return
 
-            print '[DB...BAT] returned data set keys: {0}.'.format(ret_obj[0].keys())
+            print '[DB...BAT] returned data set ({1}) keys: {0}.'.format(ret_obj[0].keys(), data_key)
 
             data_set = ret_obj[0][bank_id]
             vec_x = data_set[0]
             vec_y = data_set[1]
+
+            print '[DB...BAT] vec_x: {0}'.format(vec_x)
 
             current_unit = ret_obj[1]
 
@@ -1147,7 +1153,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # END-IF-ELSE
 
         # plot
-        bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
+        if color is None:
+            bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
+        else:
+            bank_color = color
 
         line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
                                                              line_key=data_key, title=title, line_color=bank_color)
@@ -1413,7 +1422,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # plot the data without vanadium peaks
-        #
+        # re-plot the original data because the operation can back from final stage
+        # TODO/FIXME/NOW - what if data_key is None??? VDrivePlot version
+        self._currUnit = 'dSpacing'
+        self.plot_data(data_key=data_key, bank_id=self._currBank,
+                       label='blabla', clear_previous=True,
+                       is_workspace_name=True, color='black')
+
         self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
                                               label='Vanadium peaks striped',
                                               clear_previous=False, is_workspace_name=True,
@@ -1460,11 +1475,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # plot data: the unit is changed to TOF due to Mantid's behavior
+        #            as a consequence of this, the vanadium spectrum with peak removed shall be re-plot in TOF space
+        # TODO/NOW/ - a better name
+        label_no_peak = 'blabla'
+        self.plot_data(data_key=van_peak_removed_ws, bank_id=self._currBank, title=label_no_peak, clear_previous=True,
+                       is_workspace_name=True, color='black')
+
         label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
                 ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        # TODO/ISSUE/65 - Find out how to keep the previous raw vanadium data
         self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=False,
-                       is_workspace_name=True, color='black')
+                       is_workspace_name=True, color='red')
 
         return
 

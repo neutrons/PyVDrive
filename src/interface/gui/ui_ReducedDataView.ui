@@ -90,7 +90,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Get the data from PyVDrive reduced data in this session&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>From PyVDrive</string>
+            <string>Loaded Reduced Data</string>
            </property>
           </widget>
          </item>

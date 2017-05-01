@@ -5,10 +5,10 @@ import random
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-
+import math
 
 FifteenYearsInSecond = 15*356*24*3600
-
+MAX_CHOPPED_WORKSPACE_IN_MEM = 40
 
 class TimeSegment(object):
     """ Time segment for splitters
@@ -115,78 +115,6 @@ class DataChopper(object):
 
         return
 
-    def load_data_file(self):
-        """ Load NeXus file
-        :return:
-        """
-        # use base name for output workspace
-        base_name = os.path.basename(self._myNeXusFileName)
-        out_ws_name = base_name.split('.')[0] + '_MetaData'
-
-        # Load sample logs
-        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
-                                                   output_ws_name=out_ws_name,
-                                                   meta_data_only=True)
-
-        if status is False:
-            err_msg = str(ret_obj)
-            raise RuntimeError(err_msg)
-        else:
-            self._mtdWorkspaceName = out_ws_name
-
-        # Set up log names list
-        try:
-            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
-            assert isinstance(self._logNameList, list)
-        except RuntimeError as err:
-            return False, 'Unable to retrieve series log due to %s.' % str(err)
-
-        # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
-
-        return
-
-    def chop_data_large_number_targets(self, split_ws_name, info_ws_name, data_file, tof_correction,
-                                       output_dir, is_epoch_time, num_target_ws):
-        """
-        chop data to a large number of output targets
-        :param split_ws_name:
-        :param info_ws_name:
-        :param data_file:
-        :param tof_correction:
-        :param output_dir:
-        :param is_epoch_time:
-        :return:
-        """
-        import math
-
-        # load data
-        raw_ws_name = os.path.basename(data_file).split('.')[0]
-        mantid_helper.load_nexus(data_file_name=data_file, output_ws_name='meta', meta_data_only=False)
-        raw_ws = mantid_helper.retrieve_workspace('meta')
-
-        # get run start time
-        if is_epoch_time:
-            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
-        else:
-            run_start_ns = 0
-
-        # in loop generate data
-        MAX_CHOPPED_WORKSPACE_IN_MEM = 20
-        num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
-        clear_memory = True
-        for i_loop in range(num_loops):
-            sub_split_ws_name = get_sub_splitters(split_ws_name,
-                                                  split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  run_start_ns=run_start_ns)
-            target_ws_name = 'tempxxx'
-            mantid_helper.split_event_workspace(raw_ws_name, sub_split_ws_name, info_ws_name, target_ws_name,
-                                                False, output_dir, clear_memory)
-        # END-FOR
-
-        return True, None
-
     def chop_data(self, raw_file_name, slice_key, output_directory, do_tof_correction=False):
         """
         chop data and save to GSAS file
@@ -210,14 +138,13 @@ class DataChopper(object):
         # get number of target workspace
         number_target_ws, is_epoch_time = get_number_chopped_ws(split_ws_name)
 
-        MAX_CHOPPED_WORKSPACE_IN_MEM = 40
+        # load data from file to workspace
+        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+        mantid_helper.load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
         if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
             # chop event workspace with regular method
-            # status, ret_obj = self.chop_data_regular(split_ws_name, info_ws_name,
-            #                                          data_file=raw_file_name,
-            #                                          tof_correction=do_tof_correction,
-            #                                          output_dir=output_directory)
-            status, ret_obj = mantid_helper.split_event_data(raw_file_name=raw_file_name,
+            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=event_ws_name,
                                                              split_ws_name=split_ws_name,
                                                              info_table_name=info_ws_name,
                                                              target_ws_name=None,
@@ -227,75 +154,60 @@ class DataChopper(object):
         else:
             # chop event workspace to too many target workspaces which cannot be hold in memory
             # simultaneously
-            status, ret_obj = self.chop_data_large_number_targets(split_ws_name, info_ws_name,
-                                                                  data_file=raw_file_name,
+            status, ret_obj = self.chop_data_large_number_targets(event_ws_name,
+                                                                  split_ws_name, info_ws_name,
                                                                   tof_correction=do_tof_correction,
                                                                   output_dir=output_directory,
                                                                   is_epoch_time=is_epoch_time,
                                                                   num_target_ws=number_target_ws)
-
-        # raise NotImplementedError('chop_data() requires refactor!')
-        #
-        # # TODO/ISSUE/NOW - Need to find out how to chop workspace to large amount of target workspaces/files
-        # ... ...
-        #
-        # # check
-        #
-        # # load data
-        # # out_ws_name = os.path.basename(raw_file_name).split('.')[0]
-        # base = os.path.basename(raw_file_name)
-        # out_ws_name = os.path.splitext(base)[0]
-        #
-        # mantid_helper.load_nexus(data_file_name=raw_file_name,
-        #                          output_ws_name=out_ws_name,
-        #                          meta_data_only=False)
-        #
-        # # set up slicers
-        # if slicer_type == 'time':
-        #     setup_dict = self._chopSetupDict['time']
-        #     # {'start': start_time, 'step': time_step, 'stop': stop_time}
-        #
-        #     # TODO/NOW - Need to find out a better name!
-        #     tag = 'time123'
-        #
-        #     # 2-tuple (boolean, objects): True/ws name tuple; False/error message
-        #     status, ret_obj = self.generate_events_filter_by_time(min_time=setup_dict['start'],
-        #                                                           max_time=setup_dict['stop'],
-        #                                                           time_interval=setup_dict['step'],
-        #                                                           tag=tag,
-        #                                                           ws_name=out_ws_name)
-        #     print '[DB...BAT] Returned from slicing setup:', status, ret_obj
-        #     if status:
-        #         chop_splitter_name, chop_info_name = ret_obj
-        #     else:
-        #         raise RuntimeError(ret_obj)
-        #
-        # elif slicer_type == 'log':
-        #     raise NotImplementedError('ASAP')
-        #
-        # else:
-        #     # manual
-        #     raise NotImplementedError('ASAP')
-        #
-        # # chop data
-        # base_name = os.path.join(output_directory, tag)
-        # # return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
-        # status, ret_obj = mantid_helper.split_event_data(raw_event_ws_name=out_ws_name,
-        #                                                  splitter_ws_name=chop_splitter_name,
-        #                                                  info_ws_name=chop_info_name,
-        #                                                  split_ws_base_name=base_name,
-        #                                                  tof_correction=False)
-        # if status:
-        #     ws_name_list = ret_obj[0]
-        # else:
-        #     raise RuntimeError(ret_obj)
-        #
-        # # save
-        # print '[DB...BAT] Wrokspaces to save: ', ws_name_list
-        # for ws_name in ws_name_list:
-        #     mantid_helper.save_event_workspace(ws_name, out_file_name)
+        # delete raw workspace
+        mantid_helper.delete_workspace(event_ws_name)
 
         return status, ret_obj
+
+    @staticmethod
+    def chop_data_large_number_targets(raw_ws_name, split_ws_name, info_ws_name, tof_correction,
+                                       output_dir, is_epoch_time, num_target_ws):
+        """
+        chop data to a large number of output targets
+        :param split_ws_name:
+        :param info_ws_name:
+        :param tof_correction:
+        :param output_dir:
+        :param is_epoch_time:
+        :return:
+        """
+        # TODO/ISSUE/NOW - It has not been implemented yet!
+        # # load data
+        # raw_ws_name = os.path.basename(data_file).split('.')[0]
+        # mantid_helper.load_nexus(data_file_name=data_file, output_ws_name=raw_ws_name, meta_data_only=False)
+        # raw_ws = mantid_helper.retrieve_workspace('meta')
+
+        # get raw workspace
+        raw_ws = mantid_helper.retrieve_workspace(raw_ws_name)
+
+        # get run start time
+        if is_epoch_time:
+            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
+        else:
+            run_start_ns = 0
+
+        # in loop generate data
+        num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
+        clear_memory = True
+        for i_loop in range(num_loops):
+            sub_split_ws_name = get_sub_splitters(split_ws_name,
+                                                  split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                  split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                  run_start_ns=run_start_ns)
+
+            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
+                                                             info_table_name=info_ws_name,
+                                                             target_ws_name=raw_ws_name, tof_correction=False,
+                                                             output_directory=output_dir, delete_split_ws=clear_memory)
+        # END-FOR
+
+        return True, None
 
     def delete_slicer_by_id(self, slicer_tag):
         """
@@ -514,6 +426,37 @@ class DataChopper(object):
                           '' % (slice_ws_name, str(ass_err))
 
         return True, (vec_times, vec_ws_index)
+
+    def load_data_file(self):
+        """ Load NeXus file
+        :return:
+        """
+        # use base name for output workspace
+        base_name = os.path.basename(self._myNeXusFileName)
+        out_ws_name = base_name.split('.')[0] + '_MetaData'
+
+        # Load sample logs
+        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
+                                                   output_ws_name=out_ws_name,
+                                                   meta_data_only=True)
+
+        if status is False:
+            err_msg = str(ret_obj)
+            raise RuntimeError(err_msg)
+        else:
+            self._mtdWorkspaceName = out_ws_name
+
+        # Set up log names list
+        try:
+            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
+            assert isinstance(self._logNameList, list)
+        except RuntimeError as err:
+            return False, 'Unable to retrieve series log due to %s.' % str(err)
+
+        # Set up run start time
+        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
+
+        return
 
     def set_current_slicer_time(self):
         """

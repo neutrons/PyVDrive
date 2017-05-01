@@ -496,7 +496,9 @@ class VDriveAPI(object):
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        # TODO/ISSUE/33 - Clean
+        # TODO/ISSUE/33/NOW/65 - Clean
+        # debug
+        print '[DB..BAT] Called to get loaded and reduced data: {0}'.format(run_id)
         try:
             # get GSAS file name
             if search_archive and isinstance(run_id, int):
@@ -1010,7 +1012,7 @@ class VDriveAPI(object):
 
     def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
-                        record=False, logs=False, gsas=True, fullprof=False,
+                        record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
                         merge=False):
         """
@@ -1033,7 +1035,7 @@ class VDriveAPI(object):
         :param record: boolean flag to output AutoRecord and etc.
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
-        :param fullprof: boolean flag tro produces Fullprof files from reduced runs
+        :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
         :param merge: If true, then merge the run together by calling SNSPowderReduction
@@ -1075,7 +1077,7 @@ class VDriveAPI(object):
                                                               background=background,
                                                               vanadium=vanadium,
                                                               gsas=gsas,
-                                                              fullprof=fullprof,
+                                                              fullprof=output_to_fullprof,
                                                               record_file=record,
                                                               sample_log_file=logs,
                                                               standard_sample_tuple=standard_sample_tuple,
@@ -1301,12 +1303,13 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file):
+    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing'):
         """
         Load vanadium runs
         :param ipts_number:
         :param run_number:
         :param use_reduced_file:
+        :param unit:
         :return: 2-tuple.  boolean/string
         """
         van_file_name = None
@@ -1337,6 +1340,10 @@ class VDriveAPI(object):
             # load vanadium file
             van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
             self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
+
+        # convert unit
+        print '[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name)
+        mantid_helper.mtd_convert_units(van_ws_key, unit)
 
         return True, van_ws_key
 

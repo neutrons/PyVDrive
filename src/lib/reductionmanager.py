@@ -457,8 +457,6 @@ class ReductionManager(object):
                                              ''.format(ipts_number, type(ipts_number))
 
         # get splitters workspace
-        #
-
         # split event data
         status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
                                                  slice_key=slice_key,

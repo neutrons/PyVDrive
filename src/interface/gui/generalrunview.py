@@ -40,6 +40,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         """
         line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
                                    x_label=x_unit, marker='.', color=line_color)
+        print '[DB...BAT] New line ID = {0}.'.format(line_id)
         self.set_title(title)
 
         # register

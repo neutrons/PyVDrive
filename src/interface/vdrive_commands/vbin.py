@@ -173,7 +173,7 @@ class VBin(procss_vcommand.VDriveCommand):
             status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
-                                                               binning_parameter=binning_parameters,
+                                                               binning_parameters=binning_parameters,
                                                                output_to_fullprof=output_fullprof)
 
         else:

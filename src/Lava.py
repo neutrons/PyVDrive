@@ -124,9 +124,20 @@ def lava_app():
         _app = QtGui.QApplication(sys.argv)
     return _app
 
+# get arguments
+args = sys.argv
+if len(args) == 2:
+    option = args[1]
+else:
+    option = None
+
 app = lava_app()
 
 launcher = LauncherManager()
 launcher.show()
+
+if isinstance(option, str) and option.lower().startswith('t'):
+    launcher.do_launch_terminal()
+    launcher.close()
 
 app.exec_()
