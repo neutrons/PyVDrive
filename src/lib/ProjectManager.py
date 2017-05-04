@@ -600,7 +600,8 @@ class ProjectManager(object):
         :param save_dict:
         :return:
         """
-        assert isinstance(save_dict, dict), 'blabla'
+        assert isinstance(save_dict, dict), 'Parameters to save {0} must be given by a dictionary but not a {1}.' \
+                                            ''.format(save_dict, type(save_dict))
 
         # Set
         self._name = save_dict['name']
@@ -623,7 +624,8 @@ class ProjectManager(object):
         :return: None
         """
         # Check requirements
-        assert isinstance(run_number_list, list), 'blabla'
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
         print '[INFO] Mark runs {0} to reduce.'.format(run_number_list)
 
         # Mark each runs
@@ -645,10 +647,15 @@ class ProjectManager(object):
         return
 
     def mark_runs_reduced(self, run_number_list, reduction_state_list=None):
-        """ Mark some runs to have been reduced 
+        """
+        mark runs that have been reduced
+        :param run_number_list:
+        :param reduction_state_list:
+        :return:
         """
         # TODO/NOW/FIXME/33 - Implement more for the reduction state
-        assert isinstance(run_number_list, list), 'blabla'
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
         for run_number in run_number_list:
             if run_number in self._sampleRunReductionFlagDict:

@@ -495,39 +495,40 @@ class VDriveAPI(object):
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        :return: is_workspace
         """
-        # TODO/ISSUE/33/NOW/65 - Clean
-        # debug
-        print '[DB..BAT] Called to get loaded and reduced data: {0}'.format(run_id)
-        try:
+        if is_workspace:
+            # get data from project as the first priority
+            workspace_name = run_id
+            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
+            assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
+                                                ''.format(target_unit, current_unit)
+
+        else:
+            # search for archive with GSAS file
             # get GSAS file name
             if search_archive and isinstance(run_id, int):
-                gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+                try:
+                    gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+                    data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+                except RuntimeError as run_err:
+                    return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
             else:
-                gsas_file = None
-
-            # get data from project
-            if is_workspace:
-                # data_set_dict, current_unit
-                data_set_dict, current_unit = mantid_helper.get_data_from_workspace(run_id)
-            else:
-                data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
-        except RuntimeError as run_err:
-            return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
+                return False, 'Unable to locate run {0} in archive'.format(run_id)
+            # END-IF
+        # END-IF-ELSE
 
         return True, data_set_dict
 
     def get_reduced_run_info(self, run_number, data_key=None):
         """
-        Purpose: get information of a reduced run
+        Purpose: get information of a reduced run such as bank ID and etc.
         Requirements: either run number is specified as a valid integer or data key is given;
         Guarantees: ... ...
         :param run_number:
         :param data_key:
         :return: list of bank ID
         """
-        # TODO/ISSUE/NOW/65 - What is the difference between get_reduced_run_info and get_run_info???
-
         if isinstance(run_number, int):
             # given run number
             try:
@@ -817,7 +818,8 @@ class VDriveAPI(object):
             assert isinstance(run_number, int), 'run number {0} must be an integer but not {1}' \
                                                 ''.format(run_number, type(run_number))
         else:
-            assert isinstance(data_key, str), 'blabla'
+            assert isinstance(data_key, str), 'Data key {0} must be a string but not a {1}.' \
+                                              ''.format(data_key, type(data_key))
 
         # get information
         if run_number is not None:

@@ -407,14 +407,15 @@ def get_sample_log_tsp(src_workspace, sample_log_name):
         raise RuntimeError('Workspace {0} does not exist in ADS.'.format(sample_log_name))
 
     run = workspace.run()
-    assert isinstance(sample_log_name, str), 'blabla'
+    assert isinstance(sample_log_name, str), 'sample log name {0} must be a string but not a {1}.' \
+                                             ''.format(sample_log_name, type(sample_log_name))
     if run.hasProperty(sample_log_name):
-        property = run.getProperty(sample_log_name)
+        tsp_property = run.getProperty(sample_log_name)
     else:
         raise RuntimeError('Workspace {0} does not have property {1}. Property list: {2}.'
                            ''.format(src_workspace, sample_log_name, get_sample_log_names(src_workspace)))
 
-    return property
+    return tsp_property
 
 
 def get_sample_log_info(src_workspace):
@@ -1260,7 +1261,8 @@ def save_event_workspace(event_ws_name, nxs_file_name):
 
 
 def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name=None,
-                     tof_correction=False, output_directory=None, delete_split_ws=True):
+                     tof_correction=False, output_directory=None, file_name_123=True, file_start_index=1,
+                     delete_split_ws=True):
     """
     Split event data file according pre-defined split workspace.
     Optionally the split workspace
@@ -1272,14 +1274,20 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
     :param target_ws_name:
     :param tof_correction:
     :param output_directory:
+    :param file_name_123: if True, then the output file name will be in order as (1, 2, 3) + shift
+    :param file_start_index: if file_name_123 is True, then the first file will be index.nxs
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
     :return: 2-tuple.  [1] boolean (success or fail) [2] dictionary or Error message
     """
-    # TODO/ISSUE/NOW - Clean!
     # Check requirements
-    assert workspace_does_exist(split_ws_name), 'blabla'
-    assert workspace_does_exist(info_table_name), 'blabla'
-    assert workspace_does_exist(raw_ws_name), 'blabla'
+    assert workspace_does_exist(split_ws_name), 'splitters workspace {0} does not exist.'.format(split_ws_name)
+    assert workspace_does_exist(info_table_name), 'splitting informatin workspace {0} does not exist.' \
+                                                  ''.format(info_table_name)
+    assert workspace_does_exist(raw_ws_name), 'raw event workspace {0} does not exist.'.format(raw_ws_name)
+    if file_name_123:
+        assert isinstance(file_start_index, int) and file_start_index >= 0,\
+            'If using index.nxs as file name, then the file starting index {0} must be a non-negative integer ' \
+            'but not of type {1}.'.format(file_start_index, type(file_start_index))
 
     # get the input event workspace
     # rule out some unsupported scenario
@@ -1338,10 +1346,15 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
 
     # Save result
     if output_directory is not None:
-        # TODO/NOW/ISSUE/ - This should be saved as 1.nxs, 2.nxs with starting value
         output_file_list = list()
-        for chopped_ws_name in chopped_ws_name_list:
-            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+        for index, chopped_ws_name in enumerate(chopped_ws_name_list):
+            if file_name_123:
+                # use integer index as file name
+                base_file_name = '{0}.nxs'.format(index + file_start_index)
+            else:
+                # use workspace name
+                base_file_name = '{0}.nxs'.format(chopped_ws_name)
+            file_name = os.path.join(output_directory, base_file_name)
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
             output_file_list.append(file_name)
 
@@ -1359,88 +1372,6 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                  'files': output_file_list}
 
     return True, chop_dict
-
-
-# # TODO/FIXME/ISSUE/NOW - Refactor with split_event_data()
-# def split_event_workspace(event_ws_name, split_ws_name, info_table_name, target_ws_name, tof_correction,
-#                           output_directory, delete_split_ws):
-#     """
-#
-#     :param event_ws_name:
-#     :param split_ws_name:
-#     :param info_table_name:
-#     :param target_ws_name:
-#     :param tof_correction:
-#     :param output_directory:
-#     :param delete_split_ws:
-#     :return:
-#     """
-#     # process TOF correction
-#     if tof_correction is True:
-#         correction = 'Elastic'
-#     else:
-#         correction = 'None'
-#
-#     # process the target workspace name
-#     if target_ws_name is None:
-#         target_ws_name = event_ws_name + '_split'
-#     else:
-#         assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
-#                                                 '' % (str(target_ws_name), type(target_ws_name))
-#
-#     # split workspace
-#     ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
-#                                       SplitterWorkspace=split_ws_name,
-#                                       InformationWorkspace=info_table_name,
-#                                       OutputWorkspaceBaseName=target_ws_name,
-#                                       FilterByPulseTime=False,
-#                                       GroupWorkspaces=True,
-#                                       CorrectionToSample=correction,
-#                                       SplitSampleLogs=True,
-#                                       OutputWorkspaceIndexedFrom1=True
-#                                       )
-#
-#     try:
-#         correction_ws = ret_list[0]
-#         num_split_ws = ret_list[1]
-#         chopped_ws_name_list = ret_list[2]
-#         # check the workspace name
-#         for i_w, ws_name in enumerate(chopped_ws_name_list):
-#             if len(ws_name) == 0:
-#                 chopped_ws_name_list.pop(i_w)
-#             elif ADS.doesExist(ws_name) is False:
-#                 print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
-#         # END-FOR
-#         assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
-#                                                           'chopped workspaces names {1} ({2}).' \
-#                                                           ''.format(num_split_ws, len(chopped_ws_name_list),
-#                                                                     chopped_ws_name_list)
-#     except IndexError:
-#         return False, 'Failed to split data by FilterEvents.'
-#
-#     if len(ret_list) != 3 + len(chopped_ws_name_list):
-#         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
-#
-#     # Save result
-#     # TODO/ISSUE/33 - Shall return NeXus file?
-#     if output_directory is not None:
-#         for chopped_ws_name in chopped_ws_name_list:
-#             file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
-#             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
-#
-#     # Clear
-#     delete_workspace(correction_ws)
-#     if delete_split_ws:
-#         for chopped_ws_name in chopped_ws_name_list:
-#             mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
-#
-#     # Output
-#     if delete_split_ws:
-#         ret_obj = None
-#     else:
-#         ret_obj = (chopped_ws_name_list, ret_list[3:])
-#
-#     return True, ret_obj
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,
