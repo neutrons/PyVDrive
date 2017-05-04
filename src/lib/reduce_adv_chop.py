@@ -7,6 +7,8 @@ from mantid.dataobjects import SplittersWorkspace
 import chop_utility
 import reduce_VULCAN
 
+MAX_ALLOWED_WORKSPACES = 200
+
 
 class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     """
@@ -39,8 +41,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # call SNSPowderReduction for chopping and
         # TODO/FIXME/ASAP/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
-
-
         args = dict()
         args['PreserveEvents']=True
         args['CalibrationFile']=self._reductionSetup.get_focus_file()
@@ -50,9 +50,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         args['OutputDirectory']=self._reductionSetup.get_gsas_dir()
         args['NormalizeByCurrent']=False
         args['FilterBadPulses']=0
-        args['CompressTOFTolerance']=0.
-        args['FrequencyLogNames']="skf1.speed"
-        args['WaveLengthLogNames']="skf12.lambda"
+        args['CompressTOFTolerance'] = 0.
+        args['FrequencyLogNames'] = "skf1.speed"
+        args['WaveLengthLogNames'] = "skf12.lambda"
 
         mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
                                         PreserveEvents=True,
@@ -522,13 +522,15 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         num_targets = self.get_number_chopped_ws(split_ws_name)
 
         # chop and reduce
-        MAX_ALLOWED_WORKSPACES = 40
+        # FIXME/TODO/ISSUE --- getMemorySize()
         if num_targets < MAX_ALLOWED_WORKSPACES:
             # load data and chop all at the same time
             status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
             # create the log files
             self.generate_sliced_logs(output_ws_list, self._chopExportedLogType)
             # clear workspace? or later
+            # TODO/FIXME/DEBUG/ISSUE - remove this
+            clear_workspaces = False
             if clear_workspaces:
                 for ws_name in output_ws_list:
                     mantidsimple.DeleteWorkspace(Workspace=ws_name)
