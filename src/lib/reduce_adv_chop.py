@@ -118,8 +118,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             vdrive_bin_ws_name = reduced_ws_name
 
             # it might be tricky to give out the name of GSAS
-            # TODO/ISSUE/FIXME/NOW/33 ----- Try to figure out how not to write to special name!!!
+            # TODO/ISSUE/FIXME/NOW/33/65 ----- Try to figure out how not to write to special name!!!
             chop_dir = '/SNS/users/wzz/Projects/workspace/Neutron_Day/chopped'
+
             if use_special_name:
                 gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
                                                                        ws_index+1))

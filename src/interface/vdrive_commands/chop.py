@@ -179,7 +179,7 @@ class VdriveChop(VDriveCommand):
         :param chop_furnace_log:
         :return:
         """
-        # TODO/TEST/NOW/ISSUE/33 -
+        # TODO/TEST/NOW/ISSUE/33/65 -- slicer list should be checked and re-sorted
         # check inputs
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
@@ -480,6 +480,8 @@ class VdriveChop(VDriveCommand):
             in_file = open(file_name, 'r')
             lines = in_file.readlines()
             in_file.close()
+        except IOError as io_err:
+            raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
         except OSError as os_err:
             raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
 

@@ -177,7 +177,7 @@ class DataChopper(object):
         :param is_epoch_time:
         :return:
         """
-        # TODO/ISSUE/NOW - It has not been implemented yet!
+        # TODO/ISSUE/NOW - Continue to implement! and consider to move to 
         # # load data
         # raw_ws_name = os.path.basename(data_file).split('.')[0]
         # mantid_helper.load_nexus(data_file_name=data_file, output_ws_name=raw_ws_name, meta_data_only=False)
@@ -207,7 +207,8 @@ class DataChopper(object):
                                                              output_directory=output_dir, delete_split_ws=clear_memory)
         # END-FOR
 
-        return True, None
+        # TODO - better returned value
+        return True, file_list
 
     def delete_slicer_by_id(self, slicer_tag):
         """
