@@ -13,6 +13,8 @@ import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 
+from reduce_VULCAN import align_bins
+
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 # define constants
@@ -124,35 +126,30 @@ def delete_workspace(workspace):
     return
 
 
-# TODO/ISSUE/FIXME/CLEAN/33 !
 def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
-               min_peak_height = 200,
-               peak_pos_list=None):
+               min_peak_height=200, peak_pos_list=None):
     """
-    Use FindPeaks() to find peaks in a given diffraction pattern
+    Find peaks in a diffraction pattern
     :param diff_data: diffraction data in workspace
+    :param ws_index:
+    :param is_high_background:
+    :param background_type:
     :param peak_profile: specified peak profile
-    :param auto: auto find peak profile or
+    :param min_peak_height:
+    :param peak_pos_list:  List of tuples for peak information. Tuple = (peak center, height, width)
     :return:
     """
-
-    """ Use
-    :param diff_data:
-    :param peak_profile:
-    :param auto:
-    :return: List of tuples for peak information. Tuple = (peak center, height, width)
-    """
-    # check inputs
+    # check input workspace
     assert ADS.doesExist(diff_data), 'Input workspace {0} does not exist in Mantid AnalysisDataService.' \
                                      ''.format(diff_data)
     matrix_workspace = ADS.retrieve(diff_data)
     assert isinstance(ws_index, int) and 0 <= ws_index < matrix_workspace.getNumberHistograms(), \
         'Workspace index {0} must be an integer in [0, {1}).'.format(ws_index, matrix_workspace.getNumberHistograms())
 
-    # define output workspace name
+    #  get workspace define output workspace name
     result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
 
-    # call Mantid
+    # call Mantid's FindPeaks
     arg_dict = {'InputWorkspace': diff_data,
                 'WorkspaceIndex': ws_index,
                 'HighBackground': is_high_background,
@@ -161,22 +158,22 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
                 'PeakFunction': peak_profile,
                 'BackgroundType': background_type
                 }
-    mantidapi.FindPeaks(**arg_dict)
+    if peak_pos_list is not None:
+        assert isinstance(peak_pos_list, list), 'Peak positions {0} must be given by a list but not a {1}.' \
+                                                ''.format(peak_pos_list, type(peak_pos_list))
+        if len(peak_pos_list) > 0:
+            arg_dict['Peaks'] = numpy.array(peak_pos_list)
 
-    # check
+    try:
+        mantidapi.FindPeaks(**arg_dict)
+    except RuntimeError as run_err:
+        raise RuntimeError('Unable to find peaks in workspace {0} due to {1}'.format(diff_data, run_err))
+
+    # check output workspace
     if ADS.doesExist(result_peak_ws_name):
         peak_ws = mantidapi.AnalysisDataService.retrieve(result_peak_ws_name)
     else:
         raise RuntimeError('Failed to find peaks.')
-
-    # mantidapi.FindPeaks(InputWorkspace=diff_data,
-    #                     WorkspaceIndex=ws_index,
-    #                     HighBackground=False,
-    #                     PeaksList=out_ws_name,
-    #                     MinimumPeakHeight=min_peak_height,
-    #                     PeakFunction=peak_profile,
-    #                     BackgroundType='Linear')
-
 
     # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()
@@ -185,6 +182,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     col_index_width = col_names.index('width')
     col_index_chi2 = col_names.index('chi2')
 
+    # form output as list of peak tuples
     peak_list = list()
     for index in range(peak_ws.rowCount()):
         peak_i_center = peak_ws.cell(index, col_index_centre)
@@ -194,9 +192,10 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
             peak_i_width = peak_ws.cell(index, col_index_width)
             peak_list.append((peak_i_center, peak_i_height, peak_i_width))
 
-            print ('Find peak @ ', peak_i_center, 'chi2 = ', peak_i_chi2)
+            print ('[INFO] Find peak @ {0} with chi^2 = {1}'.format(peak_i_center, peak_i_chi2))
         else:
-            print ('No peak   @ ', peak_i_center)
+            print ('[INFO] Ignore peak @ {0} with large chi^2 = {1}'.format(peak_i_center, peak_i_chi2))
+    # END-FOR
 
     return peak_list
 
@@ -843,9 +842,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     :param standard_bin_workspace:
     :return: output workspace name
     """
-    # TODO/ISSUE/62 - Implement feature with standard_bin_workspace...
-    from reduce_VULCAN import align_bins
-
+    # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
     assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
@@ -869,7 +866,6 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     align_bins(out_ws_name, standard_bin_workspace)
     mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                            Target='dSpacing')
-    # mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
 
     return out_ws_name
 
@@ -881,7 +877,6 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     :param meta_data_only:
     :return: 2-tuple
     """
-    print '[DB...BAT] Mantid: ', mantidapi
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,
@@ -928,7 +923,6 @@ def check_bins_can_align(workspace_name, template_workspace_name):
     :param template_workspace_name:
     :return: 2-tuple (boolean as align-able, string for reason
     """
-    # TODO/TEST/33
     # get workspace
     try:
         target_workspace = ADS.retrieve(workspace_name)
@@ -1000,7 +994,7 @@ def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name
         raise RuntimeError('Workspace name list is empty!')
 
     # get the workspace to get merged to
-    # TODO/TEST/ISSUE/NOW - Need to verify
+    # TEST/ISSUE/NOW - Need to verify
     if ADS.doesExist(target_workspace_name) is False:
         mantidapi.CloneWorkspace(InputWorkspace=workspace_name_list[0], OutputWorkspace=target_workspace_name)
         # add a new property to the target workspace for more information

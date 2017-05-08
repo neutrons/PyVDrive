@@ -284,6 +284,28 @@ class ReductionSetup(object):
 
         return pretty
 
+    @property
+    def binning_parameters(self):
+        """
+        return the binning parameters
+        :return:
+        """
+        if self._binningParameters is None:
+            # using default binning parameter
+            bin_param_str = '5000., -0.001, 50000.'
+        elif len(self._binningParameters) == 1:
+            # only bin size is defined
+            bin_param_str = '{0}, {1}, {2}'.format(5000., self._binningParameters[0], 50000.)
+        elif len(self._binningParameters) == 3:
+            # 3 are given
+            bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], self._binningParameters[1],
+                                                   self._binningParameters[2])
+        else:
+            # error case
+            raise RuntimeError('Binning parameter {0} is error!'.format(self._binningParameters))
+
+        return bin_param_str
+
     @staticmethod
     def change_output_directory(original_directory, user_specified_dir=None):
         """ Purpose:
@@ -376,6 +398,32 @@ class ReductionSetup(object):
             status = False
 
         return status, error_message
+
+    def get_chopped_directory(self, sns_archive=True, gsas=True, check_write_permission=True):
+        """
+        get the directory for chopped data (GSAS or NeXus)
+        :param sns_archive
+        :param gsas: if True, then output GSAS file. otherwise, output NeXus file
+        :param check_write_permission:
+        :param
+        :return:
+        """
+        # chopped data directory or chopped GSAS directory
+        if sns_archive:
+            if gsas:
+                # get the SNS archive directory for GSAS files
+                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned/{1}/'.format(self._iptsNumber, self._runNumber)
+            else:
+                # get the SNS archive directory for chopped NeXus file
+                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/Chopped/{1}/'.format(self._iptsNumber, self._runNumber)
+        else:
+            # local
+            save_dir = self._outputDirectory
+
+        if check_write_permission and os.access(save_dir, os.W_OK) is False:
+            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(save_dir))
+
+        return save_dir
 
     def get_characterization_file(self):
         """

@@ -809,8 +809,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Purpose: Re-plot the current plots with new unit
         :return:
         """
-        # TODO/ISSUE/NOW - In cleanup
-
         # new unit
         new_unit = str(self.ui.comboBox_unit.currentText())
         # Reset current unit
@@ -824,6 +822,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # try to get data from previously loaded/reduced data
             status, ret_obj = self._myController.get_reduced_data(run_id=run_number,
                                                                   target_unit=new_unit)
+
+            # if the reduced workspace is not in the memory, then search and load from archived GSAS data
             if not status:
                 # try archive
                 if isinstance(run_number, str):
@@ -839,8 +839,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                     run_number, new_unit, ret_obj
                 ))
                 return
+
+            # set the reduced workspace (name) to dictionary
             self._reducedDataDict[run_number] = ret_obj
 
+            is_workspace = True
             self.plot_run(run_number, self._currBank, over_plot=True, is_workspace=is_workspace)
         # END-FOR
 

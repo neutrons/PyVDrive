@@ -25,28 +25,26 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     def chop_reduce(self, chop_dir):
         """
         Chop and reduce
+        :except: RuntimeError if the target directory for chopped data does not exist
         :return:
         """
         # check whether it is good to go
         assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
-
-        message = 'Output GSAS files include:\n'
+        chop_dir = self._reductionSetup.get_chopped_directory(gsas=True, check_write_permission=True)
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
         # call SNSPowderReduction for chopping and
-        # TODO/FIXME/ASAP/ISSUE/FIXME/NOW/33 ----- Important! Modify it to **args
-
-
         args = dict()
-        args['PreserveEvents']=True
-        args['CalibrationFile']=self._reductionSetup.get_focus_file()
-        args['CharacterizationRunsFile']=self._reductionSetup.get_characterization_file()
-        args['Binning']="-0.001"
-        args['SaveAS']=""
+        args['PreserveEvents'] = True
+        args['CalibrationFile'] = self._reductionSetup.get_focus_file()
+        args['CharacterizationRunsFile'] = self._reductionSetup.get_characterization_file()
+        # args['Binning'] = "-0.001"
+        args['Binning'] = self._reductionSetup.binning_parameters
+        args['SaveAS'] = ""
         args['OutputDirectory']=self._reductionSetup.get_gsas_dir()
         args['NormalizeByCurrent']=False
         args['FilterBadPulses']=0
@@ -87,7 +85,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         chopped_ws_name_list = list()
 
-        print '[DB...BAT] Output workspace number: ', num_split_ws
+        print '[DB...BAT] Output workspace number: {0}'.format(num_split_ws)
+        message = 'Output GSAS files include:\n'
 
         for i_ws in range(num_split_ws):
             # get the split workspace's name
@@ -118,8 +117,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             vdrive_bin_ws_name = reduced_ws_name
 
             # it might be tricky to give out the name of GSAS
-            # TODO/ISSUE/FIXME/NOW/33 ----- Try to figure out how not to write to special name!!!
-            chop_dir = '/SNS/users/wzz/Projects/workspace/Neutron_Day/chopped'
+            # TEST/ISSUE/NOW/ ----- Try to figure out how not to write to special name!!!
             if use_special_name:
                 gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
                                                                        ws_index+1))
