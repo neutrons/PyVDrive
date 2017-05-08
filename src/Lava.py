@@ -4,9 +4,12 @@
     Script used to start the VDrive reduction GUI from MantidPlot
 """
 import sys
+import os
 
 # a fix to iPython console
-sys.path.append('/Users/wzz/MantidBuild/debug-mantid2/bin')
+home_dir = os.path.expanduser('~')
+if home_dir.startswith('/home/wzz') is False:
+    sys.path.append('/Users/wzz/MantidBuild/debug-mantid2/bin')
 
 from interface.gui.mantidipythonwidget import MantidIPythonWidget
 from PyQt4 import QtGui, QtCore

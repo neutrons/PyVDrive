@@ -1467,7 +1467,7 @@ class VDriveAPI(object):
         save_dict['myWorkDir'] = self._myWorkDir
 
         # IPTS configuration
-        # TODO/NOW - More data to be saved
+        # TODO/NOW - More parameters to be saved for GUI ... Waiting for further notice
         if len(self._iptsConfigDict) > 0:
             curr_ipts = self._iptsConfigDict.keys()[0]
             binned_dir = self._iptsConfigDict[curr_ipts][1]
