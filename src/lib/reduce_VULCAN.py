@@ -412,10 +412,10 @@ class ReductionSetup(object):
         if sns_archive:
             if gsas:
                 # get the SNS archive directory for GSAS files
-                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned/{1}/'.format(self._iptsNumber, self._runNumber)
+                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(self._iptsNumber, self._runNumber)
             else:
                 # get the SNS archive directory for chopped NeXus file
-                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/Chopped/{1}/'.format(self._iptsNumber, self._runNumber)
+                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}/'.format(self._iptsNumber, self._runNumber)
         else:
             # local
             save_dir = self._outputDirectory

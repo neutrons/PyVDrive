@@ -128,7 +128,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # Call parent method
         if self._myParent is not None:
-            # TODO/ISSUE/33 - Let _myParent to handle this! send a signal to parent with list!
+            # TODO/ISSUE/33/NOW - It is not implemented yet!!!  Let _myParent to handle this! send a signal to parent with list!
             self.controller.save_time_slicers(split_tup_list, file_name)
         # END-IF
 

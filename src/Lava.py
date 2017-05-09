@@ -9,7 +9,10 @@ import os
 # a fix to iPython console
 home_dir = os.path.expanduser('~')
 if home_dir.startswith('/home/wzz') is False:
+    # Mac debug build
     sys.path.append('/Users/wzz/MantidBuild/debug-mantid2/bin')
+    # Analysis cluster build
+    sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 from interface.gui.mantidipythonwidget import MantidIPythonWidget
 from PyQt4 import QtGui, QtCore

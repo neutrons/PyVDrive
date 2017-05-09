@@ -42,10 +42,12 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # TEST/ISSUE/NOW
         # call SNSPowderReduction for chopping and reducing
         args = dict()
+        args['Filename'] = self._reductionSetup.get_event_file()
         args['PreserveEvents'] = True
         args['CalibrationFile'] = self._reductionSetup.get_focus_file()
         args['CharacterizationRunsFile'] = self._reductionSetup.get_characterization_file()
         # args['Binning'] = "-0.001"
+        print '[DB...BAT] Binning parameter: {0}.'.format(self._reductionSetup.binning_parameters)
         args['Binning'] = self._reductionSetup.binning_parameters
         args['SaveAS'] = ""
         args['OutputDirectory']=self._reductionSetup.get_gsas_dir()
