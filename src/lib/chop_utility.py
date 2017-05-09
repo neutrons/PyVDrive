@@ -124,7 +124,9 @@ class DataChopper(object):
         :param do_tof_correction:
         :return:
         """
-        raise NotImplementedError('This method shall be deprecated and replaced by reduction manager.')
+        # TODO/ISSUE/NOW/65/FIXME - This is called by GUI to chop data and saved to NeXus.
+        #                           Better to refactor this part to adv_chop_reducion
+
         # check input
         assert isinstance(raw_file_name, str), 'Raw file name {0} must be a string but not a {1}.' \
                                                ''.format(raw_file_name, type(raw_file_name))

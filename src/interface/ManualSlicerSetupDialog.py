@@ -120,7 +120,8 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # pop a dialog for the name of the slicer
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = QtGui.QFileDialog.getOpenFileName(self, 'Time slicer file name', self.controller.get_working_dir(),
+        file_name = QtGui.QFileDialog.getSaveFileName(self, 'Time slicer file name',
+                                                      self.controller.get_working_dir(),
                                                       file_filter)
         if len(file_name) == 0:
             return
