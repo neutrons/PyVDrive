@@ -454,10 +454,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # create the log files
             self.generate_sliced_logs(chopped_ws_name_list, self._chopExportedLogType, append=(i_loop > 0))
 
-            # TODO/FIXME/DEBUG: Remove this after debugging
-            if True and i_loop == 3:
-                break
-
             # delete all the workspaces!
             for ws_name in chopped_ws_name_list:
                 mantidsimple.DeleteWorkspace(Workspace=ws_name)
@@ -466,11 +462,37 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return everything_is_right, message
     
-    def create_chop_dir(self, reduced_data=True):
+    def create_chop_dir(self, reduced_data=True, chopped_data=True):
         """
-        create directory for chopped data
+        create directory for chopped data.
+        If user specified output directory: then chopped to user specified directory. otherwise to archive
         :return:
         """
+        def create_child_dir(parent_dir):
+            """
+            blabla
+            :param parent_dir:
+            :return:
+            """
+            blabla
+            raise OSError()
+
+        # TODO/ISSUE/NOW/TODAY - Clean up this completely!!!
+        if self._reductionSetup.chopped_data_direcotry is None:
+            # default SNS archive
+            # output destination: ChoppedData/binned_data
+            if reduced_data:
+                # reduced data is saved to .../binned_data/
+                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/' % self._reductionSetup.get_ipts_number()
+                create_child_dir(parent_dir)
+
+            if chopped_data:
+                # chopped NeXus files are saved to .../ChoppedData/
+                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+
+
+        print '[DB...Output Directory: ',  self._choppedDataDirectory, self._reductionSetup.output_directory
+
         # get output file name with creating necessary directory
         try:
             # output destination: ChoppedData/binned_data
@@ -572,6 +594,206 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # END-FOR
 
         return len(target_set)
+
+    def generate_sliced_logs(self, ws_name_list, log_type, append=False):
+        """
+        generate sliced logs
+        :param ws_name_list:
+        :param log_type: either loadframe or furnace
+        :param append: if true and if the file to output exists, then just append the new content at the end
+        :return:
+        """
+        # TODO/ISSUE/TODAY - Moved from reduce_Vulcan.py: make it work here!
+        # check
+        assert isinstance(ws_name_list, list) and len(ws_name_list) > 0, 'Workspace name list must be a non-' \
+                                                                         'empty list'
+        if log_type != 'loadframe' and log_type != 'furnace':
+            raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
+                               'It must be either furnace or loadframe'.format(log_type, type(log_type)))
+        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
+
+        # get workspaces and properties
+        ws_name_list.sort()
+
+        # get the properties' names list
+        ws_name = ws_name_list[0]
+        workspace = AnalysisDataService.retrieve(ws_name)
+        property_name_list = list()
+        run_start = DateAndTime(workspace.run().getProperty('run_start').value)
+        for sample_log in workspace.run().getProperties():
+            p_name = sample_log.name
+            property_name_list.append(p_name)
+        property_name_list.sort()
+
+        # start value
+        start_file_name = os.path.join(self._choppedDataDirectory,
+                                       '%dsampleenv_chopped_start.txt' % self._reductionSetup.get_run_number())
+        mean_file_name = os.path.join(self._choppedDataDirectory,
+                                      '%dsampleenv_chopped_mean.txt' % self._reductionSetup.get_run_number())
+        end_file_name = os.path.join(self._choppedDataDirectory,
+                                     '%dsampleenv_chopped_end.txt' % self._reductionSetup.get_run_number())
+
+        # output
+        # create Pandas series dictionary
+        start_series_dict = dict()
+        mean_series_dict = dict()
+        end_series_dict = dict()
+        mts_columns = list()
+
+        if log_type == 'loadframe':
+            # loadframe
+            for entry in MTS_Header_List:
+                pd_series = pd.Series()
+                mts_name, log_name = entry
+                start_series_dict[mts_name] = pd_series
+                mean_series_dict[mts_name] = pd_series
+                end_series_dict[mts_name] = pd_series
+                mts_columns.append(mts_name)
+
+                if log_name not in property_name_list:
+                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+            # END-FOR
+        else:
+            # furnace
+            for entry in Furnace_Header_List:
+                pd_series = pd.Series()
+                mts_name = entry
+                log_name = entry
+                start_series_dict[mts_name] = pd_series
+                mean_series_dict[mts_name] = pd_series
+                end_series_dict[mts_name] = pd_series
+                mts_columns.append(mts_name)
+
+                if log_name not in property_name_list:
+                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+            # END-FOR
+        # END-IF-ELSE
+
+        # go through workspaces
+        for i_ws, ws_name in enumerate(ws_name_list):
+            # get workspace
+            workspace_i = AnalysisDataService.retrieve(ws_name)
+
+            # check: log "run_start" should be the same for workspaces split from the same EventWorkspace.
+            run_start_i = DateAndTime(workspace_i.run().getProperty('run_start').value)
+            assert run_start == run_start_i, '"run_start" of all the split workspaces should be same!'
+
+            # get difference in REAL starting time (proton_charge[0])
+            try:
+                real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            except IndexError:
+                print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
+                continue
+
+            time_stamp = real_start_time_i.total_nanoseconds()
+            # time (step) in seconds
+            diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9
+
+            if log_type == 'loadframe':
+                # loadframe
+                for entry in MTS_Header_List:
+                    mts_name, log_name = entry
+                    if len(log_name) > 0 and log_name in property_name_list:
+                        # regular log
+                        sample_log = workspace_i.run().getProperty(log_name).value
+                        if len(sample_log) > 0:
+                            start_value = sample_log[0]
+                            mean_value = sample_log.mean()
+                            end_value = sample_log[-1]
+                        else:
+                            # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+                            # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+                            # axis 0 with size 0
+                            error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+                                            'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
+                            print error_message
+                            start_value = 0.
+                            mean_value = 0.
+                            end_value = 0.
+                    elif mts_name == 'TimeStamp':
+                        # time stamp
+                        start_value = mean_value = end_value = float(time_stamp)
+                    elif mts_name == 'Time [sec]':
+                        # time step
+                        start_value = mean_value = end_value = diff_time
+                    elif len(log_name) > 0:
+                        # sample log does not exist in NeXus file. warned before. ignore!
+                        start_value = mean_value = end_value = 0.
+                    else:
+                        # unknown
+                        print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                        start_value = mean_value = end_value = 0.
+                    # END-IF-ELSE
+
+                    pd_index = float(i_ws + 1)
+                    start_series_dict[mts_name].set_value(pd_index, start_value)
+                    mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                    end_series_dict[mts_name].set_value(pd_index, end_value)
+
+                # END-FOR (entry)
+            else:
+                # furnace
+                for entry in Furnace_Header_List:
+                    mts_name = entry
+                    log_name = mts_name
+                    if len(log_name) > 0 and log_name in property_name_list:
+                        # regular log
+                        sample_log = workspace_i.run().getProperty(log_name).value
+                        start_value = sample_log[0]
+                        mean_value = sample_log.mean()
+                        end_value = sample_log[-1]
+                    elif mts_name == 'TimeStamp':
+                        # time stamp
+                        start_value = mean_value = end_value = float(time_stamp)
+                    elif mts_name == 'Time [sec]':
+                        # time step
+                        start_value = mean_value = end_value = diff_time
+                    elif len(log_name) > 0:
+                        # sample log does not exist in NeXus file. warned before. ignore!
+                        start_value = mean_value = end_value = 0.
+                    else:
+                        # unknown
+                        print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                        start_value = mean_value = end_value = 0.
+                    # END-IF-ELSE
+
+                    pd_index = float(i_ws + 1)
+                    start_series_dict[mts_name].set_value(pd_index, start_value)
+                    mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                    end_series_dict[mts_name].set_value(pd_index, end_value)
+                # END-FOR
+            # END-IF-ELSE
+        # END-FOR (workspace)
+
+        # export to csv file
+        # start file
+        pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
+        if append and os.path.exists(start_file_name):
+            with open(start_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+
+        # mean file
+        pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
+        if os.path.exists(mean_file_name) and append:
+            with open(mean_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+
+        # end file
+        pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
+        if os.path.exists(end_file_name) and append:
+            with open(end_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+
+        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+                                                                          end_file_name)
+
+        return
 
     def get_sub_splitters(self, split_start_index, split_stop_index, run_start_ns):
         """
