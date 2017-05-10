@@ -166,7 +166,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         for i_time in range(len(time_slicer_list)-1):
             start_time = time_slicer_list[i_time]
             stop_time = time_slicer_list[i_time + 1]
-            self.append_row([start_time, stop_time, i_time, False])
+            self.append_row([start_time, stop_time, i_time, True])
         # END-FOR
 
         return

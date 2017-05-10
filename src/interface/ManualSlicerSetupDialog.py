@@ -32,6 +32,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self._init_widgets()
 
         # define widgets' event handling
+        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+                     self.do_select_all_rows)
+
         self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
                      self.do_apply_slicers)
 
@@ -131,6 +134,22 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
             # TODO/ISSUE/33/NOW - It is not implemented yet!!!  Let _myParent to handle this! send a signal to parent with list!
             self.controller.save_time_slicers(split_tup_list, file_name)
         # END-IF
+
+        return
+
+    def do_select_all_rows(self):
+        """
+        select or de-select all rows
+        :return:
+        """
+        if str(self.ui.pushButton_selectAll.text()) == 'Select All':
+            self.ui.tableWidget_segments.select_all_rows(True)
+            self.ui.pushButton_selectAll.setText('Deselect All')
+        elif str(self.ui.pushButton_selectAll.text()) == 'Deselect All':
+            self.ui.tableWidget_segments.select_all_rows(False)
+            self.ui.pushButton_selectAll.setText('Select All')
+        else:
+            raise RuntimeError('Select button with text {0} is wrong!'.format(str(self.ui.pushButton_selectAll.text())))
 
         return
 
