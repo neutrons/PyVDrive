@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>569</width>
-    <height>208</height>
+    <width>590</width>
+    <height>240</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,21 +19,22 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_3">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>Reduce to</string>
+        <string>Save to</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="2">
-      <widget class="QLineEdit" name="lineEdit_outputDir"/>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>To NeXus</string>
+       </property>
+      </widget>
      </item>
-     <item row="1" column="2">
-      <widget class="QLineEdit" name="lineEdit_sourceFile"/>
-     </item>
-     <item row="1" column="4">
-      <spacer name="horizontalSpacer_2">
+     <item row="0" column="2">
+      <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -48,7 +49,69 @@
        </property>
       </spacer>
      </item>
+     <item row="1" column="3">
+      <widget class="QLineEdit" name="lineEdit_sourceFile"/>
+     </item>
+     <item row="3" column="2">
+      <widget class="QRadioButton" name="radioButton_saveToArbitrary">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_title">
+       <property name="text">
+        <string>Raw File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>To GSAS</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="3">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>SNS archive</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QRadioButton" name="radioButton_saveToArchive">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="5">
+      <widget class="QPushButton" name="pushButton_browse">
+       <property name="text">
+        <string>Browse</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3">
+      <widget class="QLineEdit" name="lineEdit_outputDir"/>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Run Number</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QCheckBox" name="checkBox_saveNeXus">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="4">
       <spacer name="horizontalSpacer_3">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -64,11 +127,18 @@
        </property>
       </spacer>
      </item>
-     <item row="0" column="2">
+     <item row="5" column="2">
+      <widget class="QCheckBox" name="checkBox_reduceToGSAS">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
       <widget class="QLineEdit" name="lineEdit_runNumber"/>
      </item>
      <item row="0" column="1">
-      <spacer name="horizontalSpacer">
+      <spacer name="horizontalSpacer_2">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -83,51 +153,19 @@
        </property>
       </spacer>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
+     <item row="4" column="3">
+      <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>Save to</string>
+        <string>Save chopped raw data to NeXus </string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
+     <item row="5" column="3">
+      <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>Run Number</string>
+        <string>Reduce chopped data and export for GSAS</string>
        </property>
       </widget>
-     </item>
-     <item row="2" column="4">
-      <widget class="QPushButton" name="pushButton_browse">
-       <property name="text">
-        <string>Browse</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_title">
-       <property name="text">
-        <string>Raw File</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QRadioButton" name="radioButton_toGSAS">
-         <property name="text">
-          <string>GSAS</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="radioButton_toNexus">
-         <property name="text">
-          <string>NeXus</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>

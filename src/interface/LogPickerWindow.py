@@ -331,6 +331,12 @@ class WindowLogPicker(QtGui.QMainWindow):
             # cancel operation
             return
         else:
+            # TODO/ISSUE/NOW/TODAY - UI changed... options are more....
+            # to archive?
+            # chop?
+            # reduce?
+            # chop + reduce?
+            # save slicing workspace?
             output_dir = self._quickChopDialog.get_output_dir()
             reduce_gsas = self._quickChopDialog.to_reduce_data()
 

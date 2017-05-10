@@ -30,6 +30,7 @@ class QuickChopDialog(QtGui.QDialog):
 
         self.ui.lineEdit_runNumber.setText(str(run_number))
         self.ui.lineEdit_sourceFile.setText(str(raw_file_name))
+        # TODO/FIXME/NOW/TODAY - UI changed!
         self.ui.radioButton_toGSAS.setChecked(True)
 
         # set up event handlers
@@ -58,9 +59,10 @@ class QuickChopDialog(QtGui.QDialog):
 
     def do_chop(self):
         """
-        Chop data
+        Chop data and or reduce
         :return:
         """
+        # TODO/ISSUE/NOW/TODAY - Need information to hand out: destination + chop + reduce
         self._outputDir = str(self.ui.lineEdit_outputDir.text())
 
         self.close()
@@ -81,6 +83,7 @@ class QuickChopDialog(QtGui.QDialog):
         get output directory
         :return:
         """
+        # TODO/FIXME/TODAY/NOW - UI changed!
         return self._outputDir
 
     def to_reduce_data(self):
@@ -88,4 +91,5 @@ class QuickChopDialog(QtGui.QDialog):
         Get the flag whether the sliced data will be reduced to GSAS
         :return:
         """
+        # TODO/FIXME/TODAY/NOW - UI changed!
         return self.ui.radioButton_toGSAS.isChecked()
