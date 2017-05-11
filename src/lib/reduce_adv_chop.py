@@ -37,10 +37,12 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
+        # TODO/NOW/ISSUE/TODAY - How to use GSAS dir and NeXus dir
         gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(check_write_permission=True)
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
+        # TODO/NOW/ISSUE/FIXME/TODAY - Examine input workspace. Ke's order lapping time slicer is not supported.
 
         # TEST/ISSUE/NOW
         # call SNSPowderReduction for chopping and reducing
@@ -59,6 +61,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         args['CompressTOFTolerance'] = 0.
         args['FrequencyLogNames'] = "skf1.speed"
         args['WaveLengthLogNames'] = "skf12.lambda"
+        args['SplittersWorkspace'] = split_ws_name
+        args['SplitInformationWorkspace'] = split_info_table
         mantidsimple.SNSPowderReduction(**args)
 
         # mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
@@ -174,6 +178,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
+        self.examine_slicing_workspace(split_ws_name)
+
         # construct reduction argument diction
         sns_arg_dict = dict()
         sns_arg_dict['Filename'] = self._reductionSetup.get_event_file()
@@ -194,7 +200,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # if the number of output workspaces are too much, it could cause severe memory issue.
         num_outputs = self.get_number_chopped_ws(split_ws_name)
-        NUM_TARGET_WS_IN_MEM = 40
+        NUM_TARGET_WS_IN_MEM = 200
         num_loops = num_outputs / NUM_TARGET_WS_IN_MEM
 
         message = 'Output GSAS files include:\n'
@@ -288,183 +294,18 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # TODO/ISSUE/Now/ - Need to delete the other reduced workspaces too, ???_TOF
             for ws_name in vulcan_bin_ws_list:
+                print '[DB...BAT] Vulcan BIN workspace: {0}'.format(ws_name)
                 pass
 
             # delete all the workspaces!
-            for ws_name in chopped_ws_name_list:
-                mantidsimple.DeleteWorkspace(Workspace=ws_name)
+            # TODO/ISSUE/FIXME/NOW/TODAY - Delete the workspace by option
+            # for ws_name in chopped_ws_name_list:
+            #     mantidsimple.DeleteWorkspace(Workspace=ws_name)
 
         # END-FOR (loop)
 
         return everything_is_right, message
 
-    def chop_and_reduce_large_output_v1(self, chop_dir):
-        """
-        Chop and reduce in the special case of large amount of output.
-        Calling SNSPowderReduction() will have to re-load the data, which is time consuming.  Therefore,
-        the workflow is to
-        1. reduce the event data by SNSPowderReduction to 2-spectrum event workspace, whose events are not compressed
-        2. chop the reduced workspace with limited amount of slicers a time
-        :param chop_dir:
-        :return:
-        """
-        # check whether it is good to go
-        assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
-        # configure the ReductionSetup
-        self._reductionSetup.process_configurations()
-
-        # check chopping directory
-        assert isinstance(chop_dir, str) and os.path.exists(chop_dir), 'Chopped data directory {0} (of type {1}) ' \
-                                                                       'must be a string and exist.' \
-                                                                       ''.format(chop_dir, type(chop_dir))
-
-        # get splitters workspaces
-        split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
-
-        # construct reduction argument diction
-        sns_arg_dict = dict()
-        sns_arg_dict['Filename'] = self._reductionSetup.get_event_file()
-        sns_arg_dict['CalibrationFile'] = self._reductionSetup.get_focus_file()
-        sns_arg_dict['CharacterizationRunsFile'] = self._reductionSetup.get_characterization_file()
-        sns_arg_dict['PreserveEvents'] = True
-        sns_arg_dict['Binning'] = '-0.001'
-        sns_arg_dict['SaveAS'] = ''
-        sns_arg_dict['OutputDirectory'] = self._reductionSetup.get_gsas_dir()
-        sns_arg_dict['NormalizeByCurrent'] = False
-        sns_arg_dict['FilterBadPulses'] = 0
-        sns_arg_dict['CompressTOFTolerance'] = 0.  # do not compress TOF events for further chopping
-        sns_arg_dict['FrequencyLogNames'] = "skf1.speed"
-        sns_arg_dict['WaveLengthLogNames'] = "skf12.lambda"
-
-        for key in sns_arg_dict.keys():
-            print key, ':', sns_arg_dict[key]
-
-        # do regular reduction
-        result = mantidsimple.SNSPowderReduction(**sns_arg_dict)
-        use_default = True
-        if len(result) == 2:
-            reduced_ws_name = str(result[1])
-            if AnalysisDataService.doesExist(reduced_ws_name):
-                use_default = False
-        if use_default:
-            reduced_ws_name = 'VULCAN_{0}'.format(self._reductionSetup.get_run_number())
-            if AnalysisDataService.doesExist(reduced_ws_name) is False:
-                return False, 'Failed to reduce data file {0}. Unable to locate output workspace {1}' \
-                              ''.format(sns_arg_dict['Filename'], reduced_ws_name)
-        # END-IF
-
-        # get run start time
-        run_start_time = AnalysisDataService.retrieve(reduced_ws_name).run().getProperty('proton_charge').times[0]
-
-        # if the number of output workspaces are too much, it could cause severe memory issue.
-        num_outputs = self.get_number_chopped_ws(split_ws_name)
-        NUM_TARGET_WS_IN_MEM = 20
-        num_loops = num_outputs / NUM_TARGET_WS_IN_MEM
-
-        message = 'Output GSAS files include:\n'
-
-        if num_outputs % NUM_TARGET_WS_IN_MEM > 0:
-            num_loops += 1
-
-        gsas_index = 1
-
-        # sort events  TODO/FUTURE - May not need this as SortEvents will be called in FilterEvents()
-        mantidsimple.SortEvents(InputWorkspace=reduced_ws_name, SortBy='Pulse Time + TOF')
-        everything_is_right = True
-
-        for i_loop in range(num_loops):
-            # get the partial splitters workspaces
-            sub_split_ws = self.get_sub_splitters(i_loop * NUM_TARGET_WS_IN_MEM, (i_loop + 1) * NUM_TARGET_WS_IN_MEM,
-                                                  run_start_ns=run_start_time.totalNanoseconds())
-            # chop
-            result = mantidsimple.FilterEvents(InputWorkspace=reduced_ws_name,
-                                               SplitterWorkspace=sub_split_ws,
-                                               InformationWorkspace=split_info_table,
-                                               FilterByPulseTime=False,  # TODO/FUTURE/ - Change to True after Mantid
-                                               OutputWorkspaceIndexedFrom1=False,
-                                               CorrectionToSample="None",
-                                               SpectrumWithoutDetector="Skip",
-                                               SplitSampleLogs=False,
-                                               OutputWorkspaceBaseName=reduced_ws_name)
-
-            # print '[DB...BAT] Filter Events Result: ',  # result
-            # print type(result), len(result)
-            #
-            # print 'Original workspace {0} still exist? {1}' \
-            #       ''.format(reduced_ws_name, AnalysisDataService.doesExist(reduced_ws_name))
-
-            if len(result) <= 2 and not isinstance(result[2], str):
-                return False, 'Failed to chop reduced workspace {0}.'.format(reduced_ws_name)
-
-            # result tuple item 3 is the list of chopped workspaces' names
-            chopped_ws_name_list = result[2]
-            for chopped_ws_name in chopped_ws_name_list:
-                if AnalysisDataService.doesExist(chopped_ws_name):
-                    chopped_ws = AnalysisDataService.retrieve(chopped_ws_name)
-                    print '[DB...BAT] Chopped workspace {0}: # events = {1}' \
-                          ''.format(chopped_ws_name, chopped_ws.getNumberEvents())
-                else:
-                    chopped_ws_name_list.pop(chopped_ws_name_list.index(chopped_ws_name))
-                    print '[ERROR] Planned chopped workspace name {0} does not exist in ADS.'.format(chopped_ws_name)
-            # END-FOR
-
-            # convert the chopped workspaces to VULCAN-style GSAS file
-            everything_is_right = True
-            for chopped_ws_name in chopped_ws_name_list:
-                # get the split workspace's name
-                print '[DB...BAT] Process log of chopped workspace {0}: '.format(chopped_ws_name)
-
-                # check whether the proposed-chopped workspace does exist
-                if AnalysisDataService.doesExist(chopped_ws_name):
-                    pass
-                else:
-                    # there won't be a workspace produced if there is no neutron event within the range.
-                    message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(reduced_ws_name)
-                    everything_is_right = False
-
-                # convert unit and save for VULCAN-specific GSAS
-                tof_ws_name = '{0}_TOF'.format(chopped_ws_name)
-                mantidsimple.ConvertUnits(InputWorkspace=chopped_ws_name,
-                                          OutputWorkspace=tof_ws_name,
-                                          Target="TOF",
-                                          EMode="Elastic",
-                                          AlignBins=False)
-
-                # overwrite the original file
-                vdrive_bin_ws_name = chopped_ws_name
-
-                # it might be tricky to give out the name of GSAS
-                gsas_file_name = os.path.join(chop_dir, '{0}.gda'.format(gsas_index))
-
-                # save to VULCAN GSAS and add a property as Note
-                mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
-                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                           OutputWorkspace=vdrive_bin_ws_name,
-                                           GSSFilename=gsas_file_name,
-                                           IPTS=self._reductionSetup.get_ipts_number(),
-                                           GSSParmFilename="Vulcan.prm")
-
-                # Add special property to output workspace
-                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-                # update message
-                message += '%d-th: %s\n' % (gsas_index, gsas_file_name)
-                gsas_index += 1
-            # END-FOR
-
-            # export sample logs!
-            # create the log files
-            self.generate_sliced_logs(chopped_ws_name_list, self._chopExportedLogType, append=(i_loop > 0))
-
-            # delete all the workspaces!
-            for ws_name in chopped_ws_name_list:
-                mantidsimple.DeleteWorkspace(Workspace=ws_name)
-
-        # END-FOR (loop)
-
-        return everything_is_right, message
-    
     def create_chop_dir(self, reduced_data=True, chopped_data=True):
         """
         create directory for chopped data.
@@ -505,6 +346,30 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # set chop_dir to class variable
             self._choppedDataDirectory = nexus_dir
+
+        return
+
+    @staticmethod
+    def examine_slicing_workspace(split_ws_name):
+        """
+        blabla
+        :param split_ws_name:
+        :return:
+        """
+        split_ws = AnalysisDataService.retrieve(split_ws_name)
+
+        if split_ws.__class__.__name__.count('Table') == 1:
+            # table workspace for splitters
+            num_rows = split_ws.rowCount()
+            message = '[INFO] There are {0} splitters '.format(num_rows)
+            if num_rows > 0:
+                message += 'from {1} to {2}.'.format(split_ws.cell(0, 0), split_ws.cell(num_rows-1, 0))
+            else:
+                message += '.'
+            print message
+        else:
+            # matrix workspace
+            print '[DB...BAT] It is MatrixWorkspace!'
 
         return
 
