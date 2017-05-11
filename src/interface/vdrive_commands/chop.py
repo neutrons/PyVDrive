@@ -55,7 +55,8 @@ class VdriveChop(VDriveCommand):
     def chop_data_by_log(self, run_number, start_time, stop_time, log_name, min_log_value, max_log_value,
                          log_step_value, reduce_flag, output_dir, dry_run):
         """
-        chop data by log value
+        chop data by log value.
+        Note: always save the chopped NeXus
         :param run_number:
         :param start_time:
         :param stop_time:
@@ -103,8 +104,9 @@ class VdriveChop(VDriveCommand):
             slicer_key = ret_obj
 
         # chop and reduce
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir)
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True,
+                                                      output_dir=output_dir)
 
         return status, message
 
@@ -161,8 +163,8 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
 
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir,
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
         return status, message
@@ -224,8 +226,8 @@ class VdriveChop(VDriveCommand):
             exp_log_type = 'furnace'
         else:
             exp_log_type = None
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir,
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
         return status, message

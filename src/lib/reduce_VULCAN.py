@@ -269,7 +269,10 @@ class ReductionSetup(object):
         self._vanadium3Tuple = None
 
         # about chopping
+        self._exportToSNSArchive = True
         self._choppedSampleLogType = 'loadframe'
+        self._saveChoppedWorkspaceToNeXus = False
+        self._choppedNeXusDir = None
 
         return
 
@@ -399,36 +402,28 @@ class ReductionSetup(object):
 
         return status, error_message
 
-    @property
-    def chopped_data_direcotry(self):
-        # TODO/FIXME/TODAY - Implement ASAP
-        raise ASAP
-
-    def get_chopped_directory(self, sns_archive=True, gsas=True, check_write_permission=True):
+    def get_chopped_directory(self, check_write_permission=True):
         """
         get the directory for chopped data (GSAS or NeXus)
-        :param sns_archive
-        :param gsas: if True, then output GSAS file. otherwise, output NeXus file
         :param check_write_permission:
         :param
         :return:
         """
         # chopped data directory or chopped GSAS directory
-        if sns_archive:
-            if gsas:
-                # get the SNS archive directory for GSAS files
-                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(self._iptsNumber, self._runNumber)
-            else:
-                # get the SNS archive directory for chopped NeXus file
-                save_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}/'.format(self._iptsNumber, self._runNumber)
+        if self._exportToSNSArchive:
+            gsas_dir = self._mainGSASDir
+            nexus_dir = self._choppedNeXusDir
         else:
             # local
-            save_dir = self._outputDirectory
+            gsas_dir = self._outputDirectory
+            nexus_dir = self._choppedNeXusDir
 
-        if check_write_permission and os.access(save_dir, os.W_OK) is False:
-            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(save_dir))
+        if check_write_permission and os.access(gsas_dir, os.W_OK) is False:
+            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(gsas_dir))
+        if check_write_permission and os.access(nexus_dir, os.W_OK) is False:
+            raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(nexus_dir))
 
-        return save_dir
+        return gsas_dir, nexus_dir
 
     def get_characterization_file(self):
         """
@@ -608,15 +603,15 @@ class ReductionSetup(object):
         return
 
     @property
-    def is_full_reduction(self):
+    def is_auto_reduction_service(self):
         """
-        check the state whether the current reduction is a standard (auto) reduction in archive
+        check the state whether the current reduction is a standard (auto) reduction in SNS archive
         :return:
         """
         return self._isFullReduction
 
-    @is_full_reduction.setter
-    def is_full_reduction(self, value):
+    @is_auto_reduction_service.setter
+    def is_auto_reduction_service(self, value):
         """
         set the state whether current reduction is for a full reduction
         :param value:
@@ -705,6 +700,27 @@ class ReductionSetup(object):
 
         return
 
+    @property
+    def save_chopped_workspace(self):
+        """
+        flag whether the chopped workspace will be saved in NeXus format
+        :return:
+        """
+        return self._saveChoppedWorkspaceToNeXus
+
+    @save_chopped_workspace.setter
+    def save_chopped_workspace(self, save):
+        """
+        set the flag to save the chopped workspace in NeXus format
+        :param save:
+        :return:
+        """
+        assert isinstance(save, bool), 'Flag {0} must be a boolean but not a {1}.'.format(save, type(save))
+
+        self._saveChoppedWorkspaceToNeXus = save
+
+        return
+
     def set_binning_parameters(self, min_tof, max_tof, bin_size):
         """
 
@@ -713,13 +729,18 @@ class ReductionSetup(object):
         :param bin_size:
         :return:
         """
-        # check: blabla
-        # TODO/ISSUE/NOW
+        # check input
+        assert isinstance(min_tof, float), 'Minimum TOF value {0} must be a float but not a {1}.' \
+                                           ''.format(min_tof, type(min_tof))
+        assert isinstance(min_tof, float), 'Minimum TOF value {0} must be a float but not a {1}.' \
+                                           ''.format(max_tof, type(max_tof))
+        assert isinstance(bin_size, float) or bin_size is None, 'Bin size {0} must be either a float or ' \
+                                                                'a None but not a {1}.'.format(bin_size, type(bin_size))
 
         if bin_size is None:
             bin_size = self._defaultBinSize
 
-        self._binningParameters = (min_tof, -1 * abs(bin_size), max_tof)
+        self._binningParameters = min_tof, -1 * abs(bin_size), max_tof
 
         return
 
@@ -732,6 +753,20 @@ class ReductionSetup(object):
         assert isinstance(file_name, str), 'Input arg type error.'
 
         self._characterFileName = file_name
+
+        return
+
+    def set_chopped_nexus_dir(self, dir_name):
+        """
+        set the directory for the chopped data in NeXus format
+        :param dir_name:
+        :return:
+        """
+        # check
+        assert isinstance(dir_name, str), 'Directory name {0} must be a string but not a {1}.' \
+                                          ''.format(dir_name, type(dir_name))
+
+        self._choppedNeXusDir = dir_name
 
         return
 
@@ -809,7 +844,7 @@ class ReductionSetup(object):
         self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binnedgda')
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
 
-        self.is_full_reduction = True
+        self.is_auto_reduction_service = True
 
         return
 
@@ -900,6 +935,32 @@ class ReductionSetup(object):
 
         # set up
         self._outputDirectory = dir_path
+
+        # set the flag
+        self._exportToSNSArchive = False
+
+        return
+
+    def set_output_dir_to_archive(self, create_parent_directories=False):
+        """
+        set output directories as SNS archive
+        :param create_parent_directories: create directories if they do not exist
+        :return:
+        """
+        # set the flag
+        self._exportToSNSArchive = True
+
+        # gsas/binned files
+        binned_parent_dir = '/SNS/VULCAN/IPTS-{0}/shared/binned_data/'.format(self._iptsNumber)
+        if os.path.exists(binned_parent_dir) is False and create_parent_directories:
+            os.mkdir(binned_parent_dir, mode=0o777)  # global writable
+        self._mainGSASDir = os.path.join(binned_parent_dir, '{0}'.format(self._runNumber))
+
+        # Nexus files
+        nexus_parent_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/'.format(self._iptsNumber)
+        if os.path.exists(nexus_parent_dir) is False and create_parent_directories:
+            os.mkdir(nexus_parent_dir, mode=0o777)
+        self._choppedNeXusDir = os.path.join(nexus_parent_dir, '{0}'.format(self._runNumber))
 
         return
 
@@ -2287,7 +2348,7 @@ class ReduceVulcanData(object):
         some special operations used in auto reduction service only
         :return:
         """
-        if not self._reductionSetup.is_full_reduction:
+        if not self._reductionSetup.is_auto_reduction_service:
             return True, 'No operation for auto reduction special.'
 
         # 2nd copy for Ke if it IS NOT an alignment run

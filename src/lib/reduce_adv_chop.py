@@ -1,10 +1,13 @@
 # Reduction with advanced chopping methods
 # It is split from ReduceVulcanData in reduce_Vulcan.py
 import os
+import pandas as pd
+
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-import chop_utility
+from mantid.kernel import DateAndTime
+
 import reduce_VULCAN
 
 MAX_ALLOWED_WORKSPACES = 200
@@ -34,7 +37,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
-        chop_dir = self._reductionSetup.get_chopped_directory(gsas=True, check_write_permission=True)
+        gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(check_write_permission=True)
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
@@ -50,9 +53,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         print '[DB...BAT] Binning parameter: {0}.'.format(self._reductionSetup.binning_parameters)
         args['Binning'] = self._reductionSetup.binning_parameters
         args['SaveAS'] = ""
-        args['OutputDirectory']=self._reductionSetup.get_gsas_dir()
-        args['NormalizeByCurrent']=False
-        args['FilterBadPulses']=0
+        args['OutputDirectory'] = self._reductionSetup.get_gsas_dir()
+        args['NormalizeByCurrent'] = False
+        args['FilterBadPulses'] = 0
         args['CompressTOFTolerance'] = 0.
         args['FrequencyLogNames'] = "skf1.speed"
         args['WaveLengthLogNames'] = "skf12.lambda"
@@ -468,65 +471,40 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         If user specified output directory: then chopped to user specified directory. otherwise to archive
         :return:
         """
-        def create_child_dir(parent_dir):
+        def check_or_create_dir(dir_name):
             """
-            blabla
-            :param parent_dir:
+            check whether a directory exists.
+            if it does, check whether it is writable;
+            otherwise, create this directory
+            :param dir_name:
             :return:
             """
-            blabla
-            raise OSError()
-
-        # TODO/ISSUE/NOW/TODAY - Clean up this completely!!!
-        if self._reductionSetup.chopped_data_direcotry is None:
-            # default SNS archive
-            # output destination: ChoppedData/binned_data
-            if reduced_data:
-                # reduced data is saved to .../binned_data/
-                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/' % self._reductionSetup.get_ipts_number()
-                create_child_dir(parent_dir)
-
-            if chopped_data:
-                # chopped NeXus files are saved to .../ChoppedData/
-                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
-
-
-        print '[DB...Output Directory: ',  self._choppedDataDirectory, self._reductionSetup.output_directory
-
-        # get output file name with creating necessary directory
-        try:
-            # output destination: ChoppedData/binned_data
-            if reduced_data:
-                # reduced data is saved to .../binned_data/
-                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/binned_data/' % self._reductionSetup.get_ipts_number()
+            if os.path.exists(dir_name):
+                # directory exists
+                if os.access(dir_name, os.W_OK) is False:
+                    raise RuntimeError('Directory {0} exists but user has no privilege to write.'.format(dir_name))
             else:
-                # chopped NeXus files are saved to .../ChoppedData/
-                parent_dir = '/SNS/VULCAN/IPTS-%d/shared/ChoppedData/' % self._reductionSetup.get_ipts_number()
+                # new directory
+                try:
+                    os.mkdir(dir_name)
+                except OSError as os_err:
+                    raise RuntimeError('Unable to make directory {0} due to {1}'.format(dir_name, os_err))
 
-            if not os.path.exists(parent_dir):
-                os.mkdir(parent_dir)
-            chop_dir = os.path.join(parent_dir, '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-            if os.access(chop_dir, os.W_OK) is False:
-                raise OSError('It is very likely that standard chopped directory {0} was created by other users.'
-                              ''.format(chop_dir))
+            return
 
-        except OSError as os_err:
-            # mostly because permission to write
-            print '[WARNING] Unable to write to shared folder. Reason: {0}'.format(os_err)
+        # get GSAS directory and NeXus file directory for set up
+        gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(False)
 
-            # get local directory
-            if not os.path.exists(self._reductionSetup.output_directory):
-                os.mkdir(self._reductionSetup.output_directory)
-            chop_dir = os.path.join(self._reductionSetup.output_directory,
-                                    '%d' % self._reductionSetup.get_run_number())
-            if not os.path.exists(chop_dir):
-                os.mkdir(chop_dir)
-        # END
+        if reduced_data:
+            print '[INFO] Reduced data will be written to {0}'.format(gsas_dir)
+            check_or_create_dir(gsas_dir)
 
-        # set chop_dir to class variable
-        self._choppedDataDirectory = chop_dir
+        if chopped_data:
+            print '[INFO] Chopped data will be saved to {0} as NeXus files.'.format(nexus_dir)
+            check_or_create_dir(nexus_dir)
+
+            # set chop_dir to class variable
+            self._choppedDataDirectory = nexus_dir
 
         return
 
@@ -603,14 +581,15 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
-        # TODO/ISSUE/TODAY - Moved from reduce_Vulcan.py: make it work here!
+        # TEST/ISSUE/TODAY - Moved from reduce_Vulcan.py: make it work here!
         # check
         assert isinstance(ws_name_list, list) and len(ws_name_list) > 0, 'Workspace name list must be a non-' \
                                                                          'empty list'
+        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
+
         if log_type != 'loadframe' and log_type != 'furnace':
             raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
                                'It must be either furnace or loadframe'.format(log_type, type(log_type)))
-        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
 
         # get workspaces and properties
         ws_name_list.sort()
@@ -642,7 +621,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         if log_type == 'loadframe':
             # loadframe
-            for entry in MTS_Header_List:
+            for entry in reduce_VULCAN.MTS_Header_List:
                 pd_series = pd.Series()
                 mts_name, log_name = entry
                 start_series_dict[mts_name] = pd_series
@@ -655,7 +634,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # END-FOR
         else:
             # furnace
-            for entry in Furnace_Header_List:
+            for entry in reduce_VULCAN.Furnace_Header_List:
                 pd_series = pd.Series()
                 mts_name = entry
                 log_name = entry
@@ -691,7 +670,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             if log_type == 'loadframe':
                 # loadframe
-                for entry in MTS_Header_List:
+                for entry in reduce_VULCAN.MTS_Header_List:
                     mts_name, log_name = entry
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
@@ -733,7 +712,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 # END-FOR (entry)
             else:
                 # furnace
-                for entry in Furnace_Header_List:
+                for entry in reduce_VULCAN.Furnace_Header_List:
                     mts_name = entry
                     log_name = mts_name
                     if len(log_name) > 0 and log_name in property_name_list:

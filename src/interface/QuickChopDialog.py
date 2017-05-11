@@ -10,6 +10,7 @@ except AttributeError:
         return s
 
 import gui.ui_ChopDialog
+import gui.GuiUtility as GuiUtility
 
 
 class QuickChopDialog(QtGui.QDialog):
@@ -28,10 +29,16 @@ class QuickChopDialog(QtGui.QDialog):
         self.ui = gui.ui_ChopDialog.Ui_Dialog()
         self.ui.setupUi(self)
 
+        # set up the default value of the widgets
         self.ui.lineEdit_runNumber.setText(str(run_number))
         self.ui.lineEdit_sourceFile.setText(str(raw_file_name))
-        # TODO/FIXME/NOW/TODAY - UI changed!
-        self.ui.radioButton_toGSAS.setChecked(True)
+        self.ui.radioButton_saveToArbitrary.setChecked(False)
+        self.ui.radioButton_saveToArchive.setChecked(True)
+        self.ui.checkBox_reduceToGSAS.setChecked(True)
+        self.ui.checkBox_saveNeXus.setChecked(True)
+
+        # default output directory
+        self.ui.lineEdit_outputDir.setText(os.getcwd())
 
         # set up event handlers
         self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
@@ -40,10 +47,6 @@ class QuickChopDialog(QtGui.QDialog):
                      self.do_browse_output)
         self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
                      self.do_quit)
-
-        # default output directory
-        self._outputDir = os.getcwd()
-        self.ui.lineEdit_outputDir.setText(self._outputDir)
 
         return
 
@@ -59,11 +62,24 @@ class QuickChopDialog(QtGui.QDialog):
 
     def do_chop(self):
         """
-        Chop data and or reduce
+        record the state to chop/reduce to be True and close the window
+        Note: this is the OK button and thus dialog will be closed and be returned with 1
         :return:
         """
-        # TODO/ISSUE/NOW/TODAY - Need information to hand out: destination + chop + reduce
-        self._outputDir = str(self.ui.lineEdit_outputDir.text())
+        # check output directory
+        if self.ui.radioButton_saveToArbitrary.isChecked():
+            # output directory
+            target_dir = str(self.ui.lineEdit_outputDir.text())
+            if len(target_dir) == 0:
+                GuiUtility.pop_dialog_error(self, 'Output direcotry is not specified.')
+                return
+
+            # data processing options
+            if self.ui.checkBox_saveNeXus.isChecked() is False and self.ui.checkBox_reduceToGSAS.isChecked() is False:
+                GuiUtility.pop_dialog_error(self, 'At least one operation, save to Nexus and reduce to GSAS, '
+                                                  'must be selected.')
+                return
+        # END-IF
 
         self.close()
 
@@ -78,18 +94,34 @@ class QuickChopDialog(QtGui.QDialog):
 
         return
 
-    def get_output_dir(self):
-        """
-        get output directory
-        :return:
-        """
-        # TODO/FIXME/TODAY/NOW - UI changed!
-        return self._outputDir
-
-    def to_reduce_data(self):
+    @property
+    def reduce_data(self):
         """
         Get the flag whether the sliced data will be reduced to GSAS
         :return:
         """
-        # TODO/FIXME/TODAY/NOW - UI changed!
-        return self.ui.radioButton_toGSAS.isChecked()
+        return self.ui.checkBox_reduceToGSAS.isChecked()
+
+    @property
+    def save_to_nexus(self):
+        """
+        check whether the chopped data will be written to NeXus
+        :return:
+        """
+        return self.ui.checkBox_saveNeXus.isChecked()
+
+    @property
+    def output_to_archive(self):
+        """
+        whether the result will be written to SNS archive?
+        :return:
+        """
+        return self.ui.radioButton_saveToArchive.isChecked()
+
+    @property
+    def output_directory(self):
+        """
+        get output directory
+        :return:
+        """
+        return str(self.ui.lineEdit_outputDir)

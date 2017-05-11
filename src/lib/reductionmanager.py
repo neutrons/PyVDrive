@@ -5,6 +5,7 @@ import os
 import reduce_VULCAN
 import mantid_helper
 import chop_utility
+import reduce_adv_chop
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -662,7 +663,8 @@ class ReductionManager(object):
 
         return tracker
 
-    def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key, output_dir):
+    def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key,
+                            save_chopped_nexus, output_dir):
         """
         reduce chopped data to GSAS file
         :param ipts_number:
@@ -670,11 +672,10 @@ class ReductionManager(object):
         :param src_file_name: original event data from which the events are split
         :param chop_manager: a ChopperManager instance which manages the split workspace
         :param slicer_key:
+        :param save_chopped_nexus: flag to save the chopped workspace to
         :param output_dir:
         :return:
         """
-        import reduce_adv_chop
-
         # check inputs
         assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer ' \
                                              'but not {1}.'.format(ipts_number, type(ipts_number))
@@ -691,9 +692,18 @@ class ReductionManager(object):
         reduce_setup.set_run_number(run_number)
         reduce_setup.set_event_file(src_file_name)
 
-        reduce_setup.set_output_dir(output_dir)
-        reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-        reduce_setup.is_full_reduction = False
+        # set up the output directory
+        if output_dir is None:
+            reduce_setup.set_output_dir_to_archive(create_parent_directories=True)
+        else:
+            reduce_setup.set_output_dir(output_dir)
+            reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+            if save_chopped_nexus:
+                reduce_setup.set_chopped_nexus_dir(output_dir)
+                reduce_setup.save_chopped_workspace = save_chopped_nexus
+
+        # set the flag for not being an auto reduction
+        reduce_setup.is_auto_reduction_service = False
         reduce_setup.set_default_calibration_files()
 
         # add splitter workspace and splitter information workspace
@@ -711,7 +721,7 @@ class ReductionManager(object):
         # set up the reduced file names and workspaces and add to reduction tracker dictionary
         tracker.set_reduction_status(status, message, True)
 
-        # TEST/ISSUE/33/
+        # TEST/ISSUE/NOW/
         reduced, workspace_name_list = reducer.get_reduced_workspaces(chopped=True)
         self.set_chopped_reduced_workspaces(run_number, slicer_key, workspace_name_list, append=True)
         self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files(), append=True)

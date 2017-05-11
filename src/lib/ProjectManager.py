@@ -94,13 +94,14 @@ class ProjectManager(object):
 
         return
 
-    def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
+    def chop_data(self, run_number, slicer_key, reduce_flag, save_chopped_nexus, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
+        :param save_chopped_nexus: flag for saving chopped data to NeXus
         :param output_dir:
         :return:
         """
@@ -124,7 +125,7 @@ class ProjectManager(object):
             # reduce to GSAS
             src_file_name, ipts_number = self.get_run_info(run_number)
             self._reductionManager.reduce_chopped_data(ipts_number, run_number, src_file_name, chopper, slicer_key,
-                                                       output_dir)
+                                                       save_chopped_nexus, output_dir)
 
             status = True,
             message = ''
@@ -137,6 +138,7 @@ class ProjectManager(object):
             except RuntimeError as run_error:
                 return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                               ''.format(run_number, run_error)
+            # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
             self._reductionManager.chop_data(ipts_number=ipts_number,
                                              run_number=run_number,
                                              data_file=data_file,
@@ -144,9 +146,6 @@ class ProjectManager(object):
                                              slice_key=slicer_key,
                                              output_dir=output_dir,
                                              tof_correction=False)
-
-            # def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir,
-            #               tof_correction=False):
 
             status = True
             message = 'Run %d is chopped and reduced. ' % run_number

@@ -331,20 +331,23 @@ class WindowLogPicker(QtGui.QMainWindow):
             # cancel operation
             return
         else:
-            # TODO/ISSUE/NOW/TODAY - UI changed... options are more....
-            # to archive?
-            # chop?
-            # reduce?
-            # chop + reduce?
-            # save slicing workspace?
-            output_dir = self._quickChopDialog.get_output_dir()
-            reduce_gsas = self._quickChopDialog.to_reduce_data()
+            # get information from the dialog box
+            output_to_archive = self._quickChopDialog.output_to_archive
+            if output_to_archive:
+                output_dir = None
+            else:
+                output_dir = self._quickChopDialog.output_directory
+
+            to_save_nexus = self._quickChopDialog.save_to_nexus
+            to_reduce_gsas = self._quickChopDialog.reduce_data
+        # END-IF-ELSE
 
         # get chop manager
         assert isinstance(self._currSlicerKey, str), 'Slicer key %s must be a string but not %s.' \
                                                      '' % (str(self._currSlicerKey), type(self._currSlicerKey))
         status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
-                                                           reduce_data=reduce_gsas,
+                                                           reduce_data=to_reduce_gsas,
+                                                           save_chopped_nexus=to_save_nexus,
                                                            output_dir=output_dir)
 
         if status:
