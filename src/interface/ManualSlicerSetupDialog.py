@@ -35,6 +35,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
                      self.do_select_all_rows)
 
+        self.connect(self.ui.pushButton_expand2ndLevelChop, QtCore.SIGNAL('clicked()'),
+                     self.do_expand_slicers)
+
         self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
                      self.do_apply_slicers)
 
@@ -59,6 +62,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         """
         # slice segments table
         self.ui.tableWidget_segments.setup()
+
+        # radio buttons
+        self.ui.radioButton_timeStep.setChecked(True)
 
         return
 
@@ -99,6 +105,26 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         # END-IF
 
         return
+
+    def do_expand_slicers(self):
+        """
+        expand the selected slicers as the second-level choppers
+        :return:
+        """
+        # get the selected slicers
+        selected_rows = self.ui.tableWidget_segments.get_selected_rows(True)
+
+        # get the slicers
+        slicer_list = list()
+        for row_index in sorted(selected_rows):
+            # TODO/TODAY - check methods' existing?
+            slicer = self.ui.tableWidget_segments.get_slicer(row_index)
+            slicer_list.append(slicer)
+
+        # TODO/ISSUE/NOW/TODAY - Implement ASAP
+        # expand ...
+        raise ASAP
+
 
     def do_hide_window(self):
         """
