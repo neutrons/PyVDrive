@@ -74,6 +74,27 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return start_time_list
 
+    def get_splitter(self, row_number):
+        """
+        get a splitter (start time, stop time and target) of a specified row
+        :param row_number:
+        :return:
+        """
+        # check input
+        assert isinstance(row_number, int), 'Row number {0} must be an integer but not a {1}.' \
+                                            ''.format(row_number, type(row_number))
+
+        # check validity
+        if row_number < 0 or row_number >= self.rowCount():
+            raise RuntimeError('Row number {0} is out of range [0, {1})'.format(row_number, self.rowCount()))
+
+        # get result
+        start_time = self.cell(row_number, 0)
+        stop_time = self.cell(row_number, 1)
+        target = self.cell(row_number, 2)
+
+        return start_time, stop_time, target
+
     def get_splitter_list(self):
         """
         Get all splitters that are selected
@@ -101,9 +122,9 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         return split_tup_list
 
-    def replace_line(self, row_number, time_segments):
+    def replace_splitter(self, row_number, time_segments):
         """
-        Replace a row by a few of new rows
+        Replace a splitter (i.e., a row) by a few of new rows
         :param row_number: the number of the row to be replace
         :param time_segments: items for the new rows.
         :return: 2-tuple as (bool, str)

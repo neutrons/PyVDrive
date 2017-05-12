@@ -10,6 +10,7 @@ import math
 FifteenYearsInSecond = 15*356*24*3600
 MAX_CHOPPED_WORKSPACE_IN_MEM = 40
 
+
 class TimeSegment(object):
     """ Time segment for splitters
     Class variables:
@@ -901,3 +902,46 @@ def get_sub_splitters(split_ws_name, split_start_index, split_stop_index, run_st
 
     return sub_split_ws_name
 
+
+def save_slicers(time_segment_list, file_name):
+    """
+    blabla
+
+        Save a list of 3-tuple or 2-tuple time segments to an ASCII file
+        Time segments may be disordered.
+        Format:
+        # Reference Run Number =
+        # Run Start Time =
+        # Start Stop TargetIndex
+        Note that all units of time stamp or difference of time are seconds
+
+    :param time_segment_list:
+    :param file_name:
+    :return:
+    """
+    # Check
+    assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
+                                       '' % (str(file_name), type(file_name))
+    assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
+                                                '' % type(time_segment_list)
+
+    # sort by segments
+    time_segment_list.sort()
+
+    # start to write to file buffer
+    file_buffer = '# Start Time \tStop Time \tTarget\n'
+
+    # splitters
+    for segment in time_segment_list:
+        file_buffer += '%.9f \t%.9f \t%s\n' % (segment[0], segment[1], str(segment[2]))
+
+    # write file from buffer
+    try:
+        set_file = open(file_name, 'w')
+        set_file.write(file_buffer)
+        set_file.close()
+    except IOError as e:
+        return False, 'Failed to write time segments to file %s due to %s' % (
+            file_name, str(e))
+
+    return True, None

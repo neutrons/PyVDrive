@@ -113,18 +113,65 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         """
         # get the selected slicers
         selected_rows = self.ui.tableWidget_segments.get_selected_rows(True)
+        if len(selected_rows) == 0:
+            GuiUtil.pop_dialog_information(self, 'No splitter (row) in the table is selected to expand.')
+            return
 
         # get the slicers
         slicer_list = list()
         for row_index in sorted(selected_rows):
-            # TODO/TODAY - check methods' existing?
-            slicer = self.ui.tableWidget_segments.get_slicer(row_index)
-            slicer_list.append(slicer)
+            slicer = self.ui.tableWidget_segments.get_splitter(row_index)
+            slicer_list.append((row_index, slicer))
+        # END-FOR
 
-        # TODO/ISSUE/NOW/TODAY - Implement ASAP
-        # expand ...
-        raise ASAP
+        # sort the slicers in reverse order in order to replace in the table
+        slicer_list.sort(reverse=True)
 
+        # get the slicing setup
+        if self.ui.radioButton_timeStep.isChecked():
+            # split by constant time step
+            try:
+                time_step = float(str(self.ui.lineEdit_timeStep.text()))
+                log_step = None
+            except ValueError:
+                GuiUtil.pop_dialog_error(self, 'Time step {0} cannot be converted to float.'
+                                         ''.format(self.ui.lineEdit_timeStep.text()))
+                return
+
+        elif self.ui.radioButton_logValueStep.isChecked():
+            # split by constant log step
+            try:
+                time_step = None
+                log_step = float(str(self.ui.lineEdit_logValueStepLevel2.text()))
+            except ValueError:
+                GuiUtil.pop_dialog_error(self, 'Log step {0} cannot be converted to float.'
+                                               ''.format(self.ui.lineEdit_logValueStepLevel2.text()))
+                return
+
+        else:
+            raise NotImplementedError('One of split by time step or split by log value step must be chosen.')
+
+        # TODO/ISSUE/FUTURE
+        if log_step is not None:
+            raise NotImplementedError('It has not been implemented yet to split further by log value.')
+
+        # expand
+        for row_index, splitter in slicer_list:
+            # get the splitter
+            if time_step is not None:
+                # split by log step
+                new_splitter_list = self.generate_time_splitters(splitter, time_step)
+            else:
+                # log_step is not None:
+                new_splitter_list = self._myParent.get_controller().generate_log_splitters(workspace_name,
+                                                                                           splitter, log_step)
+            # END-IF-ELSE
+
+            # replace the selected splitter by the new splitters
+            self.ui.tableWidget_segments.replace_splitter(row_index, new_splitter_list)
+        # END-FOR
+
+        return
 
     def do_hide_window(self):
         """
@@ -157,8 +204,11 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # Call parent method
         if self._myParent is not None:
-            # TODO/ISSUE/33/NOW - It is not implemented yet!!!  Let _myParent to handle this! send a signal to parent with list!
-            self.controller.save_time_slicers(split_tup_list, file_name)
+            # TODO/ISSUE/33/NOW - Let _myParent to handle this! send a signal to parent with list!
+            status, err_msg = self.controller.save_time_slicers(split_tup_list, file_name)
+            if not status:
+                GuiUtil.pop_dialog_error(self, err_msg)
+                return
         # END-IF
 
         return
@@ -193,7 +243,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         # get the name of the target
         # pop a dialog for the name of the slicer
         target, status = QtGui.QInputDialog.getText(self, 'Input Target',
-                                                         'Enter chopping target for selected rows:')
+                                                    'Enter chopping target for selected rows:')
         # return if rejected with
         if status is False:
             return
@@ -209,7 +259,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         Process pickers by sorting and fill the stop time
         :return:
         """
-        # TODO/ISSUE/33 - This method will be modified to an event-handlng method for picker updating
+        # TODO/ISSUE/33 - This method will be modified to an event-handling method for picker updating
         # Deselect all rows
         num_rows = self.ui.tableWidget_segments.rowCount()
         for i_row in xrange(num_rows):
@@ -222,6 +272,36 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self.ui.tableWidget_segments.fill_stop_time()
 
         return
+
+    @staticmethod
+    def generate_time_splitters(splitter, time_step):
+        """
+        generate a list of splitters by time
+        :param splitter:
+        :param time_step:
+        :return:
+        """
+        # check input
+        assert not isinstance(splitter, str), 'Splitter cannot be string.'
+        assert len(splitter, 3), 'blabla'
+        assert isinstance(time_step, float), 'Time step must be a float.'
+
+        start_time = splitter[0]
+        stop_time = splitter[1]
+        target = splitter[2]
+
+        num_child_splitters = int((stop_time - start_time) / time_step) + 1
+        child_splitters = list()
+        for i_child in range(num_child_splitters):
+            start_i = float(i_child) * time_step + start_time
+            if start_i >= stop_time:
+                break
+            stop_i = start_i + time_step
+            target_i = '{0}_{1}'.format(target, i_child)
+            child_splitters.append((start_i, stop_i, target_i))
+        # END-FOR
+
+        return child_splitters
 
     def get_slicers(self):
         """

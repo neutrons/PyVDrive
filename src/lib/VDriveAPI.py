@@ -1160,6 +1160,17 @@ class VDriveAPI(object):
 
         return status, message
 
+    def save_time_slicers(self, splitters_list, file_name):
+        """
+        blabla
+        :param splitters_list:
+        :param file_name:
+        :return:
+        """
+        chop_utility.save_slicers(splitters_list, file_name)
+
+        return
+
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory
         :rtype : tuple
