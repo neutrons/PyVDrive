@@ -236,7 +236,7 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
 
     print '[DB...BAT] Number of splitters = {0}'.format(len(split_list))
     for index, split_tup in enumerate(split_list):
-        print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
+        # print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
         start_time = split_tup[0]
         stop_time = split_tup[1]
 
