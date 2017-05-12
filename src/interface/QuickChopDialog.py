@@ -124,4 +124,4 @@ class QuickChopDialog(QtGui.QDialog):
         get output directory
         :return:
         """
-        return str(self.ui.lineEdit_outputDir)
+        return str(self.ui.lineEdit_outputDir.text())

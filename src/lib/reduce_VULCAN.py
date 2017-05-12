@@ -416,7 +416,7 @@ class ReductionSetup(object):
         else:
             # local
             gsas_dir = self._outputDirectory
-            nexus_dir = self._choppedNeXusDir
+            nexus_dir = self._outputDirectory
 
         if check_write_permission and os.access(gsas_dir, os.W_OK) is False:
             raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(gsas_dir))

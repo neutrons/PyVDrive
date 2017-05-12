@@ -89,9 +89,9 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
             raise RuntimeError('Row number {0} is out of range [0, {1})'.format(row_number, self.rowCount()))
 
         # get result
-        start_time = self.cell(row_number, 0)
-        stop_time = self.cell(row_number, 1)
-        target = self.cell(row_number, 2)
+        start_time = self.get_cell_value(row_number, 0)
+        stop_time = self.get_cell_value(row_number, 1)
+        target = self.get_cell_value(row_number, 2)
 
         return start_time, stop_time, target
 
@@ -147,11 +147,20 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
 
         # Insert the rest by inserting rows and set values
         for index in xrange(1, len(time_segments)):
-            self.insertRow(row_number+1)
+            start_time = -0.1
+            stop_time = -0.1
+            target = ''
+            self.insert_row(row_number + 1, [start_time, stop_time, target, False])
+        # END-FOR
+
+        # set value to all the rows belonged to that
         for index in xrange(1, len(time_segments)):
-            self.set_value_cell(row_number + index, self._colIndexStart, time_segments[index][0])
-            self.set_value_cell(row_number + index, self._colIndexStop, time_segments[index][1])
-            self.set_value_cell(row_number + index, self._colIndexSelect, False)
+            self.update_cell_value(row_number + index, self._colIndexStart, time_segments[index][0])
+            self.update_cell_value(row_number + index, self._colIndexStop, time_segments[index][1])
+            if len(time_segments[index]) >= 3:
+                target = time_segments[index][2]
+                self.update_cell_value(row_number + index, self._colIndexTargetWS, target)
+            self.update_cell_value(row_number + index, self._colIndexSelect, True)
 
         return True, ''
 

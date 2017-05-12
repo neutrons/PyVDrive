@@ -196,9 +196,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # pop a dialog for the name of the slicer
         file_filter = 'Data Files (*.dat);; All Files (*.*)'
-        file_name = QtGui.QFileDialog.getSaveFileName(self, 'Time slicer file name',
-                                                      self.controller.get_working_dir(),
-                                                      file_filter)
+        file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Time slicer file name',
+                                                          self.controller.get_working_dir(),
+                                                          file_filter))
         if len(file_name) == 0:
             return
 
@@ -283,7 +283,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         """
         # check input
         assert not isinstance(splitter, str), 'Splitter cannot be string.'
-        assert len(splitter, 3), 'blabla'
+        assert len(splitter) == 3, 'blabla'
         assert isinstance(time_step, float), 'Time step must be a float.'
 
         start_time = splitter[0]
@@ -296,8 +296,8 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
             start_i = float(i_child) * time_step + start_time
             if start_i >= stop_time:
                 break
-            stop_i = start_i + time_step
-            target_i = '{0}_{1}'.format(target, i_child)
+            stop_i = min(start_i + time_step, stop_time)
+            target_i = '{0}s{1}'.format(target, i_child)
             child_splitters.append((start_i, stop_i, target_i))
         # END-FOR
 

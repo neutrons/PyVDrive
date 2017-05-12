@@ -84,7 +84,7 @@ class VdriveView(VDriveCommand):
                 run_end = run_start
         else:
             # not properly set up
-            raise RuntimeError('VIEW command requires input of argument RUNS.')
+            return False, 'VIEW command requires input of argument RUNS.'
 
         # parse run numbers with chopped runs
         if 'CHOPRUN' in self._commandArgsDict:
@@ -195,7 +195,7 @@ class VdriveView(VDriveCommand):
         # examples
         help_str += 'Examples:\n'
         help_str += '> VIEW,IPTS=14094,RUNS=96450,RUNE=96451\n'
-        help_str += '> view,IPTS=13183,choprun=68607\n'
+        help_str += '> view,IPTS=13183,choprun=68607, runs=1, rune=15\n'
         help_str += '> VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1\n'
 
         return help_str

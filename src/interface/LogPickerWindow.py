@@ -362,7 +362,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
         """
-        # TODO/FIXME/FUTURE - This method should be generalized with other slicer file parser
+        # TODO/FIXME/TODAY - This method should be generalized with other slicer file parser
 
         # get file
         default_dir = os.getcwd()
@@ -374,16 +374,18 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         # parse file
         slicer_file = open(slicer_file_name, 'r')
-        raw_lines = slicer_file.readline()
+        raw_lines = slicer_file.readlines()
         slicer_file.close()
 
         slicer_list = list()
         for line in raw_lines:
+            # print '[DB...BAT] Line: {0}'.format(line)
             line = line.strip()
             if len(line) == 0 or line[0] == '#':
                 continue
 
             terms = line.split()
+            # print '[DB...BAT] Line split to {0}'.format(terms)
             if len(terms) < 3:
                 continue
             start_time = float(terms[0])
@@ -392,8 +394,23 @@ class WindowLogPicker(QtGui.QMainWindow):
             slicer_list.append((start_time, stop_time, target_ws))
         # END-FOR
 
+        # check
+        if len(slicer_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'There is no valid slicers in file {0}'.format(slicer_file_name))
+            return
+        else:
+            # sort
+            slicer_list.sort()
+
         # get run start time in second
-        run_start_s = int(self.ui.label_runStartEpoch.text())
+        slicer_start_time = slicer_list[0][0]
+        if slicer_start_time > 3600 * 24 * 365:
+            # larger than 1 year. then must be an absolute time
+            # TODO/FIXME/TODAY : label_runStartEpoch never been written in console-mode
+            run_start_s = int(self.ui.label_runStartEpoch.text())
+        else:
+            # relative time: no experiment in 1991
+            run_start_s = 0.
 
         # set to figure
         for slicer in slicer_list:

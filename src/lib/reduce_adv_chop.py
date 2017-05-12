@@ -103,8 +103,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         for i_ws in range(num_split_ws):
             # get the split workspace's name
-            ws_index = int(info_table.cell(i_ws, 0))
-            reduced_ws_name = 'VULCAN_%d_%d' % (self._reductionSetup.get_run_number(), ws_index)
+            ws_index = str(info_table.cell(i_ws, 0))
+            reduced_ws_name = 'VULCAN_{0}_{1}'.format(self._reductionSetup.get_run_number(), ws_index)
 
             # check whether the proposed-chopped workspace does exist
             if AnalysisDataService.doesExist(reduced_ws_name):

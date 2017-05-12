@@ -1350,6 +1350,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                 # use workspace name
                 base_file_name = '{0}.nxs'.format(chopped_ws_name)
             file_name = os.path.join(output_directory, base_file_name)
+            print '[INFO] Save workspace {0} to {1}.'.format(chopped_ws_name, file_name)
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
             output_file_list.append(file_name)
 

@@ -640,8 +640,9 @@ class ReductionManager(object):
             self._reductionTrackDict[tracker_key] = new_tracker
         else:
             # existing tracker: double check
-            assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker),\
-                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
+            assert isinstance(self._reductionTrackDict[tracker_key], DataReductionTracker),\
+                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[tracker_key]))
+            # NOTE: new_tracker here is not new tracker at all!
             new_tracker = self._reductionTrackDict[tracker_key]
 
         return new_tracker
