@@ -448,6 +448,8 @@ class ReductionManager(object):
         :param tof_correction: default to False.  applied if the log is fast
         :return:
         """
+        # import reduce_adv_chop
+
         # check inputs
         assert isinstance(chop_manager, chop_utility.DataChopper), \
             'Input chopper manager must be an instance of DataChopper but not {0}.' \
@@ -459,9 +461,22 @@ class ReductionManager(object):
 
         # get splitters workspace
         # split event data
-        status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
-                                                 slice_key=slice_key,
-                                                 output_directory=output_dir)
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        reduction_setup.set_ipts_number(ipts_number)
+        reduction_setup.set_run_number(run_number)
+        reduction_setup.set_event_file(data_file)
+        reduction_setup.set_chopped_nexus_dir(output_dir)
+
+        # splitters workspace
+        splitter_ws_name, split_info_name = chop_manager.get_split_workspace(slice_key)
+        reduction_setup.set_splitters(splitter_ws_name, split_info_name)
+
+        chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+        status, ret_obj = chop_reducer.chop_data()
+
+        # status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
+        #                                          slice_key=slice_key,
+        #                                          output_directory=output_dir)
 
         if status:
             chopped_ws_name_list = ret_obj['workspaces']

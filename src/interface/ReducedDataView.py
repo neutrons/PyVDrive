@@ -634,6 +634,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def plot_sample_logs(self, nexus_file_keys, sample_log_names):
+        """
+
+        :param nexus_file_keys:
+        :param sample_log_names:
+        :return:
+        """
+
     def plot_reduced_data(self, run_number, bank_id_list, over_plot):
         """
 

@@ -1306,6 +1306,22 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
                                                 '' % (str(target_ws_name), type(target_ws_name))
 
+    # find out whether it is relative time
+    split_ws = retrieve_workspace(split_ws_name)
+    if split_ws.__class__.__name__.count('Table'):
+        # table workspace
+        time0 = split_ws.cell(0, 0)
+    elif split_ws.__class__.__name__.count('Splitter'):
+        # splitters workspace
+        time0 = float(split_ws.cell(0, 0)) * 1.E-9
+    else:
+        # matrix workspace
+        time0 = split_ws.readX(0)[0]
+    if time0 < 3600. * 24. * 356:
+        is_relative_time = True
+    else:
+        is_relative_time = False
+
     # split workspace
     ret_list = mantidapi.FilterEvents(InputWorkspace=raw_ws_name,
                                       SplitterWorkspace=split_ws_name,
@@ -1315,7 +1331,8 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
                                       SplitSampleLogs=True,
-                                      OutputWorkspaceIndexedFrom1=True
+                                      OutputWorkspaceIndexedFrom1=True,
+                                      RelativeTime=is_relative_time
                                       )
 
     try:

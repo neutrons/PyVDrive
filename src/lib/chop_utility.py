@@ -148,13 +148,14 @@ class DataChopper(object):
 
         if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
             # chop event workspace with regular method
+            # TODO/DEBUG - Split workspace won't be deleted at this stage
             status, ret_obj = mantid_helper.split_event_data(raw_ws_name=event_ws_name,
                                                              split_ws_name=split_ws_name,
                                                              info_table_name=info_ws_name,
                                                              target_ws_name=None,
                                                              tof_correction=do_tof_correction,
                                                              output_directory=output_directory,
-                                                             delete_split_ws=True)
+                                                             delete_split_ws=False)
         else:
             # chop event workspace to too many target workspaces which cannot be hold in memory
             # simultaneously

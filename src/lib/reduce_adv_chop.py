@@ -9,8 +9,11 @@ from mantid.dataobjects import SplittersWorkspace
 from mantid.kernel import DateAndTime
 
 import reduce_VULCAN
+import chop_utility
+import mantid_helper
 
 MAX_ALLOWED_WORKSPACES = 200
+MAX_CHOPPED_WORKSPACE_IN_MEM = 200
 
 
 class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
@@ -26,6 +29,50 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         super(AdvancedChopReduce, self).__init__(reduce_setup)
 
         return
+
+    def chop_data(self):
+        """
+        chop data and save to GSAS file
+        :return:
+        """
+        # get data file names, splitters workspace and output directory from reduction setup object
+        raw_file_name = self._reductionSetup.get_event_file()
+        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        useless, output_directory = self._reductionSetup.get_chopped_directory(True, nexus_only=True)
+
+        # FIXME/TODO/FUTURE/ISSUE - do_tof_correction : should get from somewhere
+        do_tof_correction = False
+
+        # get number of target workspace
+        number_target_ws, is_epoch_time = chop_utility.get_number_chopped_ws(split_ws_name)
+
+        # load data from file to workspace
+        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+        mantid_helper.load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
+        if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
+            # chop event workspace with regular method
+            # TODO/DEBUG - Split workspace won't be deleted at this stage
+            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=event_ws_name,
+                                                             split_ws_name=split_ws_name,
+                                                             info_table_name=info_ws_name,
+                                                             target_ws_name=None,
+                                                             tof_correction=do_tof_correction,
+                                                             output_directory=output_directory,
+                                                             delete_split_ws=False)
+        else:
+            # chop event workspace to too many target workspaces which cannot be hold in memory
+            # simultaneously
+            status, ret_obj = self.chop_data_large_number_targets(event_ws_name,
+                                                                  split_ws_name, info_ws_name,
+                                                                  tof_correction=do_tof_correction,
+                                                                  output_dir=output_directory,
+                                                                  is_epoch_time=is_epoch_time,
+                                                                  num_target_ws=number_target_ws)
+        # delete raw workspace
+        mantid_helper.delete_workspace(event_ws_name)
+
+        return status, ret_obj
 
     def chop_reduce(self, chop_dir):
         """
@@ -130,11 +177,18 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             vdrive_bin_ws_name = reduced_ws_name
 
             # it might be tricky to give out the name of GSAS
-            if use_special_name:
-                gsas_file_name = os.path.join(chop_dir, '%d_%d.gda' % (self._reductionSetup.get_run_number(),
-                                                                       ws_index+1))
+            # now ws_index might not be an integer
+            if isinstance(ws_index, int):
+                new_tag = ws_index + 1
             else:
-                gsas_file_name = os.path.join(chop_dir, '%d.gda' % (ws_index + 1))
+                new_tag = ws_index
+            if use_special_name:
+                # special name: including run number
+                gsas_file_name = os.path.join(chop_dir, '{0}_{1}.gda'.format(self._reductionSetup.get_run_number(),
+                                                                             new_tag))
+            else:
+                # just a number
+                gsas_file_name = os.path.join(chop_dir, '{0}.gda'.format(ws_index))
 
             # save to VULCAN GSAS and add a property as Note
             mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
@@ -305,6 +359,32 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # END-FOR (loop)
 
         return everything_is_right, message
+
+    def chop_save_reduce(self):
+        """
+        chop the data, save to NeXus file and then reduce them
+        :return: 2-tuple.  (1) boolean: successful or failed  (2) list of 3-tuples: chopped file name,
+                                                                                    reduced successful,
+                                                                                    reduced result
+        """
+        # TODO/FIXME/NEXT/FUTURE - Data will be read from HDD to reduce.  This might not be efficient.
+        #   But it is a quick solution.
+
+        # chop and save data
+        status, ret_obj = self.chop_data()
+        if status:
+            nexus_file_list = ret_obj
+        else:
+            return False, ret_obj
+
+        # reduce
+        chopped_tup_list = list()
+        for event_nexus_name in nexus_file_list:
+            status, ret_obj = self.reduce_powder_diffraction_data()
+            chopped_tup_list.append((status, event_nexus_name, ret_obj))
+        # END-IF
+
+        return chopped_tup_list
 
     def create_chop_dir(self, reduced_data=True, chopped_data=True):
         """

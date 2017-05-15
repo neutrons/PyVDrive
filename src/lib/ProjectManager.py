@@ -128,7 +128,7 @@ class ProjectManager(object):
                                                        save_chopped_nexus, output_dir)
 
             status = True,
-            message = ''
+            message = 'Run {0} is chopped, reduced and saved to GSAS files in {1}.'.format(run_number, output_dir)
 
         else:
             # just chop the files and save to Nexus
@@ -148,7 +148,8 @@ class ProjectManager(object):
                                              tof_correction=False)
 
             status = True
-            message = 'Run %d is chopped and reduced. ' % run_number
+            message = 'Run %d is chopped and saved to NeXus files. ' % run_number
+        # END-IF-ELSE
 
         return status, message
 

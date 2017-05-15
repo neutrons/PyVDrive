@@ -402,7 +402,7 @@ class ReductionSetup(object):
 
         return status, error_message
 
-    def get_chopped_directory(self, check_write_permission=True):
+    def get_chopped_directory(self, check_write_permission=True, nexus_only=False):
         """
         get the directory for chopped data (GSAS or NeXus)
         :param check_write_permission:
@@ -418,7 +418,7 @@ class ReductionSetup(object):
             gsas_dir = self._outputDirectory
             nexus_dir = self._outputDirectory
 
-        if check_write_permission and os.access(gsas_dir, os.W_OK) is False:
+        if not nexus_only and check_write_permission and os.access(gsas_dir, os.W_OK) is False:
             raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(gsas_dir))
         if check_write_permission and os.access(nexus_dir, os.W_OK) is False:
             raise RuntimeError('User has no privilege to write to {0} for chopped data.'.format(nexus_dir))
@@ -2154,7 +2154,7 @@ class ReduceVulcanData(object):
 
         return van_ws_name
 
-    def reduce_powder_diffraction_data(self):
+    def reduce_powder_diffraction_data(self, event_file_name=None):
         """
         Reduce powder diffraction data.
         required parameters:  ipts, run number, output dir
@@ -2185,8 +2185,17 @@ class ReduceVulcanData(object):
             if os.path.exists(out_dir) is False:
                 return False, 'Output directory "{0}" does not exist.'.format(out_dir)
 
+            # get the event file name
+            if event_file_name is None:
+                raw_event_file = self._reductionSetup.get_event_file()
+            else:
+                assert isinstance(event_file_name, str), 'User specified event file name {0} must be a string,' \
+                                                         ' but not a {1}.'.format(event_file_name,
+                                                                                  type(event_file_name))
+                raw_event_file = event_file_name
+            # END-IF
 
-            mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
+            mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
