@@ -33,7 +33,7 @@ class LoadedDataManager(object):
 
         if data_key not in self._workspaceDict:
             raise RuntimeError('Data key {0} does not exist. Existing data key for workspaces are {1}.'
-                               ''.format(data_key, str(data_key)))
+                               ''.format(data_key, str(self._workspaceDict.keys())))
         workspace_name = self._workspaceDict[data_key]
 
         # get the list of banks starting from bank 1

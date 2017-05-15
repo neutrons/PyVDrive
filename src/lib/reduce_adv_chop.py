@@ -373,18 +373,25 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # chop and save data
         status, ret_obj = self.chop_data()
         if status:
-            nexus_file_list = ret_obj
+            choped_tuple_list = ret_obj
         else:
-            return False, ret_obj
+            return False, ret_obj, None
 
         # reduce
         chopped_tup_list = list()
-        for event_nexus_name in nexus_file_list:
-            status, ret_obj = self.reduce_powder_diffraction_data()
-            chopped_tup_list.append((status, event_nexus_name, ret_obj))
+        for index, chop_tup in enumerate(choped_tuple_list):
+            event_nexus_name, ws_name = chop_tup
+            status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name)
+            chopped_tup_list.append((status, event_nexus_name, reduced_ws_name))
+            gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+            print '[INFO] Reduced chopped event file {0} successfully ({1}) to {2} with file {3}.' \
+                  ''.format(event_nexus_name, status, ret_obj, gsas_file_name)
+            if os.path.exists(gsas_file_name):
+                gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(index+1))
+                os.rename(gsas_file_name, gsas_new_name)
         # END-IF
 
-        return chopped_tup_list
+        return status, '', chopped_tup_list
 
     def create_chop_dir(self, reduced_data=True, chopped_data=True):
         """
@@ -473,7 +480,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # FIXME/TODO/ISSUE --- getMemorySize()
         if num_targets < MAX_ALLOWED_WORKSPACES:
             # load data and chop all at the same time
-            status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
+            if 0:
+                status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
+            else:
+                status, message, chopped_tup_list = self.chop_save_reduce()
+                output_ws_list = list()
+                for tup3 in chopped_tup_list:
+                    output_ws_list.append(tup3[2])
+
             # create the log files
             self.generate_sliced_logs(output_ws_list, self._chopExportedLogType)
             # clear workspace? or later

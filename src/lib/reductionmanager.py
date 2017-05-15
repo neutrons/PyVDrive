@@ -474,24 +474,33 @@ class ReductionManager(object):
         chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
         status, ret_obj = chop_reducer.chop_data()
 
+        # TODO/ISSUE/TODAY - Clean chop_data() in ChopManager
         # status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
         #                                          slice_key=slice_key,
         #                                          output_directory=output_dir)
 
-        if status:
-            chopped_ws_name_list = ret_obj['workspaces']
-            chopped_file_list = ret_obj['files']
-        else:
+        # return if chopping fails
+        if not status:
             error_msg = ret_obj
             return False, error_msg
 
+        chopped_ws_name_list = list()
+        chopped_file_list = list()
+        for file_name, ws_name in ret_obj:
+            if file_name is not None:
+                chopped_file_list.append(file_name)
+            if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+                chopped_ws_name_list.append(ws_name)
+        # END-FOR
+
+        # initialize tracker
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-        # tracker.is_chopped_run = True
         tracker.is_reduced = False
         tracker.is_chopped = True
-        if chopped_ws_name_list is not None:
+        if len(chopped_ws_name_list) > 0:
             tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
-        tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+        if len(chopped_file_list) > 0:
+            tracker.set_chopped_nexus_files(chopped_file_list, append=True)
 
         return True, None
 
@@ -726,6 +735,7 @@ class ReductionManager(object):
         reduce_setup.set_splitters(split_ws_name, info_ws_name)
 
         # set up reducer
+        reduce_setup.process_configurations()
         reducer = reduce_adv_chop.AdvancedChopReduce(reduce_setup)
 
         # set up reduction tracker

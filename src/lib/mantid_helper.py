@@ -1256,8 +1256,7 @@ def save_event_workspace(event_ws_name, nxs_file_name):
 
 
 def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name=None,
-                     tof_correction=False, output_directory=None, file_name_123=True, file_start_index=1,
-                     delete_split_ws=True):
+                     tof_correction=False, output_directory=None, delete_split_ws=True):
     """
     Split event data file according pre-defined split workspace.
     Optionally the split workspace
@@ -1269,20 +1268,15 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
     :param target_ws_name:
     :param tof_correction:
     :param output_directory:
-    :param file_name_123: if True, then the output file name will be in order as (1, 2, 3) + shift
-    :param file_start_index: if file_name_123 is True, then the first file will be index.nxs
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
-    :return: 2-tuple.  [1] boolean (success or fail) [2] dictionary or Error message
+    :return: 2-tuple.  [1] boolean (success or fail) [2a] List of 2-tuples (output file name + workspace name)
+                                                     [2b] Error message
     """
     # Check requirements
     assert workspace_does_exist(split_ws_name), 'splitters workspace {0} does not exist.'.format(split_ws_name)
-    assert workspace_does_exist(info_table_name), 'splitting informatin workspace {0} does not exist.' \
+    assert workspace_does_exist(info_table_name), 'splitting information workspace {0} does not exist.' \
                                                   ''.format(info_table_name)
     assert workspace_does_exist(raw_ws_name), 'raw event workspace {0} does not exist.'.format(raw_ws_name)
-    if file_name_123:
-        assert isinstance(file_start_index, int) and file_start_index >= 0,\
-            'If using index.nxs as file name, then the file starting index {0} must be a non-negative integer ' \
-            'but not of type {1}.'.format(file_start_index, type(file_start_index))
 
     # get the input event workspace
     # rule out some unsupported scenario
@@ -1357,34 +1351,28 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
 
     # Save result
+    chop_list = list()
     if output_directory is not None:
-        output_file_list = list()
         for index, chopped_ws_name in enumerate(chopped_ws_name_list):
-            if file_name_123:
-                # use integer index as file name
-                base_file_name = '{0}.nxs'.format(index + file_start_index)
-            else:
-                # use workspace name
-                base_file_name = '{0}.nxs'.format(chopped_ws_name)
+            base_file_name = '{0}_event.nxs'.format(chopped_ws_name)
             file_name = os.path.join(output_directory, base_file_name)
-            print '[INFO] Save workspace {0} to {1}.'.format(chopped_ws_name, file_name)
+            print '[INFO] Save chopped workspace {0} to {1}.'.format(chopped_ws_name, file_name)
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
-            output_file_list.append(file_name)
+            chop_list.append((file_name, chopped_ws_name))
 
         # Clear only if file is saved
         delete_workspace(correction_ws)
         if delete_split_ws:
             for chopped_ws_name in chopped_ws_name_list:
                 mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
-            chopped_ws_name_list = None
     else:
-        output_file_list = None
+        if delete_split_ws:
+            print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
+        for chopped_ws_name in chopped_ws_name_list:
+            chop_list.append((None, chopped_ws_name))
+    # END-IF
 
-    # Output
-    chop_dict = {'workspaces': chopped_ws_name_list,
-                 'files': output_file_list}
-
-    return True, chop_dict
+    return True, chop_list
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,

@@ -1637,7 +1637,7 @@ class ReduceVulcanData(object):
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file
-        is_reduce_good, msg_gsas = self.reduce_powder_diffraction_data()
+        is_reduce_good, msg_gsas, reduced_ws_name = self.reduce_powder_diffraction_data()
         if not is_reduce_good and msg_gsas.count('Code001') == 0:
             # error code: Code001 does not mean a bad reduction
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
@@ -2158,12 +2158,11 @@ class ReduceVulcanData(object):
         """
         Reduce powder diffraction data.
         required parameters:  ipts, run number, output dir
-        :return: 2-tuples
+        :return: 3-tuples, status, message, output workspace name
         """
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
-            print '[INFO] No reduction is required.'
-            return True, 'No reduction as it is not required.'
+            return True, 'No reduction as it is not required.', None
 
         # reduce data
         message = ''
@@ -2177,13 +2176,13 @@ class ReduceVulcanData(object):
                 else:
                     # file cannot be overwritten, then abort!
                     message += 'GSAS file (%s) exists and cannot be overwritten.\n' % gsas_file_name
-                    return False, message
+                    return False, message, None
             # END-IF
 
             # check output
             out_dir = self._reductionSetup.get_gsas_dir()
             if os.path.exists(out_dir) is False:
-                return False, 'Output directory "{0}" does not exist.'.format(out_dir)
+                return False, 'Output directory "{0}" does not exist.'.format(out_dir), None
 
             # get the event file name
             if event_file_name is None:
@@ -2210,24 +2209,28 @@ class ReduceVulcanData(object):
                                             WaveLengthLogNames="skf12.lambda")
 
             reduced_ws_name = 'VULCAN_%d' % self._reductionSetup.get_run_number()
+            if AnalysisDataService.doesExist(reduced_ws_name) is False:
+                # special case for random event file
+                reduced_ws_name = os.path.basename(raw_event_file).split('_event.nxs')[0]
             assert AnalysisDataService.doesExist(reduced_ws_name), 'Reduced workspace %s is not in ' \
                                                                    'ADS.' % reduced_ws_name
 
         except RuntimeError as run_err:
             print '[Error] Unable to reduce workspace %s due to %s.' % (self._dataWorkspaceName, str(run_err))
-            return False, str(run_err)
+            return False, str(run_err), None
         except AssertionError as ass_err:
-            return False, str(ass_err)
+            return False, str(ass_err), None
 
         # convert unit and save for VULCAN-specific GSAS
-        tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
+        #  tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
+        tof_ws_name = reduced_ws_name
         mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
                                   OutputWorkspace=tof_ws_name,
                                   Target="TOF",
                                   EMode="Elastic",
                                   AlignBins=False)
 
-        vdrive_bin_ws_name = 'VULCAN_%d_Vdrive_2Bank' % self._reductionSetup.get_run_number()
+        vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
 
         output_access_error = False
         orig_gsas_name = gsas_file_name
@@ -2290,9 +2293,9 @@ class ReduceVulcanData(object):
         # return with False
         if output_access_error:
             return False, 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.' \
-                          ''.format(orig_gsas_name, gsas_file_name)
+                          ''.format(orig_gsas_name, gsas_file_name), None
 
-        return True, message
+        return True, message, reduced_ws_name
 
     def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
         """

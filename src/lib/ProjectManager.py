@@ -105,6 +105,8 @@ class ProjectManager(object):
         :param output_dir:
         :return:
         """
+        # TODO/ISSUE/TODAY/FIXME - This method can be REMOVED! Refactor!!!
+
         # check inputs' validity
         assert isinstance(slicer_key, str), 'Slicer key %s of type %s is not supported. It ' \
                                             'must be a string.' % (str(slicer_key), type(slicer_key))

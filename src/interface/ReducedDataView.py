@@ -34,6 +34,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         self._bankIDList = [1, 2]
 
+        # workspace management dictionary
+        self._choppedRunDict = dict()  # key: run number (key/ID), value: list of workspaces' names
+
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
         self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
@@ -85,6 +88,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                      self.do_plot_next_run)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                      self.do_plot_selected_run)
+        self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_sample_logs)
 
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
         #         self.do_plot_all_runs)
@@ -482,28 +487,32 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def add_workspaces(self, workspace_name_list, clear_previous=True):
+    def add_chopped_workspaces(self, workspace_key, workspace_name_list, clear_previous=True):
         """
         add (CHOPPED) workspaces
         :param workspace_name_list:
         :return:
         """
-        # TODO/ISSUE/NOW/33 More work on this
         self._mutexRunNumberList = True
 
-        # clear existing runs
-        if clear_previous:
-            self.ui.comboBox_runs.clear()
-            self._runNumberList = list()
+        # check input
+        assert workspace_key is not None, 'blabla'
+        assert isinstance(workspace_name_list, list), 'blabla'
 
-        # add run number of combo-box and dictionary
+        # add to widgets and data managing dictionary
+        self._choppedRunDict[workspace_key] = list()
+        self.ui.comboBox_runs.addItem(workspace_key)
+
+        self.ui.comboBox_chopSeq.clear()
         for workspace_name in workspace_name_list:
-            self.ui.comboBox_runs.addItem(workspace_name)
-            self._dataIptsRunDict[workspace_name] = None
-            self._runNumberList.append(workspace_name)
+            self.ui.comboBox_chopSeq.addItem(workspace_name)
+            self._choppedRunDict[workspace_key].append(workspace_name)
+        # END-FOR
 
         # release mutex lock
         self._mutexRunNumberList = False
+
+        return
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -634,14 +643,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def plot_sample_logs(self, nexus_file_keys, sample_log_names):
-        """
-
-        :param nexus_file_keys:
-        :param sample_log_names:
-        :return:
-        """
-
     def plot_reduced_data(self, run_number, bank_id_list, over_plot):
         """
 
@@ -725,6 +726,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         over_plot = self.ui.checkBox_overPlot.isChecked()
         self.plot_run(run_number, bank_id, over_plot)
+
+        return
+
+    def do_plot_sample_logs(self):
+        """
+        plot selected sample logs
+        :return:
+        """
+        # get run information
+        workspace_key = str(self.ui.comboBox_runs.currentText())
+
+        # TODO/ISSUE/NOW/TODAY - continue from here!
+        blabla
 
         return
 
