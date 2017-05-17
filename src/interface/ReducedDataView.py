@@ -36,6 +36,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # workspace management dictionary
         self._choppedRunDict = dict()  # key: run number (key/ID), value: list of workspaces' names
+        self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
@@ -129,8 +130,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_loadAnyGSAS, QtCore.SIGNAL('clicked()'),
                      self.do_load_local_gsas)
 
-        self.connect(self.ui.radioButton_fromMemory, QtCore.SIGNAL('toggled (bool)'),
-                     self.event_load_options)
         self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
                      self.event_load_options)
         self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
@@ -147,12 +146,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # default to load data from memory
-        self.ui.radioButton_fromMemory.setChecked(True)
-        self.ui.radioButton_fromArchive.setChecked(False)
+        self.ui.radioButton_fromArchive.setChecked(True)
         self.ui.radioButton_anyGSAS.setChecked(False)
 
         self.set_group1_enabled(True)
-        self.set_group2_enabled(False)
+        self.set_group2_enabled(True)
         self.set_group3_enabled(False)
 
         return
@@ -183,19 +181,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         handling event that the run loads option is changed
         :return:
         """
-        if self.ui.radioButton_fromMemory.isChecked():
-            # enable group 1 widgets
-            self.set_group1_enabled(True)
-            self.set_group2_enabled(False)
-            self.set_group3_enabled(False)
-        elif self.ui.radioButton_fromArchive.isChecked():
+        if self.ui.radioButton_fromArchive.isChecked():
             # enable group 2 widgets
-            self.set_group1_enabled(False)
             self.set_group2_enabled(True)
             self.set_group3_enabled(False)
         elif self.ui.radioButton_anyGSAS.isChecked():
             # enable group 3 widgets
-            self.set_group1_enabled(False)
             self.set_group2_enabled(False)
             self.set_group3_enabled(True)
         else:
@@ -308,8 +299,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 raise AssertionError(error_message)
             seq_list = self.add_chopped_workspaces(self._currRunNumber, None, True)
 
-            # set the sample logs
+            # set the sample logs. map to NeXus log workspace if applied
             chop_ws = str(self.ui.comboBox_chopSeq.currentText())
+            if chop_ws in self._choppedSampleDict:
+                chop_ws = self._choppedSampleDict[chop_ws]
+
             series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
             self.set_sample_log_names(series_sample_log_list)
 
@@ -408,15 +402,28 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         if os.path.isdir(gsas_path):
             # input is a directory: load chopped data series
-            data_key_dict = self._myController.load_chopped_diffraction_files(gsas_path, 'gsas')
-            self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
-            seq_list = sorted(self._choppedDataDict.keys())
-            self.set_chopped_sequence(seq_list)
-            status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
-            if not status:
-                GuiUtility.pop_dialog_error(self, ret_obj)
-                return
-            bank_list = ret_obj
+            data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, 'gsas')
+
+            # a key as run number
+            if run_number is None:
+                run_number = gsas_path
+
+            # get something from data key dictionary
+            diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
+
+            # # self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
+            # self._currRunNumber = str(run_number)
+            # self.ui.checkBox_choppedDataMem.setChecked(True)
+
+            # seq_list = sorted(self._choppedDataDict.keys())
+            self.add_chopped_workspaces(run_number, diff_ws_list, True)
+
+            # self.set_chopped_sequence(seq_list)
+            # status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
+            # if not status:
+            #     GuiUtility.pop_dialog_error(self, ret_obj)
+            #     return
+            # bank_list = ret_obj
         else:
             # input is a file: load a single GSAS file
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
@@ -433,16 +440,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # END-IF-ELSE
 
         # set bank list to widget/combobox
-        self.set_banks(bank_list)
+        # self.set_banks(bank_list)
 
-        # get run number from all the information
-        run_number = self.guess_run_number(gsas_path)
-        if run_number is None:
-            run_number = 0
-        self._currRunNumber = run_number
+        # # get run number from all the information
+        # run_number = self.guess_run_number(gsas_path)
+        # if run_number is None:
+        #     run_number = 0
+        # self._currRunNumber = run_number
 
         # set the label
-        self.label_loaded_data(self._currRunNumber, os.path.isdir(gsas_path), seq_list)
+        #  self.label_loaded_data(self._currRunNumber, os.path.isdir(gsas_path), seq_list)
+
+        # activate it!
+        self.do_set_reduced_from_memory()
 
         return
 
@@ -539,6 +549,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         assert workspace_key is not None, 'blabla'
         # force work key to be string
         workspace_key = '{0}'.format(workspace_key)
+
+        # sort workspace names
+        workspace_name_list.sort()
 
         # two cases
         if workspace_name_list is None:
@@ -768,8 +781,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         workspace_key = str(self.ui.comboBox_chopSeq.currentText())
         sample_name = str(self.ui.comboBox_sampleLogsList.currentText()).split()[0]
 
+        # this is for loaded GSAS and NeXus file
+        if workspace_key in self._choppedSampleDict:
+            sample_key = self._choppedSampleDict[workspace_key]
+        else:
+            sample_key = workspace_key
+
         # get the sample log time and value
-        vec_times, vec_value = self._myController.get_sample_log_values(workspace_key, sample_name, relative=True)
+        vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
 
         # plot
         self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
@@ -1141,8 +1160,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    @staticmethod
-    def get_chopped_sequence(data_key_dict):
+    def process_loaded_chop_suite(self, data_key_dict):
         """
         get the chopped data's sequence inferred from the file names
         :param data_key_dict:
@@ -1153,15 +1171,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                 ''.format(data_key_dict, type(data_key_dict))
 
         # get data sequence
-        chop_seq_dict = dict()
-        for data_key in data_key_dict.keys():
-            file_name = data_key_dict[data_key]
-            base_name = os.path.basename(file_name)
-            seq_index = base_name.split('.')[0]
-            chop_seq_dict[seq_index] = data_key
+        diff_ws_list = list()
+        for ws_name in data_key_dict.keys():
+            print '[DB...BAT] chopped ws name: {0} ... values = {1}'.format(ws_name, data_key_dict[ws_name])
+            log_ws_name = data_key_dict[ws_name][0]
+            diff_ws_list.append(ws_name)
+            self._choppedSampleDict[ws_name] = log_ws_name
         # END-FOR
 
-        return data_key_dict
+        return diff_ws_list
 
     def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """

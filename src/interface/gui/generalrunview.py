@@ -89,6 +89,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         # re-scale
         self.auto_rescale()
+        self.setXYLimit(xmin=0.)
 
         return
 

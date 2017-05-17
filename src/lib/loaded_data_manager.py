@@ -93,13 +93,15 @@ class LoadedDataManager(object):
 
         return has
 
-    def load_binned_data(self, data_file_name, data_file_type):
+    def load_binned_data(self, data_file_name, data_file_type, prefix, max_int):
         """
         load binned data
         :param data_file_name:
         :param data_file_type:
-        :return: data key
+        :return: data key (workspace name)
         """
+        import math
+
         # check inputs
         assert isinstance(data_file_type, str) or data_file_type is None, \
             'Data file type {0} must be a string or None but not a {1}.' \
@@ -119,11 +121,24 @@ class LoadedDataManager(object):
             data_file_type = data_file_type.lower()
         # END-IF-ELSE
 
+        num_zeros = int(math.log(max_int) / math.log(10)) + 1
+
         # Load data
+        base_ws_name = os.path.basename(file_name)
         if data_file_type == 'gsas':
             # load as GSAS
+
             # get the output workspace name
-            data_ws_name = os.path.basename(file_name) + '_gsas'
+            if prefix is None or prefix == '':
+                # blabla
+                data_ws_name = '{0}_gsas'.format(base_ws_name)
+            elif base_ws_name.isdigit():
+                # blabla
+                data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
+            else:
+                # blabla
+                data_ws_name = '{0}_{1}'.format(prefix, os.path.basename(file_name))
+            # END-IF
 
             # load data
             data_key = mantid_helper.load_gsas_file(data_file_name, data_ws_name,
@@ -141,7 +156,7 @@ class LoadedDataManager(object):
         load chopped and binned data (in GSAS format) for a diretory
         :param chopped_data_dir:
         :param file_format:
-        :return:
+        :return: 2-tuple.  dictionary
         """
         # check inputs
         assert isinstance(chopped_data_dir, str), 'Direcotry {0} must be given as a string but not a {1}.' \
@@ -154,6 +169,75 @@ class LoadedDataManager(object):
         # list the files in a directory
         file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
 
+        # search run_???_chop_info.txt
+        chop_info_file = None
+        for file_name in file_list:
+            if file_name.startswith('run_') and file_name.endswith('_chop_info.txt'):
+                chop_info_file = file_name
+                break
+        # END-FOR
+        print '[DB...BAT] Chop Information File: {0}'.format(chop_info_file)
+
+        if chop_info_file is None:
+            # blabla
+            reduced_tuple_list = self.search_reduced_files(file_format, file_list, chopped_data_dir)
+            run_number = None
+        else:
+            # blabla
+            reduced_tuple_list = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
+            run_number = chop_info_file.split('_')[1]
+
+        # load file
+        data_key_dict = dict()
+        for file_name, nexus_file_name, ws_name in reduced_tuple_list:
+            print '[DB...BAT] Load GSAS suite: {0}, {1}, {2}'.format(file_name, nexus_file_name, ws_name)
+            # blabla
+            data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
+                                                 prefix=run_number, max_int=len(reduced_tuple_list))
+
+            if nexus_file_name is not None:
+                # blabla
+                mantid_helper.load_nexus(data_file_name=nexus_file_name, output_ws_name=ws_name,
+                                         meta_data_only=True)
+            # END-IF
+
+            # form output
+            data_key_dict[data_ws_name] = (ws_name, file_name)
+        # END-FOR
+
+        return data_key_dict, run_number
+
+    @staticmethod
+    def parse_chop_info_file(info_file_name):
+        """
+
+        :param info_file_name:
+        :return:
+        """
+        # get the file
+        info_file = open(info_file_name, 'r')
+        raw_lines = info_file.readlines()
+        info_file.close()
+
+        # parse it
+        tuple_list = list()
+        for raw_line in raw_lines:
+            line = raw_line.strip()
+            terms = line.split()
+            if len(terms) == 3:
+                tuple_list.append((terms[0], terms[1], terms[2]))
+        # END-FOR
+
+        # print '[DB...BAT] Get chop result tuples: {0}.'.format(tuple_list)
+
+        return tuple_list
+
+    @staticmethod
+    def search_reduced_files(file_format, file_list, chopped_data_dir):
+        """
+        blabla
+        :return:
+        """
         allowed_posfix = list()
         if file_format == 'gsas':
             allowed_posfix.extend(['.gda', '.gss', '.gsa'])
@@ -166,17 +250,10 @@ class LoadedDataManager(object):
             # check and add if the file is of the right type
             if file_extension in allowed_posfix:
                 file_name = os.path.join(chopped_data_dir, file_name)
-                reduced_file_list.append(file_name)
+                reduced_file_list.append((file_name, None, None))
         # END-IF
 
         # sort file
         reduced_file_list.sort()
 
-        # load file
-        data_key_dict = dict()
-        for file_name in reduced_file_list:
-            data_key = self.load_binned_data(data_file_name=file_name, data_file_type=file_format)
-            data_key_dict[data_key] = file_name
-        # END-FOR
-
-        return data_key_dict
+        return reduced_file_list
