@@ -112,8 +112,9 @@ class ProjectManager(object):
                                             'must be a string.' % (str(slicer_key), type(slicer_key))
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+        if output_dir is not None:
+            assert isinstance(output_dir, str) and os.path.exists(output_dir),\
+                'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
 
         # get chopping helper
         try:

@@ -1565,7 +1565,7 @@ class VDriveAPI(object):
         :param slicer_id:
         :param reduce_data:
         :param save_chopped_nexus:
-        :param output_dir:
+        :param output_dir: None for saving to archive
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """

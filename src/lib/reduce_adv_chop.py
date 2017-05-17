@@ -380,7 +380,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # reduce
         chopped_tup_list = list()
         lookup_list = list()
-        gsas_index = 0
+        gsas_index = 1
         for chop_tup in choped_tuple_list:
             # get the nexus file and workspace tuple
             event_nexus_name, ws_name = chop_tup

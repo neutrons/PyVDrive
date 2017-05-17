@@ -695,8 +695,11 @@ class ReductionSetup(object):
             self._2ndGSASName = os.path.join(self._2ndGSASDir, '%d.gda' % self._runNumber)
 
         # 1D plot file name
-        self._pngFileName = os.path.join(self.get_reduced_data_dir(),
-                                         'VULCAN_' + str(self._runNumber) + '.png')
+        auto_reduction_dir = self.get_reduced_data_dir()
+        if isinstance(auto_reduction_dir, str):
+            self._pngFileName = os.path.join(auto_reduction_dir, 'VULCAN_' + str(self._runNumber) + '.png')
+        else:
+            self._pngFileName = os.path.join(self._mainGSASDir, 'VULCAN_{0}.png'.format(self._runNumber))
 
         return
 
@@ -961,6 +964,8 @@ class ReductionSetup(object):
         if os.path.exists(nexus_parent_dir) is False and create_parent_directories:
             os.mkdir(nexus_parent_dir, mode=0o777)
         self._choppedNeXusDir = os.path.join(nexus_parent_dir, '{0}'.format(self._runNumber))
+
+        print '[INFO] Save chopping result to archive: {0} and {1}.'.format(self._mainGSASDir, self._choppedNeXusDir)
 
         return
 

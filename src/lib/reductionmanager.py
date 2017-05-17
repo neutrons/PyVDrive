@@ -698,7 +698,7 @@ class ReductionManager(object):
         :param chop_manager: a ChopperManager instance which manages the split workspace
         :param slicer_key:
         :param save_chopped_nexus: flag to save the chopped workspace to
-        :param output_dir:
+        :param output_dir: None for archive
         :return:
         """
         # check inputs
