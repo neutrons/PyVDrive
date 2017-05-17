@@ -550,9 +550,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # force work key to be string
         workspace_key = '{0}'.format(workspace_key)
 
-        # sort workspace names
-        workspace_name_list.sort()
-
         # two cases
         if workspace_name_list is None:
             # the workspace key must have been loaded before
@@ -575,12 +572,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # set check box
         self.ui.checkBox_choppedDataMem.setChecked(True)
 
+        # sort workspace names
+        workspace_name_list.sort()
+
         # set workspaces
         self.ui.comboBox_chopSeq.clear()
-        print '[DB...BAT] workspace name list size = {0}'.format(len(workspace_name_list))
         for workspace_name in workspace_name_list:
             self.ui.comboBox_chopSeq.addItem(workspace_name)
-            # self._choppedRunDict[workspace_key].append(workspace_name)
         # END-FOR
 
         # release mutex lock
@@ -777,21 +775,35 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         plot selected sample logs
         :return:
         """
-        # get blabla
-        workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+        # get sample logs
         sample_name = str(self.ui.comboBox_sampleLogsList.currentText()).split()[0]
 
-        # this is for loaded GSAS and NeXus file
-        if workspace_key in self._choppedSampleDict:
-            sample_key = self._choppedSampleDict[workspace_key]
+        if self.ui.checkBox_plotallChoppedLog.isChecked():
+            workspace_key_list = self._choppedRunDict[self._currRunNumber]
+            print '[DB...BAT] Plot sample logs for {0}.'.format(workspace_key_list)
+            # reset if plot-all is checked
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
         else:
-            sample_key = workspace_key
-
-        # get the sample log time and value
-        vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
+            # get blabla
+            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+            workspace_key_list = [workspace_key]
+        # END
 
         # plot
-        self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+        for workspace_key in workspace_key_list:
+
+            # this is for loaded GSAS and NeXus file
+            if workspace_key in self._choppedSampleDict:
+                sample_key = self._choppedSampleDict[workspace_key]
+            else:
+                sample_key = workspace_key
+
+            # get the sample log time and value
+            vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
+
+            # plot
+            self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+        # END-FOR
 
         return
 
@@ -817,39 +829,38 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._mutexRunNumberList:
             return
 
-        raise NotImplementedError('Need to review this method!')
-
-        # Get the new run number
-        run_number = str(self.ui.comboBox_runs.currentText())
-        try:
-            if run_number.isdigit():
-                run_number = int(run_number)
-                status, run_info = self._myController.get_reduced_run_info(run_number)
-            else:
-                # is workspace
-                status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
-        except ValueError as value_err:
-            raise NotImplementedError('Unable to get run information from run {0} due to {1}'
-                                      ''.format(run_number, value_err))
-        bank_id_list = run_info
-
-        self._currRunNumber = run_number
-
-        if status is False:
-            GuiUtility.pop_dialog_error(self, run_info)
-
-        # Re-set the spectra list combo box
-
-        if len(bank_id_list) != len(self._bankIDList) - 1:
-            # different number of banks
-            self.ui.comboBox_spectraList.clear()
-            for bank_id in bank_id_list:
-                self.ui.comboBox_spectraList.addItem(str(bank_id))
-            self.ui.comboBox_spectraList.addItem('All')
-
-            # reset current bank ID list
-            self._bankIDList = bank_id_list[:]
-        # END-IF
+        # TODO/ISSUE/TODAY/ - Enable this method!
+        # # Get the new run number
+        # run_number = str(self.ui.comboBox_runs.currentText())
+        # try:
+        #     if run_number.isdigit():
+        #         run_number = int(run_number)
+        #         status, run_info = self._myController.get_reduced_run_info(run_number)
+        #     else:
+        #         # is workspace
+        #         status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
+        # except ValueError as value_err:
+        #     raise NotImplementedError('Unable to get run information from run {0} due to {1}'
+        #                               ''.format(run_number, value_err))
+        # bank_id_list = run_info
+        #
+        # self._currRunNumber = run_number
+        #
+        # if status is False:
+        #     GuiUtility.pop_dialog_error(self, run_info)
+        #
+        # # Re-set the spectra list combo box
+        #
+        # if len(bank_id_list) != len(self._bankIDList) - 1:
+        #     # different number of banks
+        #     self.ui.comboBox_spectraList.clear()
+        #     for bank_id in bank_id_list:
+        #         self.ui.comboBox_spectraList.addItem(str(bank_id))
+        #     self.ui.comboBox_spectraList.addItem('All')
+        #
+        #     # reset current bank ID list
+        #     self._bankIDList = bank_id_list[:]
+        # # END-IF
 
         return
 

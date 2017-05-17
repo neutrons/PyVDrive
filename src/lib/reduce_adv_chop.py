@@ -380,17 +380,33 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # reduce
         chopped_tup_list = list()
         lookup_list = list()
-        for index, chop_tup in enumerate(choped_tuple_list):
+        gsas_index = 0
+        for chop_tup in choped_tuple_list:
+            # get the nexus file and workspace tuple
             event_nexus_name, ws_name = chop_tup
+            assert isinstance(ws_name, str), 'blabla'
+            # check TODO/ISSUE/TODAY - Delete raw workspace to reduce from file or reduce directly from workspace
+            print '[DB...BAT] Previously split workspace (not used): {0}.  Exist? {1}' \
+                  ''.format(ws_name, mantid_helper.workspace_does_exist(ws_name))
+
+            # skip unfiltered
+            if ws_name.endswith('_unfiltered'):
+                continue
+
+            # reduce data
             status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name)
             chopped_tup_list.append((status, event_nexus_name, reduced_ws_name))
             gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
             print '[INFO] Reduced chopped event file {0} successfully ({1}) to {2} with file {3}.' \
                   ''.format(event_nexus_name, status, ret_obj, gsas_file_name)
+
+            # rename to VULCAN VDrive compatible name
             if os.path.exists(gsas_file_name):
-                gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(index+1))
+                gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
                 os.rename(gsas_file_name, gsas_new_name)
                 lookup_list.append((gsas_new_name, event_nexus_name, reduced_ws_name))
+                gsas_index += 1
+            # END-IF
         # END-IF
 
         # export a table-lookup file for workspace, event nexus file and target GSAS
