@@ -494,8 +494,8 @@ class VDriveAPI(object):
         :param target_unit:
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
+        :param is_workspace:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
-        :return: is_workspace
         """
         if is_workspace:
             # get data from project as the first priority
@@ -626,6 +626,7 @@ class VDriveAPI(object):
                  if status is True and Bank ID is not None: returned object is a dictionary with the specified bank ID.
                  The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
         """
+        # TODO/ISSUE/NEXT - Merge this method with get_reduced_data
         try:
             data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name,
                                                                              bank_id=bank_id,
@@ -891,16 +892,22 @@ class VDriveAPI(object):
     def get_sample_log_names(self, run_number, smart=False):
         """
         Get names of sample log with time series property
-        :param run_number:
+        :param run_number: run number (integer/string) or workspace name
         :param smart: a smart way to show sample log name with more information
         :return:
         """
         assert run_number is not None, 'Run number cannot be None.'
 
-        chopper = self._myProject.get_chopper(run_number)
-        sample_name_list = chopper.get_sample_log_names(smart)
+        if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
+            # blabla
+            ws_name = run_number
+            sample_name_list = mantid_helper.get_sample_log_names(ws_name, smart=True)
+        else:
+            # blabla
+            chopper = self._myProject.get_chopper(run_number)
+            sample_name_list = chopper.get_sample_log_names(smart)
 
-        return True, sample_name_list
+        return sample_name_list
 
     def get_sample_log_values(self, run_number, log_name, start_time=None, stop_time=None, relative=True):
         """
@@ -916,15 +923,33 @@ class VDriveAPI(object):
         # check input
         assert run_number is not None, 'Run number cannot be None.'
 
-        # get chopper
-        chopper = self._myProject.get_chopper(run_number)
+        # 2 cases: run_number is workspace or run_number is run number
+        if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
+            # blabla
+            ws_name = run_number
+            vec_times, vec_value = mantid_helper.get_sample_log_value(ws_name, log_name, start_time=None,
+                                                                      stop_time=None, relative=relative)
+        else:
+            # blabla
+            # get chopper
+            chopper = self._myProject.get_chopper(run_number)
 
-        # get log values
-        vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
-                                                       start_time=start_time, stop_time=stop_time,
-                                                       relative=relative)
+            # get log values
+            vec_times, vec_value = chopper.get_sample_data(sample_log_name=log_name,
+                                                           start_time=start_time, stop_time=stop_time,
+                                                           relative=relative)
+        # END-IF
 
-        return True, (vec_times, vec_value)
+        return vec_times, vec_value
+
+    @staticmethod
+    def is_workspace(workspace_name):
+        """
+        check whether a given string is a workspace's name in Mantid ADS
+        :param workspace_name:
+        :return:
+        """
+        return mantid_helper.workspace_does_exist(workspace_name)
 
     @staticmethod
     def import_gsas_peak_file(peak_file_name):

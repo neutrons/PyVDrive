@@ -172,13 +172,8 @@ class DialogLogSnapView(QtGui.QDialog):
         self._currSessionDiscardable = False
 
         # Get log value
-        status, ret_value = self._myWorkflowController.get_sample_log_values(
-            run_number=None, log_name=sample_log_name, relative=True)
-        if status is True:
-            vec_x, vec_y = ret_value
-        else:
-            gutil.pop_dialog_error(self, ret_value)
-            return
+        vec_x, vec_y = self._myWorkflowController.get_sample_log_values(run_number=self._currRunNumber,
+                                                                        log_name=sample_log_name, relative=True)
 
         # Plot
         self.ui.graphicsView_main.clear_all_lines()

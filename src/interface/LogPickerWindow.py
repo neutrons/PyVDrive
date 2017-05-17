@@ -413,10 +413,13 @@ class WindowLogPicker(QtGui.QMainWindow):
             run_start_s = 0.
 
         # set to figure
+        prev_stop_time = -1.E-20
         for slicer in slicer_list:
             start_time, stop_time, target = slicer
-            self.ui.graphicsView_main.add_picker(start_time - run_start_s)
+            if start_time > prev_stop_time:
+                self.ui.graphicsView_main.add_picker(start_time - run_start_s)
             self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
+            prev_stop_time = stop_time
 
         return
 
@@ -726,6 +729,7 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                                     reduced=True)
             chopped_workspace_list = info_dict['workspaces']
             view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, clear_previous=True)
+            view_window.do_set_reduced_from_memory()
 
         except RuntimeError as run_err:
             error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \

@@ -445,7 +445,7 @@ def get_sample_log_names(src_workspace, smart=False):
     From workspace get sample log names as FloatTimeSeriesProperty
     :param src_workspace:
     :param smart:
-    :return:
+    :return: list of strings
     """
     # check input
     if isinstance(src_workspace, str):

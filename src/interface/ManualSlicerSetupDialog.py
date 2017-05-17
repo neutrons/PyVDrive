@@ -44,6 +44,9 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
                      self.do_save_slicers_to_file)
 
+        self.connect(self.ui.pushButton_loadSlicerFromFile, QtCore.SIGNAL('clicked()'),
+                     self.do_load_slicers_from_file)
+
         self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
                      self.do_hide_window)
 
@@ -179,6 +182,15 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         :return:
         """
         self.setHidden(True)
+
+        return
+
+    def do_load_slicers_from_file(self):
+        """
+        blabla
+        :return:
+        """
+        self._myParent.do_import_slicer_file()
 
         return
 

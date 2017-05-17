@@ -1122,12 +1122,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
             stop_time = time_range[1]
             assert start_time < stop_time
 
-        status, ret_obj = self._myWorkflow.get_sample_log_values(run_number, log_name, start_time, stop_time,
-                                                                 relative=relative)
-        if status is False:
-            raise RuntimeError(ret_obj)
-
-        vec_times, vec_log_value = ret_obj
+        vec_times, vec_log_value = self._myWorkflow.get_sample_log_values(run_number, log_name, start_time, stop_time,
+                                                                          relative=relative)
 
         return vec_times, vec_log_value
 
@@ -1193,12 +1189,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         #     raise RuntimeError(errmsg)
         #
         # Get log names
-        status, ret_value = self._myWorkflow.get_sample_log_names(run_number, smart)
-        if status is False:
-            errmsg = ret_value
-            raise RuntimeError(errmsg)
-        else:
-            log_name_list = ret_value
+        log_name_list = self._myWorkflow.get_sample_log_names(run_number, smart)
 
         # get run information
         run_info_str = self._myWorkflow.get_run_experiment_information(run_number)
