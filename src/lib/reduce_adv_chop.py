@@ -379,6 +379,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # reduce
         chopped_tup_list = list()
+        lookup_list = list()
         for index, chop_tup in enumerate(choped_tuple_list):
             event_nexus_name, ws_name = chop_tup
             status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name)
@@ -389,7 +390,11 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             if os.path.exists(gsas_file_name):
                 gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(index+1))
                 os.rename(gsas_file_name, gsas_new_name)
+                lookup_list.append((gsas_new_name, event_nexus_name, reduced_ws_name))
         # END-IF
+
+        # export a table-lookup file for workspace, event nexus file and target GSAS
+        self.export_chopped_information(lookup_list)
 
         return status, '', chopped_tup_list
 
@@ -505,6 +510,29 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             status, message = self.chop_and_reduce_large_output(self._choppedDataDirectory)
 
         return status, message
+
+    def export_chopped_information(self, lookup_list):
+        """
+
+        :param lookup_list:
+        :return:
+        """
+        # check TODO/TODAY blabla
+
+        # generate file name with full path: to main GSAS directory
+        directory = self._reductionSetup.get_gsas_dir()
+        run_number = self._reductionSetup.get_run_number()
+        out_file_name = os.path.join(directory, 'run_{0}_chop_info.txt'.format(run_number))
+
+        wbuf = ''
+        for tup3 in lookup_list:
+            wbuf += '{0} \t{1}\t {2}\n'.format(tup3[0], tup3[1], tup3[2])
+
+        ofile = open(out_file_name, 'w')
+        ofile.write(wbuf)
+        ofile.close()
+
+        return
 
     @staticmethod
     def get_number_chopped_ws(split_ws_name):
