@@ -563,6 +563,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.plot_nexus_log(log_name)
         self._currLogName = log_name
 
+        # set up the epoch start time
+        # TODO/ISSUE/NEXT - make this work!
+        # run_start_epoch = self.get_controller().get_run_start(run_number, epoch_time=True)
+        # self.ui.label_runStartEpoch.setText('{0}'.format(run_start_epoch))
+
         return
 
     def do_load_next_log(self):
@@ -717,7 +722,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         import ReducedDataView
         # launch reduced-data-view window
         view_window = self._myParent.do_view_reduction()
-        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'blabla'
+        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'The view window'
 
         # set up the run time
         view_window.set_title('Run: {0}'.format(self._currRunNumber))

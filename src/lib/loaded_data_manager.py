@@ -130,13 +130,13 @@ class LoadedDataManager(object):
 
             # get the output workspace name
             if prefix is None or prefix == '':
-                # blabla
+                # no prefix is specified
                 data_ws_name = '{0}_gsas'.format(base_ws_name)
             elif base_ws_name.isdigit():
-                # blabla
+                # base workspace name is an integer and prefix is given.
                 data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
             else:
-                # blabla
+                # prefix_basename
                 data_ws_name = '{0}_{1}'.format(prefix, os.path.basename(file_name))
             # END-IF
 
@@ -179,24 +179,23 @@ class LoadedDataManager(object):
         print '[DB...BAT] Chop Information File: {0}'.format(chop_info_file)
 
         if chop_info_file is None:
-            # blabla
+            # chopping information file is not given, then search reduced diffraction files from hard disk
             reduced_tuple_list = self.search_reduced_files(file_format, file_list, chopped_data_dir)
             run_number = None
         else:
-            # blabla
+            # parsing the chopping information file for reduced file and raw event files
             reduced_tuple_list = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
             run_number = chop_info_file.split('_')[1]
 
         # load file
         data_key_dict = dict()
         for file_name, nexus_file_name, ws_name in reduced_tuple_list:
-            print '[DB...BAT] Load GSAS suite: {0}, {1}, {2}'.format(file_name, nexus_file_name, ws_name)
-            # blabla
+            # load GSAS file
             data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
                                                  prefix=run_number, max_int=len(reduced_tuple_list))
 
             if nexus_file_name is not None:
-                # blabla
+                # load raw NeXus file for sample logs
                 mantid_helper.load_nexus(data_file_name=nexus_file_name, output_ws_name=ws_name,
                                          meta_data_only=True)
             # END-IF
@@ -235,9 +234,14 @@ class LoadedDataManager(object):
     @staticmethod
     def search_reduced_files(file_format, file_list, chopped_data_dir):
         """
-        blabla
+        search reduced diffraction files in the given directory
         :return:
         """
+        # check input
+        assert isinstance(file_format, str), 'File format {0} must be an integer.'.format(file_format)
+        assert isinstance(file_list, list), 'Files {0} must be given by list.'.format(file_list)
+        assert isinstance(chopped_data_dir, str), 'Directory {0} must be a string.'.format(chopped_data_dir)
+
         allowed_posfix = list()
         if file_format == 'gsas':
             allowed_posfix.extend(['.gda', '.gss', '.gsa'])

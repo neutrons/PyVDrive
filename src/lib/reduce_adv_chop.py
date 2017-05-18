@@ -232,7 +232,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
 
-        self.examine_slicing_workspace(split_ws_name)
+        # disabled self.examine_slicing_workspace(split_ws_name)
 
         # construct reduction argument diction
         sns_arg_dict = dict()
@@ -384,7 +384,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for chop_tup in choped_tuple_list:
             # get the nexus file and workspace tuple
             event_nexus_name, ws_name = chop_tup
-            assert isinstance(ws_name, str), 'blabla'
+            assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}.' \
+                                             ''.format(ws_name, type(ws_name))
             # check TODO/ISSUE/TODAY - Delete raw workspace to reduce from file or reduce directly from workspace
             print '[DB...BAT] Previously split workspace (not used): {0}.  Exist? {1}' \
                   ''.format(ws_name, mantid_helper.workspace_does_exist(ws_name))
@@ -460,10 +461,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     @staticmethod
     def examine_slicing_workspace(split_ws_name):
         """
-        blabla
+        Examine the split workspace that has the slicers
         :param split_ws_name:
         :return:
         """
+        # check input
+        assert isinstance(split_ws_name, str), 'Splitters workspace name {0} must be a string but not a {1}.' \
+                                               ''.format(split_ws_name, type(split_ws_name))
+        if mantid_helper.workspace_does_exist(split_ws_name) is False:
+            raise RuntimeError('Splitters workspace with name {0} cannot be found in ADS.'.format(split_ws_name))
+
+        # get the splitters
         split_ws = AnalysisDataService.retrieve(split_ws_name)
 
         if split_ws.__class__.__name__.count('Table') == 1:
@@ -529,11 +537,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
     def export_chopped_information(self, lookup_list):
         """
-
-        :param lookup_list:
+        Export the chopped data information to a csv-compatible file
+        standard name of the output file will be run_{0}_chop_info.txt
+        :param lookup_list: a list of 3-tuples
         :return:
         """
-        # check TODO/TODAY blabla
+        # check the input
+        assert isinstance(lookup_list, list), 'Lookup table {0} must be given by list but not {1}.' \
+                                              ''.format(lookup_list, type(lookup_list))
 
         # generate file name with full path: to main GSAS directory
         directory = self._reductionSetup.get_gsas_dir()
@@ -544,9 +555,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for tup3 in lookup_list:
             wbuf += '{0} \t{1}\t {2}\n'.format(tup3[0], tup3[1], tup3[2])
 
-        ofile = open(out_file_name, 'w')
-        ofile.write(wbuf)
-        ofile.close()
+        # export to file
+        try:
+            ofile = open(out_file_name, 'w')
+            ofile.write(wbuf)
+            ofile.close()
+        except OSError as os_err:
+            raise RuntimeError('Unable to export chopped information to {0} due to {1}.'.format(out_file_name,
+                                                                                                os_err))
 
         return
 

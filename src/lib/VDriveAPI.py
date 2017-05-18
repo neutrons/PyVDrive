@@ -543,7 +543,7 @@ class VDriveAPI(object):
                 bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
                 info = bank_list
             except AssertionError as assert_err:
-                return False, str(e)
+                return False, str(assert_err)
 
         else:
             # unsupported case
@@ -758,6 +758,7 @@ class VDriveAPI(object):
         :param standard_sns_file:
         :return:
         """
+        raise NotImplementedError('Method need to be reviewed and refactored.')
         # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
                                                                        standard_sns_file)
@@ -1214,22 +1215,6 @@ class VDriveAPI(object):
             return False, 'Unable to set data root directory: {0}'.format(str(err))
 
         return True, ''
-
-    def setup_merge(self, ipts_number, merge_run_dict):
-        """
-        Set up merge information
-        :param ipts_number:
-        :param merge_run_dict:
-        :return:
-        """
-        # check inputs
-        assert isinstance(ipts_number, int) and ipts_number > 0, 'IPTS number must be a positive integer.'
-        assert isinstance(merge_run_dict, dict)
-
-        # set up
-        self._mergeSetupDict[ipts_number] = merge_run_dict
-
-        return
 
     def set_reduction_flag(self, file_flag_list, clear_flags):
         """ Turn on the flag to reduce for files in the list

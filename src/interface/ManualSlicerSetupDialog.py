@@ -54,7 +54,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
                      self.do_set_target)
 
         # define handler to signals
-        # bla bla
+        # TODO/ISSUE/NEXT - Implement this
 
         return
 
@@ -187,7 +187,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
     def do_load_slicers_from_file(self):
         """
-        blabla
+        Load data slicers from a csv-like file
         :return:
         """
         self._myParent.do_import_slicer_file()
@@ -295,7 +295,8 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         """
         # check input
         assert not isinstance(splitter, str), 'Splitter cannot be string.'
-        assert len(splitter) == 3, 'blabla'
+        assert len(splitter) == 3, 'A splitter {0} must have 3 terms but not {1}.' \
+                                   ''.format(splitter, len(splitter))
         assert isinstance(time_step, float), 'Time step must be a float.'
 
         start_time = splitter[0]

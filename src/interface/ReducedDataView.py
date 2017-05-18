@@ -195,15 +195,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def clear_chopped_sequence(self):
-        """
-        blabla
-        :return:
-        """
-        self.ui.comboBox_chopSeq.clear()
-
-        return
-
     def set_group1_enabled(self, enabled):
         """
         set the group of widgets to load run from PyVdrive reduced in memory
@@ -319,14 +310,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def set_sample_log_names(self, log_name_list):
         """
-        blabla
+        set sample log names to the log name combo box
         :param log_name_list:
         :return:
         """
-        # check blabla
+        # check
+        assert isinstance(log_name_list, list), 'Log names {0} must be given by a list but not a {1}.' \
+                                                ''.format(log_name_list, type(log_name_list))
 
+        # clear the previous session
         self.ui.comboBox_sampleLogsList.clear()
 
+        # set by name
         for name in log_name_list:
             self.ui.comboBox_sampleLogsList.addItem(name)
 
@@ -408,24 +403,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             if run_number is None:
                 run_number = gsas_path
 
-            # get something from data key dictionary
+            # get workspaces from data key dictionary and add to data management
             diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
-
-            # # self._choppedDataDict = self.get_chopped_sequence(data_key_dict)
-            # self._currRunNumber = str(run_number)
-            # self.ui.checkBox_choppedDataMem.setChecked(True)
-
-            # seq_list = sorted(self._choppedDataDict.keys())
             self.add_chopped_workspaces(run_number, diff_ws_list, True)
 
-            # self.set_chopped_sequence(seq_list)
-            # status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=data_key_dict[seq_list[0]])
-            # if not status:
-            #     GuiUtility.pop_dialog_error(self, ret_obj)
-            #     return
-            # bank_list = ret_obj
         else:
             # input is a file: load a single GSAS file
+            raise NotImplementedError('This part must be reviewed and refactored')
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
             self._currDataKey = data_key
             status, ret_obj = self._myController.get_run_info(run_number=None, data_key=data_key)
@@ -434,7 +418,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 return
             bank_list = ret_obj
             seq_list = None
-            self.clear_chopped_sequence()
+            self.ui.comboBox_chopSeq.clear()
             # clear the chopped data dictionary
             self._choppedDataDict.clear()
         # END-IF-ELSE
@@ -537,28 +521,33 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def add_chopped_workspaces(self, workspace_key, workspace_name_list, clear_previous=True):
         """
-        add (CHOPPED) workspaces
+        add (CHOPPED) workspaces' names to the data viewer
         :param workspace_key:
         :param workspace_name_list:
         :param clear_previous:
         :return:
         """
+        # turn on the mutex
         self._mutexRunNumberList = True
 
         # check input
-        assert workspace_key is not None, 'blabla'
+        assert workspace_key is not None, 'Workspace key (run number mostly) cannot be None'
         # force work key to be string
         workspace_key = '{0}'.format(workspace_key)
 
         # two cases
         if workspace_name_list is None:
             # the workspace key must have been loaded before
-            assert workspace_key in self._choppedRunDict, 'blabla'
+            assert workspace_key in self._choppedRunDict, 'Workspace key {0} cannot be found in chopped run ' \
+                                                          'dictionary whose keys are {1}.' \
+                                                          ''.format(workspace_key, self._choppedRunDict.keys())
             workspace_name_list = self._choppedRunDict[workspace_key]
         else:
             # this sequence is set to this viewer first time
-            assert isinstance(workspace_name_list, list), 'blabla'
-            assert len(workspace_name_list) > 0, 'blabla'
+            assert isinstance(workspace_name_list, list), 'Workspaces names {0} must be given by list but not a ' \
+                                                          '{1}.'.format(workspace_name_list,
+                                                                        type(workspace_name_list))
+            assert len(workspace_name_list) > 0, 'Workspaces name list cannot be empty'
 
             # add to widgets and data managing dictionary
             self._choppedRunDict[workspace_key] = list()
@@ -779,23 +768,24 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         sample_name = str(self.ui.comboBox_sampleLogsList.currentText()).split()[0]
 
         if self.ui.checkBox_plotallChoppedLog.isChecked():
+            # plot the sample log of all the chopped workspaces
             workspace_key_list = self._choppedRunDict[self._currRunNumber]
-            print '[DB...BAT] Plot sample logs for {0}.'.format(workspace_key_list)
             # reset if plot-all is checked
             self.ui.graphicsView_mainPlot.reset_1d_plots()
         else:
-            # get blabla
+            # plot the sample log from the current selected chopped workspace
             workspace_key = str(self.ui.comboBox_chopSeq.currentText())
             workspace_key_list = [workspace_key]
         # END
 
         # plot
         for workspace_key in workspace_key_list:
-
-            # this is for loaded GSAS and NeXus file
+            # get the name of the workspace containing sample logs
             if workspace_key in self._choppedSampleDict:
+                # this is for loaded GSAS and NeXus file
                 sample_key = self._choppedSampleDict[workspace_key]
             else:
+                # just reduced workspace
                 sample_key = workspace_key
 
             # get the sample log time and value
@@ -933,8 +923,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def plot_chopped_data(self, chop_tag, bank_id, unit, over_plot):
         """
-        blabla
+        plot chopped data with specified bank ID
         :param chop_tag:
+        :param bank_id:
         :param unit:
         :param over_plot:
         :return:
@@ -965,6 +956,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # TODO/FIXME/NEXT - consider to merge with plot_chopped_run()
+
+        # check input
+        assert isinstance(chop_tag, str), 'Chop tag/chopped workspace name {0} must be a string'.format(chop_tag)
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+
         # get the reduced diffraction data
         print '[DB...BAT] Chop Tag = {0}. Current workspace tag = {1}.'.format(chop_tag, self._currWorkspaceTag)
         if chop_tag == self._currWorkspaceTag and self._currUnit == unit:
@@ -1355,7 +1352,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Check requirements
         assert isinstance(run_number, int) or is_workspace, 'Run number %s must be an integer but not %s.' \
                                                             '' % (str(run_number), str(type(run_number)))
-        assert run_number > 0, 'bla bla'
+        assert run_number > 0, 'Run number {0} must be a positive number.'.format(run_number)
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
@@ -1503,7 +1500,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def set_title(self, title):
         """
-        blalba
+        set title to the figure
         :param title:
         :return:
         """
@@ -1517,8 +1514,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param fwhm:
         :return:
         """
-        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'blabla'
+        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'FWHM {0} must be a float or integer,' \
+                                                                              'but not a {1}.' \
+                                                                              ''.format(fwhm, type(fwhm))
 
+        if fwhm <= 0:
+            raise RuntimeError('Peak FWHM ({0}) must be positive!'.format(fwhm))
         self._vanadiumFWHM = fwhm
 
         return
