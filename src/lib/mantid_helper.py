@@ -535,6 +535,7 @@ def get_data_from_gsas(gsas_file_name):
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
 
     # load GSAS file
+    # FIXME/NOWNOW - load_gsas_file() takes exactly 3 arguments (2 given)
     load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
 
     data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
