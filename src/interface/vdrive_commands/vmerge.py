@@ -57,6 +57,13 @@ class VdriveMerge(VDriveCommand):
     def exec_cmd(self):
         """ Execute input command
         """
+        # check whether the any non-supported args
+        input_args = self._commandArgsDict.keys()
+        for arg_key in input_args:
+            if arg_key not in VdriveMerge.SupportedArgs:
+                raise KeyError('VMERGE argument %s is not recognized.' % arg_key)
+        # END-FOF
+
         # parse
         self.set_ipts()
 
@@ -73,16 +80,12 @@ class VdriveMerge(VDriveCommand):
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
         self._controller.add_runs_to_project(run_info_list)
 
-        # # set vanadium runs
-        # TODO/FUTURE: Optionally add support of vanadium run
-        # if van_run is not None:
-        #     self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+        # Optionally add support of 'TAG'
+        standard_tuple = self.process_tag()
 
-        # TODO/FUTURE: Optionally add support of 'TAG'
-        standard_tuple = None
-
-        # TODO/FUTURE: Optionally add support of user-specified binning parameters
-        binning_parameters = None
+        # TEST-NOW:
+        # Optionally add support of user-specified binning parameters
+        use_default_bin, binning_parameters = self.parse_binning()
 
         # set flag
         run_number_list = list()
@@ -90,12 +93,21 @@ class VdriveMerge(VDriveCommand):
             run_number_list.append(run_info['run'])
         self._controller.set_runs_to_reduce(run_number_list)
 
+        # RUNV: set vanadium runs
+        if 'RUNV' in input_args:
+            van_run = int(self._commandArgsDict['RUNV'])
+            assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
+        else:
+            van_run = None
+        if van_run is not None:
+            self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
+
         # reduce by regular runs
-        # TODO/FIXME/NOW - Binning parameters
         status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_directory,
-                                                           vanadium=None,
+                                                           vanadium=(van_run is not None),
                                                            standard_sample_tuple=standard_tuple,
                                                            binning_parameter=binning_parameters,
+                                                           align_to_vdrive_bin=use_default_bin,
                                                            merge=True)
 
         return status, str(ret_obj)

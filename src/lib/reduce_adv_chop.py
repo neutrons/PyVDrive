@@ -74,6 +74,107 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
+    # TODO/FIXME/NOWNOW - Clean up this method: Find out methods that calls chop_data(...)
+    def chop_event_data(self, raw_file_name, slice_key, output_directory, do_tof_correction=False):
+        """
+        chop data and save to GSAS file
+        :param raw_file_name:
+        :param slice_key:
+        :param output_directory:
+        :param do_tof_correction:
+        :return:
+        """
+        # TODO/ISSUE/NOW/65/FIXME - This is called by GUI to chop data and saved to NeXus.
+        #                           Better to refactor this part to adv_chop_reducion
+
+        # check input
+        assert isinstance(raw_file_name, str), 'Raw file name {0} must be a string but not a {1}.' \
+                                               ''.format(raw_file_name, type(raw_file_name))
+        assert isinstance(slice_key, str), 'Slicer type {0} must be a string but not a {1}.' \
+                                           ''.format(slice_key, type(slice_key))
+        assert isinstance(output_directory, str), 'Output directory {0} must be string but not a {1}.' \
+                                                  ''.format(output_directory, type(output_directory))
+
+        # get the split workspace name and information workspace name
+        split_ws_name, info_ws_name = self.get_split_workspace(slice_key)
+
+        # get number of target workspace
+        number_target_ws, is_epoch_time = get_number_chopped_ws(split_ws_name)
+
+        # load data from file to workspace
+        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+        mantid_helper.load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
+
+        if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
+            # chop event workspace with regular method
+            # TODO/DEBUG - Split workspace won't be deleted at this stage
+            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=event_ws_name,
+                                                             split_ws_name=split_ws_name,
+                                                             info_table_name=info_ws_name,
+                                                             target_ws_name=None,
+                                                             tof_correction=do_tof_correction,
+                                                             output_directory=output_directory,
+                                                             delete_split_ws=False)
+        else:
+            # chop event workspace to too many target workspaces which cannot be hold in memory
+            # simultaneously
+            status, ret_obj = self.chop_data_large_number_targets(event_ws_name,
+                                                                  split_ws_name, info_ws_name,
+                                                                  tof_correction=do_tof_correction,
+                                                                  output_dir=output_directory,
+                                                                  is_epoch_time=is_epoch_time,
+                                                                  num_target_ws=number_target_ws)
+        # delete raw workspace
+        mantid_helper.delete_workspace(event_ws_name)
+
+        return status, ret_obj
+
+    def chop_data_large_number_targets(self, raw_ws_name, split_ws_name, info_ws_name, tof_correction,
+                                       output_dir, is_epoch_time, num_target_ws):
+        """
+        chop data to a large number of output targets
+        :param raw_ws_name: raw event workspace to get split
+        :param split_ws_name:
+        :param info_ws_name:
+        :param tof_correction:
+        :param output_dir:
+        :param is_epoch_time:
+        :return:
+        """
+        # TODO/ISSUE/NOW - Continue to implement! and consider to move to
+        # # load data
+        # raw_ws_name = os.path.basename(data_file).split('.')[0]
+        # mantid_helper.load_nexus(data_file_name=data_file, output_ws_name=raw_ws_name, meta_data_only=False)
+        # raw_ws = mantid_helper.retrieve_workspace('meta')
+
+        # get raw workspace
+        raw_ws = mantid_helper.retrieve_workspace(raw_ws_name)
+
+        # get run start time
+        if is_epoch_time:
+            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
+        else:
+            run_start_ns = 0
+
+        # in loop generate data
+        num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
+        clear_memory = True
+        for i_loop in range(num_loops):
+            sub_split_ws_name = get_sub_splitters(split_ws_name,
+                                                  split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                  split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                  run_start_ns=run_start_ns)
+
+            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
+                                                             info_table_name=info_ws_name,
+                                                             target_ws_name=raw_ws_name, tof_correction=False,
+                                                             output_directory=output_dir, delete_split_ws=clear_memory)
+        # END-FOR
+
+        # TODO - better returned value
+        return True, file_list
+
+
     def chop_reduce(self, chop_dir):
         """
         Chop and reduce
@@ -82,16 +183,19 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         """
         # check whether it is good to go
         assert isinstance(self._reductionSetup, reduce_VULCAN.ReductionSetup), 'ReductionSetup is not correct.'
+
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
-        # TODO/NOW/ISSUE/TODAY - How to use GSAS dir and NeXus dir
         gsas_dir, nexus_dir = self._reductionSetup.get_chopped_directory(check_write_permission=True)
 
         # get splitters workspaces
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
-        # TODO/NOW/ISSUE/FIXME/TODAY - Examine input workspace. Ke's order lapping time slicer is not supported.
+        # TODO/NOW/ISSUE/FIXME/TODAY - Examine input workspace. Ke's overapping time slicer is not supported.
+        is_over_split = chop_utility.is_overlap_splitter(split_ws_name)
+        if is_over_split:
+            raise RuntimeError('Overlapped splitter will be supported soon!')
 
-        # TEST/ISSUE/NOW
+        # TEST/NOW
         # call SNSPowderReduction for chopping and reducing
         args = dict()
         args['Filename'] = self._reductionSetup.get_event_file()
@@ -111,21 +215,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         args['SplittersWorkspace'] = split_ws_name
         args['SplitInformationWorkspace'] = split_info_table
         mantidsimple.SNSPowderReduction(**args)
-
-        # mantidsimple.SNSPowderReduction(Filename=self._reductionSetup.get_event_file(),
-        #                                 PreserveEvents=True,
-        #                                 CalibrationFile=self._reductionSetup.get_focus_file(),
-        #                                 CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
-        #                                 Binning="-0.001",
-        #                                 SaveAS="",
-        #                                 OutputDirectory=self._reductionSetup.get_gsas_dir(),
-        #                                 NormalizeByCurrent=False,
-        #                                 FilterBadPulses=0,
-        #                                 CompressTOFTolerance=0.,
-        #                                 FrequencyLogNames="skf1.speed",
-        #                                 WaveLengthLogNames="skf12.lambda",
-        #                                 SplittersWorkspace=split_ws_name,
-        #                                 SplitInformationWorkspace=split_info_table)
 
         # create GSAS file for split workspaces
         # convert the chopped data to GSAS file in VULCAN's special bin
@@ -857,3 +946,65 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
 
         return sub_split_ws_name
+
+
+# TODO/ISSUE/NOW - Generalize this method with same method in reduce_adv_chop.py
+def get_sub_splitters2(split_ws_name, split_start_index, split_stop_index, run_start_ns):
+    """
+
+    :param split_ws_name:
+    :param split_start_index:
+    :param split_stop_index:
+    :param run_start_ns:
+    :return:
+    """
+    # get splitting workspace
+    split_ws = mantid_helper.retrieve_workspace(split_ws_name)
+
+    # get the sub splitters name
+    sub_split_ws_name = split_ws.name() + '_{0}'.format(split_start_index)
+
+    # split
+    if isinstance(split_ws, SplittersWorkspace):
+        # splitters workspace
+        mantid_helper.create_table_workspace(sub_split_ws_name,
+                                             [('float', 'start'), ('float', 'stop'), ('str', 'index')])
+        sub_split_ws = mantid_helper.retrieve_workspace(sub_split_ws_name)
+
+        num_rows = split_ws.rowCount()
+        for i_row in range(split_start_index, min(split_stop_index, num_rows)):
+            start_time = (split_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
+            stop_time = (split_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
+            target = str(split_ws.cell(i_row, 2))
+            sub_split_ws.addRow([start_time, stop_time, target])
+        # END-FOR
+
+    elif isinstance(split_ws, MatrixWorkspace):
+        # Matrix workspace
+        # TODO/TEST - Need to test
+        vec_x = split_ws.readX(0)[split_start_index:split_stop_index + 1]
+        vec_y = split_ws.readY(0)[split_start_index:split_stop_index]
+        vec_e = split_ws.readE(0)[split_start_index:split_stop_index]
+
+        mantid_helper.create_workspace_2d(vec_x, vec_y, vec_e, sub_split_ws_name)
+
+    elif isinstance(split_ws, ITableWorkspace):
+        # Table workspace
+        # TODO/TEST - Need to verify
+        mantid_helper.create_table_workspace(sub_split_ws_name,
+                                             [('float', 'start'), ('float', 'stop'), ('str', 'index')])
+        sub_split_ws = mantid_helper.retrieve_workspace(sub_split_ws_name)
+        num_rows = split_ws.rowCount()
+        for i_row in range(split_start_index, min(split_stop_index, num_rows)):
+            start_time = split_ws.cell(i_row, 0)
+            stop_time = split_ws.cell(i_row, 1)
+            target = split_ws.cell(i_row, 2)
+            sub_split_ws.addRow([start_time, stop_time, target])
+        # END-FOR
+
+    else:
+        # unsupported format
+        raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
+
+    return sub_split_ws_name
+

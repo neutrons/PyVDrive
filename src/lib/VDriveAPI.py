@@ -1043,6 +1043,7 @@ class VDriveAPI(object):
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
+                        align_to_vdrive_bin=False,
                         merge=False):
         """
         Reduce a set of data
@@ -1067,6 +1068,7 @@ class VDriveAPI(object):
         :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
+        :param align_to_vdrive_bin: flag to align the bining parameters to standard VDrive
         :param merge: If true, then merge the run together by calling SNSPowderReduction
         :return: 2-tuple (boolean, object)
         """
@@ -1555,7 +1557,7 @@ class VDriveAPI(object):
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
         # chop data
-        status, message = self._myProject.chop_data(run_number, slicer_id, reduce_flag=reduce_data,
+        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data,
                                                     save_chopped_nexus=save_chopped_nexus,
                                                     output_dir=output_dir)
 

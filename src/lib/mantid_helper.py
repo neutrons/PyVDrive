@@ -514,17 +514,19 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
     out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
 
-    # FIXME: find out the difference!
+    # copy the vector of X (time) and Y (value) for returning
+    # FUTURE - what if the returned values are the reference to the vectors in workspace?
     vec_times = out_ws.readX(0)[:]
     vec_value = out_ws.readY(0)[:]
 
     return vec_times, vec_value
 
 
-def get_data_from_gsas(gsas_file_name):
+def get_data_from_gsas(gsas_file_name, binning_template_ws=None):
     """
     Load and get data from a GSAS file
     :param gsas_file_name:
+    :param binning_template_ws: name of MatrixWorkspace for binning template
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
     # check input
@@ -535,8 +537,8 @@ def get_data_from_gsas(gsas_file_name):
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
 
     # load GSAS file
-    # FIXME/NOWNOW - load_gsas_file() takes exactly 3 arguments (2 given)
-    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
+    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name,
+                   standard_bin_workspace=binning_template_ws)
 
     data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
                                                   start_bank_id=True)
@@ -841,13 +843,16 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
-    :param standard_bin_workspace:
+    :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
     # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
     assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
+    assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
+        'Standard binning workspace {0} must be either a string or None but not a {1}.' \
+        ''.format(standard_bin_workspace, type(standard_bin_workspace))
 
     # Load GSAS
     mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
@@ -865,9 +870,11 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         raise RuntimeError('It is not implemented for cases more than 2 spectra.')
 
     # convert unit and to point data
-    align_bins(out_ws_name, standard_bin_workspace)
-    mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
-                           Target='dSpacing')
+    if standard_bin_workspace is not None:
+        align_bins(out_ws_name, standard_bin_workspace)
+        mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
+                               Target='dSpacing')
+    # END-IF
 
     return out_ws_name
 

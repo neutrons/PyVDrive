@@ -94,7 +94,7 @@ class ProjectManager(object):
 
         return
 
-    def chop_data(self, run_number, slicer_key, reduce_flag, save_chopped_nexus, output_dir):
+    def chop_run(self, run_number, slicer_key, reduce_flag, save_chopped_nexus, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -105,16 +105,11 @@ class ProjectManager(object):
         :param output_dir:
         :return:
         """
-        # TODO/ISSUE/TODAY/FIXME - This method can be REMOVED! Refactor!!!
-
         # check inputs' validity
         assert isinstance(slicer_key, str), 'Slicer key %s of type %s is not supported. It ' \
                                             'must be a string.' % (str(slicer_key), type(slicer_key))
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
-        if output_dir is not None:
-            assert isinstance(output_dir, str) and os.path.exists(output_dir),\
-                'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
 
         # get chopping helper
         try:
@@ -127,8 +122,11 @@ class ProjectManager(object):
         if reduce_flag:
             # reduce to GSAS
             src_file_name, ipts_number = self.get_run_info(run_number)
-            self._reductionManager.reduce_chopped_data(ipts_number, run_number, src_file_name, chopper, slicer_key,
-                                                       save_chopped_nexus, output_dir)
+            # retrieve split workspace and split information workspace from chopper manager
+            split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
+
+            self._reductionManager.chop_reduce_data(ipts_number, run_number, src_file_name, split_ws_name,
+                                                    info_ws_name, save_chopped_nexus, output_dir)
 
             status = True,
             message = 'Run {0} is chopped, reduced and saved to GSAS files in {1}.'.format(run_number, output_dir)
@@ -173,13 +171,14 @@ class ProjectManager(object):
         """
         return self._loadedDataManager
 
+    # NOTE: No caller of this method so far
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
         :param run_number: run number for the slicer
         :param slicer_tag:
         :return:
         """
-        # NOTE: No caller of this method so far
+        # check input
         if run_number not in self._chopManagerDict:
             return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
 
@@ -187,7 +186,7 @@ class ProjectManager(object):
         data_chopper = self._chopManagerDict[run_number]
 
         # let DataChopper to do business
-        data_chopper.delete_slicer_by_id(slicer_tag)
+        data_chopper.delete_splitter_workspace(slicer_tag)
 
         return True, ''
 
@@ -282,7 +281,6 @@ class ProjectManager(object):
         else:
             # create a new DataChopper associated with this run
             nxs_file_name = self.get_file_path(run_number)
-            print '[DB...BAT 104022] NeXus file name: ', nxs_file_name
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
