@@ -479,6 +479,16 @@ class ProjectManager(object):
 
         elif isinstance(reduced_data_file, str) and os.path.exists(reduced_data_file):
             # load from a file
+            # FIXME/TODO/ISSUE/NOWNOW 
+            """
+            File "/home/wzz/Projects/PyVDrive/src/interface/ReducedDataView.py", line 1218, in get_reduced_data
+                search_archive=True)
+            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/VDriveAPI.py", line 513, in get_reduced_data
+                data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/ProjectManager.py", line 483, in get_reduced_data
+                data_file_type=None)
+            TypeError: load_binned_data() takes exactly 5 arguments (3 given)
+            """
             data_key = self._loadedDataManager.load_binned_data(data_file_name=reduced_data_file,
                                                                 data_file_type=None)
             data_set = self._loadedDataManager.get_data_set(data_key, target_unit)

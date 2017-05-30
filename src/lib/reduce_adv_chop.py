@@ -1,6 +1,7 @@
 # Reduction with advanced chopping methods
 # It is split from ReduceVulcanData in reduce_Vulcan.py
 import os
+import math
 import pandas as pd
 
 import mantid.simpleapi as mantidsimple
@@ -141,7 +142,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param is_epoch_time:
         :return:
         """
-        # TODO/ISSUE/NOW - Continue to implement! and consider to move to
+        # TODO/ISSUE/NOWNOW - Continue to implement! and consider to move to
         # # load data
         # raw_ws_name = os.path.basename(data_file).split('.')[0]
         # mantid_helper.load_nexus(data_file_name=data_file, output_ws_name=raw_ws_name, meta_data_only=False)
@@ -160,6 +161,12 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
         clear_memory = True
         for i_loop in range(num_loops):
+            """
+            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/reduce_adv_chop.py", line 164, in 
+            chop_data_large_number_targets
+                sub_split_ws_name = get_sub_splitters(split_ws_name,
+            NameError: global name 'get_sub_splitters' is not defined
+            """
             sub_split_ws_name = get_sub_splitters(split_ws_name,
                                                   split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
                                                   split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,

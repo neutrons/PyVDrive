@@ -1103,6 +1103,11 @@ class VDriveAPI(object):
             # manual reduction: Reduce runs
             print '[INFO] Reduce Runs: {0}.'.format(runs_to_reduce)
             try:
+                # TODO/ISSUE/NOWNOW/FIXME - Error message!
+                """
+                [ERROR] Assertion error from reduce_runs due to The unit of DSpace workspace VULCAN_122141 should be 
+                    dSpacing but not TOF.
+                """
                 status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
