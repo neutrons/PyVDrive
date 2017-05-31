@@ -337,7 +337,7 @@ class DataReductionTracker(object):
 
         :param vdrive_bin_ws:
         :param tof_ws:
-        :param dspace_ws:
+        :param dspace_ws: it could be None or name of workspace in d-spacing
         :return:
         """
         # check workspaces existing
@@ -345,11 +345,14 @@ class DataReductionTracker(object):
                                                                   'in ADS'.format(vdrive_bin_ws)
         assert mantid_helper.workspace_does_exist(tof_ws), 'Mantid-binned TOF workspace {0} does not exist in ADS.' \
                                                            ''.format(tof_ws)
-        assert mantid_helper.workspace_does_exist(dspace_ws), 'Mantid-binned D-space workspace {0} does not exist ' \
-                                                              'in ADS.'.format(dspace_ws)
-        dspace_ws_unit = mantid_helper.get_workspace_unit(dspace_ws)
-        assert dspace_ws_unit == 'dSpacing',\
-            'The unit of DSpace workspace {0} should be dSpacing but not {1}.'.format(str(dspace_ws), dspace_ws_unit)
+        if dspace_ws is not None:
+            assert mantid_helper.workspace_does_exist(dspace_ws),\
+                'Mantid-binned D-space workspace {0} does not exist in ADS.'.format(dspace_ws)
+            dspace_ws_unit = mantid_helper.get_workspace_unit(dspace_ws)
+            assert dspace_ws_unit == 'dSpacing',\
+                'Unable to set reduced d-space workspace: The unit of DSpace workspace {0} should be dSpacing but ' \
+                'not {1}.'.format(str(dspace_ws), dspace_ws_unit)
+        # END-IF
 
         self._vdriveWorkspace = vdrive_bin_ws
         self._tofWorkspace = tof_ws
@@ -462,7 +465,7 @@ class ReductionManager(object):
 
     # TODO/ISSUE/NOWNOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
-                        output_nexus_dir, output_gsas_dir, tof_correction):
+                        output_nexus_dir, output_gsas_dir, gsas_to_archive, tof_correction):
         """
         chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
@@ -470,11 +473,12 @@ class ReductionManager(object):
         :param raw_file_name:
         :param split_ws_name:
         :param split_info_name:
-        :param slice_key:
-        :param output_nexus_dir:
-        :param output_gsas_dir:
+        :param slice_key: a general keyword to refer from the reduction tracker
+        :param output_nexus_dir: it cannot be None, must be specified
+        :param output_gsas_dir: if set to None, then chopping data only if gsas_to_archive is False too
+        :param gsas_to_archive: save GSAS to archive
         :param tof_correction:
-        :return:
+        :return: 2-tuple.  (1) boolean as status  (2) error message
         """
         if tof_correction:
             raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')
@@ -483,12 +487,92 @@ class ReductionManager(object):
         reduction_setup = reduce_VULCAN.ReductionSetup()
         reduction_setup.set_ipts_number(ipts_number)
         reduction_setup.set_run_number(run_number)
-        reduction_setup.set_event_file(data_file)
-        reduction_setup.set_chopped_nexus_dir(output_dir)
+        reduction_setup.set_event_file(raw_file_name)
 
-        # TODO/ISSUE/NOWNOW - Continue from here!!!
+        # splitters workspace suite
+        reduction_setup.set_splitters(split_ws_name, split_info_name)
 
-        return
+        # define chop processor
+        chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+
+        # use output_gsas_dir to identify whether it is to chop data only or to reduce data too
+        if output_gsas_dir is None and gsas_to_archive is False:
+            # chop data only
+            # check input
+            if output_gsas_dir is None:
+                raise RuntimeError('It is not allowed to have output NeXus directory and output GSAS directory to '
+                                   'be None. While setting GSAS_To_Archive to be False')
+            reduction_setup.set_chopped_nexus_dir(output_nexus_dir)
+
+            # chop data without reduction
+            status, ret_obj = chop_reducer.chop_data()
+
+            # return if chopping fails
+            if not status:
+                error_msg = ret_obj
+                return False, error_msg
+
+            # get chopped workspaces' names, saved NeXus file name; check them and store to lists
+            chopped_ws_name_list = list()
+            chopped_file_list = list()
+            for file_name, ws_name in ret_obj:
+                if file_name is not None:
+                    chopped_file_list.append(file_name)
+                if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+                    chopped_ws_name_list.append(ws_name)
+            # END-FOR
+
+            # initialize tracker
+            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+
+            tracker.is_reduced = False
+            tracker.is_chopped = True
+            if len(chopped_ws_name_list) > 0:
+                tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+            if len(chopped_file_list) > 0:
+                tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+
+        else:
+            # chop and then reduce to GSAS
+            if output_gsas_dir is None:
+                # set to archive
+                reduction_setup.set_output_dir_to_archive(create_parent_directories=True)
+            else:
+                # set to specified GSAS directory
+                reduction_setup.set_output_dir(output_gsas_dir)
+                reduction_setup.set_gsas_dir(output_gsas_dir, main_gsas=True)
+
+                if output_nexus_dir is not None:
+                    reduction_setup.set_chopped_nexus_dir(output_nexus_dir)
+                    reduction_setup.save_chopped_workspace = True
+                else:
+                    reduction_setup.save_chopped_workspace = False
+            # END-IF-ELSE
+
+            # set the flag for not being an auto reduction
+            reduction_setup.is_auto_reduction_service = False
+            reduction_setup.set_default_calibration_files()
+
+            # add splitter workspace and splitter information workspace
+
+            # set up reducer
+            reduction_setup.process_configurations()
+
+            # set up reduction tracker
+            tracker = self.init_tracker(ipts_number, run_number, slice_key)
+
+            # reduce data
+            status, message = chop_reducer.execute_chop_reduction(clear_workspaces=False)
+
+            # set up the reduced file names and workspaces and add to reduction tracker dictionary
+            tracker.set_reduction_status(status, message, True)
+
+            reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
+            self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
+            self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+        # END-IF
+
+        return True, None
 
     def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir, tof_correction=False):
         """
@@ -503,6 +587,7 @@ class ReductionManager(object):
         :param tof_correction: default to False.  applied if the log is fast
         :return:
         """
+        raise RuntimeError('Be replaced by chop_vulcan_run()')
         if tof_correction:
             raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')
 
@@ -570,6 +655,7 @@ class ReductionManager(object):
         :param output_dir: None for archive
         :return:
         """
+        raise RuntimeError('Replaced by chop_vulcan_run()')
         # check inputs
         assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer ' \
                                              'but not {1}.'.format(ipts_number, type(ipts_number))

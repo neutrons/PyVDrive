@@ -2044,8 +2044,10 @@ class ReduceVulcanData(object):
                                             FilterBadPulses=0,
                                             CompressTOFTolerance=0.,
                                             FrequencyLogNames="skf1.speed",
-                                            WaveLengthLogNames="skf12.lambda")
+                                            WaveLengthLogNames="skf12.lambda",
+                                            FinalDataUnits='dSpacing')
 
+            # reduced workspace should be in unit as dSpacing
             reduced_ws_name = 'VULCAN_%d' % self._reductionSetup.get_run_number()
             if AnalysisDataService.doesExist(reduced_ws_name) is False:
                 # special case for random event file
@@ -2059,17 +2061,16 @@ class ReduceVulcanData(object):
         except AssertionError as ass_err:
             return False, str(ass_err), None
 
-        # convert unit and save for VULCAN-specific GSAS
-        #  tof_ws_name = "VULCAN_%d_TOF" % self._reductionSetup.get_run_number()
-        tof_ws_name = reduced_ws_name
+        # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
         mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                  OutputWorkspace=tof_ws_name,
+                                  OutputWorkspace=reduced_ws_name,
                                   Target="TOF",
                                   EMode="Elastic",
                                   AlignBins=False)
 
         vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
 
+        # get the output workspace
         output_access_error = False
         orig_gsas_name = gsas_file_name
         if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
@@ -2089,7 +2090,7 @@ class ReduceVulcanData(object):
 
         # save to Vuclan GSAS
         try:
-            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                        OutputWorkspace=vdrive_bin_ws_name,
                                        GSSFilename=gsas_file_name,
@@ -2100,7 +2101,7 @@ class ReduceVulcanData(object):
             print '[ValueError]: {0}.'.format(value_err)
             gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
             output_access_error = True
-            mantidsimple.SaveVulcanGSS(InputWorkspace=tof_ws_name,
+            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
                                        BinFilename=self._reductionSetup.get_vulcan_bin_file(),
                                        OutputWorkspace=vdrive_bin_ws_name,
                                        GSSFilename=gsas_file_name,
@@ -2123,8 +2124,8 @@ class ReduceVulcanData(object):
         # END-IF (vanadium)
 
         # collect result
-        self._reducedWorkspaceDSpace = reduced_ws_name
-        self._reducedWorkspaceMtd = tof_ws_name
+        self._reducedWorkspaceDSpace = None  # dSpacing reduced workspace has been replaced by TOF
+        self._reducedWorkspaceMtd = reduced_ws_name
         self._reducedWorkspaceVDrive = vdrive_bin_ws_name
         self._reduceGood = True
 

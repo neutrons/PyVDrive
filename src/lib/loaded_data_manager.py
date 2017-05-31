@@ -1,6 +1,7 @@
 import os
 from os import listdir
 from os.path import isfile, join
+import math
 import mantid_helper
 
 
@@ -98,10 +99,10 @@ class LoadedDataManager(object):
         load binned data
         :param data_file_name:
         :param data_file_type:
-        :return: data key (workspace name)
+        :param prefix: prefix of the GSAS workspace name. It can be None, an integer, or a string
+        :param max_int: maximum integer for sequence such as 999 for 001, 002, ... 999
+        :return: string as data key (aka. workspace name)
         """
-        import math
-
         # check inputs
         assert isinstance(data_file_type, str) or data_file_type is None, \
             'Data file type {0} must be a string or None but not a {1}.' \
@@ -121,19 +122,17 @@ class LoadedDataManager(object):
             data_file_type = data_file_type.lower()
         # END-IF-ELSE
 
-        num_zeros = int(math.log(max_int) / math.log(10)) + 1
-
         # Load data
         base_ws_name = os.path.basename(file_name)
         if data_file_type == 'gsas':
             # load as GSAS
-
             # get the output workspace name
             if prefix is None or prefix == '':
                 # no prefix is specified
                 data_ws_name = '{0}_gsas'.format(base_ws_name)
             elif base_ws_name.isdigit():
                 # base workspace name is an integer and prefix is given.
+                num_zeros = int(math.log(max_int) / math.log(10)) + 1
                 data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
             else:
                 # prefix_basename

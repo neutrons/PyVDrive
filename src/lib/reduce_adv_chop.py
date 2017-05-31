@@ -130,24 +130,16 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
-    def chop_data_large_number_targets(self, raw_ws_name, split_ws_name, info_ws_name, tof_correction,
+    def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws):
         """
         chop data to a large number of output targets
         :param raw_ws_name: raw event workspace to get split
-        :param split_ws_name:
-        :param info_ws_name:
         :param tof_correction:
         :param output_dir:
         :param is_epoch_time:
         :return:
         """
-        # TODO/ISSUE/NOWNOW - Continue to implement! and consider to move to
-        # # load data
-        # raw_ws_name = os.path.basename(data_file).split('.')[0]
-        # mantid_helper.load_nexus(data_file_name=data_file, output_ws_name=raw_ws_name, meta_data_only=False)
-        # raw_ws = mantid_helper.retrieve_workspace('meta')
-
         # get raw workspace
         raw_ws = mantid_helper.retrieve_workspace(raw_ws_name)
 
@@ -157,25 +149,34 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         else:
             run_start_ns = 0
 
+        # get split information workspace
+        split_ws_name, split_info_name = self._reductionSetup.get_splitters(throw_not_set=True)
+
         # in loop generate data
         num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
         clear_memory = True
-        for i_loop in range(num_loops):
-            """
-            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/reduce_adv_chop.py", line 164, in 
-            chop_data_large_number_targets
-                sub_split_ws_name = get_sub_splitters(split_ws_name,
-            NameError: global name 'get_sub_splitters' is not defined
-            """
-            sub_split_ws_name = get_sub_splitters(split_ws_name,
-                                                  split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  run_start_ns=run_start_ns)
 
+        total_status = True
+        total_tup_list = list()
+        total_error_message = ''
+        for i_loop in range(num_loops):
+            # get the subset of the splitters
+            sub_split_ws_name = self.get_sub_splitters(split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                       split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
+                                                       run_start_ns=run_start_ns)
+
+            # split
             status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
-                                                             info_table_name=info_ws_name,
+                                                             info_table_name=split_info_name,
                                                              target_ws_name=raw_ws_name, tof_correction=False,
                                                              output_directory=output_dir, delete_split_ws=clear_memory)
+
+            # process
+            if status:
+                assert isinstance(ret_obj, list), 'Successful returned value must be '
+                total_tup_list.extend(ret_obj)
+
+
         # END-FOR
 
         # TODO - better returned value
@@ -469,7 +470,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # chop and save data
         status, ret_obj = self.chop_data()
         if status:
-            choped_tuple_list = ret_obj
+            raw_chopped_tuples = ret_obj
         else:
             return False, ret_obj, None
 
@@ -477,7 +478,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         chopped_tup_list = list()
         lookup_list = list()
         gsas_index = 1
-        for chop_tup in choped_tuple_list:
+        for chop_tup in raw_chopped_tuples:
             # get the nexus file and workspace tuple
             event_nexus_name, ws_name = chop_tup
             assert isinstance(ws_name, str), 'Workspace name {0} must be a string but not a {1}.' \
