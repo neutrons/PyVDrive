@@ -245,18 +245,18 @@ class VdriveCommandProcessor(object):
             view_window.set_canvas_type(dimension=1)
             view_window.add_run_numbers(processor.get_run_tuple_list())
             # plot
-            view_window.plot_run(processor.get_run_number(), bank_id=1)
+            view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
             view_window.set_canvas_type(dimension=2)
             view_window.set_chop_run_number(processor.get_run_number())
             view_window.set_chop_sequence(processor.get_chopped_sequence_range())
-            view_window.plot_chopped_run(chopped_data_dir=processor.get_reduced_data_directory())
+            view_window.plot_chopped_data_2d(chopped_data_dir=processor.get_reduced_data_directory())
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
             view_window.add_run_numbers(processor.get_run_tuple_list())
-            view_window.plot_multiple_runs(bank_id=1, bank_id_from_1=True)
+            view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
         # END-FOR
 
         return status, message
@@ -279,7 +279,7 @@ class VdriveCommandProcessor(object):
         if message == 'pop':
             data_viewer = self._mainWindow.do_view_reduction()
             # title
-            data_viewer.set_title('Processing vanadium')
+            data_viewer.set_title_plot_run('Processing vanadium')
             # get data (key), set to viewer and plot
             controller_data_key = processor.get_loaded_data()
             ipts_number, run_number_list = processor.get_ipts_runs()
@@ -288,7 +288,7 @@ class VdriveCommandProcessor(object):
             # TODO/ISSUE/NOW - unit should be set in a softer way...
             viewer_data_key = data_viewer.add_data_set(ipts_number, van_run_number, controller_data_key,
                                                        unit='dSpacing')
-            data_viewer.plot_data(viewer_data_key, bank_id=1)
+            data_viewer.plot_1d_diffraction(viewer_data_key, bank_id=1)
 
             if processor.to_shift:
                 data_viewer.set_vanadium_fwhm(2)

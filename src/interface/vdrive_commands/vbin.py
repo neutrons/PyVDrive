@@ -170,7 +170,9 @@ class VBin(procss_vcommand.VDriveCommand):
             # set vanadium runs
             if van_run is not None:
                 self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
-            status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+            # FIXME/ISSUE/NOWNOW - Implement reduce_chopped_data_set
+            # Test case: 	vbin, ipts=17414, choprun=109021, runs=1, rune=99
+            status, ret_obj = self._controller.reduce_chopped_data_set(auto_reduce=False, output_directory=output_dir,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,

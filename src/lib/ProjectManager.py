@@ -114,17 +114,17 @@ class ProjectManager(object):
         # get chopping helper
         try:
             chopper = self._chopManagerDict[run_number]
+            # retrieve split workspace and split information workspace from chopper manager
+            split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
         except KeyError as key_error:
             error_message = 'Run number %d is not registered to chopper manager (%s). Current runs are %s.' \
                             '' % (run_number, str(key_error), str(self._chopManagerDict.keys()))
             raise RuntimeError(error_message)
+        # END-TYR
 
         if reduce_flag:
             # reduce to GSAS
             src_file_name, ipts_number = self.get_run_info(run_number)
-            # retrieve split workspace and split information workspace from chopper manager
-            split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
-
             self._reductionManager.chop_reduce_data(ipts_number, run_number, src_file_name, split_ws_name,
                                                     info_ws_name, save_chopped_nexus, output_dir)
 
@@ -139,14 +139,19 @@ class ProjectManager(object):
             except RuntimeError as run_error:
                 return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                               ''.format(run_number, run_error)
+            # END-TRY
+
             # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
-            self._reductionManager.chop_data(ipts_number=ipts_number,
-                                             run_number=run_number,
-                                             data_file=data_file,
-                                             chop_manager=self._chopManagerDict[run_number],
-                                             slice_key=slicer_key,
-                                             output_dir=output_dir,
-                                             tof_correction=False)
+            self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
+                                                   run_number=run_number,
+                                                   raw_file_name=data_file,
+                                                   split_ws_name=split_ws_name,
+                                                   split_info_name=info_ws_name,
+                                                   slice_key=slicer_key,
+                                                   output_nexus_dir=output_dir,
+                                                   output_gsas_dir=None,
+                                                   gsas_to_archive=False,
+                                                   tof_correction=False)
 
             status = True
             message = 'Run %d is chopped and saved to NeXus files. ' % run_number

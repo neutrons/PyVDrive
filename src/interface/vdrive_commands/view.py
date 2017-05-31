@@ -17,7 +17,7 @@ class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MinV', 'MaxV', 'NORM', 'DIR']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',

@@ -724,9 +724,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         view_window = self._myParent.do_view_reduction()
         assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'The view window'
 
-        # set up the run time
-        view_window.set_title('Run: {0}'.format(self._currRunNumber))
-
         # get chopped and reduced workspaces from controller
         try:
             info_dict = self.get_controller().get_chopped_data_info(self._currRunNumber,
@@ -735,6 +732,10 @@ class WindowLogPicker(QtGui.QMainWindow):
             chopped_workspace_list = info_dict['workspaces']
             view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, clear_previous=True)
             view_window.do_set_reduced_from_memory()
+            # set up the run time
+            view_window.label_loaded_data(run_number=self._currRunNumber,
+                                          is_chopped=True,
+                                          chop_seq_list=range(len(chopped_workspace_list)))
 
         except RuntimeError as run_err:
             error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \

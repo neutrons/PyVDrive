@@ -34,7 +34,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
     def plot_diffraction_data(self, vec_xy_set, unit, over_plot, run_id=None, chop_tag=None):
         """
-        plot diffraction data with proper
+        plot diffraction data with proper unit... 1D
         :param vec_xy_set:
         :param unit:
         :param over_plot:

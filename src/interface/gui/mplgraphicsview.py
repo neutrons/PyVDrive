@@ -1536,7 +1536,7 @@ class Qt4MplCanvas(FigureCanvas):
         assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
         assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(title))
 
-        self.axes.set_title(title, loc='center', color=color)
+        self.axes.set_title_plot_run(title, loc='center', color=color)
 
         self.draw()
 

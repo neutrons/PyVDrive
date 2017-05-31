@@ -1311,7 +1311,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self._peakPickerMode = PeakPickerMode.MultiPeakPick
             self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.MultiMode)
             # change UI indications
-            self.ui.graphicsView_main.canvas().set_title('Multi-Peaks Selection', color='red')
+            self.ui.graphicsView_main.canvas().set_title_plot_run('Multi-Peaks Selection', color='red')
             # next will be multi-peak mode again
             self.ui.pushButton_peakPickerMode.setText('Enter Single-Peak Mode')
 
@@ -1320,7 +1320,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             self._peakPickerMode = PeakPickerMode.SinglePeakPick
             self.ui.graphicsView_main.set_peak_selection_mode(dv.PeakAdditionState.NormalMode)
             # change UI indications
-            self.ui.graphicsView_main.canvas().set_title('Single-Peak Selection', color='blue')
+            self.ui.graphicsView_main.canvas().set_title_plot_run('Single-Peak Selection', color='blue')
             # next will be multi-peak mode again
             self.ui.pushButton_peakPickerMode.setText('Enter Multi-Peak Mode')
 

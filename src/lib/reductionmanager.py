@@ -499,7 +499,7 @@ class ReductionManager(object):
         if output_gsas_dir is None and gsas_to_archive is False:
             # chop data only
             # check input
-            if output_gsas_dir is None:
+            if output_nexus_dir is None:
                 raise RuntimeError('It is not allowed to have output NeXus directory and output GSAS directory to '
                                    'be None. While setting GSAS_To_Archive to be False')
             reduction_setup.set_chopped_nexus_dir(output_nexus_dir)
@@ -1027,13 +1027,16 @@ class ReductionManager(object):
         :param dspace_ws: str
         :return:
         """
-        # check
-        assert isinstance(run_number, int), 'Input run number {0} must be a integer but not {1}.' \
-                                            ''.format(run_number, type(run_number))
-        assert isinstance(vdrive_bin_ws, str) and isinstance(tof_ws, str) and isinstance(dspace_ws, str),\
-            'VDRIVE-binning workspace name {0}, TOF workspace name {1} and Dspacing workspace {2} must be a string.' \
-            ''.format(vdrive_bin_ws, tof_ws, dspace_ws)
+        # check input
+        if run_number not in self._reductionTrackDict:
+            raise RuntimeError('Run number {0} has no ReductionTracker yet. Existing keys are {1}.'
+                               ''.format(run_number, self._reductionTrackDict.keys()))
 
-        self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
+        try:
+            self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
+        except AssertionError as ass_err:
+            raise AssertionError('ReductionManage unable to set reduced workspace for run {0} due to {1}.'
+                                 ''.format(run_number, ass_err))
+        # TRY-EXCEPT
 
         return

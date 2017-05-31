@@ -65,7 +65,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # chop event workspace to too many target workspaces which cannot be hold in memory
             # simultaneously
             status, ret_obj = self.chop_data_large_number_targets(event_ws_name,
-                                                                  split_ws_name, info_ws_name,
                                                                   tof_correction=do_tof_correction,
                                                                   output_dir=output_directory,
                                                                   is_epoch_time=is_epoch_time,
