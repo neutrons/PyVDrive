@@ -75,61 +75,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
-    # TODO/FIXME/NOWNOW - Clean up this method: Find out methods that calls chop_data(...)
-    def chop_event_data(self, raw_file_name, slice_key, output_directory, do_tof_correction=False):
-        """
-        chop data and save to GSAS file
-        :param raw_file_name:
-        :param slice_key:
-        :param output_directory:
-        :param do_tof_correction:
-        :return:
-        """
-        # TODO/ISSUE/NOW/65/FIXME - This is called by GUI to chop data and saved to NeXus.
-        #                           Better to refactor this part to adv_chop_reducion
-
-        # check input
-        assert isinstance(raw_file_name, str), 'Raw file name {0} must be a string but not a {1}.' \
-                                               ''.format(raw_file_name, type(raw_file_name))
-        assert isinstance(slice_key, str), 'Slicer type {0} must be a string but not a {1}.' \
-                                           ''.format(slice_key, type(slice_key))
-        assert isinstance(output_directory, str), 'Output directory {0} must be string but not a {1}.' \
-                                                  ''.format(output_directory, type(output_directory))
-
-        # get the split workspace name and information workspace name
-        split_ws_name, info_ws_name = self.get_split_workspace(slice_key)
-
-        # get number of target workspace
-        number_target_ws, is_epoch_time = get_number_chopped_ws(split_ws_name)
-
-        # load data from file to workspace
-        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
-        mantid_helper.load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
-
-        if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
-            # chop event workspace with regular method
-            # TODO/DEBUG - Split workspace won't be deleted at this stage
-            status, ret_obj = mantid_helper.split_event_data(raw_ws_name=event_ws_name,
-                                                             split_ws_name=split_ws_name,
-                                                             info_table_name=info_ws_name,
-                                                             target_ws_name=None,
-                                                             tof_correction=do_tof_correction,
-                                                             output_directory=output_directory,
-                                                             delete_split_ws=False)
-        else:
-            # chop event workspace to too many target workspaces which cannot be hold in memory
-            # simultaneously
-            status, ret_obj = self.chop_data_large_number_targets(event_ws_name,
-                                                                  split_ws_name, info_ws_name,
-                                                                  tof_correction=do_tof_correction,
-                                                                  output_dir=output_directory,
-                                                                  is_epoch_time=is_epoch_time,
-                                                                  num_target_ws=number_target_ws)
-        # delete raw workspace
-        mantid_helper.delete_workspace(event_ws_name)
-
-        return status, ret_obj
-
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws):
         """
@@ -173,15 +118,19 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             # process
             if status:
-                assert isinstance(ret_obj, list), 'Successful returned value must be '
+                # split with success
+                assert isinstance(ret_obj, list), 'Successful returned value must be a list of 2-tuples'
                 total_tup_list.extend(ret_obj)
-
-
+            else:
+                # failed: append error message
+                total_status = False
+                total_error_message += '{0}\n'.format(ret_obj)
         # END-FOR
 
-        # TODO - better returned value
-        return True, file_list
+        if not total_status:
+            return False, total_error_message
 
+        return True, total_tup_list
 
     def chop_reduce(self, chop_dir):
         """
