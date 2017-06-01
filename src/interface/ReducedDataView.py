@@ -51,7 +51,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._currRunNumber = None
         self._currChoppedData = False
         self._currWorkspaceTag = None
-        self._currDataKey = None
         self._currBank = 1
         self._currUnit = 'TOF'
 
@@ -65,6 +64,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
+        self._mutexChopSeqList = False
         self._mutexBankIDList = False
 
         # data structure to manage the fitting result
@@ -113,6 +113,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
+        self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_select_new_chopped_child)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -237,8 +239,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def load_reduced_data(self, run_number):
         """
-        Load reduced data (via run number) to _reduced
-        :param run_number:
+        Load reduced data (via run number) to _reducedDataDict.
+        :param run_number: a run number (int or string) or data key (i..e, workspace name)
         :return:
         """
         if run_number in self._reducedDataDict:
@@ -400,26 +402,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_chopped_sequence(self, seq_list):
-        """
-        set the chopped sequence to the sequence combo box
-        :param seq_list:
-        :return:
-        """
-        # TODO/ISSUE/TODAY - This might be merged with add_chop...
-        # check input
-        assert isinstance(seq_list, list) and len(seq_list) > 0, \
-            'Sequence {0} must be a non-empty list. Now input is of type {1}'.format(seq_list, type(seq_list))
-
-        # clear
-        self.ui.comboBox_chopSeq.clear()
-
-        # add sequence
-        for seq in sorted(seq_list):
-            self.ui.comboBox_chopSeq.addItem(str(seq))
-
-        return
-
     def do_set_reduced_from_memory(self):
         """
         set the load
@@ -448,8 +430,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self.set_sample_log_names(series_sample_log_list)
 
         else:
-            # get the original reduced data
-            data_key = self._myController.get_reduced_data(self._currRunNumber)
+            # get the original reduced data and add the this.reduced_data_dictionary
+            # TEST - Modified
+            status, error_message = self.load_reduced_data(self._currRunNumber)
+            if not status:
+                GuiUtility.pop_dialog_error(self, error_message)
+                return
             seq_list = None
 
         # set the label
@@ -513,7 +499,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if is_chopped_data:
             # get the directory of chopped data
             chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
-                                                                        default_dir))
+                                                                          default_dir))
             self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
         else:
             # get the data file
@@ -535,6 +521,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def do_load_local_gsas(self):
         """
         load gsas or sequence of GSAS files
+        If given a directory, then it is to load a series of GSAS files from chopping a run;
+        If given a single file, then it is to
         :return:
         """
         # get GSAS file path
@@ -558,31 +546,23 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         else:
             # input is a file: load a single GSAS file
-            raise NotImplementedError('This part must be reviewed and refactored')
+            # load the data file
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
-            self._currDataKey = data_key
+
+            # set up the data file to this data viewer and
+            self.load_reduced_data(run_number=data_key)
             status, ret_obj = self._myController.get_run_info(run_number=None, data_key=data_key)
             if not status:
                 GuiUtility.pop_dialog_error(self, ret_obj)
                 return
-            bank_list = ret_obj
-            seq_list = None
+
+            # clear some quick references, including GUI widgets its associated chopped data dictionary
+            self._mutexChopSeqList = True
             self.ui.comboBox_chopSeq.clear()
-            # clear the chopped data dictionary
+            self._mutexChopSeqList = False
+
             self._choppedDataDict.clear()
         # END-IF-ELSE
-
-        # set bank list to widget/combobox
-        # self.set_banks(bank_list)
-
-        # # get run number from all the information
-        # run_number = self.guess_run_number(gsas_path)
-        # if run_number is None:
-        #     run_number = 0
-        # self._currRunNumber = run_number
-
-        # set the label
-        #  self.label_loaded_data(self._currRunNumber, os.path.isdir(gsas_path), seq_list)
 
         # activate it!
         self.do_set_reduced_from_memory()
@@ -595,6 +575,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param ipts_number:
         :param run_number:
         :param controller_data_key:
+        :param unit:
         :return:
         """
         # return if the controller data key exist
@@ -671,6 +652,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     def add_chopped_workspaces(self, workspace_key, workspace_name_list, clear_previous=True):
         """
         add (CHOPPED) workspaces' names to the data viewer
+        Note: It shall not trigger the event to plot any chopped data
         :param workspace_key:
         :param workspace_name_list:
         :param clear_previous:
@@ -678,6 +660,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # turn on the mutex
         self._mutexRunNumberList = True
+        self._mutexChopSeqList = True
 
         # check input
         assert workspace_key is not None, 'Workspace key (run number mostly) cannot be None'
@@ -714,13 +697,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         workspace_name_list.sort()
 
         # set workspaces
-        self.ui.comboBox_chopSeq.clear()
+        if clear_previous:
+            self.ui.comboBox_chopSeq.clear()
         for workspace_name in workspace_name_list:
             self.ui.comboBox_chopSeq.addItem(workspace_name)
-        # END-FOR
 
         # release mutex lock
         self._mutexRunNumberList = False
+        self._mutexChopSeqList = False
 
         return range(len(workspace_name_list))
 
@@ -780,7 +764,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Re-plot
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.plot_by_run_number(run_number=run_number, bank_id=bank_id, over_plot=over_plot)
+        self.plot_by_run_number(run_number, bank_id=bank_id, over_plot=over_plot)
 
         return
 
@@ -837,36 +821,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         else:
             # non-chopped data set
-            #     def plot_loaded_data(self, data_key, bank_id_list, over_plot):
-            # TODO/ISSUE/NOWNOW - how to call_plot_by_run_number
-
             data_str = str(self.ui.comboBox_runs.currentText())
             if data_str.isdigit():
-                run_number = int(data_str)
+                # run number
+                run_number = data_str
                 self.plot_by_run_number(run_number=run_number, bank_id=bank_id_list[0], over_plot=over_plot)
             else:
-
-
-            self.plot_by_data_key(data_key, bank_id_list=bank_id_list, over_plot=self.ui.checkBox_overPlot.isChecked())
-
-            # if len(self._choppedDataDict) > 0:
-            #     # chopped data loaded from reduced files
-            #     data_key = chop_seq_tag
-            #     self.plot_loaded_data(data_key, bank_id_list, over_plot)
-            # else:
-            #     # chopped data in the memory
-            #     chop_seq_i = int(chop_seq_tag)
-            #     # TODO/ISSUE/65 - Need to find out during test!
-            #
-            # # plot a single run
-            # if self._currDataKey:
-            #     # loaded GSAS data
-            #     self.plot_loaded_data(self._currDataKey, bank_id_list, over_plot)
-            # else:
-            #     # plot reduced GSAS data in memory
-            #     self.plot_reduced_data(run_number)
-            #     # TODO/ISSUE/65 - Need to find out during test!
-            # # END-IF
+                # data key
+                data_key = data_str
+                self.plot_by_data_key(data_key, bank_id_list=bank_id_list,
+                                      over_plot=self.ui.checkBox_overPlot.isChecked())
+            # END-IF-ELSE (data_str)
+        # END-IF-ELSE
 
         return
 
@@ -875,26 +841,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Purpose: plot the previous run in the list and update the run list
         :return:
         """
-        # TODO/ISSUE/NOWNOW - Re-do with new requirement
+        if self.ui.comboBox_chopSeq.count() == 0:
+            # non-chopping option. get next run in order
+            current_run_index = self.ui.comboBox_runs.currentIndex()
+            current_run_index += 1
+            if current_run_index >= self.ui.comboBox_runs.count():
+                # already the last one. cyclic to first
+                current_run_index = 0
+            # reset the combo index. It will trigger an event
+            self.ui.comboBox_runs.setCurrentIndex(current_run_index)
 
+        else:
+            # option for chopping data
+            current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
+            current_chop_index += 1
+            if current_chop_index >= self.ui.comboBox_chopSeq.count():
+                # already the last one in the list, go back to first one
+                current_chop_index = 0
+            # reset the combobox index. It will trigger an event
+            self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
 
-        # Get previous index from combo box
-        current_index = self.ui.comboBox_runs.currentIndex()
-        current_index += 1
-        # if the current index is at the beginning, then loop to the last run number
-        if current_index == self.ui.comboBox_runs.count():
-            current_index = 0
-        elif current_index > self.ui.comboBox_runs.count():
-            raise RuntimeError('It is impossible to have index larger than number of items.')
-
-        # Get the current run
-        self.ui.comboBox_runs.setCurrentIndex(current_index)
-        run_number = int(self.ui.comboBox_runs.currentText())
-
-        # Plot
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.plot_by_run_number(run_number, bank_id, over_plot)
+        # END-IF
 
         return
 
@@ -906,24 +873,26 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         bank_id will be preserved
         :return:
         """
+        if self.ui.comboBox_chopSeq.count() == 0:
+            # non-chopping option. get next run in order
+            current_run_index = self.ui.comboBox_runs.currentIndex()
+            current_run_index -= 1
+            if current_run_index < 0:
+                # already the last one. cyclic to first
+                current_run_index = self.ui.comboBox_runs.count() - 1
+            # reset the combo index. It will trigger an event
+            self.ui.comboBox_runs.setCurrentIndex(current_run_index)
+        else:
+            # option for chopping data
+            current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
+            current_chop_index -= 1
+            if current_chop_index < 0:
+                # already the last one in the list, go back to first one
+                current_chop_index = self.ui.comboBox_chopSeq.count() - 1
+            # reset the combobox index. It will trigger an event
+            self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
 
-        # TODO/ISSUE/NOWNOW - Re-do with new requirement
-        # Get previous index from combo box
-        current_index = self.ui.comboBox_runs.currentIndex()
-        current_index -= 1
-        # if the current index is at the beginning, then loop to the last run number
-        if current_index < 0:
-            current_index = self.ui.comboBox_runs.count()-1
-
-        # Get the current run
-        self.ui.comboBox_runs.setCurrentIndex(current_index)
-        run_number = int(self.ui.comboBox_runs.currentText())
-
-        # Plot
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.do_plot_diffraction_data()  # <--- use this one instead!
-        #  self.plot_by_run_number(run_number, bank_id, over_plot)
+        # END-IF
 
         return
 
@@ -992,38 +961,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._mutexRunNumberList:
             return
 
-        # TODO/ISSUE/TODAY/ - Enable this method!
-        # # Get the new run number
-        # run_number = str(self.ui.comboBox_runs.currentText())
-        # try:
-        #     if run_number.isdigit():
-        #         run_number = int(run_number)
-        #         status, run_info = self._myController.get_reduced_run_info(run_number)
-        #     else:
-        #         # is workspace
-        #         status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
-        # except ValueError as value_err:
-        #     raise NotImplementedError('Unable to get run information from run {0} due to {1}'
-        #                               ''.format(run_number, value_err))
-        # bank_id_list = run_info
-        #
-        # self._currRunNumber = run_number
-        #
-        # if status is False:
-        #     GuiUtility.pop_dialog_error(self, run_info)
-        #
-        # # Re-set the spectra list combo box
-        #
-        # if len(bank_id_list) != len(self._bankIDList) - 1:
-        #     # different number of banks
-        #     self.ui.comboBox_spectraList.clear()
-        #     for bank_id in bank_id_list:
-        #         self.ui.comboBox_spectraList.addItem(str(bank_id))
-        #     self.ui.comboBox_spectraList.addItem('All')
-        #
-        #     # reset current bank ID list
-        #     self._bankIDList = bank_id_list[:]
-        # # END-IF
+        # plot diffraction data same as
+        # TEST - plot diffraction data
+        self.do_plot_diffraction_data()
+
+        return
+
+    def evt_select_new_chopped_child(self):
+        """
+        Handle the event if there is change in chopped sequence list
+        :return:
+        """
+        if self._mutexChopSeqList:
+            return
+
+        self.do_plot_diffraction_data()
 
         return
 
@@ -1065,9 +1017,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             # set the reduced workspace (name) to dictionary
             self._reducedDataDict[run_number] = ret_obj
-
-            is_workspace = True
-            self.plot_by_run_number(run_number, self._currBank, over_plot=True, is_workspace=is_workspace)
+            # plot
+            self.plot_by_run_number(run_number, self._currBank, over_plot=True)
         # END-FOR
 
         return
@@ -1147,59 +1098,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # check the bank ID list
         self._mutexBankIDList = True
-        try:
-            if self.ui.comboBox_spectraList.count() !=
-                # empty bank ID list
-                bank_id_list = self.ui.line
-
-            combo_index = self._bankIDList.index(bank_id)
-        except AttributeError as att_err:
-            print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
-                  ''.format(bank_id, type(bank_id), self._bankIDList)
-            raise att_err
-        self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+        if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):
+            try:
+                # bank ID list does not match
+                self.ui.comboBox_spectraList.clear()
+                bank_id_list = sorted(self._reducedDataDict.keys())
+                for bank_id in bank_id_list:
+                    self.ui.comboBox_spectraList.addItem(bank_id)
+                combo_index = bank_id_list.index(bank_id)
+                self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+            except AttributeError as att_err:
+                print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                      ''.format(bank_id, type(bank_id), self._bankIDList)
+                raise att_err
         self._mutexBankIDList = False
-
-        # # check inputs
-        # if is_workspace_name:
-        #     # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-        #     status, ret_obj = self._myController.get_data_from_workspace(data_key,
-        #                                                                  bank_id=bank_id,
-        #                                                                  target_unit=None,
-        #                                                                  starting_bank_id=1)
-        #     if not status:
-        #         err_msg = str(ret_obj)
-        #         GuiUtility.pop_dialog_error(self, err_msg)
-        #         return
-        #
-        #     print '[DB...BAT] returned data set ({1}) keys: {0}.'.format(ret_obj[0].keys(), data_key)
-        #
-        #     data_set = ret_obj[0][bank_id]
-        #     vec_x = data_set[0]
-        #     vec_y = data_set[1]
-        #
-        #     print '[DB...BAT] vec_x: {0}'.format(vec_x)
-        #
-        #     current_unit = ret_obj[1]
-        #
-        #     if len(label) == 0:
-        #         # label is not given
-        #         label = 'Data {0} Bank {1}'.format(data_key, bank_id)
-        #
-        # else:
-        #     if data_key not in self._reducedDataDict:
-        #         raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
-        #
-        #     # get data
-        #     vec_x = self._reducedDataDict[data_key][bank_id][0]
-        #     vec_y = self._reducedDataDict[data_key][bank_id][1]
-        #
-        #     if len(label) == 0:
-        #         # label is not given
-        #         label = "Run {0} bank {1}".format(data_key, bank_id)
-        #
-        #     current_unit = self._currUnit
-        # # END-IF-ELSE
 
         return line_id
 
@@ -1237,8 +1149,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             return
 
-        # TODO/FIXME/NEXT - consider to merge with plot_chopped_run()
-
         # check input
         assert isinstance(chop_tag, str), 'Chop tag/chopped workspace name {0} must be a string'.format(chop_tag)
         assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
@@ -1269,7 +1179,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             if self._currWorkspaceTag != chop_tag:
                 # different workspace. reset bank ID
                 # reset bank ID TODO/FIXME/NEXT - shall this an individual method?
-                set_bank_ids(data_set_dict.keys())
+                self.set_bank_ids(data_set_dict.keys())
 
             # update control variables
             self._reducedDataDict = data_set_dict
@@ -1403,8 +1313,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 clear_canvas = not over_plot
             else:
                 clear_canvas = False
-            self.plot_1d_diffraction(self._currDataKey, bank_id, label='Bank {0}'.format(bank_id),
-                                     title='data key: {0}'.format(self._currDataKey),
+            self.plot_1d_diffraction(data_key, bank_id, label='Bank {0}'.format(bank_id),
+                                     title='data key: {0}'.format(data_key),
                                      clear_previous=clear_canvas)
         # END-FOR
 
@@ -1428,7 +1338,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 is_workspace = True
             else:
                 is_workspace = False
-            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1, is_workspace=is_workspace)
+            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
             if status:
                 run_number_list.append(run_number)
                 data_set_list.append(ret_obj)
@@ -1513,8 +1423,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # self.resize_canvas()
         #
         # # set combo box value correct
-        # TODO/NOWNOW - Merge the blow to plot_1d_data
-
         #
         # # Change label
         #
