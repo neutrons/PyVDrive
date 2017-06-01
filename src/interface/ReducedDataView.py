@@ -2,6 +2,8 @@
 #
 # General-purposed plotting window
 #
+# NOTE: Bank ID should always start from 1 or positive
+#
 ########################################################################
 import os
 from PyQt4 import QtCore, QtGui
@@ -233,54 +235,102 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def load_reduced_data(self, run_number):
+        """
+        Load reduced data (via run number) to _reduced
+        :param run_number:
+        :return:
+        """
+        if run_number in self._reducedDataDict:
+            return True, None
+
+        # find out the input run number is a workspace name or a run number
+        if isinstance(run_number, str) and run_number.isdigit is False:
+            is_workspace = True
+        else:
+            is_workspace = False
+            run_number = int(run_number)
+
+        # try to load the data from memory
+        status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                              ipts_number=self._iptsNumber,
+                                                              search_archive=False,
+                                                              is_workspace=is_workspace)
+
+        # if not in memory, try to load from archive
+        if not status and not is_workspace:
+            # or archive
+            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                                  ipts_number=self._iptsNumber,
+                                                                  search_archive=True)
+
+        if status:
+            assert isinstance(ret_obj, dict), 'Reduced data set should be dict but not {0}.'.format(type(ret_obj))
+            self._reducedDataDict[run_number] = ret_obj
+
+        else:
+            error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+            return status, error_message
+
+        return True, None
+
     def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
         """
         get reduced data in vectors of X and Y
         :param run_number: data key or run number
         :param bank_id:
         :param bank_id_from_1:
-        :param is_workspace:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
         """
-        # Get data (run)
-        if run_number not in self._reducedDataDict:
-            # get new data from memory
-            if isinstance(run_number, str):
-                is_workspace = True
-            else:
-                is_workspace = False
-            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                                  ipts_number=self._iptsNumber,
-                                                                  search_archive=False,
-                                                                  is_workspace=is_workspace)
-            print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
+        status, error_message = self.load_reduced_data(run_number)
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to load {0} due to {1}'.format(run_number, error_message))
+            return
 
-            if not status:
-                # or archive
-                status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                                      ipts_number=self._iptsNumber,
-                                                                      search_archive=True)
-            # END-IF
-            print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
-
-            # return if unable to get reduced data
-            if status is False:
-                error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
-                return status, error_message
-
-            # check returned data dictionary and set
-            reduced_data_dict = ret_obj
-            assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
-                                                        '' % type(reduced_data_dict)
-
-            # add the returned data objects to dictionary
-            self._reducedDataDict[run_number] = reduced_data_dict
-        else:
-            # previously obtained and stored
-            reduced_data_dict = self._reducedDataDict[run_number]
-        # END-IF
+        # # Get data (run)
+        # if run_number not in self._reducedDataDict:
+        #     # get new data from memory
+        #     if isinstance(run_number, str):
+        #         is_workspace = True
+        #     else:
+        #         is_workspace = False
+        #     status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                           ipts_number=self._iptsNumber,
+        #                                                           search_archive=False,
+        #                                                           is_workspace=is_workspace)
+        #     print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     if not status:
+        #         # or archive
+        #         status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                               ipts_number=self._iptsNumber,
+        #                                                               search_archive=True)
+        #     # END-IF
+        #     print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     # return if unable to get reduced data
+        #     if status is False:
+        #         error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+        #         return status, error_message
+        #
+        #     # check returned data dictionary and set
+        #     reduced_data_dict = ret_obj
+        #     assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+        #                                                 '' % type(reduced_data_dict)
+        #
+        #     # add the returned data objects to dictionary
+        #     self._reducedDataDict[run_number] = reduced_data_dict
+        # else:
+        #     # previously obtained and stored
+        #     reduced_data_dict = self._reducedDataDict[run_number]
+        # # END-IF
 
         # Get data from bank: convert bank to spectrum
+        # make sure RUN NUMBER is integer
+        if isinstance(run_number, str) and run_number.isdigit():
+            run_number = int(run_number)
+
+        reduced_data_dict = self._reducedDataDict[run_number]
         bank_id_list = reduced_data_dict.keys()
         if 0 in bank_id_list:
             spec_id_from_0 = True
@@ -790,8 +840,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             #     def plot_loaded_data(self, data_key, bank_id_list, over_plot):
             # TODO/ISSUE/NOWNOW - how to call_plot_by_run_number
 
-            data_key = str(self.ui.comboBox_runs.currentText())
-            self.plot_by_run_number(blabla)
+            data_str = str(self.ui.comboBox_runs.currentText())
+            if data_str.isdigit():
+                run_number = int(data_str)
+                self.plot_by_run_number(run_number=run_number, bank_id=bank_id_list[0], over_plot=over_plot)
+            else:
+
 
             self.plot_by_data_key(data_key, bank_id_list=bank_id_list, over_plot=self.ui.checkBox_overPlot.isChecked())
 
@@ -1040,81 +1094,112 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return run_number_list
 
-
-    def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False,
-                            color=None):
+    def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, color=None):
         """
         plot a spectrum in a workspace
-        :param data_key: key to find the workspace or the workspace name
+        :exception: RuntimeError if the specified data and bank ID does not exist
+        :param data_key: key for self._reductionDataDict
         :param bank_id:
         :param label:
         :param title:
         :param clear_previous: flag to clear the plots on the current canvas
-        :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
         :param color:
         :return:
         """
-        # check input
-        if color is not None:
+        # check existence of data
+        if data_key not in self._reducedDataDict:
+            raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
+                           ''.format(self._reducedDataDict.keys(), data_key))
+        if bank_id not in self._reducedDataDict[data_key]:
+            raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
+                               ''.format(bank_id, type(bank_id), data_key, self._reducedDataDict[data_key].keys()))
+
+        # check other inputs
+        if color is None:
+            bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
+        else:
             assert isinstance(color, str), 'Color {0} must be either None or string but not a {1}.' \
                                            ''.format(color, type(color))
+            bank_color = color
 
         # clear canvas
         if clear_previous:
             # clear canvas and set X limit to 0. and 1.
             self.ui.graphicsView_mainPlot.reset_1d_plots()
 
-        # check inputs
-        if is_workspace_name:
-            # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-            status, ret_obj = self._myController.get_data_from_workspace(data_key,
-                                                                         bank_id=bank_id,
-                                                                         target_unit=None,
-                                                                         starting_bank_id=1)
-            if not status:
-                err_msg = str(ret_obj)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
+        # get data
+        vec_x = self._reducedDataDict[data_key][bank_id][0]
+        vec_y = self._reducedDataDict[data_key][bank_id][1]
 
-            print '[DB...BAT] returned data set ({1}) keys: {0}.'.format(ret_obj[0].keys(), data_key)
+        # take are of label
+        if label is None or len(label) == 0:
+            # label is not given
+            label = "Run {0} bank {1}".format(data_key, bank_id)
 
-            data_set = ret_obj[0][bank_id]
-            vec_x = data_set[0]
-            vec_y = data_set[1]
-
-            print '[DB...BAT] vec_x: {0}'.format(vec_x)
-
-            current_unit = ret_obj[1]
-
-            if len(label) == 0:
-                # label is not given
-                label = 'Data {0} Bank {1}'.format(data_key, bank_id)
-
-        else:
-            if data_key not in self._reducedDataDict:
-                raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
-
-            # get data
-            vec_x = self._reducedDataDict[data_key][bank_id][0]
-            vec_y = self._reducedDataDict[data_key][bank_id][1]
-
-            if len(label) == 0:
-                # label is not given
-                label = "Run {0} bank {1}".format(data_key, bank_id)
-
-            current_unit = self._currUnit
-        # END-IF-ELSE
+        # unit
+        current_unit = self._currUnit
 
         # plot
-        if color is None:
-            bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
-        else:
-            bank_color = color
-
         line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
                                                              line_key=data_key, title=title, line_color=bank_color)
 
         self.ui.graphicsView_mainPlot.auto_rescale()
+
+        # check the bank ID list
+        self._mutexBankIDList = True
+        try:
+            if self.ui.comboBox_spectraList.count() !=
+                # empty bank ID list
+                bank_id_list = self.ui.line
+
+            combo_index = self._bankIDList.index(bank_id)
+        except AttributeError as att_err:
+            print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                  ''.format(bank_id, type(bank_id), self._bankIDList)
+            raise att_err
+        self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+        self._mutexBankIDList = False
+
+        # # check inputs
+        # if is_workspace_name:
+        #     # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
+        #     status, ret_obj = self._myController.get_data_from_workspace(data_key,
+        #                                                                  bank_id=bank_id,
+        #                                                                  target_unit=None,
+        #                                                                  starting_bank_id=1)
+        #     if not status:
+        #         err_msg = str(ret_obj)
+        #         GuiUtility.pop_dialog_error(self, err_msg)
+        #         return
+        #
+        #     print '[DB...BAT] returned data set ({1}) keys: {0}.'.format(ret_obj[0].keys(), data_key)
+        #
+        #     data_set = ret_obj[0][bank_id]
+        #     vec_x = data_set[0]
+        #     vec_y = data_set[1]
+        #
+        #     print '[DB...BAT] vec_x: {0}'.format(vec_x)
+        #
+        #     current_unit = ret_obj[1]
+        #
+        #     if len(label) == 0:
+        #         # label is not given
+        #         label = 'Data {0} Bank {1}'.format(data_key, bank_id)
+        #
+        # else:
+        #     if data_key not in self._reducedDataDict:
+        #         raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
+        #
+        #     # get data
+        #     vec_x = self._reducedDataDict[data_key][bank_id][0]
+        #     vec_y = self._reducedDataDict[data_key][bank_id][1]
+        #
+        #     if len(label) == 0:
+        #         # label is not given
+        #         label = "Run {0} bank {1}".format(data_key, bank_id)
+        #
+        #     current_unit = self._currUnit
+        # # END-IF-ELSE
 
         return line_id
 
@@ -1318,10 +1403,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 clear_canvas = not over_plot
             else:
                 clear_canvas = False
-            # FIXME/ISSUE/FUTURE/TODO - blindly assume current data key is workspace name is risky
             self.plot_1d_diffraction(self._currDataKey, bank_id, label='Bank {0}'.format(bank_id),
                                      title='data key: {0}'.format(self._currDataKey),
-                                     clear_previous=clear_canvas, is_workspace_name=True)
+                                     clear_previous=clear_canvas)
         # END-FOR
 
         return
@@ -1378,28 +1462,38 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param over_plot:
         :return:
         """
-        # Check requirements
-        assert isinstance(run_number, int) or is_workspace, 'Run number %s must be an integer but not %s.' \
-                                                            '' % (str(run_number), str(type(run_number)))
-        assert run_number > 0, 'Run number {0} must be a positive number.'.format(run_number)
+        # get run number even if it is a string of integer & check requirements
+        if isinstance(run_number, str):
+            if run_number.isdigit():
+                run_number = int(run_number)
+            else:
+                raise RuntimeError('PlotByRunNumber does not accept non-integer run number {0}.'.format(run_number))
+        else:
+            assert isinstance(run_number, int), 'Run number {0} must be an integer.'.format(run_number)
+        # END-IF
+        if run_number <= 0:
+            raise RuntimeError('Run number {0} must be a positive number.'.format(run_number))
+
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
-        assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
+        if bank_id <= 0:
+            raise RuntimeError('Bank ID {0} must be positive.'.format(bank_id))
 
         # Get data (run)
-        status, ret_obj = self.get_reduced_data(run_number, bank_id, is_workspace)
-        if status:
-            vec_x, vec_y = ret_obj
-        else:
-            GuiUtility.pop_dialog_error(self, ret_obj)
+        status, error_message = self.load_reduced_data(run_number)
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to load run {0} due to {1}'.format(run_number, error_message))
             return
 
         # update information
         self._currRunNumber = run_number
         self._currBank = bank_id
 
-        # # TODO/ISSUE/NOWNOW - Continue from here!
-        self.plot_by_data_key(blabla, blabla)
+        # plot
+        line_id = self.plot_1d_diffraction(data_key=run_number, bank_id=bank_id, clear_previous=not over_plot)
+        self.label_loaded_data(run_number=run_number, is_chopped=False, chop_seq_list=None)
+        self._linesDict[(run_number, bank_id)] = line_id
+
 
 
         # self.plot_1d_diffraction(data_key=run_number,
@@ -1419,20 +1513,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # self.resize_canvas()
         #
         # # set combo box value correct
-        # TODO/NOWNOW - Merge the blow to plot_1d_data()
-        # TODO/NOWNOW - Merge the blow to plot_1d_data()
-        # self._mutexBankIDList = True
-        # try:
-        #     combo_index = self._bankIDList.index(bank_id)
-        # except AttributeError as att_err:
-        #     print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
-        #           ''.format(bank_id, type(bank_id), self._bankIDList)
-        #     raise att_err
-        # self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
-        # self._mutexBankIDList = False
+        # TODO/NOWNOW - Merge the blow to plot_1d_data
+
         #
         # # Change label
-        # self.label_loaded_data(run_number=run_number, is_chopped=False, chop_seq_list=None)
+        #
 
         return
 
