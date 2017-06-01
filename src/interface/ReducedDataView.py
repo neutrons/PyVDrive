@@ -57,7 +57,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._choppedRunNumber = 0
         self._choppedSequenceList = None
         # data managing dictionary for chopped data. key is the sequence, value is data key
-        self._choppedDataDict = None
+        # self._choppedDataDict = dict()
 
         self._canvasDimension = 1
         self._plotType = None
@@ -126,7 +126,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # widgets to load reduced data
         self.connect(self.ui.pushButton_setReducedRunMem, QtCore.SIGNAL('clicked()'),
-                     self.do_set_reduced_from_memory)
+                     self.do_set_current_run)
         self.connect(self.ui.pushButton_loadArchivedGSAS, QtCore.SIGNAL('clicked()'),
                      self.do_load_archived_gsas)
         self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
@@ -279,28 +279,30 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
             self.add_chopped_workspaces(run_number, diff_ws_list, True)
 
+            data_key = None
+
         else:
             # input is a file: load a single GSAS file
-            # load the data file
+            # load the data file and returned as data key
             data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
 
             # set up the data file to this data viewer and
-            self.load_reduced_data(run_number=data_key)
-            status, ret_obj = self._myController.get_run_info(run_number=None, data_key=data_key)
+            status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
             if not status:
-                GuiUtility.pop_dialog_error(self, ret_obj)
+                GuiUtility.pop_dialog_error(self, error_message)
                 return
 
             # clear some quick references, including GUI widgets its associated chopped data dictionary
             self._mutexChopSeqList = True
+            self._mutexRunNumberList = True
             self.ui.comboBox_chopSeq.clear()
+            self.ui.comboBox_runs.addItem(data_key)
             self._mutexChopSeqList = False
-
-            self._choppedDataDict.clear()
+            self._mutexChopSeqList = False
         # END-IF-ELSE
 
         # activate it!
-        self.do_set_reduced_from_memory()
+        # self.do_set_reduced_from_memory(data_key=data_key)
 
         return
 
@@ -327,24 +329,24 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         # get reduced data set from controller
-        if unit is None:
-            unit = self._currUnit
-        else:
+        if unit is not None:
             self._currUnit = unit
-        status, ret_obj = self._myController.get_reduced_data(controller_data_key,
-                                                              target_unit=unit,
-                                                              search_archive=True)
-        # return if unable to get reduced data
-        if status is False:
-            raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
-                                                                                   ret_obj))
-        # add data set (arrays)
-        reduced_data_dict = ret_obj
-        assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
-                                                    '' % type(reduced_data_dict)
 
-        # add the returned data objects to dictionary
-        self._reducedDataDict[controller_data_key] = reduced_data_dict
+        self.load_reduced_data(run_number=controller_data_key)
+        # status, ret_obj = self._myController.get_reduced_data(controller_data_key,
+        #                                                       target_unit=unit,
+        #                                                       search_archive=True)
+        # # return if unable to get reduced data
+        # if status is False:
+        #     raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
+        #                                                                            ret_obj))
+        # # add data set (arrays)
+        # reduced_data_dict = ret_obj
+        # assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+        #                                             '' % type(reduced_data_dict)
+        #
+        # # add the returned data objects to dictionary
+        # self._reducedDataDict[controller_data_key] = reduced_data_dict
 
         return controller_data_key
 
@@ -548,7 +550,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         unit = str(self.ui.comboBox_unit.currentText())
 
         # possible chop sequence
-        if self._currChoppedData:
+        data_str = str(self.ui.comboBox_runs.currentText())
+
+        if self._currChoppedData or data_str in self._choppedRunDict:
             # chopped data by selecting data key from the chop sequence
             chop_seq_tag = str(self.ui.comboBox_chopSeq.currentText())
             # the chopped sequence tag MAY BE the workspace name. use it directly
@@ -556,7 +560,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         else:
             # non-chopped data set
-            data_str = str(self.ui.comboBox_runs.currentText())
+
             if data_str.isdigit():
                 # run number
                 run_number = data_str
@@ -674,9 +678,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def do_set_reduced_from_memory(self):
+    def do_set_current_run(self, data_key=None):
         """
-        set the load
+        select the run (data key) in comboBox_runs's current text as the current run to plot
         :return:
         """
         # get information: current run number be a string to be more flexible
@@ -687,7 +691,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._currChoppedData:
             # get the chopped run information from memory
             if self._currRunNumber not in self._choppedRunDict:
-                error_message = 'Current run number {0} of type {1} is not in chopped run dictionary, whose keys are '
+                error_message = 'Current run number {0} of type {1} is not in chopped run dictionary, whose keys are ' \
+                                ''.format(self._currRunNumber, type(self._currRunNumber))
                 for key in self._choppedRunDict.keys():
                     error_message += '{0} of type {1}    '.format(key, type(key))
                 raise AssertionError(error_message)
@@ -698,13 +703,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             if chop_ws in self._choppedSampleDict:
                 chop_ws = self._choppedSampleDict[chop_ws]
 
+            print '[DB...BAT] Chop WS: {0} of type {1}'.format(chop_ws, type(chop_ws))
+            # FIXME/NOWNOW
+            """
+            Traceback (most recent call last):
+            File "/home/wzz/Projects/PyVDrive/src/interface/ReducedDataView.py", line 708, in do_set_current_run
+                series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
+            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/VDriveAPI.py", line 900, in get_sample_log_names
+                assert run_number is not None, 'Run number cannot be None.'
+            AssertionError: Run number cannot be None.
+            """
+
             series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
             self.set_sample_log_names(series_sample_log_list)
 
         else:
             # get the original reduced data and add the this.reduced_data_dictionary
-            # TEST - Modified
-            status, error_message = self.load_reduced_data(self._currRunNumber)
+            #
+            if data_key is None:
+                data_key = self._currRunNumber
+
+            status, error_message = self.load_reduced_data(data_key)
             if not status:
                 GuiUtility.pop_dialog_error(self, error_message)
                 return
@@ -954,13 +973,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return True, None
 
         # find out the input run number is a workspace name or a run number
-        if isinstance(run_number, str) and run_number.isdigit is False:
+        if isinstance(run_number, str) and run_number.isdigit() is False:
+            # cannot be an integer. then must be a workspace name
             is_workspace = True
         else:
+            # integer or can be a string, then shall be a run number
             is_workspace = False
             run_number = int(run_number)
 
         # try to load the data from memory
+        print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(run_number, self._currUnit,
+                                                                            self._iptsNumber, is_workspace)
+
         status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
                                                               ipts_number=self._iptsNumber,
                                                               search_archive=False,
@@ -1077,7 +1101,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # check the bank ID list
         if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):
-            bank_id_list = sorted(self._reducedDataDict.keys())
+            bank_id_list = sorted(self._reducedDataDict[data_key].keys())
             self.set_bank_ids(bank_id_list, bank_id)
 
         return line_id

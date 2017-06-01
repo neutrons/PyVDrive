@@ -991,7 +991,8 @@ class VDriveAPI(object):
         :param file_type:
         :return:
         """
-        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type)
+        data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
+                                                                         max_int=100)
 
         return data_key
 

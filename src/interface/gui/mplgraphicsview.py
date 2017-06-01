@@ -1534,9 +1534,10 @@ class Qt4MplCanvas(FigureCanvas):
         """
         # check input
         assert isinstance(title, str), 'Title must be a string but not a {0}.'.format(type(title))
-        assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(title))
+        assert isinstance(color, str), 'Color must be a string but not a {0}.'.format(type(color))
 
-        self.axes.set_title_plot_run(title, loc='center', color=color)
+        print '[DB...BAT] Set {0} in color {1} as the figure\'s title.'.format(title, color)
+        self.setWindowTitle(title)
 
         self.draw()
 

@@ -731,7 +731,7 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                                     reduced=True)
             chopped_workspace_list = info_dict['workspaces']
             view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, clear_previous=True)
-            view_window.do_set_reduced_from_memory()
+            view_window.do_set_current_run()
             # set up the run time
             view_window.label_loaded_data(run_number=self._currRunNumber,
                                           is_chopped=True,
