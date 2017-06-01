@@ -159,46 +159,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_banks(self, bank_list):
-        """
-        set banks list
-        :return:
-        """
-        # check inputs
-        assert isinstance(bank_list, list) and len(bank_list) > 0, 'List of banks {0} must be a non-empty list but ' \
-                                                                   'not a {1}.'.format(bank_list, type(bank_list))
-
-        # reset bank list in GUI and registers
-        bank_list.sort()
-        self._bankIDList = list()
-        self.ui.comboBox_spectraList.clear()
-        for bank in bank_list:
-            self.ui.comboBox_spectraList.addItem(str(bank))
-            self._bankIDList.append(bank)
-
-        self.ui.comboBox_spectraList.addItem('All')
-
-        return
-
-    def event_load_options(self):
-        """
-        handling event that the run loads option is changed
-        :return:
-        """
-        if self.ui.radioButton_fromArchive.isChecked():
-            # enable group 2 widgets
-            self.set_group2_enabled(True)
-            self.set_group3_enabled(False)
-        elif self.ui.radioButton_anyGSAS.isChecked():
-            # enable group 3 widgets
-            self.set_group2_enabled(False)
-            self.set_group3_enabled(True)
-        else:
-            # impossible situation
-            raise RuntimeError('One of these 3 radio buttons must be selected!')
-
-        return
-
     def set_group1_enabled(self, enabled):
         """
         set the group of widgets to load run from PyVdrive reduced in memory
@@ -234,231 +194,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
         self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
         self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
-
-        return
-
-    def load_reduced_data(self, run_number):
-        """
-        Load reduced data (via run number) to _reducedDataDict.
-        :param run_number: a run number (int or string) or data key (i..e, workspace name)
-        :return:
-        """
-        if run_number in self._reducedDataDict:
-            return True, None
-
-        # find out the input run number is a workspace name or a run number
-        if isinstance(run_number, str) and run_number.isdigit is False:
-            is_workspace = True
-        else:
-            is_workspace = False
-            run_number = int(run_number)
-
-        # try to load the data from memory
-        status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                              ipts_number=self._iptsNumber,
-                                                              search_archive=False,
-                                                              is_workspace=is_workspace)
-
-        # if not in memory, try to load from archive
-        if not status and not is_workspace:
-            # or archive
-            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                                  ipts_number=self._iptsNumber,
-                                                                  search_archive=True)
-
-        if status:
-            assert isinstance(ret_obj, dict), 'Reduced data set should be dict but not {0}.'.format(type(ret_obj))
-            self._reducedDataDict[run_number] = ret_obj
-
-        else:
-            error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
-            return status, error_message
-
-        return True, None
-
-    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
-        """
-        get reduced data in vectors of X and Y
-        :param run_number: data key or run number
-        :param bank_id:
-        :param bank_id_from_1:
-        :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
-        """
-        status, error_message = self.load_reduced_data(run_number)
-        if not status:
-            GuiUtility.pop_dialog_error(self, 'Unable to load {0} due to {1}'.format(run_number, error_message))
-            return
-
-        # # Get data (run)
-        # if run_number not in self._reducedDataDict:
-        #     # get new data from memory
-        #     if isinstance(run_number, str):
-        #         is_workspace = True
-        #     else:
-        #         is_workspace = False
-        #     status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-        #                                                           ipts_number=self._iptsNumber,
-        #                                                           search_archive=False,
-        #                                                           is_workspace=is_workspace)
-        #     print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
-        #
-        #     if not status:
-        #         # or archive
-        #         status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-        #                                                               ipts_number=self._iptsNumber,
-        #                                                               search_archive=True)
-        #     # END-IF
-        #     print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
-        #
-        #     # return if unable to get reduced data
-        #     if status is False:
-        #         error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
-        #         return status, error_message
-        #
-        #     # check returned data dictionary and set
-        #     reduced_data_dict = ret_obj
-        #     assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
-        #                                                 '' % type(reduced_data_dict)
-        #
-        #     # add the returned data objects to dictionary
-        #     self._reducedDataDict[run_number] = reduced_data_dict
-        # else:
-        #     # previously obtained and stored
-        #     reduced_data_dict = self._reducedDataDict[run_number]
-        # # END-IF
-
-        # Get data from bank: convert bank to spectrum
-        # make sure RUN NUMBER is integer
-        if isinstance(run_number, str) and run_number.isdigit():
-            run_number = int(run_number)
-
-        reduced_data_dict = self._reducedDataDict[run_number]
-        bank_id_list = reduced_data_dict.keys()
-        if 0 in bank_id_list:
-            spec_id_from_0 = True
-        else:
-            spec_id_from_0 = False
-
-        # determine the spectrum ID from controller
-        if bank_id_from_1 and spec_id_from_0:
-            spec_id = bank_id - 1
-        else:
-            spec_id = bank_id
-
-        # check again
-        if spec_id not in reduced_data_dict:
-            raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
-                               '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
-
-        vec_x = self._reducedDataDict[run_number][spec_id][0]
-        vec_y = self._reducedDataDict[run_number][spec_id][1]
-
-        return True, (vec_x, vec_y)
-
-    @staticmethod
-    def guess_run_number(gsas_path):
-        """
-        guess the run number from a file
-        # Example:        / home / wzz / Projects / workspaces / VDrive / beta_test / 98237 - s.gda
-        :param gsas_path:
-        :return: integer or None
-        """
-        # get the GSAS file name
-        gsas_file_name = os.path.basename(gsas_path)
-
-        # get the first integer out of the file name
-        run_number_str = ''
-        for s in gsas_file_name:
-            if s.isdigit():
-                run_number_str += s
-            elif len(run_number_str) > 0:
-                # break when encounter the first non-digit letter
-                break
-        # END-FOR
-
-        # convert string to integer
-        if len(run_number_str) > 0:
-            run_number = int(run_number_str)
-        else:
-            run_number = None
-
-        return run_number
-
-    def label_loaded_data(self, run_number, is_chopped, chop_seq_list):
-        """
-        make a label of loaded data to plot
-        :param run_number:
-        :param is_chopped:
-        :param chop_seq_list:
-        :return:
-        """
-        label_str = 'Run {0}'.format(run_number)
-        if is_chopped:
-            assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
-            chop_seq_list.sort()
-            label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
-
-        self.ui.label_currentRun.setText(label_str)
-
-        return
-
-    def do_set_reduced_from_memory(self):
-        """
-        set the load
-        :return:
-        """
-        # get information: current run number be a string to be more flexible
-        self._currRunNumber = str(self.ui.comboBox_runs.currentText())
-        self._currChoppedData = self.ui.checkBox_choppedDataMem.isChecked()
-
-        # pre-load the data
-        if self._currChoppedData:
-            # get the chopped run information from memory
-            if self._currRunNumber not in self._choppedRunDict:
-                error_message = 'Current run number {0} of type {1} is not in chopped run dictionary, whose keys are '
-                for key in self._choppedRunDict.keys():
-                    error_message += '{0} of type {1}    '.format(key, type(key))
-                raise AssertionError(error_message)
-            seq_list = self.add_chopped_workspaces(self._currRunNumber, None, True)
-
-            # set the sample logs. map to NeXus log workspace if applied
-            chop_ws = str(self.ui.comboBox_chopSeq.currentText())
-            if chop_ws in self._choppedSampleDict:
-                chop_ws = self._choppedSampleDict[chop_ws]
-
-            series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
-            self.set_sample_log_names(series_sample_log_list)
-
-        else:
-            # get the original reduced data and add the this.reduced_data_dictionary
-            # TEST - Modified
-            status, error_message = self.load_reduced_data(self._currRunNumber)
-            if not status:
-                GuiUtility.pop_dialog_error(self, error_message)
-                return
-            seq_list = None
-
-        # set the label
-        self.label_loaded_data(self._currRunNumber, self._currChoppedData, seq_list)
-
-        return
-
-    def set_sample_log_names(self, log_name_list):
-        """
-        set sample log names to the log name combo box
-        :param log_name_list:
-        :return:
-        """
-        # check
-        assert isinstance(log_name_list, list), 'Log names {0} must be given by a list but not a {1}.' \
-                                                ''.format(log_name_list, type(log_name_list))
-
-        # clear the previous session
-        self.ui.comboBox_sampleLogsList.clear()
-
-        # set by name
-        for name in log_name_list:
-            self.ui.comboBox_sampleLogsList.addItem(name)
 
         return
 
@@ -939,6 +674,47 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def do_set_reduced_from_memory(self):
+        """
+        set the load
+        :return:
+        """
+        # get information: current run number be a string to be more flexible
+        self._currRunNumber = str(self.ui.comboBox_runs.currentText())
+        self._currChoppedData = self.ui.checkBox_choppedDataMem.isChecked()
+
+        # pre-load the data
+        if self._currChoppedData:
+            # get the chopped run information from memory
+            if self._currRunNumber not in self._choppedRunDict:
+                error_message = 'Current run number {0} of type {1} is not in chopped run dictionary, whose keys are '
+                for key in self._choppedRunDict.keys():
+                    error_message += '{0} of type {1}    '.format(key, type(key))
+                raise AssertionError(error_message)
+            seq_list = self.add_chopped_workspaces(self._currRunNumber, None, True)
+
+            # set the sample logs. map to NeXus log workspace if applied
+            chop_ws = str(self.ui.comboBox_chopSeq.currentText())
+            if chop_ws in self._choppedSampleDict:
+                chop_ws = self._choppedSampleDict[chop_ws]
+
+            series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
+            self.set_sample_log_names(series_sample_log_list)
+
+        else:
+            # get the original reduced data and add the this.reduced_data_dictionary
+            # TEST - Modified
+            status, error_message = self.load_reduced_data(self._currRunNumber)
+            if not status:
+                GuiUtility.pop_dialog_error(self, error_message)
+                return
+            seq_list = None
+
+        # set the label
+        self.label_loaded_data(self._currRunNumber, self._currChoppedData, seq_list)
+
+        return
+
     def evt_bank_id_changed(self):
         """
         Handling the event that the bank ID is changed: the figure should be re-plot.
@@ -950,6 +726,25 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         self.do_plot_diffraction_data()
+
+        return
+
+    def event_load_options(self):
+        """
+        handling event that the run loads option is changed
+        :return:
+        """
+        if self.ui.radioButton_fromArchive.isChecked():
+            # enable group 2 widgets
+            self.set_group2_enabled(True)
+            self.set_group3_enabled(False)
+        elif self.ui.radioButton_anyGSAS.isChecked():
+            # enable group 3 widgets
+            self.set_group2_enabled(False)
+            self.set_group3_enabled(True)
+        else:
+            # impossible situation
+            raise RuntimeError('One of these 3 radio buttons must be selected!')
 
         return
 
@@ -1020,6 +815,190 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # plot
             self.plot_by_run_number(run_number, self._currBank, over_plot=True)
         # END-FOR
+
+        return
+
+    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
+        """
+        get reduced data in vectors of X and Y
+        :param run_number: data key or run number
+        :param bank_id:
+        :param bank_id_from_1:
+        :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
+        """
+        status, error_message = self.load_reduced_data(run_number)
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to load {0} due to {1}'.format(run_number, error_message))
+            return
+
+        # # Get data (run)
+        # if run_number not in self._reducedDataDict:
+        #     # get new data from memory
+        #     if isinstance(run_number, str):
+        #         is_workspace = True
+        #     else:
+        #         is_workspace = False
+        #     status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                           ipts_number=self._iptsNumber,
+        #                                                           search_archive=False,
+        #                                                           is_workspace=is_workspace)
+        #     print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     if not status:
+        #         # or archive
+        #         status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                               ipts_number=self._iptsNumber,
+        #                                                               search_archive=True)
+        #     # END-IF
+        #     print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     # return if unable to get reduced data
+        #     if status is False:
+        #         error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+        #         return status, error_message
+        #
+        #     # check returned data dictionary and set
+        #     reduced_data_dict = ret_obj
+        #     assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+        #                                                 '' % type(reduced_data_dict)
+        #
+        #     # add the returned data objects to dictionary
+        #     self._reducedDataDict[run_number] = reduced_data_dict
+        # else:
+        #     # previously obtained and stored
+        #     reduced_data_dict = self._reducedDataDict[run_number]
+        # # END-IF
+
+        # Get data from bank: convert bank to spectrum
+        # make sure RUN NUMBER is integer
+        if isinstance(run_number, str) and run_number.isdigit():
+            run_number = int(run_number)
+
+        reduced_data_dict = self._reducedDataDict[run_number]
+        bank_id_list = reduced_data_dict.keys()
+        if 0 in bank_id_list:
+            spec_id_from_0 = True
+        else:
+            spec_id_from_0 = False
+
+        # determine the spectrum ID from controller
+        if bank_id_from_1 and spec_id_from_0:
+            spec_id = bank_id - 1
+        else:
+            spec_id = bank_id
+
+        # check again
+        if spec_id not in reduced_data_dict:
+            raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
+                               '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
+
+        vec_x = self._reducedDataDict[run_number][spec_id][0]
+        vec_y = self._reducedDataDict[run_number][spec_id][1]
+
+        return True, (vec_x, vec_y)
+
+    @staticmethod
+    def guess_run_number(gsas_path):
+        """
+        guess the run number from a file
+        # Example:        / home / wzz / Projects / workspaces / VDrive / beta_test / 98237 - s.gda
+        :param gsas_path:
+        :return: integer or None
+        """
+        # get the GSAS file name
+        gsas_file_name = os.path.basename(gsas_path)
+
+        # get the first integer out of the file name
+        run_number_str = ''
+        for s in gsas_file_name:
+            if s.isdigit():
+                run_number_str += s
+            elif len(run_number_str) > 0:
+                # break when encounter the first non-digit letter
+                break
+        # END-FOR
+
+        # convert string to integer
+        if len(run_number_str) > 0:
+            run_number = int(run_number_str)
+        else:
+            run_number = None
+
+        return run_number
+
+    def label_loaded_data(self, run_number, is_chopped, chop_seq_list):
+        """
+        make a label of loaded data to plot
+        :param run_number:
+        :param is_chopped:
+        :param chop_seq_list:
+        :return:
+        """
+        label_str = 'Run {0}'.format(run_number)
+        if is_chopped:
+            assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
+            chop_seq_list.sort()
+            label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
+
+        self.ui.label_currentRun.setText(label_str)
+
+        return
+
+    def load_reduced_data(self, run_number):
+        """
+        Load reduced data (via run number) to _reducedDataDict.
+        :param run_number: a run number (int or string) or data key (i..e, workspace name)
+        :return:
+        """
+        if run_number in self._reducedDataDict:
+            return True, None
+
+        # find out the input run number is a workspace name or a run number
+        if isinstance(run_number, str) and run_number.isdigit is False:
+            is_workspace = True
+        else:
+            is_workspace = False
+            run_number = int(run_number)
+
+        # try to load the data from memory
+        status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                              ipts_number=self._iptsNumber,
+                                                              search_archive=False,
+                                                              is_workspace=is_workspace)
+
+        # if not in memory, try to load from archive
+        if not status and not is_workspace:
+            # or archive
+            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                                  ipts_number=self._iptsNumber,
+                                                                  search_archive=True)
+
+        if status:
+            assert isinstance(ret_obj, dict), 'Reduced data set should be dict but not {0}.'.format(type(ret_obj))
+            self._reducedDataDict[run_number] = ret_obj
+
+        else:
+            error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+            return status, error_message
+
+        return True, None
+
+    def set_sample_log_names(self, log_name_list):
+        """
+        set sample log names to the log name combo box
+        :param log_name_list:
+        :return:
+        """
+        # check
+        assert isinstance(log_name_list, list), 'Log names {0} must be given by a list but not a {1}.' \
+                                                ''.format(log_name_list, type(log_name_list))
+
+        # clear the previous session
+        self.ui.comboBox_sampleLogsList.clear()
+
+        # set by name
+        for name in log_name_list:
+            self.ui.comboBox_sampleLogsList.addItem(name)
 
         return
 
@@ -1097,21 +1076,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.graphicsView_mainPlot.auto_rescale()
 
         # check the bank ID list
-        self._mutexBankIDList = True
         if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):
-            try:
-                # bank ID list does not match
-                self.ui.comboBox_spectraList.clear()
-                bank_id_list = sorted(self._reducedDataDict.keys())
-                for bank_id in bank_id_list:
-                    self.ui.comboBox_spectraList.addItem(bank_id)
-                combo_index = bank_id_list.index(bank_id)
-                self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
-            except AttributeError as att_err:
-                print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
-                      ''.format(bank_id, type(bank_id), self._bankIDList)
-                raise att_err
-        self._mutexBankIDList = False
+            bank_id_list = sorted(self._reducedDataDict.keys())
+            self.set_bank_ids(bank_id_list, bank_id)
 
         return line_id
 
@@ -1124,38 +1091,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param over_plot:
         :return:
         """
-        def set_bank_ids(bank_id_list):
-            """
-
-            :param bank_id_list:
-            :return:
-            """
-            # lock it
-            self._mutexBankIDList = True
-
-            # get current index
-            curr_index = self.ui.comboBox_spectraList.currentIndex()
-
-            self.ui.comboBox_spectraList.clear()
-            for bank_key in bank_id_list:
-                self.ui.comboBox_spectraList.addItem('{0}'.format(bank_key))
-
-            # set to original index
-            if curr_index < len(bank_id_list):
-                self.ui.comboBox_spectraList.setCurrentIndex(curr_index)
-
-            # unlock
-            self._mutexBankIDList = False
-
-            return
-
         # check input
         assert isinstance(chop_tag, str), 'Chop tag/chopped workspace name {0} must be a string'.format(chop_tag)
         assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
                                          ''.format(bank_id, type(bank_id))
 
         # get the reduced diffraction data
-        print '[DB...BAT] Chop Tag = {0}. Current workspace tag = {1}.'.format(chop_tag, self._currWorkspaceTag)
+        # print '[DB...BAT] Chop Tag = {0}. Current workspace tag = {1}.'.format(chop_tag, self._currWorkspaceTag)
         if chop_tag == self._currWorkspaceTag and self._currUnit == unit:
             # same workspace in memory. no need to get data any more
             data_set_dict = self._reducedDataDict
@@ -1167,7 +1109,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                                             is_workspace=True)
             else:
                 # chop tag is not a workspace but need to use it look up for a workspace
-                raise NotImplementedError('ASAP')
+                # TODO/ISSUE/FUTURE - Need to find a use case for the below
+                raise NotImplementedError('In this case, chop tag = {0} of type {1}. Implement it ASAP'
+                                          ''.format(chop_tag, type(chop_tag)))
 
             # check result
             if not status:
@@ -1178,7 +1122,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             if self._currWorkspaceTag != chop_tag:
                 # different workspace. reset bank ID
-                # reset bank ID TODO/FIXME/NEXT - shall this an individual method?
+                # reset bank ID
                 self.set_bank_ids(data_set_dict.keys())
 
             # update control variables
@@ -1471,6 +1415,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Resize the canvas
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
+
+        return
+
+    def set_bank_ids(self, bank_id_list, bank_id=None):
+        """
+
+        :param bank_id_list:
+        :return:
+        """
+        # lock it
+        self._mutexBankIDList = True
+
+        # get current index
+        curr_index = self.ui.comboBox_spectraList.currentIndex()
+
+        self.ui.comboBox_spectraList.clear()
+        for bank_key in bank_id_list:
+            self.ui.comboBox_spectraList.addItem('{0}'.format(bank_key))
+
+        # set to original index
+        if bank_id is None:
+            if curr_index < len(bank_id_list):
+                self.ui.comboBox_spectraList.setCurrentIndex(curr_index)
+        else:
+            try:
+                combo_index = bank_id_list.index(bank_id)
+                self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+            except AttributeError as att_err:
+                print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                      ''.format(bank_id, type(bank_id), self._bankIDList)
+                raise att_err
+        # END-IF-ELSE
+
+        # unlock
+        self._mutexBankIDList = False
 
         return
 
