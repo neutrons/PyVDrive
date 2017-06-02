@@ -12,22 +12,21 @@
 
 from procss_vcommand import VDriveCommand
 
-# TODO/ISSUE/NOW/33/FIXME - Following example:
-# view,IPTS=13183,choprun=68607
-# VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1
-
 
 class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MinV', 'MaxV', 'NORM', 'DIR']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
         'CHOPRUN': 'Run number of the chopped run.',
+        'MinV': 'Minimum X value to plot',
+        'MaxV': 'Maximum X value to plot',
+        'NORM': 'Do normalize to the reduced data',
         'DIR': 'User specified directory to find the reduced data (including those being chopped)'
     }
 
@@ -59,6 +58,10 @@ class VdriveView(VDriveCommand):
         self._multiRuns = False
         self._choppedRunSeqList = None
         self._reducedDataDir = None  # user specified directory for reduced data
+        self._minX = None  # minimum X value to plot
+        self._maxX = None  # maximum X value to plot
+        self._normalizeData = False  # whether the data will be normalized
+        self._unit = 'dSpacing'  # unit
 
         return
 
@@ -81,7 +84,7 @@ class VdriveView(VDriveCommand):
                 run_end = run_start
         else:
             # not properly set up
-            raise RuntimeError('VIEW command requires input of argument RUNS.')
+            return False, 'VIEW command requires input of argument RUNS.'
 
         # parse run numbers with chopped runs
         if 'CHOPRUN' in self._commandArgsDict:
@@ -113,14 +116,33 @@ class VdriveView(VDriveCommand):
             self._figureDimension = 2
 
         # min and max value
-        # TODO/FIXME/NOW/33 - Make these supported!
-        # if 'MinV', 'MaxV',
+        if 'MinV' in self._commandArgsDict:
+            self._minX = float(self._commandArgsDict['MinV'])
+        if 'MaxV' in self._commandArgsDict:
+            self._maxX = float(self._commandArgsDict['MaxV'])
 
         # Normalized?
-        # TODO/ISSUE/33/NOW - Make this work!
-        # 'NORM'
+        if 'NORM' in self._commandArgsDict:
+            norm_value = int(self._commandArgsDict['NORM'])
+            if norm_value > 0:
+                self._normalizeData = True
+            else:
+                self._normalizeData = False
+        # END-IF
 
-        # TODO/ISSUE/33/NOW - Default is TOF.  Also need to determine dSpacing or TOF according to MinV or MaxV
+        # determine unit according to MinV or MaxV
+        if self._maxX is not None:
+            # use maximum X to determine the unit
+            if self._maxX > 200.:
+                self._unit = 'TOF'
+            else:
+                self._unit = 'dSpacing'
+        elif self._minX is not None:
+            # it may not be nice to use minimum X to determine the unit
+            if self._minX > 100.:
+                self._unit = 'TOF'
+            else:
+                self._unit = 'dSpacing'
 
         return True, ''
 
@@ -173,7 +195,8 @@ class VdriveView(VDriveCommand):
         # examples
         help_str += 'Examples:\n'
         help_str += '> VIEW,IPTS=14094,RUNS=96450,RUNE=96451\n'
-        help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
+        help_str += '> view,IPTS=13183,choprun=68607, runs=1, rune=15\n'
+        help_str += '> VIEW,IPTS=18420,RUNS=136558,MINV=0.5,MAXV=2.5,NORM=1\n'
 
         return help_str
 
@@ -211,3 +234,27 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._reducedDataDir
+
+    @property
+    def unit(self):
+        """
+        get unit of output data
+        :return:
+        """
+        return self._unit
+
+    @property
+    def x_min(self):
+        """
+        get minimum X to plot
+        :return:
+        """
+        return self._minX
+
+    @property
+    def x_max(self):
+        """
+        get maximum X to plot
+        :return:
+        """
+        return self._maxX

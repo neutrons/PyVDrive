@@ -5,9 +5,12 @@ import random
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-
+import math
 
 FifteenYearsInSecond = 15*356*24*3600
+# MAX_CHOPPED_WORKSPACE_IN_MEM = 40
+NUMERIC_TOLERANCE = 1.E-10
+LARGE_NUMBER_SPLITTER = 10000
 
 
 class TimeSegment(object):
@@ -115,202 +118,23 @@ class DataChopper(object):
 
         return
 
-    def load_data_file(self):
-        """ Load NeXus file
-        :return:
+    # TEST - Implemented in #65
+    def delete_splitter_workspace(self, slicer_tag):
         """
-        # use base name for output workspace
-        base_name = os.path.basename(self._myNeXusFileName)
-        out_ws_name = base_name.split('.')[0] + '_MetaData'
-
-        # Load sample logs
-        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
-                                                   output_ws_name=out_ws_name,
-                                                   meta_data_only=True)
-
-        if status is False:
-            err_msg = str(ret_obj)
-            raise RuntimeError(err_msg)
-        else:
-            self._mtdWorkspaceName = out_ws_name
-
-        # Set up log names list
-        try:
-            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
-            assert isinstance(self._logNameList, list)
-        except RuntimeError as err:
-            return False, 'Unable to retrieve series log due to %s.' % str(err)
-
-        # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
-
-        return
-
-    def chop_data_large_number_targets(self, split_ws_name, info_ws_name, data_file, tof_correction,
-                                       output_dir, is_epoch_time, num_target_ws):
-        """
-        chop data to a large number of output targets
-        :param split_ws_name:
-        :param info_ws_name:
-        :param data_file:
-        :param tof_correction:
-        :param output_dir:
-        :param is_epoch_time:
-        :return:
-        """
-        import math
-
-        # load data
-        raw_ws_name = os.path.basename(data_file).split('.')[0]
-        mantid_helper.load_nexus(data_file_name=data_file, output_ws_name='meta', meta_data_only=False)
-        raw_ws = mantid_helper.retrieve_workspace('meta')
-
-        # get run start time
-        if is_epoch_time:
-            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
-        else:
-            run_start_ns = 0
-
-        # in loop generate data
-        MAX_CHOPPED_WORKSPACE_IN_MEM = 20
-        num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
-        clear_memory = True
-        for i_loop in range(num_loops):
-            sub_split_ws_name = get_sub_splitters(split_ws_name,
-                                                  split_start_index=i_loop * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  split_stop_index=(i_loop + 1) * MAX_CHOPPED_WORKSPACE_IN_MEM,
-                                                  run_start_ns=run_start_ns)
-            mantid_helper.split_event_workspace(raw_ws_name, sub_split_ws_name, info_ws_name, output_dir, clear_memory)
-        # END-FOR
-
-        return True, None
-
-    def chop_data(self, raw_file_name, slice_key, output_directory, do_tof_correction=False):
-        """
-        chop data and save to GSAS file
-        :param raw_file_name:
-        :param slice_key:
-        :param output_directory:
-        :param do_tof_correction:
-        :return:
-        """
-        # check input
-        assert isinstance(raw_file_name, str), 'Raw file name {0} must be a string but not a {1}.' \
-                                               ''.format(raw_file_name, type(raw_file_name))
-        assert isinstance(slice_key, str), 'Slicer type {0} must be a string but not a {1}.' \
-                                           ''.format(slice_key, type(slice_key))
-        assert isinstance(output_directory, str), 'Output directory {0} must be string but not a {1}.' \
-                                                  ''.format(output_directory, type(output_directory))
-
-        # get the split workspace name and information workspace name
-        split_ws_name, info_ws_name = self.get_split_workspace(slice_key)
-
-        # get number of target workspace
-        number_target_ws, is_epoch_time = get_number_chopped_ws(split_ws_name)
-
-        MAX_CHOPPED_WORKSPACE_IN_MEM = 40
-        if number_target_ws < MAX_CHOPPED_WORKSPACE_IN_MEM:
-            # chop event workspace with regular method
-            # status, ret_obj = self.chop_data_regular(split_ws_name, info_ws_name,
-            #                                          data_file=raw_file_name,
-            #                                          tof_correction=do_tof_correction,
-            #                                          output_dir=output_directory)
-            status, ret_obj = mantid_helper.split_event_data(raw_file_name=raw_file_name,
-                                                             split_ws_name=split_ws_name,
-                                                             info_table_name=info_ws_name,
-                                                             target_ws_name=None,
-                                                             tof_correction=do_tof_correction,
-                                                             output_directory=output_directory,
-                                                             delete_split_ws=True)
-        else:
-            # chop event workspace to too many target workspaces which cannot be hold in memory
-            # simultaneously
-            status, ret_obj = self.chop_data_large_number_targets(split_ws_name, info_ws_name,
-                                                                  data_file=raw_file_name,
-                                                                  tof_correction=do_tof_correction,
-                                                                  output_dir=output_directory,
-                                                                  is_epoch_time=is_epoch_time,
-                                                                  num_target_ws=number_target_ws)
-
-        # raise NotImplementedError('chop_data() requires refactor!')
-        #
-        # # TODO/ISSUE/NOW - Need to find out how to chop workspace to large amount of target workspaces/files
-        # ... ...
-        #
-        # # check
-        #
-        # # load data
-        # # out_ws_name = os.path.basename(raw_file_name).split('.')[0]
-        # base = os.path.basename(raw_file_name)
-        # out_ws_name = os.path.splitext(base)[0]
-        #
-        # mantid_helper.load_nexus(data_file_name=raw_file_name,
-        #                          output_ws_name=out_ws_name,
-        #                          meta_data_only=False)
-        #
-        # # set up slicers
-        # if slicer_type == 'time':
-        #     setup_dict = self._chopSetupDict['time']
-        #     # {'start': start_time, 'step': time_step, 'stop': stop_time}
-        #
-        #     # TODO/NOW - Need to find out a better name!
-        #     tag = 'time123'
-        #
-        #     # 2-tuple (boolean, objects): True/ws name tuple; False/error message
-        #     status, ret_obj = self.generate_events_filter_by_time(min_time=setup_dict['start'],
-        #                                                           max_time=setup_dict['stop'],
-        #                                                           time_interval=setup_dict['step'],
-        #                                                           tag=tag,
-        #                                                           ws_name=out_ws_name)
-        #     print '[DB...BAT] Returned from slicing setup:', status, ret_obj
-        #     if status:
-        #         chop_splitter_name, chop_info_name = ret_obj
-        #     else:
-        #         raise RuntimeError(ret_obj)
-        #
-        # elif slicer_type == 'log':
-        #     raise NotImplementedError('ASAP')
-        #
-        # else:
-        #     # manual
-        #     raise NotImplementedError('ASAP')
-        #
-        # # chop data
-        # base_name = os.path.join(output_directory, tag)
-        # # return: 2-tuple (boolean, object): True/(list of ws names, list of ws objects); False/error message
-        # status, ret_obj = mantid_helper.split_event_data(raw_event_ws_name=out_ws_name,
-        #                                                  splitter_ws_name=chop_splitter_name,
-        #                                                  info_ws_name=chop_info_name,
-        #                                                  split_ws_base_name=base_name,
-        #                                                  tof_correction=False)
-        # if status:
-        #     ws_name_list = ret_obj[0]
-        # else:
-        #     raise RuntimeError(ret_obj)
-        #
-        # # save
-        # print '[DB...BAT] Wrokspaces to save: ', ws_name_list
-        # for ws_name in ws_name_list:
-        #     mantid_helper.save_event_workspace(ws_name, out_file_name)
-
-        return status, ret_obj
-
-    def delete_slicer_by_id(self, slicer_tag):
-        """
-        Clean workspace
-        :param run_number:
+        delete a splitter workspace by its tag
         :param slicer_tag:
         :return:
         """
-        raise NotImplementedError('It does not work now!')
-        # TODO/ISSUE/51 - make it work!
-        status, ret_obj = self._find_workspaces_by_run(run_number, slicer_tag)
-        if status is False:
-            return False, ret_obj
+        # get splitters workspaces
+        try:
+            slicer_ws_name, info_ws_name = self.get_split_workspace(slicer_tag)
+        except RuntimeError as run_err:
+            return False, 'Unable to delete slicer with tag {0} of run {1} due to {2}.' \
+                          ''.format(slicer_tag, self._myRunNumber, run_err)
 
-        slice_ws, info_ws = ret_obj
-        mantid_helper.delete_workspace(slice_ws)
-        mantid_helper.delete_workspace(info_ws)
+        # delete workspaces
+        mantid_helper.delete_workspace(slicer_ws_name)
+        mantid_helper.delete_workspace(info_ws_name)
 
         return True, ''
 
@@ -341,7 +165,7 @@ class DataChopper(object):
         # Generate split workspace
         status, ret_obj = mantid_helper.generate_event_filters_arbitrary(self._mtdWorkspaceName,
                                                                          split_list,
-                                                                         relative_time=True,
+                                                                         relative_time=relative_time,
                                                                          tag=splitter_tag,
                                                                          auto_target=True)
         if status:
@@ -358,14 +182,14 @@ class DataChopper(object):
 
     def get_experiment_information(self):
         """
-        get experiment information
+        get experiment information in a well-formed string
         :return:
         """
         # Check
         if self._mtdWorkspaceName is None:
             raise RuntimeError('DataChopper has no data loaded to Mantid workspace.')
 
-        info_str = 'Run {0}:\t'.format(self._myRunNumber)  #, self._mtdWorkspaceName)
+        info_str = 'Run {0}:\t'.format(self._myRunNumber)
 
         # get proton charge
         proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
@@ -376,26 +200,6 @@ class DataChopper(object):
                               pc_times[-1], 1.E-9*pc_times[-1].totalNanoseconds())
 
         return info_str
-
-    def get_log_workspace(self, run_number):
-        """
-        Get the workspace containing sample logs (only!) according to run number
-        :param run_number:
-        :return:
-        """
-        assert isinstance(run_number, int) and run_number > 0
-
-        # return current workspace if run number is current run number
-        if run_number == self._myRunNumber:
-            return self._mtdWorkspaceName
-
-        # run number (might) be in stored session
-        if run_number not in self._prevSessionDict:
-            stored_runs_str = str(self._prevSessionDict.keys())
-            raise RuntimeError('Run %d has not been processed. Processed runs are %s.' % (run_number,
-                                                                                          stored_runs_str))
-
-        return self._prevSessionDict[run_number]
 
     def get_sample_log_names(self, with_info=False):
         """
@@ -414,31 +218,10 @@ class DataChopper(object):
 
         return mantid_helper.get_sample_log_names(self._mtdWorkspaceName, smart=True)
 
-        # return
-        #
-        # # Do something fun
-        # self._logNameList.sort()
-        #
-        # ret_list = list()
-        # single_value_list = list()
-        #
-        # for log_name in self._logNameList:
-        #     log_size = self._mtdWorkspaceName.run().getProperty(log_name).size()
-        #     if log_size > 1:
-        #         ret_list.append('%s (%d)' % (log_name, log_size))
-        #     else:
-        #         single_value_list.append('%s (1)' % log_name)
-        # # END-FOR
-        #
-        # ret_list.extend(single_value_list)
-        #
-        # return ret_list
-
     def get_sample_data(self, sample_log_name, start_time, stop_time, relative):
         """
         Get sample log's data as 2 vectors for time (unit of second) and log value
         :exception: RuntimeError for sample log name is not in list
-        :param run_number:
         :param sample_log_name:
         :param start_time:
         :param stop_time:
@@ -513,25 +296,34 @@ class DataChopper(object):
 
         return True, (vec_times, vec_ws_index)
 
-    def set_current_slicer_time(self):
-        """
-        Set the current slicer as a time slicer set up previously
+    def load_data_file(self):
+        """ Load NeXus file
         :return:
         """
-        time_slicer_tag = generate_tag('time', self._myRunNumber)
-        if time_slicer_tag in self._chopSetupDict:
-            self._currentSlicerTag = time_slicer_tag
+        # use base name for output workspace
+        base_name = os.path.basename(self._myNeXusFileName)
+        out_ws_name = base_name.split('.')[0] + '_MetaData'
 
-        return
+        # Load sample logs
+        status, ret_obj = mantid_helper.load_nexus(data_file_name=self._myNeXusFileName,
+                                                   output_ws_name=out_ws_name,
+                                                   meta_data_only=True)
 
-    def set_current_slicer_manual(self):
-        """
-        Set up current splitter workspace/slicer to a previously setup slicer in manual mode.
-        :return:
-        """
-        manual_slicer_tag = generate_tag('manual', self._myRunNumber)
-        if manual_slicer_tag in self._chopSetupDict:
-            self._currentSlicerTag = manual_slicer_tag
+        if status is False:
+            err_msg = str(ret_obj)
+            raise RuntimeError(err_msg)
+        else:
+            self._mtdWorkspaceName = out_ws_name
+
+        # Set up log names list
+        try:
+            self._logNameList = mantid_helper.get_sample_log_names(self._mtdWorkspaceName)
+            assert isinstance(self._logNameList, list)
+        except RuntimeError as err:
+            return False, 'Unable to retrieve series log due to %s.' % str(err)
+
+        # Set up run start time
+        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
 
         return
 
@@ -637,131 +429,6 @@ class DataChopper(object):
 
         return True, slicer_key
 
-    def save_splitter_ws(self, run_number, log_name, out_file_name):
-        """ Save splitters workspace to segment file
-        """
-        # Get slicer
-        slice_tag = get_standard_log_tag(run_number, log_name)
-
-        status, ret_obj = self.get_slicer_by_log(run_number, log_name)
-        if status is False:
-            err_msg = ret_obj
-            return False, 'Unable to locate slicer for run %s by log %s due to %s.' % (
-                str(run_number), log_name, err_msg)
-
-        # Title
-        wbuf = ''
-
-        # Get splitters workspace
-
-        splitter_ws_name = ret_obj[0]
-        splitter_ws = mantid_helper.retrieve_workspace(splitter_ws_name)
-        if splitter_ws is None:
-            raise NotImplementedError('It is not likely not to locate the splitters workspace.')
-        log_ws = self.get_log_workspace(run_number)
-        try:
-            run_start = log_ws.run().getProperty('proton_charge').times[0]
-            run_start_ns = run_start.totalNanoseconds()
-        except RuntimeError:
-            run_start = '1990-01-01T00:00:00.0000000000'
-            run_start_ns = 0
-        num_rows = splitter_ws.rowCount()
-        wbuf += '# Reference Run Number = %s\n' % run_number
-        wbuf += '# Run Start Time = %.9f\n' % (run_start_ns * 1.E-9)
-        wbuf += '# Verbose run start = %s\n' % str(run_start)
-        wbuf += '# Start Time \tStop Time \tTarget\n'
-
-        for i_row in xrange(num_rows):
-            start_time = (splitter_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
-            stop_time = (splitter_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
-            target = splitter_ws.cell(i_row, 2)
-            wbuf += '%.9f \t%.9f \t%d\n' % (start_time, stop_time, target)
-        # END-FOR (i)
-
-        # Write
-        try:
-            ofile = open(out_file_name, 'w')
-            ofile.write(wbuf)
-            ofile.close()
-        except IOError as e:
-            return False, 'Failed to write time segments to file %s due to %s' % (
-                out_file_name, str(e))
-
-        return True, None
-
-    def save_time_segments(self, file_name, time_segment_list):
-        """
-        Save a list of 3-tuple or 2-tuple time segments to an ASCII file
-        Time segments may be disordered.
-        Format:
-        # Reference Run Number =
-        # Run Start Time =
-        # Start Stop TargetIndex
-        Note that all units of time stamp or difference of time are seconds
-
-        :param file_name:
-        :param time_segment_list:
-        :return:
-        """
-        # Check
-        assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
-                                           '' % (str(file_name), type(file_name))
-        assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
-                                                    '' % type(time_segment_list)
-
-        # get run start time
-        run_start = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='second')
-
-        # convert the time segments in list of 3-tuples to a list of TimeSegment objects
-        segment_list = list()
-        i_target = 1
-        for time_seg in time_segment_list:
-            # get the target workspace index
-            if len(time_seg) < 3:
-                # in case that the target workspace index is not given (2-tuple). use next target-index
-                tmp_target = '%d' % i_target
-                i_target += 1
-            else:
-                # use the 3rd element in the tuple as target workspace index
-                tmp_target = '%s' % str(time_seg[2])
-            # create a TimeSegment object
-            tmp_seg = TimeSegment(time_seg[0], time_seg[1], i_target)
-            segment_list.append(tmp_seg)
-        # END-IF
-
-        # sort by segments
-        segment_list.sort()
-
-        # start to write to file buffer
-        file_buffer = ''
-
-        # comment lines
-        file_buffer += '# Reference Run Number = %d' % self._myRunNumber
-
-        file_buffer += '# Run Start Time = '
-        if run_start is not None:
-            assert isinstance(run_start, float)
-            file_buffer += '%.9f'
-        file_buffer += '\n'
-
-        file_buffer += '# Start Time \tStop Time \tTarget\n'
-
-        # splitters
-        assert isinstance(segment_list, list)
-        for segment in segment_list:
-            file_buffer += '%.9f \t%.9f \t%d\n' % (segment.start, segment.stop, segment.target)
-
-        # write file from buffer
-        try:
-            set_file = open(file_name, 'w')
-            set_file.write(file_buffer)
-            set_file.close()
-        except IOError as e:
-            return False, 'Failed to write time segments to file %s due to %s' % (
-                file_name, str(e))
-
-        return True, None
-
 
 def parse_time_segments(file_name):
     """
@@ -836,7 +503,7 @@ def parse_time_segments(file_name):
                 new_segment = TimeSegment(start_time, stop_time, target_id)
                 segment_list.append(new_segment)
             except ValueError as e:
-                print '[Warning] Line "%s" has wrong type of value for start/stop.' % line
+                print '[Warning] Line "{0}" has wrong type of value for start/stop. FYI {1}.'.format(line, e)
                 continue
         # END-IF (#)
     # END-FOR
@@ -891,64 +558,122 @@ def get_number_chopped_ws(split_ws_name):
     return len(target_set), epoch_time
 
 
-# TODO/ISSUE/NOW - Generalize this method with same method in reduce_adv_chop.py
-def get_sub_splitters(split_ws_name, split_start_index, split_stop_index, run_start_ns):
+def is_overlap_splitter(split_ws_name):
     """
+            check whether a workspace contains overlapped splits
+            :return:
+            """
+    # get the workspace
+    if mantid_helper.workspace_does_exist(split_ws_name):
+        split_ws = mantid_helper.retrieve_workspace(split_ws_name)
+    else:
+        raise RuntimeError('Splitters workspace {0} cannot be found in ADS.'.format(split_ws_name))
 
-    :param split_ws_name:
-    :param split_start_index:
-    :param split_stop_index:
-    :param run_start_ns:
+    # return True if the number of splitters is too large, i.e., exceeds 10,000
+    split_number = get_splitters_number(split_ws)
+    if split_number >= LARGE_NUMBER_SPLITTER:
+        print '[Notice] Number of splitters = {0}.  It is too large to check. Return True instead' \
+              ''.format(split_number)
+        return True
+
+    vec_splitter = get_splitters(split_ws)
+    for i_splitter in range(split_number - 1):
+        stop_time_i = vec_splitter[i_splitter][1]
+        start_time_ip1 = vec_splitter[i_splitter + 1][1]
+        if stop_time_i > start_time_ip1 + NUMERIC_TOLERANCE:
+            return False
+
+    return True
+
+
+def get_splitters_number(split_ws):
+    """
+    get number of splitters in a splitters workspace
+    :param split_ws:
     :return:
     """
-    # get splitting workspace
-    split_ws = mantid_helper.retrieve_workspace(split_ws_name)
-
-    # get the sub splitters name
-    sub_split_ws_name = split_ws.name() + '_{0}'.format(split_start_index)
-
-    # split
-    if isinstance(split_ws, SplittersWorkspace):
+    if split_ws.__class__.__name__.count('Splitter') > 0:
         # splitters workspace
-        # TODO/TEST - Need to verify
-        mantid_helper.create_table_workspace(sub_split_ws_name,
-                                             [('float', 'start'), ('float', 'stop'), ('str', 'index')])
-        sub_split_ws = mantid_helper.retrieve_workspace(sub_split_ws_name)
+        number_splitters = split_ws.rowCount()
+    elif split_ws.__class__.__name__.count('Table') > 0:
+        # table workspace for splitters
+        number_splitters = split_ws.rowCount()
+    else:
+        # matrix workspace
+        number_splitters = len(split_ws.readX(0))-1
 
-        num_rows = split_ws.rowCount()
-        for i_row in range(split_start_index, min(split_stop_index, num_rows)):
-            start_time = (split_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
-            stop_time = (split_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
-            target = str(split_ws.cell(i_row, 2))
-            sub_split_ws.addRow([start_time, stop_time, target])
-        # END-FOR
+    return number_splitters
 
-    elif isinstance(split_ws, MatrixWorkspace):
-        # Matrix workspace
-        # TODO/TEST - Need to test
-        vec_x = split_ws.readX(0)[split_start_index:split_stop_index + 1]
-        vec_y = split_ws.readY(0)[split_start_index:split_stop_index]
-        vec_e = split_ws.readE(0)[split_start_index:split_stop_index]
 
-        mantid_helper.create_workspace_2d(vec_x, vec_y, vec_e, sub_split_ws_name)
+def get_splitters(split_ws):
+    """
+    get the splitters for a splitters workspace
+    :param split_ws:
+    :return: a list of splitters in the same order of splitters workspace
+    """
+    splitter_vec = list()
+    splitter_type = split_ws.__class__.__name__
 
-    elif isinstance(split_ws, ITableWorkspace):
-        # Table workspace
-        # TODO/TEST - Need to verify
-        mantid_helper.create_table_workspace(sub_split_ws_name,
-                                             [('float', 'start'), ('float', 'stop'), ('str', 'index')])
-        sub_split_ws = mantid_helper.retrieve_workspace(sub_split_ws_name)
-        num_rows = split_ws.rowCount()
-        for i_row in range(split_start_index, min(split_stop_index, num_rows)):
-            start_time = split_ws.cell(i_row, 0)
-            stop_time = split_ws.cell(i_row, 1)
-            target = split_ws.cell(i_row, 2)
-            sub_split_ws.addRow([start_time, stop_time, target])
+    if splitter_type.count('Splitter') > 0 or splitter_type.count('Table') > 0:
+        # table-styled workspace
+        for row_index in range(split_ws.rowCount()):
+            start_time = split_ws.cell(row_index, 0)
+            stop_time = split_ws.cell(row_index, 1)
+            target = split_ws.cell(row_index, 2)
+            splitter_vec.append((start_time, stop_time, target))
         # END-FOR
 
     else:
-        # unsupported format
-        raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
+        # matrix workspace
+        vec_x = split_ws.readX(0)
+        vec_y = split_ws.readY(0)
+        for index in range(len(vec_x)-1):
+            start_time = vec_x[index]
+            stop_time = vec_x[index]
+            target = vec_y[index]
+            splitter_vec.append((start_time, stop_time, target))
 
-    return sub_split_ws_name
+    # END-IF-ELSE
 
+    return splitter_vec
+
+
+def save_slicers(time_segment_list, file_name):
+    """
+    Save a list of 3-tuple or 2-tuple time segments to an ASCII file
+    Time segments may be disordered.
+    Format:
+        # Reference Run Number =
+        # Run Start Time =
+        # Start Stop TargetIndex
+        Note that all units of time stamp or difference of time are seconds
+    :param time_segment_list:
+    :param file_name:
+    :return:
+    """
+    # Check
+    assert isinstance(file_name, str), 'File name %s must be a string but not of type %s.' \
+                                       '' % (str(file_name), type(file_name))
+    assert isinstance(time_segment_list, list), 'Time segment list must be a list but not of type %s.' \
+                                                '' % type(time_segment_list)
+
+    # sort by segments
+    time_segment_list.sort()
+
+    # start to write to file buffer
+    file_buffer = '# Start Time \tStop Time \tTarget\n'
+
+    # splitters
+    for segment in time_segment_list:
+        file_buffer += '%.9f \t%.9f \t%s\n' % (segment[0], segment[1], str(segment[2]))
+
+    # write file from buffer
+    try:
+        set_file = open(file_name, 'w')
+        set_file.write(file_buffer)
+        set_file.close()
+    except IOError as e:
+        return False, 'Failed to write time segments to file %s due to %s' % (
+            file_name, str(e))
+
+    return True, None

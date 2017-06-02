@@ -5,9 +5,8 @@ import sys
 import os
 
 # sys.path.append('/opt/mantidnightly/bin/')
-sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin')
-
-sys.path.append(os.getcwd())
+# sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin')
+# sys.path.append(os.getcwd())
 # sys.path.append(os.path.join(os.path.expanduser('~/MantidBuild/debug/bin/')))
 
 
@@ -121,6 +120,16 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         # interpret command: command is in self.input_buffer
         script = str(self.input_buffer).strip()
+
+        # convert previous command "Run: vbin, ipts=18420, runs=139148, tag='C', output='\tmp'" to a property command
+        if script.startswith('"Run: '):
+            # strip "Run: and " away
+            script = script.split('Run: ')[1]
+            if script[-1] == '"':
+                script = script[:-1]
+        elif script.startswith('Run: '):
+            # strip Run: away
+            script = script.split('Run: ')[1]
 
         # main application is workspace viewer
         is_reserved = False

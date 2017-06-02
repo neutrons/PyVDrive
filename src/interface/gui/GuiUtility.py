@@ -81,17 +81,16 @@ def convert_to_qdate_datetime(date_time):
     :param date_time:
     :return:
     """
-    # TODO/NOW/Doc
-
     # check
     assert isinstance(date_time, datetime.datetime), 'Input date and time must be a datetime.datetime but not %s.' \
                                                      '' % type(date_time)
 
-    # convert
+    # convert: get year, month and day from date_time structure
     year = date_time.year
     month = date_time.month
     day = date_time.day
 
+    # create a QDate object
     m_date = QtCore.QDate(year, month, day)
 
     return m_date
@@ -154,7 +153,6 @@ def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
     :param increase:
     :return:
     """
-    # TODO/ISSUE/59 - TEST
     # check inputs
     assert isinstance(line_edit, QtGui.QLineEdit), 'Input must be a QLineEdit instance.'
 

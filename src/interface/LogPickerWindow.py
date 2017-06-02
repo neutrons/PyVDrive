@@ -25,6 +25,10 @@ IN_PICKER_MOVING = 2
 IN_PICKER_SELECTION = 3
 
 
+# TODO/ISSUE/NOWNOW - label_runStartEpoch never been written
+
+
+
 class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
@@ -331,14 +335,23 @@ class WindowLogPicker(QtGui.QMainWindow):
             # cancel operation
             return
         else:
-            output_dir = self._quickChopDialog.get_output_dir()
-            reduce_gsas = self._quickChopDialog.to_reduce_data()
+            # get information from the dialog box
+            output_to_archive = self._quickChopDialog.output_to_archive
+            if output_to_archive:
+                output_dir = None
+            else:
+                output_dir = self._quickChopDialog.output_directory
+
+            to_save_nexus = self._quickChopDialog.save_to_nexus
+            to_reduce_gsas = self._quickChopDialog.reduce_data
+        # END-IF-ELSE
 
         # get chop manager
         assert isinstance(self._currSlicerKey, str), 'Slicer key %s must be a string but not %s.' \
                                                      '' % (str(self._currSlicerKey), type(self._currSlicerKey))
         status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
-                                                           reduce_data=reduce_gsas,
+                                                           reduce_data=to_reduce_gsas,
+                                                           save_chopped_nexus=to_save_nexus,
                                                            output_dir=output_dir)
 
         if status:
@@ -353,8 +366,6 @@ class WindowLogPicker(QtGui.QMainWindow):
         The format will be a 3 column file as run start (in second), run stop(in second) and target workspace
         :return:
         """
-        # TODO/FIXME/FUTURE - This method should be generalized with other slicer file parser
-
         # get file
         default_dir = os.getcwd()
         slicer_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
@@ -364,33 +375,57 @@ class WindowLogPicker(QtGui.QMainWindow):
             return
 
         # parse file
-        slicer_file = open(slicer_file_name, 'r')
-        raw_lines = slicer_file.readline()
-        slicer_file.close()
+        if True:
+            # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
+            #                    chop_utility via controller
+            slicer_file = open(slicer_file_name, 'r')
+            raw_lines = slicer_file.readlines()
+            slicer_file.close()
 
-        slicer_list = list()
-        for line in raw_lines:
-            line = line.strip()
-            if len(line) == 0 or line[0] == '#':
-                continue
+            slicer_list = list()
+            for line in raw_lines:
+                # print '[DB...BAT] Line: {0}'.format(line)
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
+                    continue
 
-            terms = line.split()
-            if len(terms) < 3:
-                continue
-            start_time = float(terms[0])
-            stop_time = float(terms[1])
-            target_ws = str(terms[2])
-            slicer_list.append((start_time, stop_time, target_ws))
-        # END-FOR
+                terms = line.split()
+                # print '[DB...BAT] Line split to {0}'.format(terms)
+                if len(terms) < 3:
+                    continue
+                start_time = float(terms[0])
+                stop_time = float(terms[1])
+                target_ws = str(terms[2])
+                slicer_list.append((start_time, stop_time, target_ws))
+                # END-FOR
+        # END-IF
+
+        # check
+        if len(slicer_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'There is no valid slicers in file {0}'.format(slicer_file_name))
+            return
+        else:
+            # sort
+            slicer_list.sort()
 
         # get run start time in second
-        run_start_s = int(self.ui.label_runStartEpoch.text())
+        slicer_start_time = slicer_list[0][0]
+        if slicer_start_time > 3600 * 24 * 365:
+            # larger than 1 year. then must be an absolute time
+            # TODO/ISSUE/NOWNOW : need to check label_runStartEpoch
+            run_start_s = int(self.ui.label_runStartEpoch.text())
+        else:
+            # relative time: no experiment in 1991
+            run_start_s = 0.
 
         # set to figure
+        prev_stop_time = -1.E-20
         for slicer in slicer_list:
             start_time, stop_time, target = slicer
-            self.ui.graphicsView_main.add_picker(start_time - run_start_s)
+            if start_time > prev_stop_time:
+                self.ui.graphicsView_main.add_picker(start_time - run_start_s)
             self.ui.graphicsView_main.add_picker(stop_time - run_start_s)
+            prev_stop_time = stop_time
 
         return
 
@@ -534,6 +569,11 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.plot_nexus_log(log_name)
         self._currLogName = log_name
 
+        # set up the epoch start time
+        # TODO/ISSUE/NEXT - make this work!
+        # run_start_epoch = self.get_controller().get_run_start(run_number, epoch_time=True)
+        # self.ui.label_runStartEpoch.setText('{0}'.format(run_start_epoch))
+
         return
 
     def do_load_next_log(self):
@@ -590,78 +630,6 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         return
 
-    # def do_picker_abort(self):
-    #     """
-    #     Abort the action to add a picker
-    #     :return:
-    #     """
-    #     # Guide user from enable/disable widgets
-    #     self.ui.pushButton_addPicker.setEnabled(True)
-    #     self.ui.pushButton_setPicker.setDisabled(True)
-    #     self.ui.pushButton_abortPicker.setDisabled(True)
-    #     self.ui.pushButton_selectPicker.setEnabled(True)
-    #
-    #     # Delete the current picker
-    #     self.ui.graphicsView_main.remove_indicator(self._currentPickerID)
-    #     self._myPickerIDList.pop(self._currentPickerID)
-    #     # self._currentPickerID = None
-    #
-    #     self._myPickerMode = OUT_PICKER
-    #
-    #     return
-
-    # def do_picker_add(self):
-    #     """
-    #     Add picker
-    #     :return:
-    #     """
-    #     # Add a picker
-    #     indicator_id = self.ui.graphicsView_main.add_vertical_indicator(color='red')
-    #
-    #     # Guide user
-    #     self.ui.pushButton_setPicker.setEnabled(True)
-    #     self.ui.pushButton_abortPicker.setEnabled(True)
-    #     self.ui.pushButton_addPicker.setDisabled(True)
-    #     self.ui.pushButton_deletePicker.setDisabled(True)
-    #     self.ui.pushButton_selectPicker.setDisabled(True)
-    #
-    #     # Change status
-    #     # self._currentPickerID = indicator_id
-    #     self._myPickerMode = IN_PICKER
-    #     self._myPickerIDList.append(indicator_id)
-    #
-    #     return
-
-
-
-    # def do_picker_set(self):
-    #     """
-    #     Add the (open) picker to list
-    #     :return:
-    #     """
-    #     # Fix the current picker
-    #     x, x = self.ui.graphicsView_main.get_indicator_position(self._currentPickerID)
-    #     current_time = x
-    #
-    #     # Change the color
-    #     self.ui.graphicsView_main.update_indicator(self._currentPickerID, color='black')
-    #
-    #     # Guide user
-    #     self.ui.pushButton_abortPicker.setDisabled(True)
-    #     self.ui.pushButton_addPicker.setEnabled(True)
-    #     self.ui.pushButton_deletePicker.setEnabled(True)
-    #     self.ui.pushButton_setPicker.setDisabled(True)
-    #     self.ui.pushButton_selectPicker.setEnabled(True)
-    #
-    #     # Change status
-    #     self._myPickerMode = OUT_PICKER
-    #     # self._currentPickerID = None
-    #
-    #     # Set to table
-    #     self.ui.tableWidget_segments.append_start_time(current_time)
-    #
-    #     return
-
     def do_show_manual_slicer_table(self):
         """
 
@@ -685,7 +653,10 @@ class WindowLogPicker(QtGui.QMainWindow):
         launch the window to view reduced data
         :return:
         """
-        view_window = self._myParent.do_view_reduction()
+        import ReducedDataView
+        # launch reduced-data-view window
+        view_window = self._myParent.do_launch_reduced_data_viewer()
+        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'The view window'
 
         # get chopped and reduced workspaces from controller
         try:
@@ -693,7 +664,12 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                                     slice_key=self._currSlicerKey,
                                                                     reduced=True)
             chopped_workspace_list = info_dict['workspaces']
-            view_window.add_workspaces(chopped_workspace_list)
+            view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, clear_previous=True)
+            view_window.do_set_current_run()
+            # set up the run time
+            view_window.label_loaded_data(run_number=self._currRunNumber,
+                                          is_chopped=True,
+                                          chop_seq_list=range(len(chopped_workspace_list)))
 
         except RuntimeError as run_err:
             error_msg = 'Unable to get chopped and reduced workspaces. for run {0} with slicer {1} due to {2}.' \
@@ -1212,10 +1188,14 @@ class WindowLogPicker(QtGui.QMainWindow):
         return
 
     def setup(self):
-        """ Set up from parent main window
+        """ Set up from parent main window: think of what to set up
         :return:
         """
         # TODO/FIXME/NOW - How to make this work?
+        # 1. controller
+        # 2. IPTS number
+        # 3. Refer to command CHOP
+
         # ipts_run_dict = self._myParent.get_archived_runs()
         #
         # # Set to tree

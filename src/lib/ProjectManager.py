@@ -94,13 +94,14 @@ class ProjectManager(object):
 
         return
 
-    def chop_data(self, run_number, slicer_key, reduce_flag, output_dir):
+    def chop_run(self, run_number, slicer_key, reduce_flag, save_chopped_nexus, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
+        :param save_chopped_nexus: flag for saving chopped data to NeXus
         :param output_dir:
         :return:
         """
@@ -109,25 +110,26 @@ class ProjectManager(object):
                                             'must be a string.' % (str(slicer_key), type(slicer_key))
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
 
         # get chopping helper
         try:
             chopper = self._chopManagerDict[run_number]
+            # retrieve split workspace and split information workspace from chopper manager
+            split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
         except KeyError as key_error:
             error_message = 'Run number %d is not registered to chopper manager (%s). Current runs are %s.' \
                             '' % (run_number, str(key_error), str(self._chopManagerDict.keys()))
             raise RuntimeError(error_message)
+        # END-TYR
 
         if reduce_flag:
             # reduce to GSAS
             src_file_name, ipts_number = self.get_run_info(run_number)
-            self._reductionManager.reduce_chopped_data(ipts_number, run_number, src_file_name, chopper, slicer_key,
-                                                       output_dir)
+            self._reductionManager.chop_reduce_data(ipts_number, run_number, src_file_name, split_ws_name,
+                                                    info_ws_name, save_chopped_nexus, output_dir)
 
             status = True,
-            message = ''
+            message = 'Run {0} is chopped, reduced and saved to GSAS files in {1}.'.format(run_number, output_dir)
 
         else:
             # just chop the files and save to Nexus
@@ -137,19 +139,23 @@ class ProjectManager(object):
             except RuntimeError as run_error:
                 return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                               ''.format(run_number, run_error)
-            self._reductionManager.chop_data(ipts_number=ipts_number,
-                                             run_number=run_number,
-                                             data_file=data_file,
-                                             chop_manager=self._chopManagerDict[run_number],
-                                             slice_key=slicer_key,
-                                             output_dir=output_dir,
-                                             tof_correction=False)
+            # END-TRY
 
-            # def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir,
-            #               tof_correction=False):
+            # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
+            self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
+                                                   run_number=run_number,
+                                                   raw_file_name=data_file,
+                                                   split_ws_name=split_ws_name,
+                                                   split_info_name=info_ws_name,
+                                                   slice_key=slicer_key,
+                                                   output_nexus_dir=output_dir,
+                                                   output_gsas_dir=None,
+                                                   gsas_to_archive=False,
+                                                   tof_correction=False)
 
             status = True
-            message = 'Run %d is chopped and reduced. ' % run_number
+            message = 'Run %d is chopped and saved to NeXus files. ' % run_number
+        # END-IF-ELSE
 
         return status, message
 
@@ -170,13 +176,14 @@ class ProjectManager(object):
         """
         return self._loadedDataManager
 
+    # NOTE: No caller of this method so far
     def delete_slicers(self, run_number, slicer_tag=None):
         """ delete slicers from memory, i.e., mantid workspaces
         :param run_number: run number for the slicer
         :param slicer_tag:
         :return:
         """
-        # NOTE: No caller of this method so far
+        # check input
         if run_number not in self._chopManagerDict:
             return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
 
@@ -184,7 +191,7 @@ class ProjectManager(object):
         data_chopper = self._chopManagerDict[run_number]
 
         # let DataChopper to do business
-        data_chopper.delete_slicer_by_id(slicer_tag)
+        data_chopper.delete_splitter_workspace(slicer_tag)
 
         return True, ''
 
@@ -279,7 +286,6 @@ class ProjectManager(object):
         else:
             # create a new DataChopper associated with this run
             nxs_file_name = self.get_file_path(run_number)
-            print '[DB...BAT 104022] NeXus file name: ', nxs_file_name
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
@@ -479,7 +485,11 @@ class ProjectManager(object):
         elif isinstance(reduced_data_file, str) and os.path.exists(reduced_data_file):
             # load from a file
             data_key = self._loadedDataManager.load_binned_data(data_file_name=reduced_data_file,
-                                                                data_file_type=None)
+                                                                data_file_type=None, prefix=None, max_int=None)
+
+            """
+            data_file_name, data_file_type, prefix, max_int):
+            """
             data_set = self._loadedDataManager.get_data_set(data_key, target_unit)
 
         else:
@@ -600,7 +610,8 @@ class ProjectManager(object):
         :param save_dict:
         :return:
         """
-        assert isinstance(save_dict, dict), 'blabla'
+        assert isinstance(save_dict, dict), 'Parameters to save {0} must be given by a dictionary but not a {1}.' \
+                                            ''.format(save_dict, type(save_dict))
 
         # Set
         self._name = save_dict['name']
@@ -623,7 +634,8 @@ class ProjectManager(object):
         :return: None
         """
         # Check requirements
-        assert isinstance(run_number_list, list), 'blabla'
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
         print '[INFO] Mark runs {0} to reduce.'.format(run_number_list)
 
         # Mark each runs
@@ -645,10 +657,15 @@ class ProjectManager(object):
         return
 
     def mark_runs_reduced(self, run_number_list, reduction_state_list=None):
-        """ Mark some runs to have been reduced 
+        """
+        mark runs that have been reduced
+        :param run_number_list:
+        :param reduction_state_list:
+        :return:
         """
         # TODO/NOW/FIXME/33 - Implement more for the reduction state
-        assert isinstance(run_number_list, list), 'blabla'
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
         for run_number in run_number_list:
             if run_number in self._sampleRunReductionFlagDict:

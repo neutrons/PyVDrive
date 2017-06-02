@@ -2,6 +2,8 @@
 #
 # General-purposed plotting window
 #
+# NOTE: Bank ID should always start from 1 or positive
+#
 ########################################################################
 import os
 from PyQt4 import QtCore, QtGui
@@ -14,7 +16,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_GPView
+import gui.ui_ReducedDataView
 import vanadium_controller_dialog
 
 
@@ -34,6 +36,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         self._bankIDList = [1, 2]
 
+        # workspace management dictionary
+        self._choppedRunDict = dict()  # key: run number (key/ID), value: list of workspaces' names
+        self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
+
         # Controlling data structure on lines that are plotted on graph
         self._reducedDataDict = dict()  # key: run number, value: dictionary (key = spectrum ID, value = (vec x, vec y)
         self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
@@ -43,17 +49,22 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._runNumberList = None
 
         self._currRunNumber = None
+        self._currChoppedData = False
+        self._currWorkspaceTag = None
         self._currBank = 1
         self._currUnit = 'TOF'
 
         self._choppedRunNumber = 0
         self._choppedSequenceList = None
+        # data managing dictionary for chopped data. key is the sequence, value is data key
+        # self._choppedDataDict = dict()
 
         self._canvasDimension = 1
         self._plotType = None
 
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
+        self._mutexChopSeqList = False
         self._mutexBankIDList = False
 
         # data structure to manage the fitting result
@@ -68,7 +79,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._vanadiumFWHM = None
 
         # set up UI
-        self.ui = gui.ui_GPView.Ui_MainWindow()
+        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # initialize widgets
@@ -81,7 +92,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
                      self.do_plot_next_run)
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_selected_run)
+                     self.do_plot_diffraction_data)
+        self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_sample_logs)
+        self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
+                     self.do_clear_canvas)
 
         # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
         #         self.do_plot_all_runs)
@@ -98,6 +113,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # combo boxes
         self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_run_number)
+        self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_select_new_chopped_child)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -106,6 +123,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # vanadium
         self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
                      self.do_launch_vanadium_dialog)
+
+        # widgets to load reduced data
+        self.connect(self.ui.pushButton_setReducedRunMem, QtCore.SIGNAL('clicked()'),
+                     self.do_set_current_run)
+        self.connect(self.ui.pushButton_loadArchivedGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_archived_gsas)
+        self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_local_gsas)
+        self.connect(self.ui.pushButton_loadAnyGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_local_gsas)
+
+        self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
+        self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
 
         # sub window
         self._vanadiumProcessDialog = None
@@ -117,19 +149,170 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Initialize some widgets
         :return:
         """
-        # bank list
-        self.ui.comboBox_spectraList.addItem('1')
-        self.ui.comboBox_spectraList.addItem('2')
-        self.ui.comboBox_spectraList.addItem('All')
+        # default to load data from memory
+        self.ui.radioButton_fromArchive.setChecked(True)
+        self.ui.radioButton_anyGSAS.setChecked(False)
+
+        self.set_group1_enabled(True)
+        self.set_group2_enabled(True)
+        self.set_group3_enabled(False)
 
         return
 
-    def add_data_set(self, ipts_number, run_number, controller_data_key):
+    def set_group1_enabled(self, enabled):
+        """
+        set the group of widgets to load run from PyVdrive reduced in memory
+        :param enabled:
+        :return:
+        """
+        self.ui.comboBox_runs.setEnabled(enabled)
+        self.ui.pushButton_setReducedRunMem.setEnabled(enabled)
+        self.ui.checkBox_choppedDataMem.setEnabled(enabled)
+
+        return
+
+    def set_group2_enabled(self, enabled):
+        """
+        set the group of widgets to load run from archived reduced data
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_iptsNumber.setEnabled(enabled)
+        self.ui.pushButton_loadArchivedGSAS.setEnabled(enabled)
+        self.ui.lineEdit_run.setEnabled(enabled)
+        self.ui.checkBox_loadChoppedArchive.setEnabled(enabled)
+
+        return
+
+    def set_group3_enabled(self, enabled):
+        """
+        set the group of widgets to load run from arbitrary reduced data
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_gsasFileName.setEnabled(enabled)
+        self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
+        self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
+        self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
+
+        return
+
+    def do_load_archived_gsas(self):
+        """
+
+        :return:
+        """
+        # read from input
+        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+        run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
+        is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
+
+        # load
+        data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+
+        # set sequence list
+        if is_chopped_data:
+            seq_list = data_key['chopped sequence']
+        else:
+            seq_list = None
+
+        # set the label
+        self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+
+        return
+
+    def do_browse_local_gsas(self):
+        """
+        browse GSAS file or chopped GSAS files via local HDD
+        :return:
+        """
+        # get setup
+        is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
+        default_dir = self._myController.get_working_dir()
+
+        # get GSAS file or gsas files
+        if is_chopped_data:
+            # get the directory of chopped data
+            chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
+                                                                          default_dir))
+            self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
+        else:
+            # get the data file
+            gsas_filter = 'GSAS(*.gda);;GSAS (*.gsa);;All Files(*.*)'
+            gsas_file_name = QtGui.QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
+            self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
+
+        return
+
+    def do_clear_canvas(self):
+        """
+        clear canvas
+        :return:
+        """
+        self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        return
+
+    def do_load_local_gsas(self):
+        """
+        load gsas or sequence of GSAS files
+        If given a directory, then it is to load a series of GSAS files from chopping a run;
+        If given a single file, then it is to
+        :return:
+        """
+        # get GSAS file path
+        gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+        if len(gsas_path) == 0:
+            # check
+            GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
+            return
+
+        if os.path.isdir(gsas_path):
+            # input is a directory: load chopped data series
+            data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, 'gsas')
+
+            # a key as run number
+            if run_number is None:
+                run_number = gsas_path
+
+            # get workspaces from data key dictionary and add to data management
+            diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
+            self.add_chopped_workspaces(run_number, diff_ws_list, True)
+
+            data_key = None
+
+        else:
+            # input is a file: load a single GSAS file
+            # load the data file and returned as data key
+            data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
+
+            # set up the data file to this data viewer and
+            status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
+            if not status:
+                GuiUtility.pop_dialog_error(self, error_message)
+                return
+
+            # clear some quick references, including GUI widgets its associated chopped data dictionary
+            self._mutexChopSeqList = True
+            self._mutexRunNumberList = True
+            self.ui.comboBox_chopSeq.clear()
+            self.ui.comboBox_runs.addItem(data_key)
+            self._mutexChopSeqList = False
+            self._mutexChopSeqList = False
+        # END-IF-ELSE
+
+        # activate it!
+        # self.do_set_reduced_from_memory(data_key=data_key)
+
+        return
+
+    def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
         add a new data set to this data viewer window
         :param ipts_number:
         :param run_number:
         :param controller_data_key:
+        :param unit:
         :return:
         """
         # return if the controller data key exist
@@ -146,20 +329,24 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         # get reduced data set from controller
-        status, ret_obj = self._myController.get_reduced_data(controller_data_key,
-                                                              target_unit=self._currUnit,
-                                                              search_archive=True)
-        # return if unable to get reduced data
-        if status is False:
-            raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
-                                                                                   ret_obj))
-        # add data set (arrays)
-        reduced_data_dict = ret_obj
-        assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
-                                                    '' % type(reduced_data_dict)
+        if unit is not None:
+            self._currUnit = unit
 
-        # add the returned data objects to dictionary
-        self._reducedDataDict[controller_data_key] = reduced_data_dict
+        self.load_reduced_data(run_number=controller_data_key)
+        # status, ret_obj = self._myController.get_reduced_data(controller_data_key,
+        #                                                       target_unit=unit,
+        #                                                       search_archive=True)
+        # # return if unable to get reduced data
+        # if status is False:
+        #     raise RuntimeError('Unable to load data by key {0} due to {1}.'.format(controller_data_key,
+        #                                                                            ret_obj))
+        # # add data set (arrays)
+        # reduced_data_dict = ret_obj
+        # assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+        #                                             '' % type(reduced_data_dict)
+        #
+        # # add the returned data objects to dictionary
+        # self._reducedDataDict[controller_data_key] = reduced_data_dict
 
         return controller_data_key
 
@@ -199,28 +386,64 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def add_workspaces(self, workspace_name_list, clear_previous=True):
+    def add_chopped_workspaces(self, workspace_key, workspace_name_list, clear_previous=True):
         """
-        add (CHOPPED) workspaces
+        add (CHOPPED) workspaces' names to the data viewer
+        Note: It shall not trigger the event to plot any chopped data
+        :param workspace_key:
         :param workspace_name_list:
+        :param clear_previous:
         :return:
         """
-        # TODO/ISSUE/NOW/33 More work on this
+        # turn on the mutex
         self._mutexRunNumberList = True
+        self._mutexChopSeqList = True
 
-        # clear existing runs
+        # check input
+        assert workspace_key is not None, 'Workspace key (run number mostly) cannot be None'
+        # force work key to be string
+        workspace_key = '{0}'.format(workspace_key)
+
+        # two cases
+        if workspace_name_list is None:
+            # the workspace key must have been loaded before
+            assert workspace_key in self._choppedRunDict, 'Workspace key {0} cannot be found in chopped run ' \
+                                                          'dictionary whose keys are {1}.' \
+                                                          ''.format(workspace_key, self._choppedRunDict.keys())
+            workspace_name_list = self._choppedRunDict[workspace_key]
+        else:
+            # this sequence is set to this viewer first time
+            assert isinstance(workspace_name_list, list), 'Workspaces names {0} must be given by list but not a ' \
+                                                          '{1}.'.format(workspace_name_list,
+                                                                        type(workspace_name_list))
+            assert len(workspace_name_list) > 0, 'Workspaces name list cannot be empty'
+
+            # add to widgets and data managing dictionary
+            self._choppedRunDict[workspace_key] = list()
+            for workspace_name in workspace_name_list:
+                self.ui.comboBox_chopSeq.addItem(workspace_name)
+                self._choppedRunDict[workspace_key].append(workspace_name)
+
+            self.ui.comboBox_runs.addItem('{0}'.format(workspace_key))
+        # END-IF-ELSE
+
+        # set check box
+        self.ui.checkBox_choppedDataMem.setChecked(True)
+
+        # sort workspace names
+        workspace_name_list.sort()
+
+        # set workspaces
         if clear_previous:
-            self.ui.comboBox_runs.clear()
-            self._runNumberList = list()
-
-        # add run number of combo-box and dictionary
+            self.ui.comboBox_chopSeq.clear()
         for workspace_name in workspace_name_list:
-            self.ui.comboBox_runs.addItem(workspace_name)
-            self._dataIptsRunDict[workspace_name] = None
-            self._runNumberList.append(workspace_name)
+            self.ui.comboBox_chopSeq.addItem(workspace_name)
 
         # release mutex lock
         self._mutexRunNumberList = False
+        self._mutexChopSeqList = False
+
+        return range(len(workspace_name_list))
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -278,7 +501,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Re-plot
         bank_id = int(self.ui.comboBox_spectraList.currentText())
         over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.plot_run(run_number=run_number, bank_id=bank_id, over_plot=over_plot)
+        self.plot_by_run_number(run_number, bank_id=bank_id, over_plot=over_plot)
 
         return
 
@@ -307,31 +530,48 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def do_plot_selected_run(self):
+    def do_plot_diffraction_data(self):
         """
-        Plot the current run. The first choice is from the line edit. If it is blank,
+        Plot the diffraction data. The first choice is from the line edit. If it is blank,
         then from combo box
         :return:
         """
-        # Get run numbers
-        is_workspace = False
-        runs_str = str(self.ui.lineEdit_runs.text()).strip()
-        if len(runs_str) > 0:
-            run_numbers = self.parse_runs_list(runs_str)
+        # get bank to chop
+        bank_id_str = str(self.ui.comboBox_spectraList.currentText())
+        if bank_id_str.isdigit():
+            bank_id = int(bank_id_str)
+            bank_id_list = [bank_id]
         else:
-            run_number_str = str(self.ui.comboBox_runs.currentText())
-            if run_number_str.isdigit():
-                run_numbers = [int(run_number_str)]
-            else:
-                run_numbers = [run_number_str]
-                is_workspace = True
+            # plot all banks
+            bank_id_list = self._bankIDList[:]
 
+        # over plot existing
         over_plot = self.ui.checkBox_overPlot.isChecked()
-        # TODO/FIXME/ISSUE/59: replace the following by a method as get_bank_ids() for 'All' case
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
-        for run_number in run_numbers:
-            print '[DB] is_workspace = ', is_workspace
-            self.plot_run(run_number, bank_id, over_plot, is_workspace)
+        unit = str(self.ui.comboBox_unit.currentText())
+
+        # possible chop sequence
+        data_str = str(self.ui.comboBox_runs.currentText())
+
+        if self._currChoppedData or data_str in self._choppedRunDict:
+            # chopped data by selecting data key from the chop sequence
+            chop_seq_tag = str(self.ui.comboBox_chopSeq.currentText())
+            # the chopped sequence tag MAY BE the workspace name. use it directly
+            self.plot_chopped_data_1d(chop_seq_tag, bank_id=bank_id_list[0], unit=unit, over_plot=over_plot)
+
+        else:
+            # non-chopped data set
+
+            if data_str.isdigit():
+                # run number
+                run_number = data_str
+                self.plot_by_run_number(run_number=run_number, bank_id=bank_id_list[0], over_plot=over_plot)
+            else:
+                # data key
+                data_key = data_str
+                self.plot_by_data_key(data_key, bank_id_list=bank_id_list,
+                                      over_plot=self.ui.checkBox_overPlot.isChecked())
+            # END-IF-ELSE (data_str)
+        # END-IF-ELSE
 
         return
 
@@ -340,46 +580,146 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Purpose: plot the previous run in the list and update the run list
         :return:
         """
-        # Get previous index from combo box
-        current_index = self.ui.comboBox_runs.currentIndex()
-        current_index += 1
-        # if the current index is at the beginning, then loop to the last run number
-        if current_index == self.ui.comboBox_runs.count():
-            current_index = 0
-        elif current_index > self.ui.comboBox_runs.count():
-            raise RuntimeError('It is impossible to have index larger than number of items.')
+        if self.ui.comboBox_chopSeq.count() == 0:
+            # non-chopping option. get next run in order
+            current_run_index = self.ui.comboBox_runs.currentIndex()
+            current_run_index += 1
+            if current_run_index >= self.ui.comboBox_runs.count():
+                # already the last one. cyclic to first
+                current_run_index = 0
+            # reset the combo index. It will trigger an event
+            self.ui.comboBox_runs.setCurrentIndex(current_run_index)
 
-        # Get the current run
-        self.ui.comboBox_runs.setCurrentIndex(current_index)
-        run_number = int(self.ui.comboBox_runs.currentText())
+        else:
+            # option for chopping data
+            current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
+            current_chop_index += 1
+            if current_chop_index >= self.ui.comboBox_chopSeq.count():
+                # already the last one in the list, go back to first one
+                current_chop_index = 0
+            # reset the combobox index. It will trigger an event
+            self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
 
-        # Plot
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.plot_run(run_number, bank_id, over_plot)
+        # END-IF
 
         return
 
     def do_plot_prev_run(self):
         """
         Purpose: plot the previous run in the list and update the run list
+        If the current plot is chopped data, advance to previous chopped child workspace; (cyclic is supported)
+        otherwise, advance to previously loaded/imported workspace.
+        bank_id will be preserved
         :return:
         """
-        # Get previous index from combo box
-        current_index = self.ui.comboBox_runs.currentIndex()
-        current_index -= 1
-        # if the current index is at the beginning, then loop to the last run number
-        if current_index < 0:
-            current_index = self.ui.comboBox_runs.count()-1
+        if self.ui.comboBox_chopSeq.count() == 0:
+            # non-chopping option. get next run in order
+            current_run_index = self.ui.comboBox_runs.currentIndex()
+            current_run_index -= 1
+            if current_run_index < 0:
+                # already the last one. cyclic to first
+                current_run_index = self.ui.comboBox_runs.count() - 1
+            # reset the combo index. It will trigger an event
+            self.ui.comboBox_runs.setCurrentIndex(current_run_index)
+        else:
+            # option for chopping data
+            current_chop_index = self.ui.comboBox_chopSeq.currentIndex()
+            current_chop_index -= 1
+            if current_chop_index < 0:
+                # already the last one in the list, go back to first one
+                current_chop_index = self.ui.comboBox_chopSeq.count() - 1
+            # reset the combobox index. It will trigger an event
+            self.ui.comboBox_chopSeq.setCurrentIndex(current_chop_index)
 
-        # Get the current run
-        self.ui.comboBox_runs.setCurrentIndex(current_index)
-        run_number = int(self.ui.comboBox_runs.currentText())
+        # END-IF
 
-        # Plot
-        bank_id = int(self.ui.comboBox_spectraList.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
-        self.plot_run(run_number, bank_id, over_plot)
+        return
+
+    def do_plot_sample_logs(self):
+        """
+        plot selected sample logs
+        :return:
+        """
+        # get sample logs
+        current_log_str = str(self.ui.comboBox_sampleLogsList.currentText()).strip()
+        if len(current_log_str) == 0:
+            GuiUtility.pop_dialog_information(self, 'There is no log that has been loaded.')
+            return
+
+        sample_name = current_log_str.split()[0]
+
+        if self.ui.checkBox_plotallChoppedLog.isChecked():
+            # plot the sample log of all the chopped workspaces
+            workspace_key_list = self._choppedRunDict[self._currRunNumber]
+            # reset if plot-all is checked
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
+        else:
+            # plot the sample log from the current selected chopped workspace
+            workspace_key = str(self.ui.comboBox_chopSeq.currentText())
+            workspace_key_list = [workspace_key]
+        # END
+
+        # plot
+        for workspace_key in workspace_key_list:
+            # get the name of the workspace containing sample logs
+            if workspace_key in self._choppedSampleDict:
+                # this is for loaded GSAS and NeXus file
+                sample_key = self._choppedSampleDict[workspace_key]
+            else:
+                # just reduced workspace
+                sample_key = workspace_key
+
+            # get the sample log time and value
+            vec_times, vec_value = self._myController.get_sample_log_values(sample_key, sample_name, relative=True)
+
+            # plot
+            self.ui.graphicsView_mainPlot.plot_sample_data(vec_times, vec_value, workspace_key, sample_name)
+        # END-FOR
+
+        return
+
+    def do_set_current_run(self, data_key=None):
+        """
+        select the run (data key) in comboBox_runs's current text as the current run to plot
+        :return:
+        """
+        # get information: current run number be a string to be more flexible
+        self._currRunNumber = str(self.ui.comboBox_runs.currentText())
+        self._currChoppedData = self.ui.checkBox_choppedDataMem.isChecked()
+
+        # pre-load the data
+        if self._currChoppedData:
+            # get the chopped run information from memory
+            if self._currRunNumber not in self._choppedRunDict:
+                error_message = 'Current run number {0} of type {1} is not in chopped run dictionary, whose keys are ' \
+                                ''.format(self._currRunNumber, type(self._currRunNumber))
+                for key in self._choppedRunDict.keys():
+                    error_message += '{0} of type {1}    '.format(key, type(key))
+                raise AssertionError(error_message)
+            seq_list = self.add_chopped_workspaces(self._currRunNumber, None, True)
+
+            # set the sample logs. map to NeXus log workspace if applied
+            chop_ws = str(self.ui.comboBox_chopSeq.currentText())
+            if chop_ws in self._choppedSampleDict:
+                chop_log_ws_name = self._choppedSampleDict[chop_ws]
+                if chop_log_ws_name is not None and len(chop_log_ws_name) > 0:
+                    series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
+                    self.set_sample_log_names(series_sample_log_list)
+            # END-IF
+        else:
+            # get the original reduced data and add the this.reduced_data_dictionary
+            #
+            if data_key is None:
+                data_key = self._currRunNumber
+
+            status, error_message = self.load_reduced_data(data_key)
+            if not status:
+                GuiUtility.pop_dialog_error(self, error_message)
+                return
+            seq_list = None
+
+        # set the label
+        self.label_loaded_data(self._currRunNumber, self._currChoppedData, seq_list)
 
         return
 
@@ -393,31 +733,26 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._mutexBankIDList:
             return
 
-        # Get new bank ID
-        new_bank_str = str(self.ui.comboBox_spectraList.currentText()).strip()
-        if new_bank_str.isdigit() is False and new_bank_str != 'All':
-            print '[ERROR] New bank ID {0} is not an allowed integer.'.format(new_bank_str)
-            return
+        self.do_plot_diffraction_data()
 
-        if new_bank_str == 'All':
-            # plot all the banks
-            bank_id_list = self._bankIDList[:]
+        return
+
+    def event_load_options(self):
+        """
+        handling event that the run loads option is changed
+        :return:
+        """
+        if self.ui.radioButton_fromArchive.isChecked():
+            # enable group 2 widgets
+            self.set_group2_enabled(True)
+            self.set_group3_enabled(False)
+        elif self.ui.radioButton_anyGSAS.isChecked():
+            # enable group 3 widgets
+            self.set_group2_enabled(False)
+            self.set_group3_enabled(True)
         else:
-            # plot one bak
-            curr_bank_id = int(new_bank_str)
-            bank_id_list = [curr_bank_id]
-        # END-IF
-
-        # plot all the selected banks
-        for b_index, bank_id in enumerate(bank_id_list):
-            keep_prev = b_index > 0 or self.ui.checkBox_overPlot.isChecked()
-            if self._currRunNumber is not None:
-                if isinstance(bank_id, str):
-                    raise RuntimeError('bank ID {0} is string!'.format(bank_id))
-                self.plot_run(run_number=self._currRunNumber, bank_id=bank_id, over_plot=keep_prev,
-                              is_workspace=isinstance(self._currRunNumber, str))
-            # END-IF
-        # END-FOR
+            # impossible situation
+            raise RuntimeError('One of these 3 radio buttons must be selected!')
 
         return
 
@@ -429,37 +764,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if self._mutexRunNumberList:
             return
 
-        # Get the new run number
-        run_number = str(self.ui.comboBox_runs.currentText())
-        try:
-            if run_number.isdigit():
-                run_number = int(run_number)
-                status, run_info = self._myController.get_reduced_run_info(run_number)
-            else:
-                # is workspace
-                status, run_info = self._myController.get_reduced_run_info(run_number=None, data_key=run_number)
-        except ValueError as value_err:
-            raise NotImplementedError('Unable to get run information from run {0} due to {1}'
-                                      ''.format(run_number, value_err))
-        bank_id_list = run_info
+        # plot diffraction data same as
+        # TEST - plot diffraction data
+        self.do_plot_diffraction_data()
 
-        self._currRunNumber = run_number
+        return
 
-        if status is False:
-            GuiUtility.pop_dialog_error(self, run_info)
+    def evt_select_new_chopped_child(self):
+        """
+        Handle the event if there is change in chopped sequence list
+        :return:
+        """
+        if self._mutexChopSeqList:
+            return
 
-        # Re-set the spectra list combo box
-
-        if len(bank_id_list) != len(self._bankIDList) - 1:
-            # different number of banks
-            self.ui.comboBox_spectraList.clear()
-            for bank_id in bank_id_list:
-                self.ui.comboBox_spectraList.addItem(str(bank_id))
-            self.ui.comboBox_spectraList.addItem('All')
-
-            # reset current bank ID list
-            self._bankIDList = bank_id_list[:]
-        # END-IF
+        self.do_plot_diffraction_data()
 
         return
 
@@ -468,22 +787,27 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Purpose: Re-plot the current plots with new unit
         :return:
         """
-        # Check
+        # new unit
         new_unit = str(self.ui.comboBox_unit.currentText())
+        # Reset current unit
+        self._currUnit = new_unit
 
-        # Get the data sets and replace them with new unit
+        # Clear previous image and re-plot
+        self.ui.graphicsView_mainPlot.clear_all_lines()
+
+        # Get the data sets that are currently plot and replace them with new unit
         for run_number in self._reducedDataDict.keys():
-            # try reduced data first
-            # FIXME/ISSUE/TODO/33 - Shall I generalize the approach to get reduced data???
-            # self.get_reduced_data()
+            # try to get data from previously loaded/reduced data
+            status, ret_obj = self._myController.get_reduced_data(run_id=run_number,
+                                                                  target_unit=new_unit)
 
-            status, ret_obj = self._myController.get_reduced_data(run_number, new_unit)
+            # if the reduced workspace is not in the memory, then search and load from archived GSAS data
             if not status:
                 # try archive
                 if isinstance(run_number, str):
-                    is_workspace=True
+                    is_workspace = True
                 else:
-                    is_workspace=False
+                    is_workspace = False
                 status, ret_obj = self._myController.get_reduced_data(run_number, new_unit,
                                                                       self._iptsNumber,
                                                                       search_archive=True,
@@ -493,16 +817,201 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                     run_number, new_unit, ret_obj
                 ))
                 return
+
+            # set the reduced workspace (name) to dictionary
             self._reducedDataDict[run_number] = ret_obj
+            # plot
+            self.plot_by_run_number(run_number, self._currBank, over_plot=True)
         # END-FOR
 
-        # Reset current unit
-        self._currUnit = new_unit
+        return
 
-        # Clear previous image and re-plot
-        self.ui.graphicsView_mainPlot.clear_all_lines()
-        for run_number in self._reducedDataDict.keys():
-            self.plot_run(run_number, self._currBank, over_plot=True)
+    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
+        """
+        get reduced data in vectors of X and Y
+        :param run_number: data key or run number
+        :param bank_id:
+        :param bank_id_from_1:
+        :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
+        """
+        status, error_message = self.load_reduced_data(run_number)
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to load {0} due to {1}'.format(run_number, error_message))
+            return
+
+        # # Get data (run)
+        # if run_number not in self._reducedDataDict:
+        #     # get new data from memory
+        #     if isinstance(run_number, str):
+        #         is_workspace = True
+        #     else:
+        #         is_workspace = False
+        #     status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                           ipts_number=self._iptsNumber,
+        #                                                           search_archive=False,
+        #                                                           is_workspace=is_workspace)
+        #     print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     if not status:
+        #         # or archive
+        #         status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+        #                                                               ipts_number=self._iptsNumber,
+        #                                                               search_archive=True)
+        #     # END-IF
+        #     print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
+        #
+        #     # return if unable to get reduced data
+        #     if status is False:
+        #         error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+        #         return status, error_message
+        #
+        #     # check returned data dictionary and set
+        #     reduced_data_dict = ret_obj
+        #     assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
+        #                                                 '' % type(reduced_data_dict)
+        #
+        #     # add the returned data objects to dictionary
+        #     self._reducedDataDict[run_number] = reduced_data_dict
+        # else:
+        #     # previously obtained and stored
+        #     reduced_data_dict = self._reducedDataDict[run_number]
+        # # END-IF
+
+        # Get data from bank: convert bank to spectrum
+        # make sure RUN NUMBER is integer
+        if isinstance(run_number, str) and run_number.isdigit():
+            run_number = int(run_number)
+
+        reduced_data_dict = self._reducedDataDict[run_number]
+        bank_id_list = reduced_data_dict.keys()
+        if 0 in bank_id_list:
+            spec_id_from_0 = True
+        else:
+            spec_id_from_0 = False
+
+        # determine the spectrum ID from controller
+        if bank_id_from_1 and spec_id_from_0:
+            spec_id = bank_id - 1
+        else:
+            spec_id = bank_id
+
+        # check again
+        if spec_id not in reduced_data_dict:
+            raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
+                               '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
+
+        vec_x = self._reducedDataDict[run_number][spec_id][0]
+        vec_y = self._reducedDataDict[run_number][spec_id][1]
+
+        return True, (vec_x, vec_y)
+
+    @staticmethod
+    def guess_run_number(gsas_path):
+        """
+        guess the run number from a file
+        # Example:        / home / wzz / Projects / workspaces / VDrive / beta_test / 98237 - s.gda
+        :param gsas_path:
+        :return: integer or None
+        """
+        # get the GSAS file name
+        gsas_file_name = os.path.basename(gsas_path)
+
+        # get the first integer out of the file name
+        run_number_str = ''
+        for s in gsas_file_name:
+            if s.isdigit():
+                run_number_str += s
+            elif len(run_number_str) > 0:
+                # break when encounter the first non-digit letter
+                break
+        # END-FOR
+
+        # convert string to integer
+        if len(run_number_str) > 0:
+            run_number = int(run_number_str)
+        else:
+            run_number = None
+
+        return run_number
+
+    def label_loaded_data(self, run_number, is_chopped, chop_seq_list):
+        """
+        make a label of loaded data to plot
+        :param run_number:
+        :param is_chopped:
+        :param chop_seq_list:
+        :return:
+        """
+        label_str = 'Run {0}'.format(run_number)
+        if is_chopped:
+            assert isinstance(chop_seq_list, list), 'If is chopped data, then neec to give chop sequence list.'
+            chop_seq_list.sort()
+            label_str += ': chopped sequence {0} - {1}'.format(chop_seq_list[0], chop_seq_list[-1])
+
+        self.ui.label_currentRun.setText(label_str)
+
+        return
+
+    def load_reduced_data(self, run_number):
+        """
+        Load reduced data (via run number) to _reducedDataDict.
+        :param run_number: a run number (int or string) or data key (i..e, workspace name)
+        :return:
+        """
+        if run_number in self._reducedDataDict:
+            return True, None
+
+        # find out the input run number is a workspace name or a run number
+        if isinstance(run_number, str) and run_number.isdigit() is False:
+            # cannot be an integer. then must be a workspace name
+            is_workspace = True
+        else:
+            # integer or can be a string, then shall be a run number
+            is_workspace = False
+            run_number = int(run_number)
+
+        # try to load the data from memory
+        print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(run_number, self._currUnit,
+                                                                            self._iptsNumber, is_workspace)
+
+        status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                              ipts_number=self._iptsNumber,
+                                                              search_archive=False,
+                                                              is_workspace=is_workspace)
+
+        # if not in memory, try to load from archive
+        if not status and not is_workspace:
+            # or archive
+            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
+                                                                  ipts_number=self._iptsNumber,
+                                                                  search_archive=True)
+
+        if status:
+            assert isinstance(ret_obj, dict), 'Reduced data set should be dict but not {0}.'.format(type(ret_obj))
+            self._reducedDataDict[run_number] = ret_obj
+
+        else:
+            error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
+            return status, error_message
+
+        return True, None
+
+    def set_sample_log_names(self, log_name_list):
+        """
+        set sample log names to the log name combo box
+        :param log_name_list:
+        :return:
+        """
+        # check
+        assert isinstance(log_name_list, list), 'Log names {0} must be given by a list but not a {1}.' \
+                                                ''.format(log_name_list, type(log_name_list))
+
+        # clear the previous session
+        self.ui.comboBox_sampleLogsList.clear()
+
+        # set by name
+        for name in log_name_list:
+            self.ui.comboBox_sampleLogsList.addItem(name)
 
         return
 
@@ -528,12 +1037,126 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return run_number_list
 
-    def plot_chopped_run(self, bank_id=1, bank_id_from_1=True, chopped_data_dir=None):
+    def plot_1d_diffraction(self, data_key, bank_id, label='', title='', clear_previous=False, color=None):
         """
-        Plot a chopped run
+        plot a spectrum in a workspace
+        :exception: RuntimeError if the specified data and bank ID does not exist
+        :param data_key: key for self._reductionDataDict
+        :param bank_id:
+        :param label:
+        :param title:
+        :param clear_previous: flag to clear the plots on the current canvas
+        :param color:
+        :return:
+        """
+        # check existence of data
+        if data_key not in self._reducedDataDict:
+            raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
+                           ''.format(self._reducedDataDict.keys(), data_key))
+        if bank_id not in self._reducedDataDict[data_key]:
+            raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
+                               ''.format(bank_id, type(bank_id), data_key, self._reducedDataDict[data_key].keys()))
+
+        # check other inputs
+        if color is None:
+            bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
+        else:
+            assert isinstance(color, str), 'Color {0} must be either None or string but not a {1}.' \
+                                           ''.format(color, type(color))
+            bank_color = color
+
+        # clear canvas
+        if clear_previous:
+            # clear canvas and set X limit to 0. and 1.
+            self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        # get data
+        vec_x = self._reducedDataDict[data_key][bank_id][0]
+        vec_y = self._reducedDataDict[data_key][bank_id][1]
+
+        # take are of label
+        if label is None or len(label) == 0:
+            # label is not given
+            label = "Run {0} bank {1}".format(data_key, bank_id)
+
+        # unit
+        current_unit = self._currUnit
+
+        # plot
+        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
+                                                             line_key=data_key, title=title, line_color=bank_color)
+
+        self.ui.graphicsView_mainPlot.auto_rescale()
+
+        # check the bank ID list
+        if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):
+            bank_id_list = sorted(self._reducedDataDict[data_key].keys())
+            self.set_bank_ids(bank_id_list, bank_id)
+
+        return line_id
+
+    def plot_chopped_data_1d(self, chop_tag, bank_id, unit, over_plot):
+        """
+        plot chopped data with specified bank ID
+        :param chop_tag:
+        :param bank_id:
+        :param unit:
+        :param over_plot:
+        :return:
+        """
+        # check input
+        assert isinstance(chop_tag, str), 'Chop tag/chopped workspace name {0} must be a string'.format(chop_tag)
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+
+        # get the reduced diffraction data
+        # print '[DB...BAT] Chop Tag = {0}. Current workspace tag = {1}.'.format(chop_tag, self._currWorkspaceTag)
+        if chop_tag == self._currWorkspaceTag and self._currUnit == unit:
+            # same workspace in memory. no need to get data any more
+            data_set_dict = self._reducedDataDict
+
+        else:
+            if self._myController.is_workspace(chop_tag):
+                # chop tag is a workspace
+                status, data_set_dict = self._myController.get_reduced_data(run_id=chop_tag, target_unit=unit,
+                                                                            is_workspace=True)
+            else:
+                # chop tag is not a workspace but need to use it look up for a workspace
+                # TODO/ISSUE/FUTURE - Need to find a use case for the below
+                raise NotImplementedError('In this case, chop tag = {0} of type {1}. Implement it ASAP'
+                                          ''.format(chop_tag, type(chop_tag)))
+
+            # check result
+            if not status:
+                error_message = 'Unable to retrieve data tagged as {0} due to {1}.'.format(chop_tag,
+                                                                                           data_set_dict)
+                GuiUtility.pop_dialog_error(self, error_message)
+                return
+
+            if self._currWorkspaceTag != chop_tag:
+                # different workspace. reset bank ID
+                # reset bank ID
+                self.set_bank_ids(data_set_dict.keys())
+
+            # update control variables
+            self._reducedDataDict = data_set_dict
+            self._currWorkspaceTag = chop_tag
+            self._currUnit = unit
+        # END-IF
+
+        # plot
+        self.ui.graphicsView_mainPlot.plot_diffraction_data(data_set_dict[bank_id], unit, over_plot,
+                                                            self._currRunNumber,
+                                                            '{0} bank {1}'.format(chop_tag, bank_id))
+
+        return
+
+    def plot_chopped_data_2d(self, bank_id=1, bank_id_from_1=True, chopped_data_dir=None):
+        """
+        Plot a chopped run, which is only called from IDL-like command .. 2D
         :param bank_id:
         :param bank_id_from_1:
-        :param chopped_data_dir: diectory of chopped data
+        :param chopped_data_dir: directory of chopped data
         :return:
         """
         assert self._choppedRunNumber > 0, 'The chopped run number %s must be a positive integer. If None, very ' \
@@ -561,7 +1184,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 # FIXME/TODO/ISSUE/55+ Make it robust
                 assert isinstance(ret_obj, dict), 'Returned object from get_reduced_chopped_data() must be a ' \
                                                   'dictionary but not a {0}.'.format(type(ret_obj))
-                bank_data = ret_obj[bank_id-1]
+                print '[DB...BAT] Bank IDs in returned chopped data: {0}'.format(ret_obj.keys())
+                bank_data = ret_obj[bank_id]
                 vec_x = bank_data[0]
                 vec_y = bank_data[1]
 
@@ -616,9 +1240,46 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def plot_multiple_runs(self, bank_id, bank_id_from_1=False):
+    # def plot_reduced_data(self, run_number, bank_id_list, over_plot):
+    #     """
+    #
+    #     :param run_number:
+    #     :param bank_id_list:
+    #     :param over_plot:
+    #     :return:
+    #     """
+    #     for index, bank_id in enumerate(bank_id_list):
+    #         self.plot_run(run_number, bank_id, over_plot, is_workspace=True)
+    #
+    #     return
+
+    def plot_by_data_key(self, data_key, bank_id_list, over_plot):
         """
-        Plot multiple runs (reduced data) to contour plot.
+        plot loaded GSAS data
+        :param data_key:
+        :param bank_id_list:
+        :param over_plot:
+        :return:
+        """
+        # check input
+        assert isinstance(data_key, str), 'Data key {0} must be a string but not a {1}.'.format(data_key, str(data_key))
+
+        # plot
+        for index, bank_id in enumerate(bank_id_list):
+            if index == 0:
+                clear_canvas = not over_plot
+            else:
+                clear_canvas = False
+            self.plot_1d_diffraction(data_key, bank_id, label='Bank {0}'.format(bank_id),
+                                     title='data key: {0}'.format(data_key),
+                                     clear_previous=clear_canvas)
+        # END-FOR
+
+        return
+
+    def plot_multiple_runs_2d(self, bank_id, bank_id_from_1=False):
+        """
+        Plot multiple runs (reduced data) to contour plot. 2D
         :return:
         """
         assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negetive integer.' \
@@ -634,7 +1295,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 is_workspace = True
             else:
                 is_workspace = False
-            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1, is_workspace=is_workspace)
+            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
             if status:
                 run_number_list.append(run_number)
                 data_set_list.append(ret_obj)
@@ -656,140 +1317,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def get_reduced_data(self, run_number, bank_id, bank_id_from_1=True):
+    def plot_by_run_number(self, run_number, bank_id, over_plot=False):
         """
-        get reduced data in vectors of X and Y
-        :param run_number: data key or run number
-        :param bank_id:
-        :param bank_id_from_1:
-        :param is_workspace:
-        :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
-        """
-        # Get data (run)
-        if run_number not in self._reducedDataDict:
-            # get new data from memory
-            if isinstance(run_number, str):
-                is_workspace = True
-            else:
-                is_workspace = False
-            status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                                  ipts_number=self._iptsNumber,
-                                                                  search_archive=False,
-                                                                  is_workspace=is_workspace)
-            print '[DB...BAT1] status = {0}, returned = {1}'.format(status, ret_obj)
-
-            if not status:
-                # or archive
-                status, ret_obj = self._myController.get_reduced_data(run_number, self._currUnit,
-                                                                      ipts_number=self._iptsNumber,
-                                                                      search_archive=True)
-            # END-IF
-            print '[DB...BAT2] status = {0}, returned = {1}'.format(status, ret_obj)
-
-            # return if unable to get reduced data
-            if status is False:
-                error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
-                return status, error_message
-
-            # check returned data dictionary and set
-            reduced_data_dict = ret_obj
-            assert isinstance(reduced_data_dict, dict), 'Reduced data set should be dict but not %s.' \
-                                                        '' % type(reduced_data_dict)
-
-            # add the returned data objects to dictionary
-            self._reducedDataDict[run_number] = reduced_data_dict
-        else:
-            # previously obtained and stored
-            reduced_data_dict = self._reducedDataDict[run_number]
-        # END-IF
-
-        # Get data from bank: convert bank to spectrum
-        bank_id_list = reduced_data_dict.keys()
-        if 0 in bank_id_list:
-            spec_id_from_0 = True
-        else:
-            spec_id_from_0 = False
-
-        # determine the spectrum ID from controller
-        if bank_id_from_1 and spec_id_from_0:
-            spec_id = bank_id - 1
-        else:
-            spec_id = bank_id
-
-        # check again
-        if spec_id not in reduced_data_dict:
-            raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
-                               '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
-
-        vec_x = self._reducedDataDict[run_number][spec_id][0]
-        vec_y = self._reducedDataDict[run_number][spec_id][1]
-
-        return True, (vec_x, vec_y)
-
-    def plot_data(self, data_key, bank_id, label='', title='', clear_previous=False, is_workspace_name=False):
-        """
-        plot a spectrum in a workspace
-        :param data_key: key to find the workspace or the workspace name
-        :param bank_id:
-        :param label:
-        :param title:
-        :param clear_previous: flag to clear the plots on the current canvas
-        :param is_workspace_name: flag to indicate that the given data_key is a workspace's name
-        :return:
-        """
-        # clear canvas
-        if clear_previous:
-            # clear canvas and set X limit to 0. and 1.
-            self.ui.graphicsView_mainPlot.reset_1d_plots()
-
-        # check inputs
-        if is_workspace_name:
-            # the given data_key is a workspace's name, then get the vector X and vector Y from mantid workspace
-            status, ret_obj = self._myController.get_data_from_workspace(data_key,
-                                                                         bank_id=self._currBank,
-                                                                         target_unit=None,
-                                                                         starting_bank_id=1)
-            if not status:
-                err_msg = str(ret_obj)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
-
-            data_set = ret_obj[0][bank_id]
-            vec_x = data_set[0]
-            vec_y = data_set[1]
-
-            current_unit = ret_obj[1]
-
-            if len(label) == 0:
-                # label is not given
-                label = 'Data {0} Bank {1}'.format(data_key, bank_id)
-
-        else:
-            if data_key not in self._reducedDataDict:
-                raise RuntimeError('Viewer data key {0} is not a key in "ReducedDataDictionary".'.format(data_key))
-
-            # get data
-            vec_x = self._reducedDataDict[data_key][bank_id][0]
-            vec_y = self._reducedDataDict[data_key][bank_id][1]
-
-            if len(label) == 0:
-                # label is not given
-                label = "Run {0} bank {1}".format(data_key, bank_id)
-
-            current_unit = self._currUnit
-        # END-IF-ELSE
-
-        # plot
-        line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=current_unit, label=label,
-                                                             line_key=data_key, title=title)
-
-        self.ui.graphicsView_mainPlot.auto_rescale()
-
-        return line_id
-
-    def plot_run(self, run_number, bank_id, over_plot=False, is_workspace=False):
-        """
-        Plot a run on graph
+        Plot a run on graph as the API to client method
         Requirements:
          1. run number is a positive integer
          2. bank id is a positive integer
@@ -797,58 +1327,84 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_number:
         :param bank_id:
         :param over_plot:
-        :param is_workspace
         :return:
         """
-        # Check requirements
-        assert isinstance(run_number, int) or is_workspace, 'Run number %s must be an integer but not %s.' \
-                                                            '' % (str(run_number), str(type(run_number)))
-        assert run_number > 0, 'bla bla'
+        # get run number even if it is a string of integer & check requirements
+        if isinstance(run_number, str):
+            if run_number.isdigit():
+                run_number = int(run_number)
+            else:
+                raise RuntimeError('PlotByRunNumber does not accept non-integer run number {0}.'.format(run_number))
+        else:
+            assert isinstance(run_number, int), 'Run number {0} must be an integer.'.format(run_number)
+        # END-IF
+        if run_number <= 0:
+            raise RuntimeError('Run number {0} must be a positive number.'.format(run_number))
+
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
-        assert bank_id > 0, 'Bank ID %d must be positive.' % bank_id
+        if bank_id <= 0:
+            raise RuntimeError('Bank ID {0} must be positive.'.format(bank_id))
 
         # Get data (run)
-        status, ret_obj = self.get_reduced_data(run_number, bank_id, is_workspace)
-        if status:
-            vec_x, vec_y = ret_obj
-        else:
-            GuiUtility.pop_dialog_error(self, ret_obj)
+        status, error_message = self.load_reduced_data(run_number)
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to load run {0} due to {1}'.format(run_number, error_message))
             return
 
         # update information
         self._currRunNumber = run_number
         self._currBank = bank_id
 
-        # Plot the run
-        # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
-        label = "run {0} bank {1}".format(run_number, bank_id)
-        if over_plot is False:
-            self.ui.graphicsView_mainPlot.clear_all_lines()
-        line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
-                                                            x_label=self._currUnit, marker='.', color='red')
-        # self._linesDict[(run_number, bank_id)] = line_id
+        # plot
+        line_id = self.plot_1d_diffraction(data_key=run_number, bank_id=bank_id, clear_previous=not over_plot)
+        self.label_loaded_data(run_number=run_number, is_chopped=False, chop_seq_list=None)
+        self._linesDict[(run_number, bank_id)] = line_id
 
-        # Change label
-        self.ui.label_currentRun.setText(str(run_number))
 
-        # And resize the image if it is necessary
-        self.resize_canvas()
 
-        # set combo box value correct
-        self._mutexBankIDList = True
-        try:
-            combo_index = self._bankIDList.index(bank_id)
-        except AttributeError as att_err:
-            print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
-                  ''.format(bank_id, type(bank_id), self._bankIDList)
-            raise att_err
-        self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
-        self._mutexBankIDList = False
-
-        self.ui.label_currentRun.setText('Run {0}'.format(run_number))
+        # self.plot_1d_diffraction(data_key=run_number,
+        #                          bank_id=bank_id,
+        #                          label='Run {0} Bank {1}'.format(),
+        #                          it_is_broken)
+        #
+        # # Plot the run
+        # # TODO/FIXME/ISSUE/59: Move the plotting part to extended graphics view class
+        # label = "run {0} bank {1}".format(run_number, bank_id)
+        # if over_plot is False:
+        #     self.ui.graphicsView_mainPlot.clear_all_lines()
+        # line_id = self.ui.graphicsView_mainPlot.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
+        #                                                     x_label=self._currUnit, marker='.', color='red')
+        # # self._linesDict[(run_number, bank_id)] = line_id
+        # # And resize the image if it is necessary
+        # self.resize_canvas()
+        #
+        # # set combo box value correct
+        #
+        # # Change label
+        #
 
         return
+
+    def process_loaded_chop_suite(self, data_key_dict):
+        """
+        get the chopped data's sequence inferred from the file names
+        :param data_key_dict:
+        :return:
+        """
+        # check inputs
+        assert isinstance(data_key_dict, dict), 'Data key dictionary {0} must be a dictionary but not a {1}.' \
+                                                ''.format(data_key_dict, type(data_key_dict))
+
+        # get data sequence
+        diff_ws_list = list()
+        for ws_name in data_key_dict.keys():
+            log_ws_name = data_key_dict[ws_name][0]
+            diff_ws_list.append(ws_name)
+            self._choppedSampleDict[ws_name] = log_ws_name
+        # END-FOR
+
+        return diff_ws_list
 
     def resize_canvas(self):
         """
@@ -871,6 +1427,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # Resize the canvas
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
+
+        return
+
+    def set_bank_ids(self, bank_id_list, bank_id=None):
+        """
+
+        :param bank_id_list:
+        :return:
+        """
+        # lock it
+        self._mutexBankIDList = True
+
+        # get current index
+        curr_index = self.ui.comboBox_spectraList.currentIndex()
+
+        self.ui.comboBox_spectraList.clear()
+        for bank_key in bank_id_list:
+            self.ui.comboBox_spectraList.addItem('{0}'.format(bank_key))
+
+        # set to original index
+        if bank_id is None:
+            if curr_index < len(bank_id_list):
+                self.ui.comboBox_spectraList.setCurrentIndex(curr_index)
+        else:
+            try:
+                combo_index = bank_id_list.index(bank_id)
+                self.ui.comboBox_spectraList.setCurrentIndex(combo_index)
+            except AttributeError as att_err:
+                print '[ERROR] Bank ID {0} of type {1} cannot be found in Bank ID List {2}.' \
+                      ''.format(bank_id, type(bank_id), self._bankIDList)
+                raise att_err
+        # END-IF-ELSE
+
+        # unlock
+        self._mutexBankIDList = False
 
         return
 
@@ -949,9 +1540,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def set_title(self, title):
+    def set_title_plot_run(self, title):
         """
-        blalba
+        set title of the currently plot run
         :param title:
         :return:
         """
@@ -965,8 +1556,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param fwhm:
         :return:
         """
-        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'blabla'
+        assert isinstance(fwhm, float) or isinstance(fwhm, int) and fwhm > 0, 'FWHM {0} must be a float or integer,' \
+                                                                              'but not a {1}.' \
+                                                                              ''.format(fwhm, type(fwhm))
 
+        if fwhm <= 0:
+            raise RuntimeError('Peak FWHM ({0}) must be positive!'.format(fwhm))
         self._vanadiumFWHM = fwhm
 
         return
@@ -1044,10 +1639,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # plot the data without vanadium peaks
-        #
-        self._vanStripPlotID = self.plot_data(data_key=result_ws_name, bank_id=self._currBank,
-                                              label='Vanadium peaks striped',
-                                              clear_previous=True, is_workspace_name=True)
+        # re-plot the original data because the operation can back from final stage
+        # TODO/FIXME/NOW - what if data_key is None??? VDrivePlot version
+        self._currUnit = 'dSpacing'
+        self.plot_1d_diffraction(data_key=data_key, bank_id=self._currBank,
+                                 label='blabla', clear_previous=True,
+                                 is_workspace_name=True, color='black')
+
+        self._vanStripPlotID = self.plot_1d_diffraction(data_key=result_ws_name, bank_id=self._currBank,
+                                                        label='Vanadium peaks striped',
+                                                        clear_previous=False, is_workspace_name=True,
+                                                        color='green')
 
         if self._iptsNumber is None:
             self._lastVanPeakStripWorkspace = result_ws_name
@@ -1090,10 +1692,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # plot data: the unit is changed to TOF due to Mantid's behavior
+        #            as a consequence of this, the vanadium spectrum with peak removed shall be re-plot in TOF space
+        # TODO/NOW/ - a better name
+        label_no_peak = 'blabla'
+        self.plot_1d_diffraction(data_key=van_peak_removed_ws, bank_id=self._currBank, title=label_no_peak, clear_previous=True,
+                                 is_workspace_name=True, color='black')
+
         label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
                 ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        self.plot_data(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=True,
-                       is_workspace_name=True)
+        self.plot_1d_diffraction(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=False,
+                                 is_workspace_name=True, color='red')
 
         return
 

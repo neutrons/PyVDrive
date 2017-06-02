@@ -170,20 +170,21 @@ class VBin(procss_vcommand.VDriveCommand):
             # set vanadium runs
             if van_run is not None:
                 self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
-            status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+            # FIXME/ISSUE/NOWNOW - Implement reduce_chopped_data_set
+            # Test case: 	vbin, ipts=17414, choprun=109021, runs=1, rune=99
+            status, ret_obj = self._controller.reduce_chopped_data_set(auto_reduce=False, output_directory=output_dir,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
-                                                               binning_parameter=binning_parameters,
-                                                               output_to_fullprof=output_fullprof)
+                                                               binning_parameters=binning_parameters,
+                                                               output_to_fullprof=output_fullprof,
+                                                               align_to_vdrive_bin=use_default_binning)
 
         else:
             # reduce regular data
-            print '[DB...BAT] VBIN CHK P1 run number list: {0}'.format(run_number_list)
             archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
                                                                                                  run_number_list)
 
             run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key, run_number_list)
-            print '[DB...BAT] VBIN CHK P2 run info list: {0}'.format(run_info_list)
             self._controller.add_runs_to_project(run_info_list)
 
             # set vanadium runs
@@ -194,7 +195,6 @@ class VBin(procss_vcommand.VDriveCommand):
             run_number_list = list()
             for run_info in run_info_list:
                 run_number_list.append(run_info['run'])
-            print '[DB...BAT] VBIN run number list: {0}'.format(run_number_list)
             self._controller.set_runs_to_reduce(run_number_list)
 
             # reduce by regular runs
@@ -244,100 +244,6 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
 
         return help_str
-
-    def parse_binning(self):
-        """
-        process binning parameters configuration from inputs
-        :return:
-        """
-        binning_parameters = None
-
-        if not ('BINW' in self._commandArgsDict or 'Mytofbmax' in self._commandArgsDict
-                or 'Mytofbmin' in self._commandArgsDict):
-            # using default binning parameters as VDRIVE standard
-            use_default_binning = True
-
-        elif 'BINW' in self._commandArgsDict and abs(self._commandArgsDict['BINW'] - 0.005) < 1.0E-7:
-            # Bin width is same as default
-            use_default_binning = True
-
-        else:
-            use_default_binning = False
-            if 'BINW' in self._commandArgsDict:
-                bin_width = float(self._commandArgsDict['BINW'])
-            else:
-                bin_width = 0.005  # set to default in case only TOF range is customized
-
-            if 'Mytofbmax' in self._commandArgsDict:
-                tof_max = float(self._commandArgsDict['Mytofbmax'])
-            else:
-                tof_max = None
-
-            if 'Mytofbmin' in self._commandArgsDict:
-                tof_min = float(self._commandArgsDict['Mytofbmin'])
-            else:
-                tof_min = None
-
-            binning_parameters = (tof_min, bin_width, tof_max)
-        # END-IF-ELSE
-
-        return use_default_binning, binning_parameters
-
-    def process_tag(self):
-        """
-        process for 'TAG'
-        for example
-            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
-            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
-
-        :return: standard_tuple = material_type, standard_dir, standard_file
-        """
-        if 'TAG' in self._commandArgsDict:
-            # process material type
-            material_type = self._commandArgsDict['TAG']
-            material_type = material_type.lower()
-
-            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
-            if os.access(standard_dir, os.W_OK) is False:
-                # if standard VDRIVE default directory is not writable, then use the local one
-                # very likely the current PyVdrive is running in a testing mode.
-                standard_dir = os.getcwd()
-
-            if material_type == 'si':
-                material_type = 'Si'
-                standard_dir = os.path.join(standard_dir, 'Si')
-                standard_file = 'SiRecord.txt'
-            elif material_type == 'v':
-                material_type = 'Vanadium'
-                standard_dir = os.path.join(standard_dir, 'Vanadium')
-                standard_file = 'VRecord.txt'
-            elif material_type == 'c':
-                material_type = 'C'
-                standard_dir = os.path.join(standard_dir, 'C')
-                standard_file = 'CRecord.txt'
-            elif material_type == 'ceo2':
-                material_type = 'CeO3'
-                standard_dir = os.path.join(standard_dir, 'CeO2')
-                standard_file = 'CeO2Record.txt'
-            elif len(material_type) > 0:
-                # create arbitrary tag
-                # use the user specified TAG as the type of material
-                material_type = self._commandArgsDict['TAG']
-                standard_dir = os.path.join(standard_dir, material_type)
-                standard_file = '{0}Record.txt'.format(material_type)
-            else:
-                raise RuntimeError('TAG cannot be an empty string.')
-            # END-IF-ELSE
-
-            standard_tuple = material_type, standard_dir, standard_file
-
-            # create workspace if not existing
-            if os.path.exists(standard_dir) is False:
-                self._create_standard_directory(standard_dir)
-        else:
-            standard_tuple = None
-
-        return standard_tuple
 
     @staticmethod
     def _create_standard_directory(tag_dir):

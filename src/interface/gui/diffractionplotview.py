@@ -1,5 +1,3 @@
-__author__ = 'wzz'
-
 import bisect
 import operator
 
@@ -7,6 +5,8 @@ from PyQt4 import QtGui, QtCore
 import mplgraphicsview
 
 import peaksmanager
+
+__author__ = 'wzz'
 
 # define constants
 RESOLUTION = 0.005
@@ -195,11 +195,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
     def add_peak_group(self, left_boundary, right_boundary):
         """
-        Add grouped-peaks to current
-        :param peak_center:
-        :param center_id:
-        :param left_id:
-        :param right_id:
+        add a peak group with left and right boundary
+        :param left_boundary:
+        :param right_boundary:
         :return:
         """
         # check whether it is able to add a peak group
@@ -335,54 +333,39 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def clear_peak_by_position(self, peak_pos):
-        """
-        Purpose: clear a peak by given its position
-        :param peak_pos:
-        :return:
-        """
-        # check
-        assert isinstance(peak_pos, float) and peak_pos > 0
-
-        # find peak with position
-        self._myPeakGroupManager.get_peak_by_position(peak_pos)
-
-        # remove
-        self._myPeakGroupManager.delete_peak(group_id, peak_id)
-
-        return False
-
-    def clear_peak_by_id(self, peak_id):
-        """
-        Remove peak-tuple from the current in-pick-up peaks
-        Requirement: peak ID is a valid integer
-        Guarantees: the indicators for peak, left boundary and right boundary are removed from canvas.
-                    the peak tuple is removed from self._inPickList
-        :param peak_id: integer
-        :return: None
-        """
-        # check
-        assert isinstance(peak_id, int), 'Input peak/indicator ID must be an integer but not %s.' \
-                                         '' % str(type(peak_id))
-
-        # find peak tuple
-        remove_peak_index = -1
-        for i_peak in self._inEditGroupList:
-            if self._inEditGroupList[1] == peak_id:
-                remove_peak_index = i_peak
-                break
-
-        # check whether it is found
-        assert remove_peak_index >= 0, 'Peak/indicator ID %d does not exist on canvas.' % peak_id
-
-        # remove peak from inPickPeakList
-        remove_peak_tuple = self._inEditGroupList.pop(remove_peak_index)
-
-        # remove from canvas
-        for indicator_index in xrange(1, 4):
-            self.remove_peak_indicator(remove_peak_index[indicator_index])
-
-        return
+    # NOTE: Removed because it is not used
+    # def clear_peak_by_id(self, peak_id):
+    #     """
+    #     Remove peak-tuple from the current in-pick-up peaks
+    #     Requirement: peak ID is a valid integer
+    #     Guarantees: the indicators for peak, left boundary and right boundary are removed from canvas.
+    #                 the peak tuple is removed from self._inPickList
+    #     :param peak_id: integer
+    #     :return: None
+    #     """
+    #     # check
+    #     assert isinstance(peak_id, int), 'Input peak/indicator ID must be an integer but not %s.' \
+    #                                      '' % str(type(peak_id))
+    #
+    #     # find peak tuple
+    #     remove_peak_index = -1
+    #     for i_peak in self._inEditGroupList:
+    #         if self._inEditGroupList[1] == peak_id:
+    #             remove_peak_index = i_peak
+    #             break
+    #
+    #     # check whether it is found
+    #     assert remove_peak_index >= 0, 'Peak/indicator ID %d does not exist on canvas.' % peak_id
+    #
+    #     # remove peak from inPickPeakList
+    #     remove_peak_tuple = self._inEditGroupList.pop(remove_peak_index)
+    #     print '[INFO] Peak {0} is removed.'.format(remove_peak_tuple)
+    #
+    #     # remove from canvas
+    #     for indicator_index in xrange(1, 4):
+    #         self.remove_peak_indicator(remove_peak_index[indicator_index])
+    #
+    #     return
 
     def edit_group(self, group_id, status):
         """
@@ -483,16 +466,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         peak_group = self._myPeakGroupManager.get_group(group_id)
 
-        """
-        assert isinstance(index, int), 'Peak index must be a integer but not %s.' % str(type(index))
-        assert 0 <= index < len(self._inEditGroupList)
-
-        peak_group = self._myPeakGroupManager.get_group_id()
-
-        peak_group = self._inEditGroupList[index]
-        assert isinstance(peak_group, peaksmanager.GroupedPeaksInfo)
-        """
-
         return peak_group
 
     def get_peak_by_indicator(self, indicator_id):
@@ -507,7 +480,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         assert isinstance(indicator_id, int), 'Peak\'s indicator ID must be an integer but not %s.' \
                                               '' % str(type(indicator_id))
 
-        # FIXME - This is a brute force searching algorithm.  It won't be efficient if there are many peaks
+        # This is a brute force searching algorithm.  It won't be efficient if there are many peaks
+        # But as the number of peaks won't exceed 100s, there is no urgent need to improve the performance
         for peak_tup in self._inEditGroupList:
             if peak_tup[1] == indicator_id:
                 return peak_tup
@@ -618,7 +592,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         # END-IF
 
-        # update the color of the
+        # highlight or de-highlight the peak indicator by updating its color
+        # if the mouse is moving around a peak, then highlight it red
+        # if the mouse is moving far from a peak, which is previously highlighted, then color it to blue
         if peak_id == self._highlightPeakID:
             # no change
             pass
@@ -630,7 +606,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             self._highlightPeakID = -1
 
         else:
-            # move toward a peak
+            # move around a peak
             self.update_indicator(peak_id, 'red')
             # de-highlight the previously highlighted peak
             if self._highlightPeakID >= 0:
@@ -1038,27 +1014,28 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
                 action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
                 self._menu.addAction(action_del_peak)
 
-            # add actions to add group boundaries
-            if self._addedLeftBoundary:
-                # next boundary to add must be a right boundary
-                action_add_right_bound = QtGui.QAction('Add right boundary', self)
-                action_add_right_bound.triggered.connect(self.menu_add_right_group_boundary)
-                self._menu.addAction(action_add_right_bound)
-            else:
-                # next boundary to add must be a left boundary
-                action_add_left_bound = QtGui.QAction('Add left boundary', self)
-                action_add_left_bound.triggered.connect(self.menu_add_left_group_boundary)
-                self._menu.addAction(action_add_left_bound)
+            # NOTE: The following 3 actions are disabled as they are rarely used and confusing
+            # # add actions to add group boundaries
+            # if self._addedLeftBoundary:
+            #     # next boundary to add must be a right boundary
+            #     action_add_right_bound = QtGui.QAction('Add right boundary', self)
+            #     action_add_right_bound.triggered.connect(self.menu_add_right_group_boundary)
+            #     self._menu.addAction(action_add_right_bound)
+            # else:
+            #     # next boundary to add must be a left boundary
+            #     action_add_left_bound = QtGui.QAction('Add left boundary', self)
+            #     action_add_left_bound.triggered.connect(self.menu_add_left_group_boundary)
+            #     self._menu.addAction(action_add_left_bound)
 
-            # add action to undo work to add boundary
-            action_cancel = QtGui.QAction('Cancel boundary', self)
-            action_cancel.triggered.connect(self.menu_undo_boundary)
-            self._menu.addAction(action_cancel)
+            # # add action to undo work to add boundary
+            # action_cancel = QtGui.QAction('Cancel boundary', self)
+            # action_cancel.triggered.connect(self.menu_undo_boundary)
+            # self._menu.addAction(action_cancel)
 
-            # add action to reset all the grouping effort
-            action_reset = QtGui.QAction('Reset grouping', self)
-            action_reset.triggered.connect(self.menu_reset_grouping)
-            self._menu.addAction(action_reset)
+            # # add action to reset all the grouping effort
+            # action_reset = QtGui.QAction('Reset grouping', self)
+            # action_reset.triggered.connect(self.menu_reset_grouping)
+            # self._menu.addAction(action_reset)
 
             # pop
             self._menu.popup(QtGui.QCursor.pos())
@@ -1125,81 +1102,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def _add_range_peak(self, cursor_x, add_peak):
-        """
-        Add peak range and a peak as an option.
-        Requirements:
-        1. if the cursor is not within boundaries of any peak
-        :param cursor_x:
-        :param add_peak
-        :return:
-        """
-        # check
-        assert cursor_x is not None, 'X cannot be None, i.e., out of canvas'
-
-        # take no operation if the cursor is within range of any peak
-        if self._currIndicatorID >= 0:
-            return
-
-        if add_peak is True:
-            # add a peak
-            peak_id = self.add_vertical_indicator(cursor_x, 'red')
-        else:
-            # no peak to add
-            peak_id = None
-
-        # add peak(s)' range
-        left_id = self.add_vertical_indicator(cursor_x - self._defaultPeakWidth, 'orange')
-        right_id = self.add_vertical_indicator(cursor_x + self._defaultPeakWidth, 'blue')
-
-        # add peaks' group
-        self.add_peak_group(cursor_x, peak_id, left_id, right_id)
-
-        return
-
-    def _add_peak_to_group(self, cursor_x):
-        """
-        Add a peak to an existing peak group if cursor_x is in the range
-        :param cursor_x:
-        :return:
-        """
-        # sort list
-        self._inEditGroupList.sort(key=operator.attrgetter('left_boundary'))
-        w_buf = ''
-        for grp in self._inEditGroupList:
-            w_buf += '%f < ' % grp.left_boundary
-        print '[DB-Check] Is peak group ordered? ', w_buf
-
-        # FIXME - this is a brute force search.  but easy to code
-        # find out the peak group where it should be belonged to
-        peak_added = False
-        for index in xrange(len(self._inEditGroupList)):
-            p_group = self._inEditGroupList[index]
-            if p_group.left_boundary <= cursor_x <= p_group.right_boundary:
-                # check whether it is OK to add
-                left_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x - RESOLUTION)
-                right_in_vicinity = self._cursorPositionMap.in_vicinity(cursor_x + RESOLUTION)
-                allow_to_add = not left_in_vicinity and not right_in_vicinity
-                if allow_to_add is False:
-                    raise RuntimeError('Unable to add new peak due to its range overlaps other peak/boundary'
-                                       'in this peak group.')
-                # create a peak as an indicator and save the indicator (peak) ID
-                peak_id = self.add_vertical_indicator(cursor_x, 'red')
-                # update to cursor map
-                self._cursorPositionMap.add_item(cursor_x - RESOLUTION, cursor_x + RESOLUTION,
-                                                 peak_id, 1)
-                p_group.add_peak(peak_id, cursor_x)
-
-                peak_added = True
-                break
-            # END-IF
-        # END-FOR
-
-        if peak_added is False:
-            raise RuntimeError('Unable to add peak @ %f to any peak group!' % cursor_x)
-
-        return
-
     def set_peak_selection_mode(self, peak_selection_mode):
         """
         Set peak-selection mode
@@ -1225,8 +1127,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # find out the current position
         curr_group_id = self._currGroupID
 
-        print '[DB....Delete Group] About to delete group %d.' % curr_group_id
-
         # delete group on canvas
         removed = self.remove_group(curr_group_id)
         assert removed
@@ -1234,8 +1134,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         # delete group from peak group manager
         removed = self._myPeakGroupManager.delete_group(curr_group_id)
         assert removed, 'Unable to delete group %d from group manager.' % curr_group_id
-
-        print '[DB....Result]\n', self._myPeakGroupManager.pretty()
 
         return
 
@@ -1254,7 +1152,8 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # reset highlight
             self._highlightPeakID = -1
             # remove
-            removed = self.remove_peak_indicator(curr_peak_id)
+            # TO-TEST: corrected #65
+            removed = self.remove_peak_indicator(self._currGroupID, curr_peak_id)
             assert removed
 
         elif self._myPeakSelectionMode == PeakAdditionState.QuickMode \
@@ -1265,27 +1164,29 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             curr_peak_id = self._currIndicatorID
             curr_item_type = self._currIndicatorType
             print '[DB....Delete Peak] About to delete group %d peak %d type %d==2.' % (curr_group_id,
-                                                                                        curr_item_id,
+                                                                                        curr_peak_id,
                                                                                         curr_item_type)
             assert curr_item_type == 1, \
                 'Current item type must be equal 1 for peak but not %d.' % curr_item_type
 
             # remove peak
-            removed = self.remove_peak_indicator(curr_peak_id)
+            # TO-TEST: corrected #65
+            removed = self.remove_peak_indicator(self._currGroupID, curr_peak_id)
+            if not removed:
+                raise RuntimeError('Unable to remove peak (indicator) for peak with ID {0}'.format(curr_peak_id))
             # delete peak from peak group manager
-            removed = self._myPeakGroupManager.delete_peak(curr_group_id, curr_item_id)
-            assert removed
+            removed = self._myPeakGroupManager.delete_peak(curr_group_id, curr_peak_id)
+            if not removed:
+                raise RuntimeError('Unable to remove peak with ID {0} from peak group {1}.'
+                                   ''.format(curr_peak_id, curr_group_id))
 
         else:
-            # unsupported sitation
+            # unsupported situation
             raise RuntimeError('Impossible to happen!')
 
         return
 
     """
-
-
-
     menu_reset_grouping
     """
 
@@ -1315,13 +1216,6 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def menu_reset_grouping(self):
-        """
-        reset the previously grouped peaks
-        :return:
-        """
-        # TODO/NOW/ISSUE44
-
     def menu_show_info(self):
         """
 
@@ -1332,18 +1226,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def menu_undo_boundary(self):
-        """
-        
-        :return:
-        """
-        # TODO/NOW/Issue44
-
     def plot_diffraction_pattern(self, vec_x, vec_y, title=None, key=None):
         """
         Plot a diffraction pattern on canvas
         :param vec_x: 1d array or list for X
         :param vec_y: 1d array or list for Y
+        :param title:
+        :param key:
         :return:
         """
         # check
@@ -1370,14 +1259,12 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         Guarantees:
             A dashed line is drawn vertically across the figure as an indicator
         :param peak_pos:
-        :param peak_width:
-        :param in_pick:
         :return:
         """
         # Check
         left_x, right_x = self.getXLimit()
         assert isinstance(peak_pos, float), 'Input peak position must be a float'
-        assert peak_pos > 0.
+        assert peak_pos > 0., 'Peak position {0} must be positive.'.format(peak_pos)
         assert left_x <= peak_pos <= right_x, 'Specified peak position %f is out of canvas range ' \
                                               '(%f, %f)' % (peak_pos, left_x, right_x)
 
@@ -1411,7 +1298,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def remove_peak_indicator(self, peak_indicator_index):
+    def remove_peak_indicator(self, peak_groud_id, peak_indicator_index):
         """ Remove a peak indicator
         Purpose:
             Remove a peak indicator according to a given position value
@@ -1419,11 +1306,13 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             Peak index should be a valid value
         Guarantees:
             The indicator is removed from the canvas
+        :param peak_groud_id:
         :param peak_indicator_index:
         :return:
         """
         # check
-        assert isinstance(peak_indicator_index, int)
+        assert isinstance(peak_indicator_index, int), 'Peak indicator index {0} must be an integer but not a {1}.' \
+                                                      ''.format(peak_indicator_index, type(peak_indicator_index))
 
         # find and remove indicator from peak group manager
         if self._myPeakSelectionMode == PeakAdditionState.AutoMode:
@@ -1431,7 +1320,9 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # remove it from controller
             del self._mySinglePeakDict[peak_indicator_index]
         else:
-            removable = self._myPeakGroupManager.delete_peak(peak_indicator_index)
+            # remove peak by ID for PeakAdditionState
+            removable = self._myPeakGroupManager.delete_peak(group_id=peak_groud_id,
+                                                             peak_id=peak_indicator_index)
 
         # remove indicator on the canvas
         if removable:
@@ -1522,4 +1413,3 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # END-IF-ELSE
 
         return
-

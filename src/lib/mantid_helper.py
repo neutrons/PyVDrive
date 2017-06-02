@@ -13,6 +13,8 @@ import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 
+from reduce_VULCAN import align_bins
+
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 # define constants
@@ -124,35 +126,30 @@ def delete_workspace(workspace):
     return
 
 
-# TODO/ISSUE/FIXME/CLEAN/33 !
 def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
-               min_peak_height = 200,
-               peak_pos_list=None):
+               min_peak_height=200, peak_pos_list=None):
     """
-    Use FindPeaks() to find peaks in a given diffraction pattern
+    Find peaks in a diffraction pattern
     :param diff_data: diffraction data in workspace
+    :param ws_index:
+    :param is_high_background:
+    :param background_type:
     :param peak_profile: specified peak profile
-    :param auto: auto find peak profile or
+    :param min_peak_height:
+    :param peak_pos_list:  List of tuples for peak information. Tuple = (peak center, height, width)
     :return:
     """
-
-    """ Use
-    :param diff_data:
-    :param peak_profile:
-    :param auto:
-    :return: List of tuples for peak information. Tuple = (peak center, height, width)
-    """
-    # check inputs
+    # check input workspace
     assert ADS.doesExist(diff_data), 'Input workspace {0} does not exist in Mantid AnalysisDataService.' \
                                      ''.format(diff_data)
     matrix_workspace = ADS.retrieve(diff_data)
     assert isinstance(ws_index, int) and 0 <= ws_index < matrix_workspace.getNumberHistograms(), \
         'Workspace index {0} must be an integer in [0, {1}).'.format(ws_index, matrix_workspace.getNumberHistograms())
 
-    # define output workspace name
+    #  get workspace define output workspace name
     result_peak_ws_name = '{0}_FoundPeaks'.format(diff_data)
 
-    # call Mantid
+    # call Mantid's FindPeaks
     arg_dict = {'InputWorkspace': diff_data,
                 'WorkspaceIndex': ws_index,
                 'HighBackground': is_high_background,
@@ -161,22 +158,22 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
                 'PeakFunction': peak_profile,
                 'BackgroundType': background_type
                 }
-    mantidapi.FindPeaks(**arg_dict)
+    if peak_pos_list is not None:
+        assert isinstance(peak_pos_list, list), 'Peak positions {0} must be given by a list but not a {1}.' \
+                                                ''.format(peak_pos_list, type(peak_pos_list))
+        if len(peak_pos_list) > 0:
+            arg_dict['Peaks'] = numpy.array(peak_pos_list)
 
-    # check
+    try:
+        mantidapi.FindPeaks(**arg_dict)
+    except RuntimeError as run_err:
+        raise RuntimeError('Unable to find peaks in workspace {0} due to {1}'.format(diff_data, run_err))
+
+    # check output workspace
     if ADS.doesExist(result_peak_ws_name):
         peak_ws = mantidapi.AnalysisDataService.retrieve(result_peak_ws_name)
     else:
         raise RuntimeError('Failed to find peaks.')
-
-    # mantidapi.FindPeaks(InputWorkspace=diff_data,
-    #                     WorkspaceIndex=ws_index,
-    #                     HighBackground=False,
-    #                     PeaksList=out_ws_name,
-    #                     MinimumPeakHeight=min_peak_height,
-    #                     PeakFunction=peak_profile,
-    #                     BackgroundType='Linear')
-
 
     # check the table from mantid algorithm FindPeaks
     col_names = peak_ws.getColumnNames()
@@ -185,6 +182,7 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
     col_index_width = col_names.index('width')
     col_index_chi2 = col_names.index('chi2')
 
+    # form output as list of peak tuples
     peak_list = list()
     for index in range(peak_ws.rowCount()):
         peak_i_center = peak_ws.cell(index, col_index_centre)
@@ -194,9 +192,10 @@ def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_pr
             peak_i_width = peak_ws.cell(index, col_index_width)
             peak_list.append((peak_i_center, peak_i_height, peak_i_width))
 
-            print ('Find peak @ ', peak_i_center, 'chi2 = ', peak_i_chi2)
+            print ('[INFO] Find peak @ {0} with chi^2 = {1}'.format(peak_i_center, peak_i_chi2))
         else:
-            print ('No peak   @ ', peak_i_center)
+            print ('[INFO] Ignore peak @ {0} with large chi^2 = {1}'.format(peak_i_center, peak_i_chi2))
+    # END-FOR
 
     return peak_list
 
@@ -235,8 +234,9 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     info_ws = retrieve_workspace(info_ws_name)
     target_set = set()
 
+    print '[DB...BAT] Number of splitters = {0}'.format(len(split_list))
     for index, split_tup in enumerate(split_list):
-        print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
+        # print '[DB...BAT] Splitter {0}: start = {1}, stop = {2}.'.format(index, split_tup[0], split_tup[1])
         start_time = split_tup[0]
         stop_time = split_tup[1]
 
@@ -407,14 +407,15 @@ def get_sample_log_tsp(src_workspace, sample_log_name):
         raise RuntimeError('Workspace {0} does not exist in ADS.'.format(sample_log_name))
 
     run = workspace.run()
-    assert isinstance(sample_log_name, str), 'blabla'
+    assert isinstance(sample_log_name, str), 'sample log name {0} must be a string but not a {1}.' \
+                                             ''.format(sample_log_name, type(sample_log_name))
     if run.hasProperty(sample_log_name):
-        property = run.getProperty(sample_log_name)
+        tsp_property = run.getProperty(sample_log_name)
     else:
         raise RuntimeError('Workspace {0} does not have property {1}. Property list: {2}.'
                            ''.format(src_workspace, sample_log_name, get_sample_log_names(src_workspace)))
 
-    return property
+    return tsp_property
 
 
 def get_sample_log_info(src_workspace):
@@ -444,7 +445,7 @@ def get_sample_log_names(src_workspace, smart=False):
     From workspace get sample log names as FloatTimeSeriesProperty
     :param src_workspace:
     :param smart:
-    :return:
+    :return: list of strings
     """
     # check input
     if isinstance(src_workspace, str):
@@ -513,17 +514,19 @@ def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, 
 
     out_ws = mantid.AnalysisDataService.retrieve(temp_out_ws_name)
 
-    # FIXME: find out the difference!
+    # copy the vector of X (time) and Y (value) for returning
+    # FUTURE - what if the returned values are the reference to the vectors in workspace?
     vec_times = out_ws.readX(0)[:]
     vec_value = out_ws.readY(0)[:]
 
     return vec_times, vec_value
 
 
-def get_data_from_gsas(gsas_file_name):
+def get_data_from_gsas(gsas_file_name, binning_template_ws=None):
     """
     Load and get data from a GSAS file
     :param gsas_file_name:
+    :param binning_template_ws: name of MatrixWorkspace for binning template
     :return: a dictionary of 3-array-tuples (x, y, e). KEY = workspace index (from 0 ...)
     """
     # check input
@@ -534,7 +537,8 @@ def get_data_from_gsas(gsas_file_name):
     out_ws_name = os.path.basename(gsas_file_name).split('.')[0] + '_gss'
 
     # load GSAS file
-    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name)
+    load_gsas_file(gss_file_name=gsas_file_name, out_ws_name=out_ws_name,
+                   standard_bin_workspace=binning_template_ws)
 
     data_set_dict, unit = get_data_from_workspace(out_ws_name, target_unit='dSpacing', point_data=True,
                                                   start_bank_id=True)
@@ -839,18 +843,22 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     Guarantees:
     :param gss_file_name:
     :param out_ws_name:
-    :param standard_bin_workspace:
+    :param standard_bin_workspace: binning template workspace. It can be None for not aligning
     :return: output workspace name
     """
-    # TODO/ISSUE/62 - Implement feature with standard_bin_workspace...
-    from reduce_VULCAN import align_bins
-
+    # TEST/ISSUE/NOW - Implement feature with standard_bin_workspace...
     # Check
     assert isinstance(gss_file_name, str), 'GSAS file name should be string but not %s.' % str(type(gss_file_name))
     assert isinstance(out_ws_name, str), 'Output workspace name should be a string but not %s.' % str(type(out_ws_name))
+    assert isinstance(standard_bin_workspace, str) or standard_bin_workspace is None, \
+        'Standard binning workspace {0} must be either a string or None but not a {1}.' \
+        ''.format(standard_bin_workspace, type(standard_bin_workspace))
 
     # Load GSAS
-    mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
+    try:
+        mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
+    except IndexError as index_error:
+        raise RuntimeError('GSAS {0} is corrupted. FYI: {1}'.format(gss_file_name, index_error))
     gss_ws = retrieve_workspace(out_ws_name)
     assert gss_ws is not None, 'Output workspace cannot be found.'
 
@@ -865,10 +873,11 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         raise RuntimeError('It is not implemented for cases more than 2 spectra.')
 
     # convert unit and to point data
-    align_bins(out_ws_name, standard_bin_workspace)
-    mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
-                           Target='dSpacing')
-    # mantidapi.ConvertToPointData(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name)
+    if standard_bin_workspace is not None:
+        align_bins(out_ws_name, standard_bin_workspace)
+        mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
+                               Target='dSpacing')
+    # END-IF
 
     return out_ws_name
 
@@ -880,7 +889,6 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     :param meta_data_only:
     :return: 2-tuple
     """
-    print '[DB...BAT] Mantid: ', mantidapi
     try:
         out_ws = mantidapi.Load(Filename=data_file_name,
                                 OutputWorkspace=output_ws_name,
@@ -927,7 +935,6 @@ def check_bins_can_align(workspace_name, template_workspace_name):
     :param template_workspace_name:
     :return: 2-tuple (boolean as align-able, string for reason
     """
-    # TODO/TEST/33
     # get workspace
     try:
         target_workspace = ADS.retrieve(workspace_name)
@@ -999,7 +1006,7 @@ def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name
         raise RuntimeError('Workspace name list is empty!')
 
     # get the workspace to get merged to
-    # TODO/TEST/ISSUE/NOW - Need to verify
+    # TEST/ISSUE/NOW - Need to verify
     if ADS.doesExist(target_workspace_name) is False:
         mantidapi.CloneWorkspace(InputWorkspace=workspace_name_list[0], OutputWorkspace=target_workspace_name)
         # add a new property to the target workspace for more information
@@ -1126,7 +1133,7 @@ def mtd_convert_units(ws_name, target_unit):
     
     # Check output
     out_ws = retrieve_workspace(ws_name)
-    assert out_ws
+    assert out_ws, 'Output workspace {0} cannot be retrieved!'.format(ws_name)
     
     return
     
@@ -1259,25 +1266,30 @@ def save_event_workspace(event_ws_name, nxs_file_name):
     return
 
 
-def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_name=None,
+def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name=None,
                      tof_correction=False, output_directory=None, delete_split_ws=True):
     """
-    split event data file according pre-defined split workspace. optionally the split workspace
+    Split event data file according pre-defined split workspace.
+    Optionally the split workspace
+    Optionally the split workspace
     can be saved to NeXus files
-    :param raw_file_name:
+    :param raw_ws_name:
     :param split_ws_name:
     :param info_table_name:
     :param target_ws_name:
     :param tof_correction:
     :param output_directory:
     :param delete_split_ws: True/(list of ws names, list of ws objects); False/error message
-    :return: 2-tuple.  [1] boolean (success or fail) [2] dictionary or Error message
+    :return: 2-tuple.  [1] boolean (success or fail) [2a] List of 2-tuples (output file name + workspace name)
+                                                     [2b] Error message
     """
     # Check requirements
-    assert workspace_does_exist(split_ws_name)
-    assert workspace_does_exist(info_table_name)
-    assert isinstance(raw_file_name, str), 'Input file name must be a string but not %s.' % type(raw_file_name)
+    assert workspace_does_exist(split_ws_name), 'splitters workspace {0} does not exist.'.format(split_ws_name)
+    assert workspace_does_exist(info_table_name), 'splitting information workspace {0} does not exist.' \
+                                                  ''.format(info_table_name)
+    assert workspace_does_exist(raw_ws_name), 'raw event workspace {0} does not exist.'.format(raw_ws_name)
 
+    # get the input event workspace
     # rule out some unsupported scenario
     if output_directory is None and delete_split_ws:
         raise RuntimeError('It is not supported that no file is written (output_dir is None) '
@@ -1286,10 +1298,6 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         assert isinstance(output_directory, str), 'Output directory %s must be a string but not %s.' \
                                                   '' % (str(output_directory), type(output_directory))
 
-    # load the file to workspace
-    event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
-    load_nexus(data_file_name=raw_file_name, output_ws_name=event_ws_name, meta_data_only=False)
-
     # process TOF correction
     if tof_correction is True:
         correction = 'Elastic'
@@ -1298,13 +1306,29 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
 
     # process the target workspace name
     if target_ws_name is None:
-        target_ws_name = event_ws_name + '_split'
+        target_ws_name = raw_ws_name + '_split'
     else:
         assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
                                                 '' % (str(target_ws_name), type(target_ws_name))
 
+    # find out whether it is relative time
+    split_ws = retrieve_workspace(split_ws_name)
+    if split_ws.__class__.__name__.count('Table'):
+        # table workspace
+        time0 = split_ws.cell(0, 0)
+    elif split_ws.__class__.__name__.count('Splitter'):
+        # splitters workspace
+        time0 = float(split_ws.cell(0, 0)) * 1.E-9
+    else:
+        # matrix workspace
+        time0 = split_ws.readX(0)[0]
+    if time0 < 3600. * 24. * 356:
+        is_relative_time = True
+    else:
+        is_relative_time = False
+
     # split workspace
-    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
+    ret_list = mantidapi.FilterEvents(InputWorkspace=raw_ws_name,
                                       SplitterWorkspace=split_ws_name,
                                       InformationWorkspace=info_table_name,
                                       OutputWorkspaceBaseName=target_ws_name,
@@ -1312,7 +1336,8 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
                                       GroupWorkspaces=True,
                                       CorrectionToSample=correction,
                                       SplitSampleLogs=True,
-                                      OutputWorkspaceIndexedFrom1=True
+                                      OutputWorkspaceIndexedFrom1=True,
+                                      RelativeTime=is_relative_time
                                       )
 
     try:
@@ -1337,113 +1362,28 @@ def split_event_data(raw_file_name, split_ws_name, info_table_name, target_ws_na
         return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
 
     # Save result
+    chop_list = list()
     if output_directory is not None:
-        output_file_list = list()
-        for chopped_ws_name in chopped_ws_name_list:
-            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
+        for index, chopped_ws_name in enumerate(chopped_ws_name_list):
+            base_file_name = '{0}_event.nxs'.format(chopped_ws_name)
+            file_name = os.path.join(output_directory, base_file_name)
+            print '[INFO] Save chopped workspace {0} to {1}.'.format(chopped_ws_name, file_name)
             mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
-            output_file_list.append(file_name)
-    else:
-        output_file_list = None
+            chop_list.append((file_name, chopped_ws_name))
 
-    # Clear
-    delete_workspace(correction_ws)
-    if delete_split_ws:
+        # Clear only if file is saved
+        delete_workspace(correction_ws)
+        if delete_split_ws:
+            for chopped_ws_name in chopped_ws_name_list:
+                mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+    else:
+        if delete_split_ws:
+            print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
         for chopped_ws_name in chopped_ws_name_list:
-            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
-        chopped_ws_name_list = None
+            chop_list.append((None, chopped_ws_name))
+    # END-IF
 
-    # Output
-    chop_dict = {'workspaces': chopped_ws_name_list,
-                 'files': output_file_list}
-    # if delete_split_ws:
-    #     ret_obj = None
-    # else:
-    #     ret_obj = (chopped_ws_name_list, ret_list[3:])
-
-    return True, chop_dict
-
-
-# TODO/FIXME/ISSUE/NOW - Refactor with split_event_data()
-def split_event_workspace(event_ws_name, split_ws_name, info_table_name, target_ws_name, tof_correction,
-                          output_directory, delete_split_ws):
-    """
-
-    :param event_ws_name:
-    :param split_ws_name:
-    :param info_table_name:
-    :param target_ws_name:
-    :param tof_correction:
-    :param output_directory:
-    :param delete_split_ws:
-    :return:
-    """
-    # process TOF correction
-    if tof_correction is True:
-        correction = 'Elastic'
-    else:
-        correction = 'None'
-
-    # process the target workspace name
-    if target_ws_name is None:
-        target_ws_name = event_ws_name + '_split'
-    else:
-        assert isinstance(target_ws_name, str), 'Target workspace name %s must be a string but not %s.' \
-                                                '' % (str(target_ws_name), type(target_ws_name))
-
-    # split workspace
-    ret_list = mantidapi.FilterEvents(InputWorkspace=event_ws_name,
-                                      SplitterWorkspace=split_ws_name,
-                                      InformationWorkspace=info_table_name,
-                                      OutputWorkspaceBaseName=target_ws_name,
-                                      FilterByPulseTime=False,
-                                      GroupWorkspaces=True,
-                                      CorrectionToSample=correction,
-                                      SplitSampleLogs=True,
-                                      OutputWorkspaceIndexedFrom1=True
-                                      )
-
-    try:
-        correction_ws = ret_list[0]
-        num_split_ws = ret_list[1]
-        chopped_ws_name_list = ret_list[2]
-        # check the workspace name
-        for i_w, ws_name in enumerate(chopped_ws_name_list):
-            if len(ws_name) == 0:
-                chopped_ws_name_list.pop(i_w)
-            elif ADS.doesExist(ws_name) is False:
-                print '[ERROR] Chopped workspace {0} cannot be found.'.format(ws_name)
-        # END-FOR
-        assert num_split_ws == len(chopped_ws_name_list), 'Number of split workspaces {0} must be equal to number of ' \
-                                                          'chopped workspaces names {1} ({2}).' \
-                                                          ''.format(num_split_ws, len(chopped_ws_name_list),
-                                                                    chopped_ws_name_list)
-    except IndexError:
-        return False, 'Failed to split data by FilterEvents.'
-
-    if len(ret_list) != 3 + len(chopped_ws_name_list):
-        return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
-
-    # Save result
-    # TODO/ISSUE/33 - Shall return NeXus file?
-    if output_directory is not None:
-        for chopped_ws_name in chopped_ws_name_list:
-            file_name = os.path.join(output_directory, chopped_ws_name) + '.nxs'
-            mantidapi.SaveNexusProcessed(InputWorkspace=chopped_ws_name, Filename=file_name)
-
-    # Clear
-    delete_workspace(correction_ws)
-    if delete_split_ws:
-        for chopped_ws_name in chopped_ws_name_list:
-            mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
-
-    # Output
-    if delete_split_ws:
-        ret_obj = None
-    else:
-        ret_obj = (chopped_ws_name_list, ret_list[3:])
-
-    return True, ret_obj
+    return True, chop_list
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,

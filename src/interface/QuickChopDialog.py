@@ -10,6 +10,7 @@ except AttributeError:
         return s
 
 import gui.ui_ChopDialog
+import gui.GuiUtility as GuiUtility
 
 
 class QuickChopDialog(QtGui.QDialog):
@@ -28,9 +29,20 @@ class QuickChopDialog(QtGui.QDialog):
         self.ui = gui.ui_ChopDialog.Ui_Dialog()
         self.ui.setupUi(self)
 
+        # set up the default value of the widgets
         self.ui.lineEdit_runNumber.setText(str(run_number))
         self.ui.lineEdit_sourceFile.setText(str(raw_file_name))
-        self.ui.radioButton_toGSAS.setChecked(True)
+
+        self.ui.radioButton_saveToArbitrary.setChecked(False)
+        self.ui.radioButton_saveToArchive.setChecked(True)
+        self.ui.lineEdit_outputDir.setEnabled(False)
+        self.ui.pushButton_browse.setEnabled(False)
+
+        self.ui.radioButton_chopOnly.setChecked(True)
+        self.ui.radioButton_chopReduce.setChecked(True)
+
+        # default output directory
+        self.ui.lineEdit_outputDir.setText(os.getcwd())
 
         # set up event handlers
         self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
@@ -40,9 +52,10 @@ class QuickChopDialog(QtGui.QDialog):
         self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
                      self.do_quit)
 
-        # default output directory
-        self._outputDir = os.getcwd()
-        self.ui.lineEdit_outputDir.setText(self._outputDir)
+        self.connect(self.ui.radioButton_saveToArbitrary, QtCore.SIGNAL('toggled(bool)'),
+                     self.event_save_to_changed)
+        self.connect(self.ui.radioButton_saveToArchive, QtCore.SIGNAL('toggled(bool)'),
+                     self.event_save_to_changed)
 
         return
 
@@ -58,10 +71,19 @@ class QuickChopDialog(QtGui.QDialog):
 
     def do_chop(self):
         """
-        Chop data
+        record the state to chop/reduce to be True and close the window
+        Note: this is the OK button and thus dialog will be closed and be returned with 1
         :return:
         """
-        self._outputDir = str(self.ui.lineEdit_outputDir.text())
+        # check output directory
+        if self.ui.radioButton_saveToArbitrary.isChecked():
+            # output directory
+            target_dir = str(self.ui.lineEdit_outputDir.text())
+            if len(target_dir) == 0:
+                GuiUtility.pop_dialog_error(self, 'Output directory is not specified.')
+                return
+
+        # END-IF
 
         self.close()
 
@@ -76,16 +98,46 @@ class QuickChopDialog(QtGui.QDialog):
 
         return
 
-    def get_output_dir(self):
+    def event_save_to_changed(self):
         """
-        get output directory
+        event with radio buttons for 'save to...' changed
         :return:
         """
-        return self._outputDir
+        to_enable = self.ui.radioButton_saveToArbitrary.isChecked()
 
-    def to_reduce_data(self):
+        self.ui.lineEdit_outputDir.setEnabled(to_enable)
+        self.ui.pushButton_browse.setEnabled(to_enable)
+
+        return
+
+    @property
+    def reduce_data(self):
         """
         Get the flag whether the sliced data will be reduced to GSAS
         :return:
         """
-        return self.ui.radioButton_toGSAS.isChecked()
+        return self.ui.radioButton_chopReduce.isChecked()
+
+    @property
+    def save_to_nexus(self):
+        """
+        from 2017.05.15: chopped data will be always saved to NeXus
+        :return:
+        """
+        return True
+
+    @property
+    def output_to_archive(self):
+        """
+        whether the result will be written to SNS archive?
+        :return:
+        """
+        return self.ui.radioButton_saveToArchive.isChecked()
+
+    @property
+    def output_directory(self):
+        """
+        get output directory
+        :return:
+        """
+        return str(self.ui.lineEdit_outputDir.text())

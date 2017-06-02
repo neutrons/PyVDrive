@@ -5,6 +5,7 @@ import os
 import reduce_VULCAN
 import mantid_helper
 import chop_utility
+import reduce_adv_chop
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -34,10 +35,11 @@ class DataReductionTracker(object):
                                              ''.format(ipts_number, type(ipts_number))
 
         # set up
-        self._runNumber = run_number
-        # FIXME - it is not clear whether it is better to use vanadium file name or vanadium run number
-        self._vanadiumCalibrationRunNumber = None
         self._iptsNumber = ipts_number
+        self._runNumber = run_number
+
+        # vanadium run number. it will be used as a key to the dictionary to look for a vanadium workspace
+        self._vanadiumCalibrationRunNumber = None
 
         # Workspaces' names
         # event workspaces
@@ -53,6 +55,10 @@ class DataReductionTracker(object):
         self._isReduced = False
         self._isChopped = False
 
+        # detailed reduction information
+        self._reductionStatus = None
+        self._reductionInformation = None
+
         # initialize states of reduction beyond
         self._badPulseRemoved = False
         self._normalisedByCurrent = False
@@ -64,24 +70,22 @@ class DataReductionTracker(object):
         # variables about chopped workspaces
         self._slicerKey = None   # None stands for the reduction is without chopping
         self._choppedWorkspaceNameList = None
+        self._choppedNeXusFileList = list()
 
         return
 
-    def set_reduced_files(self, file_name_list, append):
+    @property
+    def compressed_ws_name(self):
         """
-        add reduced file
-        :param file_name_list:
+        get compressed workspace name
+        if the name is not set up yet, then make it and set
         :return:
         """
-        assert isinstance(file_name_list, list), 'Input file names must be in a list but not {0}.' \
-                                                 ''.format(type(file_name_list))
+        if self._compressedChoppedWorkspaceName is None:
+            # not set yet.
+            self._compressedChoppedWorkspaceName = 'Chopped_{0}_Slicer_{1}.'.format(self._runNumber, self._slicerKey)
 
-        if not append or self._reducedFiles is None:
-            self._reducedFiles = file_name_list[:]
-        else:
-            self._reducedFiles.extend(file_name_list[:])
-
-        return
+        return self._compressedChoppedWorkspaceName
 
     @property
     def dpsace_worksapce(self):
@@ -114,22 +118,10 @@ class DataReductionTracker(object):
         # Set
         self._eventWorkspace = value
 
-    def get_compressed_ws_name(self):
-        """
-        get compressed workspace name
-        if the name is not set up yet, then make it and set
-        :return:
-        """
-        if self._compressedChoppedWorkspaceName is None:
-            # not set yet.
-            self._compressedChoppedWorkspaceName = 'Chopped_{0}_Slicer_{1}.'.format(self._runNumber, self._slicerKey)
-
-        return self._compressedChoppedWorkspaceName
-
     def get_information(self):
         """
         construct information about the chopped workspace
-        :return:
+        :return: a dictionary containing all the information about the reduction tracker
         """
         info_dict = dict()
         info_dict['run'] = self._runNumber
@@ -141,6 +133,7 @@ class DataReductionTracker(object):
             # chopped run
             info_dict['slicer_key'] = self._slicerKey
             info_dict['workspaces'] = self._choppedWorkspaceNameList[:]
+            info_dict['raw_files'] = self._choppedNeXusFileList[:]
             if self._reducedFiles is not None:
                 info_dict['files'] = self._reducedFiles[:]
             else:
@@ -307,9 +300,35 @@ class DataReductionTracker(object):
         return
 
     def set_chopped_nexus_files(self, chopped_file_list, append=True):
+        """ set NeXus files that are saved from chopped workspace to this tracker
         """
+        # check input
+        assert isinstance(chopped_file_list, list), 'Chopped NeXus files {0} must be given by list but not {1}.' \
+                                                    ''.format(chopped_file_list, type(chopped_file_list))
+
+        # clear previous data
+        if not append:
+            self._choppedNeXusFileList = list()
+
+        # append the input file lsit
+        self._choppedWorkspaceNameList.extend(chopped_file_list)
+
+        return
+
+    def set_reduced_files(self, file_name_list, append):
         """
-        # TODO/FIXME/ISSUE/33 - Make it work
+        add reduced file
+        :param file_name_list:
+        :param append:
+        :return:
+        """
+        assert isinstance(file_name_list, list), 'Input file names must be in a list but not {0}.' \
+                                                 ''.format(type(file_name_list))
+
+        if not append or self._reducedFiles is None:
+            self._reducedFiles = file_name_list[:]
+        else:
+            self._reducedFiles.extend(file_name_list[:])
 
         return
 
@@ -318,7 +337,7 @@ class DataReductionTracker(object):
 
         :param vdrive_bin_ws:
         :param tof_ws:
-        :param dspace_ws:
+        :param dspace_ws: it could be None or name of workspace in d-spacing
         :return:
         """
         # check workspaces existing
@@ -326,11 +345,14 @@ class DataReductionTracker(object):
                                                                   'in ADS'.format(vdrive_bin_ws)
         assert mantid_helper.workspace_does_exist(tof_ws), 'Mantid-binned TOF workspace {0} does not exist in ADS.' \
                                                            ''.format(tof_ws)
-        assert mantid_helper.workspace_does_exist(dspace_ws), 'Mantid-binned D-space workspace {0} does not exist ' \
-                                                              'in ADS.'.format(dspace_ws)
-        dspace_ws_unit = mantid_helper.get_workspace_unit(dspace_ws)
-        assert dspace_ws_unit == 'dSpacing',\
-            'The unit of DSpace workspace {0} should be dSpacing but not {1}.'.format(str(dspace_ws), dspace_ws_unit)
+        if dspace_ws is not None:
+            assert mantid_helper.workspace_does_exist(dspace_ws),\
+                'Mantid-binned D-space workspace {0} does not exist in ADS.'.format(dspace_ws)
+            dspace_ws_unit = mantid_helper.get_workspace_unit(dspace_ws)
+            assert dspace_ws_unit == 'dSpacing',\
+                'Unable to set reduced d-space workspace: The unit of DSpace workspace {0} should be dSpacing but ' \
+                'not {1}.'.format(str(dspace_ws), dspace_ws_unit)
+        # END-IF
 
         self._vdriveWorkspace = vdrive_bin_ws
         self._tofWorkspace = tof_ws
@@ -342,15 +364,22 @@ class DataReductionTracker(object):
 
     def set_reduction_status(self, status, message, chopped_data):
         """
-        set the reduction status
+        set the reduction status for this tracker
         :param status:
         :param message:
+        :param chopped_data
         :return:
         """
-        # TODO/ISSUE/NOW - More class parameters and type check!
-        self._myStatus = status
-        self._myReductionDetails = message
-        self._isChoppedData = chopped_data
+        # check input
+        assert isinstance(status, bool), 'Reduction status must be given by bool but not {0}'.format(type(status))
+        assert isinstance(message, str), 'Reduction message {0} must be string but not {1}' \
+                                         ''.format(message, type(message))
+        assert isinstance(chopped_data, bool), 'Flag for being chopped run must be boolean but not {0}' \
+                                               ''.format(type(chopped_data))
+
+        self._reductionStatus = status
+        self._reductionInformation = message
+        self._isChopped = chopped_data
 
         return
 
@@ -434,52 +463,250 @@ class ReductionManager(object):
 
         return
 
-    def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir, tof_correction=False):
+    # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
+    def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
+                        output_nexus_dir, output_gsas_dir, gsas_to_archive, tof_correction):
         """
-        chop data from a source event file and then save the result to Nexus files.
-        There is no focusing type of reduction is evolved.
-        :param ipts_number:
-        :param run_number
-        :param data_file:
-        :param chop_manager:
-        :param slice_key:
-        :param output_dir:
-        :param tof_correction: default to False.  applied if the log is fast
-        :return:
+        chop VULCAN run with reducing to GSAS file as an option
+        :param ipts_number: IPTS number (serving as key for reference)
+        :param run_number: Run number (serving as key for reference)
+        :param raw_file_name:
+        :param split_ws_name:
+        :param split_info_name:
+        :param slice_key: a general keyword to refer from the reduction tracker
+        :param output_nexus_dir: it cannot be None, must be specified
+        :param output_gsas_dir: if set to None, then chopping data only if gsas_to_archive is False too
+        :param gsas_to_archive: save GSAS to archive
+        :param tof_correction:
+        :return: 2-tuple.  (1) boolean as status  (2) error message
         """
-        # check inputs
-        assert isinstance(chop_manager, chop_utility.DataChopper), \
-            'Input chopper manager must be an instance of DataChopper but not {0}.' \
-            ''.format(chop_manager.__class__.__name__)
-        assert isinstance(run_number, int), 'Run number must be an integer but not of type {0}.' \
-                                            ''.format(type(run_number))
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
+        if tof_correction:
+            raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')
 
-        # get splitters workspace
-        #
+        # set up reduction parameters
+        reduction_setup = reduce_VULCAN.ReductionSetup()
+        reduction_setup.set_ipts_number(ipts_number)
+        reduction_setup.set_run_number(run_number)
+        reduction_setup.set_event_file(raw_file_name)
 
-        # split event data
-        status, ret_obj = chop_manager.chop_data(raw_file_name=data_file,
-                                                 slice_key=slice_key,
-                                                 output_directory=output_dir)
+        # splitters workspace suite
+        reduction_setup.set_splitters(split_ws_name, split_info_name)
 
-        if status:
-            chopped_ws_name_list = ret_obj['workspaces']
-            chopped_file_list = ret_obj['files']
+        # define chop processor
+        chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+
+        # use output_gsas_dir to identify whether it is to chop data only or to reduce data too
+        if output_gsas_dir is None and gsas_to_archive is False:
+            # chop data only
+            # check input
+            if output_nexus_dir is None:
+                raise RuntimeError('It is not allowed to have output NeXus directory and output GSAS directory to '
+                                   'be None. While setting GSAS_To_Archive to be False')
+            reduction_setup.set_chopped_nexus_dir(output_nexus_dir)
+
+            # chop data without reduction
+            status, ret_obj = chop_reducer.chop_data()
+
+            # return if chopping fails
+            if not status:
+                error_msg = ret_obj
+                return False, error_msg
+
+            # get chopped workspaces' names, saved NeXus file name; check them and store to lists
+            chopped_ws_name_list = list()
+            chopped_file_list = list()
+            for file_name, ws_name in ret_obj:
+                if file_name is not None:
+                    chopped_file_list.append(file_name)
+                if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+                    chopped_ws_name_list.append(ws_name)
+            # END-FOR
+
+            # initialize tracker
+            tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+
+            tracker.is_reduced = False
+            tracker.is_chopped = True
+            if len(chopped_ws_name_list) > 0:
+                tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+            if len(chopped_file_list) > 0:
+                tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+
         else:
-            error_msg = ret_obj
-            return False, error_msg
+            # chop and then reduce to GSAS
+            if output_gsas_dir is None:
+                # set to archive
+                reduction_setup.set_output_dir_to_archive(create_parent_directories=True)
+            else:
+                # set to specified GSAS directory
+                reduction_setup.set_output_dir(output_gsas_dir)
+                reduction_setup.set_gsas_dir(output_gsas_dir, main_gsas=True)
 
-        tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-        # tracker.is_chopped_run = True
-        tracker.is_reduced = False
-        tracker.is_chopped = True
-        if chopped_ws_name_list is not None:
-            tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
-        tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+                if output_nexus_dir is not None:
+                    reduction_setup.set_chopped_nexus_dir(output_nexus_dir)
+                    reduction_setup.save_chopped_workspace = True
+                else:
+                    reduction_setup.save_chopped_workspace = False
+            # END-IF-ELSE
+
+            # set the flag for not being an auto reduction
+            reduction_setup.is_auto_reduction_service = False
+            reduction_setup.set_default_calibration_files()
+
+            # add splitter workspace and splitter information workspace
+
+            # set up reducer
+            reduction_setup.process_configurations()
+
+            # set up reduction tracker
+            tracker = self.init_tracker(ipts_number, run_number, slice_key)
+
+            # reduce data
+            status, message = chop_reducer.execute_chop_reduction(clear_workspaces=False)
+
+            # set up the reduced file names and workspaces and add to reduction tracker dictionary
+            tracker.set_reduction_status(status, message, True)
+
+            reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
+            self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
+            self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+        # END-IF
 
         return True, None
+
+    # def chop_data(self, ipts_number, run_number, data_file, chop_manager, slice_key, output_dir, tof_correction=False):
+    #     """
+    #     chop data from a source event file and then save the result to Nexus files.
+    #     There is no focusing type of reduction is evolved.
+    #     :param ipts_number:
+    #     :param run_number
+    #     :param data_file:
+    #     :param chop_manager:
+    #     :param slice_key:
+    #     :param output_dir:
+    #     :param tof_correction: default to False.  applied if the log is fast
+    #     :return:
+    #     """
+    #     raise RuntimeError('Be replaced by chop_vulcan_run()')
+    #     if tof_correction:
+    #         raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')
+    #
+    #     # check inputs
+    #     assert isinstance(chop_manager, chop_utility.DataChopper), \
+    #         'Input chopper manager must be an instance of DataChopper but not {0}.' \
+    #         ''.format(chop_manager.__class__.__name__)
+    #     assert isinstance(run_number, int), 'Run number must be an integer but not of type {0}.' \
+    #                                         ''.format(type(run_number))
+    #     assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+    #                                          ''.format(ipts_number, type(ipts_number))
+    #
+    #     # get splitters workspace
+    #     # split event data
+    #     reduction_setup = reduce_VULCAN.ReductionSetup()
+    #     reduction_setup.set_ipts_number(ipts_number)
+    #     reduction_setup.set_run_number(run_number)
+    #     reduction_setup.set_event_file(data_file)
+    #     reduction_setup.set_chopped_nexus_dir(output_dir)
+    #
+    #     # splitters workspace
+    #     splitter_ws_name, split_info_name = chop_manager.get_split_workspace(slice_key)
+    #     reduction_setup.set_splitters(splitter_ws_name, split_info_name)
+    #
+    #     chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
+    #     # chop data without reduction
+    #     status, ret_obj = chop_reducer.chop_data()
+    #
+    #     # return if chopping fails
+    #     if not status:
+    #         error_msg = ret_obj
+    #         return False, error_msg
+    #
+    #     chopped_ws_name_list = list()
+    #     chopped_file_list = list()
+    #     for file_name, ws_name in ret_obj:
+    #         if file_name is not None:
+    #             chopped_file_list.append(file_name)
+    #         if isinstance(ws_name, str) and mantid_helper.workspace_does_exist(ws_name):
+    #             chopped_ws_name_list.append(ws_name)
+    #     # END-FOR
+    #
+    #     # initialize tracker
+    #     tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
+    #     tracker.is_reduced = False
+    #     tracker.is_chopped = True
+    #     if len(chopped_ws_name_list) > 0:
+    #         tracker.set_chopped_workspaces(chopped_ws_name_list, append=True)
+    #     if len(chopped_file_list) > 0:
+    #         tracker.set_chopped_nexus_files(chopped_file_list, append=True)
+    #
+    #     return True, None
+    #
+    # def chop_reduce_data(self, ipts_number, run_number, src_file_name, split_ws_name, info_ws_name,
+    #                      save_chopped_nexus, output_dir):
+    #     """
+    #     reduce chopped data to GSAS file
+    #     :param ipts_number:
+    #     :param run_number:
+    #     :param src_file_name: original event data from which the events are split
+    #     :param split_ws_name:
+    #     :param info_ws_name:
+    #     :param save_chopped_nexus: flag to save the chopped workspace to
+    #     :param output_dir: None for archive
+    #     :return:
+    #     """
+    #     raise RuntimeError('Replaced by chop_vulcan_run()')
+    #     # check inputs
+    #     assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer ' \
+    #                                          'but not {1}.'.format(ipts_number, type(ipts_number))
+    #     assert isinstance(run_number, int), 'Input run number {0} must be an integer ' \
+    #                                         'but not {1}.'.format(run_number, type(run_number))
+    #     if output_dir is not None:
+    #         assert isinstance(output_dir, str) and os.path.exists(output_dir),\
+    #             'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+    #
+    #     # initialize a ReductionSetup instance
+    #     reduce_setup = reduce_VULCAN.ReductionSetup()
+    #
+    #     reduce_setup.set_ipts_number(ipts_number)
+    #     reduce_setup.set_run_number(run_number)
+    #     reduce_setup.set_event_file(src_file_name)
+    #
+    #     # set up the output directory
+    #     if output_dir is None:
+    #         reduce_setup.set_output_dir_to_archive(create_parent_directories=True)
+    #     else:
+    #         reduce_setup.set_output_dir(output_dir)
+    #         reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
+    #         if save_chopped_nexus:
+    #             reduce_setup.set_chopped_nexus_dir(output_dir)
+    #             reduce_setup.save_chopped_workspace = save_chopped_nexus
+    #
+    #     # set the flag for not being an auto reduction
+    #     reduce_setup.is_auto_reduction_service = False
+    #     reduce_setup.set_default_calibration_files()
+    #
+    #     # add splitter workspace and splitter information workspace
+    #     reduce_setup.set_splitters(split_ws_name, info_ws_name)
+    #
+    #     # set up reducer
+    #     reduce_setup.process_configurations()
+    #     reducer = reduce_adv_chop.AdvancedChopReduce(reduce_setup)
+    #
+    #     # set up reduction tracker
+    #     tracker = self.init_tracker(ipts_number, run_number, slicer_key)
+    #
+    #     # reduce data
+    #     status, message = reducer.execute_chop_reduction(clear_workspaces=False)
+    #
+    #     # set up the reduced file names and workspaces and add to reduction tracker dictionary
+    #     tracker.set_reduction_status(status, message, True)
+    #
+    #     # TEST/ISSUE/NOW/
+    #     reduced, workspace_name_list = reducer.get_reduced_workspaces(chopped=True)
+    #     self.set_chopped_reduced_workspaces(run_number, slicer_key, workspace_name_list, append=True)
+    #     self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files(), append=True)
+    #
+    #     return status, message
 
     def get_event_workspace_name(self, run_number):
         """
@@ -606,6 +833,23 @@ class ReductionManager(object):
 
         return return_ws_name
 
+    def get_tracker(self, run_number, slicer_key):
+        """
+        get a reduction tracker
+        :param run_number:
+        :param slicer_key:
+        :return:
+        """
+        # construct a tracker key
+        tracker_key = run_number, slicer_key
+        if tracker_key in self._reductionTrackDict:
+            tracker = self._reductionTrackDict[tracker_key]
+        else:
+            raise RuntimeError('Unable to locate tracker with run: {0} slicer: {1}.  Existing keys are {2}'
+                               ''.format(run_number, slicer_key, self._reductionTrackDict.keys()))
+
+        return tracker
+
     def has_run(self, run_number):
         """
         check whether a certain run number is reduced and stored
@@ -616,6 +860,7 @@ class ReductionManager(object):
 
     def init_tracker(self, ipts_number, run_number, slicer_key=None):
         """ Initialize tracker
+        :param ipts_number:
         :param run_number:
         :param slicer_key: if not specified, then the reduction is without chopping
         :return: a DataReductionTracker object that is just created and initialized
@@ -641,84 +886,12 @@ class ReductionManager(object):
             self._reductionTrackDict[tracker_key] = new_tracker
         else:
             # existing tracker: double check
-            assert isinstance(self._reductionTrackDict[run_number], DataReductionTracker),\
-                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[run_number]))
+            assert isinstance(self._reductionTrackDict[tracker_key], DataReductionTracker),\
+                'It is not DataReductionTracker but a {0}.'.format(type(self._reductionTrackDict[tracker_key]))
+            # NOTE: new_tracker here is not new tracker at all!
             new_tracker = self._reductionTrackDict[tracker_key]
 
         return new_tracker
-
-    def get_tracker(self, run_number, slicer_key):
-        """
-        get a reduction tracker
-        :param run_number:
-        :param slicer_key:
-        :return:
-        """
-        # construct a tracker key
-        tracker_key = run_number, slicer_key
-        if tracker_key in self._reductionTrackDict:
-            tracker = self._reductionTrackDict[tracker_key]
-        else:
-            raise RuntimeError('Unable to locate tracker with run: {0} slicer: {1}.  Existing keys are {2}'
-                               ''.format(run_number, slicer_key, self._reductionTrackDict.keys()))
-
-        return tracker
-
-    def reduce_chopped_data(self, ipts_number, run_number, src_file_name, chop_manager, slicer_key, output_dir):
-        """
-        reduce chopped data to GSAS file
-        :param ipts_number:
-        :param run_number:
-        :param src_file_name: original event data from which the events are split
-        :param chop_manager: a ChopperManager instance which manages the split workspace
-        :param slicer_key:
-        :param output_dir:
-        :return:
-        """
-        import reduce_adv_chop
-
-        # check inputs
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer ' \
-                                             'but not {1}.'.format(ipts_number, type(ipts_number))
-        assert isinstance(run_number, int), 'Input run number {0} must be an integer ' \
-                                            'but not {1}.'.format(run_number, type(run_number))
-
-        # retrieve split workspace and split information workspace from chopper manager
-        split_ws_name, info_ws_name = chop_manager.get_split_workspace(slicer_key)
-
-        # initialize a ReductionSetup instance
-        reduce_setup = reduce_VULCAN.ReductionSetup()
-
-        reduce_setup.set_ipts_number(ipts_number)
-        reduce_setup.set_run_number(run_number)
-        reduce_setup.set_event_file(src_file_name)
-
-        reduce_setup.set_output_dir(output_dir)
-        reduce_setup.set_gsas_dir(output_dir, main_gsas=True)
-        reduce_setup.is_full_reduction = False
-        reduce_setup.set_default_calibration_files()
-
-        # add splitter workspace and splitter information workspace
-        reduce_setup.set_splitters(split_ws_name, info_ws_name)
-
-        # set up reducer
-        reducer = reduce_adv_chop.AdvancedChopReduce(reduce_setup)
-
-        # set up reduction tracker
-        tracker = self.init_tracker(ipts_number, run_number, slicer_key)
-
-        # reduce data
-        status, message = reducer.execute_chop_reduction(clear_workspaces=False)
-
-        # set up the reduced file names and workspaces and add to reduction tracker dictionary
-        tracker.set_reduction_status(status, message, True)
-
-        # TEST/ISSUE/33/
-        reduced, workspace_name_list = reducer.get_reduced_workspaces(chopped=True)
-        self.set_chopped_reduced_workspaces(run_number, slicer_key, workspace_name_list, append=True)
-        self.set_chopped_reduced_files(run_number, slicer_key, reducer.get_reduced_files(), append=True)
-
-        return status, message
 
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
                    vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
@@ -747,7 +920,13 @@ class ReductionManager(object):
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
         if binning_parameters is not None:
-            reduction_setup.set_mantid_binning(binning_parameters)
+            try:
+                tof_min, bin_size, tof_max = binning_parameters
+            except IndexError as index_err:
+                raise NotImplementedError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
+                                          .format(binning_parameters, index_err))
+            reduction_setup.set_binning_parameters(tof_min, bin_size, tof_max)
+        # END-IF
 
         # vanadium
         reduction_setup.normalized_by_vanadium = vanadium
@@ -796,7 +975,7 @@ class ReductionManager(object):
 
         return reduce_good, message
 
-    def set_chopped_reduced_workspaces(self, run_number, slicer_key, workspace_name_list, append=False, compress=False):
+    def set_chopped_reduced_workspaces(self, run_number, slicer_key, workspace_name_list, append, compress=False):
         """
         set the chopped and reduced workspaces to reduction manager
         :param run_number:
@@ -811,10 +990,10 @@ class ReductionManager(object):
 
         # add files
         assert isinstance(tracker, DataReductionTracker), 'Must be a DataReductionTracker'
-        tracker.set_chopped_workspaces(workspace_name_list, append=True)
+        tracker.set_chopped_workspaces(workspace_name_list, append=append)
 
         if compress:
-            target_ws_name = tracker.get_compressed_ws_name()
+            target_ws_name = tracker.compressed_ws_name
             mantid_helper.make_compressed_reduced_workspace(workspace_name_list, target_workspace_name=target_ws_name)
 
         return
@@ -846,14 +1025,16 @@ class ReductionManager(object):
         :param dspace_ws: str
         :return:
         """
-        # check
-        assert isinstance(run_number, int), 'Input run number {0} must be a integer but not {1}.' \
-                                            ''.format(run_number, type(run_number))
-        assert isinstance(vdrive_bin_ws, str) and isinstance(tof_ws, str) and isinstance(dspace_ws, str),\
-            'VDRIVE-binning workspace name {0}, TOF workspace name {1} and Dspacing workspace {2} must be a string.' \
-            ''.format(vdrive_bin_ws, tof_ws, dspace_ws)
+        # check input
+        if run_number not in self._reductionTrackDict:
+            raise RuntimeError('Run number {0} has no ReductionTracker yet. Existing keys are {1}.'
+                               ''.format(run_number, self._reductionTrackDict.keys()))
 
-        self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
+        try:
+            self._reductionTrackDict[run_number].set_reduced_workspaces(vdrive_bin_ws, tof_ws, dspace_ws)
+        except AssertionError as ass_err:
+            raise AssertionError('ReductionManage unable to set reduced workspace for run {0} due to {1}.'
+                                 ''.format(run_number, ass_err))
+        # TRY-EXCEPT
 
         return
-

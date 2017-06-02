@@ -92,6 +92,45 @@ class VDriveCommand(object):
         """
         return self._iptsNumber, self._runNumberList[:]
 
+    def parse_binning(self):
+        """
+        process binning parameters configuration from inputs
+        :return: 2-tuple: (1) flag whether binning parameter is default
+                          (2) 3-tuple as TOF min, bin width, TOF max
+        """
+        binning_parameters = None
+
+        if not ('BINW' in self._commandArgsDict or 'Mytofbmax' in self._commandArgsDict
+                or 'Mytofbmin' in self._commandArgsDict):
+            # using default binning parameters as VDRIVE standard
+            use_default_binning = True
+
+        elif 'BINW' in self._commandArgsDict and abs(self._commandArgsDict['BINW'] - 0.005) < 1.0E-7:
+            # Bin width is same as default
+            use_default_binning = True
+
+        else:
+            use_default_binning = False
+            if 'BINW' in self._commandArgsDict:
+                bin_width = float(self._commandArgsDict['BINW'])
+            else:
+                bin_width = 0.005  # set to default in case only TOF range is customized
+
+            if 'Mytofbmax' in self._commandArgsDict:
+                tof_max = float(self._commandArgsDict['Mytofbmax'])
+            else:
+                tof_max = None
+
+            if 'Mytofbmin' in self._commandArgsDict:
+                tof_min = float(self._commandArgsDict['Mytofbmin'])
+            else:
+                tof_min = None
+
+            binning_parameters = (tof_min, bin_width, tof_max)
+        # END-IF-ELSE
+
+        return use_default_binning, binning_parameters
+
     def parse_run_number(self):
         """
         parse run numbers from RUNS and RUNE
@@ -115,6 +154,62 @@ class VDriveCommand(object):
         print '[DB...BAT] Parse Run Numbers: Input = {0}, Output = {1}.'.format(self._commandArgsDict['RUNS'], run_number_list)
 
         return run_number_list
+
+    def process_tag(self):
+        """
+        process for 'TAG'
+        for example
+            TAG='V'  to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium
+            TAG='Si' to /SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si
+
+        :return: standard_tuple = material_type, standard_dir, standard_file
+        """
+        if 'TAG' in self._commandArgsDict:
+            # process material type
+            material_type = self._commandArgsDict['TAG']
+            material_type = material_type.lower()
+
+            standard_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard'
+            if os.access(standard_dir, os.W_OK) is False:
+                # if standard VDRIVE default directory is not writable, then use the local one
+                # very likely the current PyVdrive is running in a testing mode.
+                standard_dir = os.getcwd()
+
+            if material_type == 'si':
+                material_type = 'Si'
+                standard_dir = os.path.join(standard_dir, 'Si')
+                standard_file = 'SiRecord.txt'
+            elif material_type == 'v':
+                material_type = 'Vanadium'
+                standard_dir = os.path.join(standard_dir, 'Vanadium')
+                standard_file = 'VRecord.txt'
+            elif material_type == 'c':
+                material_type = 'C'
+                standard_dir = os.path.join(standard_dir, 'C')
+                standard_file = 'CRecord.txt'
+            elif material_type == 'ceo2':
+                material_type = 'CeO3'
+                standard_dir = os.path.join(standard_dir, 'CeO2')
+                standard_file = 'CeO2Record.txt'
+            elif len(material_type) > 0:
+                # create arbitrary tag
+                # use the user specified TAG as the type of material
+                material_type = self._commandArgsDict['TAG']
+                standard_dir = os.path.join(standard_dir, material_type)
+                standard_file = '{0}Record.txt'.format(material_type)
+            else:
+                raise RuntimeError('TAG cannot be an empty string.')
+            # END-IF-ELSE
+
+            standard_tuple = material_type, standard_dir, standard_file
+
+            # create workspace if not existing
+            if os.path.exists(standard_dir) is False:
+                self._create_standard_directory(standard_dir)
+        else:
+            standard_tuple = None
+
+        return standard_tuple
 
     def set_ipts(self):
         """

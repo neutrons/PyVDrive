@@ -22,6 +22,8 @@ class VdriveChop(VDriveCommand):
         'LOADFRAME': 'Chop LoadFrame log (MTSLoadFrame) along with',
         'FURNACE': 'Chop Furnace log (MTSFurnace) along with',
         'BIN': 'If bin=1, chopped data will be reduced to GSAS files',
+        'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
+                  'will be saved to /SNS/VULCAN/IPTS-????/shared.',
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
     }
@@ -53,7 +55,8 @@ class VdriveChop(VDriveCommand):
     def chop_data_by_log(self, run_number, start_time, stop_time, log_name, min_log_value, max_log_value,
                          log_step_value, reduce_flag, output_dir, dry_run):
         """
-        chop data by log value
+        chop data by log value.
+        Note: always save the chopped NeXus
         :param run_number:
         :param start_time:
         :param stop_time:
@@ -66,7 +69,7 @@ class VdriveChop(VDriveCommand):
         :param dry_run:
         :return:
         """
-        # TODO/ISSUE/59 - Test
+        # TEST/ISSUE/59 - Test
         # check inputs
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             ''.format(run_number, type(run_number))
@@ -92,8 +95,8 @@ class VdriveChop(VDriveCommand):
 
         # generate data slicer by log value
         status, ret_obj = self._controller.generate_data_slicer_by_log(run_number, start_time, stop_time,
-                                                                          log_name, min_log_value, log_step_value,
-                                                                          max_log_value)
+                                                                       log_name, min_log_value, log_step_value,
+                                                                       max_log_value)
         if not status:
             error_msg = str(ret_obj)
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
@@ -101,8 +104,9 @@ class VdriveChop(VDriveCommand):
             slicer_key = ret_obj
 
         # chop and reduce
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir)
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True,
+                                                      output_dir=output_dir)
 
         return status, message
 
@@ -159,8 +163,8 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
 
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir,
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
         return status, message
@@ -179,12 +183,14 @@ class VdriveChop(VDriveCommand):
         :param chop_furnace_log:
         :return:
         """
-        # TODO/TEST/NOW/ISSUE/33 -
         # check inputs
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
         assert isinstance(output_dir, str) and os.path.exists(output_dir), \
             'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+
+        # sort slice list
+        slicer_list = self.sort_slice_list(slicer_list)
 
         # dry run: return input options
         if dry_run:
@@ -220,8 +226,8 @@ class VdriveChop(VDriveCommand):
             exp_log_type = 'furnace'
         else:
             exp_log_type = None
-        status, message = self._controller.slice_data(run_number, slicer_key,
-                                                      reduce_data=reduce_flag, output_dir=output_dir,
+        status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
         return status, message
@@ -374,7 +380,7 @@ class VdriveChop(VDriveCommand):
             #                                             dry_run=is_dry_run)
             elif user_slice_file is not None:
                 # chop by user specified time splitters
-                # FIXME/TODO/ISSUE/33 - Need to wait for Mantid
+                # TEST - Need to wait for Mantid
                 try:
                     slicer_list = self.parse_pick_data(user_slice_file)
                     status, message = self.chop_data_manually(run_number=run_number,
@@ -480,6 +486,8 @@ class VdriveChop(VDriveCommand):
             in_file = open(file_name, 'r')
             lines = in_file.readlines()
             in_file.close()
+        except IOError as io_err:
+            raise RuntimeError('Unable to open file {0} due to {1}.'.format(file_name, io_err))
         except OSError as os_err:
             raise RuntimeError('Unable to import file {0} due to {1}.'.format(file_name, os_err))
 
@@ -505,6 +513,21 @@ class VdriveChop(VDriveCommand):
         # END-FOR
 
         return split_list
+
+    @staticmethod
+    def sort_slice_list(slicer_list):
+        """
+        sort slice list
+        :param slicer_list:
+        :return:
+        """
+        assert isinstance(slicer_list, list), 'Slicer list {0} must be a list but not a {1}.' \
+                                              ''.format(slicer_list, type(slicer_list))
+
+        slicer_list = sorted(slicer_list)
+
+        return slicer_list
+
 
 """
 CHOP, IPTS=1000, RUNS=2000, dbin=60, loadframe=1, bin=1

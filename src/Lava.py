@@ -1,16 +1,22 @@
 #!/usr/bin/python
-#pylint: disable=invalid-name
-"""
-    Script used to start the VDrive reduction GUI from MantidPlot
-"""
-import sys
 
-# a fix to iPython console
 from interface.gui.mantidipythonwidget import MantidIPythonWidget
+import sys
+import os
 from PyQt4 import QtGui, QtCore
 
 from interface.gui import ui_LaunchManager
 from interface.VDrivePlot import VdriveMainWindow
+
+#  Script used to start the VDrive reduction GUI from MantidPlot
+
+# a fix to iPython console
+home_dir = os.path.expanduser('~')
+if home_dir.startswith('/home/wzz') is False:
+    # Mac debug build
+    sys.path.append('/Users/wzz/MantidBuild/debug/bin')
+    # Analysis cluster build
+    sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 
 class LauncherManager(QtGui.QDialog):
@@ -111,6 +117,19 @@ class LauncherManager(QtGui.QDialog):
 
         return
 
+    def do_launch_viewer(self):
+        """
+        launch reduced data view
+        :return:
+        """
+        self._mainReducerWindow.do_launch_reduced_data_viewer()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+
 # END-DEFINITION (class)
 
 
@@ -122,9 +141,23 @@ def lava_app():
         _app = QtGui.QApplication(sys.argv)
     return _app
 
+# get arguments
+args = sys.argv
+if len(args) == 2:
+    option = args[1]
+else:
+    option = None
+
 app = lava_app()
 
 launcher = LauncherManager()
 launcher.show()
+
+if isinstance(option, str) and option.lower().startswith('t'):
+    launcher.do_launch_terminal()
+    launcher.close()
+elif isinstance(option, str) and option.lower().startswith('v'):
+    launcher.do_launch_viewer()
+    launcher.close()
 
 app.exec_()

@@ -33,6 +33,56 @@ class NTableWidget(QtGui.QTableWidget):
 
         return
 
+    def insert_row(self, row_number, row_value_list, type_list=None, num_decimal=7):
+        """
+
+        :param row_value_list:
+        :param type_list:
+        :param num_decimal:
+        :return:
+        """
+        # TODO/ISSUE/TODAY/ - check row_number
+        # insert row
+        self.insertRow(row_number)
+
+        # Check input
+        # TODO/ISSUE/TODAY/ - Refactor with append_row()
+        assert isinstance(row_value_list, list)
+        if type_list is not None:
+            assert isinstance(type_list, list)
+            assert len(row_value_list) == len(type_list)
+        else:
+            type_list = self._myColumnTypeList
+        if len(row_value_list) != self.columnCount():
+            ret_msg = 'Input number of values (%d) is different from ' \
+                      'column number (%d).' % (len(row_value_list), self.columnCount())
+            return False, ret_msg
+        else:
+            ret_msg = ''
+
+        # Set values
+        for i_col in xrange(min(len(row_value_list), self.columnCount())):
+            if type_list[i_col] == 'checkbox':
+                # special case: check box
+                self.set_check_box(row_number, i_col, row_value_list[i_col])
+            else:
+                # regular items
+                item_value = row_value_list[i_col]
+                if isinstance(item_value, float):
+                    # value_str = ('{0:.%dg}' % num_decimal).format(item_value)   # significant
+                    value_str = ('{0:.%df}' % num_decimal).format(item_value)
+                else:
+                    value_str = str(item_value)
+
+                item = QtGui.QTableWidgetItem()
+                item.setText(_fromUtf8(value_str))
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
+                self.setItem(row_number, i_col, item)
+        # END-FOR(i_col)
+
+        return True, ret_msg
+
     def append_row(self, row_value_list, type_list=None, num_decimal=7):
         """
         append a row to the table

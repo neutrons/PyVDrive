@@ -99,8 +99,6 @@ class VanadiumPeak(VDriveCommand):
                                                                 do_shift=self._doShift,
                                                                 local_output=local_output_dir)
 
-        print '[DB] VPEAK output', status, ret_obj
-
         return status, ret_obj
 
     def get_help(self):

@@ -96,7 +96,11 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             elif right_index == len(array):
                 # right to Index=-1
                 nearest_index = left_index
-                distance = x - array[left_index]
+                try:
+                    distance = x - array[left_index]
+                except TypeError as type_err:
+                    print '[DB...BAT] x = {0}, array = {1}'.format(x, array)
+                    raise type_err
             else:
                 dist_left = x - array[left_index]
                 dist_right = array[right_index] - x
@@ -218,7 +222,8 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
         # add to dictionary
         self._currentLogPickerList.append(indicator_id)
         # add the picker to the dictionary
-        self._pickerRangeDict[self._currMousePosX] = indicator_id
+        # self._pickerRangeDict[self._currMousePosX] = indicator_id
+        self._pickerRangeDict[pos_x] = indicator_id
 
         # update the new list to parent window
         picker_pos_list = self.get_pickers_positions()

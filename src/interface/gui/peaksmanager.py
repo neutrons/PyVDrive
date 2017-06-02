@@ -329,11 +329,14 @@ class GroupedPeaksManager(object):
         :return: boolean. True if peak ID exists in group
         """
         # check
-        assert isinstance(group_id, int)
+        assert isinstance(group_id, int), 'Peak group ID {0} must be an integer but not a {1}.' \
+                                          ''.format(group_id, type(group_id))
+        assert isinstance(peak_id, int), 'Peak ID {0} must be an integer but not a {1}.' \
+                                         ''.format(peak_id, type(peak_id))
+
         if group_id not in self._myGroupDict:
             return False
 
-        assert isinstance(peak_id, int)
         group = self._myGroupDict[group_id]
         if group.has_peak(peak_id) is False:
             return False
