@@ -127,7 +127,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # Tab-3: view reduction result
         self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
-                     self.do_view_reduction)
+                     self.do_launch_reduced_data_viewer)
 
         # Tab-4: fig single peak
         self.connect(self.ui.pushButton_fitSinglePeak, QtCore.SIGNAL('clicked()'),
@@ -450,7 +450,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    def do_view_reduction(self):
+    def do_launch_reduced_data_viewer(self):
         """
         Purpose: Launch reduction view and set up
         Requirements: ... ...

@@ -155,7 +155,9 @@ class LoadedDataManager(object):
         load chopped and binned data (in GSAS format) for a diretory
         :param chopped_data_dir:
         :param file_format:
-        :return: 2-tuple.  dictionary
+        :return: 2-tuple of dictionary and integer (run number)
+            dictionary: key is data workspace name;
+                        value is 2-tuple as (1) log workspace name or None (if no NeXus file) and (2) gsas file name
         """
         # check inputs
         assert isinstance(chopped_data_dir, str), 'Direcotry {0} must be given as a string but not a {1}.' \
@@ -175,14 +177,16 @@ class LoadedDataManager(object):
                 chop_info_file = file_name
                 break
         # END-FOR
-        print '[DB...BAT] Chop Information File: {0}'.format(chop_info_file)
 
         if chop_info_file is None:
             # chopping information file is not given, then search reduced diffraction files from hard disk
+            print '[WARNING] Unable to Find Chop Information File in {0}. No Sample Log Loaded.' \
+                  ''.format(chopped_data_dir)
             reduced_tuple_list = self.search_reduced_files(file_format, file_list, chopped_data_dir)
             run_number = None
         else:
             # parsing the chopping information file for reduced file and raw event files
+            print '[INFO] Load Chop Information File: {0}'.format(chop_info_file)
             reduced_tuple_list = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
             run_number = chop_info_file.split('_')[1]
 

@@ -700,24 +700,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             # set the sample logs. map to NeXus log workspace if applied
             chop_ws = str(self.ui.comboBox_chopSeq.currentText())
-            print '[DB...BAT] Chop WS: {0} of type {1}'.format(chop_ws, type(chop_ws))
             if chop_ws in self._choppedSampleDict:
-                chop_ws = self._choppedSampleDict[chop_ws]
-
-
-            # FIXME/NOWNOW
-            """
-            Traceback (most recent call last):
-            File "/home/wzz/Projects/PyVDrive/src/interface/ReducedDataView.py", line 708, in do_set_current_run
-                series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
-            File "/home/wzz/local/lib/python2.7/Site-Packages/PyVDrive/lib/VDriveAPI.py", line 900, in get_sample_log_names
-                assert run_number is not None, 'Run number cannot be None.'
-            AssertionError: Run number cannot be None.
-            """
-
-            series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
-            self.set_sample_log_names(series_sample_log_list)
-
+                chop_log_ws_name = self._choppedSampleDict[chop_ws]
+                if chop_log_ws_name is not None and len(chop_log_ws_name) > 0:
+                    series_sample_log_list = self._myController.get_sample_log_names(run_number=chop_ws, smart=True)
+                    self.set_sample_log_names(series_sample_log_list)
+            # END-IF
         else:
             # get the original reduced data and add the this.reduced_data_dictionary
             #
@@ -1411,10 +1399,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # get data sequence
         diff_ws_list = list()
         for ws_name in data_key_dict.keys():
-            print '[DB...BAT] chopped ws name: {0} ... values = {1}'.format(ws_name, data_key_dict[ws_name])
             log_ws_name = data_key_dict[ws_name][0]
-            if log_ws_name is None or len(log_ws_name) == 0:
-                raise RuntimeError('Log workspace of {0} is empty or None.'.format(ws_name))
             diff_ws_list.append(ws_name)
             self._choppedSampleDict[ws_name] = log_ws_name
         # END-FOR

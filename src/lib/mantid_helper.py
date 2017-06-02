@@ -855,7 +855,10 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
         ''.format(standard_bin_workspace, type(standard_bin_workspace))
 
     # Load GSAS
-    mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
+    try:
+        mantidapi.LoadGSS(Filename=gss_file_name, OutputWorkspace=out_ws_name)
+    except IndexError as index_error:
+        raise RuntimeError('GSAS {0} is corrupted. FYI: {1}'.format(gss_file_name, index_error))
     gss_ws = retrieve_workspace(out_ws_name)
     assert gss_ws is not None, 'Output workspace cannot be found.'
 

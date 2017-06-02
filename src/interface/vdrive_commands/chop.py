@@ -380,7 +380,7 @@ class VdriveChop(VDriveCommand):
             #                                             dry_run=is_dry_run)
             elif user_slice_file is not None:
                 # chop by user specified time splitters
-                # FIXME/TODO/ISSUE/33 - Need to wait for Mantid
+                # TEST - Need to wait for Mantid
                 try:
                     slicer_list = self.parse_pick_data(user_slice_file)
                     status, message = self.chop_data_manually(run_number=run_number,

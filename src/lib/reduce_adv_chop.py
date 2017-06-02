@@ -16,6 +16,8 @@ import mantid_helper
 MAX_ALLOWED_WORKSPACES = 200
 MAX_CHOPPED_WORKSPACE_IN_MEM = 200
 
+# FIXME/NOWNOW : Clean this python module!
+
 
 class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     """
