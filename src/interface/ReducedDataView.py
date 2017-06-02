@@ -700,10 +700,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             # set the sample logs. map to NeXus log workspace if applied
             chop_ws = str(self.ui.comboBox_chopSeq.currentText())
+            print '[DB...BAT] Chop WS: {0} of type {1}'.format(chop_ws, type(chop_ws))
             if chop_ws in self._choppedSampleDict:
                 chop_ws = self._choppedSampleDict[chop_ws]
 
-            print '[DB...BAT] Chop WS: {0} of type {1}'.format(chop_ws, type(chop_ws))
+
             # FIXME/NOWNOW
             """
             Traceback (most recent call last):
@@ -1412,6 +1413,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         for ws_name in data_key_dict.keys():
             print '[DB...BAT] chopped ws name: {0} ... values = {1}'.format(ws_name, data_key_dict[ws_name])
             log_ws_name = data_key_dict[ws_name][0]
+            if log_ws_name is None or len(log_ws_name) == 0:
+                raise RuntimeError('Log workspace of {0} is empty or None.'.format(ws_name))
             diff_ws_list.append(ws_name)
             self._choppedSampleDict[ws_name] = log_ws_name
         # END-FOR

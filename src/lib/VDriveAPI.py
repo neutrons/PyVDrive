@@ -1040,6 +1040,21 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
+    def reduce_chopped_data_set(self, ipts_number, run_number, raw_data_directory, output_directory, vanadium,
+                                binning_parameters, align_to_vdrive_bin):
+        """
+
+        :param raw_data_directory: if None, then search for archive
+        :param vanadium:
+        :param binning_parameters:
+        :param align_to_vdrive_bin:
+        :return:
+        """
+        # TODO/IMPLEMENT/NOWNOW : it is similar to reduce_auto_script
+
+
+        return True, None
+
     def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
