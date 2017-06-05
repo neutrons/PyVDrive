@@ -113,7 +113,6 @@ class VDriveAPI(object):
         """
         Add runs under an IPTS dir to project
         :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
-        :param ipts_number:
         :return:
         """
         # check  input
@@ -227,32 +226,32 @@ class VDriveAPI(object):
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
 
         return reflection_list
-
-    def export_gsas_file(self, run_number, gsas_file_name):
-        """
-        Purpose: export a reduced run to GSAS data file
-        Requirements:
-        1. run number is a valid integer
-        2. run number exists in project
-        3. gsas file name includes a path that is writable
-        Guarantees: A gsas file is written
-        :param run_number:
-        :param gsas_file_name:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(run_number, int)
-        assert run_number > 0
-
-        assert isinstance(gsas_file_name, str)
-        out_dir = os.path.dirname(gsas_file_name)
-        assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
-
-        try:
-            self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
-        except KeyError as e:
-            return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, gsas_file_name)
-        raise
+    #
+    # def export_gsas_file(self, run_number, gsas_file_name):
+    #     """
+    #     Purpose: export a reduced run to GSAS data file
+    #     Requirements:
+    #     1. run number is a valid integer
+    #     2. run number exists in project
+    #     3. gsas file name includes a path that is writable
+    #     Guarantees: A gsas file is written
+    #     :param run_number:
+    #     :param gsas_file_name:
+    #     :return:
+    #     """
+    #     # Check requirements
+    #     assert isinstance(run_number, int)
+    #     assert run_number > 0
+    #
+    #     assert isinstance(gsas_file_name, str)
+    #     out_dir = os.path.dirname(gsas_file_name)
+    #     assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
+    #
+    #     try:
+    #         self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
+    #     except KeyError as key_err:
+    #         return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, key_err)
+    #     raise
 
     @staticmethod
     def export_gsas_peak_file(bank_peak_dict, out_file_name):
@@ -971,6 +970,19 @@ class VDriveAPI(object):
 
         return peak_list
 
+    @staticmethod
+    def import_data_slicers(file_name):
+        """ import slicers from a text file
+        :param file_name:
+        :return:
+        """
+        try:
+            slicers = chop_utility.parse_time_segments(file_name)
+        except AssertionError as assert_err:
+            raise AssertionError('VDriveAPI unable to parse data slicers/time segements. {0}'.format(assert_err))
+
+        return slicers
+
     def load_chopped_diffraction_files(self, directory, file_type):
         """
         loaded chopped and reduced diffraction files
@@ -1044,17 +1056,52 @@ class VDriveAPI(object):
                                 binning_parameters, align_to_vdrive_bin):
         """
 
-        :param raw_data_directory: if None, then search for archive
+        :param ipts_number:
+        :param run_number:
+        :param raw_data_directory:
+        :param output_directory:
         :param vanadium:
         :param binning_parameters:
         :param align_to_vdrive_bin:
         :return:
         """
-        # TODO/IMPLEMENT/NOWNOW : it is similar to reduce_auto_script
+        if raw_data_directory is None:
+            # raw data is not given, then search the data in archive
+            try:
+                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number)
+            except AssertionError as assert_err:
+                raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
+            except RuntimeError as run_err:
+                return False, 'Failed to locate chopped NeXus files. FYI: {0}.'.format(run_err)
+        else:
+            # scan the directory for file
+            try:
+                raw_file_list = [f for f in os.listdir(raw_data_directory) if f.endswith('.nxs') and
+                                 os.path.isfile(os.path.join(raw_data_directory, f))]
 
+                # raw_file_list = chop_utility.scan_chopped_nexus(raw_data_directory)
+            except AssertionError as assert_err:
+                raise AssertionError('Error in scanning files in {0}: {1}'.format(raw_data_directory, assert_err))
+        # END-IF-ELSE
 
-        return True, None
+        if len(raw_file_list) == 0:
+            # return False if there is not file found
+            return False, 'Unable to find chopped files for IPTS-{0} Run {1} directory {2}' \
+                          ''.format(ipts_number,run_number, raw_data_directory)
+        # END-IF
 
+        gsas = True
+
+        # reduce
+        try:
+            status, error_message = self._myProject.reduce_nexus_files(raw_file_list ,output_directory, vanadium, gsas,
+                                                                       binning_parameters, align_to_vdrive_bin)
+        except AssertionError as assert_err:
+            raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
+
+        return status, error_message
+
+    # FIXME/NOWNOW/TODO - Think of refactor reduced_chopped_data_set() and reduce_data_set()
     def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
@@ -1622,27 +1669,27 @@ class VDriveAPI(object):
 
         return
 
-    def set_reduction_parameters(self, parameter_dict):
-        """ Set parameters used for reducing powder event data
-        Purpose:
-            Set up the reduction parameters
-        Requirements:
-            Parameters' value are given via dictionary
-        Guarantees:
-            ... ...
-        :return:
-        """
-        assert isinstance(parameter_dict, dict)
-
-        try:
-            self._myProject.set_reduction_parameters(parameter_dict)
-            status = True
-            error_msg = ''
-        except RuntimeError as re:
-            status = False
-            error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
-
-        return status, error_msg
+    # def set_reduction_parameters(self, parameter_dict):
+    #     """ Set parameters used for reducing powder event data
+    #     Purpose:
+    #         Set up the reduction parameters
+    #     Requirements:
+    #         Parameters' value are given via dictionary
+    #     Guarantees:
+    #         ... ...
+    #     :return:
+    #     """
+    #     assert isinstance(parameter_dict, dict)
+    #
+    #     try:
+    #         self._myProject.set_reduction_parameters(parameter_dict)
+    #         status = True
+    #         error_msg = ''
+    #     except RuntimeError as re:
+    #         status = False
+    #         error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
+    #
+    #     return status, error_msg
 
     def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
         """

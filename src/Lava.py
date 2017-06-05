@@ -45,6 +45,8 @@ class LauncherManager(QtGui.QDialog):
                      self.do_launch_chopper)
         self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
                      self.do_launch_peak_picker)
+        self.connect(self.ui.pushButton_reducedDataViewer, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_viewer)
         self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
                      self.do_launch_terminal)
 

@@ -173,11 +173,11 @@ class VBin(procss_vcommand.VDriveCommand):
             # FIXME/ISSUE/NOWNOW - Implement reduce_chopped_data_set
             # Test case: 	vbin, ipts=17414, choprun=109021, runs=1, rune=99
             status, ret_obj = self._controller.reduce_chopped_data_set(auto_reduce=False, output_directory=output_dir,
-                                                               vanadium=(van_run is not None),
-                                                               standard_sample_tuple=standard_tuple,
-                                                               binning_parameters=binning_parameters,
-                                                               output_to_fullprof=output_fullprof,
-                                                               align_to_vdrive_bin=use_default_binning)
+                                                                       vanadium=(van_run is not None),
+                                                                       standard_sample_tuple=standard_tuple,
+                                                                       binning_parameters=binning_parameters,
+                                                                       output_to_fullprof=output_fullprof,
+                                                                       align_to_vdrive_bin=use_default_binning)
 
         else:
             # reduce regular data

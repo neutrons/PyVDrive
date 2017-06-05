@@ -98,6 +98,12 @@ class ProjectManager(object):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
+
+        cases to deal with difference scenarios:
+        1. reduce_flag = True, output_dir is False: save to archive
+        2. reduce_flag = True, output_dir is given, save_chopped_nexus is True: save both GSAS files and NeXus to same
+                directory
+        3. reduce_flag = False, outut_dir is false: save to archive
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
@@ -122,14 +128,33 @@ class ProjectManager(object):
             raise RuntimeError(error_message)
         # END-TYR
 
+        # TODO/ISSUE/NOWNOW - Need to be clear when to reduce and where to put reduced files
+        # TODO/FIXME/NOWNOW - There is a hole: reduce flag is ON, output_dir is None, Save Chopped NeXus is ON
+        #                     What is the difference to reduce flag is ON, output_dir is None, Save Chopped NeXus is OFF
         if reduce_flag:
             # reduce to GSAS
-            src_file_name, ipts_number = self.get_run_info(run_number)
-            self._reductionManager.chop_reduce_data(ipts_number, run_number, src_file_name, split_ws_name,
-                                                    info_ws_name, save_chopped_nexus, output_dir)
+            data_file, ipts_number = self.get_run_info(run_number)
 
-            status = True,
-            message = 'Run {0} is chopped, reduced and saved to GSAS files in {1}.'.format(run_number, output_dir)
+            # set up output directory
+            if output_dir is None:
+                # the archive directory
+                save_to_archive = True
+                final_output = 'Archive'
+
+            else:
+                # the user given directory
+                save_to_archive = False
+                final_output = output_dir
+
+            gsas_dir = output_dir
+            if save_chopped_nexus:
+                # if GSAS directory is None (archive), then NeXus directory is None too.
+                nexus_output = gsas_dir
+            else:
+                nexus_output = None
+
+            # success message
+            reduced = 'reduced to GSAS'
 
         else:
             # just chop the files and save to Nexus
@@ -139,22 +164,44 @@ class ProjectManager(object):
             except RuntimeError as run_error:
                 return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                               ''.format(run_number, run_error)
+
+            # set up output directory
+            if output_dir is None:
+                # the archive directory
+                save_to_archive = True
+                final_output = 'Archive'
+            else:
+                # the user given directory
+                save_to_archive = False
+                final_output = output_dir
+
+            # set up output directory
+            nexus_output = output_dir
+            gsas_dir = None
+
+            # success message
+            reduced = 'NOT reduced'
+
             # END-TRY
 
-            # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
-            self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
-                                                   run_number=run_number,
-                                                   raw_file_name=data_file,
-                                                   split_ws_name=split_ws_name,
-                                                   split_info_name=info_ws_name,
-                                                   slice_key=slicer_key,
-                                                   output_nexus_dir=output_dir,
-                                                   output_gsas_dir=None,
-                                                   gsas_to_archive=False,
-                                                   tof_correction=False)
+        # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
+        status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
+                                                                       run_number=run_number,
+                                                                       raw_file_name=data_file,
+                                                                       split_ws_name=split_ws_name,
+                                                                       split_info_name=info_ws_name,
+                                                                       slice_key=slicer_key,
+                                                                       output_nexus_dir=nexus_output,
+                                                                       output_gsas_dir=gsas_dir,
+                                                                       gsas_to_archive=save_to_archive,
+                                                                       tof_correction=False)
 
-            status = True
-            message = 'Run %d is chopped and saved to NeXus files. ' % run_number
+        # process outputs
+        if status:
+            message = 'IPTS-{0} Run {1} is chopped, {2} and saved to {3}'.format(ipts_number, run_number,
+                                                                                 reduced, final_output)
+        else:
+            message = error_message
         # END-IF-ELSE
 
         return status, message
@@ -343,6 +390,7 @@ class ProjectManager(object):
         :param slice_tag:
         :return:
         """
+        # TEST/NOWNOW - Need to find a test for this!
         # check whether DataChopper
         if run_number not in self._chopManagerDict:
             return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
@@ -350,15 +398,16 @@ class ProjectManager(object):
         # Get file name according to run number
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
-            file_name, ipts_number = self._myProject.get_run_info(run_number)
+            file_name, ipts_number = self.get_run_info(run_number)
         elif isinstance(run_number, str):
             # run number is a file name
             base_file_name = run_number
-            file_name = self._myProject.get_file_path(base_file_name)
+            file_name = self.get_file_path(base_file_name)
         else:
             return False, 'Input run_number %s is either an integer or string.' % str(run_number)
 
         # Start a session
+        # FIXE/NOWNOW - How to get slicer manager to do these jobs
         self._mySlicingManager.load_data_file(nxs_file_name=file_name, run_number=run_number)
 
         # this_ws_name = get_standard_ws_name(file_name, True)
@@ -663,7 +712,7 @@ class ProjectManager(object):
         :param reduction_state_list:
         :return:
         """
-        # TODO/NOW/FIXME/33 - Implement more for the reduction state
+        # TODO/FUTURE/NEXT - Implement more for the reduction state
         assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
                                                   ''.format(run_number_list, type(run_number_list))
 
@@ -702,6 +751,43 @@ class ProjectManager(object):
         :return:
         """
         return self._reductionManager
+
+    def reduce_nexus_files(self, raw_file_list ,output_directory, vanadium, gsas, binning_parameters,
+                           align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None):
+        """
+        Reduce a list of NeXus files
+        This could be similar to reduce runs
+        :param raw_file_list:
+        :param output_directory:
+        :param vanadium:
+        :param gsas:
+        :param binning_parameters:
+        :param align_to_vdrive_bin:
+        :return:
+        """
+        # check inputs
+        assert isinstance(raw_file_list, list), 'Raw files {0} must be given by a list but not a {1}.' \
+                                                ''.format(raw_file_list, type(raw_file_list))
+
+        sum_status = True
+        sum_message = ''
+
+        for nexus_file_name in raw_file_list:
+
+            status, sub_message = self._reductionManager.reduce_run(ipts_number=None, run_number=None,
+                                                                    event_file=nexus_file_name,
+                                                                    output_directory=output_directory,
+                                                                    vanadium=vanadium,
+                                                                    vanadium_tuple=vanadium_tuple,
+                                                                    gsas=gsas,
+                                                                    standard_sample_tuple=standard_sample_tuple,
+                                                                    binning_parameters=binning_parameters)
+            if not status:
+                sum_status = False
+                sum_message += '{0}\n'.format(sum_message)
+        # END-FOR
+
+        return sum_status, sum_message
 
     def reduce_runs(self, run_number_list, output_directory, background=False,
                     vanadium=False, gsas=True, fullprof=False, record_file=False,
@@ -743,7 +829,8 @@ class ProjectManager(object):
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
-            raise RuntimeError('It is not allowed to process multiple standard samples {0} in a single call.'.format(run_number_list))
+            raise RuntimeError('It is not allowed to process multiple standard samples {0} in a single call.'
+                               ''.format(run_number_list))
 
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
@@ -859,22 +946,22 @@ class ProjectManager(object):
 
         return
 
-    def set_reduction_parameters(self, parameter_dict):
-        """
-        Purpose: set up the parameters to reduce run
-        Requirements:
-        - reduction manager is available
-        - input is a dictionary, key=parameter name, value=parameter value
-        :param parameter_dict:
-        :return:
-        """
-        # Check requirements
-        assert self._reductionManager is not None
-        assert isinstance(parameter_dict, dict)
-
-        self._reductionManager.set_parameters(parameter_dict)
-
-        return
+    # def set_reduction_parameters(self, parameter_dict):
+    #     """
+    #     Purpose: set up the parameters to reduce run
+    #     Requirements:
+    #     - reduction manager is available
+    #     - input is a dictionary, key=parameter name, value=parameter value
+    #     :param parameter_dict:
+    #     :return:
+    #     """
+    #     # Check requirements
+    #     assert self._reductionManager is not None
+    #     assert isinstance(parameter_dict, dict)
+    #
+    #     self._reductionManager.set_parameters(parameter_dict)
+    #
+    #     return
 
     def set_vanadium_runs(self, run_number_list, van_run_number, van_file_name):
         """

@@ -374,31 +374,34 @@ class WindowLogPicker(QtGui.QMainWindow):
             # return if operation is cancelled
             return
 
+        # import slicers from a file
+        slicer_list = self.get_controller().import_data_slicers(slicer_file_name)
+
         # parse file
-        if True:
-            # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
-            #                    chop_utility via controller
-            slicer_file = open(slicer_file_name, 'r')
-            raw_lines = slicer_file.readlines()
-            slicer_file.close()
-
-            slicer_list = list()
-            for line in raw_lines:
-                # print '[DB...BAT] Line: {0}'.format(line)
-                line = line.strip()
-                if len(line) == 0 or line[0] == '#':
-                    continue
-
-                terms = line.split()
-                # print '[DB...BAT] Line split to {0}'.format(terms)
-                if len(terms) < 3:
-                    continue
-                start_time = float(terms[0])
-                stop_time = float(terms[1])
-                target_ws = str(terms[2])
-                slicer_list.append((start_time, stop_time, target_ws))
-                # END-FOR
-        # END-IF
+        # if True:
+        #     # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
+        #     #                    chop_utility via controller
+        #     slicer_file = open(slicer_file_name, 'r')
+        #     raw_lines = slicer_file.readlines()
+        #     slicer_file.close()
+        #
+        #     slicer_list = list()
+        #     for line in raw_lines:
+        #         # print '[DB...BAT] Line: {0}'.format(line)
+        #         line = line.strip()
+        #         if len(line) == 0 or line[0] == '#':
+        #             continue
+        #
+        #         terms = line.split()
+        #         # print '[DB...BAT] Line split to {0}'.format(terms)
+        #         if len(terms) < 3:
+        #             continue
+        #         start_time = float(terms[0])
+        #         stop_time = float(terms[1])
+        #         target_ws = str(terms[2])
+        #         slicer_list.append((start_time, stop_time, target_ws))
+        #         # END-FOR
+        # # END-IF
 
         # check
         if len(slicer_list) == 0:
@@ -536,7 +539,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Get run number
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
         if run_number is None:
-            GuiUtility.pop_dialog_error('Unable to load run as value is not specified.')
+            GuiUtility.pop_dialog_error(self, 'Unable to load run as value is not specified.')
             return
 
         # Get sample logs
