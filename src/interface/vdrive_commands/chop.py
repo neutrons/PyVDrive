@@ -9,8 +9,9 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
+    # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'INFO']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -25,7 +26,9 @@ class VdriveChop(VDriveCommand):
         'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
                   'will be saved to /SNS/VULCAN/IPTS-????/shared.',
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
-        'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
+        'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
+        'DT': 'blabla',
+        'RUNV': 'blabla'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):

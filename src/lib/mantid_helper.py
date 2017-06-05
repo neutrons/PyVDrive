@@ -1340,6 +1340,12 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                                       RelativeTime=is_relative_time
                                       )
 
+    # DEBUG: where does raw workspace go?
+    if ADS.doesExist(raw_ws_name):
+        print '[DB...BAT] Raw workspace {0} is still there.'.format(raw_ws_name)
+    else:
+        print '[DB...BAT] Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
+
     try:
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
@@ -1364,6 +1370,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
     # Save result
     chop_list = list()
     if output_directory is not None:
+        # saved the output
         for index, chopped_ws_name in enumerate(chopped_ws_name_list):
             base_file_name = '{0}_event.nxs'.format(chopped_ws_name)
             file_name = os.path.join(output_directory, base_file_name)
@@ -1372,16 +1379,39 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
             chop_list.append((file_name, chopped_ws_name))
 
         # Clear only if file is saved
+        print '[INFO] Delete correction workspace {0}'.format(correction_ws)
         delete_workspace(correction_ws)
+
+        # DEBUG: where does raw workspace go?
+        if ADS.doesExist(raw_ws_name):
+            print '[DB...BAT] Check3 Raw workspace {0} is still there.'.format(raw_ws_name)
+        else:
+            print '[DB...BAT] Check3 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
+
         if delete_split_ws:
             for chopped_ws_name in chopped_ws_name_list:
+                print '[INFO] Delete chopped child workspace {0}'.format(chopped_ws_name)
                 mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+                # DEBUG: where does raw workspace go?
+                if ADS.doesExist(raw_ws_name):
+                    print '[DB...BAT] Check2 Raw workspace {0} is still there after deleting {1}.' \
+                          ''.format(raw_ws_name, chopped_ws_name)
+                else:
+                    print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents after deleting {1}.' \
+                          ''.format(raw_ws_name, chopped_ws_name)
+                    raise RuntimeError('.... Debug Stop ... Debug Stop ...')
     else:
         if delete_split_ws:
             print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
         for chopped_ws_name in chopped_ws_name_list:
             chop_list.append((None, chopped_ws_name))
     # END-IF
+
+    # DEBUG: where does raw workspace go?
+    if ADS.doesExist(raw_ws_name):
+        print '[DB...BAT] Check2 Raw workspace {0} is still there.'.format(raw_ws_name)
+    else:
+        print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
     return True, chop_list
 

@@ -112,10 +112,20 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                        run_start_ns=run_start_ns)
 
             # split
+            # pre-check
+            if AnalysisDataService.doesExist(raw_ws_name) is False:
+                raise NotImplementedError('Pre-check Raw workspace {0} cannot be found at loop {1} ({2}).'
+                                          ''.format(raw_ws_name, i_loop, num_loops))
+
             status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
                                                              info_table_name=split_info_name,
                                                              target_ws_name=raw_ws_name, tof_correction=False,
                                                              output_directory=output_dir, delete_split_ws=clear_memory)
+
+            # post check
+            if AnalysisDataService.doesExist(raw_ws_name) is False:
+                raise NotImplementedError('Post-check Raw workspace {0} cannot be found at loop {1} ({2}).'
+                                          ''.format(raw_ws_name, i_loop, num_loops))
 
             # process
             if status:
