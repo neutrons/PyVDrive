@@ -70,14 +70,20 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                   tof_correction=do_tof_correction,
                                                                   output_dir=output_directory,
                                                                   is_epoch_time=is_epoch_time,
-                                                                  num_target_ws=number_target_ws)
+                                                                  num_target_ws=number_target_ws,
+                                                                  delete_split_ws=True)
         # delete raw workspace
-        mantid_helper.delete_workspace(event_ws_name)
+        # TODO/ISSUE/NOWNOW - Requiring a user option for this!
+        print '[INFO] Deleting raw event workspace {0} which {1} exists.' \
+              ''.format(event_ws_name, AnalysisDataService.doesExist(event_ws_name))
+        if AnalysisDataService.doesExist(event_ws_name):
+            mantid_helper.delete_workspace(event_ws_name)
 
         return status, ret_obj
 
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
-                                       output_dir, is_epoch_time, num_target_ws):
+                                       output_dir, is_epoch_time, num_target_ws,
+                                       delete_split_ws=True):
         """
         chop data to a large number of output targets
         :param raw_ws_name: raw event workspace to get split
@@ -100,7 +106,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # in loop generate data
         num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
-        clear_memory = True
 
         total_status = True
         total_tup_list = list()
@@ -119,13 +124,15 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
             status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
                                                              info_table_name=split_info_name,
-                                                             target_ws_name=raw_ws_name, tof_correction=False,
-                                                             output_directory=output_dir, delete_split_ws=clear_memory)
+                                                             target_ws_name=raw_ws_name+'_split',
+                                                             tof_correction=False,
+                                                             output_directory=output_dir,
+                                                             delete_split_ws=delete_split_ws)
 
             # post check
             if AnalysisDataService.doesExist(raw_ws_name) is False:
-                raise NotImplementedError('Post-check Raw workspace {0} cannot be found at loop {1} ({2}).'
-                                          ''.format(raw_ws_name, i_loop, num_loops))
+                return False, str(NotImplementedError('Post-check Raw workspace {0} cannot be found at loop {1} ({2}).'
+                                  ''.format(raw_ws_name, i_loop, num_loops)))
 
             # process
             if status:
@@ -136,6 +143,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 # failed: append error message
                 total_status = False
                 total_error_message += '{0}\n'.format(ret_obj)
+
         # END-FOR
 
         if not total_status:

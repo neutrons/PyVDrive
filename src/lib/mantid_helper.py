@@ -1385,6 +1385,8 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         # DEBUG: where does raw workspace go?
         if ADS.doesExist(raw_ws_name):
             print '[DB...BAT] Check3 Raw workspace {0} is still there.'.format(raw_ws_name)
+            mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_1.py')
+
         else:
             print '[DB...BAT] Check3 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
@@ -1399,7 +1401,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                 else:
                     print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents after deleting {1}.' \
                           ''.format(raw_ws_name, chopped_ws_name)
-                    raise RuntimeError('.... Debug Stop ... Debug Stop ...')
+                    return False, str(RuntimeError('.... Debug Stop ... Debug Stop ...'))
     else:
         if delete_split_ws:
             print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
@@ -1410,6 +1412,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
     # DEBUG: where does raw workspace go?
     if ADS.doesExist(raw_ws_name):
         print '[DB...BAT] Check2 Raw workspace {0} is still there.'.format(raw_ws_name)
+        mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_2.py')
     else:
         print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 

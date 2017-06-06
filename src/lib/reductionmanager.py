@@ -311,7 +311,7 @@ class DataReductionTracker(object):
             self._choppedNeXusFileList = list()
 
         # append the input file lsit
-        self._choppedWorkspaceNameList.extend(chopped_file_list)
+        self._choppedNeXusFileList.extend(chopped_file_list)
 
         return
 
