@@ -1606,7 +1606,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, slicer_id, reduce_data, save_chopped_nexus, output_dir,
+    def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
                    export_log_type='loadframe'):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
@@ -1614,15 +1614,15 @@ class VDriveAPI(object):
         :param run_number: run number
         :param slicer_id:
         :param reduce_data:
+        :param vanadium:
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
         # chop data
-        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data,
-                                                    save_chopped_nexus=save_chopped_nexus,
-                                                    output_dir=output_dir)
+        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data, vanadium=vanadium,
+                                                   save_chopped_nexus=save_chopped_nexus, output_dir=output_dir)
 
         # TODO/ISSUE/NOW/TODAY - Implement 'loadframe' option!
 

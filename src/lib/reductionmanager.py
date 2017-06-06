@@ -465,7 +465,7 @@ class ReductionManager(object):
 
     # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
-                        output_nexus_dir, output_gsas_dir, gsas_to_archive, tof_correction):
+                        output_nexus_dir, output_gsas_dir, gsas_to_archive, tof_correction, vanadium):
         """
         chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
@@ -477,6 +477,7 @@ class ReductionManager(object):
         :param output_nexus_dir: it cannot be None, must be specified
         :param output_gsas_dir: if set to None, then chopping data only if gsas_to_archive is False too
         :param gsas_to_archive: save GSAS to archive
+        :param vanadium: vanadium run number of None for not normalizing
         :param tof_correction:
         :return: 2-tuple.  (1) boolean as status  (2) error message
         """
@@ -547,6 +548,8 @@ class ReductionManager(object):
                     reduction_setup.save_chopped_workspace = True
                 else:
                     reduction_setup.save_chopped_workspace = False
+
+                # set original ...
             # END-IF-ELSE
 
             # set the flag for not being an auto reduction

@@ -94,7 +94,7 @@ class ProjectManager(object):
 
         return
 
-    def chop_run(self, run_number, slicer_key, reduce_flag, save_chopped_nexus, output_dir):
+    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_dir):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -107,6 +107,7 @@ class ProjectManager(object):
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
+        :param vanadium:
         :param save_chopped_nexus: flag for saving chopped data to NeXus
         :param output_dir:
         :return:
@@ -116,6 +117,9 @@ class ProjectManager(object):
                                             'must be a string.' % (str(slicer_key), type(slicer_key))
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
+        if vanadium is not None:
+            assert isinstance(vanadium, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
+                                              ''.format(vanadium, type(vanadium))
 
         # get chopping helper
         try:
@@ -194,7 +198,8 @@ class ProjectManager(object):
                                                                        output_nexus_dir=nexus_output,
                                                                        output_gsas_dir=gsas_dir,
                                                                        gsas_to_archive=save_to_archive,
-                                                                       tof_correction=False)
+                                                                       tof_correction=False,
+                                                                       vanadium=vanadium)
 
         # process outputs
         if status:
