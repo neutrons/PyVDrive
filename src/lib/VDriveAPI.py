@@ -1628,6 +1628,26 @@ class VDriveAPI(object):
 
         return status, message
 
+    def slice_data_with_period(self, ipts_number, run_number, time_interval, chop_period, reduce_data,
+                               vanadium, save_chopped_nexus, output_dir, export_log_type):
+        """
+        slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
+        other than time_interval value.
+        :param ipts_number:
+        :param run_number:
+        :param time_interval:
+        :param chop_period:
+        :param reduce_data:
+        :param vanadium:
+        :param save_chopped_nexus:
+        :param output_dir:
+        :param export_log_type:
+        :return:
+        """
+
+
+        return False, 'Not Implemented Yet.'
+
     def set_focus_calibration_file(self, calibration_file):
         """
         Purpose:
