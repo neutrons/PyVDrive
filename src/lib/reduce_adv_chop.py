@@ -33,14 +33,18 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def chop_data(self):
+    def chop_data(self, split_ws_name=None, info_ws_name=None):
         """
         chop data and save to GSAS file
+        :param split_ws_name:
         :return:
         """
         # get data file names, splitters workspace and output directory from reduction setup object
         raw_file_name = self._reductionSetup.get_event_file()
-        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        if split_ws_name is None:
+            split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        elif info_ws_name is None:
+            raise RuntimeError('Splitters workspace name must be given with information workspace name.')
         useless, output_directory = self._reductionSetup.get_chopped_directory(True, nexus_only=True)
 
         # FIXME/TODO/FUTURE/ISSUE - do_tof_correction : should get from somewhere
@@ -80,6 +84,38 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             mantid_helper.delete_workspace(event_ws_name)
 
         return status, ret_obj
+
+    def chop_data_overlap_slicers(self, raw_ws_name, tof_correction,
+                                       output_dir, is_epoch_time, num_target_ws,
+                                       delete_split_ws=True):
+        """
+
+        :param raw_ws_name:
+        :param tof_correction:
+        :param output_dir:
+        :param is_epoch_time:
+        :param num_target_ws:
+        :param delete_split_ws:
+        :return:
+        """
+        # get split information workspace
+        split_ws_name, split_info_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        # check that the splitters workspace must be a TableWorkspace
+        assert mantid_helper.is_table_workspace(split_ws_name),'Splitters workspace {0} must be a table workspace.' \
+                                                               ''.format(split_ws_name)
+
+        # convert to a set of non-overlapping splitters
+        time_segment_period = self._reductionSetup.get_time_segment_period()
+        if time_segment_period is None:
+            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_bf(split_ws_name)
+        else:
+            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_period(split_ws_name, time_segment_period)
+
+        # reduce
+        for split_ws_name in split_ws_list:
+            self.chop_data(split_ws_name, split_info_name)
+
+        return True, ''
 
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws,
@@ -153,7 +189,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
     def chop_reduce(self, chop_dir):
         """
-        Chop and reduce
+        Chop and reduce (this is a method calling Mantid algorithm directly)
         :except: RuntimeError if the target directory for chopped data does not exist
         :return:
         """

@@ -167,6 +167,7 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
 
+        # chop
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
                                                       vanadium=vanadium, save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
@@ -219,12 +220,21 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
 
-        status, message = self._controller.slice_data_with_period(self._iptsNumber, run_number,
-                                                                  time_interval, chop_period,
-                                                                  reduce_data=reduce_flag,
-                                                                  vanadium=vanadium, save_chopped_nexus=True,
-                                                                  output_dir=output_dir,
-                                                                  export_log_type=exp_log_type)
+        # generate data slicer
+        status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
+                                                                      time_interval)
+        if status:
+            slicer_key = ret_obj
+        else:
+            return False, 'Unable to generate data slicer by time due to {0}.'.format(ret_obj)
+
+        status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
+                                                                     chop_period,
+                                                                     reduce_data=reduce_flag,
+                                                                     vanadium=vanadium, save_chopped_nexus=True,
+                                                                     output_dir=output_dir,
+                                                                     export_log_type=exp_log_type)
+
 
         return status, message
 

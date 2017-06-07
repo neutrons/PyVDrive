@@ -135,6 +135,8 @@ class ProjectManager(object):
         # TODO/ISSUE/NOWNOW - Need to be clear when to reduce and where to put reduced files
         # TODO/FIXME/NOWNOW - There is a hole: reduce flag is ON, output_dir is None, Save Chopped NeXus is ON
         #                     What is the difference to reduce flag is ON, output_dir is None, Save Chopped NeXus is OFF
+
+        # TODO/FIXME/NOWNOW - Why there are multiple method to get data file path and IPTS number!
         if reduce_flag:
             # reduce to GSAS
             data_file, ipts_number = self.get_run_info(run_number)
@@ -210,6 +212,92 @@ class ProjectManager(object):
         # END-IF-ELSE
 
         return status, message
+
+    def chop_run_time_segment_period(self, run_number, slicer_key, chop_period, reduce_data_flag, vanadium,
+                                     save_chopped_nexus, output_dir, export_log_type):
+        """
+
+        :param run_number:
+        :param slicer_key:
+        :param chop_period:
+        :param reduce_data_flag:
+        :param vanadium:
+        :param save_chopped_nexus:
+        :param output_dir:
+        :param export_log_type:
+        :return:
+        """
+        # get splitters workspace and information workspace by retrieving
+        #  split workspace and split information workspace from chopper manager
+        try:
+            chopper = self.get_chopper(run_number) # self._chopManagerDict[run_number]
+            split_ws_name, info_ws_name = chopper.get_split_workspace(slicer_key)
+        except KeyError as key_error:
+            raise RuntimeError('Run number %d is not registered to chopper manager (%s). Current runs are %s.' \
+                               '' % (run_number, str(key_error), str(self._chopManagerDict.keys())))
+        # END-TYR
+
+        # determine where to store chopped and reduced data
+        # TODO/FIXME/NOWNOW - There is a hole: reduce flag is ON, output_dir is None, Save Chopped NeXus is ON
+        #                     What is the difference to reduce flag is ON, output_dir is None, Save Chopped NeXus is OFF
+
+        try:
+            # TODO/FIXME/NOWNOW - Why there are multiple method to
+            data_file, ipts_number = self.get_run_info(run_number)
+            data_file = self.get_file_path(run_number)
+            ipts_number = self.get_ipts_number(run_number)
+        except RuntimeError as run_error:
+                return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
+                              ''.format(run_number, run_error)
+
+        if reduce_data_flag:
+            # reduce to GSAS
+            # set up output directory
+            if output_dir is None:
+                # the archive directory
+                save_to_archive = True
+                final_output = 'Archive'
+
+            else:
+                # the user given directory
+                save_to_archive = False
+                final_output = output_dir
+
+            gsas_dir = output_dir
+            if save_chopped_nexus:
+                # if GSAS directory is None (archive), then NeXus directory is None too.
+                nexus_output = gsas_dir
+            else:
+                nexus_output = None
+
+            # success message
+            reduced = 'reduced to GSAS'
+
+        else:
+            # just chop the files and save to Nexus
+
+
+            # set up output directory
+            if output_dir is None:
+                # the archive directory
+                save_to_archive = True
+                final_output = 'Archive'
+            else:
+                # the user given directory
+                save_to_archive = False
+                final_output = output_dir
+
+            # set up output directory
+            nexus_output = output_dir
+            gsas_dir = None
+
+            # success message
+            reduced = 'NOT reduced'
+        # END-IF-ELSE
+
+        # TODO/NEXT/ - Continue from here for CHOP-DT option
+
+        return
 
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False

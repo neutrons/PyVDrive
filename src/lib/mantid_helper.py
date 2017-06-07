@@ -27,6 +27,15 @@ VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
+def convert_to_non_overlap_splitters_bf(split_ws_name):
+    """
+    convert a Table splitters workspace containing overlapped time segment
+    to a set of splitters workspace without overlap by brute force
+    :param split_ws_name:
+    :return:
+    """
+    blabla
+
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
     convert SplittersWorkspace to vectors of time and target workspace index
