@@ -469,7 +469,7 @@ def parse_time_segments(file_name):
             (False, error message)
     """
     # Check
-    assert isinstance(file_name, str)
+    assert isinstance(file_name, str), 'blabla'
 
     # Read file
     try:

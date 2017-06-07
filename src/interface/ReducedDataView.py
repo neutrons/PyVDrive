@@ -98,8 +98,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
                      self.do_clear_canvas)
 
-        # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
-        #         self.do_plot_all_runs)
+        self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_contour)
 
         self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
                      self.do_normalise_by_current)
@@ -530,6 +530,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def do_plot_contour(self):
+        """
+        plot all the chopped data as contour
+        :return:
+        """
+        # TODO/NOWNOW - Implement! Refer to plot_multiple_runs_2d
+        self.ui.comboBox_chopSeq and blabla()
+
+        self.plot_multiple_runs_2d()
+
+        return
+
     def do_plot_diffraction_data(self):
         """
         Plot the diffraction data. The first choice is from the line edit. If it is blank,
@@ -837,7 +849,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         status, error_message = self.load_reduced_data(run_number)
         if not status:
             GuiUtility.pop_dialog_error(self, 'Unable to load {0} due to {1}'.format(run_number, error_message))
-            return
+            return False, 'Unable to load {0} due to {1}'.format(run_number, error_message)
 
         # # Get data (run)
         # if run_number not in self._reducedDataDict:
@@ -1291,10 +1303,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         data_set_list = list()
 
         for run_number in self._runNumberList:
-            if isinstance(run_number, str) and run_number.isdigit() is False:
-                is_workspace = True
-            else:
-                is_workspace = False
             status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
             if status:
                 run_number_list.append(run_number)
@@ -1357,12 +1365,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._currBank = bank_id
 
         # plot
+        # FIXME/LATER/ line_id does not seems useful here.
         line_id = self.plot_1d_diffraction(data_key=run_number, bank_id=bank_id, clear_previous=not over_plot)
         self.label_loaded_data(run_number=run_number, is_chopped=False, chop_seq_list=None)
-        self._linesDict[(run_number, bank_id)] = line_id
-
-
-
+        # self._linesDict[(run_number, bank_id)] = line_id
         # self.plot_1d_diffraction(data_key=run_number,
         #                          bank_id=bank_id,
         #                          label='Run {0} Bank {1}'.format(),

@@ -201,7 +201,7 @@ class DataArchiveManager(object):
         return data_set
 
     @staticmethod
-    def get_data_chopped_nexus(ipts_number, run_number):
+    def get_data_chopped_nexus(ipts_number, run_number, chop_child_list):
         """
         get the default directory for chopped NeXus file from SNS archive
         :exception: RuntimeError if unable to find the directory
@@ -209,6 +209,7 @@ class DataArchiveManager(object):
         :param run_number: a list of string (i.e., files)
         :return:
         """
+        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method!
         assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
         assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
                                              ''.format(ipts_number, type(ipts_number))

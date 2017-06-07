@@ -669,10 +669,7 @@ class VDriveAPI(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int)
-        file_name, ipts_number = self._myProject.get_run_info(run_number)
-
-        return file_name
+        return self._myProject.get_file_path(run_number)
 
     def get_ipts_config(self, ipts=None):
         """
@@ -826,7 +823,10 @@ class VDriveAPI(object):
         if run_number is not None:
             # get information from _myProject's reduced data
             try:
-                run_info_tuple = self._myProject.get_run_info(run_number)
+                nexus_file_name = self._myProject.get_file_path(run_number)
+                ipts_number = self._myProject.get_ipts_number(run_number)
+                run_info_tuple = nexus_file_name, ipts_number
+                #  run_info_tuple = self._myProject.get_run_info(run_number)
             except RuntimeError as re:
                 return False, str(re)
         elif data_key is not None:
@@ -1052,10 +1052,11 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_chopped_data_set(self, ipts_number, run_number, raw_data_directory, output_directory, vanadium,
+    def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
+                                output_directory, vanadium,
                                 binning_parameters, align_to_vdrive_bin):
         """
-
+        blabla
         :param ipts_number:
         :param run_number:
         :param raw_data_directory:
@@ -1065,10 +1066,11 @@ class VDriveAPI(object):
         :param align_to_vdrive_bin:
         :return:
         """
+        # get list of files
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
             try:
-                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number)
+                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number, chop_child_list)
             except AssertionError as assert_err:
                 raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
             except RuntimeError as run_err:
@@ -1094,7 +1096,7 @@ class VDriveAPI(object):
 
         # reduce
         try:
-            status, error_message = self._myProject.reduce_nexus_files(raw_file_list ,output_directory, vanadium, gsas,
+            status, error_message = self._myProject.reduce_nexus_files(raw_file_list, output_directory, vanadium, gsas,
                                                                        binning_parameters, align_to_vdrive_bin)
         except AssertionError as assert_err:
             raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
@@ -1620,11 +1622,10 @@ class VDriveAPI(object):
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
+        # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
         status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data, vanadium=vanadium,
-                                                   save_chopped_nexus=save_chopped_nexus, output_dir=output_dir)
-
-        # TODO/ISSUE/NOW/TODAY - Implement 'loadframe' option!
+                                                   save_chopped_nexus=save_chopped_nexus, output_directory=output_dir)
 
         return status, message
 

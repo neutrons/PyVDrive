@@ -94,7 +94,7 @@ class ProjectManager(object):
 
         return
 
-    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_dir):
+    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -103,13 +103,13 @@ class ProjectManager(object):
         1. reduce_flag = True, output_dir is False: save to archive
         2. reduce_flag = True, output_dir is given, save_chopped_nexus is True: save both GSAS files and NeXus to same
                 directory
-        3. reduce_flag = False, outut_dir is false: save to archive
+        3. reduce_flag = False, output_dir is false: save to archive
         :param run_number:
         :param slicer_key:
         :param reduce_flag:
         :param vanadium:
         :param save_chopped_nexus: flag for saving chopped data to NeXus
-        :param output_dir:
+        :param output_directory:
         :return:
         """
         # check inputs' validity
@@ -132,63 +132,60 @@ class ProjectManager(object):
             raise RuntimeError(error_message)
         # END-TYR
 
-        # TODO/ISSUE/NOWNOW - Need to be clear when to reduce and where to put reduced files
-        # TODO/FIXME/NOWNOW - There is a hole: reduce flag is ON, output_dir is None, Save Chopped NeXus is ON
-        #                     What is the difference to reduce flag is ON, output_dir is None, Save Chopped NeXus is OFF
+        # get data file path and IPTS number
+        try:
+            data_file = self.get_file_path(run_number)
+            ipts_number = self.get_ipts_number(run_number)
+        except RuntimeError as run_error:
+            return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
+                          ''.format(run_number, run_error)
 
-        # TODO/FIXME/NOWNOW - Why there are multiple method to get data file path and IPTS number!
-        if reduce_flag:
-            # reduce to GSAS
-            data_file, ipts_number = self.get_run_info(run_number)
-
-            # set up output directory
-            if output_dir is None:
-                # the archive directory
-                save_to_archive = True
-                final_output = 'Archive'
-
-            else:
-                # the user given directory
-                save_to_archive = False
-                final_output = output_dir
-
-            gsas_dir = output_dir
-            if save_chopped_nexus:
-                # if GSAS directory is None (archive), then NeXus directory is None too.
-                nexus_output = gsas_dir
-            else:
-                nexus_output = None
-
-            # success message
-            reduced = 'reduced to GSAS'
-
-        else:
-            # just chop the files and save to Nexus
-            try:
-                data_file = self.get_file_path(run_number)
-                ipts_number = self.get_ipts_number(run_number)
-            except RuntimeError as run_error:
-                return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
-                              ''.format(run_number, run_error)
-
-            # set up output directory
-            if output_dir is None:
-                # the archive directory
-                save_to_archive = True
-                final_output = 'Archive'
-            else:
-                # the user given directory
-                save_to_archive = False
-                final_output = output_dir
-
-            # set up output directory
-            nexus_output = output_dir
-            gsas_dir = None
-
-            # success message
-            reduced = 'NOT reduced'
-
-            # END-TRY
+        # # get output directories
+        # if reduce_flag:
+        #     # reduce to GSAS
+        #     # set up output directory
+        #     if output_directory is None:
+        #         # the archive directory
+        #         save_to_archive = True
+        #         final_output = 'Archive'
+        #
+        #     else:
+        #         # the user given directory
+        #         save_to_archive = False
+        #         final_output = output_directory
+        #
+        #     output_directory = output_directory
+        #     if save_chopped_nexus:
+        #         # if GSAS directory is None (archive), then NeXus directory is None too.
+        #         nexus_output = output_directory
+        #     else:
+        #         nexus_output = None
+        #
+        #     # success message
+        #     reduced = 'reduced to GSAS'
+        #
+        # else:
+        #     # just chop the files and save to Nexus
+        #
+        #
+        #     # set up output directory
+        #     if output_directory is None:
+        #         # the archive directory
+        #         save_to_archive = True
+        #         final_output = 'Archive'
+        #     else:
+        #         # the user given directory
+        #         save_to_archive = False
+        #         final_output = output_directory
+        #
+        #     # set up output directory
+        #     nexus_output = output_directory
+        #     output_directory = None
+        #
+        #     # success message
+        #     reduced = 'NOT reduced'
+        #
+        #     # END-TRY
 
         # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
@@ -197,16 +194,16 @@ class ProjectManager(object):
                                                                        split_ws_name=split_ws_name,
                                                                        split_info_name=info_ws_name,
                                                                        slice_key=slicer_key,
-                                                                       output_nexus_dir=nexus_output,
-                                                                       output_gsas_dir=gsas_dir,
-                                                                       gsas_to_archive=save_to_archive,
+                                                                       output_directory=output_directory,
+                                                                       reduce_data_flag=reduce_flag,
+                                                                       save_chopped_nexus=save_chopped_nexus,
                                                                        tof_correction=False,
                                                                        vanadium=vanadium)
 
         # process outputs
         if status:
-            message = 'IPTS-{0} Run {1} is chopped, {2} and saved to {3}'.format(ipts_number, run_number,
-                                                                                 reduced, final_output)
+            message = 'IPTS-{0} Run {1} is chopped, reduced? {2} and saved to {3}' \
+                      ''.format(ipts_number, run_number, reduce_flag, output_directory)
         else:
             message = error_message
         # END-IF-ELSE
@@ -243,7 +240,6 @@ class ProjectManager(object):
 
         try:
             # TODO/FIXME/NOWNOW - Why there are multiple method to
-            data_file, ipts_number = self.get_run_info(run_number)
             data_file = self.get_file_path(run_number)
             ipts_number = self.get_ipts_number(run_number)
         except RuntimeError as run_error:
@@ -297,7 +293,7 @@ class ProjectManager(object):
 
         # TODO/NEXT/ - Continue from here for CHOP-DT option
 
-        return
+        return False, 'Not Implemented and Tested'
 
     def clear_reduction_flags(self):
         """ Set to all runs' reduction flags to be False
@@ -491,7 +487,7 @@ class ProjectManager(object):
         # Get file name according to run number
         if isinstance(run_number, int):
             # run number is a Run Number, locate file
-            file_name, ipts_number = self.get_run_info(run_number)
+            file_name = self.get_file_path(run_number)
         elif isinstance(run_number, str):
             # run number is a file name
             base_file_name = run_number
@@ -529,7 +525,7 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int) and run_number >= 0
+        assert isinstance(run_number, int) and run_number >= 0, 'blabla'
 
         if run_number in self._dataFileDict:
             file_path = self._dataFileDict[run_number][0]
@@ -544,7 +540,7 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int) and run_number >= 0
+        assert isinstance(run_number, int) and run_number >= 0, 'blabla'
 
         if run_number in self._dataFileDict:
             ipts_number = self._dataFileDict[run_number][1]
@@ -681,16 +677,16 @@ class ProjectManager(object):
 
         return ws_info
 
-    def get_run_info(self, run_number):
-        """
-        Get run's information
-        :param run_number:
-        :return:  2-tuple (file name, IPTS number)
-        """
-        if run_number not in self._dataFileDict:
-            raise RuntimeError('Unable to find run %d in project manager.' % run_number)
-
-        return self._dataFileDict[run_number]
+    # def get_run_info(self, run_number):
+    #     """
+    #     Get run's information
+    #     :param run_number:
+    #     :return:  2-tuple (file name, IPTS number)
+    #     """
+    #     if run_number not in self._dataFileDict:
+    #         raise RuntimeError('Unable to find run %d in project manager.' % run_number)
+    #
+    #     return self._dataFileDict[run_number]
 
     def get_runs(self):
         """

@@ -788,13 +788,23 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # time (step) in seconds
             diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9
 
+            # TODO/ISSUE/NOWNOW2 - consider to put the following methods
             if log_type == 'loadframe':
                 # loadframe
                 for entry in reduce_VULCAN.MTS_Header_List:
                     mts_name, log_name = entry
+                    pd_index = float(i_ws + 1)
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
-                        sample_log = workspace_i.run().getProperty(log_name).value
+                        try:
+                            sample_log = workspace_i.run().getProperty(log_name).value
+                        except RuntimeError as run_err:
+                            print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+                            start_series_dict[mts_name].set_value(pd_index, 0.)
+                            mean_series_dict[mts_name].set_value(pd_index, 0.)
+                            end_series_dict[mts_name].set_value(pd_index, 0.)
+                            continue
+
                         if len(sample_log) > 0:
                             start_value = sample_log[0]
                             mean_value = sample_log.mean()
@@ -824,7 +834,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                         start_value = mean_value = end_value = 0.
                     # END-IF-ELSE
 
-                    pd_index = float(i_ws + 1)
                     start_series_dict[mts_name].set_value(pd_index, start_value)
                     mean_series_dict[mts_name].set_value(pd_index, mean_value)
                     end_series_dict[mts_name].set_value(pd_index, end_value)
@@ -837,6 +846,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     log_name = mts_name
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
+                        # TODO/ISSUE/FIXME/ - Put Try-exception here too!
                         sample_log = workspace_i.run().getProperty(log_name).value
                         start_value = sample_log[0]
                         mean_value = sample_log.mean()

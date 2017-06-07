@@ -58,7 +58,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         # FIXME/TODO/ISSUE/TODAY - Use cyclic color
         self._currLineID = self.plot_1d_data(vec_x, vec_y, unit, label=chop_tag, line_key=chop_tag,
-                                             title=run_id, line_color='blue')
+                                             title='Run {0}'.format(run_id), line_color='blue')
         self._onCanvasIDList.append(self._currLineID)
 
         # re-scale

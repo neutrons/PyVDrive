@@ -944,9 +944,10 @@ class ReductionSetup(object):
 
         return
 
-    def set_output_dir_to_archive(self, create_parent_directories=False):
+    def set_chopped_output_to_archive(self, create_parent_directories=False):
         """
-        set output directories as SNS archive
+        set chopped data's output directories to SNS archive, including
+        (1) chopped NeXus files and (2) reduced data files
         :param create_parent_directories: create directories if they do not exist
         :return:
         """

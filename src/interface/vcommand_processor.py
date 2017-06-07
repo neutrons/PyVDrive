@@ -237,7 +237,7 @@ class VdriveCommandProcessor(object):
             # this is for help
             return status, message
 
-        view_window = self._mainWindow.do_view_reduction()
+        view_window = self._mainWindow.do_launch_reduced_data_viewer()
         view_window.set_ipts_number(processor.get_ipts_number())
 
         if processor.is_1_d:
