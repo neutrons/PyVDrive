@@ -9,6 +9,7 @@ import numpy
 
 import mantid
 import mantid.api
+import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
@@ -34,7 +35,94 @@ def convert_to_non_overlap_splitters_bf(split_ws_name):
     :param split_ws_name:
     :return:
     """
-    blabla
+    # get splitters workspace and check its type
+    split_ws = retrieve_workspace(split_ws_name)
+    assert isinstance(split_ws, mantid.dataobjects.TableWorkspace), \
+        'Splitters workspace {0} must be a TableWorkspace but not a {1}.'.format(split_ws, type(split_ws))
+
+    # output data structure
+    current_child_index = 0
+    curr_split_ws = create_table_splitters(split_ws_name + '0')
+    sub_split_ws_list = [curr_split_ws]
+
+    for i_row in split_ws.rowCount():
+        # get start and stop
+        start_i = split_ws.cell(i_row, 0)
+        stop_i = split_ws.cell(i_row, 1)
+        target_i = split_ws.cell(i_row, 2)
+        # always tends to append to the current one.  if not, then search till beginning of the list
+
+        prev_child_index = current_child_index
+
+        continue_loop = True
+        while continue_loop:
+            if curr_split_ws.rowCount() == 0 or curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) <= start_i:
+                # either empty split workspace of current split workspace's last splitter's stop time is earlier
+                # add a new row
+                print '[DB...BT] Add split from {0} to {1} to sub-splitter {2}' \
+                      ''.format(start_i, stop_i, current_child_index)
+                curr_split_ws.addRow([start_i, stop_i, target_i])
+                break
+
+            if current_child_index == len(sub_split_ws_list) - 1:
+                # go back to first one
+                current_child_index = 0
+            else:
+                # advance to next one (fill evenly, right?)
+                current_child_index += 1
+            curr_split_ws = sub_split_ws_list[current_child_index]
+            print '[DB...BT] Advance to next sub-splitter {0}'.format(current_child_index)
+
+            if current_child_index == 0 and curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) > start_i:
+                # go from last one to first one. time to add a new one if still overlap with new one
+                current_child_index = len(sub_split_ws_list)
+                curr_split_ws = create_table_splitters(split_ws_name + '{0}'.format(current_child_index))
+                sub_split_ws_list.append(curr_split_ws)
+                print '[DB...BT] Create a new sub-splitter {0}.'.format(current_child_index)
+            # END-IF
+        # END-WHILE
+    # END-FOR
+
+    return sub_split_ws_list
+
+
+def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time_segment_period):
+    """
+
+    :param ws_name:
+    :param start_time:
+    :param stop_time:
+    :param time_bin_size:
+    :param time_segment_period:
+    :return:
+    """
+    if time_bin_size <= time_segment_period:
+        raise RuntimeError('Not applied... to easy!')
+
+    num_sub_splitters = int(time_bin_size / time_segment_period + 0.5)
+    print '[DB...BAT] Time bin size = {0} Time segment size = {1} Num sub splitters = {2}' \
+          ''.format(time_bin_size, time_segment_period, num_sub_splitters)
+
+    for i_split in range(num_sub_splitters):
+        vec_x = blabla
+        vec_y = blabla
+        vec_e = blabla
+        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_split)
+
+    return XXX
+
+def create_table_splitters(split_ws_name):
+    """
+    create splitters workspace in form of TableWorkspace
+    :param split_ws_name:
+    :return:
+    """
+    column_definitions = list()
+    column_definitions.append(('float', 'start'))
+    column_definitions.append(('float', 'stop'))
+    column_definitions.append(('str', 'target'))
+
+    return create_table_workspace(split_ws_name, column_definitions)
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
@@ -95,9 +183,9 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
 
 def create_table_workspace(table_ws_name, column_def_list):
     """
-
+    create a table workspace with user-specified column
     :param table_ws_name:
-    :param column_def_list:
+    :param column_def_list: list of 2-tuples (string as column data type, string as column name)
     :return:
     """
     mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=table_ws_name)
@@ -107,7 +195,7 @@ def create_table_workspace(table_ws_name, column_def_list):
         col_name = col_tup[1]
         table_ws.addColumn(data_type, col_name)
 
-    return
+    return table_ws
 
 
 def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
