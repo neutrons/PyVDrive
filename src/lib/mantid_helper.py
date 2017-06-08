@@ -107,7 +107,7 @@ def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time
         vec_x = blabla
         vec_y = blabla
         vec_e = blabla
-        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_split)
+        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_split))
 
     return XXX
 

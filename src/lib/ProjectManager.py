@@ -140,53 +140,6 @@ class ProjectManager(object):
             return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                           ''.format(run_number, run_error)
 
-        # # get output directories
-        # if reduce_flag:
-        #     # reduce to GSAS
-        #     # set up output directory
-        #     if output_directory is None:
-        #         # the archive directory
-        #         save_to_archive = True
-        #         final_output = 'Archive'
-        #
-        #     else:
-        #         # the user given directory
-        #         save_to_archive = False
-        #         final_output = output_directory
-        #
-        #     output_directory = output_directory
-        #     if save_chopped_nexus:
-        #         # if GSAS directory is None (archive), then NeXus directory is None too.
-        #         nexus_output = output_directory
-        #     else:
-        #         nexus_output = None
-        #
-        #     # success message
-        #     reduced = 'reduced to GSAS'
-        #
-        # else:
-        #     # just chop the files and save to Nexus
-        #
-        #
-        #     # set up output directory
-        #     if output_directory is None:
-        #         # the archive directory
-        #         save_to_archive = True
-        #         final_output = 'Archive'
-        #     else:
-        #         # the user given directory
-        #         save_to_archive = False
-        #         final_output = output_directory
-        #
-        #     # set up output directory
-        #     nexus_output = output_directory
-        #     output_directory = None
-        #
-        #     # success message
-        #     reduced = 'NOT reduced'
-        #
-        #     # END-TRY
-
         # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,

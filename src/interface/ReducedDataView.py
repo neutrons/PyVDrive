@@ -1639,6 +1639,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                                   data_key)
         if status:
             result_ws_name = ret_obj
+            self.load_reduced_data(run_number=result_ws_name)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
@@ -1649,12 +1650,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # TODO/FIXME/NOW - what if data_key is None??? VDrivePlot version
         self._currUnit = 'dSpacing'
         self.plot_1d_diffraction(data_key=data_key, bank_id=self._currBank,
-                                 label='blabla', clear_previous=True,
-                                 is_workspace_name=True, color='black')
+                                 label='blabla raw label', title='blabla raw title', clear_previous=True,
+                                 color='black')
 
         self._vanStripPlotID = self.plot_1d_diffraction(data_key=result_ws_name, bank_id=self._currBank,
-                                                        label='Vanadium peaks striped',
-                                                        clear_previous=False, is_workspace_name=True,
+                                                        label='Vanadium peaks striped', title='blabla strip title',
+                                                        clear_previous=False,
                                                         color='green')
 
         if self._iptsNumber is None:
@@ -1692,6 +1693,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 self._lastVanSmoothedWorkspace = smoothed_ws_name
             else:
                 self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
+            self.load_reduced_data(run_number=smoothed_ws_name)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
@@ -1699,15 +1701,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # plot data: the unit is changed to TOF due to Mantid's behavior
         #            as a consequence of this, the vanadium spectrum with peak removed shall be re-plot in TOF space
-        # TODO/NOW/ - a better name
-        label_no_peak = 'blabla'
-        self.plot_1d_diffraction(data_key=van_peak_removed_ws, bank_id=self._currBank, title=label_no_peak, clear_previous=True,
-                                 is_workspace_name=True, color='black')
+        # # TODO/NOW/ - a better name
+        # label_no_peak = 'blabla no peak'
+        # self.plot_1d_diffraction(data_key=van_peak_removed_ws, bank_id=self._currBank,
+        #                          title=label_no_peak,
+        #                          label=label_no_peak,
+        #                          clear_previous=True,
+        #                          color='black')
 
         label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
                 ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        self.plot_1d_diffraction(data_key=smoothed_ws_name, bank_id=self._currBank, title=label, clear_previous=False,
-                                 is_workspace_name=True, color='red')
+        self.plot_1d_diffraction(data_key=smoothed_ws_name, bank_id=self._currBank,
+                                 label=label, title=label,
+                                 clear_previous=False, color='red')
 
         return
 

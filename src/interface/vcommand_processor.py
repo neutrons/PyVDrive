@@ -277,7 +277,7 @@ class VdriveCommandProcessor(object):
 
         # process for special case: log-pick-helper
         if message == 'pop':
-            data_viewer = self._mainWindow.do_view_reduction()
+            data_viewer = self._mainWindow.do_launch_reduced_data_viewer()
             # title
             data_viewer.set_title_plot_run('Processing vanadium')
             # get data (key), set to viewer and plot

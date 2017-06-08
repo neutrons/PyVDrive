@@ -1430,7 +1430,8 @@ class VDriveAPI(object):
             # END-IF
         else:
             # load vanadium file
-            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
+            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas',
+                                                                               None, 1000)
             self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
 
         # convert unit
