@@ -535,10 +535,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         plot all the chopped data as contour
         :return:
         """
-        # TODO/NOWNOW - Implement! Refer to plot_multiple_runs_2d
-        self.ui.comboBox_chopSeq and blabla()
+        # get chopped workspace keys
+        num_items = self.ui.comboBox_chopSeq.count()
+        ws_keys = list()
+        for p in range(num_items):
+            key_i = str(self.ui.comboBox_chopSeq.itemText(p))
+            ws_keys.append(key_i)
+        # END-FOR
+        print '[DB...BAT] chopped workspace keys: {0}'.format(ws_keys)
 
-        self.plot_multiple_runs_2d()
+        #
+        curr_bank = int(self.ui.comboBox_spectraList.currentText())
+        self.plot_multiple_runs_2d(bank_id=curr_bank, bank_id_from_1=True, ws_key_list=ws_keys)
 
         return
 
@@ -1289,7 +1297,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def plot_multiple_runs_2d(self, bank_id, bank_id_from_1=False):
+    def plot_multiple_runs_2d(self, bank_id, bank_id_from_1=False, ws_key_list=None):
         """
         Plot multiple runs (reduced data) to contour plot. 2D
         :return:
@@ -1297,20 +1305,39 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negetive integer.' \
                                                           '' % str(bank_id)
 
+        if ws_key_list is None and len(self._runNumberList) == 0:
+            GuiUtility.pop_dialog_information(self, 'No workspace list or run number list for contour plot.')
+            return
+
         # get the list of runs
         error_msg = ''
         run_number_list = list()
         data_set_list = list()
 
-        for run_number in self._runNumberList:
-            status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
-            if status:
-                run_number_list.append(run_number)
-                data_set_list.append(ret_obj)
-            else:
-                error_msg += 'Unable to get reduced data for run %d due to %s;\n' % (run_number, str(ret_obj))
-                continue
+        if ws_key_list is None:
+            for run_number in self._runNumberList:
+                status, ret_obj = self.get_reduced_data(run_number, bank_id, bank_id_from_1=bank_id_from_1)
+                if status:
+                    run_number_list.append(run_number)
+                    data_set_list.append(ret_obj)
+                else:
+                    error_msg += 'Unable to get reduced data for run %d due to %s;\n' % (run_number, str(ret_obj))
+                    continue
+            # END-FOR
+        else:
+            for chop_index, ws_key in enumerate(ws_key_list):
+                status, ret_obj = self.get_reduced_data(ws_key, bank_id, bank_id_from_1=bank_id_from_1)
+                if status:
+                    run_number_list.append(chop_index+1)
+                    data_set_list.append(ret_obj)
+                else:
+                    error_msg += 'Unable to get reduced data for run {0} due to {1};\n'.format(ws_key, str(ret_obj))
+                    continue
+            # END-FOR
         # END-FOR
+
+        print '[DB...BAT] Error message: {0}'.format(error_msg)
+        print '[DB...BAT] Run number list: {0} Data set list size: {1}'.format(run_number_list, len(data_set_list))
 
         # return if nothing to plot
         if len(run_number_list) == 0:

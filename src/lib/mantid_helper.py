@@ -96,6 +96,7 @@ def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time
     :param time_segment_period:
     :return:
     """
+    # TODO/NOWNOW/ - continue to implement!
     if time_bin_size <= time_segment_period:
         raise RuntimeError('Not applied... to easy!')
 
@@ -110,6 +111,7 @@ def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time
         splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_split))
 
     return XXX
+
 
 def create_table_splitters(split_ws_name):
     """
