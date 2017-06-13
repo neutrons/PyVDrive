@@ -68,6 +68,7 @@ class VdriveView(VDriveCommand):
     def exec_cmd(self):
         """
         Execute input command (override)
+        view's execution only collects information but not load any data at all!
         :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """

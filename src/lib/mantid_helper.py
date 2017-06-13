@@ -310,9 +310,9 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     """
     print '[DB...BAT] Workspace Name: ', ws_name
 
-    # check
-    if relative_time is False:
-        raise RuntimeError('It has not been implemented for absolute time stamp!')
+    # # check
+    # if relative_time is False:
+    #     raise RuntimeError('It has not been implemented for absolute time stamp!')
 
     # check
     assert isinstance(split_list, list), 'split list should be a list but not a %s.' \

@@ -150,15 +150,18 @@ class LoadedDataManager(object):
 
         return data_key
 
-    def load_chopped_binned_data(self, chopped_data_dir, file_format='gsas'):
+    def load_chopped_binned_data(self, chopped_data_dir, chop_sequence=None, load_raw=True, file_format='gsas'):
         """
-        load chopped and binned data (in GSAS format) for a diretory
+        load chopped and binned data (in GSAS format) for a directory.
+        Chopping information file will be searched first
         :param chopped_data_dir:
         :param file_format:
         :return: 2-tuple of dictionary and integer (run number)
             dictionary: key is data workspace name;
                         value is 2-tuple as (1) log workspace name or None (if no NeXus file) and (2) gsas file name
         """
+        # TODO/ISSUE/NOWNOW - Clean the doc.. considering option load_raw
+
         # check inputs
         assert isinstance(chopped_data_dir, str), 'Direcotry {0} must be given as a string but not a {1}.' \
                                                   ''.format(chopped_data_dir, str(chopped_data_dir))
@@ -190,9 +193,24 @@ class LoadedDataManager(object):
             reduced_tuple_list = self.parse_chop_info_file(os.path.join(chopped_data_dir, chop_info_file))
             run_number = chop_info_file.split('_')[1]
 
+        # chop sequence is used to determine the specified files
+        if chop_sequence is not None:
+            assert isinstance(chop_sequence, list), 'blabla'
+            # this is VERY VULCAN specific
+            vulcan_file_list = list()
+            for seq_index in sorted(chop_sequence):
+                vulcan_file_list.append('{0}.gda'.format(seq_index))
+        else:
+            vulcan_file_list = None
+
         # load file
         data_key_dict = dict()
         for file_name, nexus_file_name, ws_name in reduced_tuple_list:
+            # select specified file if there is such ...
+            base_file_name = os.path.basename(file_name)
+            if vulcan_file_list is None or base_file_name not in vulcan_file_list:
+                continue
+
             # load GSAS file
             data_ws_name = self.load_binned_data(data_file_name=file_name, data_file_type=file_format,
                                                  prefix=run_number, max_int=len(reduced_tuple_list))

@@ -155,11 +155,26 @@ app = lava_app()
 launcher = LauncherManager()
 launcher.show()
 
-if isinstance(option, str) and option.lower().startswith('t'):
+if isinstance(option, str) and (option.lower().startswith('-h') or option.lower().startswith('--h')):
+    print 'Options:'
+    print '  -t: launch IPython terminal'
+    print '  -c: launch chopping/slicing interface'
+    print '  -p: launch peak processing interface'
+    print '  -v: launch reduced data view interface'
+    sys.exit(1)
+
+elif isinstance(option, str) and option.lower().startswith('-t'):
     launcher.do_launch_terminal()
     launcher.close()
-elif isinstance(option, str) and option.lower().startswith('v'):
+elif isinstance(option, str) and option.lower().startswith('-c'):
+    launcher.do_launch_chopper()
+    launcher.close()
+elif isinstance(option, str) and option.lower().startswith('-p'):
+    launcher.do_launch_peak_picker()
+    launcher.close()
+elif isinstance(option, str) and option.lower().startswith('-v'):
     launcher.do_launch_viewer()
     launcher.close()
+
 
 app.exec_()

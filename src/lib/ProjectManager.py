@@ -585,7 +585,7 @@ class ProjectManager(object):
 
         else:
             # no idea what to do
-            raise RuntimeError('Unable to find reduced data {0}/{1}/{2}'
+            raise RuntimeError('Unable to find reduced data run ID ={0}, unit = {1}, data file = {2}'
                                ''.format(run_id, target_unit, reduced_data_file))
         # END-IF-ELSE
 

@@ -245,13 +245,17 @@ class VdriveCommandProcessor(object):
             view_window.set_canvas_type(dimension=1)
             view_window.add_run_numbers(processor.get_run_tuple_list())
             # plot
+            view_window.set_diffraction_unit(processor.unit)
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
-            view_window.set_canvas_type(dimension=2)
-            view_window.set_chop_run_number(processor.get_run_number())
-            view_window.set_chop_sequence(processor.get_chopped_sequence_range())
-            view_window.plot_chopped_data_2d(chopped_data_dir=processor.get_reduced_data_directory())
+            view_window.plot_chopped_data_2d(run_number=processor.get_run_number(),
+                                             chop_sequence=processor.get_chopped_sequence_range(),
+                                             bank_id=1,
+                                             bank_id_from_1=True,
+                                             chopped_data_dir=processor.get_reduced_data_directory(),
+                                             min_x=processor.x_min, max_x=processor.x_max,
+                                             unit=processor.unit)
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)

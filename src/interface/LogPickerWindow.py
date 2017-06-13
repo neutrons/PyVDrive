@@ -28,7 +28,6 @@ IN_PICKER_SELECTION = 3
 # TODO/ISSUE/NOWNOW - label_runStartEpoch never been written
 
 
-
 class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """

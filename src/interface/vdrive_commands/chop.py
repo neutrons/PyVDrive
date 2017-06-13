@@ -297,6 +297,7 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      vanadium=None,
                                                       save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 

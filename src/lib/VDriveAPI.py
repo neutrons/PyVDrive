@@ -524,8 +524,8 @@ class VDriveAPI(object):
         Purpose: get information of a reduced run such as bank ID and etc.
         Requirements: either run number is specified as a valid integer or data key is given;
         Guarantees: ... ...
-        :param run_number:
-        :param data_key:
+        :param run_number: integer or string that can be converted to an integer
+        :param data_key: string for workspace name
         :return: list of bank ID
         """
         if isinstance(run_number, int):
@@ -983,7 +983,7 @@ class VDriveAPI(object):
 
         return slicers
 
-    def load_chopped_diffraction_files(self, directory, file_type):
+    def load_chopped_diffraction_files(self, directory, chop_seq_list, file_type):
         """
         loaded chopped and reduced diffraction files
         :param directory:
@@ -991,6 +991,7 @@ class VDriveAPI(object):
         :return: 2-tuple.  dictionary of 2-tuple: key : data workspace, value = (log workspace, file name) | run number
         """
         chopped_key_dict, run_number = self._myProject.data_loading_manager.load_chopped_binned_data(directory,
+                                                                                                     chop_seq_list,
                                                                                                      file_type)
 
         return chopped_key_dict, run_number

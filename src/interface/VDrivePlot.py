@@ -1170,11 +1170,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                                              '' % type(run)
 
         # Get NeXus file name
+        load_without_file = False
         if isinstance(run, int):
             # in case of run number is given
             status, run_tuple = self._myWorkflow.get_run_info(run)
             if status is False:
-                raise RuntimeError(run_tuple)
+                load_without_file = True
             nxs_file_name = run_tuple[0]
             run_number = int(run)
         else:
@@ -1183,11 +1184,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
             run_number = None
             raise RuntimeError('It is not supported to use a random NeXus file.')
 
-        # Load file
-        # status, errmsg = self._myWorkflow.set_slicer_helper(nxs_file_name=nxs_file_name, run_number=run_number)
-        # if status is False:
-        #     raise RuntimeError(errmsg)
-        #
+        # get files
+        if load_without_file:
+            # TODO/NOWNOW/ - Implement!
+            self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name='VULCAN_{0}'.format(run),
+                                             meta_data_only=True)
+
         # Get log names
         log_name_list = self._myWorkflow.get_sample_log_names(run_number, smart)
 
