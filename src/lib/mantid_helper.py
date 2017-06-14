@@ -96,21 +96,42 @@ def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time
     :param time_segment_period:
     :return:
     """
-    # TODO/NOWNOW/ - continue to implement!
+    # checking condition
     if time_bin_size <= time_segment_period:
-        raise RuntimeError('Not applied... to easy!')
+        raise RuntimeError('The case that time segment bin size {0} is smaller than time segment period/distance {1} '
+                           'is not applied by method create_overlap_splitters.'
+                           ''.format(time_bin_size, time_segment_period))
 
+    # get number of sub-splitters workspaces
     num_sub_splitters = int(time_bin_size / time_segment_period + 0.5)
     print '[DB...BAT] Time bin size = {0} Time segment size = {1} Num sub splitters = {2}' \
           ''.format(time_bin_size, time_segment_period, num_sub_splitters)
 
-    for i_split in range(num_sub_splitters):
-        vec_x = blabla
-        vec_y = blabla
-        vec_e = blabla
-        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_split))
+    # get the element of each splitters workspace
+    splitters_size = (stop_time - start_time) / time_segment_period
 
-    return XXX
+    splitter_ws_list = list()
+    for i_sub in range(num_sub_splitters):
+        # define for array size
+        vec_x = numpy.ndarray(shape=(splitters_size*2, ), dtype='double')
+        vec_y = numpy.ndarray(shape=(splitters_size*2-1, ), dtype='double')
+        vec_y.fill(-1)
+        vec_e = vec_y
+
+        # set up the value
+        for i_split in range(splitters_size):
+            vec_x[i_split*2] = start_time + i_split * time_segment_period
+            vec_x[i_split*2+1] = vec_x[i_split] + time_bin_size
+
+            vec_y[i_split*2] = i_split * num_sub_splitters + i_sub
+        # END-FOR
+
+        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_sub))
+
+        splitter_ws_list.append(splitters_ws)
+    # END-FOR
+
+    return splitter_ws_list
 
 
 def create_table_splitters(split_ws_name):
@@ -207,12 +228,16 @@ def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
     :param vec_y:
     :param vec_e:
     :param output_ws_name:
-    :return:
+    :return: reference to the generated workspace
     """
+    # check size
+    assert len(vec_x) == len(vec_y) or len(vec_x) == len(vec_y) + 1, 'blabla'
+    assert len(vec_y) == len(vec_e), 'blabla'
+
     mantidapi.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
                               OutputWorkspace=output_ws_name)
 
-    return
+    return ADS.retrieve(output_ws_name)
 
 
 def delete_workspace(workspace):
