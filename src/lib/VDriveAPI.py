@@ -506,12 +506,18 @@ class VDriveAPI(object):
         else:
             # search for archive with GSAS file
             # get GSAS file name
-            if search_archive and isinstance(run_id, int):
+            if self._myProject.reduction_manager.has_run(run_number=run_id):
+                # reduced data that is still in memory
+                data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
+
+            elif search_archive and isinstance(run_id, int):
+                # search /SNS/VULCAN/
                 try:
                     gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
                     data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
                 except RuntimeError as run_err:
                     return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
+
             else:
                 return False, 'Unable to locate run {0} in archive'.format(run_id)
             # END-IF
@@ -1046,7 +1052,13 @@ class VDriveAPI(object):
         """
         # get NeXus file name
         if file_name is None:
+            # nexus file name is not given, then use the standard SNS archive name
+            if ipts_number is None:
+                # get IPTS number if it is not given
+                ipts_number = self._myProject.get_ipts_number(run_number)
+
             file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+        # END-IF
 
         # load file
         info_dict = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,

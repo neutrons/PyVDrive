@@ -200,7 +200,6 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         assert isinstance(run_start_time, float), 'Starting time must be a float'
         vec_times -= run_start_time
 
-    print '[DB...BAT] splitters: vector of time: ', vec_times.tolist()
     print '[DB...BAT] size of output vectors: ', len(vec_times), len(vec_ws)
 
     return vec_times, vec_ws

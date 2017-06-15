@@ -465,12 +465,20 @@ class VdriveMainWindow(QtGui.QMainWindow):
             self._myChildWindows.append(self._reducedDataViewWindow)
         # END-IF
 
-        # update to current reduction status
-        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
-                                                    clear_previous=True)
-
         # show the window if it exists and return
         self._reducedDataViewWindow.show()
+
+        # update to current reduction status
+        runs_tuples = self._myWorkflow.get_reduced_runs(with_ipts=True)
+        if len(runs_tuples) == 0:
+            print '[INFO] No reduced run is found. '
+            return self._reducedDataViewWindow
+
+        self._reducedDataViewWindow.set_ipts_number(runs_tuples[0][1])
+        # 1-D image
+        self._reducedDataViewWindow.set_canvas_type(dimension=1)
+        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
+                                                    clear_previous=True)
 
         return self._reducedDataViewWindow
 
@@ -510,6 +518,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """ Event handler to slice/chop data by time
         :return:
         """
+        raise RuntimeError('NOWNOW: Need to redo this method!')
+
         # Check selected run numbers
         selected_run_list = self.ui.tableWidget_selectedRuns.get_selected_runs()
         print '[DB] Slice data by time: runs to chop = %s' % str(selected_run_list)
@@ -544,7 +554,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                         err_msg += ret_obj + '\n'
                 # END-FOR
                 if err_msg != '':
-                    GuiUtility.pop_dialog_error(err_msg)
+                    GuiUtility.pop_dialog_error(self, err_msg)
 
         elif self.ui.radioButton_chopByTimeSegments.isChecked() is True:
             # chop with user-defined time segment
@@ -916,24 +926,21 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # run is located in workflow controller
         run_file_name, ipts_number = ret_obj
-        if run_file_name.startswith('/SNS/'):
-            # data is from data server: redirect to IPTS-???/0/.. directory
-            log_path = os.path.join('/SNS/VULCAN/',
-                                    'IPTS-%d/0/%d/NeXus' % (ipts_number, run_number))
+        if os.path.exists(run_file_name):
+            self._currLogRunNumber = run_number
+            log_file_name = run_file_name
         else:
             # local data file
-            log_path = os.path.dirname(run_file_name)
+            log_path = os.path.dirname('/SNS/VULCAN/IPTS-{0}/'.format(ipts_number))
+            # Dialog to get the file name
+            file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
+            log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
+                                                                  log_path, file_filter))
+            run_number = 0  # parse_run_number(log_file_name)
         # END-IF
 
-        self._currLogRunNumber = run_number
-
-        # Dialog to get the file name
-        file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
-                                                              log_path, file_filter))
-
         # Load log
-        log_name_list, run_info_str = self.load_sample_run(log_file_name, smart=True)
+        log_name_list, run_info_str = self.load_sample_run(run_number, log_file_name, smart=True)
         log_name_list = GuiUtility.sort_sample_logs(log_name_list, reverse=False, ignore_1_value=True)
 
         # Plot first 6 sample logs
@@ -1117,10 +1124,14 @@ class VdriveMainWindow(QtGui.QMainWindow):
             start_time = None
             stop_time = None
         else:
-            assert len(time_range) == 2
+            assert len(time_range) == 2, 'blabla'
             start_time = time_range[0]
             stop_time = time_range[1]
-            assert start_time < stop_time
+            assert start_time < stop_time, 'blabla'
+
+        # about run number
+        if run_number is None:
+            run_number = int(self.ui.comboBox_chopTabRunList.currentText())
 
         vec_times, vec_log_value = self._myWorkflow.get_sample_log_values(run_number, log_name, start_time, stop_time,
                                                                           relative=relative)
@@ -1157,7 +1168,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """
         return self._myWorkflow
 
-    def load_sample_run(self, run, smart):
+    def load_sample_run(self, run, nxs_file_name, smart):
         """
         Load sample run
         :param run: string or integer as nxs file name or run number
@@ -1165,27 +1176,12 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return: list of string for log names
         """
         # Check
-        assert isinstance(run, str) or isinstance(run, int), 'Run must be either an integer (run number) ' \
-                                                             'or a string (NeXus file name) but not a %s.' \
-                                                             '' % type(run)
-
-        # Get NeXus file name
-        load_without_file = False
-        if isinstance(run, int):
-            # in case of run number is given
-            status, run_tuple = self._myWorkflow.get_run_info(run)
-            if status is False:
-                load_without_file = True
-            nxs_file_name = run_tuple[0]
-            run_number = int(run)
-        else:
-            # run is in the form of data file name
-            nxs_file_name = run
-            run_number = None
-            raise RuntimeError('It is not supported to use a random NeXus file.')
+        assert isinstance(run, int), 'Run number {0} must be an integer but not a {1}'.format(run, type(run))
+        assert isinstance(nxs_file_name, str) or nxs_file_name is None,\
+            'Nexus file name {0} must be a string but not a {1}.'.format(nxs_file_name, type(nxs_file_name))
 
         # get files
-        if load_without_file:
+        if nxs_file_name is None:
             # Load data without file name, IPTS number and etc.
             self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name='VULCAN_{0}'.format(run),
                                              meta_data_only=True)
@@ -1194,10 +1190,10 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                              meta_data_only=True)
 
         # Get log names
-        log_name_list = self._myWorkflow.get_sample_log_names(run_number, smart)
+        log_name_list = self._myWorkflow.get_sample_log_names(run, smart)
 
         # get run information
-        run_info_str = self._myWorkflow.get_run_experiment_information(run_number)
+        run_info_str = self._myWorkflow.get_run_experiment_information(run)
 
         return log_name_list, run_info_str
 

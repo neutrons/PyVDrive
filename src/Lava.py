@@ -155,7 +155,10 @@ app = lava_app()
 launcher = LauncherManager()
 launcher.show()
 
-if isinstance(option, str) and (option.lower().startswith('-h') or option.lower().startswith('--h')):
+if option is None:
+    pass
+
+elif isinstance(option, str) and (option.lower().startswith('-h') or option.lower().startswith('--h')):
     print 'Options:'
     print '  -t: launch IPython terminal'
     print '  -c: launch chopping/slicing interface'

@@ -150,8 +150,10 @@ class DataArchiveManager(object):
         :return: list of data or None (cannot find)
         """
         # check
-        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number, int), 'Run number must be an integer.'
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         # check whether the IPTS/run is valid
         nexus_dir = '/SNS/VULCAN/IPTS-%d/0/%d/' % (ipts_number, run_number)

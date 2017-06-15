@@ -116,14 +116,18 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                      self.do_close)
 
         # combo boxes
-        self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_select_new_run_number)
+        # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_select_new_run_number)
         self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_select_new_chopped_child)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_unit_changed)
+
+        # check boxes
+        self.connect(self.ui.checkBox_choppedDataMem, QtCore.SIGNAL(''),
+                     self.evt_toggle_load_logs)
 
         # vanadium
         self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
@@ -159,6 +163,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # default to load data from memory
         self.ui.radioButton_fromArchive.setChecked(True)
         self.ui.radioButton_anyGSAS.setChecked(False)
+        self.ui.pushButton_loadSampleLogs.setEnabled(False)
 
         self.set_group1_enabled(True)
         self.set_group2_enabled(True)
@@ -389,6 +394,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self.ui.comboBox_runs.addItem(str(run_number))
             self._dataIptsRunDict[run_number] = ipts_number, run_number
             self._runNumberList.append(run_number)
+
+            print '[DB...BAT] Reduction Window Add Run {0} ({1})'.format(run_number, type(run_number))
+        # END-FOR
 
         # release mutex lock
         self._mutexRunNumberList = False
@@ -829,7 +837,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return
 
         # plot diffraction data same as
-        # TEST - plot diffraction data
+        print '[DB...BAT] Event Select new run number! {0}'.format(self._mutexRunNumberList)
         self.do_plot_diffraction_data()
 
         return
@@ -845,6 +853,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.do_plot_diffraction_data()
 
         return
+
+    def evt_toggle_load_logs(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/NOWNOW
+        print self.ui.pushButton_loadSampleLogs
 
     def evt_unit_changed(self):
         """
@@ -971,6 +987,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # integer or can be a string, then shall be a run number
             is_workspace = False
             run_number = int(run_number)
+            try:
+                self._iptsNumber = self._dataIptsRunDict[run_number][0]
+            except KeyError as key_err:
+                raise RuntimeError('DataIPTSRunDict keys are {0}; Not include {1}. FYI {2}'
+                                   ''.format(self._dataIptsRunDict.keys(),run_number, key_err))
 
         # try to load the data from memory
         print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(run_number, unit,

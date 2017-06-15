@@ -545,7 +545,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Get sample logs
         try:
             log_name_with_size = True
-            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, log_name_with_size)
+            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, None, log_name_with_size)
             self._logNameList.sort()
 
             # Update class variables, add a new entry to sample log value holder
@@ -657,9 +657,12 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         import ReducedDataView
+
         # launch reduced-data-view window
         view_window = self._myParent.do_launch_reduced_data_viewer()
-        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'The view window'
+        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow),\
+            'The view window ({0}) is not a proper ReducedDataView.GeneralPurposedDataViewWindow instance.' \
+            ''.format(view_window.__class__.__name__)
 
         # get chopped and reduced workspaces from controller
         try:
