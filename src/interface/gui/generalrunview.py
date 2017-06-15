@@ -7,6 +7,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
     """
     ColorList = ['black', 'red', 'blue', 'green', 'yellow']
+    BankMarkList = [None, '.', 'D', '*']
+
     def __init__(self, parent):
         """
         An extension to the MplGraphicsView for plotting reduced run
@@ -30,18 +32,80 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self._maxX = None
         self._maxY = None
 
+        # color index
+        self._diffColorID = 0
+
+        # 1D/2D flag
+        self._has2DImage = False
+
         return
 
-    def plot_diffraction_data(self, vec_xy_set, unit, over_plot, run_id=None, chop_tag=None):
+    def _get_next_diffraction_color(self):
+        """
+        blabla
+        :return:
+        """
+        color = GeneralRunView.ColorList[self._diffColorID]
+        self._diffColorID = (self._diffColorID + 1) % len(GeneralRunView.ColorList)
+
+        return color
+
+    @staticmethod
+    def _get_diffraction_marker(bank_id):
+        """
+
+        :return:
+        """
+        assert bank_id < len(GeneralRunView.BankMarkList), 'Bank ID {0} is out of range {1} of BankMarkList.' \
+                                                           ''.format(bank_id, len(GeneralRunView.BankMarkList))
+
+        return GeneralRunView.BankMarkList[bank_id]
+
+    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_color, marker='.', title=None):
+        """
+        plot a 1-D data set
+        :param vec_x:
+        :param vec_y:
+        :param x_unit:
+        :param label:
+        :param line_key:
+        :param title:
+        :param line_color
+        :return:
+        """
+        if self._has2DImage:
+            self.reset_2d_plots()
+
+        # draw line
+        line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
+                                   label=label, x_label=x_unit,
+                                   marker=marker, color=line_color)
+
+        # add to title
+        if title is not None:
+            self.set_title(title)
+
+        # record statistics
+        if self._maxX is None or vec_x[-1] > self._maxX:
+            self._maxX = vec_x[-1]
+
+        if self._maxY is None or np.max(vec_y) > self._maxY:
+            self._maxY = np.max(vec_y)
+
+        return line_id
+
+    def plot_diffraction_data(self, vec_xy_set, unit, run_id, bank_id, over_plot, chop_tag=None):
         """
         plot diffraction data with proper unit... 1D
         :param vec_xy_set:
         :param unit:
         :param over_plot:
-        :param run_id:
-        :param chop_tag:
+        :param run_id: information string
+        :param chop_tag: information string
         :return:
         """
+        # TODO/NOW/CLEAN
+
         # data mode blabla
         if self._dataMode != 'd':
             self.reset_1d_plots()
@@ -51,20 +115,30 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         vec_x = vec_xy_set[0]
         vec_y = vec_xy_set[1]
 
+        # take are of label
+        line_label = "Run {0} Bank {1}".format(run_id, bank_id)
+
         # process the current image
         if not over_plot:
-            self.clear_all_lines()
-            self._onCanvasIDList = list()
+            self.reset_1d_plots()
 
-        # FIXME/TODO/ISSUE/TODAY - Use cyclic color
-        self._currLineID = self.plot_1d_data(vec_x, vec_y, unit, label=chop_tag, line_key=chop_tag,
-                                             title=run_id, line_color='blue')
+        # color & marker
+        line_color = self._get_next_diffraction_color()
+        line_marker = self._get_diffraction_marker(bank_id)
+
+        if chop_tag is not None:
+            title = 'Run {0} Chop Tag {1}'.format(run_id, chop_tag)
+            self.set_title(title, 'blue')
+
+        # plot 1D diffraction data
+        self._currLineID = self.plot_1d_data(vec_x, vec_y, x_unit=unit, label=line_label,
+                                             line_color=line_color, marker=line_marker)
         self._onCanvasIDList.append(self._currLineID)
 
         # re-scale
         self.auto_rescale()
 
-        return
+        return self._currLineID
 
     def plot_sample_data(self, vec_times, vec_value, workspace_key, sample_name):
         """
@@ -83,7 +157,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         # plot
         auto_color = GeneralRunView.ColorList[len(self._onCanvasIDList) % len(GeneralRunView.ColorList)]
 
-        self._currLineID = self.plot_1d_data(vec_times, vec_value, 'second', label=workspace_key, line_key=None,
+        self._currLineID = self.plot_1d_data(vec_times, vec_value, 'second', label=workspace_key,
                                              title=sample_name, line_color=auto_color)
         self._onCanvasIDList.append(self._currLineID)
 
@@ -92,35 +166,6 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self.setXYLimit(xmin=0.)
 
         return
-
-    def plot_1d_data(self, vec_x, vec_y, x_unit, label, line_key=None, title='', line_color='red'):
-        """
-        plot a 1-D data set
-        :param vec_x:
-        :param vec_y:
-        :param x_unit:
-        :param label:
-        :param line_key:
-        :param title:
-        :param line_color
-        :return:
-        """
-        line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y, label=label,
-                                   x_label=x_unit, marker='.', color=line_color)
-        print '[DB...BAT] New line ID = {0}.'.format(line_id)
-        self.set_title(title)
-
-        # register
-        # self._linesDict[line_key] = line_id
-
-        # record statistics
-        if self._maxX is None or vec_x[-1] > self._maxX:
-            self._maxX = vec_x[-1]
-
-        if self._maxY is None or np.max(vec_y) > self._maxY:
-            self._maxY = np.max(vec_y)
-
-        return line_id
 
     def plot_2d_contour(self, run_number_list, data_set_list):
         """
@@ -152,6 +197,9 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
             vec_y[i] = run_number_list[i]
 
         self.canvas().add_contour_plot(vec_x, np.array(run_number_list), matrix_y)
+
+        # 2D image
+        self._has2DImage = True
 
         return
 
@@ -187,8 +235,18 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self._currLineID = None
         self._onCanvasIDList = list()
 
+        self._diffColorID = 0
+
         # reset X and Y
         self._maxX = None
         self._maxY = None
 
         return
+
+    def reset_2d_plots(self):
+        """
+
+        :return:
+        """
+        self.clear_canvas()
+        self._has2DImage = False

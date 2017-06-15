@@ -325,7 +325,7 @@ class DataChopper(object):
         # Set up run start time
         self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
 
-        return
+        return out_ws_name
 
     def set_log_value_slicer(self, log_name, log_value_step, start_time=None, stop_time=None,
                              min_log_value=None, max_log_value=None, direction='Both'):
@@ -430,6 +430,37 @@ class DataChopper(object):
         return True, slicer_key
 
 
+# TODO/NEXT - If parse_time_segmenets works for data slicer file too, then remove parse_data_slicer_file()
+def parse_data_slicer_file(file_name):
+    """
+    parse data slicer file
+    :param file_name:
+    :return:
+    """
+    slicer_file = open(file_name, 'r')
+    raw_lines = slicer_file.readlines()
+    slicer_file.close()
+
+    slicer_list = list()
+    for line in raw_lines:
+        # print '[DB...BAT] Line: {0}'.format(line)
+        line = line.strip()
+        if len(line) == 0 or line[0] == '#':
+            continue
+
+        terms = line.split()
+        # print '[DB...BAT] Line split to {0}'.format(terms)
+        if len(terms) < 3:
+            continue
+        start_time = float(terms[0])
+        stop_time = float(terms[1])
+        target_ws = str(terms[2])
+        slicer_list.append((start_time, stop_time, target_ws))
+    # END-FOR
+
+    return slicer_list
+
+
 def parse_time_segments(file_name):
     """
     Parse the standard time segments file serving for event slicers
@@ -438,7 +469,7 @@ def parse_time_segments(file_name):
             (False, error message)
     """
     # Check
-    assert isinstance(file_name, str)
+    assert isinstance(file_name, str), 'blabla'
 
     # Read file
     try:

@@ -36,6 +36,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="pushButton_reducedDataViewer">
+     <property name="text">
+      <string>Reduced Data Viewer</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="pushButton_terminal">
      <property name="text">
       <string>Terminal</string>

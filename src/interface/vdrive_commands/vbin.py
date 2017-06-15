@@ -137,8 +137,10 @@ class VBin(procss_vcommand.VDriveCommand):
         # Use result from CHOP?
         if 'CHOPRUN' in input_args:
             use_chop_data = True
+            chop_run_number = int(self._commandArgsDict['CHOPRUN'])
         else:
             use_chop_data = False
+            chop_run_number = None
 
         # binning parameters
         use_default_binning, binning_parameters = self.parse_binning()
@@ -172,12 +174,14 @@ class VBin(procss_vcommand.VDriveCommand):
                 self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
             # FIXME/ISSUE/NOWNOW - Implement reduce_chopped_data_set
             # Test case: 	vbin, ipts=17414, choprun=109021, runs=1, rune=99
-            status, ret_obj = self._controller.reduce_chopped_data_set(auto_reduce=False, output_directory=output_dir,
-                                                               vanadium=(van_run is not None),
-                                                               standard_sample_tuple=standard_tuple,
-                                                               binning_parameters=binning_parameters,
-                                                               output_to_fullprof=output_fullprof,
-                                                               align_to_vdrive_bin=use_default_binning)
+            status, ret_obj = self._controller.reduce_chopped_data_set(ipts_number=self._iptsNumber,
+                                                                       run_number=chop_run_number,
+                                                                       chop_child_list=run_number_list,
+                                                                       raw_data_directory=None,
+                                                                       output_directory=output_dir,
+                                                                       vanadium=(van_run is not None),
+                                                                       binning_parameters=binning_parameters,
+                                                                       align_to_vdrive_bin=use_default_binning)
 
         else:
             # reduce regular data

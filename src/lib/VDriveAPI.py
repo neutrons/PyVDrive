@@ -113,7 +113,6 @@ class VDriveAPI(object):
         """
         Add runs under an IPTS dir to project
         :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
-        :param ipts_number:
         :return:
         """
         # check  input
@@ -227,32 +226,32 @@ class VDriveAPI(object):
             reflection_list.append((peak_pos, ref_dict[peak_pos]))
 
         return reflection_list
-
-    def export_gsas_file(self, run_number, gsas_file_name):
-        """
-        Purpose: export a reduced run to GSAS data file
-        Requirements:
-        1. run number is a valid integer
-        2. run number exists in project
-        3. gsas file name includes a path that is writable
-        Guarantees: A gsas file is written
-        :param run_number:
-        :param gsas_file_name:
-        :return:
-        """
-        # Check requirements
-        assert isinstance(run_number, int)
-        assert run_number > 0
-
-        assert isinstance(gsas_file_name, str)
-        out_dir = os.path.dirname(gsas_file_name)
-        assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
-
-        try:
-            self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
-        except KeyError as e:
-            return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, gsas_file_name)
-        raise
+    #
+    # def export_gsas_file(self, run_number, gsas_file_name):
+    #     """
+    #     Purpose: export a reduced run to GSAS data file
+    #     Requirements:
+    #     1. run number is a valid integer
+    #     2. run number exists in project
+    #     3. gsas file name includes a path that is writable
+    #     Guarantees: A gsas file is written
+    #     :param run_number:
+    #     :param gsas_file_name:
+    #     :return:
+    #     """
+    #     # Check requirements
+    #     assert isinstance(run_number, int)
+    #     assert run_number > 0
+    #
+    #     assert isinstance(gsas_file_name, str)
+    #     out_dir = os.path.dirname(gsas_file_name)
+    #     assert os.access(out_dir, os.W_OK), 'Output directory {0} is not writable.'.format(out_dir)
+    #
+    #     try:
+    #         self._myProject.export_reduced_run_gsas(run_number, gsas_file_name)
+    #     except KeyError as key_err:
+    #         return False, 'Unable to export reduced run %d to GSAS file due to %s.' % (run_number, key_err)
+    #     raise
 
     @staticmethod
     def export_gsas_peak_file(bank_peak_dict, out_file_name):
@@ -507,12 +506,18 @@ class VDriveAPI(object):
         else:
             # search for archive with GSAS file
             # get GSAS file name
-            if search_archive and isinstance(run_id, int):
+            if self._myProject.reduction_manager.has_run(run_number=run_id):
+                # reduced data that is still in memory
+                data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
+
+            elif search_archive and isinstance(run_id, int):
+                # search /SNS/VULCAN/
                 try:
                     gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
                     data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
                 except RuntimeError as run_err:
                     return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
+
             else:
                 return False, 'Unable to locate run {0} in archive'.format(run_id)
             # END-IF
@@ -525,8 +530,8 @@ class VDriveAPI(object):
         Purpose: get information of a reduced run such as bank ID and etc.
         Requirements: either run number is specified as a valid integer or data key is given;
         Guarantees: ... ...
-        :param run_number:
-        :param data_key:
+        :param run_number: integer or string that can be converted to an integer
+        :param data_key: string for workspace name
         :return: list of bank ID
         """
         if isinstance(run_number, int):
@@ -540,7 +545,8 @@ class VDriveAPI(object):
             # given data key: mostly from loaded GSAS
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+                # bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+                bank_list = self._myProject.get_data_bank_list(data_key)
                 info = bank_list
             except AssertionError as assert_err:
                 return False, str(assert_err)
@@ -670,10 +676,7 @@ class VDriveAPI(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int)
-        file_name, ipts_number = self._myProject.get_run_info(run_number)
-
-        return file_name
+        return self._myProject.get_file_path(run_number)
 
     def get_ipts_config(self, ipts=None):
         """
@@ -747,6 +750,22 @@ class VDriveAPI(object):
             ret_obj = 'No run is selected from %d to %d' % (begin_run, end_run)
 
         return status, ret_obj
+
+    def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
+        """
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :param chopped_data:
+        :return:
+        """
+        if chopped_data:
+            sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
+        else:
+            # TODO/ISSUE/NOWNOW - Easy implement
+            sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
+
+        return sns_dir
 
     def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
         """
@@ -827,7 +846,10 @@ class VDriveAPI(object):
         if run_number is not None:
             # get information from _myProject's reduced data
             try:
-                run_info_tuple = self._myProject.get_run_info(run_number)
+                nexus_file_name = self._myProject.get_file_path(run_number)
+                ipts_number = self._myProject.get_ipts_number(run_number)
+                run_info_tuple = nexus_file_name, ipts_number
+                #  run_info_tuple = self._myProject.get_run_info(run_number)
             except RuntimeError as re:
                 return False, str(re)
         elif data_key is not None:
@@ -971,7 +993,29 @@ class VDriveAPI(object):
 
         return peak_list
 
-    def load_chopped_diffraction_files(self, directory, file_type):
+    def has_chopped_data(self, run_number, reduced):
+        """
+        blabla
+        :param run_number:
+        :param reduced:
+        :return:
+        """
+        return self._myProject.reduction_manager.has_run(run_number)
+
+    @staticmethod
+    def import_data_slicers(file_name):
+        """ import slicers from a text file
+        :param file_name:
+        :return:
+        """
+        try:
+            slicers = chop_utility.parse_time_segments(file_name)
+        except AssertionError as assert_err:
+            raise AssertionError('VDriveAPI unable to parse data slicers/time segements. {0}'.format(assert_err))
+
+        return slicers
+
+    def load_chopped_diffraction_files(self, directory, chop_seq_list, file_type):
         """
         loaded chopped and reduced diffraction files
         :param directory:
@@ -979,6 +1023,7 @@ class VDriveAPI(object):
         :return: 2-tuple.  dictionary of 2-tuple: key : data workspace, value = (log workspace, file name) | run number
         """
         chopped_key_dict, run_number = self._myProject.data_loading_manager.load_chopped_binned_data(directory,
+                                                                                                     chop_seq_list,
                                                                                                      file_type)
 
         return chopped_key_dict, run_number
@@ -995,6 +1040,31 @@ class VDriveAPI(object):
                                                                          max_int=100)
 
         return data_key
+
+    def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
+        """
+        Load NeXus file to ADS
+        :param ipts_number:
+        :param run_number:
+        :param file_name:
+        :param meta_data_only:
+        :return:
+        """
+        # get NeXus file name
+        if file_name is None:
+            # nexus file name is not given, then use the standard SNS archive name
+            if ipts_number is None:
+                # get IPTS number if it is not given
+                ipts_number = self._myProject.get_ipts_number(run_number)
+
+            file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+        # END-IF
+
+        # load file
+        info_dict = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
+                                                    nxs_file_name=file_name, meta_data_only=meta_data_only)
+
+        return info_dict
 
     def load_session(self, in_file_name=None):
         """ Load session from saved file
@@ -1040,21 +1110,58 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
-    def reduce_chopped_data_set(self, ipts_number, run_number, raw_data_directory, output_directory, vanadium,
+    def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
+                                output_directory, vanadium,
                                 binning_parameters, align_to_vdrive_bin):
         """
-
-        :param raw_data_directory: if None, then search for archive
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :param raw_data_directory:
+        :param output_directory:
         :param vanadium:
         :param binning_parameters:
         :param align_to_vdrive_bin:
         :return:
         """
-        # TODO/IMPLEMENT/NOWNOW : it is similar to reduce_auto_script
+        # get list of files
+        if raw_data_directory is None:
+            # raw data is not given, then search the data in archive
+            try:
+                raw_file_list = self._myArchiveManager.get_data_chopped_nexus(ipts_number, run_number, chop_child_list)
+            except AssertionError as assert_err:
+                raise AssertionError('Error in calling ArchiveManager.get_data_chopped_nexus(): {0}'.format(assert_err))
+            except RuntimeError as run_err:
+                return False, 'Failed to locate chopped NeXus files. FYI: {0}.'.format(run_err)
+        else:
+            # scan the directory for file
+            try:
+                raw_file_list = [f for f in os.listdir(raw_data_directory) if f.endswith('.nxs') and
+                                 os.path.isfile(os.path.join(raw_data_directory, f))]
 
+                # raw_file_list = chop_utility.scan_chopped_nexus(raw_data_directory)
+            except AssertionError as assert_err:
+                raise AssertionError('Error in scanning files in {0}: {1}'.format(raw_data_directory, assert_err))
+        # END-IF-ELSE
 
-        return True, None
+        if len(raw_file_list) == 0:
+            # return False if there is not file found
+            return False, 'Unable to find chopped files for IPTS-{0} Run {1} directory {2}' \
+                          ''.format(ipts_number,run_number, raw_data_directory)
+        # END-IF
 
+        gsas = True
+
+        # reduce
+        try:
+            status, error_message = self._myProject.reduce_nexus_files(raw_file_list, output_directory, vanadium, gsas,
+                                                                       binning_parameters, align_to_vdrive_bin)
+        except AssertionError as assert_err:
+            raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
+
+        return status, error_message
+
+    # FIXME/NOWNOW/TODO - Think of refactor reduced_chopped_data_set() and reduce_data_set()
     def reduce_data_set(self, auto_reduce, output_directory, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
@@ -1216,6 +1323,27 @@ class VDriveAPI(object):
         status, error_message = chop_utility.save_slicers(splitters_list, file_name)
 
         return status, error_message
+
+    def scan_ipts_runs(self, ipts_number, start_run, stop_run ):
+        """
+
+        :param ipts_number:
+        :param start_run:
+        :param stop_run:
+        :return:
+        """
+        run_info_dict_list = list()
+        for run_number in range(start_run, stop_run+1):
+            event_file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=False)
+            if os.path.exists(event_file_name):
+                run_info = dict()
+                run_info['run'] = run_number
+                run_info['ipts'] = ipts_number
+                run_info['file'] = event_file_name
+                run_info_dict_list.append(run_info)
+        # END-FOR
+
+        return run_info_dict_list
 
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory
@@ -1381,7 +1509,8 @@ class VDriveAPI(object):
             # END-IF
         else:
             # load vanadium file
-            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas')
+            van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas',
+                                                                               None, 1000)
             self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
 
         # convert unit
@@ -1559,7 +1688,7 @@ class VDriveAPI(object):
 
         return
 
-    def slice_data(self, run_number, slicer_id, reduce_data, save_chopped_nexus, output_dir,
+    def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
                    export_log_type='loadframe'):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
@@ -1567,17 +1696,38 @@ class VDriveAPI(object):
         :param run_number: run number
         :param slicer_id:
         :param reduce_data:
+        :param vanadium:
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
+        # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
-        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data,
-                                                    save_chopped_nexus=save_chopped_nexus,
-                                                    output_dir=output_dir)
+        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data, vanadium=vanadium,
+                                                   save_chopped_nexus=save_chopped_nexus, output_directory=output_dir)
 
-        # TODO/ISSUE/NOW/TODAY - Implement 'loadframe' option!
+        return status, message
+
+    def slice_data_segment_period(self, run_number, slicer_id, chop_period, reduce_data,
+                                 vanadium, save_chopped_nexus, output_dir, export_log_type):
+        """
+        slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
+        other than time_interval value.
+        :param run_number:
+        :param slicer_id:
+        :param chop_period:
+        :param reduce_data:
+        :param vanadium:
+        :param save_chopped_nexus:
+        :param output_dir:
+        :param export_log_type:
+        :return:
+        """
+        status, message = self._myProject.chop_run_time_segment_period(run_number, slicer_id,
+                                                                       chop_period, reduce_data, vanadium,
+                                                                       save_chopped_nexus, output_dir, export_log_type)
+
 
         return status, message
 
@@ -1622,27 +1772,27 @@ class VDriveAPI(object):
 
         return
 
-    def set_reduction_parameters(self, parameter_dict):
-        """ Set parameters used for reducing powder event data
-        Purpose:
-            Set up the reduction parameters
-        Requirements:
-            Parameters' value are given via dictionary
-        Guarantees:
-            ... ...
-        :return:
-        """
-        assert isinstance(parameter_dict, dict)
-
-        try:
-            self._myProject.set_reduction_parameters(parameter_dict)
-            status = True
-            error_msg = ''
-        except RuntimeError as re:
-            status = False
-            error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
-
-        return status, error_msg
+    # def set_reduction_parameters(self, parameter_dict):
+    #     """ Set parameters used for reducing powder event data
+    #     Purpose:
+    #         Set up the reduction parameters
+    #     Requirements:
+    #         Parameters' value are given via dictionary
+    #     Guarantees:
+    #         ... ...
+    #     :return:
+    #     """
+    #     assert isinstance(parameter_dict, dict)
+    #
+    #     try:
+    #         self._myProject.set_reduction_parameters(parameter_dict)
+    #         status = True
+    #         error_msg = ''
+    #     except RuntimeError as re:
+    #         status = False
+    #         error_msg = 'Unable to set reduction parameters due to %s.' % str(re)
+    #
+    #     return status, error_msg
 
     def set_vanadium_to_runs(self, ipts_number, run_number_list, van_run_number):
         """

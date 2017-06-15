@@ -237,8 +237,11 @@ class VdriveCommandProcessor(object):
             # this is for help
             return status, message
 
-        view_window = self._mainWindow.do_view_reduction()
+        view_window = self._mainWindow.do_launch_reduced_data_viewer()
         view_window.set_ipts_number(processor.get_ipts_number())
+
+        view_window.set_x_range(processor.x_min, processor.x_max)
+        view_window.set_unit(processor.unit)
 
         if processor.is_1_d:
             # 1-D image
@@ -248,10 +251,11 @@ class VdriveCommandProcessor(object):
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
-            view_window.set_canvas_type(dimension=2)
-            view_window.set_chop_run_number(processor.get_run_number())
-            view_window.set_chop_sequence(processor.get_chopped_sequence_range())
-            view_window.plot_chopped_data_2d(chopped_data_dir=processor.get_reduced_data_directory())
+            view_window.plot_chopped_data_2d(run_number=processor.get_run_number(),
+                                             chop_sequence=processor.get_chopped_sequence_range(),
+                                             bank_id=1,
+                                             bank_id_from_1=True,
+                                             chopped_data_dir=processor.get_reduced_data_directory())
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
@@ -277,7 +281,7 @@ class VdriveCommandProcessor(object):
 
         # process for special case: log-pick-helper
         if message == 'pop':
-            data_viewer = self._mainWindow.do_view_reduction()
+            data_viewer = self._mainWindow.do_launch_reduced_data_viewer()
             # title
             data_viewer.set_title_plot_run('Processing vanadium')
             # get data (key), set to viewer and plot

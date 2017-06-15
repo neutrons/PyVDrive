@@ -9,9 +9,12 @@ import numpy
 
 import mantid
 import mantid.api
+import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
+
+import vdrivehelper
 
 from reduce_VULCAN import align_bins
 
@@ -26,6 +29,125 @@ VULCAN_2BANK_1_POLAR = 90.
 VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
+
+def convert_to_non_overlap_splitters_bf(split_ws_name):
+    """
+    convert a Table splitters workspace containing overlapped time segment
+    to a set of splitters workspace without overlap by brute force
+    :param split_ws_name:
+    :return:
+    """
+    # get splitters workspace and check its type
+    split_ws = retrieve_workspace(split_ws_name)
+    assert isinstance(split_ws, mantid.dataobjects.TableWorkspace), \
+        'Splitters workspace {0} must be a TableWorkspace but not a {1}.'.format(split_ws, type(split_ws))
+
+    # output data structure
+    current_child_index = 0
+    curr_split_ws = create_table_splitters(split_ws_name + '0')
+    sub_split_ws_list = [curr_split_ws]
+
+    for i_row in split_ws.rowCount():
+        # get start and stop
+        start_i = split_ws.cell(i_row, 0)
+        stop_i = split_ws.cell(i_row, 1)
+        target_i = split_ws.cell(i_row, 2)
+        # always tends to append to the current one.  if not, then search till beginning of the list
+
+        prev_child_index = current_child_index
+
+        continue_loop = True
+        while continue_loop:
+            if curr_split_ws.rowCount() == 0 or curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) <= start_i:
+                # either empty split workspace of current split workspace's last splitter's stop time is earlier
+                # add a new row
+                print '[DB...BT] Add split from {0} to {1} to sub-splitter {2}' \
+                      ''.format(start_i, stop_i, current_child_index)
+                curr_split_ws.addRow([start_i, stop_i, target_i])
+                break
+
+            if current_child_index == len(sub_split_ws_list) - 1:
+                # go back to first one
+                current_child_index = 0
+            else:
+                # advance to next one (fill evenly, right?)
+                current_child_index += 1
+            curr_split_ws = sub_split_ws_list[current_child_index]
+            print '[DB...BT] Advance to next sub-splitter {0}'.format(current_child_index)
+
+            if current_child_index == 0 and curr_split_ws.cell(curr_split_ws.rowCount()-1, 1) > start_i:
+                # go from last one to first one. time to add a new one if still overlap with new one
+                current_child_index = len(sub_split_ws_list)
+                curr_split_ws = create_table_splitters(split_ws_name + '{0}'.format(current_child_index))
+                sub_split_ws_list.append(curr_split_ws)
+                print '[DB...BT] Create a new sub-splitter {0}.'.format(current_child_index)
+            # END-IF
+        # END-WHILE
+    # END-FOR
+
+    return sub_split_ws_list
+
+
+def create_overlap_splitters(ws_name, start_time, stop_time, time_bin_size, time_segment_period):
+    """
+
+    :param ws_name:
+    :param start_time:
+    :param stop_time:
+    :param time_bin_size:
+    :param time_segment_period:
+    :return:
+    """
+    # checking condition
+    if time_bin_size <= time_segment_period:
+        raise RuntimeError('The case that time segment bin size {0} is smaller than time segment period/distance {1} '
+                           'is not applied by method create_overlap_splitters.'
+                           ''.format(time_bin_size, time_segment_period))
+
+    # get number of sub-splitters workspaces
+    num_sub_splitters = int(time_bin_size / time_segment_period + 0.5)
+    print '[DB...BAT] Time bin size = {0} Time segment size = {1} Num sub splitters = {2}' \
+          ''.format(time_bin_size, time_segment_period, num_sub_splitters)
+
+    # get the element of each splitters workspace
+    splitters_size = (stop_time - start_time) / time_segment_period
+
+    splitter_ws_list = list()
+    for i_sub in range(num_sub_splitters):
+        # define for array size
+        vec_x = numpy.ndarray(shape=(splitters_size*2, ), dtype='double')
+        vec_y = numpy.ndarray(shape=(splitters_size*2-1, ), dtype='double')
+        vec_y.fill(-1)
+        vec_e = vec_y
+
+        # set up the value
+        for i_split in range(splitters_size):
+            vec_x[i_split*2] = start_time + i_split * time_segment_period
+            vec_x[i_split*2+1] = vec_x[i_split] + time_bin_size
+
+            vec_y[i_split*2] = i_split * num_sub_splitters + i_sub
+        # END-FOR
+
+        splitters_ws = create_workspace_2d(vec_x, vec_y, vec_e, ws_name + '{0}'.format(i_sub))
+
+        splitter_ws_list.append(splitters_ws)
+    # END-FOR
+
+    return splitter_ws_list
+
+
+def create_table_splitters(split_ws_name):
+    """
+    create splitters workspace in form of TableWorkspace
+    :param split_ws_name:
+    :return:
+    """
+    column_definitions = list()
+    column_definitions.append(('float', 'start'))
+    column_definitions.append(('float', 'stop'))
+    column_definitions.append(('str', 'target'))
+
+    return create_table_workspace(split_ws_name, column_definitions)
 
 def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
     """
@@ -78,7 +200,6 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
         assert isinstance(run_start_time, float), 'Starting time must be a float'
         vec_times -= run_start_time
 
-    print '[DB...BAT] splitters: vector of time: ', vec_times.tolist()
     print '[DB...BAT] size of output vectors: ', len(vec_times), len(vec_ws)
 
     return vec_times, vec_ws
@@ -86,9 +207,9 @@ def convert_splitters_workspace_to_vectors(split_ws, run_start_time=None):
 
 def create_table_workspace(table_ws_name, column_def_list):
     """
-
+    create a table workspace with user-specified column
     :param table_ws_name:
-    :param column_def_list:
+    :param column_def_list: list of 2-tuples (string as column data type, string as column name)
     :return:
     """
     mantidapi.CreateEmptyTableWorkspace(OutputWorkspace=table_ws_name)
@@ -98,7 +219,7 @@ def create_table_workspace(table_ws_name, column_def_list):
         col_name = col_tup[1]
         table_ws.addColumn(data_type, col_name)
 
-    return
+    return table_ws
 
 
 def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
@@ -108,12 +229,16 @@ def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
     :param vec_y:
     :param vec_e:
     :param output_ws_name:
-    :return:
+    :return: reference to the generated workspace
     """
+    # check size
+    assert len(vec_x) == len(vec_y) or len(vec_x) == len(vec_y) + 1, 'blabla'
+    assert len(vec_y) == len(vec_e), 'blabla'
+
     mantidapi.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
                               OutputWorkspace=output_ws_name)
 
-    return
+    return ADS.retrieve(output_ws_name)
 
 
 def delete_workspace(workspace):
@@ -211,9 +336,9 @@ def generate_event_filters_arbitrary(ws_name, split_list, relative_time, tag, au
     """
     print '[DB...BAT] Workspace Name: ', ws_name
 
-    # check
-    if relative_time is False:
-        raise RuntimeError('It has not been implemented for absolute time stamp!')
+    # # check
+    # if relative_time is False:
+    #     raise RuntimeError('It has not been implemented for absolute time stamp!')
 
     # check
     assert isinstance(split_list, list), 'split list should be a list but not a %s.' \
@@ -582,13 +707,15 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (2) unit of the returned data
     """
     # check requirements by asserting
-    assert isinstance(workspace_name, str) and isinstance(point_data, bool)
-    assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+    assert isinstance(workspace_name, str) and isinstance(point_data, bool), 'blabla'
     assert isinstance(target_unit, str) or target_unit is None,\
         'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
     assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
         'Start-Bank-ID {0} must be a non-negetive integer but not {1}.' \
         ''.format(start_bank_id, type(start_bank_id))
+
+    if workspace_does_exist(workspace_name) is False:
+        raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None
     workspace = ADS.retrieve(workspace_name)
@@ -606,6 +733,16 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     # define a temporary workspace name
     use_temp = False
     temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
+
+    # process target unit
+    if target_unit is not None:
+        if target_unit.lower() == 'tof':
+            target_unit = 'TOF'
+        elif target_unit.lower().count('spac') > 0:
+            target_unit = 'dSpacing'
+        elif target_unit.lower() == 'q':
+            target_unit = 'MomentumTransfer'
+    # END-IF
 
     # get unit
     current_unit = get_workspace_unit(workspace_name)
@@ -682,6 +819,28 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     return data_set_dict, current_unit
 
 
+def get_ipts_number(ws_name):
+    """
+    get IPTS number from a standard EventWorkspace
+    :param ws_name:
+    :return:
+    """
+    workspace = retrieve_workspace(ws_name)
+    if not workspace.run().hasProperty('Filename'):
+        return None
+
+    # get file name
+    file_name = workspace.run().getProperty('Filename').value
+
+    status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
+    if status:
+        ipts_number = ret_obj
+    else:
+        ipts_number = None
+
+    return ipts_number
+
+
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
     """ Get time segments from splitters workspace
     Purpose:
@@ -741,6 +900,22 @@ def get_workspace_information(run_ws_name):
     bank_id_list = range(1, num_spec+1)
 
     return bank_id_list
+
+
+def get_workspace_property(workspace_name, property_name, value_in_str=False):
+    """
+
+    :param workspace_name:
+    :param property_name:
+    :return:
+    """
+    # TODO/ISSUE/NOWNOW - Better docs and checks
+    workspace = retrieve_workspace(workspace_name)
+
+    if value_in_str:
+        return workspace.run().getProperty(property_name).value
+
+    return workspace.run().getProperty(property_name)
 
 
 def get_workspace_unit(workspace_name):
@@ -1359,11 +1534,12 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         return False, 'Failed to split data by FilterEvents.'
 
     if len(ret_list) != 3 + len(chopped_ws_name_list):
-        return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+        print '[WARNING] Returned List Size = {0}'.format(len(ret_list))
 
     # Save result
     chop_list = list()
     if output_directory is not None:
+        # saved the output
         for index, chopped_ws_name in enumerate(chopped_ws_name_list):
             base_file_name = '{0}_event.nxs'.format(chopped_ws_name)
             file_name = os.path.join(output_directory, base_file_name)
@@ -1372,16 +1548,42 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
             chop_list.append((file_name, chopped_ws_name))
 
         # Clear only if file is saved
+        print '[INFO] Delete correction workspace {0}'.format(correction_ws)
         delete_workspace(correction_ws)
+
+        # DEBUG: where does raw workspace go?
+        if ADS.doesExist(raw_ws_name):
+            print '[DB...BAT] Check3 Raw workspace {0} is still there.'.format(raw_ws_name)
+            mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_1.py')
+
+        else:
+            print '[DB...BAT] Check3 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
+
         if delete_split_ws:
             for chopped_ws_name in chopped_ws_name_list:
+                print '[INFO] Delete chopped child workspace {0}'.format(chopped_ws_name)
                 mantidapi.DeleteWorkspace(Workspace=chopped_ws_name)
+                # DEBUG: where does raw workspace go?
+                if ADS.doesExist(raw_ws_name):
+                    print '[DB...BAT] Check2 Raw workspace {0} is still there after deleting {1}.' \
+                          ''.format(raw_ws_name, chopped_ws_name)
+                else:
+                    print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents after deleting {1}.' \
+                          ''.format(raw_ws_name, chopped_ws_name)
+                    return False, str(RuntimeError('.... Debug Stop ... Debug Stop ...'))
     else:
         if delete_split_ws:
             print '[WARNING] Chopped workspaces cannot be deleted if the output directory is not specified.'
         for chopped_ws_name in chopped_ws_name_list:
             chop_list.append((None, chopped_ws_name))
     # END-IF
+
+    # DEBUG: where does raw workspace go?
+    if ADS.doesExist(raw_ws_name):
+        print '[DB...BAT] Check2 Raw workspace {0} is still there.'.format(raw_ws_name)
+        mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_2.py')
+    else:
+        print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
     return True, chop_list
 

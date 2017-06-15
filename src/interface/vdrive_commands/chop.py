@@ -9,8 +9,9 @@ class VdriveChop(VDriveCommand):
     """
     Process command MERGE
     """
+    # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'INFO']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -25,7 +26,9 @@ class VdriveChop(VDriveCommand):
         'OUTPUT': 'If specified, then the chopped files will be saved to the directory. Otherwise, these files '
                   'will be saved to /SNS/VULCAN/IPTS-????/shared.',
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
-        'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n'
+        'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
+        'DT': 'the period between two adjacent time segments',
+        'RUNV': 'vanadium run number'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -110,8 +113,8 @@ class VdriveChop(VDriveCommand):
 
         return status, message
 
-    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, output_dir,
-                          dry_run, chop_loadframe_log, chop_furnace_log):
+    def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, vanadium,
+                          output_dir, dry_run, chop_loadframe_log, chop_furnace_log):
         """
         Chop data by time interval
         :param run_number:
@@ -119,6 +122,7 @@ class VdriveChop(VDriveCommand):
         :param stop_time:
         :param time_interval:
         :param reduce_flag: flag to reduce the data afterwards
+        :param vanadium: vanadium run number for normalization. None for no normalization;
         :param output_dir:
         :param dry_run:
         :param chop_loadframe_log:
@@ -163,19 +167,85 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
 
+        # chop
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      save_chopped_nexus=True, output_dir=output_dir,
+                                                      vanadium=vanadium, save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
         return status, message
 
-    def chop_data_manually(self, run_number, slicer_list, reduce_flag, output_dir, epoch_time, dry_run,
+    def chop_data_by_time_period(self, run_number, start_time, stop_time, time_interval, chop_period, reduce_flag,
+                                 vanadium, output_dir, dry_run, chop_loadframe_log, chop_furnace_log):
+        """
+        Chop data by time interval
+        :param run_number:
+        :param start_time:
+        :param stop_time:
+        :param time_interval:
+        :param reduce_flag: flag to reduce the data afterwards
+        :param vanadium: vanadium run number for normalization. None for no normalization;
+        :param output_dir:
+        :param dry_run:
+        :param chop_loadframe_log:
+        :param chop_furnace_log:
+        :return:
+        """
+        # check inputs
+        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
+                                            '' % (str(run_number), type(run_number))
+        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
+            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
+
+        # dry run: return input options
+        if dry_run:
+            outputs = 'Slice IPTS-{0} Run {1} by time with ({2}, {3}, {4}) and dt = {5}' \
+                      ''.format(self._iptsNumber, run_number, start_time, time_interval, stop_time, chop_period)
+            if reduce_flag:
+                outputs += 'and reduce (to GSAS) '
+            else:
+                outputs += 'and save to NeXus files '
+            outputs += 'to directory %s' % output_dir
+
+            if not os.access(output_dir, os.W_OK):
+                outputs += '\n[WARNING] Output directory %s is not writable!' % output_dir
+
+            return True, outputs
+        # END-IF (dry run)
+
+        # chop and reduce
+        if chop_loadframe_log:
+            exp_log_type = 'loadframe'
+        elif chop_furnace_log:
+            exp_log_type = 'furnace'
+        else:
+            exp_log_type = None
+
+        # generate data slicer
+        status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
+                                                                      time_interval)
+        if status:
+            slicer_key = ret_obj
+        else:
+            return False, 'Unable to generate data slicer by time due to {0}.'.format(ret_obj)
+
+        status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
+                                                                     chop_period,
+                                                                     reduce_data=reduce_flag,
+                                                                     vanadium=vanadium, save_chopped_nexus=True,
+                                                                     output_dir=output_dir,
+                                                                     export_log_type=exp_log_type)
+
+
+        return status, message
+
+    def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
                            chop_loadframe_log, chop_furnace_log):
         """
         chop and/or reduce data with arbitrary slicers
         :param run_number:
         :param slicer_list:
         :param reduce_flag:
+        :param vanadium: vanadium run number for normalization. None for no normalization;
         :param output_dir:
         :param epoch_time:
         :param dry_run:
@@ -227,6 +297,7 @@ class VdriveChop(VDriveCommand):
         else:
             exp_log_type = None
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
+                                                      vanadium=None,
                                                       save_chopped_nexus=True, output_dir=output_dir,
                                                       export_log_type=exp_log_type)
 
@@ -292,6 +363,12 @@ class VdriveChop(VDriveCommand):
                 str(run_start), str(type(run_start)), str(run_end), str(type(run_end))
             )
 
+        # vanadium run
+        if 'RUNV' in self._commandArgsDict:
+            van_run_number = int(self._commandArgsDict['RUNV'])
+        else:
+            van_run_number = None
+
         # chopping method: by constant time or input
         # how to deal with sample logs
         if 'LOADFRAME' in self._commandArgsDict:
@@ -309,6 +386,10 @@ class VdriveChop(VDriveCommand):
             time_step = float(self._commandArgsDict['DBIN'])
         else:
             time_step = None
+        if 'DT' in self._commandArgsDict:
+            chop_period = float(self._commandArgsDict['DT'])
+        else:
+            chop_period = None
         if 'PICKDATA' in self._commandArgsDict:
             user_slice_file = self._commandArgsDict['PICKDATA']
         else:
@@ -345,6 +426,11 @@ class VdriveChop(VDriveCommand):
         # do chopping
         sum_msg = ''
         final_success = True
+
+        # check inputs' validity
+        if chop_period is not None and time_step is None:
+            return False, 'Chopping period (DT) = {0}. Under this case, DBIN must be given.'.format(chop_period)
+
         for run_number in range(run_start, run_end+1):
             # create default directory
             if output_dir is None:
@@ -356,17 +442,34 @@ class VdriveChop(VDriveCommand):
                     continue
 
             # chop and optionally reduce
-            if time_step is not None:
+            if chop_period is not None:
+                # chopping with period
+                status, mesage = self.chop_data_by_time_period(run_number=run_number,
+                                                               start_time=None,
+                                                               stop_time=None,
+                                                               time_interval=time_step,
+                                                               chop_period=chop_period,
+                                                               reduce_flag=output_to_gsas,
+                                                               vanadium=van_run_number,
+                                                               output_dir=output_dir,
+                                                               dry_run=is_dry_run,
+                                                               chop_loadframe_log=chop_load_frame,
+                                                               chop_furnace_log=chop_furnace_log)
+
+
+            elif time_step is not None:
                 # chop by time and reduce
                 status, message = self.chop_data_by_time(run_number=run_number,
                                                          start_time=None,
                                                          stop_time=None,
                                                          time_interval=time_step,
                                                          reduce_flag=output_to_gsas,
+                                                         vanadium=van_run_number,
                                                          output_dir=output_dir,
                                                          dry_run=is_dry_run,
                                                          chop_loadframe_log=chop_load_frame,
-                                                         chop_furnace_log=chop_furnace_log)
+                                                         chop_furnace_log=chop_furnace_log
+                                                         )
             # elif log_name is not None:
             #     # chop by log value
             #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
@@ -386,6 +489,7 @@ class VdriveChop(VDriveCommand):
                     status, message = self.chop_data_manually(run_number=run_number,
                                                               slicer_list=slicer_list,
                                                               reduce_flag=output_to_gsas,
+                                                              vanadium=van_run_number,
                                                               output_dir=output_dir,
                                                               dry_run=is_dry_run,
                                                               epoch_time=(pulse_time == 1),
@@ -402,13 +506,11 @@ class VdriveChop(VDriveCommand):
             # END-IF-ELSE
 
             final_success = final_success and status
-            sum_msg += 'Run %d: %s\n' % (run_number, message)
+            sum_msg += 'Run {0}: {1}\n'.format(run_number, message)
         # END-FOR (run_number)
 
         # TODO/THINK/ISSUE/55 - shall a signal be emit???
         # self.reduceSignal.emit(command_args)
-
-        print '[DB...BAT] CHOP Message: ', sum_msg
 
         return final_success, sum_msg
 

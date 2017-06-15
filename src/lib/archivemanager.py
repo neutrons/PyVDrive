@@ -150,8 +150,10 @@ class DataArchiveManager(object):
         :return: list of data or None (cannot find)
         """
         # check
-        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number, int), 'Run number must be an integer.'
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         # check whether the IPTS/run is valid
         nexus_dir = '/SNS/VULCAN/IPTS-%d/0/%d/' % (ipts_number, run_number)
@@ -200,6 +202,34 @@ class DataArchiveManager(object):
 
         return data_set
 
+    @staticmethod
+    def get_data_chopped_nexus(ipts_number, run_number, chop_child_list):
+        """
+        get the default directory for chopped NeXus file from SNS archive
+        :exception: RuntimeError if unable to find the directory
+        :param ipts_number:
+        :param run_number: a list of string (i.e., files)
+        :return:
+        """
+        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method!
+        assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+                                             ''.format(ipts_number, type(ipts_number))
+
+        # form the directory name
+        chop_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}'.format(ipts_number, run_number)
+
+        # scan the directory
+        if os.path.exists(chop_dir) is False:
+            raise RuntimeError('Directory for chopped NeXus file {0} does not exist.'.format(chop_dir))
+
+        #   from os import listdir
+        # from os.path import isfile, join
+        nexus_file_list = [f for f in os.listdir(chop_dir) if f.endswith('.nxs') and
+                           os.path.isfile(os.path.join(chop_dir, f))]
+
+        return nexus_file_list
+
     def get_event_file(self, ipts_number, run_number, check_file_exist):
         """
         get the raw event NEXUS file from archive
@@ -215,6 +245,9 @@ class DataArchiveManager(object):
 
         if check_file_exist and not os.path.exists(raw_event_file_name):
             raise RuntimeError('Event NeXus file {0} is not found.'.format(raw_event_file_name))
+
+        # add the dictionary
+        self._runIptsDict[run_number] = ipts_number
 
         return raw_event_file_name
 
@@ -346,15 +379,17 @@ class DataArchiveManager(object):
 
     def get_partial_run_info(self, archive_key, run_number_list):
         """
-        Get a subset of runs (with all information) by specified range of run numbers
+        Get a subset of runs (with all information) by specified range of run numbers, i.e., the run number is in
+        this object's IPTS information dictonary (_iptsInfoDict)
         :param archive_key:
-        :param start_run:
-        :param end_run:
-        :return:
+        :param run_number_list:
+        :return: a list of run information (in dictionary)
         """
         # check
-        assert isinstance(archive_key, str) or isinstance(archive_key, int), 'Archive key %s must be a string or integer but not %s.' % (str(archive_key), type(archive_key))
-        assert isinstance(run_number_list, list), 'bla bla 333'
+        assert isinstance(archive_key, str) or isinstance(archive_key, int), \
+            'Archive key {0} must be a string or integer but not {1}.'.format(archive_key, type(archive_key))
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be given in list but not {1}.' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
         # get partial list
         partial_list = list()
@@ -363,9 +398,20 @@ class DataArchiveManager(object):
                 run_dict = self._iptsInfoDict[archive_key][run_number]
                 partial_list.append(run_dict)
             else:
-                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.'.format(run_number)
+                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.' \
+                      ''.format(run_number)
 
         return partial_list
+
+    @staticmethod
+    def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
+        """
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
 
     @staticmethod
     def locate_vanadium_gsas_file(ipts_number, van_run_number):
@@ -385,8 +431,7 @@ class DataArchiveManager(object):
         """
         Scan VULCAN archive with a specific IPTS by guessing the name of NeXus and checking its existence.
         :param ipts_number:
-        :param start_run:
-        :param end_run:
+        :param run_number_list:
         :return: archive key and error message
         """
         # check

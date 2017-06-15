@@ -146,7 +146,10 @@ class SampleLogView(object):
         # Get log name from
         log_name = self.get_log_name()
 
-        vec_times, vec_log_value = self._myParent.get_sample_log_value(log_name=log_name)
+        vec_times, vec_log_value = self._myParent.get_sample_log_value(run_number=None,
+                                                                       log_name=log_name,
+                                                                       time_range=None,
+                                                                       relative=True)
 
         if len(vec_times) > max_resolution:
             skip = len(vec_times)/max_resolution

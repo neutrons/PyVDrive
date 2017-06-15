@@ -33,14 +33,18 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def chop_data(self):
+    def chop_data(self, split_ws_name=None, info_ws_name=None):
         """
         chop data and save to GSAS file
+        :param split_ws_name:
         :return:
         """
         # get data file names, splitters workspace and output directory from reduction setup object
         raw_file_name = self._reductionSetup.get_event_file()
-        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        if split_ws_name is None:
+            split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        elif info_ws_name is None:
+            raise RuntimeError('Splitters workspace name must be given with information workspace name.')
         useless, output_directory = self._reductionSetup.get_chopped_directory(True, nexus_only=True)
 
         # FIXME/TODO/FUTURE/ISSUE - do_tof_correction : should get from somewhere
@@ -70,14 +74,52 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                   tof_correction=do_tof_correction,
                                                                   output_dir=output_directory,
                                                                   is_epoch_time=is_epoch_time,
-                                                                  num_target_ws=number_target_ws)
+                                                                  num_target_ws=number_target_ws,
+                                                                  delete_split_ws=True)
         # delete raw workspace
-        mantid_helper.delete_workspace(event_ws_name)
+        # TODO/ISSUE/NOWNOW - Requiring a user option for this!
+        print '[INFO] Deleting raw event workspace {0} which {1} exists.' \
+              ''.format(event_ws_name, AnalysisDataService.doesExist(event_ws_name))
+        if AnalysisDataService.doesExist(event_ws_name):
+            mantid_helper.delete_workspace(event_ws_name)
 
         return status, ret_obj
 
+    def chop_data_overlap_slicers(self, raw_ws_name, tof_correction,
+                                       output_dir, is_epoch_time, num_target_ws,
+                                       delete_split_ws=True):
+        """
+
+        :param raw_ws_name:
+        :param tof_correction:
+        :param output_dir:
+        :param is_epoch_time:
+        :param num_target_ws:
+        :param delete_split_ws:
+        :return:
+        """
+        # get split information workspace
+        split_ws_name, split_info_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        # check that the splitters workspace must be a TableWorkspace
+        assert mantid_helper.is_table_workspace(split_ws_name),'Splitters workspace {0} must be a table workspace.' \
+                                                               ''.format(split_ws_name)
+
+        # convert to a set of non-overlapping splitters
+        time_segment_period = self._reductionSetup.get_time_segment_period()
+        if time_segment_period is None:
+            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_bf(split_ws_name)
+        else:
+            split_ws_list = mantid_helper.convert_to_non_overlap_splitters_period(split_ws_name, time_segment_period)
+
+        # reduce
+        for split_ws_name in split_ws_list:
+            self.chop_data(split_ws_name, split_info_name)
+
+        return True, ''
+
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
-                                       output_dir, is_epoch_time, num_target_ws):
+                                       output_dir, is_epoch_time, num_target_ws,
+                                       delete_split_ws=True):
         """
         chop data to a large number of output targets
         :param raw_ws_name: raw event workspace to get split
@@ -100,7 +142,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # in loop generate data
         num_loops = int(math.ceil(num_target_ws * 1. / MAX_CHOPPED_WORKSPACE_IN_MEM))
-        clear_memory = True
 
         total_status = True
         total_tup_list = list()
@@ -112,10 +153,22 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                        run_start_ns=run_start_ns)
 
             # split
+            # pre-check
+            if AnalysisDataService.doesExist(raw_ws_name) is False:
+                raise NotImplementedError('Pre-check Raw workspace {0} cannot be found at loop {1} ({2}).'
+                                          ''.format(raw_ws_name, i_loop, num_loops))
+
             status, ret_obj = mantid_helper.split_event_data(raw_ws_name=raw_ws_name, split_ws_name=sub_split_ws_name,
                                                              info_table_name=split_info_name,
-                                                             target_ws_name=raw_ws_name, tof_correction=False,
-                                                             output_directory=output_dir, delete_split_ws=clear_memory)
+                                                             target_ws_name=raw_ws_name+'_split',
+                                                             tof_correction=False,
+                                                             output_directory=output_dir,
+                                                             delete_split_ws=delete_split_ws)
+
+            # post check
+            if AnalysisDataService.doesExist(raw_ws_name) is False:
+                return False, str(NotImplementedError('Post-check Raw workspace {0} cannot be found at loop {1} ({2}).'
+                                  ''.format(raw_ws_name, i_loop, num_loops)))
 
             # process
             if status:
@@ -126,6 +179,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 # failed: append error message
                 total_status = False
                 total_error_message += '{0}\n'.format(ret_obj)
+
         # END-FOR
 
         if not total_status:
@@ -135,7 +189,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
     def chop_reduce(self, chop_dir):
         """
-        Chop and reduce
+        Chop and reduce (this is a method calling Mantid algorithm directly)
         :except: RuntimeError if the target directory for chopped data does not exist
         :return:
         """
@@ -556,13 +610,11 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # FIXME/TODO/ISSUE --- getMemorySize()
         if num_targets < MAX_ALLOWED_WORKSPACES:
             # load data and chop all at the same time
-            if 0:
-                status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
-            else:
-                status, message, chopped_tup_list = self.chop_save_reduce()
-                output_ws_list = list()
-                for tup3 in chopped_tup_list:
-                    output_ws_list.append(tup3[2])
+            status, message, chopped_tup_list = self.chop_save_reduce()
+            print '[DB...BAT] chop-reduction status: {0}; chop-reduction message: {1}'.format(status, message)
+            output_ws_list = list()
+            for tup3 in chopped_tup_list:
+                output_ws_list.append(tup3[2])
 
             # create the log files
             self.generate_sliced_logs(output_ws_list, self._chopExportedLogType)
@@ -734,13 +786,23 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # time (step) in seconds
             diff_time = (real_start_time_i - run_start).total_nanoseconds() * 1.E-9
 
+            # TODO/ISSUE/NOWNOW2 - consider to put the following methods
             if log_type == 'loadframe':
                 # loadframe
                 for entry in reduce_VULCAN.MTS_Header_List:
                     mts_name, log_name = entry
+                    pd_index = float(i_ws + 1)
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
-                        sample_log = workspace_i.run().getProperty(log_name).value
+                        try:
+                            sample_log = workspace_i.run().getProperty(log_name).value
+                        except RuntimeError as run_err:
+                            print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+                            start_series_dict[mts_name].set_value(pd_index, 0.)
+                            mean_series_dict[mts_name].set_value(pd_index, 0.)
+                            end_series_dict[mts_name].set_value(pd_index, 0.)
+                            continue
+
                         if len(sample_log) > 0:
                             start_value = sample_log[0]
                             mean_value = sample_log.mean()
@@ -770,7 +832,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                         start_value = mean_value = end_value = 0.
                     # END-IF-ELSE
 
-                    pd_index = float(i_ws + 1)
                     start_series_dict[mts_name].set_value(pd_index, start_value)
                     mean_series_dict[mts_name].set_value(pd_index, mean_value)
                     end_series_dict[mts_name].set_value(pd_index, end_value)
@@ -783,6 +844,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     log_name = mts_name
                     if len(log_name) > 0 and log_name in property_name_list:
                         # regular log
+                        # TODO/ISSUE/FIXME/ - Put Try-exception here too!
                         sample_log = workspace_i.run().getProperty(log_name).value
                         start_value = sample_log[0]
                         mean_value = sample_log.mean()

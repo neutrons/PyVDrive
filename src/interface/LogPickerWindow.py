@@ -28,7 +28,6 @@ IN_PICKER_SELECTION = 3
 # TODO/ISSUE/NOWNOW - label_runStartEpoch never been written
 
 
-
 class WindowLogPicker(QtGui.QMainWindow):
     """ Class for general-puposed plot window
     """
@@ -351,9 +350,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                      '' % (str(self._currSlicerKey), type(self._currSlicerKey))
         status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
                                                            reduce_data=to_reduce_gsas,
+                                                           vanadium=None,
                                                            save_chopped_nexus=to_save_nexus,
-                                                           output_dir=output_dir)
-
+                                                           output_dir=output_dir,
+                                                           export_log_type='loadframe')
         if status:
             GuiUtility.pop_dialog_information(self, message)
         else:
@@ -374,31 +374,34 @@ class WindowLogPicker(QtGui.QMainWindow):
             # return if operation is cancelled
             return
 
+        # import slicers from a file
+        slicer_list = self.get_controller().import_data_slicers(slicer_file_name)
+
         # parse file
-        if True:
-            # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
-            #                    chop_utility via controller
-            slicer_file = open(slicer_file_name, 'r')
-            raw_lines = slicer_file.readlines()
-            slicer_file.close()
-
-            slicer_list = list()
-            for line in raw_lines:
-                # print '[DB...BAT] Line: {0}'.format(line)
-                line = line.strip()
-                if len(line) == 0 or line[0] == '#':
-                    continue
-
-                terms = line.split()
-                # print '[DB...BAT] Line split to {0}'.format(terms)
-                if len(terms) < 3:
-                    continue
-                start_time = float(terms[0])
-                stop_time = float(terms[1])
-                target_ws = str(terms[2])
-                slicer_list.append((start_time, stop_time, target_ws))
-                # END-FOR
-        # END-IF
+        # if True:
+        #     # TODO/FIXME/NOWNOW - This method should be generalized with other slicer file parser
+        #     #                    chop_utility via controller
+        #     slicer_file = open(slicer_file_name, 'r')
+        #     raw_lines = slicer_file.readlines()
+        #     slicer_file.close()
+        #
+        #     slicer_list = list()
+        #     for line in raw_lines:
+        #         # print '[DB...BAT] Line: {0}'.format(line)
+        #         line = line.strip()
+        #         if len(line) == 0 or line[0] == '#':
+        #             continue
+        #
+        #         terms = line.split()
+        #         # print '[DB...BAT] Line split to {0}'.format(terms)
+        #         if len(terms) < 3:
+        #             continue
+        #         start_time = float(terms[0])
+        #         stop_time = float(terms[1])
+        #         target_ws = str(terms[2])
+        #         slicer_list.append((start_time, stop_time, target_ws))
+        #         # END-FOR
+        # # END-IF
 
         # check
         if len(slicer_list) == 0:
@@ -536,13 +539,13 @@ class WindowLogPicker(QtGui.QMainWindow):
         # Get run number
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_runNumber)
         if run_number is None:
-            GuiUtility.pop_dialog_error('Unable to load run as value is not specified.')
+            GuiUtility.pop_dialog_error(self, 'Unable to load run as value is not specified.')
             return
 
         # Get sample logs
         try:
             log_name_with_size = True
-            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, log_name_with_size)
+            self._logNameList, run_info_str = self._myParent.load_sample_run(run_number, None, log_name_with_size)
             self._logNameList.sort()
 
             # Update class variables, add a new entry to sample log value holder
@@ -654,9 +657,12 @@ class WindowLogPicker(QtGui.QMainWindow):
         :return:
         """
         import ReducedDataView
+
         # launch reduced-data-view window
         view_window = self._myParent.do_launch_reduced_data_viewer()
-        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow), 'The view window'
+        assert isinstance(view_window, ReducedDataView.GeneralPurposedDataViewWindow),\
+            'The view window ({0}) is not a proper ReducedDataView.GeneralPurposedDataViewWindow instance.' \
+            ''.format(view_window.__class__.__name__)
 
         # get chopped and reduced workspaces from controller
         try:

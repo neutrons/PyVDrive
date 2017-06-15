@@ -208,7 +208,8 @@ class VanadiumProcessingManager(object):
             else:
                 archive_file_name = None
                 return_status = False
-                error_msg += 'Failed to write {0} to archive due to permission error.\n'.format(archive_file_name)
+                error_msg += 'Failed to write {0} to archive {1} due to permission error.\n' \
+                             ''.format(base_name, van_dir)
         else:
             archive_file_name = None
 
