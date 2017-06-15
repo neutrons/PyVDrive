@@ -539,7 +539,8 @@ class VDriveAPI(object):
             # given data key: mostly from loaded GSAS
             assert len(data_key) > 0, 'Data key cannot be an empty string.'
             try:
-                bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+                # bank_list = self._myProject.data_loading_manager.get_bank_list(data_key)
+                bank_list = self._myProject.get_data_bank_list(data_key)
                 info = bank_list
             except AssertionError as assert_err:
                 return False, str(assert_err)
@@ -743,6 +744,22 @@ class VDriveAPI(object):
             ret_obj = 'No run is selected from %d to %d' % (begin_run, end_run)
 
         return status, ret_obj
+
+    def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
+        """
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :param chopped_data:
+        :return:
+        """
+        if chopped_data:
+            sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
+        else:
+            # TODO/ISSUE/NOWNOW - Easy implement
+            sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
+
+        return sns_dir
 
     def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
         """
@@ -970,6 +987,15 @@ class VDriveAPI(object):
 
         return peak_list
 
+    def has_chopped_data(self, run_number, reduced):
+        """
+        blabla
+        :param run_number:
+        :param reduced:
+        :return:
+        """
+        return self._myProject.reduction_manager.has_run(run_number)
+
     @staticmethod
     def import_data_slicers(file_name):
         """ import slicers from a text file
@@ -1008,6 +1034,25 @@ class VDriveAPI(object):
                                                                          max_int=100)
 
         return data_key
+
+    def load_nexus_file(self, ipts_number, run_number, file_name, meta_data_only):
+        """
+        Load NeXus file to ADS
+        :param ipts_number:
+        :param run_number:
+        :param file_name:
+        :param meta_data_only:
+        :return:
+        """
+        # get NeXus file name
+        if file_name is None:
+            file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
+
+        # load file
+        info_dict = self._myProject.load_event_file(ipts_number=ipts_number, run_number=run_number,
+                                                    nxs_file_name=file_name, meta_data_only=meta_data_only)
+
+        return info_dict
 
     def load_session(self, in_file_name=None):
         """ Load session from saved file
@@ -1266,6 +1311,27 @@ class VDriveAPI(object):
         status, error_message = chop_utility.save_slicers(splitters_list, file_name)
 
         return status, error_message
+
+    def scan_ipts_runs(self, ipts_number, start_run, stop_run ):
+        """
+
+        :param ipts_number:
+        :param start_run:
+        :param stop_run:
+        :return:
+        """
+        run_info_dict_list = list()
+        for run_number in range(start_run, stop_run+1):
+            event_file_name = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=False)
+            if os.path.exists(event_file_name):
+                run_info = dict()
+                run_info['run'] = run_number
+                run_info['ipts'] = ipts_number
+                run_info['file'] = event_file_name
+                run_info_dict_list.append(run_info)
+        # END-FOR
+
+        return run_info_dict_list
 
     def set_data_root_directory(self, root_dir):
         """ Set root archive directory

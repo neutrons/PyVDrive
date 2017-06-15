@@ -14,6 +14,8 @@ import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
 
+import vdrivehelper
+
 from reduce_VULCAN import align_bins
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
@@ -706,13 +708,15 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (2) unit of the returned data
     """
     # check requirements by asserting
-    assert isinstance(workspace_name, str) and isinstance(point_data, bool)
-    assert workspace_does_exist(workspace_name), 'Workspace %s does not exist.' % workspace_name
+    assert isinstance(workspace_name, str) and isinstance(point_data, bool), 'blabla'
     assert isinstance(target_unit, str) or target_unit is None,\
         'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
     assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
         'Start-Bank-ID {0} must be a non-negetive integer but not {1}.' \
         ''.format(start_bank_id, type(start_bank_id))
+
+    if workspace_does_exist(workspace_name) is False:
+        raise RuntimeError('Workspace %s does not exist.' % workspace_name)
 
     # check bank ID not being None
     workspace = ADS.retrieve(workspace_name)
@@ -730,6 +734,16 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     # define a temporary workspace name
     use_temp = False
     temp_ws_name = workspace_name + '__{0}'.format(random.randint(1, 100000))
+
+    # process target unit
+    if target_unit is not None:
+        if target_unit.lower() == 'tof':
+            target_unit = 'TOF'
+        elif target_unit.lower().count('spac') > 0:
+            target_unit = 'dSpacing'
+        elif target_unit.lower() == 'q':
+            target_unit = 'MomentumTransfer'
+    # END-IF
 
     # get unit
     current_unit = get_workspace_unit(workspace_name)
@@ -806,6 +820,28 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     return data_set_dict, current_unit
 
 
+def get_ipts_number(ws_name):
+    """
+    get IPTS number from a standard EventWorkspace
+    :param ws_name:
+    :return:
+    """
+    workspace = retrieve_workspace(ws_name)
+    if not workspace.run().hasProperty('Filename'):
+        return None
+
+    # get file name
+    file_name = workspace.run().getProperty('Filename').value
+
+    status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
+    if status:
+        ipts_number = ret_obj
+    else:
+        ipts_number = None
+
+    return ipts_number
+
+
 def get_time_segments_from_splitters(split_ws_name, time_shift, unit):
     """ Get time segments from splitters workspace
     Purpose:
@@ -865,6 +901,22 @@ def get_workspace_information(run_ws_name):
     bank_id_list = range(1, num_spec+1)
 
     return bank_id_list
+
+
+def get_workspace_property(workspace_name, property_name, value_in_str=False):
+    """
+
+    :param workspace_name:
+    :param property_name:
+    :return:
+    """
+    # TODO/ISSUE/NOWNOW - Better docs and checks
+    workspace = retrieve_workspace(workspace_name)
+
+    if value_in_str:
+        return workspace.run().getProperty(property_name).value
+
+    return workspace.run().getProperty(property_name)
 
 
 def get_workspace_unit(workspace_name):
@@ -1464,12 +1516,6 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
                                       RelativeTime=is_relative_time
                                       )
 
-    # DEBUG: where does raw workspace go?
-    if ADS.doesExist(raw_ws_name):
-        print '[DB...BAT] Raw workspace {0} is still there.'.format(raw_ws_name)
-    else:
-        print '[DB...BAT] Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
-
     try:
         correction_ws = ret_list[0]
         num_split_ws = ret_list[1]
@@ -1489,7 +1535,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         return False, 'Failed to split data by FilterEvents.'
 
     if len(ret_list) != 3 + len(chopped_ws_name_list):
-        return False, 'Failed to split data by FilterEvents due incorrect objects returned.'
+        print '[WARNING] Returned List Size = {0}'.format(len(ret_list))
 
     # Save result
     chop_list = list()

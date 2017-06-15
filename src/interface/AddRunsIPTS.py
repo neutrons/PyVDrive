@@ -208,9 +208,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             # get run information in quick mode
             assert isinstance(self._iptsNumber, int) and self._iptsNumber > 0, 'IPTS number must be verified ' \
                                                                                'for quick-filter-run mode.'
-            ipts_run_dir = self._iptsNumber
-            # TODO/FIXME/ISSUE/55 - scan_ipts_runs() is not a method of workflow_controller!!!
-            status, ret_obj = workflow_controller.scan_ipts_runs(ipts_run_dir, begin_run, end_run)
+            run_info_dict_list = workflow_controller.scan_ipts_runs(self._iptsNumber, begin_run, end_run)
 
         else:
             # it is impossible to have an empty end run because the non-skip option always specifies one
@@ -226,17 +224,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                 print '[DB...BAT] data directory:', self._dataDir, 'IPTS dir:', self._iptsDir
                 status, ret_obj = workflow_controller.get_local_runs(self._archiveKey, self._iptsDir,
                                                                      begin_run, end_run, standard_sns_file=True)
+            # get the complete list of run (tuples) as it is filtered by date
+            if status is True:
+                run_info_dict_list = ret_obj
+            else:
+                error_message = ret_obj
+                gutil.pop_dialog_error(self, error_message)
+                return False
         # END-IF-ELSE
 
-        # get the complete list of run (tuples) as it is filtered by date
-        if status is True:
-            run_tup_list = ret_obj
-        else:
-            error_message = ret_obj
-            gutil.pop_dialog_error(self, error_message)
-            return False
-
-        return run_tup_list
+        return run_info_dict_list
 
     def do_browse_data_directory(self):
         """ Browse data directory if it is set up to use IPTS directory other than number

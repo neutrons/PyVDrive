@@ -599,7 +599,6 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
             x_start = vec_times[i_seg]
             x_stop = vec_times[i_seg+1]
             color_index = vec_target_ws[i_seg]
-            print '[DB...DEVELOP] Plot X = ', x_start, x_stop, ' with color index ', color_index
 
             # get start time and stop time's index
             i_start = (np.abs(vec_x - x_start)).argmin()

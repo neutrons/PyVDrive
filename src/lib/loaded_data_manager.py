@@ -84,15 +84,15 @@ class LoadedDataManager(object):
         :return:
         """
         assert isinstance(data_key, str) or isinstance(data_key, int), 'Data key {0} of type {1} ' \
-                                                                       'is not supported.'.format(data_key,
-                                                                                                  type(data_key))
+                                                                       'is not supported.' \
+                                                                       ''.format(data_key, type(data_key))
 
-        has = data_key in self._workspaceDict
+        if data_key not in self._workspaceDict:
+            return False
 
-        if not has:
-            print '[DB....BAT] Loaded data keys are {0}.'.format(self._workspaceDict.keys())
+        print '[DB....BAT] Loaded data keys are {0}.'.format(self._workspaceDict.keys())
 
-        return has
+        return True
 
     def load_binned_data(self, data_file_name, data_file_type, prefix, max_int):
         """
@@ -155,20 +155,20 @@ class LoadedDataManager(object):
         load chopped and binned data (in GSAS format) for a directory.
         Chopping information file will be searched first
         :param chopped_data_dir:
+        :param chop_sequence:
+        :param load_raw:
         :param file_format:
         :return: 2-tuple of dictionary and integer (run number)
             dictionary: key is data workspace name;
                         value is 2-tuple as (1) log workspace name or None (if no NeXus file) and (2) gsas file name
         """
-        # TODO/ISSUE/NOWNOW - Clean the doc.. considering option load_raw
-
         # check inputs
-        assert isinstance(chopped_data_dir, str), 'Direcotry {0} must be given as a string but not a {1}.' \
+        assert isinstance(chopped_data_dir, str), 'Directory {0} must be given as a string but not a {1}.' \
                                                   ''.format(chopped_data_dir, str(chopped_data_dir))
+        assert isinstance(file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
+
         if not os.path.exists(chopped_data_dir):
             raise RuntimeError('Directory {0} for chopped data does not exist.'.format(chopped_data_dir))
-
-        assert isinstance(file_format, str), 'Reduced data file format {0} must be a string.'.format(file_format)
 
         # list the files in a directory
         file_list = [f for f in listdir(chopped_data_dir) if isfile(join(chopped_data_dir, f))]
@@ -194,11 +194,14 @@ class LoadedDataManager(object):
             run_number = chop_info_file.split('_')[1]
 
         # chop sequence is used to determine the specified files
+        # check values
         if chop_sequence is not None:
-            assert isinstance(chop_sequence, list), 'blabla'
+            assert isinstance(chop_sequence, list), 'Chop sequence must be a list blabla'
             # this is VERY VULCAN specific
             vulcan_file_list = list()
             for seq_index in sorted(chop_sequence):
+                assert isinstance(seq_index, int) and seq_index >= 0,\
+                    'Sequence {0} in list must be a non-negative integer.'.format(seq_index)
                 vulcan_file_list.append('{0}.gda'.format(seq_index))
         else:
             vulcan_file_list = None
@@ -208,7 +211,7 @@ class LoadedDataManager(object):
         for file_name, nexus_file_name, ws_name in reduced_tuple_list:
             # select specified file if there is such ...
             base_file_name = os.path.basename(file_name)
-            if vulcan_file_list is None or base_file_name not in vulcan_file_list:
+            if vulcan_file_list is not None and base_file_name not in vulcan_file_list:
                 continue
 
             # load GSAS file

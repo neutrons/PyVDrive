@@ -63,9 +63,9 @@ class ProjectManager(object):
         :return:
         """
         # Check input
-        assert isinstance(run_number, int)
-        assert isinstance(ipts_number, int)
-        assert isinstance(file_name, str)
+        assert isinstance(run_number, int), 'run number blabla'
+        assert isinstance(ipts_number, int), 'ipts number, blabla'
+        assert isinstance(file_name, str), 'file name blabla'
 
         self._dataFileDict[run_number] = (file_name, ipts_number)
         self._baseDataFileNameList.append(os.path.basename(file_name))
@@ -362,7 +362,7 @@ class ProjectManager(object):
 
         return peak_info_list
 
-    def get_chopper(self, run_number):
+    def get_chopper(self, run_number, nxs_file_name=None):
         """
         Get data chopper (manager) of a run number
         If the run number does not have any DataChopper associated, then create a one
@@ -374,7 +374,8 @@ class ProjectManager(object):
             run_chopper = self._chopManagerDict[run_number]
         else:
             # create a new DataChopper associated with this run
-            nxs_file_name = self.get_file_path(run_number)
+            if nxs_file_name is None:
+                nxs_file_name = self.get_file_path(run_number)
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
@@ -392,8 +393,8 @@ class ProjectManager(object):
         """
         if self._loadedDataManager.has_data(data_key):
             bank_list = self._loadedDataManager.get_bank_list(data_key)
-        elif self._reductionManager.has_data(data_key):
-            bank_list = self._reductionManager.get_bank_list(data_key)
+        elif mantid_helper.workspace_does_exist(data_key):
+            bank_list = mantid_helper.get_data_banks(data_key, 1)
         else:
             raise RuntimeError('Data key {0} cannot be found in project manager.'.format(data_key))
 
@@ -681,6 +682,31 @@ class ProjectManager(object):
         do_have = run_number in self._dataFileDict
 
         return do_have
+
+    def load_event_file(self, ipts_number, run_number, nxs_file_name, meta_data_only):
+        """
+
+        :param ipts_number:
+        :param run_number:
+        :param nxs_file_name:
+        :return:
+        """
+        if meta_data_only:
+            # for log and chopping
+            chopper = self.get_chopper(run_number, nxs_file_name)
+            meta_ws_name = chopper.load_data_file()
+
+            if ipts_number is None:
+                ipts_number = mantid_helper.get_ipts_number(meta_ws_name)
+            if nxs_file_name.endswith('.nxs') is False and nxs_file_name.endswith('.h5') is False:
+                nxs_file_name = mantid_helper.get_workspace_property(meta_ws_name, 'Filename', True)
+
+            self.add_run(run_number, nxs_file_name, ipts_number)
+
+        else:
+            raise NotImplementedError('blabla NOWNOW')
+
+        return dict()
 
     def load_standard_binning_workspace(self, data_directory):
         """

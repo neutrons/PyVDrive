@@ -350,9 +350,10 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                      '' % (str(self._currSlicerKey), type(self._currSlicerKey))
         status, message = self.get_controller().slice_data(run_number, self._currSlicerKey,
                                                            reduce_data=to_reduce_gsas,
+                                                           vanadium=None,
                                                            save_chopped_nexus=to_save_nexus,
-                                                           output_dir=output_dir)
-
+                                                           output_dir=output_dir,
+                                                           export_log_type='loadframe')
         if status:
             GuiUtility.pop_dialog_information(self, message)
         else:

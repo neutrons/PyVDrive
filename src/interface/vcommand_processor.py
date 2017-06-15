@@ -240,12 +240,14 @@ class VdriveCommandProcessor(object):
         view_window = self._mainWindow.do_launch_reduced_data_viewer()
         view_window.set_ipts_number(processor.get_ipts_number())
 
+        view_window.set_x_range(processor.x_min, processor.x_max)
+        view_window.set_unit(processor.unit)
+
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
             view_window.add_run_numbers(processor.get_run_tuple_list())
             # plot
-            view_window.set_diffraction_unit(processor.unit)
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
@@ -253,9 +255,7 @@ class VdriveCommandProcessor(object):
                                              chop_sequence=processor.get_chopped_sequence_range(),
                                              bank_id=1,
                                              bank_id_from_1=True,
-                                             chopped_data_dir=processor.get_reduced_data_directory(),
-                                             min_x=processor.x_min, max_x=processor.x_max,
-                                             unit=processor.unit)
+                                             chopped_data_dir=processor.get_reduced_data_directory())
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)

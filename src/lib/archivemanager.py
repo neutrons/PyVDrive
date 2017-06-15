@@ -244,6 +244,9 @@ class DataArchiveManager(object):
         if check_file_exist and not os.path.exists(raw_event_file_name):
             raise RuntimeError('Event NeXus file {0} is not found.'.format(raw_event_file_name))
 
+        # add the dictionary
+        self._runIptsDict[run_number] = ipts_number
+
         return raw_event_file_name
 
     def get_experiment_run_info(self, archive_key, run_number_list=None):
@@ -393,9 +396,20 @@ class DataArchiveManager(object):
                 run_dict = self._iptsInfoDict[archive_key][run_number]
                 partial_list.append(run_dict)
             else:
-                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.'.format(run_number)
+                print '[Warning] Run number {0} is not in ArchiveManager\'s IPTS information dictionary.' \
+                      ''.format(run_number)
 
         return partial_list
+
+    @staticmethod
+    def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
+        """
+        blabla
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
 
     @staticmethod
     def locate_vanadium_gsas_file(ipts_number, van_run_number):

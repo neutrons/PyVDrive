@@ -88,7 +88,7 @@ class VulcanGuiReduction(object):
         option_dict = dict()
         option_dict['auto_reduce'] = self.user_interface.checkBox_autoReduction.isChecked()
         option_dict['gsas'] = self.user_interface.checkBox_outGSAS.isChecked()
-        option_dict['fullprof'] = self.user_interface.checkBox_outFullprof.isChecked()
+        option_dict['output_to_fullprof'] = self.user_interface.checkBox_outFullprof.isChecked()
         option_dict['record'] = self.user_interface.checkBox_outputAutoRecords.isChecked()
         option_dict['logs'] = self.user_interface.checkBox_outputSampleLogs.isChecked()
         option_dict['output_directory'] = str(self.user_interface.lineEdit_outputDir.text())
@@ -131,7 +131,7 @@ class VulcanGuiReduction(object):
             return False, error_message
             # GuiUtility.pop_dialog_error(self, error_message)
 
-        arg_dict = {'binning': bin_par}
+        arg_dict = {'binning_parameters': bin_par}
         arg_dict.update(output_option_dict)
         arg_dict['output_directory'] = self.controller.get_working_dir()
 

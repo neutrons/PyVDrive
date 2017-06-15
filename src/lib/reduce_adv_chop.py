@@ -610,13 +610,11 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # FIXME/TODO/ISSUE --- getMemorySize()
         if num_targets < MAX_ALLOWED_WORKSPACES:
             # load data and chop all at the same time
-            if 0:
-                status, message, output_ws_list = self.chop_reduce(self._choppedDataDirectory)
-            else:
-                status, message, chopped_tup_list = self.chop_save_reduce()
-                output_ws_list = list()
-                for tup3 in chopped_tup_list:
-                    output_ws_list.append(tup3[2])
+            status, message, chopped_tup_list = self.chop_save_reduce()
+            print '[DB...BAT] chop-reduction status: {0}; chop-reduction message: {1}'.format(status, message)
+            output_ws_list = list()
+            for tup3 in chopped_tup_list:
+                output_ws_list.append(tup3[2])
 
             # create the log files
             self.generate_sliced_logs(output_ws_list, self._chopExportedLogType)

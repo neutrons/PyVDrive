@@ -325,7 +325,7 @@ class DataChopper(object):
         # Set up run start time
         self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
 
-        return
+        return out_ws_name
 
     def set_log_value_slicer(self, log_name, log_value_step, start_time=None, stop_time=None,
                              min_log_value=None, max_log_value=None, direction='Both'):

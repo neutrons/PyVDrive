@@ -1186,8 +1186,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # get files
         if load_without_file:
-            # TODO/NOWNOW/ - Implement!
+            # Load data without file name, IPTS number and etc.
             self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name='VULCAN_{0}'.format(run),
+                                             meta_data_only=True)
+        else:
+            self._myWorkflow.load_nexus_file(ipts_number=None, run_number=run, file_name=nxs_file_name,
                                              meta_data_only=True)
 
         # Get log names

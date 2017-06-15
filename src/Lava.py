@@ -163,17 +163,29 @@ if isinstance(option, str) and (option.lower().startswith('-h') or option.lower(
     print '  -v: launch reduced data view interface'
     sys.exit(1)
 
-elif isinstance(option, str) and option.lower().startswith('-t'):
+elif option.lower() == '-m':
+    launcher.do_launch_vdrive()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower() == '-t':
     launcher.do_launch_terminal()
     launcher.close()
+
 elif isinstance(option, str) and option.lower().startswith('-c'):
     launcher.do_launch_chopper()
     launcher.close()
+
 elif isinstance(option, str) and option.lower().startswith('-p'):
     launcher.do_launch_peak_picker()
     launcher.close()
+
 elif isinstance(option, str) and option.lower().startswith('-v'):
     launcher.do_launch_viewer()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().count('t') and option.lower().count('c'):
+    launcher.do_launch_chopper()
+    launcher.do_launch_terminal()
     launcher.close()
 
 
