@@ -407,7 +407,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                     pass
                 else:
                     # there won't be a workspace produced if there is no neutron event within the range.
-                    message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(reduced_ws_name)
+                    message += 'Reduced workspace {0} does not exist. Investigate it!\n'.format(chopped_ws_name)
                     everything_is_right = False
 
                 # convert unit and save for VULCAN-specific GSAS
@@ -737,36 +737,55 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         end_series_dict = dict()
         mts_columns = list()
 
+        # initialize the data structure for output
         if log_type == 'loadframe':
-            # loadframe
-            for entry in reduce_VULCAN.MTS_Header_List:
-                pd_series = pd.Series()
-                mts_name, log_name = entry
-                start_series_dict[mts_name] = pd_series
-                mean_series_dict[mts_name] = pd_series
-                end_series_dict[mts_name] = pd_series
-                mts_columns.append(mts_name)
-
-                if log_name not in property_name_list:
-                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
-            # END-FOR
+            header_list = reduce_VULCAN.MTS_Header_List
         else:
-            # furnace
-            for entry in reduce_VULCAN.Furnace_Header_List:
-                pd_series = pd.Series()
-                mts_name = entry
-                log_name = entry
-                start_series_dict[mts_name] = pd_series
-                mean_series_dict[mts_name] = pd_series
-                end_series_dict[mts_name] = pd_series
-                mts_columns.append(mts_name)
+            header_list = reduce_VULCAN.Furnace_Header_List
+        for entry in reduce_VULCAN.MTS_Header_List:
+            pd_series = pd.Series()
+            mts_name, log_name = entry
+            start_series_dict[mts_name] = pd_series
+            mean_series_dict[mts_name] = pd_series
+            end_series_dict[mts_name] = pd_series
+            mts_columns.append(mts_name)
 
-                if log_name not in property_name_list:
-                    print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
-            # END-FOR
-        # END-IF-ELSE
+            if log_name not in property_name_list:
+                print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
+        # END-FOR
+
+        # if log_type == 'loadframe':
+        #     # loadframe
+        #     for entry in reduce_VULCAN.MTS_Header_List:
+        #         pd_series = pd.Series()
+        #         mts_name, log_name = entry
+        #         start_series_dict[mts_name] = pd_series
+        #         mean_series_dict[mts_name] = pd_series
+        #         end_series_dict[mts_name] = pd_series
+        #         mts_columns.append(mts_name)
+        #
+        #         if log_name not in property_name_list:
+        #             print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+        #     # END-FOR
+        # else:
+        #     # furnace
+        #     for entry in reduce_VULCAN.Furnace_Header_List:
+        #         pd_series = pd.Series()
+        #         mts_name = entry
+        #         log_name = entry
+        #         start_series_dict[mts_name] = pd_series
+        #         mean_series_dict[mts_name] = pd_series
+        #         end_series_dict[mts_name] = pd_series
+        #         mts_columns.append(mts_name)
+        #
+        #         if log_name not in property_name_list:
+        #             print '[WARNING] Log %s is not a sample log in NeXus.' % log_name
+        #     # END-FOR
+        # # END-IF-ELSE
 
         # go through workspaces
+        # TODO/ISSUE/NOWNOW -
+
         for i_ws, ws_name in enumerate(ws_name_list):
             # get workspace
             workspace_i = AnalysisDataService.retrieve(ws_name)
@@ -789,54 +808,57 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             # TODO/ISSUE/NOWNOW2 - consider to put the following methods
             if log_type == 'loadframe':
                 # loadframe
-                for entry in reduce_VULCAN.MTS_Header_List:
-                    mts_name, log_name = entry
-                    pd_index = float(i_ws + 1)
-                    if len(log_name) > 0 and log_name in property_name_list:
-                        # regular log
-                        try:
-                            sample_log = workspace_i.run().getProperty(log_name).value
-                        except RuntimeError as run_err:
-                            print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
-                            start_series_dict[mts_name].set_value(pd_index, 0.)
-                            mean_series_dict[mts_name].set_value(pd_index, 0.)
-                            end_series_dict[mts_name].set_value(pd_index, 0.)
-                            continue
+                # ISSUE/NOWNOW/FIXME/TODO - From here!!!
+                self.export_chopped_logs('loadframe')
 
-                        if len(sample_log) > 0:
-                            start_value = sample_log[0]
-                            mean_value = sample_log.mean()
-                            end_value = sample_log[-1]
-                        else:
-                            # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
-                            # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
-                            # axis 0 with size 0
-                            error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
-                                            'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
-                            print error_message
-                            start_value = 0.
-                            mean_value = 0.
-                            end_value = 0.
-                    elif mts_name == 'TimeStamp':
-                        # time stamp
-                        start_value = mean_value = end_value = float(time_stamp)
-                    elif mts_name == 'Time [sec]':
-                        # time step
-                        start_value = mean_value = end_value = diff_time
-                    elif len(log_name) > 0:
-                        # sample log does not exist in NeXus file. warned before. ignore!
-                        start_value = mean_value = end_value = 0.
-                    else:
-                        # unknown
-                        print '[ERROR] MTS log name %s is cannot be found.' % mts_name
-                        start_value = mean_value = end_value = 0.
-                    # END-IF-ELSE
-
-                    start_series_dict[mts_name].set_value(pd_index, start_value)
-                    mean_series_dict[mts_name].set_value(pd_index, mean_value)
-                    end_series_dict[mts_name].set_value(pd_index, end_value)
-
-                # END-FOR (entry)
+                # for entry in reduce_VULCAN.MTS_Header_List:
+                #     mts_name, log_name = entry
+                #     pd_index = float(i_ws + 1)
+                #     if len(log_name) > 0 and log_name in property_name_list:
+                #         # regular log
+                #         try:
+                #             sample_log = workspace_i.run().getProperty(log_name).value
+                #         except RuntimeError as run_err:
+                #             print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+                #             start_series_dict[mts_name].set_value(pd_index, 0.)
+                #             mean_series_dict[mts_name].set_value(pd_index, 0.)
+                #             end_series_dict[mts_name].set_value(pd_index, 0.)
+                #             continue
+                #
+                #         if len(sample_log) > 0:
+                #             start_value = sample_log[0]
+                #             mean_value = sample_log.mean()
+                #             end_value = sample_log[-1]
+                #         else:
+                #             # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+                #             # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+                #             # axis 0 with size 0
+                #             error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+                #                             'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
+                #             print error_message
+                #             start_value = 0.
+                #             mean_value = 0.
+                #             end_value = 0.
+                #     elif mts_name == 'TimeStamp':
+                #         # time stamp
+                #         start_value = mean_value = end_value = float(time_stamp)
+                #     elif mts_name == 'Time [sec]':
+                #         # time step
+                #         start_value = mean_value = end_value = diff_time
+                #     elif len(log_name) > 0:
+                #         # sample log does not exist in NeXus file. warned before. ignore!
+                #         start_value = mean_value = end_value = 0.
+                #     else:
+                #         # unknown
+                #         print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                #         start_value = mean_value = end_value = 0.
+                #     # END-IF-ELSE
+                #
+                #     start_series_dict[mts_name].set_value(pd_index, start_value)
+                #     mean_series_dict[mts_name].set_value(pd_index, mean_value)
+                #     end_series_dict[mts_name].set_value(pd_index, end_value)
+                #
+                # # END-FOR (entry)
             else:
                 # furnace
                 for entry in reduce_VULCAN.Furnace_Header_List:
@@ -899,6 +921,69 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
                                                                           end_file_name)
+
+        return
+
+    def export_chopped_logs(self, log_type, i_ws, property_name_list, workspace_i, start_series_dict,
+                            mean_series_dict, end_series_dict):
+        """
+
+        :param log_type:
+        :return:
+        """
+        if log_type == 'loadframe':
+            header_list = reduce_VULCAN.MTS_Header_List
+        else:
+            raise
+
+        for entry in header_list:
+            mts_name, log_name = entry
+            pd_index = float(i_ws + 1)
+            if len(log_name) > 0 and log_name in property_name_list:
+                # regular log
+                try:
+                    sample_log = workspace_i.run().getProperty(log_name).value
+                except RuntimeError as run_err:
+                    print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+                    start_series_dict[mts_name].set_value(pd_index, 0.)
+                    mean_series_dict[mts_name].set_value(pd_index, 0.)
+                    end_series_dict[mts_name].set_value(pd_index, 0.)
+                    continue
+
+                if len(sample_log) > 0:
+                    start_value = sample_log[0]
+                    mean_value = sample_log.mean()
+                    end_value = sample_log[-1]
+                else:
+                    # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+                    # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+                    # axis 0 with size 0
+                    error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+                                    'due to {2}'.format(i_ws, ws_name, 'index error', log_name)
+                    print error_message
+                    start_value = 0.
+                    mean_value = 0.
+                    end_value = 0.
+            elif mts_name == 'TimeStamp':
+                # time stamp
+                start_value = mean_value = end_value = float(time_stamp)
+            elif mts_name == 'Time [sec]':
+                # time step
+                start_value = mean_value = end_value = diff_time
+            elif len(log_name) > 0:
+                # sample log does not exist in NeXus file. warned before. ignore!
+                start_value = mean_value = end_value = 0.
+            else:
+                # unknown
+                print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+                start_value = mean_value = end_value = 0.
+            # END-IF-ELSE
+
+            start_series_dict[mts_name].set_value(pd_index, start_value)
+            mean_series_dict[mts_name].set_value(pd_index, mean_value)
+            end_series_dict[mts_name].set_value(pd_index, end_value)
+
+        # END-FOR (entry)
 
         return
 
