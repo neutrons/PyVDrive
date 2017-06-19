@@ -86,7 +86,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
-                     'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'OneBank', 'NoMask', 'TAG',
+                     'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
                      'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT']
 
     ArgsDocDict = {
@@ -161,10 +161,15 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
 
-        if 'FullProf' in input_args:
+        if 'FULLPROF' in input_args:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
             output_fullprof = False
+
+        if 'ONEBANK' in input_args:
+            merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
+        else:
+            merge_to_one_bank = False
 
         # scan the runs with data archive manager and add the runs to project
         if use_chop_data:
@@ -181,7 +186,8 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        output_directory=output_dir,
                                                                        vanadium=(van_run is not None),
                                                                        binning_parameters=binning_parameters,
-                                                                       align_to_vdrive_bin=use_default_binning)
+                                                                       align_to_vdrive_bin=use_default_binning,
+                                                                       merge_banks=merge_to_one_bank)
 
         else:
             # reduce regular data
@@ -204,10 +210,11 @@ class VBin(procss_vcommand.VDriveCommand):
             # reduce by regular runs
             # TODO/FIXME/NOW - Binning parameters
             status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+                                                               merge_banks=merge_to_one_bank,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               merge=False)
+                                                               merge_runs=False)
 
         # END-IF-ELSE
 

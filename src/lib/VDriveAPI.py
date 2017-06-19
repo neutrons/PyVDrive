@@ -1112,7 +1112,8 @@ class VDriveAPI(object):
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
-                                binning_parameters, align_to_vdrive_bin):
+                                binning_parameters, align_to_vdrive_bin,
+                                merge_banks):
         """
         blabla
         :param ipts_number:
@@ -1122,8 +1123,10 @@ class VDriveAPI(object):
         :param vanadium:
         :param binning_parameters:
         :param align_to_vdrive_bin:
+        :param merge_banks:
         :return:
         """
+        # TODO/ISSUE/71/NOWNOW - new option merge bank
         # get list of files
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
@@ -1161,13 +1164,12 @@ class VDriveAPI(object):
 
         return status, error_message
 
-    # FIXME/NOWNOW/TODO - Think of refactor reduced_chopped_data_set() and reduce_data_set()
-    def reduce_data_set(self, auto_reduce, output_directory, background=False,
+    def reduce_data_set(self, auto_reduce, output_directory, merge_banks, background=False,
                         vanadium=False, special_pattern=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
                         align_to_vdrive_bin=False,
-                        merge=False):
+                        merge_runs=False):
         """
         Reduce a set of data
         Purpose:
@@ -1180,7 +1182,7 @@ class VDriveAPI(object):
             Event data will be reduced to diffraction pattern.
         :param auto_reduce: boolean flag whether the reduction uses auto reduction script
         :param output_directory:  output directory
-        :param binning: binning parameter. [1] None for default; [2] a size 1 container as bin size
+        :param binning_parameters: binning parameter. [1] None for default; [2] a size 1 container as bin size
                                            [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param background: boolean flag to subtract background
         :param vanadium: boolean flag to normalize by vanadium
@@ -1192,7 +1194,7 @@ class VDriveAPI(object):
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
         :param align_to_vdrive_bin: flag to align the bining parameters to standard VDrive
-        :param merge: If true, then merge the run together by calling SNSPowderReduction
+        :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1224,7 +1226,7 @@ class VDriveAPI(object):
 
         else:
             # manual reduction: Reduce runs
-            print '[INFO] Reduce Runs: {0}.'.format(runs_to_reduce)
+            print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
             try:
                 status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
@@ -1235,7 +1237,8 @@ class VDriveAPI(object):
                                                               record_file=record,
                                                               sample_log_file=logs,
                                                               standard_sample_tuple=standard_sample_tuple,
-                                                              merge=merge,
+                                                              merge_banks=merge_banks,
+                                                              merge_runs=merge_runs,
                                                               binning_parameters=binning_parameters)
 
             except AssertionError as re:
@@ -1474,7 +1477,9 @@ class VDriveAPI(object):
 
         return status, ret_obj
 
-    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing'):
+    # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
+    def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
+                          binning_parameters=None):
         """
         Load vanadium runs
         :param ipts_number:
@@ -1499,8 +1504,17 @@ class VDriveAPI(object):
             # if vanadium gsas file is not found, reduce it
             nxs_file = self._myArchiveManager.get_event_file(ipts_number, run_number, check_file_exist=True)
             self._myProject.add_run(run_number, nxs_file, ipts_number)
-            reduced, message = self._myProject.reduce_runs([run_number], output_directory=self._myWorkDir,
-                                                           vanadium=False)
+            reduced, message = self._myProject.reduce_runs(run_number_list=[run_number],
+                                                           output_directory=self._myWorkDir,
+                                                           background=False,
+                                                           vanadium=None,
+                                                           gsas=True,
+                                                           fullprof=False,
+                                                           sample_log_file=None,
+                                                           standard_sample_tuple=None,
+                                                           merge_banks=False,
+                                                           merge_runs=False,
+                                                           binning_parameters=binning_parameters)
             if not reduced:
                 return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
                               ''.format(run_number, ipts_number, message)

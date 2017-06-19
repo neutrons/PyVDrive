@@ -274,6 +274,10 @@ class ReductionSetup(object):
         self._saveChoppedWorkspaceToNeXus = False
         self._choppedNeXusDir = None
 
+        # post diffraction focusing operations
+        self._mergeBanks = False
+        self._alignVDriveBinFlag = True
+
         return
 
     def __str__(self):
@@ -286,6 +290,14 @@ class ReductionSetup(object):
         pretty += 'Main GSAS output: {0}\n'.format(self._mainGSASName)
 
         return pretty
+
+    @property
+    def align_bins_to_vdrive_standard(self):
+        """
+        blabla
+        :return:
+        """
+        return self._alignVDriveBinFlag
 
     @property
     def binning_parameters(self):
@@ -645,6 +657,14 @@ class ReductionSetup(object):
         return
 
     @property
+    def merge_banks(self):
+        """
+        blabla
+        :return:
+        """
+        return self._mergeBanks
+
+    @property
     def output_directory(self):
         """
         get output directory
@@ -721,6 +741,30 @@ class ReductionSetup(object):
         assert isinstance(save, bool), 'Flag {0} must be a boolean but not a {1}.'.format(save, type(save))
 
         self._saveChoppedWorkspaceToNeXus = save
+
+        return
+
+    def set_align_vdrive_bin(self, flag):
+        """
+        set the flag to align the output GSAS workspace with VDRIVE's IDL-style binning
+        :param flag:
+        :return:
+        """
+        assert isinstance(flag, bool), 'Flag to align with VDRIVE GSAS binns {0} must be a boolean.'.format(flag)
+
+        self._alignVDriveBinFlag = flag
+
+        return
+
+    def set_banks_to_merge(self, merge):
+        """
+        blabla
+        :param merge:
+        :return:
+        """
+        assert isinstance(merge, bool), 'Flag to merge banks {0} must be a boolean.'.format(merge)
+
+        self._mergeBanks = merge
 
         return
 
@@ -2062,16 +2106,8 @@ class ReduceVulcanData(object):
         except AssertionError as ass_err:
             return False, str(ass_err), None
 
-        # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
-        mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                  OutputWorkspace=reduced_ws_name,
-                                  Target="TOF",
-                                  EMode="Elastic",
-                                  AlignBins=False)
-
-        vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
-
-        # get the output workspace
+        # get the output directory for GSAS file
+        # TODO/ISSUE/NOWNOW/#71: this section can be put to a method
         output_access_error = False
         orig_gsas_name = gsas_file_name
         if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
@@ -2088,40 +2124,70 @@ class ReduceVulcanData(object):
         if os.access(gsas_dir, os.W_OK) is False:
             raise RuntimeError('Unable to write GSAS file {0} as user has no write permission to directory {1}.'
                                ''.format(gsas_file_name, gsas_dir))
+        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            raise RuntimeError('Unable to overwrite exiting GSAS file {0} due to lacking of writing permission, while '
+                               'use has permission to write to directory {1}'.format(gsas_file_name, gsas_dir))
+        # ---- end of section
 
-        # save to Vuclan GSAS
-        try:
-            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                       OutputWorkspace=vdrive_bin_ws_name,
-                                       GSSFilename=gsas_file_name,
-                                       IPTS=self._reductionSetup.get_ipts_number(),
-                                       GSSParmFilename="Vulcan.prm")
-        except ValueError as value_err:
-            # write again to a temporary directory
-            print '[ValueError]: {0}.'.format(value_err)
-            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
-            output_access_error = True
-            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                       OutputWorkspace=vdrive_bin_ws_name,
-                                       GSSFilename=gsas_file_name,
-                                       IPTS=self._reductionSetup.get_ipts_number(),
-                                       GSSParmFilename="Vulcan.prm")
+        # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
+        if self._reductionSetup.align_bins_to_vdrive_standard:
+            # align bins to VDrive standard for VDRIVE to analyze the data
+            mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
+                                      OutputWorkspace=reduced_ws_name,
+                                      Target="TOF",
+                                      EMode="Elastic",
+                                      AlignBins=False)
+
+            vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
+
+            # save to Vuclan GSAS
+            try:
+                mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
+                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                           OutputWorkspace=vdrive_bin_ws_name,
+                                           GSSFilename=gsas_file_name,
+                                           IPTS=self._reductionSetup.get_ipts_number(),
+                                           GSSParmFilename="Vulcan.prm")
+                # Add special property to output workspace
+                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+
+                self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+            except ValueError as value_err:
+                # write again to a temporary directory
+                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
+                                   ''.format(gsas_file_name, value_err))
+                # gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+                # output_access_error = True
+                # mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
+                #                            BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                #                            OutputWorkspace=vdrive_bin_ws_name,
+                #                            GSSFilename=gsas_file_name,
+                #                            IPTS=self._reductionSetup.get_ipts_number(),
+                #                            GSSParmFilename="Vulcan.prm")
+
+        else:
+            # write to GSAS file with Mantid bins
+            mantidsimple.SaveGSS(InputWorkspace=reduced_ws_name,
+                                 Filename=gsas_file_name)
+            vdrive_bin_ws_name = reduced_ws_name
+
+        # END-IF-ELSE
+
+        if self._reductionSetup.merge_banks:
+            # merge all the banks to 1
+            mantidsimple.SumSpectra(InputWorkspace=vdrive_bin_ws_name,
+                                    OutputWorkspace=vdrive_bin_ws_name)
 
         # set up the output file's permit for other users to modify
         os.chmod(gsas_file_name, 0774)
-
-        # Add special property to output workspace
-        final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-        final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-        self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
+            # TODO/FIXME/NOWNOW - It is a different procedure to normalized by vanadium if not being aligned to VDRIVE
             gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
             self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
+
         # END-IF (vanadium)
 
         # collect result

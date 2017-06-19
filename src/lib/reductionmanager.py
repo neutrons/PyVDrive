@@ -746,7 +746,7 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
+    def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
                    vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
         """
         Reduce run with selected options
@@ -757,6 +757,7 @@ class ReductionManager(object):
         :param run_number:
         :param event_file:
         :param output_directory:
+        :param merge_banks:
         :param vanadium:
         :param vanadium_tuple:
         :param gsas:
@@ -772,6 +773,7 @@ class ReductionManager(object):
         reduction_setup.set_run_number(run_number)
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
+        reduction_setup.set_banks_to_merge(merge_banks)
         if binning_parameters is not None:
             try:
                 tof_min, bin_size, tof_max = binning_parameters
@@ -779,6 +781,10 @@ class ReductionManager(object):
                 raise NotImplementedError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
                                           .format(binning_parameters, index_err))
             reduction_setup.set_binning_parameters(tof_min, bin_size, tof_max)
+            reduction_setup.set_align_vdrive_bin(False)
+        else:
+            reduction_setup.set_align_vdrive_bin(True)
+
         # END-IF
 
         # vanadium

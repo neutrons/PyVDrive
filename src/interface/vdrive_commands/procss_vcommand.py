@@ -98,6 +98,7 @@ class VDriveCommand(object):
         :return: 2-tuple: (1) flag whether binning parameter is default
                           (2) 3-tuple as TOF min, bin width, TOF max
         """
+        # TODO/ISSUE/NOWNOW/#71 - Rewrite this algorithm!!!
         binning_parameters = None
 
         if not ('BINW' in self._commandArgsDict or 'Mytofbmax' in self._commandArgsDict

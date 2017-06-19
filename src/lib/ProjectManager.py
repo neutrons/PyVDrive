@@ -820,7 +820,8 @@ class ProjectManager(object):
         """
         return self._reductionManager
 
-    def reduce_nexus_files(self, raw_file_list ,output_directory, vanadium, gsas, binning_parameters,
+    def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters,
+                           merge_banks,
                            align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None):
         """
         Reduce a list of NeXus files
@@ -841,10 +842,10 @@ class ProjectManager(object):
         sum_message = ''
 
         for nexus_file_name in raw_file_list:
-
             status, sub_message = self._reductionManager.reduce_run(ipts_number=None, run_number=None,
                                                                     event_file=nexus_file_name,
                                                                     output_directory=output_directory,
+                                                                    merge_banks=merge_banks,
                                                                     vanadium=vanadium,
                                                                     vanadium_tuple=vanadium_tuple,
                                                                     gsas=gsas,
@@ -857,10 +858,11 @@ class ProjectManager(object):
 
         return sum_status, sum_message
 
-    def reduce_runs(self, run_number_list, output_directory, background=False,
-                    vanadium=False, gsas=True, fullprof=False, record_file=False,
-                    sample_log_file=False, standard_sample_tuple=None,
-                    merge=False, binning_parameters=None):
+    def reduce_runs(self, run_number_list, output_directory, background,
+                    vanadium, gsas, fullprof, record_file,
+                    sample_log_file, standard_sample_tuple,
+                    merge_banks,
+                    merge_runs, binning_parameters):
         """
         Reduce a set of runs with selected options
         Purpose:
@@ -903,12 +905,14 @@ class ProjectManager(object):
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
 
+        print '[DB...BAT] Merge banks = ', merge_banks
+
         reduce_all_success = True
         message = ''
 
         vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
 
-        if not merge:
+        if not merge_runs:
             # reduce runs one by one
             for run_number in run_number_list:
                 # get IPTS and files
@@ -933,7 +937,8 @@ class ProjectManager(object):
                                                                         output_directory, vanadium=vanadium,
                                                                         vanadium_tuple=vanadium_tuple, gsas=gsas,
                                                                         standard_sample_tuple=standard_sample_tuple,
-                                                                        binning_parameters=binning_parameters)
+                                                                        binning_parameters=binning_parameters,
+                                                                        merge_banks=merge_banks)
 
                 reduce_all_success = reduce_all_success and status
                 if not status:
