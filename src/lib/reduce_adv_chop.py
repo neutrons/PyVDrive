@@ -580,7 +580,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             num_rows = split_ws.rowCount()
             message = '[INFO] There are {0} splitters '.format(num_rows)
             if num_rows > 0:
-                message += 'from {1} to {2}.'.format(split_ws.cell(0, 0), split_ws.cell(num_rows-1, 0))
+                message += 'from {0} to {1}.'.format(split_ws.cell(0, 0), split_ws.cell(num_rows-1, 0))
             else:
                 message += '.'
             print message

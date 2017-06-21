@@ -2129,15 +2129,16 @@ class ReduceVulcanData(object):
                                'use has permission to write to directory {1}'.format(gsas_file_name, gsas_dir))
         # ---- end of section
 
+        # convert unit to TOF
+        mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
+                                  OutputWorkspace=reduced_ws_name,
+                                  Target="TOF",
+                                  EMode="Elastic",
+                                  AlignBins=False)
+
         # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
         if self._reductionSetup.align_bins_to_vdrive_standard:
             # align bins to VDrive standard for VDRIVE to analyze the data
-            mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                      OutputWorkspace=reduced_ws_name,
-                                      Target="TOF",
-                                      EMode="Elastic",
-                                      AlignBins=False)
-
             vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
 
             # save to Vuclan GSAS

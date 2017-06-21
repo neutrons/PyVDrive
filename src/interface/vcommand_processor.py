@@ -58,8 +58,6 @@ class VdriveCommandProcessor(object):
         """
         arg_dict = dict()
         for index, term in enumerate(command_args):
-            print '[DB] Input: ', term
-
             term = term.strip()
             if len(term) == 0:
                 # empty string. might appear at the end of the command

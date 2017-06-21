@@ -93,9 +93,9 @@ class VBin(procss_vcommand.VDriveCommand):
         'IPTS': 'IPTS number',
         'RUNE': 'First run number',
         'RUNS': 'Last run number',
-
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
         'OneBank': 'Add 2 bank data together (=1).',
+        'Mytofbmin': 'User defined TOF min in binning parameter',
         'Tag': '"Si/V" for instrument calibration.',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin'
     }
@@ -119,11 +119,11 @@ class VBin(procss_vcommand.VDriveCommand):
         # FOCUS_EW: TODO/FIXME : anything interesting?
 
         # check whether the any non-supported args
-        input_args = self._commandArgsDict.keys()
-        for arg_key in input_args:
-            if arg_key not in VBin.SupportedArgs:
-                raise KeyError('VBIN argument %s is not recognized.' % arg_key)
-        # END-FOF
+        # input_args = self._commandArgsDict.keys()
+        # for arg_key in input_args:
+        #     if arg_key not in VBin.SupportedArgs:
+        #         raise KeyError('VBIN argument %s is not recognized.' % arg_key)
+        # # END-FOF
 
         # check and set IPTS
         self.set_ipts()
@@ -135,7 +135,7 @@ class VBin(procss_vcommand.VDriveCommand):
             return False, 'Unable to parse run numbers due to {0}'.format(run_err)
 
         # Use result from CHOP?
-        if 'CHOPRUN' in input_args:
+        if 'CHOPRUN' in self._commandArgsDict:
             use_chop_data = True
             chop_run_number = int(self._commandArgsDict['CHOPRUN'])
         else:
@@ -146,7 +146,7 @@ class VBin(procss_vcommand.VDriveCommand):
         use_default_binning, binning_parameters = self.parse_binning()
 
         # RUNV
-        if 'RUNV' in input_args:
+        if 'RUNV' in self._commandArgsDict:
             van_run = int(self._commandArgsDict['RUNV'])
             assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
         else:
@@ -156,17 +156,17 @@ class VBin(procss_vcommand.VDriveCommand):
         standard_tuple = self.process_tag()
 
         # output directory
-        if 'OUTPUT' in input_args:
+        if 'OUTPUT' in self._commandArgsDict:
             output_dir = self._commandArgsDict['OUTPUT']
         else:
             output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
 
-        if 'FULLPROF' in input_args:
+        if 'FULLPROF' in self._commandArgsDict:
             output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
         else:
             output_fullprof = False
 
-        if 'ONEBANK' in input_args:
+        if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
         else:
             merge_to_one_bank = False

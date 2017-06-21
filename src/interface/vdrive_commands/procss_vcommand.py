@@ -29,7 +29,8 @@ class VDriveCommand(object):
     """
     Base class to process VDRIVE commands
     """
-    SupportedArgs = []
+    SupportedArgs = list()
+    ArgsDocDict = dict()
 
     def __init__(self, controller, command_args):
         """
@@ -49,8 +50,11 @@ class VDriveCommand(object):
         self._controller = controller
 
         # set arguments to command arguments dictionary: it is only set once here
-        self._commandArgsDict = command_args
-        print '[DB...BAT] Command Args: {0}'.format(command_args)
+        # and they must be capital
+        self._commandArgsDict = {command: command_args[command] for command in command_args}
+
+        # create a dictionary to compare the capital command arguments with VDrive argument
+        self._commandMapDict = {command.upper(): command for command in self.SupportedArgs}
 
         # other command variables
         self._iptsNumber = None   # IPTS
@@ -66,13 +70,15 @@ class VDriveCommand(object):
     def check_command_arguments(self, supported_arg_list):
         """ Check whether the command arguments are valid
         """
+        upper_args = [arg.upper() for arg in supported_arg_list]
+
         # check whether the any non-supported args
         input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
-            if arg_key not in supported_arg_list:
+            if arg_key not in upper_args:
                 error_message = 'Command %s\'s argument "%s" is not recognized. Supported ' \
                                 'arguments are %s.' % (self._commandName, arg_key, str(supported_arg_list))
-                print error_message
+                print '[ERROR] {0}'.format(error_message)
                 raise CommandKeyError(error_message)
         # END-FOF
 
@@ -98,36 +104,40 @@ class VDriveCommand(object):
         :return: 2-tuple: (1) flag whether binning parameter is default
                           (2) 3-tuple as TOF min, bin width, TOF max
         """
-        # TODO/ISSUE/NOWNOW/#71 - Rewrite this algorithm!!!
-        binning_parameters = None
+        # check input
+        if 'BINW' in self._commandArgsDict:
+            user_bin_width = float(self._commandArgsDict['BINW'])
+        else:
+            user_bin_width = None
 
-        if not ('BINW' in self._commandArgsDict or 'Mytofbmax' in self._commandArgsDict
-                or 'Mytofbmin' in self._commandArgsDict):
-            # using default binning parameters as VDRIVE standard
-            use_default_binning = True
+        if 'Mytofbmin'.upper() in self._commandArgsDict:
+            user_tof_min = float(self._commandArgsDict['Mytofbmin'.upper()])
+        else:
+            user_tof_min = None
 
-        elif 'BINW' in self._commandArgsDict and abs(self._commandArgsDict['BINW'] - 0.005) < 1.0E-7:
-            # Bin width is same as default
+        if 'Mytofbmax'.upper() in self._commandArgsDict:
+            user_tof_max = float(self._commandArgsDict['Mytofbmax'.upper()])
+        else:
+            user_tof_max = None
+
+        # get default setup
+        if user_tof_min is None and user_tof_max is None and user_bin_width is None:
+            # none of the 3 parameters is given. use default binning
             use_default_binning = True
+            binning_parameters = None
 
         else:
+            # parse by set up the default value
             use_default_binning = False
-            if 'BINW' in self._commandArgsDict:
-                bin_width = float(self._commandArgsDict['BINW'])
-            else:
-                bin_width = 0.005  # set to default in case only TOF range is customized
 
-            if 'Mytofbmax' in self._commandArgsDict:
-                tof_max = float(self._commandArgsDict['Mytofbmax'])
-            else:
-                tof_max = None
+            if user_bin_width is None:
+                user_bin_width = 0.005   # set to default in case only TOF range is customized value
+            if user_tof_min is None:
+                user_tof_min = 5000.
+            if user_tof_max is None:
+                user_tof_max = 50000.
 
-            if 'Mytofbmin' in self._commandArgsDict:
-                tof_min = float(self._commandArgsDict['Mytofbmin'])
-            else:
-                tof_min = None
-
-            binning_parameters = (tof_min, bin_width, tof_max)
+            binning_parameters = (user_tof_min, user_bin_width, user_tof_max)
         # END-IF-ELSE
 
         return use_default_binning, binning_parameters
