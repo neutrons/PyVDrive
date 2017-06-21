@@ -119,6 +119,34 @@ def calculate_vulcan_resolution(d, delta_d):
     return fwhm
 
 
+def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
+    """
+    calculate a peak's integral intensity by removing a linear background
+    A = int f(x) dx = sum f(x) dx
+    :param vec_d:
+    :param vec_y:
+    :param left_x_index:
+    :param right_x_index:
+    :param bkgd_a:
+    :param bkgd_b:
+    :return:
+    """
+    import numpy
+    # check input:
+    assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
+    assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
+    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+        raise RuntimeError('Vector of D and vector of Y have different size.')
+    if left_x_index >= right_x_index:
+        raise RuntimeError('Left X index cannot be equal or larger than right X index')
+    if left_x_index < 0:
+        raise RuntimeError('Left X index cannot be negative')
+    if right_x_index >= len(vec_d):
+        raise RuntimeError('Right X index cannot be over limit of vector of D')
+    
+
+
+
 def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     """
     put a series of peaks into peak group for GSAS refinement
@@ -177,3 +205,4 @@ def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     # END-FOR
 
     return peak_group
+
