@@ -1,4 +1,5 @@
 # This module contains algorithms to process peaks
+import numpy
 
 
 class PeakGroupCollection(object):
@@ -126,12 +127,49 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
     :param vec_d:
     :param vec_y:
     :param left_x_index:
-    :param right_x_index:
+    :param right_x_index: not included
     :param bkgd_a:
     :param bkgd_b:
     :return:
     """
-    import numpy
+    # check input:
+    assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
+    assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
+    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+        raise RuntimeError('Vector of D and vector of Y have different size.')
+    if left_x_index >= right_x_index:
+        raise RuntimeError('Left X index cannot be equal or larger than right X index')
+    if left_x_index < 0:
+        raise RuntimeError('Left X index cannot be negative')
+    if right_x_index > len(vec_d):
+        raise RuntimeError('Right X index cannot be over limit of vector of D')
+
+    # use numpy vector to solve the issue
+    sub_d = vec_d[left_x_index:right_x_index]
+    delta_d = vec_d[left_x_index:right_x_index] - vec_d[left_x_index-1:right_x_index-1]
+
+    sub_y = vec_y[left_x_index:right_x_index]
+
+    # remove background
+    # sub_b = numpy.ndarray(shape=sub_y.shape, dtype='double')
+    sub_b = sub_d * bkgd_a + bkgd_b
+
+    peak_integral = numpy.sum(sub_y - sub_b) * delta_d
+
+    return peak_integral
+
+
+def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
+    """
+    mu = 1/A \int x f(x) dx = 1/A \sum x * f(x) * delta(x)
+    :param vec_d:
+    :param vec_y:
+    :param left_x_index:
+    :param right_x_index:
+    :param bkgd_a:
+    :param bkgd_b:
+    :return: 2-tuple: peak intensity, average d space
+    """
     # check input:
     assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
     assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
@@ -143,8 +181,55 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
         raise RuntimeError('Left X index cannot be negative')
     if right_x_index >= len(vec_d):
         raise RuntimeError('Right X index cannot be over limit of vector of D')
-    
 
+    peak_integral = calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
+                                                      bkgd_a, bkgd_b)
+
+    sub_d = vec_d[left_x_index:right_x_index]
+    sub_y = vec_y[left_x_index:right_x_index]
+    vec_dx = vec_d[left_x_index:right_x_index] - vec_d[left_x_index-1:right_x_index-1]
+
+    mu = numpy.sum(sub_d * sub_y * vec_dx) / peak_integral
+
+    return peak_integral, mu
+
+
+def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, bkgd_b):
+    """
+    var = \int (x-mu)**2 f(x) dx = \sum (x-mu)**2 * f(x) * dx
+    :param vec_d:
+    :param vec_y:
+    :param left_x_index:
+    :param right_x_index:
+    :param bkgd_a:
+    :param bkgd_b:
+    :return: 3-tuple: peak integral, average d-space, variance
+    """
+    # check input:
+    assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
+    assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
+    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+        raise RuntimeError('Vector of D and vector of Y have different size.')
+    if left_x_index >= right_x_index:
+        raise RuntimeError('Left X index cannot be equal or larger than right X index')
+    if left_x_index < 0:
+        raise RuntimeError('Left X index cannot be negative')
+    if right_x_index >= len(vec_d):
+        raise RuntimeError('Right X index cannot be over limit of vector of D')
+
+    # calculate peak integral and average d-spacing
+    peak_integral, average_d_space = calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index,
+                                                                    bkgd_a, bkgd_b)
+
+    # get sub vector for calculation
+    sub_d = vec_d[left_x_index:right_x_index]
+    sub_y = vec_y[left_x_index:right_x_index]
+    vec_dx = vec_d[left_x_index:right_x_index] - vec_d[left_x_index-1:right_x_index-1]
+
+    # calculate variance
+    variance = numpy.sum(numpy.power(sub_d - average_d_space, 2) * sub_y * vec_dx)
+
+    return peak_integral, average_d_space, variance
 
 
 def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
@@ -205,4 +290,3 @@ def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     # END-FOR
 
     return peak_group
-

@@ -456,7 +456,6 @@ class VdriveChop(VDriveCommand):
                                                                chop_loadframe_log=chop_load_frame,
                                                                chop_furnace_log=chop_furnace_log)
 
-
             elif time_step is not None:
                 # chop by time and reduce
                 status, message = self.chop_data_by_time(run_number=run_number,
