@@ -310,10 +310,10 @@ class ReductionSetup(object):
             bin_param_str = '5000., -0.001, 50000.'
         elif len(self._binningParameters) == 1:
             # only bin size is defined
-            bin_param_str = '{0}, {1}, {2}'.format(5000., self._binningParameters[0], 50000.)
+            bin_param_str = '{0}, {1}, {2}'.format(5000., -1*abs(self._binningParameters[0]), 50000.)
         elif len(self._binningParameters) == 3:
             # 3 are given
-            bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], self._binningParameters[1],
+            bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], -1*abs(self._binningParameters[1]),
                                                    self._binningParameters[2])
         else:
             # error case
@@ -768,7 +768,7 @@ class ReductionSetup(object):
 
         return
 
-    def set_binning_parameters(self, min_tof, max_tof, bin_size):
+    def set_binning_parameters(self, min_tof, bin_size, max_tof):
         """
 
         :param min_tof:
@@ -1519,15 +1519,17 @@ class ReduceVulcanData(object):
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
 
-        # reduce and write to GSAS file
+        # reduce and write to GSAS file ... it is reduced HERE!
         is_reduce_good, msg_gsas, reduced_ws_name = self.reduce_powder_diffraction_data()
+
+        # post process
         if not is_reduce_good and msg_gsas.count('Code001') == 0:
             # error code: Code001 does not mean a bad reduction
             return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
         if self._reductionSetup.is_standard:
             # standard sample for VULCAN
             gsas_file = self.get_reduced_files()[0]
-            print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
+            # print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
@@ -2077,12 +2079,20 @@ class ReduceVulcanData(object):
                 raw_event_file = event_file_name
             # END-IF
 
+            # set up binning parameters
+            if self._reductionSetup.align_bins_to_vdrive_standard:
+                binning_parameter = "-0.001"
+            else:
+                binning_parameter = self._reductionSetup.binning_parameters
+
+            # TODO/ISSUE/NOWNOW - value for 'BinInDpsace' should be set up according to binning parameters
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             # CalibrationFile=CalibrationFileName,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
                                             CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
-                                            Binning="-0.001",
+                                            Binning=binning_parameter,
+                                            BinInDspace=False,
                                             SaveAS="",
                                             OutputDirectory=self._reductionSetup.get_gsas_dir(),
                                             NormalizeByCurrent=False,
@@ -2105,6 +2115,7 @@ class ReduceVulcanData(object):
             return False, str(run_err), None
         except AssertionError as ass_err:
             return False, str(ass_err), None
+        # END-IF-ELSE
 
         # get the output directory for GSAS file
         # TODO/ISSUE/NOWNOW/#71: this section can be put to a method
@@ -2171,6 +2182,7 @@ class ReduceVulcanData(object):
             # write to GSAS file with Mantid bins
             mantidsimple.SaveGSS(InputWorkspace=reduced_ws_name,
                                  Filename=gsas_file_name)
+            print '[DB...BAT] User binning reduecd workspace name: {0}'.format(reduced_ws_name)
             vdrive_bin_ws_name = reduced_ws_name
 
         # END-IF-ELSE

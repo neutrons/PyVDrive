@@ -17,17 +17,22 @@ class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR', 'SHOW',
+                     'PEAK', 'OUTPUT']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
         'CHOPRUN': 'Run number of the chopped run.',
-        'MinV': 'Minimum X value to plot',
-        'MaxV': 'Maximum X value to plot',
+        'MINV': 'Minimum X value to plot',
+        'MAXV': 'Maximum X value to plot',
         'NORM': 'Do normalize to the reduced data',
-        'DIR': 'User specified directory to find the reduced data (including those being chopped)'
+        'DIR': 'User specified directory to find the reduced data (including those being chopped)',
+        'PEAK': 'Integrate peak and output value',
+        'OUTPUT': 'Name of the output file',
+        # TODO/ISSUE/NOWNOW - Implement this 'SHOW'
+        'SHOW': 'Launch the reduced-data viewer'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -117,10 +122,10 @@ class VdriveView(VDriveCommand):
             self._figureDimension = 2
 
         # min and max value
-        if 'MinV' in self._commandArgsDict:
-            self._minX = float(self._commandArgsDict['MinV'])
-        if 'MaxV' in self._commandArgsDict:
-            self._maxX = float(self._commandArgsDict['MaxV'])
+        if 'MINV' in self._commandArgsDict:
+            self._minX = float(self._commandArgsDict['MINV'])
+        if 'MAXV' in self._commandArgsDict:
+            self._maxX = float(self._commandArgsDict['MAXV'])
 
         # Normalized?
         if 'NORM' in self._commandArgsDict:

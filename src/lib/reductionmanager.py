@@ -784,7 +784,6 @@ class ReductionManager(object):
             reduction_setup.set_align_vdrive_bin(False)
         else:
             reduction_setup.set_align_vdrive_bin(True)
-
         # END-IF
 
         # vanadium

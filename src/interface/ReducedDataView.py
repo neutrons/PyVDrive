@@ -49,7 +49,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # current status
         self._iptsNumber = None
-        self._runNumberList = None
+        self._runNumberList = list()
 
         self._currRunNumber = None
         self._currChoppedData = False
@@ -1080,20 +1080,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         if bank_id not in self._reducedDataDict[data_key]:
             raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
                                ''.format(bank_id, type(bank_id), data_key, self._reducedDataDict[data_key].keys()))
-
-        # # check other inputs
-        # if color is None:
-        #     bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
-        # else:
-        #     assert isinstance(color, str), 'Color {0} must be either None or string but not a {1}.' \
-        #                                    ''.format(color, type(color))
-        #     bank_color = color
-
-        # # clear canvas
-        # if clear_previous:
-        #     # clear canvas and set X limit to 0. and 1.
-        #     self.ui.graphicsView_mainPlot.reset_1d_plots()
-
         # get data and unit
         self._currUnit = str(self.ui.comboBox_unit.currentText())
         status, error_message = self.load_reduced_data(run_number=data_key, unit=self._currUnit)
@@ -1104,14 +1090,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         vec_y = self._reducedDataDict[data_key][bank_id][1]
 
         # plot
+        print '[DB...BAT] Check Unit = {0}, X Range = {1}, {2}'.format(self._currUnit, self._minX,
+                                                                       self._maxX)
+
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                                       over_plot=not clear_previous,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None)
-        # line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
-        #                                                      line_key=data_key, title=title, line_color=bank_color)
 
         self.ui.graphicsView_mainPlot.auto_rescale()
+        self.ui.graphicsView_mainPlot.setXYLimit(self._minX, self._maxX)
 
         # check the bank ID list
         if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):

@@ -208,7 +208,6 @@ class VBin(procss_vcommand.VDriveCommand):
             self._controller.set_runs_to_reduce(run_number_list)
 
             # reduce by regular runs
-            # TODO/FIXME/NOW - Binning parameters
             status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                merge_banks=merge_to_one_bank,
                                                                vanadium=(van_run is not None),
