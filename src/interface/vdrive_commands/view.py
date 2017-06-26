@@ -18,7 +18,7 @@ class VdriveView(VDriveCommand):
     Process command VIEW or VDRIVEVIEW
     """
     SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR', 'SHOW',
-                     'PEAK', 'OUTPUT']
+                     'PEAK']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -29,8 +29,8 @@ class VdriveView(VDriveCommand):
         'MAXV': 'Maximum X value to plot',
         'NORM': 'Do normalize to the reduced data',
         'DIR': 'User specified directory to find the reduced data (including those being chopped)',
-        'PEAK': 'Integrate peak and output value',
-        'OUTPUT': 'Name of the output file',
+        'PEAK': 'Integrate peak and output value. PEAK=1: output to console. Otherwise, output '
+                'to the file name',
         # TODO/ISSUE/NOWNOW - Implement this 'SHOW'
         'SHOW': 'Launch the reduced-data viewer'
     }
@@ -67,6 +67,9 @@ class VdriveView(VDriveCommand):
         self._maxX = None  # maximum X value to plot
         self._normalizeData = False  # whether the data will be normalized
         self._unit = 'dSpacing'  # unit
+
+        self._peakValueFileName = None
+        self._outputPeakValueToConsole = False
 
         return
 
@@ -122,10 +125,14 @@ class VdriveView(VDriveCommand):
             self._figureDimension = 2
 
         # min and max value
+        has_min = False
+        has_max = False
         if 'MINV' in self._commandArgsDict:
             self._minX = float(self._commandArgsDict['MINV'])
+            has_min = True
         if 'MAXV' in self._commandArgsDict:
             self._maxX = float(self._commandArgsDict['MAXV'])
+            has_max = True
 
         # Normalized?
         if 'NORM' in self._commandArgsDict:
@@ -135,6 +142,21 @@ class VdriveView(VDriveCommand):
             else:
                 self._normalizeData = False
         # END-IF
+
+        # Calculate peak parameters
+        if 'PEAK' in self._commandArgsDict:
+            peak_str = str(self._commandArgsDict['PEAK']).strip()
+            if peak_str != '0':
+                # check
+                if not (has_min and has_max):
+                    return False, 'PEAK = {0}. Both MinV and MaxV must be specified.'.format(peak_str)
+                if peak_str == '1':
+                    self._outputPeakValueToConsole = True
+                    self._peakValueFileName = None
+                else:
+                    self._peakValueFileName = peak_str
+                    self._outputPeakValueToConsole = False
+        # END-IF ('PEAK')
 
         # determine unit according to MinV or MaxV
         if self._maxX is not None:
@@ -151,6 +173,14 @@ class VdriveView(VDriveCommand):
                 self._unit = 'dSpacing'
 
         return True, ''
+
+    @property
+    def do_calculate_peak_parameter(self):
+        """
+        blabla
+        :return:
+        """
+        return self._outputPeakValueToConsole or self._peakValueFileName is not None
 
     @property
     def is_1_d(self):
@@ -240,6 +270,22 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._reducedDataDir
+
+    @property
+    def output_peak_parameters_to_console(self):
+        """
+        blabla
+        :return:
+        """
+        return self._outputPeakValueToConsole
+
+    @property
+    def peak_parameters_file(self):
+        """
+        blabla
+        :return:
+        """
+        return self._peakValueFileName
 
     @property
     def unit(self):

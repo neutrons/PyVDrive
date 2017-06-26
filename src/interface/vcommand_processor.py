@@ -261,6 +261,16 @@ class VdriveCommandProcessor(object):
             view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
         # END-FOR
 
+        # write out the peak parameters
+        if processor.do_calculate_peak_parameter:
+            ipts_number, run_number_list = processor.get_ipts_runs()
+            message = self._myController.calculate_peak_parameters(ipts_number, run_number_list,
+                                                         processor.x_min, processor.x_max,
+                                                         processor.output_peak_parameters_to_console,
+                                                         processor.peak_parameters_file)
+            status = True
+        # END-IF-ELSE
+
         return status, message
 
     def _process_vanadium_peak(self, arg_dict):

@@ -133,6 +133,26 @@ class VDriveAPI(object):
 
         return True, ''
 
+    def calculate_peak_parameters(self, ipts_number, run_number_list, x_min, x_max, write_to_console,
+                                  output_file):
+        """
+
+        :param ipts_number:
+        :param run_number_list:
+        :param x_min:
+        :param x_max:
+        :param write_to_console:
+        :param output_file:
+        :return:
+        """
+        try:
+            message = self._myProject.calculate_peaks_parameter(ipts_number, run_number_list, x_min, x_max, write_to_console,
+                                                  output_file)
+        except RuntimeError as run_err:
+            return False, '{0}'.format(run_err)
+
+        return True, message
+
     @staticmethod
     def calculate_peaks_position(phase, min_d, max_d):
         """

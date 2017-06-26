@@ -94,6 +94,54 @@ class ProjectManager(object):
 
         return
 
+    # TODO/ISSUE/NOWNOW - clean and docs.
+    def calculate_peaks_parameter(self, ipts_number, run_number_list, x_min, x_max, to_console, file_name):
+        """
+
+        :return:
+        """
+        import peak_util
+        import numpy
+        output_str = ''
+
+        for run_number in run_number_list:
+            if self.has_reduced_workspace(ipts_number, run_number):
+                # TODO/ISSUE/NOW/71
+                raise NotImplementedError('Think of how to do it?')
+            else:
+                # from loaded data manager
+                ws_key = '{0}_gsas'.format(run_number)
+                if self.data_loading_manager.has_data(data_key=ws_key) is False:
+                    return False, 'Data not found'
+            # END
+
+            if x_max < 100:
+                unit = 'dSpacing'
+            else:
+                unit = 'TOF'
+            data_set, unit = mantid_helper.get_data_from_workspace(ws_key, target_unit=unit, start_bank_id=1)
+
+            for bank_id in data_set.keys():
+                vec_d = data_set[bank_id][0]
+                vec_y = data_set[bank_id][1]
+
+                min_x_index = max(0, numpy.searchsorted(vec_d, x_min)-1)
+                max_x_index = min(len(vec_y), numpy.searchsorted(vec_d, x_max)+1)
+
+                # TODO/ISSUE/NOWNOW - Need scipy fit
+                bkgd_a = 0.
+                bkgd_b = 1.
+
+                peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index, max_x_index, bkgd_a, bkgd_b)
+
+                print peak_integral, average_d, variance
+
+        # END-FOR
+
+        # END-FOR
+
+        return True, output_str
+
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
