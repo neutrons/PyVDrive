@@ -8,6 +8,8 @@ import reductionmanager as prl
 import archivemanager
 import loaded_data_manager
 import vanadium_utility
+import peak_util
+import numpy
 
 
 class ProjectManager(object):
@@ -94,33 +96,61 @@ class ProjectManager(object):
 
         return
 
-    # TODO/ISSUE/NOWNOW - clean and docs.
     def calculate_peaks_parameter(self, ipts_number, run_number_list, x_min, x_max, to_console, file_name):
-        """
+        """Calculate a peak or several overlapped peaks' parameters
 
-        :return:
-        """
-        import peak_util
-        import numpy
-        output_str = ''
+        These parameters include integral intensity, average d-spacing and variance
 
+        :except RuntimeError:
+        :param ipts_number: None or integer.  None if by run number it is able to locate workspace
+        :param run_number_list:
+        :param x_min:
+        :param x_max:
+        :param to_console:
+        :param file_name:
+        :return: a dictionary of strings as formed message. key = bank ID
+        """
+        # check inputs' types
+        assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0} must be either ' \
+                                                                    'integer or None.'.format(ipts_number)
+        assert isinstance(run_number_list, list), 'Run numbers must be given as list.'
+        assert isinstance(x_min, float) and isinstance(x_max, float),\
+            'Min X {0} and Max X {1} must be integers.'.format(x_min, x_max)
+
+        # check inputs' logic
+        if x_min >= x_max:
+            raise RuntimeError('Min X {0} cannot be equal or larger than Max X {1}'.format(x_min, x_max))
+        if not to_console and not file_name:
+            raise RuntimeError('At least one in to_console and file name should be specified')
+
+        # determine units
+        if x_max < 100:
+            unit = 'dSpacing'
+        else:
+            unit = 'TOF'
+
+        # loop over run numbers
+        output_dict = dict()
+        error_str = ''
         for run_number in run_number_list:
             if self.has_reduced_workspace(ipts_number, run_number):
                 # TODO/ISSUE/NOW/71
                 raise NotImplementedError('Think of how to do it?')
             else:
                 # from loaded data manager
-                ws_key = '{0}_gsas'.format(run_number)
-                if self.data_loading_manager.has_data(data_key=ws_key) is False:
-                    return False, 'Data not found'
+                # TODO/ISSUE/FUTURE/71 There should be a better data objects to look for loaded data
+                gsas_ws_name = '{0}_gsas'.format(run_number)
+                if self.data_loading_manager.has_data(data_key=gsas_ws_name) is False:
+                    error_str += 'IPTS {0} run {1} is not either reduced or loaded' \
+                                 ''.format(ipts_number, run_number)
+                    continue
             # END
 
-            if x_max < 100:
-                unit = 'dSpacing'
-            else:
-                unit = 'TOF'
-            data_set, unit = mantid_helper.get_data_from_workspace(ws_key, target_unit=unit, start_bank_id=1)
+            # get data set
+            data_set, unit = mantid_helper.get_data_from_workspace(gsas_ws_name, target_unit=unit,
+                                                                   start_bank_id=1)
 
+            # get data and calculate
             for bank_id in data_set.keys():
                 vec_d = data_set[bank_id][0]
                 vec_y = data_set[bank_id][1]
@@ -128,19 +158,34 @@ class ProjectManager(object):
                 min_x_index = max(0, numpy.searchsorted(vec_d, x_min)-1)
                 max_x_index = min(len(vec_y), numpy.searchsorted(vec_d, x_max)+1)
 
-                # TODO/ISSUE/NOWNOW - Need scipy fit
-                bkgd_a = 0.
-                bkgd_b = 1.
+                # estimate background
+                bkgd_a, bkgd_b = peak_util.estimate_background(vec_d, vec_y, min_x_index, max_x_index)
 
-                peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index, max_x_index, bkgd_a, bkgd_b)
+                # calculate peak intensity parameters
+                peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
+                                                                                       max_x_index, bkgd_a, bkgd_b)
 
-                print peak_integral, average_d, variance
+                if bank_id not in output_dict:
+                    output_dict[bank_id] = ''
+                output_dict[bank_id] += '{0}\t{1}\t{2}\t{3}\n'.format(run_number, peak_integral, average_d, variance)
+            # END-FOR
+        # END-FOR (run start)
 
-        # END-FOR
+        # output
+        if file_name is not None:
+            base_name, extension = os.path.splitext(file_name)
+            for bank_id in output_dict.keys():
+                sub_file_name = '{0}_bank{1}{2}'.format(base_name, bank_id, extension)
+                try:
+                    sub_file = open(sub_file_name, 'w')
+                    sub_file.write(output_dict[bank_id])
+                    sub_file.close()
+                except IOError as io_err:
+                    raise RuntimeError('Unable to write to file {0} due to {1}'.format(sub_file_name, io_err))
+            # END-FOR
+        # END-IF
 
-        # END-FOR
-
-        return True, output_str
+        return output_dict
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
