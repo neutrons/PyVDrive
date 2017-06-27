@@ -264,11 +264,16 @@ class VdriveCommandProcessor(object):
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:
             ipts_number, run_number_list = processor.get_ipts_runs()
-            message = self._myController.calculate_peak_parameters(ipts_number, run_number_list,
-                                                         processor.x_min, processor.x_max,
-                                                         processor.output_peak_parameters_to_console,
-                                                         processor.peak_parameters_file)
-            status = True
+            status, ret_obj = self._myController.calculate_peak_parameters(ipts_number, run_number_list,
+                                                                           processor.x_min, processor.x_max,
+                                                                           processor.output_peak_parameters_to_console,
+                                                                           processor.peak_parameters_file)
+            if status:
+                message = ''
+                for bank_id in ret_obj.keys():
+                    message += 'Bank {0}\n{1}\n'.format(bank_id, ret_obj[bank_id])
+            else:
+                message = ret_obj
         # END-IF-ELSE
 
         return status, message
