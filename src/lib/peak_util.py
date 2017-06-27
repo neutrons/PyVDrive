@@ -296,42 +296,43 @@ def group_peaks_to_fit(peak_tuple_list, resolution, fit_range_factor):
     return peak_group
 
 
-if __name__ == '__main__':
-    def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
-        """Estimate background
+def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
+    """Estimate background
 
-        by assuming that the left and right boundaries have enough distance to peak
-        :param vec_d:
-        :param vec_y:
-        :param min_x_index:
-        :param max_x_index:
-        :return:
-        """
-        # check inputs' types
-        assert isinstance(vec_d, numpy.ndarray), 'Vector of dSpacing must be numpy.ndarray'
-        assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be numpy.ndarray'
+    by assuming that the left and right boundaries have enough distance to peak
+    :param vec_d:
+    :param vec_y:
+    :param min_x_index:
+    :param max_x_index:
+    :return:
+    """
+    # check inputs' types
+    assert isinstance(vec_d, numpy.ndarray), 'Vector of dSpacing must be numpy.ndarray'
+    assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be numpy.ndarray'
 
-        # form the vector to fit with linear background
-        list_x = list()
-        list_y = list()
-        for index in range(-1, 2):
-            x_index = min_x_index + index
-            if x_index > 0:
-                list_x.append(vec_d[x_index])
-                list_y.append(vec_y[x_index])
-        # END-FOR
-        for index in range(-1, 2):
-            x_index = max_x_index + index
-            if x_index < len(vec_d):
-                list_x.append(vec_d[x_index])
-                list_y.append(vec_y[x_index])
-        # END-FOR
+    # form the vector to fit with linear background
+    list_x = list()
+    list_y = list()
+    for index in range(-1, 2):
+        x_index = min_x_index + index
+        if x_index > 0:
+            list_x.append(vec_d[x_index])
+            list_y.append(vec_y[x_index])
+    # END-FOR
+    for index in range(-1, 2):
+        x_index = max_x_index + index
+        if x_index < len(vec_d):
+            list_x.append(vec_d[x_index])
+            list_y.append(vec_y[x_index])
+    # END-FOR
 
-        d_fit_vec = numpy.array(list_x)
-        y_fit_vec = numpy.array(list_y)
+    d_fit_vec = numpy.array(list_x)
+    y_fit_vec = numpy.array(list_y)
 
-        # fit for linear background
-        # TODO/NOW/ISSUE/71
+    # fit for linear background, i.e, order = 1
+    vec_bkgd = numpy.polyfit(d_fit_vec, y_fit_vec, 1)
+    bkgd_a = vec_bkgd[0]
+    bkgd_b = vec_bkgd[1]
 
-        return
+    return bkgd_a, bkgd_b
 
