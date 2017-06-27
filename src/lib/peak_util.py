@@ -189,9 +189,10 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
 
     sub_d = vec_d[left_x_index:right_x_index]
     sub_y = vec_y[left_x_index:right_x_index]
+    vec_back = sub_d * bkgd_a + bkgd_b
     vec_dx = vec_d[left_x_index:right_x_index] - vec_d[left_x_index-1:right_x_index-1]
 
-    mu = numpy.sum(sub_d * sub_y * vec_dx) / peak_integral
+    mu = numpy.sum(sub_d * (sub_y - vec_back) * vec_dx) / peak_integral
 
     print '[DB...BAT] Peak average d = {0}'.format(mu)
 
