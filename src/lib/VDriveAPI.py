@@ -1765,7 +1765,6 @@ class VDriveAPI(object):
                                                                        chop_period, reduce_data, vanadium,
                                                                        save_chopped_nexus, output_dir, export_log_type)
 
-
         return status, message
 
     def set_focus_calibration_file(self, calibration_file):

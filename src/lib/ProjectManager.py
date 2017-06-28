@@ -134,11 +134,10 @@ class ProjectManager(object):
         error_str = ''
         for run_number in run_number_list:
             if self.has_reduced_workspace(ipts_number, run_number):
-                # TODO/ISSUE/NOW/71
-                raise NotImplementedError('Think of how to do it?')
+                # get workspace from reduced
+                gsas_ws_name = self.get_reduced_workspace(ipts_number, run_number=run_number)
             else:
                 # from loaded data manager
-                # TODO/ISSUE/FUTURE/71 There should be a better data objects to look for loaded data
                 gsas_ws_name = '{0}_gsas'.format(run_number)
                 if self.data_loading_manager.has_data(data_key=gsas_ws_name) is False:
                     error_str += 'IPTS {0} run {1} is not either reduced or loaded' \
@@ -696,11 +695,11 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        workspace_name = None
-
         if (ipts_number, run_number) in self._loadedDataDict:
+            # get workspace's name from loaded gsas file
             workspace_name = self._loadedDataDict[ipts_number, run_number]
         else:
+            # get workspace's name from reduction
             workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
 
         if workspace_name is None:
