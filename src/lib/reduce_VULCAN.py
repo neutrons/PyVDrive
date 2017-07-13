@@ -691,7 +691,12 @@ class ReductionSetup(object):
         mantid.config.setDataSearchDirs(";".join(data_search_path))
 
         # parse the run number file name is in form as VULCAN_RUNNUBER_event.nxs
-        self._runNumber = int(self._eventFileName.split('_')[1])
+        if self._vulcanBinsFileName.lower().endswith('.h5'):
+            # name: VULCAN_run.nxs.h5
+            self._runNumber = int(self._eventFileName.split('.')[0].split('_')[1])
+        else:
+            # name: VULCAN_run_event.nxs
+            self._runNumber = int(self._eventFileName.split('_')[1])
 
         # parse IPTS from NeXus directory: as /SNS/.../IPTS-XXX/...
         if self._nexusDirectory.count('IPTS') == 1:
