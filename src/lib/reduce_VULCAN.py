@@ -691,7 +691,7 @@ class ReductionSetup(object):
         mantid.config.setDataSearchDirs(";".join(data_search_path))
 
         # parse the run number file name is in form as VULCAN_RUNNUBER_event.nxs
-        if self._vulcanBinsFileName.lower().endswith('.h5'):
+        if self._eventFileName.lower().endswith('.h5'):
             # name: VULCAN_run.nxs.h5
             self._runNumber = int(self._eventFileName.split('.')[0].split('_')[1])
         else:
