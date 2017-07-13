@@ -238,13 +238,28 @@ class DataArchiveManager(object):
         :param check_file_exist: if file is not found, raise RuntimeError()
         :return:
         """
-        # build the path
+        # build the path: for the pre-nED NeXus file
         base_name = 'VULCAN_{0}_event.nxs'.format(run_number)
         sub_path = os.path.join('IPTS-{0}/0/{1}/NeXus'.format(ipts_number, run_number), base_name)
         raw_event_file_name = os.path.join(self._archiveRootDirectory, sub_path)
 
-        if check_file_exist and not os.path.exists(raw_event_file_name):
-            raise RuntimeError('Event NeXus file {0} is not found.'.format(raw_event_file_name))
+        if os.path.exists(raw_event_file_name):
+            # return if the NeXus file exists
+            pass
+
+        else:
+            # build the path for the nED NeXus file
+            base_name = 'VULCAN_{0}.nxs.h5'.format(run_number)
+            sns_path = os.path.join(self._archiveRootDirectory, 'IPTS-{0}/nexus'.format(ipts_number))
+            ned_event_file_name = os.path.join(sns_path, base_name)
+
+            if check_file_exist and not os.path.exists(ned_event_file_name):
+                raise RuntimeError('Event NeXus file {0} or {1} cannot be not found under IPTS-{2}.'
+                                   ''.format(ned_event_file_name, raw_event_file_name, ipts_number))
+            # END-IF (for checking)
+
+            raw_event_file_name = ned_event_file_name
+        # END-IF-ELSE
 
         # add the dictionary
         self._runIptsDict[run_number] = ipts_number
@@ -453,7 +468,8 @@ class DataArchiveManager(object):
         # locate file
         for run_number in sorted(run_number_list):
             # form file
-            nexus_file_name = os.path.join(ipts_dir, 'data/VULCAN_%d_event.nxs' % run_number)
+            nexus_file_name = self.get_event_file(ipts_number, run_number, check_file_exist=True)
+
             if os.path.exists(nexus_file_name):
                 # create a run information dictionary and put to information-buffering dictionaries
                 run_info = {'run': run_number,
