@@ -2,8 +2,9 @@
 #
 # Auto reduction script for VULCAN
 # Version 3.0 for both auto reduction service and manual
+# Version 4.0 (in test) for new nED (071_vbin_improve)
 #
-# Last version: reduce_VULCAN_141028.py
+# Last version: reduce_VULCAN_20170723.py
 #
 # Input
 # - Event file name with path
@@ -50,15 +51,19 @@ import sys
 import numpy
 import pandas as pd
 
-# sys.path.append("/opt/mantidnightly/bin")
+sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 
-refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
+# TODO/ISSUE/NOW - Need to use a date to find out calibration files .../2011_1_7_CAL
+refLogTofFilename = None
+CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_24.h5'
+CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
+# refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
+# CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
+# CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
 
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
@@ -377,8 +382,10 @@ class ReductionSetup(object):
                              '' % self._eventFileFullPath
 
         # focusing file
-        for file_name in [self._focusFileName, self._characterFileName, self._vulcanBinsFileName]:
+        for file_name in [self._focusFileName, self._characterFileName]:
             if not os.path.exists(file_name):
+                error_message += 'Calibration file %s cannot be found.\n' % file_name
+	if self._vulcanBinsFileName is not None and os.path.exists(file_name) is False:
                 error_message += 'Calibration file %s cannot be found.\n' % file_name
 
         # GSAS file
@@ -691,12 +698,12 @@ class ReductionSetup(object):
         mantid.config.setDataSearchDirs(";".join(data_search_path))
 
         # parse the run number file name is in form as VULCAN_RUNNUBER_event.nxs
-        if self._eventFileName.lower().endswith('.h5'):
-            # name: VULCAN_run.nxs.h5
-            self._runNumber = int(self._eventFileName.split('.')[0].split('_')[1])
-        else:
-            # name: VULCAN_run_event.nxs
+        # FIXME/TODO/NOW - ValueError: invalid literal for int() with base 10: '151206.nxs.h5'
+        if self._eventFileName.endswith('.xns'):
             self._runNumber = int(self._eventFileName.split('_')[1])
+        else:
+	    # '151206.nxs.h5'
+	    self._runNumber = int(self._eventFileName.split('_')[1].split('.')[0])
 
         # parse IPTS from NeXus directory: as /SNS/.../IPTS-XXX/...
         if self._nexusDirectory.count('IPTS') == 1:
@@ -907,7 +914,8 @@ class ReductionSetup(object):
         """
         self.set_focus_file(CalibrationFileName)
         self.set_charact_file(CharacterFileName)
-        self.set_vulcan_bin_file(refLogTofFilename)
+        if refLogTofFilename is not None:
+	    self.set_vulcan_bin_file(refLogTofFilename)
 
         return
 
@@ -1646,10 +1654,16 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        patcher = PatchRecord(self._instrumentName,
-                              self._reductionSetup.get_ipts_number(),
-                              self._reductionSetup.get_run_number())
-        patch_list = patcher.export_patch_list()
+        try:
+            patcher = PatchRecord(self._instrumentName,
+                                  self._reductionSetup.get_ipts_number(),
+                                  self._reductionSetup.get_run_number())
+            patch_list = patcher.export_patch_list()
+	except RuntimeError as run_err:
+	    # nED: not preNeXus log file for patching
+	    # TODO/ISSUE/NOW - Need to use a date for run number to identify whether the data is collected by nED or with preNeXus
+	    print ('[Warning] {0}'.format(run_err))
+	    patch_list = list()
 
         # define over all message
         return_status = True
