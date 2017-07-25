@@ -1038,6 +1038,30 @@ class VDriveAPI(object):
 
         return slicers
 
+    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data):
+        """
+        Load GSAS file from SNS archive
+        :param ipts_number:
+        :param run_number:
+        :param is_chopped_data:
+        :return:
+        """
+        # check
+        assert isinstance(is_chopped_data, bool), 'blabla'
+
+        # get data
+        if is_chopped_data:
+            # TODO/ISSUE/NOW - Not considered for chopped data
+            raise
+        else:
+            # single GSAS file
+            gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+
+            # load data
+            data_key = self.load_diffraction_file(gsas_file_name, 'gsas')
+
+        return data_key
+
     def load_chopped_diffraction_files(self, directory, chop_seq_list, file_type):
         """
         loaded chopped and reduced diffraction files

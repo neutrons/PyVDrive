@@ -72,6 +72,7 @@ ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), d
 
 
 # TODO/ISSUE/NOW - Test and apply!
+# TODO/Now - Remove all the debug output
 def get_auto_reduction_calibration_files(nexus_file_name):
     """
     get calibration files for auto reduction according to the date of the NeXus event file is generated
@@ -2133,18 +2134,17 @@ class ReduceVulcanData(object):
                                                          ' but not a {1}.'.format(event_file_name,
                                                                                   type(event_file_name))
                 raw_event_file = event_file_name
-            # END-IF
+            # END-IFG
 
             # set up binning parameters
             if self._reductionSetup.align_bins_to_vdrive_standard:
-                binning_parameter = "-0.001"
+                binning_parameter = "5000, -0.0005, 60000"
             else:
                 binning_parameter = self._reductionSetup.binning_parameters
 
             # TODO/ISSUE/NOWNOW - value for 'BinInDpsace' should be set up according to binning parameters
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
-                                            # CalibrationFile=CalibrationFileName,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
                                             CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
                                             Binning=binning_parameter,
@@ -2225,14 +2225,6 @@ class ReduceVulcanData(object):
                 # write again to a temporary directory
                 raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
                                    ''.format(gsas_file_name, value_err))
-                # gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
-                # output_access_error = True
-                # mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                #                            BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                #                            OutputWorkspace=vdrive_bin_ws_name,
-                #                            GSSFilename=gsas_file_name,
-                #                            IPTS=self._reductionSetup.get_ipts_number(),
-                #                            GSSParmFilename="Vulcan.prm")
 
         else:
             # write to GSAS file with Mantid bins

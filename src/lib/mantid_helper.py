@@ -1038,17 +1038,26 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     assert gss_ws is not None, 'Output workspace cannot be found.'
 
     # set instrument geometry: this is for VULCAN-only
-    if gss_ws.getNumberHistograms() == 2:
+    num_spec = gss_ws.getNumberHistograms()
+    if num_spec == 2:
+        # before nED, no high angle detector
         mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2',
                                                 L2='2.00944,2.00944',
                                                 Polar='90,270')
+    elif num_spec == 3:
+        # after nED, with high angle detector
+        mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
+                                                PrimaryFlightPath=43.753999999999998,
+                                                SpectrumIDs='1,2,3',
+                                                L2='2.0,2.0,2.0',
+                                                Polar='90,270,150')
     else:
         raise RuntimeError('It is not implemented for cases more than 2 spectra.')
 
     # convert unit and to point data
-    if standard_bin_workspace is not None:
+    if num_spec == 2:
         align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
