@@ -44,11 +44,13 @@
 ################################################################################
 import getopt
 import os
+import datetime
 import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
 import numpy
+import bisect
 import pandas as pd
 
 sys.path.append("/opt/mantidnightly/bin")
@@ -58,6 +60,41 @@ from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 
 # TODO/ISSUE/NOW - Need to use a date to find out calibration files .../2011_1_7_CAL
+
+
+CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
+                         '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
+                         '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
+                        ['/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_24.h5',
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                         None]]
+ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
+
+
+# TODO/ISSUE/NOW - Test and apply!
+def get_auto_reduction_calibration_files(nexus_file_name):
+    """
+    get calibration files for auto reduction according to the date of the NeXus event file is generated
+    :param nexus_file_name:
+    :return:
+    """
+    # check input
+    assert isinstance(nexus_file_name, str), 'Input event NeXus file {0} must be a string but not a {1}.' \
+                                             ''.format(nexus_file_name, type(nexus_file_name))
+    if os.path.exists(nexus_file_name) is False:
+        raise RuntimeError('Event NeXus file {0} does not exist or is not accessible.'.format(nexus_file_name))
+
+    # get the date of the NeXus file
+    event_file_time = datetime.datetime.fromtimestamp(os.path.getmtime(nexus_file_name))
+
+    # locate the position of the date in the list
+    char_index = bisect.bisect_left(ValidDateList, event_file_time)
+    if char_index < 0 or char_index >= len(ValidDateList):
+        raise RuntimeError('File date is out of range.')
+
+    return CalibrationFilesList[char_index]
+
+
 refLogTofFilename = None
 CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_24.h5'
 CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
