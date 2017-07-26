@@ -1211,11 +1211,10 @@ class VDriveAPI(object):
 
         return status, error_message
 
-    def reduce_data_set(self, auto_reduce, output_directory, merge_banks, background=False,
-                        vanadium=False, special_pattern=False,
+    def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
+                        background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        align_to_vdrive_bin=False,
                         merge_runs=False):
         """
         Reduce a set of data
@@ -1233,14 +1232,12 @@ class VDriveAPI(object):
                                            [3] a size-3 container as [TOF_min, Bin Size, TOF_max]
         :param background: boolean flag to subtract background
         :param vanadium: boolean flag to normalize by vanadium
-        :param special_pattern: boolean flag to normalize by special pattern
         :param record: boolean flag to output AutoRecord and etc.
         :param logs: boolean flag to output sample log files (MTS)
         :param gsas: boolean flag to produce GSAS files from reduced runs
         :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
-        :param align_to_vdrive_bin: flag to align the bining parameters to standard VDrive
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :return: 2-tuple (boolean, object)
         """
@@ -1264,18 +1261,18 @@ class VDriveAPI(object):
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
-            print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
+            # print '[INFO] (Auto) reduce data: IPTS = {0}, Runs = {1}.'.format(ipts_number, runs_to_reduce)
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
                                                       is_dry_run=False)
-            ret_obj = message
+            message = message
 
         else:
             # manual reduction: Reduce runs
-            print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
+            # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
             try:
-                status, ret_obj = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
+                status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
                                                               background=background,
                                                               vanadium=vanadium,
@@ -1290,7 +1287,7 @@ class VDriveAPI(object):
 
             except AssertionError as re:
                 status = False
-                ret_obj = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
+                message = '[ASSERTION ERROR] from reduce_runs due to %s' % str(re)
             # END-TRY-EXCEPT
         # END-IF-ELSE
 
@@ -1298,7 +1295,7 @@ class VDriveAPI(object):
         reduction_state_list = None
         self._myProject.mark_runs_reduced(runs_to_reduce, reduction_state_list)
 
-        return status, ret_obj
+        return status, message
 
     def reduce_auto_script(self, ipts_number, run_numbers, output_dir, is_dry_run):
         """
@@ -1353,7 +1350,7 @@ class VDriveAPI(object):
             if is_dry_run:
                 part_status, part_message = reducer.dry_run()
             else:
-                part_status, part_message = reducer.execute_vulcan_reduction()
+                part_status, part_message = reducer.execute_vulcan_reduction(output_logs=True)
 
             # contribute the overall message
             status = status and part_status

@@ -997,8 +997,6 @@ class ProjectManager(object):
         # check input
         assert isinstance(run_number_list, list), 'Run number must be a list.'
 
-        print '[DB...BAT] Merge banks = ', merge_banks
-
         reduce_all_success = True
         message = ''
 
@@ -1018,7 +1016,7 @@ class ProjectManager(object):
                         vanadium_tuple = van_run, van_gda, vanadium_tag
                     except KeyError:
                         reduce_all_success = False
-                        message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
+                        message += 'Run {0}: No valid vanadium run set up!\n.'.format(run_number)
                         continue
                 else:
                     vanadium_tuple = None

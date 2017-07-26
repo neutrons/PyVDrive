@@ -1570,8 +1570,7 @@ class ReduceVulcanData(object):
 
         return
 
-    # TODO/ISSUE/NOW - Check how many times is this called!
-    def execute_vulcan_reduction(self):
+    def execute_vulcan_reduction(self, output_logs):
         """
         Execute the command for reduce, including
         (1) reduce to GSAS file
@@ -1586,52 +1585,64 @@ class ReduceVulcanData(object):
         """
         # check whether it is good to go
         assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
+        final_message = ''
+
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file ... it is reduced HERE!
-        is_reduce_good, msg_gsas, reduced_ws_name = self.reduce_powder_diffraction_data()
+        return_list = self.reduce_powder_diffraction_data()
+        reduction_is_successful = return_list[0]
+        msg_gsas = return_list[1]
+        final_message += '{0}\n'.format(msg_gsas)
+        # reduced_ws_name is not used here
 
         # post process: error code: Code001 does not mean a bad reduction
-        if not is_reduce_good == 0:
-            # reduction failture
-            return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
+        if not reduction_is_successful:
+            # reduction failure
+            return False, 'Reduction failure:\n{0}\n'.format(msg_gsas)
+
         if self._reductionSetup.is_standard:
-            # standard sample for VULCAN
-            # TODO/ISSUE/NOW/FIXME - Bug if the output is re-directed to /tmp/
+            # processing a standard sample (Si, V or C) for VULCAN. Record GSAS file
             gsas_file = self.get_reduced_files()[0]
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
             except (IOError, OSError) as copy_err:
-                self._myLogInfo += '[ERROR] Unable to write standard GSAS file to {0} due to {1}\n' \
-                                   ''.format(standard_dir, copy_err)
+                msg_gsas += 'Unable to write standard GSAS file to {0} due to {1}\n' \
+                            ''.format(standard_dir, copy_err)
+        # END-IF
 
-        # load the sample run
-        is_load_good, msg_load_file = self.load_data_file()
-        if not is_load_good:
-            return False, 'Unable to load source data file %s.' % self._reductionSetup.get_event_file()
+        # load the sample run as an option
+        if output_logs:
+            # load data again with meta data only
+            is_load_good, msg_load_file = self.load_data_file()
+            if not is_load_good:
+                raise RuntimeError('It is not likely to be unable to load {0} at this stage'
+                                   ''.format(self._reductionSetup.get_event_file()))
 
-        # check whether it is an alignment run
-        self._reductionSetup.is_alignment_run = self.check_alignment_run()
+            # check whether it is an alignment run
+            self._reductionSetup.is_alignment_run = self.check_alignment_run()
 
-        # export the sample log record file: AutoRecord.txt and etc.
-        is_record_good, msg_record = self.export_experiment_records()
+            # export the sample log record file: AutoRecord.txt and etc.
+            is_record_good, msg_record = self.export_experiment_records()
+            final_message += msg_record + '\n'
 
-        # write experiment files
-        is_log_good, msg_log = self.export_log_files()
+            # write experiment files
+            is_log_good, msg_log = self.export_log_files()
+            final_message += msg_log + '\n'
+
+            is_log_good = is_load_good and is_record_good
+        else:
+            is_log_good = True
+            final_message += 'No sample logs record is required to export.\n'
+        # END-IF
 
         # special operations for auto reduction
         is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
+        final_message += msg_auto + '\n'
 
-        final_message = ''
-        final_message += msg_gsas + '\n'
-        final_message += msg_load_file + '\n'
-        final_message += msg_record + '\n'
-        final_message += msg_log + '\n'
-        final_message += msg_log + '\n'
-
-        return is_record_good and is_log_good and is_auto_good, final_message
+        return is_log_good and is_auto_good, final_message
 
     def _export_experiment_log(self, target_file, sample_name_list,
                                sample_title_list, sample_operation_list, patch_list):
@@ -2663,7 +2674,7 @@ def main(argv):
     status, error_message = reduction_setup.check_validity()
     if status and not reduction_setup.is_dry_run():
         # reduce data
-        reducer.execute_vulcan_reduction()
+        reducer.execute_vulcan_reduction(output_logs=True)
     elif not status:
         # error message
         raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)

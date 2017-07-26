@@ -42,7 +42,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
             print '[DB...BAT] IPTS = ', ipts
 
         try:
-            run_number_list = self.parse_run_numbers()
+            run_number_list = self.parse_run_number()
         except RuntimeError as error:
             return False, 'Unable to parse run numbers due to {0}'.format(error)
 
@@ -118,13 +118,6 @@ class VBin(procss_vcommand.VDriveCommand):
         # TODO/FIXME What is SKIPXML
         # FOCUS_EW: TODO/FIXME : anything interesting?
 
-        # check whether the any non-supported args
-        # input_args = self._commandArgsDict.keys()
-        # for arg_key in input_args:
-        #     if arg_key not in VBin.SupportedArgs:
-        #         raise KeyError('VBIN argument %s is not recognized.' % arg_key)
-        # # END-FOF
-
         # check and set IPTS
         self.set_ipts()
 
@@ -161,10 +154,11 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             output_dir = vulcan_util.get_default_binned_directory(self._iptsNumber)
 
-        if 'FULLPROF' in self._commandArgsDict:
-            output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
-        else:
-            output_fullprof = False
+        # Option FullProf is temporarily disabled
+        # if 'FULLPROF' in self._commandArgsDict:
+        #     output_fullprof = int(self._commandArgsDict['Fullprof']) == 1
+        # else:
+        #     output_fullprof = False
 
         if 'ONEBANK' in self._commandArgsDict:
             merge_to_one_bank = bool(int(self._commandArgsDict['ONEBANK']))
@@ -177,9 +171,7 @@ class VBin(procss_vcommand.VDriveCommand):
             # set vanadium runs
             if van_run is not None:
                 self._controller.set_vanadium_to_runs(self._iptsNumber, run_number_list, van_run)
-            # FIXME/ISSUE/NOWNOW - Implement reduce_chopped_data_set
-            # Test case: 	vbin, ipts=17414, choprun=109021, runs=1, rune=99
-            status, ret_obj = self._controller.reduce_chopped_data_set(ipts_number=self._iptsNumber,
+            status, message = self._controller.reduce_chopped_data_set(ipts_number=self._iptsNumber,
                                                                        run_number=chop_run_number,
                                                                        chop_child_list=run_number_list,
                                                                        raw_data_directory=None,
@@ -190,7 +182,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        merge_banks=merge_to_one_bank)
 
         else:
-            # reduce regular data
+            # reduce event data without chopping
             archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
                                                                                                  run_number_list)
 
@@ -208,7 +200,7 @@ class VBin(procss_vcommand.VDriveCommand):
             self._controller.set_runs_to_reduce(run_number_list)
 
             # reduce by regular runs
-            status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
+            status, message = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_dir,
                                                                merge_banks=merge_to_one_bank,
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
@@ -217,22 +209,25 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # END-IF-ELSE
 
-        # process special tag for vanadium
-        print '[DB...BAT] Standard tuple: ', standard_tuple
-        if standard_tuple is not None and standard_tuple[0] == 'Vanadium':
+        # process special tag for vanadium: create intensity file for each detector pixel
+        if use_chop_data is False and standard_tuple is not None and standard_tuple[0] == 'Vanadium':
             for run_number in run_number_list:
                 standard_dir = standard_tuple[1]
+                # vanadium NeXus file
                 nexus_file_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(self._iptsNumber, run_number)
                 if os.path.exists(nexus_file_name) is False:
-                    nexus_file_name = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs'.format(self._iptsNumber, run_number)
+                    nexus_file_name = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs' \
+                                      ''.format(self._iptsNumber, run_number)
+
+                # get intensity file
                 intensity_file_name = os.path.join(standard_dir, '{0}.int'.format(run_number))
-                print '[DB...BAT] Export GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
+                message += '\nExport GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
                 vulcan_util.export_vanadium_intensity_to_file(van_nexus_file=nexus_file_name,
                                                               gsas_van_int_file=intensity_file_name)
             # END-FOR
         # END-IF
 
-        return status, str(ret_obj)
+        return status, message
 
     def get_help(self):
         """

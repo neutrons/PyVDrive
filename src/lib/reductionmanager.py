@@ -778,8 +778,8 @@ class ReductionManager(object):
             try:
                 tof_min, bin_size, tof_max = binning_parameters
             except IndexError as index_err:
-                raise NotImplementedError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
-                                          .format(binning_parameters, index_err))
+                raise RuntimeError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
+                                   ''.format(binning_parameters, index_err))
             reduction_setup.set_binning_parameters(tof_min, bin_size, tof_max)
             reduction_setup.set_align_vdrive_bin(False)
         else:
@@ -811,7 +811,7 @@ class ReductionManager(object):
 
         # reduce
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
-        reduce_good, message = reducer.execute_vulcan_reduction()
+        reduce_good, message = reducer.execute_vulcan_reduction(output_logs=False)
 
         # record reduction tracker
         if reduce_good:
