@@ -390,11 +390,11 @@ class ReductionSetup(object):
             else:
                 # from .../autoreduce/ to .../<user_specified>/
                 new_output_dir = os.path.join(parent_dir, user_specified_dir)
-            print "Log file will be written to directory %s. " % new_output_dir
+            # print "Log file will be written to directory %s. " % new_output_dir
         else:
             # non-auto reduction mode.
             new_output_dir = original_directory
-            print "Log file will be written to the original directory %s. " % new_output_dir
+            # print "Log file will be written to the original directory %s. " % new_output_dir
 
         # Create path
         if os.path.exists(new_output_dir) is False:
@@ -423,8 +423,8 @@ class ReductionSetup(object):
         for file_name in [self._focusFileName, self._characterFileName]:
             if not os.path.exists(file_name):
                 error_message += 'Calibration file %s cannot be found.\n' % file_name
-	if self._vulcanBinsFileName is not None and os.path.exists(file_name) is False:
-                error_message += 'Calibration file %s cannot be found.\n' % file_name
+        if self._vulcanBinsFileName is not None and os.path.exists(self._vulcanBinsFileName) is False:
+            error_message += 'Calibration file %s cannot be found.\n' % self._vulcanBinsFileName
 
         # GSAS file
         if self._mainGSASName is not None:
@@ -736,12 +736,12 @@ class ReductionSetup(object):
         mantid.config.setDataSearchDirs(";".join(data_search_path))
 
         # parse the run number file name is in form as VULCAN_RUNNUBER_event.nxs
-        # FIXME/TODO/NOW - ValueError: invalid literal for int() with base 10: '151206.nxs.h5'
-        if self._eventFileName.endswith('.xns'):
+        if self._eventFileName.endswith('.nxs'):
+            # pre-nED file name: ends with .nxs
             self._runNumber = int(self._eventFileName.split('_')[1])
         else:
-	    # '151206.nxs.h5'
-	    self._runNumber = int(self._eventFileName.split('_')[1].split('.')[0])
+            # nED file name: ends with .nxs.h5 '151206.nxs.h5'
+            self._runNumber = int(self._eventFileName.split('_')[1].split('.')[0])
 
         # parse IPTS from NeXus directory: as /SNS/.../IPTS-XXX/...
         if self._nexusDirectory.count('IPTS') == 1:
@@ -1199,13 +1199,21 @@ class PatchRecord:
             instrument, ipts, run, instrument)
 
         # Verify whether these 2 files are accessible
+        self._noPatchRecord = False
         if os.path.exists(self._cvInfoFileName) is False or \
                         os.path.exists(self._runInfoFileName) is False or \
                         os.path.exists(self._beamInfoFileName) is False:
-            raise RuntimeError("PreNexus log file %s and/or %s cannot be accessed. " % (
-                self._cvInfoFileName, self._runInfoFileName))
+            self._noPatchRecord = True
 
         return
+
+    @property
+    def do_not_patch(self):
+        """
+        return state whether a patch should be done or not
+        :return:
+        """
+        return self._noPatchRecord
 
     def export_patch_list(self):
         """ Export patch as a list of strings
@@ -1225,8 +1233,6 @@ class PatchRecord:
             if key in self.PatchLogList:
                 patch_list.append(str(key))
                 patch_list.append(str(patchdict[key]))
-
-        print '[DB...BAT] Patch List: ', patch_list
 
         return patch_list
 
@@ -1427,6 +1433,15 @@ class ReduceVulcanData(object):
         self._choppedDataDirectory = None
         self._chopExportedLogType = 'loadframe'
 
+        self._myLogInfo = ''
+
+        # check whether the run is nED
+        if self._reductionSetup.get_event_file().endswith('.h5'):
+            # nED NeXus
+            self._is_nED = True
+        else:
+            self._is_nED = False
+
         return
 
     def check_alignment_run(self):
@@ -1459,9 +1474,9 @@ class ReduceVulcanData(object):
         # clear the list
         self._reducedWorkspaceList = list()
 
-        # print out error
+        # log error message
         if len(error_message) > 0:
-            print '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
+            self._myLogInfo += '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
 
         return
 
@@ -1518,23 +1533,20 @@ class ReduceVulcanData(object):
         dry_run_str += "Record(2) file name : %s\n" % str(reduction_setup.get_record_2nd_file())
         dry_run_str += "1D plot file name   : %s\n" % reduction_setup.get_plot_file()
 
-        print 'Dry run:\n%s' % dry_run_str
-
         return True, dry_run_str
 
-    @staticmethod
-    def duplicate_gsas_file(source_gsas_file_name, target_directory):
+    def duplicate_gsas_file(self, source_gsas_file_name, target_directory):
         """ Duplicate gsas file to a new directory with file mode 664
         """
         # Verify input
         if os.path.exists(source_gsas_file_name) is False:
-            print "Warning.  Input file wrong"
+            self._myLogInfo += "[Warning]  Input file wrong\n"
             return
         elif os.path.isdir(source_gsas_file_name) is True:
-            print "Warning.  Input file is not file but directory."
+            self._myLogInfo += "[Warning]  Input file is not file but directory.\n"
             return
         if os.path.isabs(source_gsas_file_name) is not True:
-            print "Warning"
+            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n'.format(source_gsas_file_name)
             return
 
         # Create directory if it does not exist
@@ -1543,12 +1555,18 @@ class ReduceVulcanData(object):
 
         # Copy
         target_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
-        if os.path.isfile(target_file_name) is True:
-            print "Destination GSAS file exists. "
-            return
-        else:
+        try:
+            if os.path.isfile(target_file_name) is True:
+                # delete existing file
+                self._myLogInfo += "Destination GSAS file {0} exists and will be overwritten.\n" \
+                                   "".format(target_file_name)
+                os.remove(target_file_name)
+
             shutil.copy(source_gsas_file_name, target_directory)
             os.chmod(target_file_name, 0664)
+        except OSError as os_err:
+            self._myLogInfo += '[ERROR] Unable to copy {0} to {1} due to {2}.\n' \
+                               ''.format(source_gsas_file_name, target_file_name, os_err)
 
         return
 
@@ -1580,16 +1598,15 @@ class ReduceVulcanData(object):
         if self._reductionSetup.is_standard:
             # standard sample for VULCAN
             gsas_file = self.get_reduced_files()[0]
-            # print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
             except IOError as io_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}' \
-                      ''.format(standard_dir, io_err)
+                self._myLogInfo += '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}\n' \
+                                   ''.format(standard_dir, io_err)
             except OSError as os_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}' \
-                      ''.format(standard_dir, os_err)
+                self._myLogInfo += '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}\n' \
+                                   ''.format(standard_dir, os_err)
 
         # load the sample run
         is_load_good, msg_load_file = self.load_data_file()
@@ -1668,11 +1685,11 @@ class ReduceVulcanData(object):
         file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])
         file_access_mode = file_access_mode[-3:]
         if file_access_mode != '666' and file_access_mode != '676':
-            print "Current file %s's mode is %s." % (target_file, file_access_mode)
             try:
                 os.chmod(target_file, 0666)
             except OSError as os_err:
-                print '[ERROR] Unable to set file {0} to mode 666 due to {1}.'.format(target_file, os_err)
+                self._myLogInfo += '[ERROR] Unable to set file {0} to mode 666 due to {1}.\n' \
+                                   ''.format(target_file, os_err)
         # END-IF
 
         return True, ''
@@ -1692,16 +1709,13 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        try:
-            patcher = PatchRecord(self._instrumentName,
-                                  self._reductionSetup.get_ipts_number(),
-                                  self._reductionSetup.get_run_number())
+        patcher = PatchRecord(self._instrumentName,
+                              self._reductionSetup.get_ipts_number(),
+                              self._reductionSetup.get_run_number())
+        if patcher.do_not_patch:
+            patch_list = list()
+        else:
             patch_list = patcher.export_patch_list()
-	except RuntimeError as run_err:
-	    # nED: not preNeXus log file for patching
-	    # TODO/ISSUE/NOW - Need to use a date for run number to identify whether the data is collected by nED or with preNeXus
-	    print ('[Warning] {0}'.format(run_err))
-	    patch_list = list()
 
         # define over all message
         return_status = True
@@ -2025,11 +2039,11 @@ class ReduceVulcanData(object):
                                     OutputFilename=self._reductionSetup.get_plot_file(),
                                     YLabel='Intensity')
         except ValueError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
-                                                                            str(err))
+            self._myLogInfo += "Unable to generate 1D plot for run %s caused by %s. \n" \
+                               "" % (str(self._reductionSetup.get_run_number()), str(err))
         except RuntimeError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
-                                                                            str(err))
+            self._myLogInfo += "Unable to generate 1D plot for run %s caused by %s. \n" \
+                               "" % (str(self._reductionSetup.get_run_number()), str(err))
         # Try-Exception
 
         return
@@ -2137,18 +2151,21 @@ class ReduceVulcanData(object):
             # END-IFG
 
             # set up binning parameters
-            if self._reductionSetup.align_bins_to_vdrive_standard:
+            if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+                # pre-nED: required to align bins to VDRIVE standard
                 binning_parameter = "5000, -0.0005, 60000"
+                bin_in_d = False
             else:
+                # regular binning parameters
                 binning_parameter = self._reductionSetup.binning_parameters
+                print 'Default or user given binning parameters? {0}'.format(binning_parameter)
 
-            # TODO/ISSUE/NOWNOW - value for 'BinInDpsace' should be set up according to binning parameters
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
                                             CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
                                             Binning=binning_parameter,
-                                            BinInDspace=False,
+                                            BinInDspace=bin_in_d,
                                             SaveAS="",
                                             OutputDirectory=self._reductionSetup.get_gsas_dir(),
                                             NormalizeByCurrent=False,
@@ -2167,7 +2184,8 @@ class ReduceVulcanData(object):
                                                                    'ADS.' % reduced_ws_name
 
         except RuntimeError as run_err:
-            print '[Error] Unable to reduce workspace %s due to %s.' % (self._dataWorkspaceName, str(run_err))
+            self._myLogInfo += '[Error] Unable to reduce workspace %s due to %s.\n' \
+                               '' % (self._dataWorkspaceName, str(run_err))
             return False, str(run_err), None
         except AssertionError as ass_err:
             return False, str(ass_err), None
@@ -2196,12 +2214,15 @@ class ReduceVulcanData(object):
                                'use has permission to write to directory {1}'.format(gsas_file_name, gsas_dir))
         # ---- end of section
 
-        # convert unit to TOF
+        # convert unit to TOF and rebin
         mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
                                   OutputWorkspace=reduced_ws_name,
                                   Target="TOF",
                                   EMode="Elastic",
                                   AlignBins=False)
+        mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
+                                  OutputWorkspace=reduced_ws_name,
+                                  Params=binning_parameter)
 
         # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
         if self._reductionSetup.align_bins_to_vdrive_standard:
@@ -2230,7 +2251,6 @@ class ReduceVulcanData(object):
             # write to GSAS file with Mantid bins
             mantidsimple.SaveGSS(InputWorkspace=reduced_ws_name,
                                  Filename=gsas_file_name)
-            print '[DB...BAT] User binning reduecd workspace name: {0}'.format(reduced_ws_name)
             vdrive_bin_ws_name = reduced_ws_name
 
         # END-IF-ELSE
@@ -2283,33 +2303,11 @@ class ReduceVulcanData(object):
         # get vanadium workspace
         van_ws = AnalysisDataService.retrieve(van_ws_name)
 
-        check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
-        if not check_result:
-            print '[INFO] ', message
-
-        align_bins(van_ws_name, reduced_gss_ws_name)
-
-        print '[INFO] ', reduced_gss_ws_name, reduced_gss_ws.run().getProperty('VDriveBin')
-
-        # # check whether the reduced GSAS workspace has the same binning with vanadium workspace
-        # gda_vec_x = reduced_gss_ws.readX(0)
-        # van_vec_x = van_ws.readX(0)
-        # diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
-        # if numpy.max(diff_vec) >= 0.01:
-        #     raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
-        #                        'differs too much!'.format(van_run_number, reduced_gss_ws_name))
-        #
-        # # check whether vanadium and sample run workspace have the same number of spectra
-        # num_spec = reduced_gss_ws.getNumberHistograms()
-        # if num_spec != van_ws.getNumberHistograms():
-        #     raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
-        #                        '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
-        #                                             van_ws.getNumberHistograms()))
-        #
-        # # normalize by vanadium
-        # # make the binning exactly the same because there is always some tiny difference between loaded GSAS
-        # for ws_index in range(num_spec):
-        #     numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
+        # align bins
+        if not self._is_nED:
+            check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
+            align_bins(van_ws_name, reduced_gss_ws_name)
+        # END-IF
 
         # normalize and write out again
         reduced_gss_ws = reduced_gss_ws / van_ws
