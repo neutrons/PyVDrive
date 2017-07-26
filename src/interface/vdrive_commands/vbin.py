@@ -221,9 +221,21 @@ class VBin(procss_vcommand.VDriveCommand):
 
                 # get intensity file
                 intensity_file_name = os.path.join(standard_dir, '{0}.int'.format(run_number))
-                message += '\nExport GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
-                vulcan_util.export_vanadium_intensity_to_file(van_nexus_file=nexus_file_name,
-                                                              gsas_van_int_file=intensity_file_name)
+                write_intensity = True
+                if os.path.exists(intensity_file_name):
+                    try:
+                        os.remove(intensity_file_name)
+                    except OSError as err:
+                        message += 'Unable to write vanadium intensity to file {0} due to {1}\n'.format(intensity_file_name)
+                        status = False
+                        write_intensity = False
+                
+                if write_intensity:
+                    message += '\nExport GSAS intensity of file {0} to {1}'.format(nexus_file_name, intensity_file_name)
+                    vulcan_util.export_vanadium_intensity_to_file(van_nexus_file=nexus_file_name,
+                                                                  gsas_van_int_file=intensity_file_name)
+                    os.chmod(intensity_file_name, 0666)
+
             # END-FOR
         # END-IF
 

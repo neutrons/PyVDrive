@@ -2128,42 +2128,50 @@ class ReduceVulcanData(object):
         """
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
-            return True, 'No reduction as it is not required.', None
+            return True, 'No reduction as it is not required because GSAS directory is not specified.', None
+
+        message = ''
+        # get the event file name
+        if event_file_name is None:
+            raw_event_file = self._reductionSetup.get_event_file()
+        else:
+            raw_event_file = event_file_name
+        assert isinstance(raw_event_file, str), 'User specified event file name {0} must be a string but not a {1}.'.format(raw_event_file, type(raw_event_file))
+        # END-IF-ELSE
+
+        # set up binning parameters
+        if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+            # pre-nED: required to align bins to VDRIVE standard
+            binning_parameter = "5000, -0.0005, 60000"
+            bin_in_d = False
+        else:
+            # regular binning parameters
+            binning_parameter = self._reductionSetup.binning_parameters
+            # print 'Default or user given binning parameters? {0}'.format(binning_parameter)
+            if binning_parameter.count(',') == 0:
+                bin_in_d = True
+            elif binning_parameter.count(',') == 2:
+                max_x = float(binning_parameter.split(',')[2])
+                if max_x < 100:
+                    bin_in_d = True
+                else:
+                    bin_in_d = False
+            else:
+                # unacceptable binning parameters. return with False
+                return False, 'Binnig parameters {0} is not acceptable.'.format(binning_parameter), None
+        # END-IF
+
+        # get the output directory for GSAS file
+        gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+        orig_gsas_name = gsas_file_name
+        gsas_file_name, gsas_message, output_access_error, del_exist = self.pre_process_output_gsas(gsas_file_name)
+        if output_access_error:
+            return False, 'Unable to write GSAS file {0} due to {1}'.format(gsas_file_name, gsas_message), None
+
+        self._myLogInfo += gsas_message + '\n'
 
         # reduce data
-        message = ''
         try:
-            # get the event file name
-            if event_file_name is None:
-                raw_event_file = self._reductionSetup.get_event_file()
-            else:
-                assert isinstance(event_file_name, str), 'User specified event file name {0} must be a string,' \
-                                                         ' but not a {1}.'.format(event_file_name,
-                                                                                  type(event_file_name))
-                raw_event_file = event_file_name
-            # END-IFG
-
-            # set up binning parameters
-            if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
-                # pre-nED: required to align bins to VDRIVE standard
-                binning_parameter = "5000, -0.0005, 60000"
-                bin_in_d = False
-            else:
-                # regular binning parameters
-                binning_parameter = self._reductionSetup.binning_parameters
-                print 'Default or user given binning parameters? {0}'.format(binning_parameter)
-                if binning_parameter.count(',') == 0:
-                    bin_in_d = True
-                elif binning_parameter.count(',') == 2:
-                    max_x = float(binning_parameter.split(',')[2])
-                    if max_x < 100:
-                        bin_in_d = True
-                    else:
-                        bin_in_d = False
-                else:
-                    raise RuntimeError('Binnig parameters {0} is not acceptable.'.format(binning_parameter))
-            # END-IF
-
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
@@ -2205,13 +2213,11 @@ class ReduceVulcanData(object):
                            OutputWorkspace=reduced_ws_name,
                            Params=binning_parameter)
 
-        # get the output directory for GSAS file
-        gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
-        orig_gsas_name = gsas_file_name
-        gsas_file_name, gsas_message, output_access_error = self._get_gsas_file_path(gsas_file_name)
-        self._myLogInfo += gsas_message + '\n'
 
-        # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
+        # delete existing GSAS file
+        if del_exist:
+            os.remove(gsas_file_name)
+
         if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
             # align bins to VDrive standard for VDRIVE to analyze the data
             vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
@@ -2252,7 +2258,7 @@ class ReduceVulcanData(object):
                 self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
             except ValueError as value_err:
                 # write again to a temporary directory
-                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
+                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}.\n  FYI ValueError: {1}.'
                                    ''.format(gsas_file_name, value_err))
 
         else:
@@ -2269,7 +2275,7 @@ class ReduceVulcanData(object):
                                     OutputWorkspace=vdrive_bin_ws_name)
 
         # set up the output file's permit for other users to modify
-        os.chmod(gsas_file_name, 0774)
+        os.chmod(gsas_file_name, 0666)
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
@@ -2293,15 +2299,16 @@ class ReduceVulcanData(object):
 
         return True, self._myLogInfo, reduced_ws_name
 
-    def _get_gsas_file_path(self, gsas_file_name):
+    def pre_process_output_gsas(self, gsas_file_name):
         """
         get the full path for output GSAS file
         :param gsas_file_name: proposed GSAS file
-        :return: 3-tuple. (final (may be modified) GSAS file name, message, flag for access error
+        :return: 4-tuple. (final (may be modified) GSAS file name, message, flag for access error, flag to delete existing gsas
         """
         message = ''
         output_access_error = False
-        write_to_temp = False
+        #write_to_temp = False
+        del_curr_gsas = False
 
         # check directory
         gsas_dir = os.path.dirname(gsas_file_name)
@@ -2309,26 +2316,27 @@ class ReduceVulcanData(object):
             # directory for proposed output GSAS file does not exist
             output_access_error = True
             message += 'Output directory "{0}" does not exist.'.format(gsas_dir)
-            write_to_temp = True
+            #write_to_temp = True
         elif os.access(gsas_dir, os.W_OK) is False:
             # user has no write permission for the directory
             output_access_error = True
-            message += 'User has not write permission to directory {0}'.format(gsas_dir)
-            write_to_temp = True
+            message += 'User hasn\'t the write permission to directory {0}'.format(gsas_dir)
+            #write_to_temp = True
         elif os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
             # GSAS file exists but user cannot rewrite
             output_access_error = True
             message += 'User cannot overwrite existing GSAS file {0}'.format(gsas_file_name)
-            write_to_temp = True
+            #write_to_temp = True
         elif os.path.exists(gsas_file_name):
-            # re-write
-            message += 'Previously reduced GSAS file {0} is overwritten.'.format(gsas_file_name)
+            # re-write: so delete the original gsas file first
+            message += 'Previously reduced GSAS file {0} is to be overwritten.'.format(gsas_file_name)
+            del_curr_gsas = True
 
         # change to a new GSAS file
-        if write_to_temp:
-            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
+        #if write_to_temp:
+        #    gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
 
-        return gsas_file_name, message, output_access_error
+        return gsas_file_name, message, output_access_error, del_curr_gsas
 
     def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
         """

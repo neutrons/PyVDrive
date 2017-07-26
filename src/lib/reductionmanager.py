@@ -810,6 +810,7 @@ class ReductionManager(object):
         # END-IF (standard sample tuple)
 
         # reduce
+        reduction_setup.is_auto_reduction_service = False
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
         reduce_good, message = reducer.execute_vulcan_reduction(output_logs=False)
 
