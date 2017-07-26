@@ -197,11 +197,11 @@ class VanadiumProcessingManager(object):
         return_status = True
         error_msg = ''
 
-        # write to archive
+        # write to archive's instrument specific calibration directory's instrument specific calibration directory
         if to_archive:
             base_name = '{0}-s.gda'.format(self._runNumber)
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
-            archive_file_name = os.path.join(base_name, van_dir)
+            archive_file_name = os.path.join(van_dir, base_name)
             if os.access(van_dir, os.W_OK):
                 mantid_helper.save_vulcan_gsas(workspace_name, archive_file_name, ipts_number,
                                                binning_reference_file='', gss_parm_file='')
@@ -239,10 +239,11 @@ class VanadiumProcessingManager(object):
 
         return return_status, error_msg
 
-    def smooth_spectra(self, workspace_index, smoother_type, param_n, param_order, workspace_name=None):
+    # TODO/ISSUE/NOWNOW/71 - This is a dirty fix for determining to align bins or not!
+    def smooth_spectra(self, workspace_index, smoother_type, param_n, param_order, workspace_name=None, require_to_align=False):
         """
         smooth focused diffraction spectra
-        :param workspace_name: if it is not None then the method is called as a stic method
+        :param workspace_name: if it is not None then the method is called as a static method
         :param workspace_index:
         :param smoother_type:
         :param param_n:
@@ -277,14 +278,17 @@ class VanadiumProcessingManager(object):
         self._smoothedWorkspace = output_workspace_name
 
         # check the workspace whether it can be aligned
-        align_able, diff_reason = mantid_helper.check_bins_can_align(output_workspace_name, self._myParent.vdrive_bin_template)
-        if align_able:
-            # align bins
-            align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
-        else:
-            # the bins are not matching
-            raise RuntimeError('Workspace {0} cannot be aligned to template workspace {1} due to {2}'
-                               ''.format(output_workspace_name, self._myParent.vdrive_bin_template, diff_reason))
+        target_ws = mantid_helper.retrieve_workspace(output_workspace_name)
+        if target_ws.getNumberHistograms() <= 2:
+            alignable, diff_reason = mantid_helper.check_bins_can_align(output_workspace_name, self._myParent.vdrive_bin_template)
+            if alignable:
+                # align bins
+                align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
+            # TODO - Find out the situation to raise an exception for not being aligned
+            # else:
+            #     # the bins are not matching
+            #     raise RuntimeError('Workspace {0} cannot be aligned to template workspace {1} due to {2}'
+            #                        ''.format(output_workspace_name, self._myParent.vdrive_bin_template, diff_reason))
 
         return output_workspace_name
 
