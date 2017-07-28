@@ -539,7 +539,8 @@ class VDriveAPI(object):
                     gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
                     data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
                 except RuntimeError as run_err:
-                    return False, 'Failed to to get data  {0}.  FYI: {1}'.format(run_id, run_err)
+                    return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
+                                  ''.format(run_id, gsas_file, run_err)
 
             else:
                 return False, 'Unable to locate run {0} in archive'.format(run_id)

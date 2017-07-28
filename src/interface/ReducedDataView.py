@@ -975,6 +975,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param unit:
         :return:
         """
+        # search in this object's reduced data dictionary
         if run_number in self._reducedDataDict and self._reducedDataDict[run_number]['unit'] == unit:
             # data existing and unit is same
             return True, None
