@@ -350,10 +350,10 @@ class ReductionSetup(object):
         """
         if self._binningParameters is None:
             # using default binning parameter
-            bin_param_str = '5000., -0.001, 50000.'
+            bin_param_str = '5000., -0.001, 70000.'
         elif len(self._binningParameters) == 1:
             # only bin size is defined
-            bin_param_str = '{0}, {1}, {2}'.format(5000., -1*abs(self._binningParameters[0]), 50000.)
+            bin_param_str = '{0}, {1}, {2}'.format(5000., -1*abs(self._binningParameters[0]), 70000.)
         elif len(self._binningParameters) == 3:
             # 3 are given
             bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], -1*abs(self._binningParameters[1]),
@@ -2142,7 +2142,7 @@ class ReduceVulcanData(object):
         # set up binning parameters
         if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
             # pre-nED: required to align bins to VDRIVE standard
-            binning_parameter = "5000, -0.0005, 60000"
+            binning_parameter = "5000, -0.0005, 70000"
             bin_in_d = False
         else:
             # regular binning parameters
