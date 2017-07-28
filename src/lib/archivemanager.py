@@ -155,11 +155,6 @@ class DataArchiveManager(object):
         assert isinstance(run_number, int), 'Run number {0} must be an integer but not {1}.' \
                                             ''.format(run_number, type(run_number))
 
-        # check whether the IPTS/run is valid
-        nexus_dir = '/SNS/VULCAN/IPTS-%d/0/%d/' % (ipts_number, run_number)
-        if not os.path.exists(nexus_dir):
-            return None
-
         # locate reduced GSAS file name
         gsas_file_name = os.path.join('/SNS/VULCAN/IPTS-%d/shared/binned_data' % ipts_number, '%d.gda' % run_number)
         if not os.path.exists(gsas_file_name):
