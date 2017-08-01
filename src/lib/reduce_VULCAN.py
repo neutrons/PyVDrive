@@ -2387,6 +2387,11 @@ class ReduceVulcanData(object):
         :param gsas_param_file:
         :return:
         """
+        import save_vulcan_gsas
+
+        save_vulcan_gsas.save_vulcan_gss(input_workspace, output_file_name, ipts, gsas_param_file)
+
+        return
 
 
     def pre_process_output_gsas(self, gsas_file_name):
