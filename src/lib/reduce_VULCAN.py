@@ -2204,8 +2204,13 @@ class ReduceVulcanData(object):
         # END-IF-ELSE
 
         # Save to GSAS file
+        # TODO/ISSUE/NOWNOW/FIXME/ERROR - From Here!
         self.export_to_gsas(reduced_workspace=reduced_ws_name,
                             gsas_file_name=gsas_file_name)
+
+        #  reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
+        #               east_west_binning_parameters, high_angle_binning_parameters
+
         # # convert unit to TOF and Rebin for exporting reduced data to GSAS
         # mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
         #                           OutputWorkspace=reduced_ws_name,

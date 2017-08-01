@@ -131,11 +131,11 @@ class VDriveCommand(object):
             use_default_binning = False
 
             if user_bin_width is None:
-                user_bin_width = 0.005   # set to default in case only TOF range is customized value
+                user_bin_width = 0.001   # set to default in case only TOF range is customized value
             if user_tof_min is None:
                 user_tof_min = 5000.
             if user_tof_max is None:
-                user_tof_max = 50000.
+                user_tof_max = 70000.
 
             binning_parameters = (user_tof_min, user_bin_width, user_tof_max)
         # END-IF-ELSE
@@ -161,8 +161,6 @@ class VDriveCommand(object):
             raise RuntimeError('RUNS is not found.')
         except (ValueError, TypeError):
             raise RuntimeError('RUNS {0} is not an integer.'.format(run_numbers_str))
-
-        print '[DB...BAT] Parse Run Numbers: Input = {0}, Output = {1}.'.format(self._commandArgsDict['RUNS'], run_number_list)
 
         return run_number_list
 
