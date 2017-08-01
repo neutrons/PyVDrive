@@ -2203,94 +2203,83 @@ class ReduceVulcanData(object):
             return False, str(ass_err), None
         # END-IF-ELSE
 
-        # convert unit to TOF and Rebin for exporting reduced data to GSAS
-        mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                  OutputWorkspace=reduced_ws_name,
-                                  Target="TOF",
-                                  EMode="Elastic",
-                                  AlignBins=False)
-        mantidsimple.Rebin(InputWorkspace=reduced_ws_name,
-                           OutputWorkspace=reduced_ws_name,
-                           Params=binning_parameter)
-
-
-        # delete existing GSAS file
-        if del_exist:
-            os.remove(gsas_file_name)
-
-        if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
-            # align bins to VDrive standard for VDRIVE to analyze the data
-            vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
-
-            # save to Vuclan GSAS
-            try:
-                mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                           OutputWorkspace=vdrive_bin_ws_name,
-                                           GSSFilename=gsas_file_name,
-                                           IPTS=self._reductionSetup.get_ipts_number(),
-                                           GSSParmFilename="Vulcan.prm")
-                # Add special property to output workspace
-                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-                self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
-            except ValueError as value_err:
-                # write again to a temporary directory
-                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
-                                   ''.format(gsas_file_name, value_err))
-
-        elif self._is_nED:
-            # nED NeXus. save to VDRIVE GSAS format
-            vdrive_bin_ws_name = reduced_ws_name
-            # save to Vuclan GSAS
-            try:
-                mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                           BinFilename=None,
-                                           OutputWorkspace=vdrive_bin_ws_name,
-                                           GSSFilename=gsas_file_name,
-                                           IPTS=self._reductionSetup.get_ipts_number(),
-                                           GSSParmFilename="Vulcan.prm")
-                # Add special property to output workspace
-                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
-
-                self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
-            except ValueError as value_err:
-                # write again to a temporary directory
-                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}.\n  FYI ValueError: {1}.'
-                                   ''.format(gsas_file_name, value_err))
-
-        else:
-            # write to GSAS file with Mantid bins
-            mantidsimple.SaveGSS(InputWorkspace=reduced_ws_name,
-                                 Filename=gsas_file_name)
-            vdrive_bin_ws_name = reduced_ws_name
-
-        # END-IF-ELSE
-
-        if self._reductionSetup.merge_banks:
-            # merge all the banks to 1
-            mantidsimple.SumSpectra(InputWorkspace=vdrive_bin_ws_name,
-                                    OutputWorkspace=vdrive_bin_ws_name)
-
-        # set up the output file's permit for other users to modify
-        os.chmod(gsas_file_name, 0666)
-        self._reducedDataFiles.append(gsas_file_name)
-
-        if self._reductionSetup.normalized_by_vanadium:
-            # TODO/FIXME/NOWNOW - It is a different procedure to normalized by vanadium if not being aligned to VDRIVE
-            gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
-            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
-
-        # END-IF (vanadium)
-
-        # collect result
-        self._reducedWorkspaceDSpace = None  # dSpacing reduced workspace has been replaced by TOF
-        self._reducedWorkspaceMtd = reduced_ws_name
-        self._reducedWorkspaceVDrive = vdrive_bin_ws_name
-        self._reduceGood = True
-
+        # Save to GSAS file
+        self.export_to_gsas(reduced_workspace=reduced_ws_name,
+                            gsas_file_name=gsas_file_name)
+        # # convert unit to TOF and Rebin for exporting reduced data to GSAS
+        # mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
+        #                           OutputWorkspace=reduced_ws_name,
+        #                           Target="TOF",
+        #                           EMode="Elastic",
+        #                           AlignBins=False)
+        # mantidsimple.Rebin(InputWorkspace=reduced_ws_name,
+        #                    OutputWorkspace=reduced_ws_name,
+        #                    Params=binning_parameter)
+        #
+        #
+        # # delete existing GSAS file
+        # if del_exist:
+        #     os.remove(gsas_file_name)
+        #
+        # if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+        #     # align bins to VDrive standard for VDRIVE to analyze the data
+        #     vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
+        #
+        #     # save to Vuclan GSAS
+        #     try:
+        #         mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
+        #                                    BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+        #                                    OutputWorkspace=vdrive_bin_ws_name,
+        #                                    GSSFilename=gsas_file_name,
+        #                                    IPTS=self._reductionSetup.get_ipts_number(),
+        #                                    GSSParmFilename="Vulcan.prm")
+        #         # Add special property to output workspace
+        #         final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+        #         final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+        #     except ValueError as value_err:
+        #         # write again to a temporary directory
+        #         raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
+        #                            ''.format(gsas_file_name, value_err))
+        #
+        # elif self._is_nED:
+        #     # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
+        #     # TODO/FUTURE/NOW - Need a configurable GSAS param file name
+        #     self.save_vulcan_gss(input_workspace=reduced_ws_name,
+        #                          output_file_name=gsas_file_name,
+        #                          ipts=self._reductionSetup.get_ipts_number(),
+        #                          gsas_param_file='Vulcan.prm')
+        #     vdrive_bin_ws_name = reduced_ws_name
+        # else:
+        #     # write to GSAS file with Mantid bins
+        #     mantidsimple.SaveGSS(InputWorkspace=reduced_ws_name,
+        #                          Filename=gsas_file_name)
+        #     vdrive_bin_ws_name = reduced_ws_name
+        # # END-IF-ELSE
+        #
+        # self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+        #
+        # if self._reductionSetup.merge_banks:
+        #     # merge all the banks to 1
+        #     mantidsimple.SumSpectra(InputWorkspace=vdrive_bin_ws_name,
+        #                             OutputWorkspace=vdrive_bin_ws_name)
+        #
+        # # set up the output file's permit for other users to modify
+        # os.chmod(gsas_file_name, 0666)
+        # self._reducedDataFiles.append(gsas_file_name)
+        #
+        # if self._reductionSetup.normalized_by_vanadium:
+        #     # TODO/FIXME/NOWNOW - It is a different procedure to normalized by vanadium if not being aligned to VDRIVE
+        #     gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
+        #     self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
+        #
+        # # END-IF (vanadium)
+        #
+        # # collect result
+        # self._reducedWorkspaceDSpace = None  # dSpacing reduced workspace has been replaced by TOF
+        # self._reducedWorkspaceMtd = reduced_ws_name
+        # self._reducedWorkspaceVDrive = vdrive_bin_ws_name
+        # self._reduceGood = True
+        #
         # Add
         if output_access_error:
             error_message = 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.\n' \
@@ -2298,6 +2287,107 @@ class ReduceVulcanData(object):
             self._myLogInfo += error_message
 
         return True, self._myLogInfo, reduced_ws_name
+
+    def export_to_gsas(self, reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
+                       east_west_binning_parameters, high_angle_binning_parameters):
+        """
+        export reduced workspace to GSAS file
+        :param gsas_iparm_file_name: default '"Vulcan.prm"'
+        :param reduced_workspace:
+        :param gsas_file_name:
+        :return:
+        """
+        # convert unit to TOF and Rebin for exporting reduced data to GSAS
+        mantidsimple.ConvertUnits(InputWorkspace=reduced_workspace,
+                                  OutputWorkspace=reduced_workspace,
+                                  Target="TOF",
+                                  EMode="Elastic",
+                                  AlignBins=False)
+
+        # rebin to regular bin size: east and west
+        mantidsimple.Rebin(InputWorkspace=reduced_workspace,
+                           OutputWorkspace=reduced_workspace,
+                           Params=east_west_binning_parameters)
+
+
+        # delete existing GSAS file
+        if delete_exist_gsas_file:
+            os.remove(gsas_file_name)
+
+        pre_ned = False
+        if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+            # align bins to VDrive standard for VDRIVE to analyze the data (pre-nED)
+            vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_workspace)
+
+            # save to Vuclan GSAS
+            try:
+                mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
+                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                           OutputWorkspace=vdrive_bin_ws_name,
+                                           GSSFilename=gsas_file_name,
+                                           IPTS=self._reductionSetup.get_ipts_number(),
+                                           GSSParmFilename=gsas_iparm_file_name)
+                # Add special property to output workspace
+                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+                pre_ned = True
+            except ValueError as value_err:
+                # write again to a temporary directory
+                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
+                                   ''.format(gsas_file_name, value_err))
+
+        elif self._is_nED:
+            # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
+            # TODO/FUTURE/NOW - Need a configurable GSAS param file name
+            self.save_vulcan_gss(input_workspace=reduced_workspace,
+                                 output_file_name=gsas_file_name,
+                                 ipts=self._reductionSetup.get_ipts_number(),
+                                 gsas_param_file='Vulcan.prm')
+            vdrive_bin_ws_name = reduced_workspace
+        else:
+            # write to GSAS file with Mantid bins
+            mantidsimple.SaveGSS(InputWorkspace=reduced_workspace,
+                                 Filename=gsas_file_name)
+            vdrive_bin_ws_name = reduced_workspace
+        # END-IF-ELSE
+
+        self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+
+        # merge banks
+        if self._reductionSetup.merge_banks:
+            # merge all the banks to 1
+            mantidsimple.SumSpectra(InputWorkspace=vdrive_bin_ws_name,
+                                    OutputWorkspace=vdrive_bin_ws_name,
+                                    StartWorkspaceIndex=0,
+                                    EndWorkspaceIndex=1)
+
+        # set up the output file's permit for other users to modify
+        os.chmod(gsas_file_name, 0666)
+        self._reducedDataFiles.append(gsas_file_name)
+
+        if self._reductionSetup.normalized_by_vanadium:
+            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2, pre_ned)
+
+        # END-IF (vanadium)
+
+        # collect result
+        self._reducedWorkspaceDSpace = None  # dSpacing reduced workspace has been replaced by TOF
+        self._reducedWorkspaceMtd = reduced_workspace
+        self._reducedWorkspaceVDrive = vdrive_bin_ws_name
+        self._reduceGood = True
+
+        return
+
+    def save_vulcan_gss(self, input_workspace, output_file_name, ipts, gsas_param_file):
+        """save GSAS file for VULCAN
+        :param input_workspace:
+        :param output_file_name:
+        :param ipts:
+        :param gsas_param_file:
+        :return:
+        """
+
 
     def pre_process_output_gsas(self, gsas_file_name):
         """
