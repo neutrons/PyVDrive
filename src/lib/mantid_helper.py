@@ -1054,7 +1054,8 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                                                 L2='2.0,2.0,2.0',
                                                 Polar='90,270,150')
     else:
-        raise RuntimeError('It is not implemented for cases more than 2 spectra.')
+        raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
+                           ''.format(num_spec))
 
     # convert unit and to point data
     if num_spec == 2:

@@ -290,8 +290,8 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
     for bank_id in sorted(bank_buffer_dict.keys()):
         for line in bank_buffer_dict[bank_id]:
             vulcan_gss_buffer += line + '\n'  # bank_buffer_dict[bank_id]
-
-    print '[DB] Output ... \n{0}'.format(vulcan_gss_buffer)
+        # END-FOR
+    # END-FOR
 
     # save GSAS file
     try:
