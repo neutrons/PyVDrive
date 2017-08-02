@@ -1,6 +1,6 @@
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
-
+import os
 
 def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
     """ Save file
@@ -188,6 +188,68 @@ def _rewriteOneBankData(banklines):
     return wbuf
 
 
+def read_gsas_file(gsas_file_name):
+    """read GSAS file
+    :param gsas_file_name:
+    :return: 2-tuple (1) list as headers (2) a dictionary: key = bank ID, value = list of strings (lines)
+    """
+    # check input
+    assert isinstance(gsas_file_name, str), 'Input GSAS file name {0} must be a string.'.format(gsas_file_name)
+    if os.path.exists(gsas_file_name) is False:
+        raise RuntimeError('GSAS file {0} cannot be found.'.format(gsas_file_name))
+
+    # read file to lines
+    g_file = open(gsas_file_name, 'r')
+    raw_lines = g_file.readlines()
+    g_file.close()
+
+    # cut the GSAS file into multiple sections by BANK
+    inside_bank = False
+    curr_bank_lines = list()
+    header_lines = list()
+    curr_bank_id = -1
+    bank_data_dict = dict()
+
+    for line in raw_lines:
+        cline = line.strip()
+        if len(cline) == 0:
+            continue
+        cline = line.strip('\n')
+
+        if cline.startswith("BANK"):
+            # Indicate a new bank
+            if len(curr_bank_lines) == 0:
+                # first bank in the GSAS file
+                inside_bank = True
+                curr_bank_lines.append(cline)
+
+            else:
+                # bank line for next bank. need to process the previous-current bank
+                bank_data_dict[curr_bank_id] = curr_bank_lines
+                curr_bank_lines = [line]
+            # ENDIFELSE
+
+            # get the current bank ID
+            curr_bank_id = int(cline.split('BANK')[1].split()[0])
+
+        elif inside_bank is True and cline.startswith("#") is False:
+            # Write data line
+            curr_bank_lines.append(cline)
+
+        elif inside_bank is False:
+            # must be header
+            header_lines.append(cline)
+
+    # ENDFOR
+
+    if len(curr_bank_lines) > 0:
+        bank_data_dict[curr_bank_id] = curr_bank_lines
+    else:
+        raise NotImplementedError("Impossible to have this")
+
+    return header_lines, bank_data_dict
+
+
 def save_vulcan_gss(input_workspace, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
     """
 
@@ -204,17 +266,20 @@ def save_vulcan_gss(input_workspace, binning_parameter_dict, output_file_name, i
     for binning_parameters in binning_parameter_dict:
         # save GSAS to single bank temporary file
         gsas_file_dict = save_gsas_temp(input_workspace, output_file_name, binning_parameters)
+        header_lines, gsas_file_buffer = read_gsas_file(gsas_file_dict[bank_id])
 
         # load the GSAS file and convert the header
         bank_id_list = binning_parameter_dict[binning_parameters]
         for bank_id in bank_id_list:
-            gsas_file_buffer = read_gsas_file(gsas_file_dict[bank_id])
+
             bank_buffer_dict[bank_id] = gsas_file_buffer
         # END-FOR
     # END-FOR (binning_parameters)
 
+
+
     # form final output buffer
-    vulcan_gss_buffer = ''
+    vulcan_gss_buffer = header_lines
 
     header = generate_vulcan_gda_header(input_workspace, gsas_file_name=output_file_name, ipts=ipts,
                                         gsas_param_file_name=gsas_param_file)

@@ -183,8 +183,12 @@ class VBin(procss_vcommand.VDriveCommand):
 
         else:
             # reduce event data without chopping
-            archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
-                                                                                                 run_number_list)
+            try:
+                archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                                     run_number_list)
+            except RuntimeError as run_err:
+                return False, 'Failed to find nexus file for IPTS {0} Runs {1} due to {2}' \
+                              ''.format(self._iptsNumber, run_number_list, run_err)
 
             run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key, run_number_list)
             self._controller.add_runs_to_project(run_info_list)

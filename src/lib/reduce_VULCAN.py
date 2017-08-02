@@ -2206,7 +2206,11 @@ class ReduceVulcanData(object):
         # Save to GSAS file
         # TODO/ISSUE/NOWNOW/FIXME/ERROR - From Here!
         self.export_to_gsas(reduced_workspace=reduced_ws_name,
-                            gsas_file_name=gsas_file_name)
+                            gsas_file_name=gsas_file_name,
+                            gsas_iparm_file_name='vulcan.prm',
+                            delete_exist_gsas_file=del_exist,
+                            east_west_binning_parameters='5000.,-0.001,70000.',
+                            high_angle_binning_parameters='5000.,-0.0003,70000.')
 
         #  reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
         #               east_west_binning_parameters, high_angle_binning_parameters
@@ -2344,10 +2348,16 @@ class ReduceVulcanData(object):
         elif self._is_nED:
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # TODO/FUTURE/NOW - Need a configurable GSAS param file name
-            self.save_vulcan_gss(input_workspace=reduced_workspace,
-                                 output_file_name=gsas_file_name,
-                                 ipts=self._reductionSetup.get_ipts_number(),
-                                 gsas_param_file='Vulcan.prm')
+            import save_vulcan_gsas
+
+            binning_parameter_dict= {(5000., -0.001, 70000.): [0, 1],
+                                     (5000., -0.0003, 70000.): [2]}
+
+            save_vulcan_gsas.save_vulcan_gss(reduced_workspace, binning_parameter_dict,
+                                             output_file_name=gsas_file_name,
+                                             ipts=self._reductionSetup.get_ipts_number(),
+                                             gsas_param_file='Vulcan.prm')
+
             vdrive_bin_ws_name = reduced_workspace
         else:
             # write to GSAS file with Mantid bins
@@ -2383,21 +2393,6 @@ class ReduceVulcanData(object):
         self._reduceGood = True
 
         return
-
-    def save_vulcan_gss(self, input_workspace, output_file_name, ipts, gsas_param_file):
-        """save GSAS file for VULCAN
-        :param input_workspace:
-        :param output_file_name:
-        :param ipts:
-        :param gsas_param_file:
-        :return:
-        """
-        import save_vulcan_gsas
-
-        save_vulcan_gsas.save_vulcan_gss(input_workspace, output_file_name, ipts, gsas_param_file)
-
-        return
-
 
     def pre_process_output_gsas(self, gsas_file_name):
         """
@@ -2438,9 +2433,12 @@ class ReduceVulcanData(object):
 
         return gsas_file_name, message, output_access_error, del_curr_gsas
 
-    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
+    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name, is_pre_ned):
         """
-
+        normalize by vanadium
+        :param reduced_gss_ws_name:
+        :param output_file_name:
+        :param is_pre_ned: flag to show whether the data is collect before nED was installed.
         :return:
         """
         # check inputs and get input workspace
