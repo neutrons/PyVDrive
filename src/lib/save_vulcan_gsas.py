@@ -2,26 +2,23 @@ import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 import os
 
+
 def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
     """ Save file
     """
-    def _find_gsas_files(gda_file_name, num_banks):
-        # TODO/ISSUE/NOW - Find out the output files' names
-        return list()
-
-    api.Rebin(InputWorkspace=gda_file_name, OutputWorkspace=gda_file_name, Params=binning_parameters)
+    print '[DB] Binning: {0}'.format(binning_parameters)
+    api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
 
     # Convert from PointData to Histogram
-    gsas_ws_name = api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
+    #  gsas_ws_name = api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
 
     # Save
-    api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=True, Append=False,
+    api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
                 Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
 
     gsas_ws = ADS.retrieve(gsas_ws_name)
-    gsas_file_name_dict = _find_gsas_files(gda_file_name, gsas_ws.getNumberHistograms())
 
-    return gsas_file_name_dict
+    return gda_file_name
 
 
 def _rewrite_gda_file(self, gssfilename, newheader):
@@ -84,6 +81,8 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
     """
     from datetime import datetime
     import os.path
+
+    # TODO/CHECK/ISSUE/NOWNOW
 
     # Get necessary information
     title = gsas_workspace.getTitle()
@@ -239,8 +238,8 @@ def read_gsas_file(gsas_file_name):
         elif inside_bank is False:
             # must be header
             header_lines.append(cline)
-
-    # ENDFOR
+        # END-IF-ELSE
+    # END-FOR
 
     if len(curr_bank_lines) > 0:
         bank_data_dict[curr_bank_id] = curr_bank_lines
@@ -250,10 +249,10 @@ def read_gsas_file(gsas_file_name):
     return header_lines, bank_data_dict
 
 
-def save_vulcan_gss(input_workspace, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
+def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
     """
 
-    :param input_workspace:
+    :param diffraction_workspace_name:
     :param binning_parameter_dict:
     :param output_file_name:
     :param ipts:
@@ -262,31 +261,37 @@ def save_vulcan_gss(input_workspace, binning_parameter_dict, output_file_name, i
     """
     # save to a general GSAS files and load back for the data portion
     bank_buffer_dict = dict()
+    header_lines = list()
 
     for binning_parameters in binning_parameter_dict:
         # save GSAS to single bank temporary file
-        gsas_file_dict = save_gsas_temp(input_workspace, output_file_name, binning_parameters)
-        header_lines, gsas_file_buffer = read_gsas_file(gsas_file_dict[bank_id])
+        save_gsas_temp(diffraction_workspace_name, output_file_name, binning_parameters)
+        header_lines, gsas_bank_dict = read_gsas_file(output_file_name)
 
         # load the GSAS file and convert the header
         bank_id_list = binning_parameter_dict[binning_parameters]
+        print '[DB...BAT] Bank List: {0}'.format(bank_id_list)
         for bank_id in bank_id_list:
-
-            bank_buffer_dict[bank_id] = gsas_file_buffer
+            bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
         # END-FOR
     # END-FOR (binning_parameters)
 
-
-
     # form final output buffer
-    vulcan_gss_buffer = header_lines
+    vulcan_gss_buffer = ''
+    for line in header_lines:
+        if line.startswith('#'):
+            vulcan_gss_buffer += line + '\n'
 
-    header = generate_vulcan_gda_header(input_workspace, gsas_file_name=output_file_name, ipts=ipts,
+    diff_ws = ADS.retrieve(diffraction_workspace_name)
+    header = generate_vulcan_gda_header(diff_ws, gsas_file_name=output_file_name, ipts=ipts,
                                         gsas_param_file_name=gsas_param_file)
     vulcan_gss_buffer += header
 
     for bank_id in sorted(bank_buffer_dict.keys()):
-        vulcan_gss_buffer += bank_buffer_dict[bank_id]
+        for line in bank_buffer_dict[bank_id]:
+            vulcan_gss_buffer += line + '\n'  # bank_buffer_dict[bank_id]
+
+    print '[DB] Output ... \n{0}'.format(vulcan_gss_buffer)
 
     # save GSAS file
     try:

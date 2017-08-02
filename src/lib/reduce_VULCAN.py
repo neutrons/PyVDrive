@@ -2350,8 +2350,9 @@ class ReduceVulcanData(object):
             # TODO/FUTURE/NOW - Need a configurable GSAS param file name
             import save_vulcan_gsas
 
-            binning_parameter_dict= {(5000., -0.001, 70000.): [0, 1],
-                                     (5000., -0.0003, 70000.): [2]}
+            # NOTE: The bank ID (from 1) is required here
+            binning_parameter_dict = {(5000., -0.001, 70000.): [1, 2],
+                                      (5000., -0.0003, 70000.): [3]}
 
             save_vulcan_gsas.save_vulcan_gss(reduced_workspace, binning_parameter_dict,
                                              output_file_name=gsas_file_name,
