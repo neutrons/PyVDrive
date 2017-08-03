@@ -301,7 +301,8 @@ class VanadiumProcessingManager(object):
 
         return output_workspace_name
 
-    def strip_peaks(self, peak_fwhm, pos_tolerance, background_type, is_high_background, workspace_name=None):
+    def strip_peaks(self, peak_fwhm, pos_tolerance, background_type, is_high_background, workspace_name=None,
+                    bank_list=None):
         """
         strip vanadium peaks
         :param workspace_name: if specified, then this method will be used as a static method
@@ -309,6 +310,7 @@ class VanadiumProcessingManager(object):
         :param pos_tolerance:
         :param background_type:
         :param is_high_background:
+        :param bank_list:
         :return:
         """
         # about workspace_name
@@ -328,11 +330,30 @@ class VanadiumProcessingManager(object):
             input_ws_name = workspace_name
         # END-IF-ELSE
 
-        output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=input_ws_name,
-                                                            fwhm=peak_fwhm,
-                                                            peak_pos_tol=pos_tolerance,
-                                                            background_type=background_type,
-                                                            is_high_background=is_high_background)
+        # identify output workspace type
+        raw_ws = mantid_helper.retrieve_workspace(input_ws_name)
+        if raw_ws.__class__.__name__.count('EventWorkspace') == 1:
+            # event workspace. possible to rebin
+            if 1 in bank_list or 2 in bank_list:
+                # rebin workspace
+                binning_parameter = '5000., -0.001, 70000.'
+                # TODO/NOWNOW/TONIGHT -
+                rebin()
+                strip()
+            elif 3 in bank_list:
+                # ...
+                rebin()
+                strip()
+
+        else:
+            # regular one!
+            output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=input_ws_name,
+                                                                bank_list=bank_list,  # TODO/TONIGHT/NEW FEATURE
+                                                                fwhm=peak_fwhm,
+                                                                peak_pos_tol=pos_tolerance,
+                                                                background_type=background_type,
+                                                                is_high_background=is_high_background)
+
 
         # register the output workspace if it is not called as a static
         if output_ws_name is not None:

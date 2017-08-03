@@ -1940,7 +1940,7 @@ class VDriveAPI(object):
 
         return True, smoothed_ws_name
 
-    def strip_vanadium_peaks(self, ipts_number, run_number, peak_fwhm,
+    def strip_vanadium_peaks(self, ipts_number, run_number, bank_list, peak_fwhm,
                              peak_pos_tolerance, background_type, is_high_background,
                              workspace_name):
         """
@@ -1950,6 +1950,7 @@ class VDriveAPI(object):
          (2) workspace name
         :param ipts_number:
         :param run_number:
+        :param bank_list:
         :param peak_fwhm:
         :param peak_pos_tolerance:
         :param background_type:
@@ -1971,9 +1972,13 @@ class VDriveAPI(object):
         # END-IF
 
         # call for strip vanadium peaks
-        out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
-                                                                              background_type, is_high_background,
-                                                                              workspace_name=workspace_name)
+        try:
+            out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
+                                                                                  background_type, is_high_background,
+                                                                                  workspace_name=workspace_name,
+                                                                                  bank_list=bank_list)
+        except RuntimeError as run_err:
+            return False, 'Unable to strip vanadium due to {0}'.format(run_err)
 
         return True, out_ws_name
 

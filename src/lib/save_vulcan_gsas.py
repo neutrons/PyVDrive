@@ -20,57 +20,13 @@ def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
     return gda_file_name
 
 
-def _rewrite_gda_file(self, gssfilename, newheader):
+def reformat_gsas_bank(bank_line_list):
     """
-    Re-write GSAS file including header and header for each bank
-    :param gssfilename:
-    :param newheader:
+
+    :param bank_line_list:
     :return:
     """
-    # Get all lines
-    gfile = open(gssfilename, "r")
-    lines = gfile.readlines()
-    gfile.close()
-
-    # New file
-    filebuffer = ""
-    filebuffer += newheader
-
-    inbank = False
-    banklines = []
-    for line in lines:
-        cline = line.strip()
-        if len(cline) == 0:
-            continue
-
-        if line.startswith("BANK"):
-            # Indicate a new bank
-            if len(banklines) == 0:
-                # bank line for first bank
-                inbank = True
-                banklines.append(line.strip("\n"))
-            else:
-                # bank line for non-first bank.
-                tmpbuffer = self._rewriteOneBankData(banklines)
-                filebuffer += tmpbuffer
-                banklines = [line]
-                # ENDIFELSE
-        elif inbank is True and cline.startswith("#") is False:
-            # Write data line
-            banklines.append(line.strip("\n"))
-
-    # ENDFOR
-
-    if len(banklines) > 0:
-        tmpbuffer = self._rewriteOneBankData(banklines)
-        filebuffer += tmpbuffer
-    else:
-        raise NotImplementedError("Impossible to have this")
-
-    # Overwrite the original file
-    ofile = open(gssfilename, "w")
-    ofile.write(filebuffer)
-    ofile.close()
+    # TONIGHT/TODO/NOWNOW - Refer to SaveVulcanGSS() to re-format data in ASCII
 
     return
 
@@ -95,6 +51,7 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
         assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
 
     # Get necessary information
+    print '[DB...BAT] Type of GSAS workspace: {0}'.format(type(gsas_workspace))
     title = gsas_workspace.getTitle()
     run = gsas_workspace.getRun()
 
@@ -166,8 +123,8 @@ def read_gsas_file(gsas_file_name):
     curr_bank_lines = ''
     header_lines = ''
     curr_bank_id = -1
-    primary_path_line = ''
-    geometry_line = ''
+    bank_geometry_line = ''
+    spectrum_flag_line = ''
     bank_data_dict = dict()
 
     for line in raw_lines:
@@ -177,12 +134,12 @@ def read_gsas_file(gsas_file_name):
             continue
 
         # identify geometry information lines
-        if line.count('Primary') == 1:
+        if line.count('DIFC') == 1 and line.count('path') == 1:
             # primary path line
-            primary_path_line = line
-        elif line.count('L2') == 1:
+            bank_geometry_line = line
+        elif line.count('Data for spectrum') == 1:
             # secondary geometry line
-            geometry_line = line
+            spectrum_flag_line = line
         elif line.startswith("BANK"):
             # Indicate a new bank
             if len(curr_bank_lines) == 0:
@@ -194,8 +151,8 @@ def read_gsas_file(gsas_file_name):
             # END-IF-ELSE
 
             # construct the first 3 lines
-            curr_bank_lines = primary_path_line
-            curr_bank_lines += geometry_line
+            curr_bank_lines = bank_geometry_line
+            curr_bank_lines += spectrum_flag_line
             curr_bank_lines += line
 
             # get the current bank ID
@@ -251,7 +208,7 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # save to a general GSAS files and load back for the data portion
     bank_buffer_dict = dict()
-    header_lines = ''
+    # header_lines = ''
 
     for binning_parameters in binning_parameter_dict:
         # save GSAS to single bank temporary file
@@ -267,13 +224,14 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # form final output buffer
     # original header
-    vulcan_gss_buffer = header_lines
+    vulcan_gss_buffer = ''  # header_lines
 
     # VDRIVE special header
     diff_ws = ADS.retrieve(diffraction_workspace_name)
     header = generate_vulcan_gda_header(diff_ws, gsas_file_name=output_file_name, ipts=ipts,
                                         gsas_param_file_name=gsas_param_file)
     vulcan_gss_buffer += header
+    vulcan_gss_buffer += '%-80s\n' % '#'   # one empty comment line
 
     # append each bank
     for bank_id in sorted(bank_buffer_dict.keys()):

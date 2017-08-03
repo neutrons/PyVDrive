@@ -1561,13 +1561,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
+    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background, bank_list):
         """
         process the signal to strip vanadium peaks
         :param peak_fwhm:
         :param tolerance:
         :param background_type:
         :param is_high_background:
+        :param bank_list:
         :return:
         """
         # from signal, the string is of type unicode.
@@ -1585,13 +1586,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
-        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number,
+        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
                                                                   peak_fwhm, tolerance,
                                                                   background_type, is_high_background,
                                                                   data_key)
         if status:
             result_ws_name = ret_obj
-            self.load_reduced_data(run_number=result_ws_name)
+            self.load_reduced_data(run_number=result_ws_name, unit='dSpacing')
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
