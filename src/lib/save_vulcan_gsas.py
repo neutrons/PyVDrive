@@ -228,6 +228,11 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
     :param gsas_param_file:
     :return:
     """
+    # default
+    if binning_parameter_dict is None:
+        binning_parameter_dict = {(5000., -0.001, 70000.): [1, 2],
+                                  (5000., -0.0003, 70000.): [3]}
+
     # check
     assert isinstance(diffraction_workspace_name, str), 'Diffraction workspace name {0} must be a string.' \
                                                         ''.format(diffraction_workspace_name)

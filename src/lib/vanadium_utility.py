@@ -146,12 +146,13 @@ class VanadiumProcessingManager(object):
         # save
         message = 'Vanadium {0} has peaks removed and is smoothed. '
         if output_dir is None:
-            # if output directory is not given, use the default
-            output_dir = self._localOutputDirectory
+            save_to_archive = True
+        else:
+            save_to_archive = False
         if save:
-            status, sub_message = self.save_vanadium_to_file(to_archive=True, out_file_name=output_dir)
+            status, sub_message = self.save_vanadium_to_file(to_archive=save_to_archive, out_file_name=output_dir)
             if status:
-                message += 'Processed vanadium is saved to {0}. '.format(output_dir)
+                message += 'Processed vanadium is saved to {0} or archive. '.format(output_dir)
             else:
                 message += 'Processed vanadium failed to be written to {0} due to {1}.' \
                            ''.format(self._localOutputDirectory, sub_message)
@@ -199,55 +200,54 @@ class VanadiumProcessingManager(object):
 
         # determine the output file name with full path
         if to_archive:
+            # write to archive's instrument specific calibration directory's instrument specific calibration directory
             base_name = '{0}-s.gda'.format(self._runNumber)
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+            if os.path.exists(van_dir) is False:
+                return False, 'Vanadium directory {0} does not exist.'.format(van_dir)
+            elif os.access(van_dir, os.W_OK) is False:
+                return False, 'User has no privilege to write to directory {0}'.format(van_dir)
+
             archive_file_name = os.path.join(van_dir, base_name)
+            if os.path.exists(archive_file_name) and os.access(archive_file_name, os.W_OK) is False:
+                return False, 'Smoothed vanadium GSAS file {0} exists and user does not have privilege to over write.' \
+                              ''.format(archive_file_name)
+            out_file_name = archive_file_name
 
-        # write to archive's instrument specific calibration directory's instrument specific calibration directory
-
-
-
-        bank_id_list = mantid_helper.get_workspace_information(workspace_name)
-        if to_archive and len(bank_id_list) <= 2:
-            # regular
-            base_name = '{0}-s.gda'.format(self._runNumber)
-            van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
-            archive_file_name = os.path.join(van_dir, base_name)
-            if os.access(van_dir, os.W_OK):
-                mantid_helper.save_vulcan_gsas(workspace_name, archive_file_name, ipts_number,
-                                               binning_reference_file='', gss_parm_file='')
-            else:
-                archive_file_name = None
-                return_status = False
-                error_msg += 'Failed to write {0} to archive {1} due to permission error.\n' \
-                             ''.format(base_name, van_dir)
-        else:
-            archive_file_name = None
-
-        if out_file_name:
+        elif out_file_name is not None:
             # file name re-define & get directory of the output file
             if os.path.isdir(out_file_name):
+                # get the file name
                 local_dir = out_file_name
                 out_file_name = os.path.join(local_dir, '{0}-s.gda'.format(run_number))
             else:
                 local_dir = os.path.dirname(out_file_name)
-                if len(local_dir) == 0:
-                    local_dir = os.getcwd()
-            # END-IF
-
-            # check whether the directory is writable
+            # END0F
             if os.access(local_dir, os.W_OK):
-                if archive_file_name is None:
-                    mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
-                                                   binning_reference_file='', gss_parm_file='')
-                else:
-                    shutil.move(out_file_name, archive_file_name)
-                    shutil.copy(archive_file_name, out_file_name)
-            else:
-                return_status = False
-                error_msg += 'Failed to write {0} to local directory due to permission error.'.format(archive_file_name)
-            # END-IF
-        # END-IF
+                return False, 'User cannot write to directory {0}'.format(local_dir)
+            elif os.path.exists(out_file_name) and os.access(out_file_name, os.W_OK):
+                return False, 'Smoothed vanadium file {0} exists but user cannot over write.'.format(out_file_name)
+
+        else:
+            # neither to archive nor to local directory
+            return False, 'User does not specify either to-archive nor a local directory'
+
+        # write to GSAS file for VDRIVE
+        bank_id_list = mantid_helper.get_workspace_information(workspace_name)
+        if to_archive and len(bank_id_list) <= 2:
+            # regular
+            # base_name = '{0}-s.gda'.format(self._runNumber)
+            # van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+            # archive_file_name = os.path.join(van_dir, base_name)
+            # if os.access(van_dir, os.W_OK):
+            mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
+                                           binning_reference_file='', gss_parm_file='')
+        else:
+            # nED data: 3 banks
+            import save_vulcan_gsas
+            bin_dict = None  # use default
+            save_vulcan_gsas.save_vulcan_gss(workspace_name, bin_dict, out_file_name, ipts_number, 'Vulcan.prm')
+        # END-IF-ELSE
 
         return return_status, error_msg
 
@@ -297,11 +297,7 @@ class VanadiumProcessingManager(object):
             if alignable:
                 # align bins
                 align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
-            # TODO - Find out the situation to raise an exception for not being aligned
-            # else:
-            #     # the bins are not matching
-            #     raise RuntimeError('Workspace {0} cannot be aligned to template workspace {1} due to {2}'
-            #                        ''.format(output_workspace_name, self._myParent.vdrive_bin_template, diff_reason))
+        # END-IF (align bins)
 
         return output_workspace_name
 
