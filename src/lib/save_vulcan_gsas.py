@@ -1,12 +1,13 @@
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 import os
+from datetime import datetime
+import os.path
 
 
 def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
     """ Save file
     """
-    print '[DB] Binning: {0}'.format(binning_parameters)
     api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
 
     # Convert from PointData to Histogram
@@ -15,8 +16,6 @@ def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
     # Save
     api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
                 Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
-
-    gsas_ws = ADS.retrieve(gsas_ws_name)
 
     return gda_file_name
 
@@ -78,26 +77,32 @@ def _rewrite_gda_file(self, gssfilename, newheader):
 
 def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_file_name):
     """
+    generate a VDRIVE compatible GSAS file's header
+    :param gsas_workspace:
+    :param gsas_file_name:
+    :param ipts:
+    :param gsas_param_file_name:
+    :return: string : multiple lines
     """
-    from datetime import datetime
-    import os.path
-
-    # TODO/CHECK/ISSUE/NOWNOW
+    # check
+    assert isinstance(gsas_workspace, str) is False, 'GSAS workspace must not be a string.'
+    assert isinstance(gsas_file_name, str), 'GSAS file name {0} must be a string.'.format(gsas_file_name)
+    assert isinstance(ipts, int) or isinstance(ipts, str), 'IPTS number {0} must be either string or integer.' \
+                                                           ''.format(ipts)
+    assert isinstance(gsas_param_file_name, str), 'GSAS iparm file name {0} must be an integer.' \
+                                                  ''.format(gsas_param_file_name)
+    if isinstance(ipts, str):
+        assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
 
     # Get necessary information
     title = gsas_workspace.getTitle()
-
     run = gsas_workspace.getRun()
 
     # Get information on start/stop
-    processtime = True
     if run.hasProperty("run_start") and run.hasProperty("duration"):
+        # export processing time information
         runstart = run.getProperty("run_start").value
         duration = float(run.getProperty("duration").value)
-    else:
-        processtime = False
-
-    if processtime is True:
         # property run_start and duration exist
         runstart_sec = runstart.split(".")[0]
         runstart_ns = runstart.split(".")[1]
@@ -141,52 +146,6 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
     return newheader
 
 
-def _rewriteOneBankData(banklines):
-    """ first line is for bank information
-    """
-    wbuf = ""
-
-    # Rewrite bank lines
-    bankline = banklines[0].strip()
-    terms = bankline.split()
-    tofmin = float(banklines[1].split()[0])
-    tofmax = float(banklines[-1].split()[0])
-
-    terms[5] = "%.1f" % (tofmin)
-    terms[6] = "%.1f" % (tofmax)
-
-    newbankline = ""
-
-    # title
-    for t in terms:
-        newbankline += "%s " % (t)
-    wbuf = "%-80s\n" % (newbankline)
-
-    # data
-    for i in range(1, len(banklines)):
-        cline = banklines[i]
-
-        terms = cline.split()
-        try:
-            tof = float(terms[0])
-            y = float(terms[1])
-            e = float(terms[2])
-
-            x_s = "%.1f" % (tof)
-            y_s = "%.1f" % (y)
-            e_s = "%.2f" % (e)
-
-            temp = "%12s%12s%12s" % (x_s, y_s, e_s)
-
-        except TypeError:
-            temp = "%-80s\n" % (cline.rstrip())
-
-        wbuf += "%-80s\n" % (temp)
-    # ENDFOR
-
-    return wbuf
-
-
 def read_gsas_file(gsas_file_name):
     """read GSAS file
     :param gsas_file_name:
@@ -202,42 +161,52 @@ def read_gsas_file(gsas_file_name):
     raw_lines = g_file.readlines()
     g_file.close()
 
-    # cut the GSAS file into multiple sections by BANK
+    # cut the GSAS file into multiple sections by BANK.  create the strings other than list of lines
     inside_bank = False
-    curr_bank_lines = list()
-    header_lines = list()
+    curr_bank_lines = ''
+    header_lines = ''
     curr_bank_id = -1
+    primary_path_line = ''
+    geometry_line = ''
     bank_data_dict = dict()
 
     for line in raw_lines:
+        # skip empty line
         cline = line.strip()
         if len(cline) == 0:
             continue
-        cline = line.strip('\n')
 
-        if cline.startswith("BANK"):
+        # identify geometry information lines
+        if line.count('Primary') == 1:
+            # primary path line
+            primary_path_line = line
+        elif line.count('L2') == 1:
+            # secondary geometry line
+            geometry_line = line
+        elif line.startswith("BANK"):
             # Indicate a new bank
             if len(curr_bank_lines) == 0:
                 # first bank in the GSAS file
                 inside_bank = True
-                curr_bank_lines.append(cline)
-
             else:
                 # bank line for next bank. need to process the previous-current bank
                 bank_data_dict[curr_bank_id] = curr_bank_lines
-                curr_bank_lines = [line]
-            # ENDIFELSE
+            # END-IF-ELSE
+
+            # construct the first 3 lines
+            curr_bank_lines = primary_path_line
+            curr_bank_lines += geometry_line
+            curr_bank_lines += line
 
             # get the current bank ID
             curr_bank_id = int(cline.split('BANK')[1].split()[0])
-
         elif inside_bank is True and cline.startswith("#") is False:
             # Write data line
-            curr_bank_lines.append(cline)
+            curr_bank_lines += line
 
         elif inside_bank is False:
             # must be header
-            header_lines.append(cline)
+            header_lines += line
         # END-IF-ELSE
     # END-FOR
 
@@ -251,7 +220,7 @@ def read_gsas_file(gsas_file_name):
 
 def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
     """
-
+    Save a diffraction workspace to GSAS file for VDRive
     :param diffraction_workspace_name:
     :param binning_parameter_dict:
     :param output_file_name:
@@ -259,9 +228,25 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
     :param gsas_param_file:
     :return:
     """
+    # check
+    assert isinstance(diffraction_workspace_name, str), 'Diffraction workspace name {0} must be a string.' \
+                                                        ''.format(diffraction_workspace_name)
+    assert isinstance(binning_parameter_dict, dict), 'Binning parameters {0} must be given in a dictionary.' \
+                                                     ''.format(binning_parameter_dict)
+    assert isinstance(output_file_name, str), 'Output file name {0} must be a string.'.format(output_file_name)
+    output_dir = os.path.dirname(output_file_name)
+    if os.path.exists(output_dir) is False:
+        raise RuntimeError('Directory {0} for output GSAS file {1} does not exist.'
+                           ''.format(output_dir, output_file_name))
+    elif os.path.exists(output_file_name) and os.access(output_file_name, os.W_OK) is False:
+        raise RuntimeError('Output GSAS file {0} exists and current user has not priviledge to overwrite it.'
+                           ''.format(output_file_name))
+    elif os.access(output_dir, os.W_OK) is False:
+        raise RuntimeError('Current user has no writing priviledge to directory {0}'.format(output_dir))
+
     # save to a general GSAS files and load back for the data portion
     bank_buffer_dict = dict()
-    header_lines = list()
+    header_lines = ''
 
     for binning_parameters in binning_parameter_dict:
         # save GSAS to single bank temporary file
@@ -270,27 +255,24 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
         # load the GSAS file and convert the header
         bank_id_list = binning_parameter_dict[binning_parameters]
-        print '[DB...BAT] Bank List: {0}'.format(bank_id_list)
         for bank_id in bank_id_list:
             bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
         # END-FOR
     # END-FOR (binning_parameters)
 
     # form final output buffer
-    vulcan_gss_buffer = ''
-    for line in header_lines:
-        if line.startswith('#'):
-            vulcan_gss_buffer += line + '\n'
+    # original header
+    vulcan_gss_buffer = header_lines
 
+    # VDRIVE special header
     diff_ws = ADS.retrieve(diffraction_workspace_name)
     header = generate_vulcan_gda_header(diff_ws, gsas_file_name=output_file_name, ipts=ipts,
                                         gsas_param_file_name=gsas_param_file)
     vulcan_gss_buffer += header
 
+    # append each bank
     for bank_id in sorted(bank_buffer_dict.keys()):
-        for line in bank_buffer_dict[bank_id]:
-            vulcan_gss_buffer += line + '\n'  # bank_buffer_dict[bank_id]
-        # END-FOR
+        vulcan_gss_buffer += bank_buffer_dict[bank_id]
     # END-FOR
 
     # save GSAS file
@@ -302,10 +284,3 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
         raise RuntimeError('Unable to write to {0} due to {1}'.format(output_file_name, os_err))
 
     return
-
-
-
-
-
-
-
