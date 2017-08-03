@@ -197,8 +197,19 @@ class VanadiumProcessingManager(object):
         return_status = True
         error_msg = ''
 
-        # write to archive's instrument specific calibration directory's instrument specific calibration directory
+        # determine the output file name with full path
         if to_archive:
+            base_name = '{0}-s.gda'.format(self._runNumber)
+            van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
+            archive_file_name = os.path.join(van_dir, base_name)
+
+        # write to archive's instrument specific calibration directory's instrument specific calibration directory
+
+
+
+        bank_id_list = mantid_helper.get_workspace_information(workspace_name)
+        if to_archive and len(bank_id_list) <= 2:
+            # regular
             base_name = '{0}-s.gda'.format(self._runNumber)
             van_dir = '/SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium'
             archive_file_name = os.path.join(van_dir, base_name)
@@ -230,6 +241,7 @@ class VanadiumProcessingManager(object):
                     mantid_helper.save_vulcan_gsas(workspace_name, out_file_name, ipts_number,
                                                    binning_reference_file='', gss_parm_file='')
                 else:
+                    shutil.move(out_file_name, archive_file_name)
                     shutil.copy(archive_file_name, out_file_name)
             else:
                 return_status = False
@@ -272,7 +284,8 @@ class VanadiumProcessingManager(object):
                                                               smooth_filter=smoother_type,
                                                               workspace_index=workspace_index,
                                                               param_n=param_n,
-                                                              param_order=param_order)
+                                                              param_order=param_order,
+                                                              push_to_positive=True)
 
         # register the output workspace if this method is not called as a static
         self._smoothedWorkspace = output_workspace_name

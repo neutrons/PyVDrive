@@ -1599,7 +1599,8 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,
-                    smooth_filter='Butterworth', param_n=20, param_order=2):
+                    smooth_filter='Butterworth', param_n=20, param_order=2,
+                    push_to_positive=True):
     """
     Use Mantid FFTSmooth to smooth vanadium diffraction data
     :except: RuntimeError if failed to execute. AssertionError if input is wrong
@@ -1666,6 +1667,21 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
             raise RuntimeError('Unable to smooth spectrum {2} of workspace {0} due to {1}.'
                                ''.format(input_workspace, run_err, workspace_index))
     # END-IF-ELSE
+
+    if push_to_positive:
+        # push all the Y values to positive integer
+        smooth_ws = ADS.retrieve(input_workspace)
+        if workspace_index is None:
+            workspace_index_list = range(smooth_ws.getNumberHistogram())
+        else:
+            workspace_index_list = [workspace_index]
+
+        for ws_index in workspace_index_list:
+            vec_y = smooth_ws.dataY(ws_index)
+            for i_y in vec_y:
+                vec_y[i_y] = max(1, int(vec_y[i_y] + 1))
+        # END-FOR
+    # END-IF
 
     return output_workspace
 

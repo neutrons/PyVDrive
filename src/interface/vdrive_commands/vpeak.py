@@ -4,16 +4,16 @@ from procss_vcommand import VDriveCommand
 class VanadiumPeak(VDriveCommand):
     """ process vanadium peaks
     """
-    SupportedArgs = ['IPTS', 'RUNV', 'HELP', 'NSMOOTH', 'ONEBANK', 'SHIFT', 'OUTPUT']
+    SupportedArgs = ['IPTS', 'RUNV', 'VIEWER', 'NSMOOTH', 'ONEBANK', 'SHIFT', 'OUTPUT']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
-        'HELP': 'Launch General Plot Viewer',
         'ONEBANK': 'Add 2 bank data together (=1).',
         'SHIFT': 'the chopper center is shift to large lambda aggressively.',
         'NSMOOTH': 'the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.',
-        'OUTPUT': 'the directory where the smooth vanadium gsas file will be saved other than default.'
+        'OUTPUT': 'the directory where the smooth vanadium gsas file will be saved other than default.',
+        'VIEWER': 'Launch General Plot Viewer'
     }
 
     def __init__(self, controller, command_args):
@@ -69,8 +69,8 @@ class VanadiumPeak(VDriveCommand):
         if 'SHIFT' in self._commandArgsDict:
             self._doShift = bool(int(self._commandArgsDict['SHIFT']))
 
-        if 'HELP' in self._commandArgsDict:
-            do_launch_gui = bool(int(self._commandArgsDict['HELP']))
+        if 'VIEWER' in self._commandArgsDict:
+            do_launch_gui = bool(int(self._commandArgsDict['VIEWER']))
         else:
             do_launch_gui = False
 
