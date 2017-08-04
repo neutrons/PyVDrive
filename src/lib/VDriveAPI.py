@@ -1933,7 +1933,7 @@ class VDriveAPI(object):
             # END-IF
 
             smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
-                workspace_index=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
+                bank_id_list=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
 
         except RuntimeError as run_err:
             return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)

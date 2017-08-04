@@ -22,13 +22,72 @@ def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
 
 def reformat_gsas_bank(bank_line_list):
     """
-
+    re-format all the lines to GSAS/VDRive compatible
     :param bank_line_list:
     :return:
     """
-    # TONIGHT/TODO/NOWNOW - Refer to SaveVulcanGSS() to re-format data in ASCII
+    # check input
+    assert isinstance(bank_line_list, list), 'Bank lines must be given by list.'
+    if len(bank_line_list) < 4:
+        raise RuntimeError('Number of lines in bank data {0} is too small.'.format(len(bank_line_list)))
 
-    return
+    # init
+    bank_data = ''
+    in_data = False
+    i_line = 0
+
+    # add the information lines till 'BANK'
+    while in_data and i_line < len(bank_line_list):
+        # current line
+        curr_line = bank_line_list[i_line]
+
+        if curr_line.count('BANK') == 1:
+            # bank line. need reformat
+            in_data = True
+
+            # form the new BANK line
+            tof_min = float(bank_line_list[i_line+1].split()[0])
+            tof_max = float(bank_line_list[-1].split()[0])
+
+            terms = curr_line.split()
+            # replace TOF min and TOF max (item 5 and 6)
+            terms[5] = "%.1f" % (tof_min)
+            terms[6] = "%.1f" % (tof_max)
+
+            new_bank_line = ''
+            for t in terms:
+                new_bank_line += "%s " % (t)
+            bank_data = "%-80s\n" % new_bank_line
+        else:
+            # regular geometry line
+            bank_data += '{0}'.format(bank_line_list[i_line])
+        i_line += 1
+    # END-WHILE
+
+    # scan data
+    for i in range(i_line, len(bank_line_list)):
+        # split the line
+        terms = bank_line_list[i].strip().split()
+        try:
+            tof = float(terms[0])
+            y = float(terms[1])
+            e = float(terms[2])
+
+            x_s = "%.1f" % (tof)
+            y_s = "%.1f" % (y)
+            e_s = "%.2f" % (e)
+
+            temp = "%12s%12s%12s" % (x_s, y_s, e_s)
+
+        except TypeError:
+            # unable to convert to X, Y, Z. then use the original line
+            temp = "%-80s" % bank_line_list[i].rstrip()
+        # END-TRY-EXCEPTION
+
+        bank_data += "%-80s\n" % (temp)
+    # END-FOR
+
+    return bank_data
 
 
 def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_file_name):
@@ -120,7 +179,7 @@ def read_gsas_file(gsas_file_name):
 
     # cut the GSAS file into multiple sections by BANK.  create the strings other than list of lines
     inside_bank = False
-    curr_bank_lines = ''
+    curr_bank_lines = list()
     header_lines = ''
     curr_bank_id = -1
     bank_geometry_line = ''
@@ -151,15 +210,16 @@ def read_gsas_file(gsas_file_name):
             # END-IF-ELSE
 
             # construct the first 3 lines
-            curr_bank_lines = bank_geometry_line
-            curr_bank_lines += spectrum_flag_line
-            curr_bank_lines += line
+            curr_bank_lines = list()
+            curr_bank_lines.append(bank_geometry_line)
+            curr_bank_lines.append(spectrum_flag_line)
+            curr_bank_lines.append(line)
 
             # get the current bank ID
             curr_bank_id = int(cline.split('BANK')[1].split()[0])
         elif inside_bank is True and cline.startswith("#") is False:
             # Write data line
-            curr_bank_lines += line
+            curr_bank_lines.append(line)
 
         elif inside_bank is False:
             # must be header
@@ -235,7 +295,8 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # append each bank
     for bank_id in sorted(bank_buffer_dict.keys()):
-        vulcan_gss_buffer += bank_buffer_dict[bank_id]
+        bank_data_str = reformat_gsas_bank(bank_buffer_dict[bank_id])
+        vulcan_gss_buffer += bank_data_str
     # END-FOR
 
     # save GSAS file

@@ -19,8 +19,8 @@ class VanadiumProcessingManager(object):
         self._localOutputDirectory = os.getcwd()
 
         self._rawMatrixWorkspace = None
-        self._peakStripWorkspace = None
-        self._smoothedWorkspace = None
+        self._peakStripedWorkspaceDict = dict()
+        self._smoothedWorkspaceDict = None
         self._oneBankWorkspace = None
 
         self._iptsNumber = None
@@ -44,14 +44,14 @@ class VanadiumProcessingManager(object):
         get the vanadium workspace (name) that has peaks striped
         :return:
         """
-        return self._peakStripWorkspace
+        return self._peakStripedWorkspaceDict
 
     def get_smoothed_vanadium(self):
         """
         get the vanadium workspace (name) that has peaks striped and smoothed
         :return:
         """
-        return self._smoothedWorkspace
+        return self._smoothedWorkspaceDict
 
     def init_session(self, workspace_name, ipts_number, run_number):
         """
@@ -75,8 +75,8 @@ class VanadiumProcessingManager(object):
         self._runNumber = run_number
 
         # reset processed workspaces
-        self._peakStripWorkspace = None
-        self._smoothedWorkspace = None
+        self._peakStripedWorkspaceDict.clear()
+        self._smoothedWorkspaceDict = None
         self._oneBankWorkspace = None
 
         # default FWHM
@@ -94,20 +94,20 @@ class VanadiumProcessingManager(object):
         :return:
         """
         # check whether the data that has been smoothed
-        if self._smoothedWorkspace is None:
+        if self._smoothedWorkspaceDict is None:
             raise RuntimeError('Vanadium run {0} has not been processed yet.'.format(self._runNumber))
 
         # merge
         one_bank_name = self._rawMatrixWorkspace + '_1bank'
-        mantid_helper.sum_spectra(input_workspace=self._smoothedWorkspace, output_workspace=one_bank_name)
+        mantid_helper.sum_spectra(input_workspace=self._smoothedWorkspaceDict, output_workspace=one_bank_name)
         self._oneBankWorkspace = one_bank_name
 
         # export
         if save:
-            buffer_name = self._smoothedWorkspace
-            self._smoothedWorkspace = self._oneBankWorkspace
+            buffer_name = self._smoothedWorkspaceDict
+            self._smoothedWorkspaceDict = self._oneBankWorkspace
             status, message = self.save_vanadium_to_file(to_archive, local_file_name)
-            self._smoothedWorkspace = buffer_name
+            self._smoothedWorkspaceDict = buffer_name
         else:
             status = True
             message = ''
@@ -139,7 +139,7 @@ class VanadiumProcessingManager(object):
         assert isinstance(out_ws_1, str), 'Output must be a string'
 
         # smooth vanadium spectra
-        out_ws_2 = self.smooth_spectra(workspace_index=None, smoother_type=smoother_filter_type,
+        out_ws_2 = self.smooth_spectra(bank_id_list=None, smoother_type=smoother_filter_type,
                                        param_n=param_n, param_order=param_order)
         assert isinstance(out_ws_2, str), 'Output must be a string'
 
@@ -177,10 +177,10 @@ class VanadiumProcessingManager(object):
             # use the class variables of this instance
             assert self._iptsNumber is not None, 'IPTS number must be specified.'
             assert self._runNumber is not None, 'Run number must be specified.'
-            assert self._smoothedWorkspace is not None, 'Vanadium run {0} must have been processed.' \
+            assert self._smoothedWorkspaceDict is not None, 'Vanadium run {0} must have been processed.' \
                                                         ''.format(self._runNumber)
 
-            workspace_name = self._smoothedWorkspace
+            workspace_name = self._smoothedWorkspaceDict
             ipts_number = self._iptsNumber
             run_number = self._runNumber
 
@@ -251,55 +251,52 @@ class VanadiumProcessingManager(object):
 
         return return_status, error_msg
 
-    # TODO/ISSUE/NOWNOW/71 - This is a dirty fix for determining to align bins or not!
-    def smooth_spectra(self, workspace_index, smoother_type, param_n, param_order, workspace_name=None, require_to_align=False):
+    def smooth_spectra(self, bank_id_list, smoother_type, param_n, param_order, require_to_align=False):
         """
         smooth focused diffraction spectra
         :param workspace_name: if it is not None then the method is called as a static method
-        :param workspace_index:
+        :param bank_id_list:
         :param smoother_type:
         :param param_n:
         :param param_order:
         :return: output workspace name
         """
-        # about workspace_name
-        if workspace_name is None:
-            # using previously setup raw MatrixWorkspace
-            if self._peakStripWorkspace is None:
-                raise RuntimeError('{0} is not set up with raw MatrixWorkspace yet.'.format(self.__class__.__name__))
-            input_ws_name = self._peakStripWorkspace
-        else:
-            # using user specified workspace
-            # check whether the workspace exists
-            assert isinstance(workspace_name, str), 'User input workspace name {0} must be a string but not of type ' \
-                                                    '{1}.'.format(workspace_name, type(workspace_name))
-            if not mantid_helper.workspace_does_exist(workspace_name):
-                raise RuntimeError('User input workspace {0} does not exist in ADS.'.format(workspace_name))
+        if bank_id_list is None:
+            bank_id_list = self._peakStripedWorkspaceDict.keys()
 
-            input_ws_name = workspace_name
-        # END-IF-ELSE
+        processed_input_dict = dict()
+        for bank_id in bank_id_list:
+            # get workspace with peak striped
+            if bank_id not in self._peakStripedWorkspaceDict:
+                raise RuntimeError('Bank {0} has not been striped peaks.'.format(bank_id))
+            input_ws_name = self._peakStripedWorkspaceDict[bank_id]
 
-        # smooth vanadium spectra
-        output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
-                                                              smooth_filter=smoother_type,
-                                                              workspace_index=workspace_index,
-                                                              param_n=param_n,
-                                                              param_order=param_order,
-                                                              push_to_positive=True)
+            # skip if same workspace has been processed
+            if input_ws_name in processed_input_dict:
+                self._smoothedWorkspaceDict[bank_id] = processed_input_dict[input_ws_name]
+                continue
 
-        # register the output workspace if this method is not called as a static
-        self._smoothedWorkspace = output_workspace_name
+            # smooth vanadium spectra
+            output_workspace_name = mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
+                                                                  smooth_filter=smoother_type,
+                                                                  workspace_index=bank_id_list,
+                                                                  param_n=param_n,
+                                                                  param_order=param_order,
+                                                                  push_to_positive=True)
+            self._smoothedWorkspaceDict[bank_id] = output_workspace_name
+            processed_input_dict[input_ws_name] = output_workspace_name
+        # END-FOR
 
         # check the workspace whether it can be aligned
-        target_ws = mantid_helper.retrieve_workspace(output_workspace_name)
-        if target_ws.getNumberHistograms() <= 2:
+        if require_to_align:
+            output_workspace_name = self._smoothedWorkspaceDict[1]
             alignable, diff_reason = mantid_helper.check_bins_can_align(output_workspace_name, self._myParent.vdrive_bin_template)
             if alignable:
                 # align bins
                 align_bins(output_workspace_name, self._myParent.vdrive_bin_template)
         # END-IF (align bins)
 
-        return output_workspace_name
+        return self._smoothedWorkspaceDict
 
     def strip_peaks(self, peak_fwhm, pos_tolerance, background_type, is_high_background, workspace_name=None,
                     bank_list=None):
@@ -330,43 +327,63 @@ class VanadiumProcessingManager(object):
             input_ws_name = workspace_name
         # END-IF-ELSE
 
+        # output workspace dictionary
+        output_ws_dict = dict()
+
         # identify output workspace type
         raw_ws = mantid_helper.retrieve_workspace(input_ws_name)
         if raw_ws.__class__.__name__.count('EventWorkspace') == 1:
             # event workspace. possible to rebin
             if 1 in bank_list or 2 in bank_list:
-                # rebin workspace
+                # east/west bank
                 binning_parameter = '5000., -0.001, 70000.'
-                # TODO/NOWNOW/TONIGHT -
-                rebin()
-                strip()
-            elif 3 in bank_list:
-                # ...
-                rebin()
-                strip()
+                output_ws_name_ew = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                                                       bank_list=bank_list,
+                                                                       binning_parameter=binning_parameter,
+                                                                       fwhm=peak_fwhm,
+                                                                       peak_pos_tol=pos_tolerance,
+                                                                       background_type=background_type,
+                                                                       is_high_background=is_high_background)
+                for bank_id in [1, 2]:
+                    if bank_id in bank_list:
+                        output_ws_dict[bank_id] = output_ws_name_ew
+            if 3 in bank_list:
+                # high angle bank
+                binning_parameter = '5000., -0.001, 70000.'
+                output_ws_name_high = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                                                         bank_list=bank_list,
+                                                                         binning_parameter=binning_parameter,
+                                                                         fwhm=peak_fwhm,
+                                                                         peak_pos_tol=pos_tolerance,
+                                                                         background_type=background_type,
+                                                                         is_high_background=is_high_background)
+                output_ws_dict[3] = output_ws_name_high
 
         else:
             # regular one!
             output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=input_ws_name,
-                                                                bank_list=bank_list,  # TODO/TONIGHT/NEW FEATURE
+                                                                bank_list=bank_list,
+                                                                binning_parameter=None,
                                                                 fwhm=peak_fwhm,
                                                                 peak_pos_tol=pos_tolerance,
                                                                 background_type=background_type,
                                                                 is_high_background=is_high_background)
-
+            for bank_id in bank_list:
+                output_ws_dict[bank_id] = output_ws_name
+        # END-IF-ELSE
 
         # register the output workspace if it is not called as a static
-        if output_ws_name is not None:
-            self._peakStripWorkspace = output_ws_name
+        for bank_id in output_ws_dict:
+            self._peakStripedWorkspaceDict[bank_id] = output_ws_dict[bank_id]
 
-        return output_ws_name
+        return output_ws_dict
 
     def undo_peak_strip(self):
         """
         undo peak strip
         :return:
         """
-        self._peakStripWorkspace = None
+        self._peakStripedWorkspaceDict.clear()
 
         return
 
@@ -375,6 +392,6 @@ class VanadiumProcessingManager(object):
         undo spectra smoothing
         :return:
         """
-        self._smoothedWorkspace = None
+        self._smoothedWorkspaceDict = None
 
         return
