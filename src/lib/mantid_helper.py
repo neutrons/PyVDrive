@@ -1686,14 +1686,18 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
     return output_workspace
 
 
-def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_pos_tol=0.05,
+def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
+                         bank_list=None, binning_parameter=None,
+                         fwhm=7, peak_pos_tol=0.05,
                          background_type="Quadratic", is_high_background=True):
     """
     Strip vanadium peaks
     :except: run time error
 
-    :param input_workspace:
-    :param output_workspace:
+    :param input_ws_name:
+    :param output_ws_name:
+    :param bank_list:
+    :param binning_parameter:
     :param fwhm: integer peak FWHM
     :param peak_pos_tol: float peak position tolerance
     :param background_type:
@@ -1701,21 +1705,30 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     :return: output workspace's name, indicating it successfully strips vanadium peaks.
     """
     # check inputs
-    assert isinstance(input_workspace, str), 'Input workspace {0} must be a string but not a {1}.' \
-                                             ''.format(input_workspace, type(input_workspace))
-    if not workspace_does_exist(input_workspace):
-        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_workspace))
+    assert isinstance(input_ws_name, str), 'Input workspace {0} must be a string but not a {1}.' \
+                                             ''.format(input_ws_name, type(input_ws_name))
+    if not workspace_does_exist(input_ws_name):
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_ws_name))
+    else:
+        input_workspace = ADS.retrieve(input_ws_name)
 
-    if output_workspace is None:
-        output_workspace = input_workspace + '_no_peak'
+    if bank_list is None:
+        bank_list = range(1, 1+input_workspace.getNumberHistograms())
+    else:
+        assert isinstance(bank_list, list), 'Banks must be given by list'
+        if len(bank_list) == 0:
+            raise RuntimeError('Empty bank list')
+
+    if output_ws_name is None:
+        output_ws_name = input_ws_name + '_no_peak'
 
     # make sure that the input workspace is in unit dSpacing
     try:
-        if get_workspace_unit(input_workspace) != 'dSpacing':
-            mantidapi.ConvertUnits(InputWorkspace=input_workspace, OutputWorkspace=input_workspace,
+        if get_workspace_unit(input_ws_name) != 'dSpacing':
+            mantidapi.ConvertUnits(InputWorkspace=input_ws_name, OutputWorkspace=input_ws_name,
                                    Target='dSpacing')
     except RuntimeError as run_err:
-        raise RuntimeError('Unable to convert workspace {0} to dSpacing due to {1}.'.format(input_workspace), run_err)
+        raise RuntimeError('Unable to convert workspace {0} to dSpacing due to {1}.'.format(input_ws_name, run_err))
 
     # call Mantid algorithm StripVanadiumPeaks
     assert isinstance(fwhm, int), 'FWHM {0} must be an integer but not {1}.'.format(fwhm, type(fwhm))
@@ -1724,22 +1737,34 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:
+        # rebin if asked
+        print '[DB...BAT] Workspace Unit Before Strip = {0}'.format(input_workspace.getAxis(0).getUnit().ID())
+        if binning_parameter is not None:
+            mantidapi.Rebin(InputWorkspace=input_ws_name, OutputWorkspace=output_ws_name,
+                            Params=binning_parameter)
+
         # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
-        mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
-                                     OutputWorkspace=output_workspace,
-                                     FWHM=fwhm,
-                                     PeakPositionTolerance=peak_pos_tol,
-                                     BackgroundType=background_type,
-                                     HighBackground=is_high_background)
+        print '[DB...BAT] Before strip: workspace type: {0}'.format(input_workspace.__class__.__name__)
+        for bank_id in bank_list:
+            mantidapi.StripVanadiumPeaks(InputWorkspace=input_ws_name,
+                                         OutputWorkspace=output_ws_name,
+                                         FWHM=fwhm,
+                                         PeakPositionTolerance=peak_pos_tol,
+                                         BackgroundType=background_type,
+                                         HighBackground=is_high_background,
+                                         WorkspaceIndex=bank_id-1
+                                         )
+            output_workspace = ADS.retrieve(output_ws_name)
+            print '[DB...BAT] Before strip: workspace type: {0}'.format(output_workspace.__class__.__name__)
 
         # peakless_ws = ADS.retrieve(output_workspace)
         # print '[DB...BAT] Peakless WS: ', peakless_ws.isHistogramData(), peakless_ws.getAxis(0).getUnit().unitID()
 
     except RuntimeError as run_err:
         raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
-                           ''.format(input_workspace, run_err))
+                           ''.format(input_ws_name, run_err))
 
-    return output_workspace
+    return output_ws_name
 
 
 def sum_spectra(input_workspace, output_workspace):

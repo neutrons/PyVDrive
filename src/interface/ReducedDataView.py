@@ -1545,7 +1545,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
         """
-        save GSAS file
+        save GSAS file from GUI
         :param output_file_name:
         :param ipts_number:
         :param run_number:
@@ -1555,7 +1555,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # convert string
         output_file_name = str(output_file_name)
 
-        status, error_message = self._myController.save_processed_vanadium(van_info_tuple, output_file_name)
+        status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+                                                                           output_file_name=output_file_name)
         if not status:
             GuiUtility.pop_dialog_error(self, error_message)
 

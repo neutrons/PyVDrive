@@ -5,10 +5,16 @@ from datetime import datetime
 import os.path
 
 
-def save_gsas_temp(gsas_ws_name, gda_file_name, binning_parameters):
-    """ Save file
+def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
     """
-    api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
+    Save temporary GSAS file
+    :param gsas_ws_name:
+    :param gda_file_name:
+    :param binning_parameters:
+    :return:
+    """
+    if binning_parameters is not None:
+        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
 
     # Convert from PointData to Histogram
     #  gsas_ws_name = api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
@@ -235,6 +241,60 @@ def read_gsas_file(gsas_file_name):
     return header_lines, bank_data_dict
 
 
+def save_vanadium_gss(self, vanadium_workspace_dict, out_file_name, ipts_number, gsas_param_file):
+    """
+    save vanadium GSAS
+    :param self:
+    :param vanadium_workspace_dict:
+    :param out_file_name:
+    :param ipts_number:
+    :return:
+    """
+    # check input
+    assert isinstance(vanadium_workspace_dict, dict), 'vanadium workspaces must be given by dictionary.'
+    if len(vanadium_workspace_dict) == 0:
+        raise RuntimeError('Vanadium workspace dictionary is empty.')
+
+    # save to temporary GSAS file
+    bank_buffer_dict = dict()
+    # FIXME - This is not efficient because bank 1 and bank 2 always have the same resolution
+    for bank_id in sorted(vanadium_workspace_dict.keys()):
+        # save to a temporary file
+        van_ws_name = vanadium_workspace_dict[bank_id]
+        save_mantid_gsas(van_ws_name, out_file_name, None)
+        header_lines, gsas_bank_dict = read_gsas_file(out_file_name)
+
+        # load the GSAS file and convert the header
+        bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
+    # END-FOR
+
+    # form final output buffer
+    # original header
+    vulcan_gss_buffer = ''  # header_lines
+
+    # VDRIVE special header
+    diff_ws = ADS.retrieve(vanadium_workspace_dict.values[0])
+    header = generate_vulcan_gda_header(diff_ws, gsas_file_name=out_file_name, ipts=ipts_number,
+                                        gsas_param_file_name=gsas_param_file)
+    vulcan_gss_buffer += header
+    vulcan_gss_buffer += '%-80s\n' % '#'  # one empty comment line
+
+    # append each bank
+    for bank_id in sorted(bank_buffer_dict.keys()):
+        bank_data_str = reformat_gsas_bank(bank_buffer_dict[bank_id])
+        vulcan_gss_buffer += bank_data_str
+    # END-FOR
+
+    # save GSAS file
+    try:
+        gsas_file = open(out_file_name, 'w')
+        gsas_file.write(vulcan_gss_buffer)
+        gsas_file.close()
+    except OSError as os_err:
+        raise RuntimeError('Unable to write to {0} due to {1}'.format(out_file_name, os_err))
+
+    return
+
 def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
     """
     Save a diffraction workspace to GSAS file for VDRive
@@ -272,7 +332,7 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     for binning_parameters in binning_parameter_dict:
         # save GSAS to single bank temporary file
-        save_gsas_temp(diffraction_workspace_name, output_file_name, binning_parameters)
+        save_mantid_gsas(diffraction_workspace_name, output_file_name, binning_parameters)
         header_lines, gsas_bank_dict = read_gsas_file(output_file_name)
 
         # load the GSAS file and convert the header

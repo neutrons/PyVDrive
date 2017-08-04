@@ -185,13 +185,14 @@ class VanadiumProcessingManager(object):
             run_number = self._runNumber
 
         else:
-            assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
-                                             ''.format(len(vanadium_tuple))
-            workspace_name, ipts_number, run_number = vanadium_tuple
-            assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
-                                                 ''.format(ipts_number, type(ipts_number))
-            assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
-                                                ''.format(run_number, type(run_number))
+            raise RuntimeError('It is not supported to save vanadium with given workspace name.')
+            # assert len(vanadium_tuple) == 3, 'A not-None vanadium tuple must have 3 elements but not {0}' \
+            #                                  ''.format(len(vanadium_tuple))
+            # workspace_name, ipts_number, run_number = vanadium_tuple
+            # assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
+            #                                      ''.format(ipts_number, type(ipts_number))
+            # assert isinstance(run_number, int), 'Run number must be an integer but not a {1}.' \
+            #                                     ''.format(run_number, type(run_number))
         # END-IF-ELSE
 
         # archive file name
@@ -246,7 +247,7 @@ class VanadiumProcessingManager(object):
             # nED data: 3 banks
             import save_vulcan_gsas
             bin_dict = None  # use default
-            save_vulcan_gsas.save_vulcan_gss(workspace_name, bin_dict, out_file_name, ipts_number, 'Vulcan.prm')
+            save_vulcan_gsas.save_vanadium_gss(self._smoothedWorkspaceDict, out_file_name, ipts_number, 'Vulcan.prm')
         # END-IF-ELSE
 
         return return_status, error_msg
@@ -361,7 +362,7 @@ class VanadiumProcessingManager(object):
 
         else:
             # regular one!
-            output_ws_name = mantid_helper.strip_vanadium_peaks(input_workspace=input_ws_name,
+            output_ws_name = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
                                                                 bank_list=bank_list,
                                                                 binning_parameter=None,
                                                                 fwhm=peak_fwhm,
