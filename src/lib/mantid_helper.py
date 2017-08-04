@@ -1702,7 +1702,7 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
     :param peak_pos_tol: float peak position tolerance
     :param background_type:
     :param is_high_background:
-    :return: output workspace's name, indicating it successfully strips vanadium peaks.
+    :return: dictionary to workspace names
     """
     # check inputs
     assert isinstance(input_ws_name, str), 'Input workspace {0} must be a string but not a {1}.' \
@@ -1738,33 +1738,35 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:
         # rebin if asked
-        print '[DB...BAT] Workspace Unit Before Strip = {0}'.format(input_workspace.getAxis(0).getUnit().ID())
+        # workspace unit before striping:  dSpacing.  therefore, cannot use the TOF binning range
         if binning_parameter is not None:
             mantidapi.Rebin(InputWorkspace=input_ws_name, OutputWorkspace=output_ws_name,
-                            Params=binning_parameter)
+                            Params='-0.001')
+        #                    Params=binning_parameter)
 
         # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
-        print '[DB...BAT] Before strip: workspace type: {0}'.format(input_workspace.__class__.__name__)
+        # before striping: EventWorkspace
+        output_ws_dict = dict()
         for bank_id in bank_list:
+            output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
             mantidapi.StripVanadiumPeaks(InputWorkspace=input_ws_name,
-                                         OutputWorkspace=output_ws_name,
+                                         OutputWorkspace=output_ws_name_i,
                                          FWHM=fwhm,
                                          PeakPositionTolerance=peak_pos_tol,
                                          BackgroundType=background_type,
                                          HighBackground=is_high_background,
                                          WorkspaceIndex=bank_id-1
                                          )
-            output_workspace = ADS.retrieve(output_ws_name)
-            print '[DB...BAT] Before strip: workspace type: {0}'.format(output_workspace.__class__.__name__)
+            output_ws_dict[bank_id] = output_ws_name_i
+            # After strip: Workspace2D
 
-        # peakless_ws = ADS.retrieve(output_workspace)
-        # print '[DB...BAT] Peakless WS: ', peakless_ws.isHistogramData(), peakless_ws.getAxis(0).getUnit().unitID()
+        # END-FOR
 
     except RuntimeError as run_err:
         raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
                            ''.format(input_ws_name, run_err))
 
-    return output_ws_name
+    return output_ws_dict
 
 
 def sum_spectra(input_workspace, output_workspace):

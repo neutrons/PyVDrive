@@ -43,7 +43,7 @@ def reformat_gsas_bank(bank_line_list):
     i_line = 0
 
     # add the information lines till 'BANK'
-    while in_data and i_line < len(bank_line_list):
+    while in_data is False and i_line < len(bank_line_list):
         # current line
         curr_line = bank_line_list[i_line]
 
@@ -57,13 +57,13 @@ def reformat_gsas_bank(bank_line_list):
 
             terms = curr_line.split()
             # replace TOF min and TOF max (item 5 and 6)
-            terms[5] = "%.1f" % (tof_min)
-            terms[6] = "%.1f" % (tof_max)
+            terms[5] = "%.1f" % tof_min
+            terms[6] = "%.1f" % tof_max
 
             new_bank_line = ''
             for t in terms:
-                new_bank_line += "%s " % (t)
-            bank_data = "%-80s\n" % new_bank_line
+                new_bank_line += "%s " % t
+            bank_data += "%-80s\n" % new_bank_line
         else:
             # regular geometry line
             bank_data += '{0}'.format(bank_line_list[i_line])
@@ -78,19 +78,22 @@ def reformat_gsas_bank(bank_line_list):
             tof = float(terms[0])
             y = float(terms[1])
             e = float(terms[2])
-
-            x_s = "%.1f" % (tof)
-            y_s = "%.1f" % (y)
-            e_s = "%.2f" % (e)
+            x_s = "%.1f" % tof
+            y_s = "%.1f" % y
+            e_s = "%.2f" % e
 
             temp = "%12s%12s%12s" % (x_s, y_s, e_s)
 
         except TypeError:
             # unable to convert to X, Y, Z. then use the original line
             temp = "%-80s" % bank_line_list[i].rstrip()
+        except ValueError:
+            # unable to convert to X, Y, Z
+            temp = '%-80s' % bank_line_list[i].rstrip()
+            print '[ERROR] Unexpected line {0}: {1} as data.'.format(i, temp)
         # END-TRY-EXCEPTION
 
-        bank_data += "%-80s\n" % (temp)
+        bank_data += "%-80s\n" % temp
     # END-FOR
 
     return bank_data

@@ -976,9 +976,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # search in this object's reduced data dictionary
-        if run_number in self._reducedDataDict and self._reducedDataDict[run_number]['unit'] == unit:
-            # data existing and unit is same
-            return True, None
+        if run_number in self._reducedDataDict:
+            assert isinstance(self._reducedDataDict[run_number], dict),\
+                'Expected run data info {0} is stored in a dictionary but not a {1}.' \
+                ''.format(self._reducedDataDict[run_number], type(self._reducedDataDict[run_number]))
+
+            if self._reducedDataDict[run_number]['unit'] == unit:
+                # data existing and unit is same
+                return True, None
 
         # find out the input run number is a workspace name or a run number
         if isinstance(run_number, str) and run_number.isdigit() is False:

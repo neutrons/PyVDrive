@@ -338,16 +338,15 @@ class VanadiumProcessingManager(object):
             if 1 in bank_list or 2 in bank_list:
                 # east/west bank
                 binning_parameter = '5000., -0.001, 70000.'
-                output_ws_name_ew = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
-                                                                       bank_list=bank_list,
-                                                                       binning_parameter=binning_parameter,
-                                                                       fwhm=peak_fwhm,
-                                                                       peak_pos_tol=pos_tolerance,
-                                                                       background_type=background_type,
-                                                                       is_high_background=is_high_background)
-                for bank_id in [1, 2]:
-                    if bank_id in bank_list:
-                        output_ws_dict[bank_id] = output_ws_name_ew
+                output_ws_name_ew_dict = mantid_helper.strip_vanadium_peaks(input_ws_name=input_ws_name,
+                                                                            bank_list=bank_list,
+                                                                            binning_parameter=binning_parameter,
+                                                                            fwhm=peak_fwhm,
+                                                                            peak_pos_tol=pos_tolerance,
+                                                                            background_type=background_type,
+                                                                            is_high_background=is_high_background)
+                for bank_id in output_ws_name_ew_dict:
+                    output_ws_dict[bank_id] = output_ws_name_ew_dict[bank_id]
             if 3 in bank_list:
                 # high angle bank
                 binning_parameter = '5000., -0.001, 70000.'
@@ -358,7 +357,7 @@ class VanadiumProcessingManager(object):
                                                                          peak_pos_tol=pos_tolerance,
                                                                          background_type=background_type,
                                                                          is_high_background=is_high_background)
-                output_ws_dict[3] = output_ws_name_high
+                output_ws_dict[3] = output_ws_name_high[3]
 
         else:
             # regular one!
@@ -370,7 +369,7 @@ class VanadiumProcessingManager(object):
                                                                 background_type=background_type,
                                                                 is_high_background=is_high_background)
             for bank_id in bank_list:
-                output_ws_dict[bank_id] = output_ws_name
+                output_ws_dict[bank_id] = output_ws_name[bank_id]
         # END-IF-ELSE
 
         # register the output workspace if it is not called as a static
