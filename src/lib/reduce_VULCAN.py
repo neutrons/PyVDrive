@@ -65,7 +65,7 @@ from mantid.kernel import DateAndTime
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
-                        ['/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_24.h5',
+                        ['/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          None]]
 ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
@@ -97,7 +97,7 @@ def get_auto_reduction_calibration_files(nexus_file_name):
 
 
 refLogTofFilename = None
-CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_24.h5'
+CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5'
 CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
 # refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
 # CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"

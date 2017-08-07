@@ -1598,7 +1598,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                                   data_key)
         if status:
             result_ws_name = ret_obj
-            self.load_reduced_data(run_number=result_ws_name, unit='dSpacing')
+            # self.load_reduced_data(run_number=controller_data_key, unit=self._currUnit)
+            self.load_reduced_data(run_number=result_ws_name, unit=self._currUnit)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
