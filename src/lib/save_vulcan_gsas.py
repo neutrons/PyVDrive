@@ -364,6 +364,7 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # save GSAS file
     try:
+        print '[DB...BAT] WRITE OUT FINAL GSAS File {0}.'.format(output_file_name)
         gsas_file = open(output_file_name, 'w')
         gsas_file.write(vulcan_gss_buffer)
         gsas_file.close()
