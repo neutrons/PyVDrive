@@ -1017,7 +1017,11 @@ class ReductionSetup(object):
         :param dir_name:
         :return:
         """
-        assert isinstance(dir_name, str), 'directory name must be string'
+        assert isinstance(dir_name, str), 'directory name {0} must be of type string'.format(dir_name)
+        if os.path.exists(dir_name) is False:
+            raise RuntimeError('Output sample log directory {0} does not exist.'.format(dir_name))
+        if os.path.isfile(dir_name):
+            raise RuntimeError('Use input {0} is an existing file.'.format(dir_name))
 
         self._sampleLogDirectory = dir_name
 
@@ -1879,10 +1883,10 @@ class ReduceVulcanData(object):
         assert isinstance(log_ws_name, str), 'Log workspace name must be a string'
         assert AnalysisDataService.doesExist(log_ws_name), 'Log workspace %s does not exist in data service.' \
                                                            '' % log_ws_name
-        assert isinstance(output_directory, str), 'Output directory must be a string.'
+        assert isinstance(output_directory, str), 'Output directory {0} must be a string.'.format(output_directory)
+        assert isinstance(run_number, int), 'Run number must be an integer.'
         assert os.path.exists(output_directory) and os.path.isdir(output_directory), \
             'Output directory must be an existing directory.'
-        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         furnace_log_file_name = os.path.join(output_directory, "furnace%d.txt" % run_number)
         self.generate_csv_log(furnace_log_file_name, Furnace_Header_List, None)
@@ -2611,7 +2615,7 @@ class MainUtility(object):
     @staticmethod
     def print_main_help():
         """
-        Print help message
+        Print help message1884
         :return:
         """
         help_str = ''
@@ -2628,6 +2632,8 @@ class MainUtility(object):
         help_str += '-f/focus    : diffraction focus file.\n'
         help_str += '-c/charact  : characterization file.\n'
         help_str += '-b/bin      : binning file.\n'
+
+        print 'Vulcan reduction helping: \n{0}'.format(help_str)
 
         return
 

@@ -1,5 +1,6 @@
 import sys
 sys.path.append("/opt/mantidnightly/bin")
+sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
 
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
