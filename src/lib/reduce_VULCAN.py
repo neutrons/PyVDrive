@@ -1562,12 +1562,14 @@ class ReduceVulcanData(object):
                 self._myLogInfo += "Destination GSAS file {0} exists and will be overwritten.\n" \
                                    "".format(target_file_name)
                 os.remove(target_file_name)
-
             shutil.copy(source_gsas_file_name, target_directory)
             os.chmod(target_file_name, 0664)
         except OSError as os_err:
             self._myLogInfo += '[ERROR] Unable to copy {0} to {1} due to {2}.\n' \
                                ''.format(source_gsas_file_name, target_file_name, os_err)
+        except IOError as io_err:
+            raise RuntimeError('Unable to cropy {0} to {1} due to {2}.'
+                               ''.format(source_gsas_file_name, target_file_name, io_err))
 
         return
 
