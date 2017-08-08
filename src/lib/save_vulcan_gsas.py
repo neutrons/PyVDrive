@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/opt/mantidnightly/bin")
+
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 import os

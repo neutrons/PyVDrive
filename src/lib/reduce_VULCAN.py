@@ -1556,6 +1556,10 @@ class ReduceVulcanData(object):
 
         # Copy
         target_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
+        if source_gsas_file_name == target_file_name:
+            print '[INFO] Source GSAS file (1) {0} is same as target GSAS file (1) {1}.  No copy operation.'.format(source_gsas_file_name, target_file_name)
+            return
+
         try:
             if os.path.isfile(target_file_name) is True:
                 # delete existing file
