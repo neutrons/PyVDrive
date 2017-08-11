@@ -60,20 +60,16 @@ import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 
-# TODO/ISSUE/NOW - Need to use a date to find out calibration files .../2011_1_7_CAL
-
 
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
-                        ['/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5',
+                        ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_mix_2017_08_11.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          None]]
 ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
 
 
-# TODO/ISSUE/NOW - Test and apply!
-# TODO/Now - Remove all the debug output
 def get_auto_reduction_calibration_files(nexus_file_name):
     """
     get calibration files for auto reduction according to the date of the NeXus event file is generated
@@ -90,19 +86,19 @@ def get_auto_reduction_calibration_files(nexus_file_name):
     event_file_time = datetime.datetime.fromtimestamp(os.path.getmtime(nexus_file_name))
 
     # locate the position of the date in the list
-    char_index = bisect.bisect_left(ValidDateList, event_file_time)
+    char_index = bisect.bisect_right(ValidDateList, event_file_time) - 1
     if char_index < 0 or char_index >= len(ValidDateList):
         raise RuntimeError('File date is out of range.')
 
     return CalibrationFilesList[char_index]
 
 
-refLogTofFilename = None
-CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5'
-CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
-# refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-# CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-# CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
+# refLogTofFilename = None
+# CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5'
+# CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
+# # refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
+# # CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
+# # CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
 
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
@@ -951,10 +947,17 @@ class ReductionSetup(object):
         set default calibration files
         :return:
         """
-        self.set_focus_file(CalibrationFileName)
-        self.set_charact_file(CharacterFileName)
-        if refLogTofFilename is not None:
-	    self.set_vulcan_bin_file(refLogTofFilename)
+        # get the reduction calibration and etc files from event data file
+        file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
+
+        calibrate_file_name = file_list[0]
+        character_file_name = file_list[1]
+        binning_ref_file_name = file_list[2]
+
+        self.set_focus_file(calibrate_file_name)
+        self.set_charact_file(character_file_name)
+        if binning_ref_file_name is not None:
+            self.set_vulcan_bin_file(binning_ref_file_name)
 
         return
 
