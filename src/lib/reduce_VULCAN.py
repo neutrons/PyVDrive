@@ -66,7 +66,8 @@ CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
                         ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_mix_2017_08_11.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
-                         None]]
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
+                        ]
 ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
 
 
@@ -91,14 +92,8 @@ def get_auto_reduction_calibration_files(nexus_file_name):
         raise RuntimeError('File date is out of range.')
 
     return CalibrationFilesList[char_index]
+# END-DEF
 
-
-# refLogTofFilename = None
-# CalibrationFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_calibrate_d150178_2017_07_31_v1m.h5'
-# CharacterFileName = '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt'
-# # refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-# # CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-# # CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
 
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
@@ -2254,7 +2249,6 @@ class ReduceVulcanData(object):
                            OutputWorkspace=reduced_workspace,
                            Params=east_west_binning_parameters)
 
-
         # delete existing GSAS file
         if delete_exist_gsas_file:
             os.remove(gsas_file_name)
@@ -2284,7 +2278,20 @@ class ReduceVulcanData(object):
         elif self._is_nED:
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # NOTE: The bank ID (from 1) is required here
-            save_vulcan_gsas.save_vulcan_gss(reduced_workspace, binning_parameter_dict=None,
+
+            # import h5 file
+            h5_bin_file_name = self._reductionSetup.get_vulcan_bin_file()
+            import h5py
+            bin_file = h5py.File(h5_bin_file_name, 'r')
+            low_bins = bin_file['west_east_bank'][:]
+            high_bins = bin_file['high_angle_bank'][:]
+            bin_file.close()
+
+            bin_param_list = [([1, 2], low_bins),
+                              ([3], high_bins)]
+
+            save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
+                                             binning_parameter_list=bin_param_list,
                                              output_file_name=gsas_file_name,
                                              ipts=self._reductionSetup.get_ipts_number(),
                                              gsas_param_file=gsas_iparm_file_name)
@@ -2329,7 +2336,8 @@ class ReduceVulcanData(object):
 
         return
 
-    def pre_process_output_gsas(self, gsas_file_name):
+    @staticmethod
+    def pre_process_output_gsas(gsas_file_name):
         """
         get the full path for output GSAS file
         :param gsas_file_name: proposed GSAS file
@@ -2337,7 +2345,6 @@ class ReduceVulcanData(object):
         """
         message = ''
         output_access_error = False
-        #write_to_temp = False
         del_curr_gsas = False
 
         # check directory
@@ -2346,25 +2353,18 @@ class ReduceVulcanData(object):
             # directory for proposed output GSAS file does not exist
             output_access_error = True
             message += 'Output directory "{0}" does not exist.'.format(gsas_dir)
-            #write_to_temp = True
         elif os.access(gsas_dir, os.W_OK) is False:
             # user has no write permission for the directory
             output_access_error = True
             message += 'User hasn\'t the write permission to directory {0}'.format(gsas_dir)
-            #write_to_temp = True
         elif os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
             # GSAS file exists but user cannot rewrite
             output_access_error = True
             message += 'User cannot overwrite existing GSAS file {0}'.format(gsas_file_name)
-            #write_to_temp = True
         elif os.path.exists(gsas_file_name):
             # re-write: so delete the original gsas file first
             message += 'Previously reduced GSAS file {0} is to be overwritten.'.format(gsas_file_name)
             del_curr_gsas = True
-
-        # change to a new GSAS file
-        #if write_to_temp:
-        #    gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
 
         return gsas_file_name, message, output_access_error, del_curr_gsas
 

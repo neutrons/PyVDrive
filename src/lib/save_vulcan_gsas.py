@@ -1,33 +1,62 @@
+from datetime import datetime
+import os
+import os.path
+import numpy
 import sys
 sys.path.append("/opt/mantidnightly/bin")
 sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
-
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
-import os
-from datetime import datetime
-import os.path
 
 
-def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
+def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
     """
-    Save temporary GSAS file
-    :param gsas_ws_name:
-    :param gda_file_name:
-    :param binning_parameters:
+    Rebin input workspace (to histogram data)
+     in order to to match VULCAN's VDRIVE-generated GSAS file
+    :param input_ws: focused workspace
+    :param vec_ref_tof: vector of TOF bins
+    :param output_ws_name:
     :return:
     """
-    if binning_parameters is not None:
-        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
+    # Create a complicated bin parameter
+    params = []
+    dx = None
+    for ibin in range(len(vec_ref_tof) - 1):
+        x0 = vec_ref_tof[ibin]
+        xf = vec_ref_tof[ibin + 1]
+        dx = xf - x0
+        params.append(x0)
+        params.append(dx)
 
-    # Convert from PointData to Histogram
-    #  gsas_ws_name = api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
+    # last bin
+    assert dx is not None, 'Vector of refT has less than 2 values.  It is not supported.'
+    x0 = vec_ref_tof[-1]
+    xf = 2 * dx + x0
+    params.extend([x0, 2 * dx, xf])
 
-    # Save
-    api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
-                Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
+    # Rebin
+    tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=False)
 
-    return gda_file_name
+    # Map to a new workspace with 'vdrive-bin', which is the integer value of log bins
+    numhist = tempws.getNumberHistograms()
+    newvecx = []
+    newvecy = []
+    newvece = []
+    for iws in range(numhist):
+        vecx = tempws.readX(iws)
+        vecy = tempws.readY(iws)
+        vece = tempws.readE(iws)
+        for i in range(len(vecx) - 1):
+            newvecx.append(int(vecx[i] * 10) / 10.)
+            newvecy.append(vecy[i])
+            newvece.append(vece[i])
+            # ENDFOR (i)
+    # ENDFOR (iws)
+    api.DeleteWorkspace(Workspace=tempws)
+    gsaws = api.CreateWorkspace(DataX=newvecx, DataY=newvecy, DataE=newvece, NSpec=numhist,
+                                UnitX="TOF", ParentWorkspace=input_ws, OutputWorkspace=output_ws_name)
+
+    return gsaws
 
 
 def reformat_gsas_bank(bank_line_list):
@@ -123,7 +152,6 @@ def generate_vulcan_gda_header(gsas_workspace, gsas_file_name, ipts, gsas_param_
         assert ipts.isdigit(), 'IPTS {0} must be convertible to an integer.'.format(ipts)
 
     # Get necessary information
-    print '[DB...BAT] Type of GSAS workspace: {0}'.format(type(gsas_workspace))
     title = gsas_workspace.getTitle()
     run = gsas_workspace.getRun()
 
@@ -248,10 +276,33 @@ def read_gsas_file(gsas_file_name):
     return header_lines, bank_data_dict
 
 
-def save_vanadium_gss(self, vanadium_workspace_dict, out_file_name, ipts_number, gsas_param_file):
+def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
+    """
+    Save temporary GSAS file
+    :param gsas_ws_name:
+    :param gda_file_name:
+    :param binning_parameters:
+    :return:
+    """
+    if isinstance(binning_parameters, numpy.ndarray):
+        align_to_vdrive_bin(gsas_ws_name, binning_parameters, gsas_ws_name)
+    elif binning_parameters is not None:
+        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
+    # END-IF (rebin)
+
+    # Convert from PointData to Histogram
+    api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
+
+    # Save
+    api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
+                Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
+
+    return gda_file_name
+
+
+def save_vanadium_gss(vanadium_workspace_dict, out_file_name, ipts_number, gsas_param_file):
     """
     save vanadium GSAS
-    :param self:
     :param vanadium_workspace_dict:
     :param out_file_name:
     :param ipts_number:
@@ -302,26 +353,27 @@ def save_vanadium_gss(self, vanadium_workspace_dict, out_file_name, ipts_number,
 
     return
 
-def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_file_name, ipts, gsas_param_file):
+
+def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_file_name, ipts, gsas_param_file):
     """
     Save a diffraction workspace to GSAS file for VDRive
     :param diffraction_workspace_name:
-    :param binning_parameter_dict:
+    :param binning_parameter_list:
     :param output_file_name:
     :param ipts:
     :param gsas_param_file:
     :return:
     """
     # default
-    if binning_parameter_dict is None:
-        binning_parameter_dict = {(5000., -0.001, 70000.): [1, 2],
-                                  (5000., -0.0003, 70000.): [3]}
+    if binning_parameter_list is None:
+        binning_parameter_list = [([1, 2], (5000., -0.001, 70000.)),
+                                  ([3], (5000., -0.0003, 70000.))]
 
     # check
     assert isinstance(diffraction_workspace_name, str), 'Diffraction workspace name {0} must be a string.' \
                                                         ''.format(diffraction_workspace_name)
-    assert isinstance(binning_parameter_dict, dict), 'Binning parameters {0} must be given in a dictionary.' \
-                                                     ''.format(binning_parameter_dict)
+    assert isinstance(binning_parameter_list, list), 'Binning parameters {0} must be given in a list.' \
+                                                     ''.format(binning_parameter_list)
     assert isinstance(output_file_name, str), 'Output file name {0} must be a string.'.format(output_file_name)
     output_dir = os.path.dirname(output_file_name)
     if os.path.exists(output_dir) is False:
@@ -335,15 +387,19 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # save to a general GSAS files and load back for the data portion
     bank_buffer_dict = dict()
-    # header_lines = ''
 
-    for binning_parameters in binning_parameter_dict:
+    binning_parameter_list.sort()
+    for i_bin_param in range(len(binning_parameter_list)):
+        bank_id_list, binning_parameters = binning_parameter_list[i_bin_param]
         # save GSAS to single bank temporary file
+        assert isinstance(bank_id_list, list), 'Bank IDs {0} must be given by list but not {1}.' \
+                                               ''.format(bank_id_list, type(bank_id_list))
+
         save_mantid_gsas(diffraction_workspace_name, output_file_name, binning_parameters)
         header_lines, gsas_bank_dict = read_gsas_file(output_file_name)
 
         # load the GSAS file and convert the header
-        bank_id_list = binning_parameter_dict[binning_parameters]
+        # bank_id_list = binning_parameter_list[binning_parameters]
         for bank_id in bank_id_list:
             bank_buffer_dict[bank_id] = gsas_bank_dict[bank_id]
         # END-FOR
@@ -368,7 +424,6 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_dict, output_f
 
     # save GSAS file
     try:
-        print '[DB...BAT] WRITE OUT FINAL GSAS File {0}.'.format(output_file_name)
         gsas_file = open(output_file_name, 'w')
         gsas_file.write(vulcan_gss_buffer)
         gsas_file.close()
