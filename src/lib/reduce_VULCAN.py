@@ -929,6 +929,9 @@ class ReductionSetup(object):
         self._mainRecordFileName = os.path.join(self._outputDirectory, "AutoRecord.txt")
         self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
                                                "AutoRecord.txt")
+        print ('[DEBUG LOG] auto reduction mode: output directory: {0}; 2nd record file: {1}'
+               ''.format(self._outputDirectory, self._2ndRecordFileName))
+
         # output GSAS directory
         self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binnedgda')
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
@@ -1331,10 +1334,10 @@ class PatchRecordHDF5(object):
     """Get the missing information in the loaded workspace from original hdf5 file
     """
     H5Path = {'Sample': ('entry', 'sample', 'name', 0, 0),
+              'ITEM': ('entry', 'sample', 'identifier', 0, 0),
               'Monitor1': ('entry', 'monitor1', 'total_counts', 0),
               'Monitor2': ('entry', 'monitor2', 'total_counts', 0),
               'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0)}
-
 
     def __init__(self, h5name, sample_log_names):
         """initialization
@@ -1711,7 +1714,7 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        sample_log_list = ['Comment', 'Sample', 'Monitor1', 'Monitor2']
+        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
         if self._reductionSetup.get_event_file().endswith('.h5'):
             # HDF5 file
             patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
@@ -1763,30 +1766,35 @@ class ReduceVulcanData(object):
         # Auto reduction only: record file for users
         if user_record_name:
             # 2nd copy of Auto Record . txt
+            change_2nd_record_mode = False
             if os.path.exists(self._reductionSetup.get_record_2nd_file()):
                 # if the target copy of AutoRecord.txt exists, then append
                 status3, message3 = self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
                                                                 sample_name_list, sample_title_list,
                                                                 sample_operation_list, patch_list)
-                return_status += status3
+                return_status = status3 and return_status
                 return_message += message3 + '\n'
+                change_2nd_record_mode = True
             else:
                 # if the target copy of AutoRecord.txt does not exist
                 if os.access(self._reductionSetup.get_record_2nd_file(), os.W_OK):
                     shutil.copy(self._reductionSetup.get_record_file(),
                                 self._reductionSetup.get_record_2nd_file())
-                    # change mode to 666
-                    try:
-                        os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
-                    except IOError as io_err:
-                        return_status = False
-                        return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
-                                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+                    change_2nd_record_mode =True
                 else:
                     return_status = False
                     return_message += 'Unable to write file {0} without writing permission.\n' \
                                       ''.format(self._reductionSetup.get_record_2nd_file())
             # END-IF-ELSE
+            if change_2nd_record_mode:
+                # change mode to 666
+                try:
+                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                except IOError as io_err:
+                    return_status = False
+                    return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
+                                      ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+            # END-IF
 
             # 2nd copy of auto align/sample
             # find out the path of the target file
@@ -2712,7 +2720,10 @@ def main(argv):
     status, error_message = reduction_setup.check_validity()
     if status and not reduction_setup.is_dry_run():
         # reduce data
-        reducer.execute_vulcan_reduction(output_logs=True)
+        status, message = reducer.execute_vulcan_reduction(output_logs=True)
+        if not status:
+            raise RuntimeError('Auto reduction error: {0}'.format(message))
+        print ('[Auto Reduction Successful: {0}'.format(message))
     elif not status:
         # error message
         raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)
