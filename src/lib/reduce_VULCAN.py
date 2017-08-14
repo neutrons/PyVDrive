@@ -1239,86 +1239,6 @@ class PatchRecord:
 
         return patch_list
 
-    @staticmethod
-    def get_last_line_in_binary_file(filename):
-        """ Get the first and last line of a (possibly long) file
-        """
-        # Open an binary file
-        with open(filename, 'rb') as binary_file:
-            # Determine a roughly the size of a line
-            first_line = next(binary_file).decode().strip()
-            second_line = next(binary_file).decode().strip()
-            line_size = len(second_line)
-
-            try:
-                # search from the end of line
-                binary_file.seek(-2*line_size, 2)
-                last_line = binary_file.readlines()[-1].decode().strip()
-                binary_file.close()
-            except IOError:
-                # File is too short
-                # close the file and re-open
-                binary_file.close()
-                binary_file = open(filename, 'rb')
-
-                lines = binary_file.readlines()
-                last_line = lines[-1]
-        # END-WITH
-
-        return first_line, last_line
-
-    @staticmethod
-    def remove_last_line_in_text(filename):
-        """ Remove last line
-        """
-        # ifile = open(sys.argv[1], "r+", encoding = "utf-8")
-        ifile = open(filename, "r+")
-
-        ifile.seek(0, os.SEEK_END)
-        pos = ifile.tell() - 1
-        while pos > 0 and ifile.read(1) != "\n":
-            pos -= 1
-            ifile.seek(pos, os.SEEK_SET)
-
-        if pos > 0:
-            ifile.seek(pos, os.SEEK_SET)
-            ifile.truncate()
-
-        ifile.close()
-
-        return
-
-    def _getIPTS(self):
-        """ Get IPTS
-        Return: integer
-        """
-        tree = ET.parse(self._beamInfoFileName)
-
-        root = tree.getroot()
-        if root.tag != 'Instrument':
-            raise NotImplementedError("Not an instrument")
-
-        proposal = None
-        for child in root:
-            if child.tag == "Proposal":
-                proposal = child
-                break
-        if proposal is None:
-            raise NotImplementedError("Not have proposal")
-
-        id_node = None
-        for child in proposal:
-            if child.tag == "ID":
-                id_node = child
-                break
-        if id_node is None:
-            raise NotImplementedError("No ID")
-
-        ipts = id_node.text
-        ipts = int(ipts)
-
-        return ipts
-
     def _readCvInfoFile(self):
         """ read CV info
         """
@@ -1405,6 +1325,69 @@ class PatchRecord:
 
         return runinfodict
 # END-CLASS
+
+
+class PatchRecordHDF5(object):
+    """Get the missing information in the loaded workspace from original hdf5 file
+    """
+    H5Path = {'Sample': ('entry', 'sample', 'name', 0, 0),
+              'Monitor1': ('entry', 'monitor1', 'total_counts', 0),
+              'Monitor2': ('entry', 'monitor2', 'total_counts', 0),
+              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0)}
+
+
+    def __init__(self, h5name, sample_log_names):
+        """initialization
+        :param h5name:
+        :param sample_log_names:
+        """
+        # check input
+        assert isinstance(h5name, str), 'HDF5 file name {0} must be a string.'.format(h5name)
+        assert isinstance(sample_log_names, list), 'Sample logs names must be given by list'
+
+        if os.path.exists(h5name) is False:
+            raise RuntimeError('Input HDF5 {0} cannot be found.'.format(h5name))
+
+        self._h5name = h5name
+        self._sample_log_list = sorted(sample_log_names)
+
+        return
+
+    def export_patch_list(self):
+        """search the HDF5 for the sample logs
+        :return:
+        """
+        import h5py
+
+        try:
+            h5file = h5py.File(self._h5name, 'r')
+        except IOError as io_err:
+            raise RuntimeError('Unable to open hdf5 file {0} due to {1}'.format(self._h5name, io_err))
+
+        log_value_dict = dict()
+
+        for log_name in self._sample_log_list:
+            if log_name in PatchRecordHDF5.H5Path:
+                h5_path = PatchRecordHDF5.H5Path[log_name]
+                node = h5file
+                for item in h5_path:
+                    if isinstance(item, str):
+                        node = node[item]
+                    elif isinstance(item, int):
+                        node = node[item]
+                # END-FOR
+                log_value_dict[log_name] = str(node)
+        # END-FOR
+
+        h5file.close()
+
+        # convert to list
+        patch_list = []
+        for log_name in log_value_dict:
+            patch_list.append(log_name)
+            patch_list.append(log_value_dict[log_name])
+
+        return patch_list
 
 
 class ReduceVulcanData(object):
@@ -1728,13 +1711,21 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        patcher = PatchRecord(self._instrumentName,
-                              self._reductionSetup.get_ipts_number(),
-                              self._reductionSetup.get_run_number())
-        if patcher.do_not_patch:
-            patch_list = list()
-        else:
+        sample_log_list = ['Comment', 'Sample', 'Monitor1', 'Monitor2']
+        if self._reductionSetup.get_event_file().endswith('.h5'):
+            # HDF5 file
+            patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
             patch_list = patcher.export_patch_list()
+        else:
+            # with preNexus and others. pre nED
+            patcher = PatchRecord(self._instrumentName,
+                                  self._reductionSetup.get_ipts_number(),
+                                  self._reductionSetup.get_run_number())
+            if patcher.do_not_patch:
+                patch_list = list()
+            else:
+                patch_list = patcher.export_patch_list()
+        # END-IF-ELSE
 
         # define over all message
         return_status = True
