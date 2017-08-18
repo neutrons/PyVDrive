@@ -1548,6 +1548,7 @@ class ReduceVulcanData(object):
             print '[INFO] Source GSAS file (1) {0} is same as target GSAS file (1) {1}.  No copy operation.'.format(source_gsas_file_name, target_file_name)
             return
 
+        # copy the file
         try:
             if os.path.isfile(target_file_name) is True:
                 # delete existing file
@@ -1555,13 +1556,17 @@ class ReduceVulcanData(object):
                                    "".format(target_file_name)
                 os.remove(target_file_name)
             shutil.copy(source_gsas_file_name, target_directory)
-            os.chmod(target_file_name, 0664)
-        except OSError as os_err:
-            self._myLogInfo += '[ERROR] Unable to copy {0} to {1} due to {2}.\n' \
-                               ''.format(source_gsas_file_name, target_file_name, os_err)
+            new_gsas_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
+            os.chmod(new_gsas_file_name, 0666)
         except IOError as io_err:
             raise RuntimeError('Unable to cropy {0} to {1} due to {2}.'
                                ''.format(source_gsas_file_name, target_file_name, io_err))
+        # modify the file property
+        try:
+            os.chmod(target_file_name, 0666)
+        except OSError as os_err:
+            self._myLogInfo += '[ERROR] Unable to change file {0}\'s mode to {1} due to {2}.\n' \
+                               ''.format(source_gsas_file_name, '666', os_err)
 
         return
 
@@ -1605,8 +1610,10 @@ class ReduceVulcanData(object):
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
                 shutil.copy(gsas_file, standard_dir)
+                new_gsas_file_name = os.path.join(standard_dir, os.path.basename(gsas_file))
+                os.chmod(new_gsas_file_name, 0666)
             except (IOError, OSError) as copy_err:
-                msg_gsas += 'Unable to write standard GSAS file to {0} due to {1}\n' \
+                msg_gsas += 'Unable to write standard GSAS file to {0} and change mode to 666 due to {1}\n' \
                             ''.format(standard_dir, copy_err)
         # END-IF
 
@@ -1782,6 +1789,7 @@ class ReduceVulcanData(object):
                 try:
                     shutil.copy(self._reductionSetup.get_record_file(),
                                 self._reductionSetup.get_record_2nd_file())
+                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
                 except IOError as io_err:
                     return_status = False
                     return_message += 'Unable to copy file {0} to {1} due to {2}.\n' \
@@ -1812,6 +1820,7 @@ class ReduceVulcanData(object):
                 # target record file does not exist and previous write-to-file is successful
                 try:
                     shutil.copy(categorized_record_file, categorized_2_record_file)
+                    os.chmod(categorized_2_record_file, 0666)
                 except IOError as io_err:
                     return_status = False
                     return_message += 'Unable to copy {0} to {1} due to {2}.\n' \
@@ -2035,6 +2044,7 @@ class ReduceVulcanData(object):
                 else:
                     # save last file
                     shutil.copy(log_file_name, back_file_name)
+                    os.chmod(back_file_name, 0666)
                     break
             # END-WHILE()
         # END-IF
@@ -2724,7 +2734,7 @@ def main(argv):
         status, message = reducer.execute_vulcan_reduction(output_logs=True)
         if not status:
             raise RuntimeError('Auto reduction error: {0}'.format(message))
-        print ('[Auto Reduction Successful: {0}'.format(message))
+        print ('[Auto Reduction Successful: {0}]'.format(message))
     elif not status:
         # error message
         raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)
