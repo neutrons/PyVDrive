@@ -64,7 +64,7 @@ from mantid.kernel import DateAndTime
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7/vdrive_log_bin.dat'],
-                        ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_mix_2017_08_11.h5',
+                        ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         ]
@@ -1590,15 +1590,17 @@ class ReduceVulcanData(object):
         reduction_is_successful = return_list[0]
         msg_gsas = return_list[1]
         final_message += '{0}\n'.format(msg_gsas)
-        # reduced_ws_name is not used here
 
         # post process: error code: Code001 does not mean a bad reduction
         if not reduction_is_successful:
             # reduction failure
             return False, 'Reduction failure:\n{0}\n'.format(msg_gsas)
+        elif self._reductionSetup.is_auto_reduction_service:
+            self.generate_1d_plot()
 
+        # VULCAN: process a standard sample (Si, V or C) for VULCAN: copy the GSAS file to directory for
+        #         standard materials
         if self._reductionSetup.is_standard:
-            # processing a standard sample (Si, V or C) for VULCAN. Record GSAS file
             gsas_file = self.get_reduced_files()[0]
             standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
             try:
@@ -1611,7 +1613,7 @@ class ReduceVulcanData(object):
         # load the sample run as an option
         if output_logs:
             # load data again with meta data only
-            is_load_good, msg_load_file = self.load_data_file()
+            is_load_good, msg_load_file = self.load_meta_data_from_file()
             if not is_load_good:
                 raise RuntimeError('It is not likely to be unable to load {0} at this stage'
                                    ''.format(self._reductionSetup.get_event_file()))
@@ -1765,8 +1767,8 @@ class ReduceVulcanData(object):
 
         # Auto reduction only: record file for users
         if user_record_name:
-            # 2nd copy of Auto Record . txt
-            change_2nd_record_mode = False
+            # 2nd copy of AutoRecord.txt
+            # change_2nd_record_mode = False
             if os.path.exists(self._reductionSetup.get_record_2nd_file()):
                 # if the target copy of AutoRecord.txt exists, then append
                 status3, message3 = self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
@@ -1774,27 +1776,29 @@ class ReduceVulcanData(object):
                                                                 sample_operation_list, patch_list)
                 return_status = status3 and return_status
                 return_message += message3 + '\n'
-                change_2nd_record_mode = True
+                # change_2nd_record_mode = True
             else:
                 # if the target copy of AutoRecord.txt does not exist
-                if os.access(self._reductionSetup.get_record_2nd_file(), os.W_OK):
+                try:
                     shutil.copy(self._reductionSetup.get_record_file(),
                                 self._reductionSetup.get_record_2nd_file())
-                    change_2nd_record_mode =True
-                else:
-                    return_status = False
-                    return_message += 'Unable to write file {0} without writing permission.\n' \
-                                      ''.format(self._reductionSetup.get_record_2nd_file())
-            # END-IF-ELSE
-            if change_2nd_record_mode:
-                # change mode to 666
-                try:
-                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
                 except IOError as io_err:
                     return_status = False
-                    return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
-                                      ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
-            # END-IF
+                    return_message += 'Unable to copy file {0} to {1} due to {2}.\n' \
+                                      ''.format(self._reductionSetup.get_record_file(),
+                                                self._reductionSetup.get_record_2nd_file(), io_err)
+                # TRY-EXCEPT
+            # END-IF-ELSE
+
+            # if change_2nd_record_mode:
+            #     # change mode to 666
+            #     try:
+            #         os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+            #     except IOError as io_err:
+            #         return_status = False
+            #         return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
+            #                           ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+            # # END-IF
 
             # 2nd copy of auto align/sample
             # find out the path of the target file
@@ -1841,7 +1845,8 @@ class ReduceVulcanData(object):
         1. Furnace log;
         2. Generic DAQ log;
         3. Load frame/MTS log;
-        4. VULCAN sample environment log
+        4. VULCAN sample environment log;
+        NOTE: Log files are not RECORD files
         :return: 2-tuple. (boolean: status, string: message)
         """
         # check whether it is necessary
@@ -2086,7 +2091,7 @@ class ReduceVulcanData(object):
 
         return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceDSpace)
 
-    def load_data_file(self):
+    def load_meta_data_from_file(self):
         """
         Load NeXus file. If reducing to GSAS is also required, then load the complete NeXus file. Otherwise,
         load the sample log only
@@ -2407,8 +2412,7 @@ class ReduceVulcanData(object):
         return
 
     def special_operation_auto_reduction_service(self):
-        """
-        some special operations used in auto reduction service only
+        """some special operations used in auto reduction service only
         :return:
         """
         if not self._reductionSetup.is_auto_reduction_service:
@@ -2422,9 +2426,6 @@ class ReduceVulcanData(object):
 
             self.duplicate_gsas_file(self._reductionSetup.get_gsas_file(main_gsas=True),
                                      self._reductionSetup.get_gsas_2nd_dir())
-
-        # save the plot
-        self.generate_1d_plot()
 
         return True, ''
 
