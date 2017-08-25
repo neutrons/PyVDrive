@@ -273,6 +273,9 @@ class ReductionSetup(object):
 
         self._pngFileName = None
 
+        # flag whether auto reduction just include log value only
+        self._autoReduceLogOnly = False
+
         # about reduction required files
         self._focusFileName = None
         self._characterFileName = None
@@ -1028,6 +1031,12 @@ class ReductionSetup(object):
 
         return
 
+    def set_log_only(self, state):
+        """
+        """
+        # blabla
+        self._autoReduceLogOnly = state
+
     def set_output_dir(self, dir_path):
         """
         set output directory
@@ -1337,7 +1346,11 @@ class PatchRecordHDF5(object):
               'ITEM': ('entry', 'sample', 'identifier', 0, 0),
               'Monitor1': ('entry', 'monitor1', 'total_counts', 0),
               'Monitor2': ('entry', 'monitor2', 'total_counts', 0),
-              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0)}
+              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0),
+              'NOTES': ('entry', 'notes', 0),
+              'Collimator': ('entry', 'DASlogs', 'East_Collimator', 'average_value', 0),
+              'TotalCounts': ('entry', 'total_counts', 0)
+              }
 
     def __init__(self, h5name, sample_log_names):
         """initialization
@@ -1373,12 +1386,19 @@ class PatchRecordHDF5(object):
             if log_name in PatchRecordHDF5.H5Path:
                 h5_path = PatchRecordHDF5.H5Path[log_name]
                 node = h5file
-                for item in h5_path:
-                    if isinstance(item, str):
-                        node = node[item]
-                    elif isinstance(item, int):
-                        node = node[item]
-                # END-FOR
+                try:
+                    for item in h5_path:
+                        if isinstance(item, str):
+                            node = node[item]
+                        elif isinstance(item, int):
+                            node = node[item]
+                    # END-FOR
+                except KeyError as key_err:
+                    if log_name == 'Notes':
+                        node = 'Not Set'
+                    else:
+                        raise key_err
+                # END-TRY-EXCEPT
                 log_value_dict[log_name] = str(node)
         # END-FOR
 
@@ -1591,30 +1611,35 @@ class ReduceVulcanData(object):
         self._reductionSetup.process_configurations()
 
         # reduce and write to GSAS file ... it is reduced HERE!
-        return_list = self.reduce_powder_diffraction_data()
-        reduction_is_successful = return_list[0]
-        msg_gsas = return_list[1]
-        final_message += '{0}\n'.format(msg_gsas)
+        if not self._reductionSetup._autoReduceLogOnly:
+            return_list = self.reduce_powder_diffraction_data()
+            reduction_is_successful = return_list[0]
+            msg_gsas = return_list[1]
+            final_message += '{0}\n'.format(msg_gsas)
 
-        # post process: error code: Code001 does not mean a bad reduction
-        if not reduction_is_successful:
-            # reduction failure
-            return False, 'Reduction failure:\n{0}\n'.format(msg_gsas)
-        elif self._reductionSetup.is_auto_reduction_service:
-            self.generate_1d_plot()
+            # post process: error code: Code001 does not mean a bad reduction
+            if not reduction_is_successful:
+                # reduction failure
+                return False, 'Reduction failure:\n{0}\n'.format(msg_gsas)
+            elif self._reductionSetup.is_auto_reduction_service:
+                self.generate_1d_plot()
 
-        # VULCAN: process a standard sample (Si, V or C) for VULCAN: copy the GSAS file to directory for
-        #         standard materials
-        if self._reductionSetup.is_standard:
-            gsas_file = self.get_reduced_files()[0]
-            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
-            try:
-                shutil.copy(gsas_file, standard_dir)
-                new_gsas_file_name = os.path.join(standard_dir, os.path.basename(gsas_file))
-                os.chmod(new_gsas_file_name, 0666)
-            except (IOError, OSError) as copy_err:
-                msg_gsas += 'Unable to write standard GSAS file to {0} and change mode to 666 due to {1}\n' \
-                            ''.format(standard_dir, copy_err)
+            # VULCAN: process a standard sample (Si, V or C) for VULCAN: copy the GSAS file to directory for
+            #         standard materials
+            if self._reductionSetup.is_standard:
+                gsas_file = self.get_reduced_files()[0]
+                standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+                try:
+                    shutil.copy(gsas_file, standard_dir)
+                    new_gsas_file_name = os.path.join(standard_dir, os.path.basename(gsas_file))
+                    os.chmod(new_gsas_file_name, 0666)
+                except (IOError, OSError) as copy_err:
+                    msg_gsas += 'Unable to write standard GSAS file to {0} and change mode to 666 due to {1}\n' \
+                                ''.format(standard_dir, copy_err)
+            # END-IF
+        else:
+            # no reduction
+            pass
         # END-IF
 
         # load the sample run as an option
@@ -2058,7 +2083,10 @@ class ReduceVulcanData(object):
                                                Header=header)
 
         # change the file permission
-        os.chmod(log_file_name, 0666)
+        try:
+            os.chmod(log_file_name, 0666)
+        except OSError as os_err:
+            self._myLogInfo += 'Unable to modify permission mode of {0}.\n'.format(log_file_name)
 
         return log_file_name
 
@@ -2429,7 +2457,7 @@ class ReduceVulcanData(object):
             return True, 'No operation for auto reduction special.'
 
         # 2nd copy for Ke if it IS NOT an alignment run
-        if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir():
+        if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir() and self._reductionSetup._autoReduceLogOnly is False:
             first_gsas_file = self._reductionSetup.get_gsas_file(main_gsas=True)
             if os.path.exists(first_gsas_file) is False:
                 raise RuntimeError('First GSAS file {0} cannot be found.'.format(first_gsas_file))
@@ -2551,6 +2579,9 @@ class MainUtility(object):
             is_default_mode = True
             if '-d' in argv or '--dryrun' in argv:
                 reduction_setup.set_dry_run(True)
+
+            if '--log' in argv:
+                reduction_setup.set_log_only(True)
 
         elif len(opts) == 1 and opts[0][0] in ("-d", "--dryrun"):
             # dry run for auto mode
