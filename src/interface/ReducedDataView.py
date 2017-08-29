@@ -1011,6 +1011,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # if not in memory, try to load from archive
         if not status and not is_workspace:
             # or archive
+            print '[DB...BAT] Loading data without searching archive fails... {0}'.format(ret_obj)
             status, ret_obj = self._myController.get_reduced_data(run_number, unit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=True)
