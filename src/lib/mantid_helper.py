@@ -754,10 +754,16 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         use_temp = True
     # END-IF
 
-    # Convert to point data
+    # Convert to point data by checking
     workspace = ADS.retrieve(workspace_name)
-    #  TODO/ISSUE/NOWNOW - [FAILED] ... This fails due to different number of bins
-    if point_data and workspace.isHistogramData():
+    num_bins_set = set()
+    for iws in workspace.getNumberHistograms():
+        num_bins_set.add(len(workspace.readY(0)))
+    # END-FOR
+
+    # FIXME/TODO/FUTURE - After Mantid support ConvertToPointData for workspace with various bin sizes...
+    if point_data and workspace.isHistogramData() and len(num_bins_set) == 1:
+        # requiring point data and input is histogram data and number of bins are same for all spectra
         if use_temp:
             input_ws_name = temp_ws_name
         else:
@@ -779,7 +785,11 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # all banks
         num_spec = workspace.getNumberHistograms()
         for i_ws in xrange(num_spec):
-            vec_x = workspace.readX(i_ws)
+            # TODO/FIXME/FUTURE : for point data need 1 fewer X value
+            if len(num_bins_set) > 1 and point_data:
+                vec_x = workspace.readX(i_ws)[:-1]
+            else:
+                vec_x = workspace.readX(i_ws)
             size_x = len(vec_x)
             vec_y = workspace.readY(i_ws)
             size_y = len(vec_y)
@@ -797,9 +807,13 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # END-FOR
     else:
         # specific bank
-        vec_x = workspace.readX(required_workspace_index)
+        # TODO/FIXME/FUTURE : for point data need 1 fewer X value
+        if len(num_bins_set) > 1 and point_data:
+            vec_x = workspace.readX(required_workspace_index)[:-1]
+        else:
+            vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
-        vec_y = workspace.readY(required_workspace_index)
+        vec_y = workspace.readY()
         size_y = len(vec_y)
         vec_e = workspace.readE(required_workspace_index)
 
