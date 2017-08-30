@@ -757,8 +757,8 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     # Convert to point data by checking
     workspace = ADS.retrieve(workspace_name)
     num_bins_set = set()
-    for iws in workspace.getNumberHistograms():
-        num_bins_set.add(len(workspace.readY(0)))
+    for iws in range(workspace.getNumberHistograms()):
+        num_bins_set.add(len(workspace.readY(iws)))
     # END-FOR
 
     # FIXME/TODO/FUTURE - After Mantid support ConvertToPointData for workspace with various bin sizes...
