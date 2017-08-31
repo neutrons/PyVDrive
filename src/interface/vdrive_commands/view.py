@@ -24,6 +24,7 @@ class VdriveView(VDriveCommand):
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
+        'RUNV': 'Vanadium run number for calibration',
         'CHOPRUN': 'Run number of the chopped run.',
         'MINV': 'Minimum X value to plot',
         'MAXV': 'Maximum X value to plot',

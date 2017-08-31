@@ -251,16 +251,25 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
         is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
 
-        # load
-        # FIXME/TODO/NOWNOW - It has not been implemented at all! Consider to refactor with
-        #   load_chopped_diffraction_files
-        data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+        # import GSAS in SNS archive: data key is workspace name
+        try:
+            data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+        except RuntimeError as run_error:
+            GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+                                              ''.format(run_number, run_error))
+            return
 
         # set sequence list
         if is_chopped_data:
             seq_list = data_key['chopped sequence']
         else:
             seq_list = None
+
+        # add data
+        if is_chopped_data:
+            raise NotImplementedError('It is not implemented to plot chopped data from GSAS.')
+        else:
+            self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
 
         # set the label
         self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
@@ -336,7 +345,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
-        add a new data set to this data viewer window bit without plotting
+        add a new data set to this data viewer window BUT without plotting including
+        1. data management dictionary
+        2. combo-box as data key
         :param ipts_number:
         :param run_number:
         :param controller_data_key:
@@ -1322,23 +1333,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
          1. run number is a positive integer
          2. bank id is a positive integer
         Guarantees:
-        :param run_number:
+        :param run_number: integer (run number) or string (workspace name/key)
         :param bank_id:
         :param over_plot:
         :param unit:  default (None) by using the current text in the unit-combo-box
         :return:
         """
-        # get run number even if it is a string of integer & check requirements
-        if isinstance(run_number, str) and run_number.isdigit():
-            run_number = int(run_number)
-        else:
-            assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
-                                                ''.format(run_number, type(run_number))
-        # END-IF
-        if run_number <= 0:
-            raise RuntimeError('Run number {0} must be a positive number.'.format(run_number))
-
-        # check bank ID
+        # check bank ID; leave the check for run_number to load_reduced_data
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         if bank_id <= 0:

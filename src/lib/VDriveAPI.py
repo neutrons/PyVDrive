@@ -1053,13 +1053,14 @@ class VDriveAPI(object):
         # get data
         if is_chopped_data:
             # TODO/ISSUE/NOW - Not considered for chopped data
-            raise
+            raise NotImplementedError('It has not been implemented for chopped data in GSAS.')
         else:
             # single GSAS file
             gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
 
             # load data
             data_key = self.load_diffraction_file(gsas_file_name, 'gsas')
+        # END-IF-ELSE
 
         return data_key
 
