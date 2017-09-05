@@ -144,6 +144,13 @@ class VdriveView(VDriveCommand):
                 self._normalizeData = False
         # END-IF
 
+        # RUNV
+        if 'RUNV' in self._commandArgsDict:
+            van_run = int(self._commandArgsDict['RUNV'])
+            assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
+        else:
+            van_run = None
+
         # Calculate peak parameters
         if 'PEAK' in self._commandArgsDict:
             peak_str = str(self._commandArgsDict['PEAK']).strip()

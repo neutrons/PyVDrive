@@ -1093,8 +1093,17 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # check existence of data
         if data_key not in self._reducedDataDict:
-            raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
-                           ''.format(self._reducedDataDict.keys(), data_key))
+            # check again whether the input data key is an integer but converted to string
+            raise_key = True
+            if isinstance(data_key, str) and data_key.isdigit():
+                data_key = int(data_key)
+                if data_key in self._reducedDataDict:
+                    raise_key = False
+
+            if raise_key: 
+                raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
+                               ''.format(self._reducedDataDict.keys(), data_key))
+
         if bank_id not in self._reducedDataDict[data_key]:
             raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
                                ''.format(bank_id, type(bank_id), data_key, self._reducedDataDict[data_key].keys()))
