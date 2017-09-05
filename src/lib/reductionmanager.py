@@ -767,13 +767,14 @@ class ReductionManager(object):
         """
         # set up reduction options
         reduction_setup = reduce_VULCAN.ReductionSetup()
-        reduction_setup.set_default_calibration_files()
 
         # run number, ipts and etc
         reduction_setup.set_run_number(run_number)
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
         reduction_setup.set_banks_to_merge(merge_banks)
+        reduction_setup.set_default_calibration_files()
+
         if binning_parameters is not None:
             try:
                 tof_min, bin_size, tof_max = binning_parameters

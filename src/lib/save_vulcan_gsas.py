@@ -35,7 +35,7 @@ def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
     params.extend([x0, 2 * dx, xf])
 
     # Rebin
-    tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=False)
+    tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=True)
 
     # Map to a new workspace with 'vdrive-bin', which is the integer value of log bins
     numhist = tempws.getNumberHistograms()
@@ -284,17 +284,24 @@ def save_mantid_gsas(gsas_ws_name, gda_file_name, binning_parameters):
     :param binning_parameters:
     :return:
     """
+    # temp1_ws = ADS.retrieve(gsas_ws_name)
+    # print '[DB...BAT] Before aligned {0}.. vec x: {1}'.format(type(temp1_ws), temp1_ws.readX(2)[:])
+
+    aligned_gss_ws_name = '{0}_temp'.format(gsas_ws_name)
+
     if isinstance(binning_parameters, numpy.ndarray):
-        align_to_vdrive_bin(gsas_ws_name, binning_parameters, gsas_ws_name)
+        # align to VDRIVE
+        align_to_vdrive_bin(gsas_ws_name, binning_parameters, aligned_gss_ws_name)
     elif binning_parameters is not None:
-        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=gsas_ws_name, Params=binning_parameters)
+        api.Rebin(InputWorkspace=gsas_ws_name, OutputWorkspace=aligned_gss_ws_name, Params=binning_parameters)
     # END-IF (rebin)
 
     # Convert from PointData to Histogram
-    api.ConvertToHistogram(InputWorkspace=gsas_ws_name, OutputWorkspace=str(gsas_ws_name))
+    api.ConvertToHistogram(InputWorkspace=aligned_gss_ws_name, OutputWorkspace=aligned_gss_ws_name)
 
     # Save
-    api.SaveGSS(InputWorkspace=gsas_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
+    # print '[DB...VERY IMPORTANT] Save to GSAS File {0} as a temporary output'.format(gda_file_name)
+    api.SaveGSS(InputWorkspace=aligned_gss_ws_name, Filename=gda_file_name, SplitFiles=False, Append=False,
                 Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
 
     return gda_file_name
@@ -364,6 +371,9 @@ def save_vulcan_gss(diffraction_workspace_name, binning_parameter_list, output_f
     :param gsas_param_file:
     :return:
     """
+    # input_ws = ADS.retrieve(diffraction_workspace_name)
+    # print '[DB...BAT] Input workspace to save for VULCAN gsas is of type {0}'.format(type(input_ws))
+
     # default
     if binning_parameter_list is None:
         binning_parameter_list = [([1, 2], (5000., -0.001, 70000.)),
