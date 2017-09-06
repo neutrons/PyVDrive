@@ -1,4 +1,4 @@
-# Methods for vanadium utility methods
+# Methods for processing vanadiums
 import os
 import shutil
 import mantid_helper

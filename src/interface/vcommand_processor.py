@@ -241,10 +241,15 @@ class VdriveCommandProcessor(object):
         view_window.set_x_range(processor.x_min, processor.x_max)
         view_window.set_unit(processor.unit)
 
+        # TODO/ISSUE/NOWNOW - get vanadium normalization information!
+        # BLABLA blabla
+
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
             view_window.add_run_numbers(processor.get_run_tuple_list())
+            # TODO/ISSUE/NOWNOW - Set up vanadium normalization information!
+            # blabla ...
             # plot
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:

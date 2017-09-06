@@ -72,6 +72,9 @@ class VdriveView(VDriveCommand):
         self._peakValueFileName = None
         self._outputPeakValueToConsole = False
 
+        self._autoFindVanadium = False
+        self._vanRunNumber = None
+
         return
 
     def exec_cmd(self):
@@ -146,10 +149,14 @@ class VdriveView(VDriveCommand):
 
         # RUNV
         if 'RUNV' in self._commandArgsDict:
-            van_run = int(self._commandArgsDict['RUNV'])
-            assert van_run > 0, 'Vanadium run number {0} must be positive.'.format(van_run)
-        else:
-            van_run = None
+            van_run_str = str(self._commandArgsDict['RUNV'])
+            if van_run_str == 'auto':
+                self._autoFindVanadium = True
+            elif van_run_str.isdigit():
+                self._vanRunNumber = int(van_run_str)
+            else:
+                return False, 'Vanadium run {0} is not recognized'.format(van_run_str)
+        # END-IF
 
         # Calculate peak parameters
         if 'PEAK' in self._commandArgsDict:
@@ -189,6 +196,22 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._outputPeakValueToConsole or self._peakValueFileName is not None
+
+    @property
+    def do_vanadium_normalization(self):
+        """blabla
+        """
+        # TODO/ISSUE/NOWNOW
+        self._autoFindVanadium
+        self._vanRunNumber
+
+        return False
+
+    @property
+    def get_vanadium_number(self):
+        """TODO/ISSUE/NOWNOW
+        :return:
+        """
 
     @property
     def is_1_d(self):

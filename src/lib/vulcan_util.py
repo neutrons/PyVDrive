@@ -261,7 +261,7 @@ def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
 
 
 class AutoVanadiumCalibrationLocator(object):
-    """ Class to locate calibration file automatically
+    """ Class to locate Vanadium calibration file automatically
     """
     def __init__(self, ipts, base_path='/SNS/VULCAN/', vrecordfile=None, autorecordfile=None):
         """ Initialization
