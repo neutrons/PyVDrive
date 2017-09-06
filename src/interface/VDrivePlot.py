@@ -12,9 +12,8 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-# Set up path to PyVDrive
+# Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
 import socket
-# if it is on analysis computer... 
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 

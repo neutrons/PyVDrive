@@ -1,11 +1,6 @@
-import sys
 import os
 import random
 import numpy
-
-# Import mantid directory
-# sys.path.append('/opt/mantidnightly/bin/')
-# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')  # Mantid directory for local debugging
 
 import mantid
 import mantid.api
