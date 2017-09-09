@@ -192,8 +192,9 @@ class VdriveCommandProcessor(object):
         # process for special case: log-pick-helper
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
-            log_window.load_run(self._chopRunNumberList[0])
-            log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
+            if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
+                log_window.load_run(self._chopRunNumberList[0])
+                log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
         # END-IF
 
         return status, message
