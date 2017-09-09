@@ -11,6 +11,7 @@
 
 
 from procss_vcommand import VDriveCommand
+from PyVDrive.lib import vulcan_util
 
 
 class VdriveView(VDriveCommand):
@@ -72,8 +73,8 @@ class VdriveView(VDriveCommand):
         self._peakValueFileName = None
         self._outputPeakValueToConsole = False
 
-        self._autoFindVanadium = False
-        self._vanRunNumber = None
+        self._normByVanadium = False
+        self._vanRunNumberDict = dict()
 
         return
 
@@ -148,15 +149,38 @@ class VdriveView(VDriveCommand):
         # END-IF
 
         # RUNV
+        auto_search_van = False
+        van_run_number = None
         if 'RUNV' in self._commandArgsDict:
             van_run_str = str(self._commandArgsDict['RUNV'])
             if van_run_str == 'auto':
-                self._autoFindVanadium = True
+                auto_search_van = True
             elif van_run_str.isdigit():
-                self._vanRunNumber = int(van_run_str)
+                van_run_number = int(van_run_str)
             else:
                 return False, 'Vanadium run {0} is not recognized'.format(van_run_str)
         # END-IF
+
+        # match vanadium run numbers
+        if van_run_number is not None:
+            # vanadium run number is set up by user
+            for run_number in self._runNumberList:
+                self._vanRunNumberDict[run_number] = van_run_number
+
+        elif auto_search_van:
+            # search vanadium
+            van_locator = vulcan_util.AutoVanadiumCalibrationLocator(ipts=self._iptsNumber)
+            for run_number in self._runNumberList:
+                van_run_number = van_locator.search_vanadium_gda(run_number)
+                if isinstance(van_run_number, list):
+                    error_msg = 'Run {0} has more than {1} vanadium GSAS file corresponding.' \
+                                ''.format(run_number, len(van_run_number))
+                    if len(van_run_number) > 0:
+                        error_msg += 'Candidates are {0}'.format(van_run_number)
+                    return False, error_msg
+                self._vanRunNumberDict[run_number] = van_run_number
+            # END-IF
+        # END-IF-ELSE
 
         # Calculate peak parameters
         if 'PEAK' in self._commandArgsDict:
@@ -199,19 +223,24 @@ class VdriveView(VDriveCommand):
 
     @property
     def do_vanadium_normalization(self):
-        """blabla
+        """check whether VIEW command is required to do vanadium calibration
         """
-        # TODO/ISSUE/NOWNOW
-        self._autoFindVanadium
-        self._vanRunNumber
+        return self._normByVanadium
 
-        return False
-
-    @property
-    def get_vanadium_number(self):
-        """TODO/ISSUE/NOWNOW
+    def get_vanadium_number(self, run_number):
+        """get vanadium run number
         :return:
         """
+        if self._normByVanadium:
+            if run_number in self._vanRunNumberDict:
+                van_number = self._vanRunNumberDict[run_number]
+            else:
+                raise RuntimeError('Run number {0} does not exist in vanadium number dictionary ({1})'
+                                   ''.format(run_number, self._vanRunNumberDict.keys()))
+        else:
+            raise RuntimeError('No vanadium calibration is set up.')
+
+        return van_number
 
     @property
     def is_1_d(self):

@@ -4,17 +4,12 @@ import inspect
 import sys
 import os
 
-# sys.path.append('/opt/mantidnightly/bin/')
-# sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin')
-# sys.path.append(os.getcwd())
-# sys.path.append(os.path.join(os.path.expanduser('~/MantidBuild/debug/bin/')))
-
 home_dir = os.path.expanduser('~')
 if home_dir.startswith('/home/wzz') is False:
     # Mac debug build
     sys.path.append('/Users/wzz/MantidBuild/debug/bin')
     # Analysis cluster build
-    sys.path.append('/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
+    sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 # IPython monkey patches the  pygments.lexer.RegexLexer.get_tokens_unprocessed method
 # and breaks Sphinx when running within MantidPlot.
