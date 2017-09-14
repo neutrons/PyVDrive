@@ -192,8 +192,9 @@ class VdriveCommandProcessor(object):
         # process for special case: log-pick-helper
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
-            log_window.load_run(self._chopRunNumberList[0])
-            log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
+            if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
+                log_window.load_run(self._chopRunNumberList[0])
+                log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
         # END-IF
 
         return status, message
@@ -241,16 +242,17 @@ class VdriveCommandProcessor(object):
         view_window.set_x_range(processor.x_min, processor.x_max)
         view_window.set_unit(processor.unit)
 
-        # TODO/ISSUE/NOWNOW - get vanadium normalization information!
-        # BLABLA blabla
-
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
-            view_window.add_run_numbers(processor.get_run_tuple_list())
-            # TODO/ISSUE/NOWNOW - Set up vanadium normalization information!
-            # blabla ...
-            # plot
+
+            vanadium_dict = None
+            if processor.do_vanadium_normalization:
+                vanadium_dict = dict()
+                for run_number in processor.get_run_number():
+                    vanadium_dict[run_number] = processor.get_vanadium_number(run_number)
+
+            view_window.add_run_numbers(processor.get_run_tuple_list(), vanadium_dict)
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
