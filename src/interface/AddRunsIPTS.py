@@ -333,17 +333,22 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             return
 
         # build IPTS directory and check
-        ipts_dir = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
-        if os.path.exists(ipts_dir) is False:
-            gutil.pop_dialog_error(self, 'IPTS number %d cannot be found under %s. ' % (
-                ipts_number, ipts_dir))
+        ipts_dir_1 = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
+        ipts_dir_2 = os.path.join(self._dataDir, 'IPTS-%d/nexus/' % ipts_number)
+        if not os.path.exists(ipts_dir_1) and not os.path.exists(ipts_dir_2):
+            gutil.pop_dialog_error(self, 'IPTS number %d cannot be found under %s or %s. ' % (
+                ipts_number, ipts_dir_1, ipts_dir_2))
             self.ui.lineEdit_iptsNumber.setStyleSheet('color:red')
             return
         else:
             self.ui.lineEdit_iptsNumber.setStyleSheet('color:green')
 
-        self._iptsDir = ipts_dir
-        self._iptsDirFromNumber = ipts_dir
+        if os.path.exists(ipts_dir_1):
+            self._iptsDir = ipts_dir_1
+            self._iptsDirFromNumber = ipts_dir_1
+        else:
+            self._iptsDir = ipts_dir_2
+            self._iptsDirFromNumber = ipts_dir_2
 
         # browse log files
         self.ui.comboBox_existingIPTS.clear()
