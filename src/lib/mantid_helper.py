@@ -1,11 +1,6 @@
-import sys
 import os
 import random
 import numpy
-
-# Import mantid directory
-# sys.path.append('/opt/mantidnightly/bin/')
-# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')  # Mantid directory for local debugging
 
 import mantid
 import mantid.api
@@ -754,9 +749,16 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         use_temp = True
     # END-IF
 
-    # Convert to point data
+    # Convert to point data by checking
     workspace = ADS.retrieve(workspace_name)
-    if point_data and workspace.isHistogramData():
+    num_bins_set = set()
+    for iws in range(workspace.getNumberHistograms()):
+        num_bins_set.add(len(workspace.readY(iws)))
+    # END-FOR
+
+    # FIXME/TODO/FUTURE - After Mantid support ConvertToPointData for workspace with various bin sizes...
+    if point_data and workspace.isHistogramData() and len(num_bins_set) == 1:
+        # requiring point data and input is histogram data and number of bins are same for all spectra
         if use_temp:
             input_ws_name = temp_ws_name
         else:
@@ -778,7 +780,11 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # all banks
         num_spec = workspace.getNumberHistograms()
         for i_ws in xrange(num_spec):
-            vec_x = workspace.readX(i_ws)
+            # TODO/FIXME/FUTURE : for point data need 1 fewer X value
+            if len(num_bins_set) > 1 and point_data:
+                vec_x = workspace.readX(i_ws)[:-1]
+            else:
+                vec_x = workspace.readX(i_ws)
             size_x = len(vec_x)
             vec_y = workspace.readY(i_ws)
             size_y = len(vec_y)
@@ -796,9 +802,13 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # END-FOR
     else:
         # specific bank
-        vec_x = workspace.readX(required_workspace_index)
+        # TODO/FIXME/FUTURE : for point data need 1 fewer X value
+        if len(num_bins_set) > 1 and point_data:
+            vec_x = workspace.readX(required_workspace_index)[:-1]
+        else:
+            vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
-        vec_y = workspace.readY(required_workspace_index)
+        vec_y = workspace.readY()
         size_y = len(vec_y)
         vec_e = workspace.readE(required_workspace_index)
 
@@ -1038,17 +1048,27 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     assert gss_ws is not None, 'Output workspace cannot be found.'
 
     # set instrument geometry: this is for VULCAN-only
-    if gss_ws.getNumberHistograms() == 2:
+    num_spec = gss_ws.getNumberHistograms()
+    if num_spec == 2:
+        # before nED, no high angle detector
         mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2',
                                                 L2='2.00944,2.00944',
                                                 Polar='90,270')
+    elif num_spec == 3:
+        # after nED, with high angle detector
+        mantid.simpleapi.EditInstrumentGeometry(Workspace=out_ws_name,
+                                                PrimaryFlightPath=43.753999999999998,
+                                                SpectrumIDs='1,2,3',
+                                                L2='2.0,2.0,2.0',
+                                                Polar='90,270,150')
     else:
-        raise RuntimeError('It is not implemented for cases more than 2 spectra.')
+        raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
+                           ''.format(num_spec))
 
     # convert unit and to point data
-    if standard_bin_workspace is not None:
+    if num_spec == 2:
         align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
@@ -1589,7 +1609,8 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
 
 
 def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None,
-                    smooth_filter='Butterworth', param_n=20, param_order=2):
+                    smooth_filter='Butterworth', param_n=20, param_order=2,
+                    push_to_positive=True):
     """
     Use Mantid FFTSmooth to smooth vanadium diffraction data
     :except: RuntimeError if failed to execute. AssertionError if input is wrong
@@ -1657,39 +1678,67 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
                                ''.format(input_workspace, run_err, workspace_index))
     # END-IF-ELSE
 
+    if push_to_positive:
+        # push all the Y values to positive integer
+        smooth_ws = ADS.retrieve(input_workspace)
+        if workspace_index is None:
+            workspace_index_list = range(smooth_ws.getNumberHistogram())
+        else:
+            workspace_index_list = [workspace_index]
+
+        for ws_index in workspace_index_list:
+            vec_y = smooth_ws.dataY(ws_index)
+            for i_y in vec_y:
+                vec_y[i_y] = max(1, int(vec_y[i_y] + 1))
+        # END-FOR
+    # END-IF
+
     return output_workspace
 
 
-def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_pos_tol=0.05,
+def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
+                         bank_list=None, binning_parameter=None,
+                         fwhm=7, peak_pos_tol=0.05,
                          background_type="Quadratic", is_high_background=True):
     """
     Strip vanadium peaks
     :except: run time error
 
-    :param input_workspace:
-    :param output_workspace:
+    :param input_ws_name:
+    :param output_ws_name:
+    :param bank_list:
+    :param binning_parameter:
     :param fwhm: integer peak FWHM
     :param peak_pos_tol: float peak position tolerance
     :param background_type:
     :param is_high_background:
-    :return: output workspace's name, indicating it successfully strips vanadium peaks.
+    :return: dictionary to workspace names
     """
     # check inputs
-    assert isinstance(input_workspace, str), 'Input workspace {0} must be a string but not a {1}.' \
-                                             ''.format(input_workspace, type(input_workspace))
-    if not workspace_does_exist(input_workspace):
-        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_workspace))
+    assert isinstance(input_ws_name, str), 'Input workspace {0} must be a string but not a {1}.' \
+                                             ''.format(input_ws_name, type(input_ws_name))
+    if not workspace_does_exist(input_ws_name):
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(input_ws_name))
+    else:
+        input_workspace = ADS.retrieve(input_ws_name)
 
-    if output_workspace is None:
-        output_workspace = input_workspace + '_no_peak'
+    if bank_list is None:
+        bank_list = range(1, 1+input_workspace.getNumberHistograms())
+    else:
+        assert isinstance(bank_list, list), 'Banks must be given by list'
+        if len(bank_list) == 0:
+            raise RuntimeError('Empty bank list')
+
+    if output_ws_name is None:
+        output_ws_name = input_ws_name + '_no_peak'
 
     # make sure that the input workspace is in unit dSpacing
     try:
-        if get_workspace_unit(input_workspace) != 'dSpacing':
-            mantidapi.ConvertUnits(InputWorkspace=input_workspace, OutputWorkspace=input_workspace,
+        if get_workspace_unit(input_ws_name) != 'dSpacing':
+            mantidapi.ConvertUnits(InputWorkspace=input_ws_name, OutputWorkspace=input_ws_name,
                                    Target='dSpacing')
     except RuntimeError as run_err:
-        raise RuntimeError('Unable to convert workspace {0} to dSpacing due to {1}.'.format(input_workspace), run_err)
+        raise RuntimeError('Unable to convert workspace {0} to dSpacing due to {1}.'.format(input_ws_name, run_err))
 
     # call Mantid algorithm StripVanadiumPeaks
     assert isinstance(fwhm, int), 'FWHM {0} must be an integer but not {1}.'.format(fwhm, type(fwhm))
@@ -1698,22 +1747,36 @@ def strip_vanadium_peaks(input_workspace, output_workspace=None, fwhm=7, peak_po
     assert background_type in ['Linear', 'Quadratic'], 'Background type {0} is not supported.' \
                                                        'Candidates are {1}'.format(background_type, 'Linear, Quadratic')
     try:
-        # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
-        mantidapi.StripVanadiumPeaks(InputWorkspace=input_workspace,
-                                     OutputWorkspace=output_workspace,
-                                     FWHM=fwhm,
-                                     PeakPositionTolerance=peak_pos_tol,
-                                     BackgroundType=background_type,
-                                     HighBackground=is_high_background)
+        # rebin if asked
+        # workspace unit before striping:  dSpacing.  therefore, cannot use the TOF binning range
+        if binning_parameter is not None:
+            mantidapi.Rebin(InputWorkspace=input_ws_name, OutputWorkspace=output_ws_name,
+                            Params='-0.001')
+        #                    Params=binning_parameter)
 
-        # peakless_ws = ADS.retrieve(output_workspace)
-        # print '[DB...BAT] Peakless WS: ', peakless_ws.isHistogramData(), peakless_ws.getAxis(0).getUnit().unitID()
+        # strip vanadium peaks. and the output workspace is Histogram/PointData (depending on input) in unit dSpacing
+        # before striping: EventWorkspace
+        output_ws_dict = dict()
+        for bank_id in bank_list:
+            output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
+            mantidapi.StripVanadiumPeaks(InputWorkspace=input_ws_name,
+                                         OutputWorkspace=output_ws_name_i,
+                                         FWHM=fwhm,
+                                         PeakPositionTolerance=peak_pos_tol,
+                                         BackgroundType=background_type,
+                                         HighBackground=is_high_background,
+                                         WorkspaceIndex=bank_id-1
+                                         )
+            output_ws_dict[bank_id] = output_ws_name_i
+            # After strip: Workspace2D
+
+        # END-FOR
 
     except RuntimeError as run_err:
         raise RuntimeError('Failed to execute StripVanadiumPeaks on workspace {0} due to {1}'
-                           ''.format(input_workspace, run_err))
+                           ''.format(input_ws_name, run_err))
 
-    return output_workspace
+    return output_ws_dict
 
 
 def sum_spectra(input_workspace, output_workspace):

@@ -8,6 +8,8 @@ import reductionmanager as prl
 import archivemanager
 import loaded_data_manager
 import vanadium_utility
+import peak_util
+import numpy
 
 
 class ProjectManager(object):
@@ -93,6 +95,96 @@ class ProjectManager(object):
         self._loadedDataDict[ipts_number, run_number] = workspace_name
 
         return
+
+    def calculate_peaks_parameter(self, ipts_number, run_number_list, x_min, x_max, to_console, file_name):
+        """Calculate a peak or several overlapped peaks' parameters
+
+        These parameters include integral intensity, average d-spacing and variance
+
+        :except RuntimeError:
+        :param ipts_number: None or integer.  None if by run number it is able to locate workspace
+        :param run_number_list:
+        :param x_min:
+        :param x_max:
+        :param to_console:
+        :param file_name:
+        :return: a dictionary of strings as formed message. key = bank ID
+        """
+        # check inputs' types
+        assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0} must be either ' \
+                                                                    'integer or None.'.format(ipts_number)
+        assert isinstance(run_number_list, list), 'Run numbers must be given as list.'
+        assert isinstance(x_min, float) and isinstance(x_max, float),\
+            'Min X {0} and Max X {1} must be integers.'.format(x_min, x_max)
+
+        # check inputs' logic
+        if x_min >= x_max:
+            raise RuntimeError('Min X {0} cannot be equal or larger than Max X {1}'.format(x_min, x_max))
+        if not to_console and not file_name:
+            raise RuntimeError('At least one in to_console and file name should be specified')
+
+        # determine units
+        if x_max < 100:
+            unit = 'dSpacing'
+        else:
+            unit = 'TOF'
+
+        # loop over run numbers
+        output_dict = dict()
+        error_str = ''
+        for run_number in run_number_list:
+            if self.has_reduced_workspace(ipts_number, run_number):
+                # get workspace from reduced
+                gsas_ws_name = self.get_reduced_workspace(ipts_number, run_number=run_number)
+            else:
+                # from loaded data manager
+                gsas_ws_name = '{0}_gsas'.format(run_number)
+                if self.data_loading_manager.has_data(data_key=gsas_ws_name) is False:
+                    error_str += 'IPTS {0} run {1} is not either reduced or loaded' \
+                                 ''.format(ipts_number, run_number)
+                    continue
+            # END
+
+            # get data set
+            data_set, unit = mantid_helper.get_data_from_workspace(gsas_ws_name, target_unit=unit,
+                                                                   start_bank_id=1)
+
+            # get data and calculate
+            for bank_id in data_set.keys():
+                vec_d = data_set[bank_id][0]
+                vec_y = data_set[bank_id][1]
+
+                min_x_index = max(0, numpy.searchsorted(vec_d, x_min)-1)
+                max_x_index = min(len(vec_y), numpy.searchsorted(vec_d, x_max)+1)
+
+                # estimate background
+                bkgd_a, bkgd_b = peak_util.estimate_background(vec_d, vec_y, min_x_index, max_x_index)
+
+                # calculate peak intensity parameters
+                peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
+                                                                                       max_x_index, bkgd_a, bkgd_b)
+
+                if bank_id not in output_dict:
+                    output_dict[bank_id] = ''
+                output_dict[bank_id] += '{0}\t{1}\t{2}\t{3}\n'.format(run_number, peak_integral, average_d, variance)
+            # END-FOR
+        # END-FOR (run start)
+
+        # output
+        if file_name is not None:
+            base_name, extension = os.path.splitext(file_name)
+            for bank_id in output_dict.keys():
+                sub_file_name = '{0}_bank{1}{2}'.format(base_name, bank_id, extension)
+                try:
+                    sub_file = open(sub_file_name, 'w')
+                    sub_file.write(output_dict[bank_id])
+                    sub_file.close()
+                except IOError as io_err:
+                    raise RuntimeError('Unable to write to file {0} due to {1}'.format(sub_file_name, io_err))
+            # END-FOR
+        # END-IF
+
+        return output_dict
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
@@ -433,43 +525,44 @@ class ProjectManager(object):
         :param slice_tag:
         :return:
         """
-        # TEST/NOWNOW - Need to find a test for this!
-        # check whether DataChopper
-        if run_number not in self._chopManagerDict:
-            return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
-
-        # Get file name according to run number
-        if isinstance(run_number, int):
-            # run number is a Run Number, locate file
-            file_name = self.get_file_path(run_number)
-        elif isinstance(run_number, str):
-            # run number is a file name
-            base_file_name = run_number
-            file_name = self.get_file_path(base_file_name)
-        else:
-            return False, 'Input run_number %s is either an integer or string.' % str(run_number)
-
-        # Start a session
-        # FIXE/NOWNOW - How to get slicer manager to do these jobs
-        self._mySlicingManager.load_data_file(nxs_file_name=file_name, run_number=run_number)
-
-        # this_ws_name = get_standard_ws_name(file_name, True)
-        # mtdHelper.load_nexus(file_name, this_ws_name, True)
-        # slicer_name, info_name = get_splitters_names(this_ws_name)
-        # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
-        # print 'log_name = ', sample_log_name
-
-        # FIXME - Need to pass value change direction
-        self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
-                                                             min_time=start_time, max_time=end_time,
-                                                             relative_time=True,
-                                                             min_log_value=min_log_value,
-                                                             max_log_value=max_log_value,
-                                                             log_value_interval=log_value_step,
-                                                             value_change_direction='Both',
-                                                             tag=slice_tag)
-
-        return
+        raise RuntimeError('This method shall be reviewed!')
+        # # TEST/NOWNOW - Need to find a test for this!
+        # # check whether DataChopper
+        # if run_number not in self._chopManagerDict:
+        #     return False, 'Run number %s does not have DataChopper associated.' % str(run_number)
+        #
+        # # Get file name according to run number
+        # if isinstance(run_number, int):
+        #     # run number is a Run Number, locate file
+        #     file_name = self.get_file_path(run_number)
+        # elif isinstance(run_number, str):
+        #     # run number is a file name
+        #     base_file_name = run_number
+        #     file_name = self.get_file_path(base_file_name)
+        # else:
+        #     return False, 'Input run_number %s is either an integer or string.' % str(run_number)
+        #
+        # # Start a session
+        # # FIXE/NOWNOW - How to get slicer manager to do these jobs
+        # self._mySlicingManager.load_meta_data_from_file(nxs_file_name=file_name, run_number=run_number)
+        #
+        # # this_ws_name = get_standard_ws_name(file_name, True)
+        # # mtdHelper.load_nexus(file_name, this_ws_name, True)
+        # # slicer_name, info_name = get_splitters_names(this_ws_name)
+        # # print '[DB] slicer_name = ', slicer_name, 'info_name = ', info_name, 'ws_name = ', this_ws_name,
+        # # print 'log_name = ', sample_log_name
+        #
+        # # FIXME - Need to pass value change direction
+        # self._mySlicingManager.generate_events_filter_by_log(log_name=sample_log_name,
+        #                                                      min_time=start_time, max_time=end_time,
+        #                                                      relative_time=True,
+        #                                                      min_log_value=min_log_value,
+        #                                                      max_log_value=max_log_value,
+        #                                                      log_value_interval=log_value_step,
+        #                                                      value_change_direction='Both',
+        #                                                      tag=slice_tag)
+        #
+        # return
 
     def get_file_path(self, run_number):
         """ Get file path
@@ -603,11 +696,11 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        workspace_name = None
-
         if (ipts_number, run_number) in self._loadedDataDict:
+            # get workspace's name from loaded gsas file
             workspace_name = self._loadedDataDict[ipts_number, run_number]
         else:
+            # get workspace's name from reduction
             workspace_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
 
         if workspace_name is None:
@@ -820,7 +913,8 @@ class ProjectManager(object):
         """
         return self._reductionManager
 
-    def reduce_nexus_files(self, raw_file_list ,output_directory, vanadium, gsas, binning_parameters,
+    def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters,
+                           merge_banks,
                            align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None):
         """
         Reduce a list of NeXus files
@@ -841,10 +935,10 @@ class ProjectManager(object):
         sum_message = ''
 
         for nexus_file_name in raw_file_list:
-
             status, sub_message = self._reductionManager.reduce_run(ipts_number=None, run_number=None,
                                                                     event_file=nexus_file_name,
                                                                     output_directory=output_directory,
+                                                                    merge_banks=merge_banks,
                                                                     vanadium=vanadium,
                                                                     vanadium_tuple=vanadium_tuple,
                                                                     gsas=gsas,
@@ -857,10 +951,11 @@ class ProjectManager(object):
 
         return sum_status, sum_message
 
-    def reduce_runs(self, run_number_list, output_directory, background=False,
-                    vanadium=False, gsas=True, fullprof=False, record_file=False,
-                    sample_log_file=False, standard_sample_tuple=None,
-                    merge=False, binning_parameters=None):
+    def reduce_runs(self, run_number_list, output_directory, background,
+                    vanadium, gsas, fullprof, record_file,
+                    sample_log_file, standard_sample_tuple,
+                    merge_banks,
+                    merge_runs, binning_parameters):
         """
         Reduce a set of runs with selected options
         Purpose:
@@ -908,7 +1003,7 @@ class ProjectManager(object):
 
         vanadium_tag = '{0:06d}'.format(random.randint(1, 999999))
 
-        if not merge:
+        if not merge_runs:
             # reduce runs one by one
             for run_number in run_number_list:
                 # get IPTS and files
@@ -922,7 +1017,7 @@ class ProjectManager(object):
                         vanadium_tuple = van_run, van_gda, vanadium_tag
                     except KeyError:
                         reduce_all_success = False
-                        message += 'Run {0} has no valid vanadium run set up\n.'.format(run_number)
+                        message += 'Run {0}: No valid vanadium run set up!\n.'.format(run_number)
                         continue
                 else:
                     vanadium_tuple = None
@@ -933,7 +1028,8 @@ class ProjectManager(object):
                                                                         output_directory, vanadium=vanadium,
                                                                         vanadium_tuple=vanadium_tuple, gsas=gsas,
                                                                         standard_sample_tuple=standard_sample_tuple,
-                                                                        binning_parameters=binning_parameters)
+                                                                        binning_parameters=binning_parameters,
+                                                                        merge_banks=merge_banks)
 
                 reduce_all_success = reduce_all_success and status
                 if not status:

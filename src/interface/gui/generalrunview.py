@@ -7,7 +7,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
     """
     ColorList = ['black', 'red', 'blue', 'green', 'yellow']
-    BankMarkList = [None, '.', 'D', '*']
+    BankMarkList = [None, None, None, '.', 'D', '*']  # user prefer uniform marker
 
     def __init__(self, parent):
         """
@@ -40,13 +40,20 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return
 
-    def _get_next_diffraction_color(self):
+    def _get_next_diffraction_color(self, bank_id=None):
         """
-        blabla
+        get the next color. if bank ID is present, then use color dedicated for that bank
+        :param bank_id:
         :return:
         """
-        color = GeneralRunView.ColorList[self._diffColorID]
-        self._diffColorID = (self._diffColorID + 1) % len(GeneralRunView.ColorList)
+        # check
+        if bank_id is None:
+            color = GeneralRunView.ColorList[self._diffColorID]
+            self._diffColorID = (self._diffColorID + 1) % len(GeneralRunView.ColorList)
+        elif isinstance(bank_id, int):
+            color = GeneralRunView.ColorList[bank_id % len(GeneralRunView.ColorList)]
+        else:
+            raise AssertionError('Bank ID {0} must be either integer or None'.format(bank_id))
 
         return color
 
@@ -104,8 +111,6 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         :param chop_tag: information string
         :return:
         """
-        # TODO/NOW/CLEAN
-
         # data mode blabla
         if self._dataMode != 'd':
             self.reset_1d_plots()
@@ -123,7 +128,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
             self.reset_1d_plots()
 
         # color & marker
-        line_color = self._get_next_diffraction_color()
+        line_color = self._get_next_diffraction_color(bank_id)
         line_marker = self._get_diffraction_marker(bank_id)
 
         if chop_tag is not None:

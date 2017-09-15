@@ -105,10 +105,11 @@ class VdriveMerge(VDriveCommand):
         # reduce by regular runs
         status, ret_obj = self._controller.reduce_data_set(auto_reduce=False, output_directory=output_directory,
                                                            vanadium=(van_run is not None),
+                                                           merge_banks=True,
                                                            standard_sample_tuple=standard_tuple,
                                                            binning_parameter=binning_parameters,
                                                            align_to_vdrive_bin=use_default_bin,
-                                                           merge=True)
+                                                           merge_runs=True)
 
         return status, str(ret_obj)
 

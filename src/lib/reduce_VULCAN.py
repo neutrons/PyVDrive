@@ -2,8 +2,9 @@
 #
 # Auto reduction script for VULCAN
 # Version 3.0 for both auto reduction service and manual
+# Version 4.0 (in test) for new nED (071_vbin_improve)
 #
-# Last version: reduce_VULCAN_141028.py
+# Last version: reduce_VULCAN_20170723.py
 #
 # Input
 # - Event file name with path
@@ -43,22 +44,56 @@
 ################################################################################
 import getopt
 import os
+import datetime
 import stat
 import shutil
 import xml.etree.ElementTree as ET
 import sys
 import numpy
+import bisect
 import pandas as pd
+import save_vulcan_gsas
 
-# sys.path.append("/opt/mantidnightly/bin")
+sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 
-refLogTofFilename = "/SNS/VULCAN/shared/autoreduce/vdrive_log_bin.dat"
-CalibrationFileName = "/SNS/VULCAN/shared/autoreduce/vulcan_foc_all_2bank_11p.cal"
-CharacterFileName = "/SNS/VULCAN/shared/autoreduce/VULCAN_Characterization_2Banks_v2.txt"
+
+CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal',
+                         '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt',
+                         '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
+                        ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                         '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
+                        ]
+ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
+
+
+def get_auto_reduction_calibration_files(nexus_file_name):
+    """
+    get calibration files for auto reduction according to the date of the NeXus event file is generated
+    :param nexus_file_name:
+    :return:
+    """
+    # check input
+    assert isinstance(nexus_file_name, str), 'Input event NeXus file {0} must be a string but not a {1}.' \
+                                             ''.format(nexus_file_name, type(nexus_file_name))
+    if os.path.exists(nexus_file_name) is False:
+        raise RuntimeError('Event NeXus file {0} does not exist or is not accessible.'.format(nexus_file_name))
+
+    # get the date of the NeXus file
+    event_file_time = datetime.datetime.fromtimestamp(os.path.getmtime(nexus_file_name))
+
+    # locate the position of the date in the list
+    char_index = bisect.bisect_right(ValidDateList, event_file_time) - 1
+    if char_index < 0 or char_index >= len(ValidDateList):
+        raise RuntimeError('File date is out of range.')
+
+    return CalibrationFilesList[char_index]
+# END-DEF
+
 
 TIMEZONE1 = 'America/New_York'
 TIMEZONE2 = 'UTC'
@@ -238,6 +273,9 @@ class ReductionSetup(object):
 
         self._pngFileName = None
 
+        # flag whether auto reduction just include log value only
+        self._autoReduceLogOnly = False
+
         # about reduction required files
         self._focusFileName = None
         self._characterFileName = None
@@ -274,6 +312,10 @@ class ReductionSetup(object):
         self._saveChoppedWorkspaceToNeXus = False
         self._choppedNeXusDir = None
 
+        # post diffraction focusing operations
+        self._mergeBanks = False
+        self._alignVDriveBinFlag = True
+
         return
 
     def __str__(self):
@@ -288,6 +330,14 @@ class ReductionSetup(object):
         return pretty
 
     @property
+    def align_bins_to_vdrive_standard(self):
+        """
+        blabla
+        :return:
+        """
+        return self._alignVDriveBinFlag
+
+    @property
     def binning_parameters(self):
         """
         return the binning parameters
@@ -295,13 +345,13 @@ class ReductionSetup(object):
         """
         if self._binningParameters is None:
             # using default binning parameter
-            bin_param_str = '5000., -0.001, 50000.'
+            bin_param_str = '5000., -0.001, 70000.'
         elif len(self._binningParameters) == 1:
             # only bin size is defined
-            bin_param_str = '{0}, {1}, {2}'.format(5000., self._binningParameters[0], 50000.)
+            bin_param_str = '{0}, {1}, {2}'.format(5000., -1*abs(self._binningParameters[0]), 70000.)
         elif len(self._binningParameters) == 3:
             # 3 are given
-            bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], self._binningParameters[1],
+            bin_param_str = '{0}, {1}, {2}'.format(self._binningParameters[0], -1*abs(self._binningParameters[1]),
                                                    self._binningParameters[2])
         else:
             # error case
@@ -335,11 +385,11 @@ class ReductionSetup(object):
             else:
                 # from .../autoreduce/ to .../<user_specified>/
                 new_output_dir = os.path.join(parent_dir, user_specified_dir)
-            print "Log file will be written to directory %s. " % new_output_dir
+            # print "Log file will be written to directory %s. " % new_output_dir
         else:
             # non-auto reduction mode.
             new_output_dir = original_directory
-            print "Log file will be written to the original directory %s. " % new_output_dir
+            # print "Log file will be written to the original directory %s. " % new_output_dir
 
         # Create path
         if os.path.exists(new_output_dir) is False:
@@ -365,9 +415,11 @@ class ReductionSetup(object):
                              '' % self._eventFileFullPath
 
         # focusing file
-        for file_name in [self._focusFileName, self._characterFileName, self._vulcanBinsFileName]:
+        for file_name in [self._focusFileName, self._characterFileName]:
             if not os.path.exists(file_name):
                 error_message += 'Calibration file %s cannot be found.\n' % file_name
+        if self._vulcanBinsFileName is not None and os.path.exists(self._vulcanBinsFileName) is False:
+            error_message += 'Calibration file %s cannot be found.\n' % self._vulcanBinsFileName
 
         # GSAS file
         if self._mainGSASName is not None:
@@ -645,6 +697,14 @@ class ReductionSetup(object):
         return
 
     @property
+    def merge_banks(self):
+        """
+        blabla
+        :return:
+        """
+        return self._mergeBanks
+
+    @property
     def output_directory(self):
         """
         get output directory
@@ -671,7 +731,12 @@ class ReductionSetup(object):
         mantid.config.setDataSearchDirs(";".join(data_search_path))
 
         # parse the run number file name is in form as VULCAN_RUNNUBER_event.nxs
-        self._runNumber = int(self._eventFileName.split('_')[1])
+        if self._eventFileName.endswith('.nxs'):
+            # pre-nED file name: ends with .nxs
+            self._runNumber = int(self._eventFileName.split('_')[1])
+        else:
+            # nED file name: ends with .nxs.h5 '151206.nxs.h5'
+            self._runNumber = int(self._eventFileName.split('_')[1].split('.')[0])
 
         # parse IPTS from NeXus directory: as /SNS/.../IPTS-XXX/...
         if self._nexusDirectory.count('IPTS') == 1:
@@ -724,7 +789,31 @@ class ReductionSetup(object):
 
         return
 
-    def set_binning_parameters(self, min_tof, max_tof, bin_size):
+    def set_align_vdrive_bin(self, flag):
+        """
+        set the flag to align the output GSAS workspace with VDRIVE's IDL-style binning
+        :param flag:
+        :return:
+        """
+        assert isinstance(flag, bool), 'Flag to align with VDRIVE GSAS binns {0} must be a boolean.'.format(flag)
+
+        self._alignVDriveBinFlag = flag
+
+        return
+
+    def set_banks_to_merge(self, merge):
+        """
+        blabla
+        :param merge:
+        :return:
+        """
+        assert isinstance(merge, bool), 'Flag to merge banks {0} must be a boolean.'.format(merge)
+
+        self._mergeBanks = merge
+
+        return
+
+    def set_binning_parameters(self, min_tof, bin_size, max_tof):
         """
 
         :param min_tof:
@@ -843,6 +932,9 @@ class ReductionSetup(object):
         self._mainRecordFileName = os.path.join(self._outputDirectory, "AutoRecord.txt")
         self._2ndRecordFileName = os.path.join(self.change_output_directory(self._outputDirectory, ""),
                                                "AutoRecord.txt")
+        print ('[DEBUG LOG] auto reduction mode: output directory: {0}; 2nd record file: {1}'
+               ''.format(self._outputDirectory, self._2ndRecordFileName))
+
         # output GSAS directory
         self._mainGSASDir = self.change_output_directory(self._outputDirectory, 'autoreduce/binnedgda')
         self._2ndGSASDir = self.change_output_directory(self._outputDirectory, 'binned_data')
@@ -856,9 +948,17 @@ class ReductionSetup(object):
         set default calibration files
         :return:
         """
-        self.set_focus_file(CalibrationFileName)
-        self.set_charact_file(CharacterFileName)
-        self.set_vulcan_bin_file(refLogTofFilename)
+        # get the reduction calibration and etc files from event data file
+        file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
+
+        calibrate_file_name = file_list[0]
+        character_file_name = file_list[1]
+        binning_ref_file_name = file_list[2]
+
+        self.set_focus_file(calibrate_file_name)
+        self.set_charact_file(character_file_name)
+        if binning_ref_file_name is not None:
+            self.set_vulcan_bin_file(binning_ref_file_name)
 
         return
 
@@ -921,11 +1021,21 @@ class ReductionSetup(object):
         :param dir_name:
         :return:
         """
-        assert isinstance(dir_name, str), 'directory name must be string'
+        assert isinstance(dir_name, str), 'directory name {0} must be of type string'.format(dir_name)
+        if os.path.exists(dir_name) is False:
+            raise RuntimeError('Output sample log directory {0} does not exist.'.format(dir_name))
+        if os.path.isfile(dir_name):
+            raise RuntimeError('Use input {0} is an existing file.'.format(dir_name))
 
         self._sampleLogDirectory = dir_name
 
         return
+
+    def set_log_only(self, state):
+        """
+        """
+        # blabla
+        self._autoReduceLogOnly = state
 
     def set_output_dir(self, dir_path):
         """
@@ -1104,13 +1214,21 @@ class PatchRecord:
             instrument, ipts, run, instrument)
 
         # Verify whether these 2 files are accessible
+        self._noPatchRecord = False
         if os.path.exists(self._cvInfoFileName) is False or \
                         os.path.exists(self._runInfoFileName) is False or \
                         os.path.exists(self._beamInfoFileName) is False:
-            raise RuntimeError("PreNexus log file %s and/or %s cannot be accessed. " % (
-                self._cvInfoFileName, self._runInfoFileName))
+            self._noPatchRecord = True
 
         return
+
+    @property
+    def do_not_patch(self):
+        """
+        return state whether a patch should be done or not
+        :return:
+        """
+        return self._noPatchRecord
 
     def export_patch_list(self):
         """ Export patch as a list of strings
@@ -1131,89 +1249,7 @@ class PatchRecord:
                 patch_list.append(str(key))
                 patch_list.append(str(patchdict[key]))
 
-        print '[DB...BAT] Patch List: ', patch_list
-
         return patch_list
-
-    @staticmethod
-    def get_last_line_in_binary_file(filename):
-        """ Get the first and last line of a (possibly long) file
-        """
-        # Open an binary file
-        with open(filename, 'rb') as binary_file:
-            # Determine a roughly the size of a line
-            first_line = next(binary_file).decode().strip()
-            second_line = next(binary_file).decode().strip()
-            line_size = len(second_line)
-
-            try:
-                # search from the end of line
-                binary_file.seek(-2*line_size, 2)
-                last_line = binary_file.readlines()[-1].decode().strip()
-                binary_file.close()
-            except IOError:
-                # File is too short
-                # close the file and re-open
-                binary_file.close()
-                binary_file = open(filename, 'rb')
-
-                lines = binary_file.readlines()
-                last_line = lines[-1]
-        # END-WITH
-
-        return first_line, last_line
-
-    @staticmethod
-    def remove_last_line_in_text(filename):
-        """ Remove last line
-        """
-        # ifile = open(sys.argv[1], "r+", encoding = "utf-8")
-        ifile = open(filename, "r+")
-
-        ifile.seek(0, os.SEEK_END)
-        pos = ifile.tell() - 1
-        while pos > 0 and ifile.read(1) != "\n":
-            pos -= 1
-            ifile.seek(pos, os.SEEK_SET)
-
-        if pos > 0:
-            ifile.seek(pos, os.SEEK_SET)
-            ifile.truncate()
-
-        ifile.close()
-
-        return
-
-    def _getIPTS(self):
-        """ Get IPTS
-        Return: integer
-        """
-        tree = ET.parse(self._beamInfoFileName)
-
-        root = tree.getroot()
-        if root.tag != 'Instrument':
-            raise NotImplementedError("Not an instrument")
-
-        proposal = None
-        for child in root:
-            if child.tag == "Proposal":
-                proposal = child
-                break
-        if proposal is None:
-            raise NotImplementedError("Not have proposal")
-
-        id_node = None
-        for child in proposal:
-            if child.tag == "ID":
-                id_node = child
-                break
-        if id_node is None:
-            raise NotImplementedError("No ID")
-
-        ipts = id_node.text
-        ipts = int(ipts)
-
-        return ipts
 
     def _readCvInfoFile(self):
         """ read CV info
@@ -1303,6 +1339,80 @@ class PatchRecord:
 # END-CLASS
 
 
+class PatchRecordHDF5(object):
+    """Get the missing information in the loaded workspace from original hdf5 file
+    """
+    H5Path = {'Sample': ('entry', 'sample', 'name', 0, 0),
+              'ITEM': ('entry', 'sample', 'identifier', 0, 0),
+              'Monitor1': ('entry', 'monitor1', 'total_counts', 0),
+              'Monitor2': ('entry', 'monitor2', 'total_counts', 0),
+              'Comment': ('entry', 'DASlogs', 'comments', 'value', 0, 0),
+              'NOTES': ('entry', 'notes', 0),
+              'Collimator': ('entry', 'DASlogs', 'East_Collimator', 'average_value', 0),
+              'TotalCounts': ('entry', 'total_counts', 0)
+              }
+
+    def __init__(self, h5name, sample_log_names):
+        """initialization
+        :param h5name:
+        :param sample_log_names:
+        """
+        # check input
+        assert isinstance(h5name, str), 'HDF5 file name {0} must be a string.'.format(h5name)
+        assert isinstance(sample_log_names, list), 'Sample logs names must be given by list'
+
+        if os.path.exists(h5name) is False:
+            raise RuntimeError('Input HDF5 {0} cannot be found.'.format(h5name))
+
+        self._h5name = h5name
+        self._sample_log_list = sorted(sample_log_names)
+
+        return
+
+    def export_patch_list(self):
+        """search the HDF5 for the sample logs
+        :return:
+        """
+        import h5py
+
+        try:
+            h5file = h5py.File(self._h5name, 'r')
+        except IOError as io_err:
+            raise RuntimeError('Unable to open hdf5 file {0} due to {1}'.format(self._h5name, io_err))
+
+        log_value_dict = dict()
+
+        for log_name in self._sample_log_list:
+            if log_name in PatchRecordHDF5.H5Path:
+                h5_path = PatchRecordHDF5.H5Path[log_name]
+                node = h5file
+                try:
+                    for item in h5_path:
+                        if isinstance(item, str):
+                            node = node[item]
+                        elif isinstance(item, int):
+                            node = node[item]
+                    # END-FOR
+                except KeyError as key_err:
+                    if log_name == 'Notes':
+                        node = 'Not Set'
+                    else:
+                        raise key_err
+                # END-TRY-EXCEPT
+                log_value_dict[log_name] = str(node)
+        # END-FOR
+
+        h5file.close()
+
+        # convert to list
+        patch_list = []
+        for log_name in log_value_dict:
+            patch_list.append(log_name)
+            patch_list.append(log_value_dict[log_name])
+
+        return patch_list
+
+
 class ReduceVulcanData(object):
     """
     Class to reduce VULCAN data
@@ -1331,6 +1441,15 @@ class ReduceVulcanData(object):
 
         self._choppedDataDirectory = None
         self._chopExportedLogType = 'loadframe'
+
+        self._myLogInfo = ''
+
+        # check whether the run is nED
+        if self._reductionSetup.get_event_file().endswith('.h5'):
+            # nED NeXus
+            self._is_nED = True
+        else:
+            self._is_nED = False
 
         return
 
@@ -1364,9 +1483,9 @@ class ReduceVulcanData(object):
         # clear the list
         self._reducedWorkspaceList = list()
 
-        # print out error
+        # log error message
         if len(error_message) > 0:
-            print '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
+            self._myLogInfo += '[ERROR] Clear the reduced workspaces:\n{0}'.format(error_message)
 
         return
 
@@ -1423,23 +1542,20 @@ class ReduceVulcanData(object):
         dry_run_str += "Record(2) file name : %s\n" % str(reduction_setup.get_record_2nd_file())
         dry_run_str += "1D plot file name   : %s\n" % reduction_setup.get_plot_file()
 
-        print 'Dry run:\n%s' % dry_run_str
-
         return True, dry_run_str
 
-    @staticmethod
-    def duplicate_gsas_file(source_gsas_file_name, target_directory):
+    def duplicate_gsas_file(self, source_gsas_file_name, target_directory):
         """ Duplicate gsas file to a new directory with file mode 664
         """
         # Verify input
         if os.path.exists(source_gsas_file_name) is False:
-            print "Warning.  Input file wrong"
+            self._myLogInfo += "[Warning]  Input file wrong\n"
             return
         elif os.path.isdir(source_gsas_file_name) is True:
-            print "Warning.  Input file is not file but directory."
+            self._myLogInfo += "[Warning]  Input file is not file but directory.\n"
             return
         if os.path.isabs(source_gsas_file_name) is not True:
-            print "Warning"
+            self._myLogInfo += '[Warning] Source file name {0} is not an absolute path.\n'.format(source_gsas_file_name)
             return
 
         # Create directory if it does not exist
@@ -1448,16 +1564,33 @@ class ReduceVulcanData(object):
 
         # Copy
         target_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
-        if os.path.isfile(target_file_name) is True:
-            print "Destination GSAS file exists. "
+        if source_gsas_file_name == target_file_name:
+            print '[INFO] Source GSAS file (1) {0} is same as target GSAS file (1) {1}.  No copy operation.'.format(source_gsas_file_name, target_file_name)
             return
-        else:
+
+        # copy the file
+        try:
+            if os.path.isfile(target_file_name) is True:
+                # delete existing file
+                self._myLogInfo += "Destination GSAS file {0} exists and will be overwritten.\n" \
+                                   "".format(target_file_name)
+                os.remove(target_file_name)
             shutil.copy(source_gsas_file_name, target_directory)
-            os.chmod(target_file_name, 0664)
+            new_gsas_file_name = os.path.join(target_directory, os.path.basename(source_gsas_file_name))
+            os.chmod(new_gsas_file_name, 0666)
+        except IOError as io_err:
+            raise RuntimeError('Unable to cropy {0} to {1} due to {2}.'
+                               ''.format(source_gsas_file_name, target_file_name, io_err))
+        # modify the file property
+        try:
+            os.chmod(target_file_name, 0666)
+        except OSError as os_err:
+            self._myLogInfo += '[ERROR] Unable to change file {0}\'s mode to {1} due to {2}.\n' \
+                               ''.format(source_gsas_file_name, '666', os_err)
 
         return
 
-    def execute_vulcan_reduction(self):
+    def execute_vulcan_reduction(self, output_logs):
         """
         Execute the command for reduce, including
         (1) reduce to GSAS file
@@ -1472,53 +1605,73 @@ class ReduceVulcanData(object):
         """
         # check whether it is good to go
         assert isinstance(self._reductionSetup, ReductionSetup), 'ReductionSetup is not correct.'
+        final_message = ''
+
         # configure the ReductionSetup
         self._reductionSetup.process_configurations()
 
-        # reduce and write to GSAS file
-        is_reduce_good, msg_gsas, reduced_ws_name = self.reduce_powder_diffraction_data()
-        if not is_reduce_good and msg_gsas.count('Code001') == 0:
-            # error code: Code001 does not mean a bad reduction
-            return False, 'Unable to generate GSAS file due to %s.' % msg_gsas
-        if self._reductionSetup.is_standard:
-            # standard sample for VULCAN
-            gsas_file = self.get_reduced_files()[0]
-            print '[DB...BAT] GSAS file generated is {0}.'.format(gsas_file)
-            standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
-            try:
-                shutil.copy(gsas_file, standard_dir)
-            except IOError as io_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to IOError {1}' \
-                      ''.format(standard_dir, io_err)
-            except OSError as os_err:
-                print '[ERROR] Unable to write standard GSAS file to {0} due to OSError {1}' \
-                      ''.format(standard_dir, os_err)
+        # reduce and write to GSAS file ... it is reduced HERE!
+        if not self._reductionSetup._autoReduceLogOnly:
+            return_list = self.reduce_powder_diffraction_data()
+            reduction_is_successful = return_list[0]
+            msg_gsas = return_list[1]
+            final_message += '{0}\n'.format(msg_gsas)
 
-        # load the sample run
-        is_load_good, msg_load_file = self.load_data_file()
-        if not is_load_good:
-            return False, 'Unable to load source data file %s.' % self._reductionSetup.get_event_file()
+            # post process: error code: Code001 does not mean a bad reduction
+            if not reduction_is_successful:
+                # reduction failure
+                return False, 'Reduction failure:\n{0}\n'.format(msg_gsas)
+            elif self._reductionSetup.is_auto_reduction_service:
+                self.generate_1d_plot()
 
-        # check whether it is an alignment run
-        self._reductionSetup.is_alignment_run = self.check_alignment_run()
+            # VULCAN: process a standard sample (Si, V or C) for VULCAN: copy the GSAS file to directory for
+            #         standard materials
+            if self._reductionSetup.is_standard:
+                gsas_file = self.get_reduced_files()[0]
+                standard_dir, standard_record = self._reductionSetup.get_standard_processing_setup()
+                try:
+                    shutil.copy(gsas_file, standard_dir)
+                    new_gsas_file_name = os.path.join(standard_dir, os.path.basename(gsas_file))
+                    os.chmod(new_gsas_file_name, 0666)
+                except (IOError, OSError) as copy_err:
+                    msg_gsas += 'Unable to write standard GSAS file to {0} and change mode to 666 due to {1}\n' \
+                                ''.format(standard_dir, copy_err)
+            # END-IF
+        else:
+            # no reduction
+            pass
+        # END-IF
 
-        # export the sample log record file: AutoRecord.txt and etc.
-        is_record_good, msg_record = self.export_experiment_records()
+        # load the sample run as an option
+        if output_logs:
+            # load data again with meta data only
+            is_load_good, msg_load_file = self.load_meta_data_from_file()
+            if not is_load_good:
+                raise RuntimeError('It is not likely to be unable to load {0} at this stage'
+                                   ''.format(self._reductionSetup.get_event_file()))
 
-        # write experiment files
-        is_log_good, msg_log = self.export_log_files()
+            # check whether it is an alignment run
+            self._reductionSetup.is_alignment_run = self.check_alignment_run()
+
+            # export the sample log record file: AutoRecord.txt and etc.
+            is_record_good, msg_record = self.export_experiment_records()
+            final_message += msg_record + '\n'
+
+            # write experiment files
+            is_log_good, msg_log = self.export_log_files()
+            final_message += msg_log + '\n'
+
+            is_log_good = is_load_good and is_record_good
+        else:
+            is_log_good = True
+            final_message += 'No sample logs record is required to export.\n'
+        # END-IF
 
         # special operations for auto reduction
         is_auto_good, msg_auto = self.special_operation_auto_reduction_service()
+        final_message += msg_auto + '\n'
 
-        final_message = ''
-        final_message += msg_gsas + '\n'
-        final_message += msg_load_file + '\n'
-        final_message += msg_record + '\n'
-        final_message += msg_log + '\n'
-        final_message += msg_log + '\n'
-
-        return is_record_good and is_log_good and is_auto_good, final_message
+        return is_log_good and is_auto_good, final_message
 
     def _export_experiment_log(self, target_file, sample_name_list,
                                sample_title_list, sample_operation_list, patch_list):
@@ -1571,11 +1724,11 @@ class ReduceVulcanData(object):
         file_access_mode = oct(os.stat(target_file)[stat.ST_MODE])
         file_access_mode = file_access_mode[-3:]
         if file_access_mode != '666' and file_access_mode != '676':
-            print "Current file %s's mode is %s." % (target_file, file_access_mode)
             try:
                 os.chmod(target_file, 0666)
             except OSError as os_err:
-                print '[ERROR] Unable to set file {0} to mode 666 due to {1}.'.format(target_file, os_err)
+                self._myLogInfo += '[ERROR] Unable to set file {0} to mode 666 due to {1}.\n' \
+                                   ''.format(target_file, os_err)
         # END-IF
 
         return True, ''
@@ -1595,10 +1748,21 @@ class ReduceVulcanData(object):
         sample_title_list, sample_name_list, sample_operation_list = self.generate_record_file_format()
 
         # Patch for logs that do not exist in event NeXus yet
-        patcher = PatchRecord(self._instrumentName,
-                              self._reductionSetup.get_ipts_number(),
-                              self._reductionSetup.get_run_number())
-        patch_list = patcher.export_patch_list()
+        sample_log_list = ['Comment', 'Sample', 'ITEM', 'Monitor1', 'Monitor2']
+        if self._reductionSetup.get_event_file().endswith('.h5'):
+            # HDF5 file
+            patcher = PatchRecordHDF5(self._reductionSetup.get_event_file(), sample_log_list)
+            patch_list = patcher.export_patch_list()
+        else:
+            # with preNexus and others. pre nED
+            patcher = PatchRecord(self._instrumentName,
+                                  self._reductionSetup.get_ipts_number(),
+                                  self._reductionSetup.get_run_number())
+            if patcher.do_not_patch:
+                patch_list = list()
+            else:
+                patch_list = patcher.export_patch_list()
+        # END-IF-ELSE
 
         # define over all message
         return_status = True
@@ -1635,31 +1799,39 @@ class ReduceVulcanData(object):
 
         # Auto reduction only: record file for users
         if user_record_name:
-            # 2nd copy of Auto Record . txt
+            # 2nd copy of AutoRecord.txt
+            # change_2nd_record_mode = False
             if os.path.exists(self._reductionSetup.get_record_2nd_file()):
                 # if the target copy of AutoRecord.txt exists, then append
                 status3, message3 = self._export_experiment_log(self._reductionSetup.get_record_2nd_file(),
                                                                 sample_name_list, sample_title_list,
                                                                 sample_operation_list, patch_list)
-                return_status += status3
+                return_status = status3 and return_status
                 return_message += message3 + '\n'
+                # change_2nd_record_mode = True
             else:
                 # if the target copy of AutoRecord.txt does not exist
-                if os.access(self._reductionSetup.get_record_2nd_file(), os.W_OK):
+                try:
                     shutil.copy(self._reductionSetup.get_record_file(),
                                 self._reductionSetup.get_record_2nd_file())
-                    # change mode to 666
-                    try:
-                        os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
-                    except IOError as io_err:
-                        return_status = False
-                        return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
-                                          ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
-                else:
+                    os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+                except IOError as io_err:
                     return_status = False
-                    return_message += 'Unable to write file {0} without writing permission.\n' \
-                                      ''.format(self._reductionSetup.get_record_2nd_file())
+                    return_message += 'Unable to copy file {0} to {1} due to {2}.\n' \
+                                      ''.format(self._reductionSetup.get_record_file(),
+                                                self._reductionSetup.get_record_2nd_file(), io_err)
+                # TRY-EXCEPT
             # END-IF-ELSE
+
+            # if change_2nd_record_mode:
+            #     # change mode to 666
+            #     try:
+            #         os.chmod(self._reductionSetup.get_record_2nd_file(), 0666)
+            #     except IOError as io_err:
+            #         return_status = False
+            #         return_message += 'Unable to change file {0} mode to 666 due to {1}.\n' \
+            #                           ''.format(self._reductionSetup.get_record_2nd_file(), io_err)
+            # # END-IF
 
             # 2nd copy of auto align/sample
             # find out the path of the target file
@@ -1673,6 +1845,7 @@ class ReduceVulcanData(object):
                 # target record file does not exist and previous write-to-file is successful
                 try:
                     shutil.copy(categorized_record_file, categorized_2_record_file)
+                    os.chmod(categorized_2_record_file, 0666)
                 except IOError as io_err:
                     return_status = False
                     return_message += 'Unable to copy {0} to {1} due to {2}.\n' \
@@ -1706,7 +1879,8 @@ class ReduceVulcanData(object):
         1. Furnace log;
         2. Generic DAQ log;
         3. Load frame/MTS log;
-        4. VULCAN sample environment log
+        4. VULCAN sample environment log;
+        NOTE: Log files are not RECORD files
         :return: 2-tuple. (boolean: status, string: message)
         """
         # check whether it is necessary
@@ -1745,10 +1919,10 @@ class ReduceVulcanData(object):
         assert isinstance(log_ws_name, str), 'Log workspace name must be a string'
         assert AnalysisDataService.doesExist(log_ws_name), 'Log workspace %s does not exist in data service.' \
                                                            '' % log_ws_name
-        assert isinstance(output_directory, str), 'Output directory must be a string.'
+        assert isinstance(output_directory, str), 'Output directory {0} must be a string.'.format(output_directory)
+        assert isinstance(run_number, int), 'Run number must be an integer.'
         assert os.path.exists(output_directory) and os.path.isdir(output_directory), \
             'Output directory must be an existing directory.'
-        assert isinstance(run_number, int), 'Run number must be an integer.'
 
         furnace_log_file_name = os.path.join(output_directory, "furnace%d.txt" % run_number)
         self.generate_csv_log(furnace_log_file_name, Furnace_Header_List, None)
@@ -1895,6 +2069,7 @@ class ReduceVulcanData(object):
                 else:
                     # save last file
                     shutil.copy(log_file_name, back_file_name)
+                    os.chmod(back_file_name, 0666)
                     break
             # END-WHILE()
         # END-IF
@@ -1908,7 +2083,10 @@ class ReduceVulcanData(object):
                                                Header=header)
 
         # change the file permission
-        os.chmod(log_file_name, 0666)
+        try:
+            os.chmod(log_file_name, 0666)
+        except OSError as os_err:
+            self._myLogInfo += 'Unable to modify permission mode of {0}.\n'.format(log_file_name)
 
         return log_file_name
 
@@ -1922,11 +2100,11 @@ class ReduceVulcanData(object):
                                     OutputFilename=self._reductionSetup.get_plot_file(),
                                     YLabel='Intensity')
         except ValueError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
-                                                                            str(err))
+            self._myLogInfo += "Unable to generate 1D plot for run %s caused by %s. \n" \
+                               "" % (str(self._reductionSetup.get_run_number()), str(err))
         except RuntimeError as err:
-            print "Unable to generate 1D plot for run %s caused by %s. " % (str(self._reductionSetup.get_run_number()),
-                                                                            str(err))
+            self._myLogInfo += "Unable to generate 1D plot for run %s caused by %s. \n" \
+                               "" % (str(self._reductionSetup.get_run_number()), str(err))
         # Try-Exception
 
         return
@@ -1951,7 +2129,7 @@ class ReduceVulcanData(object):
 
         return self._reduceGood, (self._reducedWorkspaceVDrive, self._reducedWorkspaceMtd, self._reducedWorkspaceDSpace)
 
-    def load_data_file(self):
+    def load_meta_data_from_file(self):
         """
         Load NeXus file. If reducing to GSAS is also required, then load the complete NeXus file. Otherwise,
         load the sample log only
@@ -2001,44 +2179,56 @@ class ReduceVulcanData(object):
         """
         # check whether it is required to reduce GSAS
         if self._reductionSetup.get_gsas_dir() is None:
-            return True, 'No reduction as it is not required.', None
+            return True, 'No reduction as it is not required because GSAS directory is not specified.', None
+
+        message = ''
+        # get the event file name
+        if event_file_name is None:
+            raw_event_file = self._reductionSetup.get_event_file()
+        else:
+            raw_event_file = event_file_name
+        assert isinstance(raw_event_file, str), 'User specified event file name {0} must be a string but not a {1}.'.format(raw_event_file, type(raw_event_file))
+        # END-IF-ELSE
+
+        # set up binning parameters
+        if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+            # pre-nED: required to align bins to VDRIVE standard
+            binning_parameter = "5000, -0.0005, 70000"
+            bin_in_d = False
+        else:
+            # regular binning parameters
+            binning_parameter = self._reductionSetup.binning_parameters
+            # print 'Default or user given binning parameters? {0}'.format(binning_parameter)
+            if binning_parameter.count(',') == 0:
+                bin_in_d = True
+            elif binning_parameter.count(',') == 2:
+                max_x = float(binning_parameter.split(',')[2])
+                if max_x < 100:
+                    bin_in_d = True
+                else:
+                    bin_in_d = False
+            else:
+                # unacceptable binning parameters. return with False
+                return False, 'Binnig parameters {0} is not acceptable.'.format(binning_parameter), None
+        # END-IF
+
+        # get the output directory for GSAS file
+        gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+        orig_gsas_name = gsas_file_name
+        gsas_file_name, gsas_message, output_access_error, del_exist = self.pre_process_output_gsas(gsas_file_name)
+        if output_access_error:
+            return False, 'Unable to write GSAS file {0} due to {1}'.format(gsas_file_name, gsas_message), None
+
+        self._myLogInfo += gsas_message + '\n'
 
         # reduce data
-        message = ''
         try:
-            gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
-            if os.path.isfile(gsas_file_name):
-                if os.access(gsas_file_name, os.W_OK):
-                    # file is writable
-                    message += 'GSAS file (%s) has been reduced for run %s already.  It will be overwritten.\n' \
-                               '' % (gsas_file_name, str(self._reductionSetup.get_run_number()))
-                else:
-                    # file cannot be overwritten, then abort!
-                    message += 'GSAS file (%s) exists and cannot be overwritten.\n' % gsas_file_name
-                    return False, message, None
-            # END-IF
-
-            # check output
-            out_dir = self._reductionSetup.get_gsas_dir()
-            if os.path.exists(out_dir) is False:
-                return False, 'Output directory "{0}" does not exist.'.format(out_dir), None
-
-            # get the event file name
-            if event_file_name is None:
-                raw_event_file = self._reductionSetup.get_event_file()
-            else:
-                assert isinstance(event_file_name, str), 'User specified event file name {0} must be a string,' \
-                                                         ' but not a {1}.'.format(event_file_name,
-                                                                                  type(event_file_name))
-                raw_event_file = event_file_name
-            # END-IF
-
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
-                                            # CalibrationFile=CalibrationFileName,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
                                             CharacterizationRunsFile=self._reductionSetup.get_characterization_file(),
-                                            Binning="-0.001",
+                                            Binning=binning_parameter,
+                                            BinInDspace=bin_in_d,
                                             SaveAS="",
                                             OutputDirectory=self._reductionSetup.get_gsas_dir(),
                                             NormalizeByCurrent=False,
@@ -2057,89 +2247,175 @@ class ReduceVulcanData(object):
                                                                    'ADS.' % reduced_ws_name
 
         except RuntimeError as run_err:
-            print '[Error] Unable to reduce workspace %s due to %s.' % (self._dataWorkspaceName, str(run_err))
+            self._myLogInfo += '[Error] Unable to reduce workspace %s due to %s.\n' \
+                               '' % (self._dataWorkspaceName, str(run_err))
             return False, str(run_err), None
         except AssertionError as ass_err:
             return False, str(ass_err), None
+        # END-IF-ELSE
 
-        # convert unit and save for VULCAN-specific GSAS. There is not d-spacing left now
-        mantidsimple.ConvertUnits(InputWorkspace=reduced_ws_name,
-                                  OutputWorkspace=reduced_ws_name,
+        # Save to GSAS file
+        # TODO/NEXT - vulcan.prm should be input as an argument
+        self.export_to_gsas(reduced_workspace=reduced_ws_name,
+                            gsas_file_name=gsas_file_name,
+                            gsas_iparm_file_name='vulcan.prm',
+                            delete_exist_gsas_file=del_exist,
+                            east_west_binning_parameters='5000.,-0.001,70000.',
+                            high_angle_binning_parameters='5000.,-0.0003,70000.')
+
+        if output_access_error:
+            error_message = 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.\n' \
+                            ''.format(orig_gsas_name, gsas_file_name)
+            self._myLogInfo += error_message
+
+        return True, self._myLogInfo, reduced_ws_name
+
+    def export_to_gsas(self, reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
+                       east_west_binning_parameters, high_angle_binning_parameters):
+        """
+        export reduced workspace to GSAS file
+        :param gsas_iparm_file_name: default '"Vulcan.prm"'
+        :param reduced_workspace:
+        :param gsas_file_name:
+        :return:
+        """
+        # convert unit to TOF and Rebin for exporting reduced data to GSAS
+        mantidsimple.ConvertUnits(InputWorkspace=reduced_workspace,
+                                  OutputWorkspace=reduced_workspace,
                                   Target="TOF",
                                   EMode="Elastic",
                                   AlignBins=False)
 
-        vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_ws_name)
+        # rebin to regular bin size: east and west
+        mantidsimple.Rebin(InputWorkspace=reduced_workspace,
+                           OutputWorkspace=reduced_workspace,
+                           Params=east_west_binning_parameters)
 
-        # get the output workspace
-        output_access_error = False
-        orig_gsas_name = gsas_file_name
-        if os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
-            # gsas file does exist and cannot be modified: write to a temporary account
-            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
-            output_access_error = True
-        elif not os.path.exists(gsas_file_name) and os.access(os.path.dirname(gsas_file_name), os.W_OK) is False:
-            # gsas file does not exist and use has no write permit to directory: write to a temporary account
-            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
-            output_access_error = True
+        # delete existing GSAS file
+        if delete_exist_gsas_file:
+            os.remove(gsas_file_name)
 
-        # check whether the file is writable
-        gsas_dir = os.path.dirname(gsas_file_name)
-        if os.access(gsas_dir, os.W_OK) is False:
-            raise RuntimeError('Unable to write GSAS file {0} as user has no write permission to directory {1}.'
-                               ''.format(gsas_file_name, gsas_dir))
+        pre_ned = False
+        if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
+            # align bins to VDrive standard for VDRIVE to analyze the data (pre-nED)
+            vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_workspace)
 
-        # save to Vuclan GSAS
-        try:
-            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                       OutputWorkspace=vdrive_bin_ws_name,
-                                       GSSFilename=gsas_file_name,
-                                       IPTS=self._reductionSetup.get_ipts_number(),
-                                       GSSParmFilename="Vulcan.prm")
-        except ValueError as value_err:
-            # write again to a temporary directory
-            print '[ValueError]: {0}.'.format(value_err)
-            gsas_file_name = os.path.join('/tmp/', os.path.basename(gsas_file_name))
-            output_access_error = True
-            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_ws_name,
-                                       BinFilename=self._reductionSetup.get_vulcan_bin_file(),
-                                       OutputWorkspace=vdrive_bin_ws_name,
-                                       GSSFilename=gsas_file_name,
-                                       IPTS=self._reductionSetup.get_ipts_number(),
-                                       GSSParmFilename="Vulcan.prm")
+            # save to Vuclan GSAS
+            try:
+                mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
+                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                           OutputWorkspace=vdrive_bin_ws_name,
+                                           GSSFilename=gsas_file_name,
+                                           IPTS=self._reductionSetup.get_ipts_number(),
+                                           GSSParmFilename=gsas_iparm_file_name)
+                # Add special property to output workspace
+                final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
+                final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+                pre_ned = True
+            except ValueError as value_err:
+                # write again to a temporary directory
+                raise RuntimeError('[ERROR] Failed to run SaveVulcanGSS to GSAS file {0}. FYI ValueError: {1}.'
+                                   ''.format(gsas_file_name, value_err))
 
-        # set up the output file's permit for other users to modify
-        os.chmod(gsas_file_name, 0774)
+        elif self._is_nED:
+            # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
+            # NOTE: The bank ID (from 1) is required here
 
-        # Add special property to output workspace
-        final_ws = AnalysisDataService.retrieve(vdrive_bin_ws_name)
-        final_ws.getRun().addProperty('VDriveBin', True, replace=True)
+            # import h5 file
+            h5_bin_file_name = self._reductionSetup.get_vulcan_bin_file()
+            import h5py
+            bin_file = h5py.File(h5_bin_file_name, 'r')
+            low_bins = bin_file['west_east_bank'][:]
+            high_bins = bin_file['high_angle_bank'][:]
+            bin_file.close()
+
+            bin_param_list = [([1, 2], low_bins),
+                              ([3], high_bins)]
+
+            save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
+                                             binning_parameter_list=bin_param_list,
+                                             output_file_name=gsas_file_name,
+                                             ipts=self._reductionSetup.get_ipts_number(),
+                                             gsas_param_file=gsas_iparm_file_name)
+
+            vdrive_bin_ws_name = reduced_workspace
+        else:
+            # write to GSAS file with Mantid bins
+            mantidsimple.SaveGSS(InputWorkspace=reduced_workspace,
+                                 Filename=gsas_file_name)
+            vdrive_bin_ws_name = reduced_workspace
+        # END-IF-ELSE
+
+        # check whether it is correctly reduced
+        if not os.path.exists(gsas_file_name):
+            raise RuntimeError('Output GSAS file {0} cannot be found.'.format(gsas_file_name))
 
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+
+        # merge banks
+        if self._reductionSetup.merge_banks:
+            # merge all the banks to 1
+            mantidsimple.SumSpectra(InputWorkspace=vdrive_bin_ws_name,
+                                    OutputWorkspace=vdrive_bin_ws_name,
+                                    StartWorkspaceIndex=0,
+                                    EndWorkspaceIndex=1)
+
+        # set up the output file's permit for other users to modify
+        os.chmod(gsas_file_name, 0666)
         self._reducedDataFiles.append(gsas_file_name)
 
         if self._reductionSetup.normalized_by_vanadium:
-            gsas_name2 = os.path.splitext(orig_gsas_name)[0] + '_v.gda'
-            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2)
+            gsas_name2 = os.path.splitext(gsas_file_name)[0] + '_v.gda'
+            self._normalize_by_vanadium(vdrive_bin_ws_name, gsas_name2, pre_ned)
+
         # END-IF (vanadium)
 
         # collect result
         self._reducedWorkspaceDSpace = None  # dSpacing reduced workspace has been replaced by TOF
-        self._reducedWorkspaceMtd = reduced_ws_name
+        self._reducedWorkspaceMtd = reduced_workspace
         self._reducedWorkspaceVDrive = vdrive_bin_ws_name
         self._reduceGood = True
 
-        # return with False
-        if output_access_error:
-            return False, 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.' \
-                          ''.format(orig_gsas_name, gsas_file_name), None
+        return
 
-        return True, message, reduced_ws_name
-
-    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name):
+    @staticmethod
+    def pre_process_output_gsas(gsas_file_name):
         """
+        get the full path for output GSAS file
+        :param gsas_file_name: proposed GSAS file
+        :return: 4-tuple. (final (may be modified) GSAS file name, message, flag for access error, flag to delete existing gsas
+        """
+        message = ''
+        output_access_error = False
+        del_curr_gsas = False
 
+        # check directory
+        gsas_dir = os.path.dirname(gsas_file_name)
+        if os.path.exists(gsas_dir) is False:
+            # directory for proposed output GSAS file does not exist
+            output_access_error = True
+            message += 'Output directory "{0}" does not exist.'.format(gsas_dir)
+        elif os.access(gsas_dir, os.W_OK) is False:
+            # user has no write permission for the directory
+            output_access_error = True
+            message += 'User hasn\'t the write permission to directory {0}'.format(gsas_dir)
+        elif os.path.exists(gsas_file_name) and os.access(gsas_file_name, os.W_OK) is False:
+            # GSAS file exists but user cannot rewrite
+            output_access_error = True
+            message += 'User cannot overwrite existing GSAS file {0}'.format(gsas_file_name)
+        elif os.path.exists(gsas_file_name):
+            # re-write: so delete the original gsas file first
+            message += 'Previously reduced GSAS file {0} is to be overwritten.'.format(gsas_file_name)
+            del_curr_gsas = True
+
+        return gsas_file_name, message, output_access_error, del_curr_gsas
+
+    def _normalize_by_vanadium(self, reduced_gss_ws_name, output_file_name, is_pre_ned):
+        """
+        normalize by vanadium
+        :param reduced_gss_ws_name:
+        :param output_file_name:
+        :param is_pre_ned: flag to show whether the data is collect before nED was installed.
         :return:
         """
         # check inputs and get input workspace
@@ -2156,33 +2432,11 @@ class ReduceVulcanData(object):
         # get vanadium workspace
         van_ws = AnalysisDataService.retrieve(van_ws_name)
 
-        check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
-        if not check_result:
-            print '[INFO] ', message
-
-        align_bins(van_ws_name, reduced_gss_ws_name)
-
-        print '[INFO] ', reduced_gss_ws_name, reduced_gss_ws.run().getProperty('VDriveBin')
-
-        # # check whether the reduced GSAS workspace has the same binning with vanadium workspace
-        # gda_vec_x = reduced_gss_ws.readX(0)
-        # van_vec_x = van_ws.readX(0)
-        # diff_vec = numpy.abs((van_vec_x - gda_vec_x) / gda_vec_x)
-        # if numpy.max(diff_vec) >= 0.01:
-        #     raise RuntimeError('Binning between vanadium run {0} and reduced run {1} '
-        #                        'differs too much!'.format(van_run_number, reduced_gss_ws_name))
-        #
-        # # check whether vanadium and sample run workspace have the same number of spectra
-        # num_spec = reduced_gss_ws.getNumberHistograms()
-        # if num_spec != van_ws.getNumberHistograms():
-        #     raise RuntimeError('Number of reduced workspace {0}\'s histogram {1} does not equal to that of vanadium '
-        #                        '{2} as {3}.'.format(reduced_gss_ws_name, num_spec, van_ws_name,
-        #                                             van_ws.getNumberHistograms()))
-        #
-        # # normalize by vanadium
-        # # make the binning exactly the same because there is always some tiny difference between loaded GSAS
-        # for ws_index in range(num_spec):
-        #     numpy.copyto(van_ws.dataX(ws_index), reduced_gss_ws.readX(ws_index))
+        # align bins
+        if not self._is_nED:
+            check_result, message = check_point_data_log_binning(van_ws_name, standard_bin_size=0.01, tolerance=1.E-5)
+            align_bins(van_ws_name, reduced_gss_ws_name)
+        # END-IF
 
         # normalize and write out again
         reduced_gss_ws = reduced_gss_ws / van_ws
@@ -2196,20 +2450,20 @@ class ReduceVulcanData(object):
         return
 
     def special_operation_auto_reduction_service(self):
-        """
-        some special operations used in auto reduction service only
+        """some special operations used in auto reduction service only
         :return:
         """
         if not self._reductionSetup.is_auto_reduction_service:
             return True, 'No operation for auto reduction special.'
 
         # 2nd copy for Ke if it IS NOT an alignment run
-        if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir():
+        if not self._reductionSetup.is_alignment_run and self._reductionSetup.get_gsas_2nd_dir() and self._reductionSetup._autoReduceLogOnly is False:
+            first_gsas_file = self._reductionSetup.get_gsas_file(main_gsas=True)
+            if os.path.exists(first_gsas_file) is False:
+                raise RuntimeError('First GSAS file {0} cannot be found.'.format(first_gsas_file))
+
             self.duplicate_gsas_file(self._reductionSetup.get_gsas_file(main_gsas=True),
                                      self._reductionSetup.get_gsas_2nd_dir())
-
-        # save the plot
-        self.generate_1d_plot()
 
         return True, ''
 
@@ -2326,6 +2580,9 @@ class MainUtility(object):
             if '-d' in argv or '--dryrun' in argv:
                 reduction_setup.set_dry_run(True)
 
+            if '--log' in argv:
+                reduction_setup.set_log_only(True)
+
         elif len(opts) == 1 and opts[0][0] in ("-d", "--dryrun"):
             # dry run for auto mode
             reduction_setup.set_dry_run(True)
@@ -2402,7 +2659,7 @@ class MainUtility(object):
     @staticmethod
     def print_main_help():
         """
-        Print help message
+        Print help message1884
         :return:
         """
         help_str = ''
@@ -2419,6 +2676,8 @@ class MainUtility(object):
         help_str += '-f/focus    : diffraction focus file.\n'
         help_str += '-c/charact  : characterization file.\n'
         help_str += '-b/bin      : binning file.\n'
+
+        print 'Vulcan reduction helping: \n{0}'.format(help_str)
 
         return
 
@@ -2503,7 +2762,10 @@ def main(argv):
     status, error_message = reduction_setup.check_validity()
     if status and not reduction_setup.is_dry_run():
         # reduce data
-        reducer.execute_vulcan_reduction()
+        status, message = reducer.execute_vulcan_reduction(output_logs=True)
+        if not status:
+            raise RuntimeError('Auto reduction error: {0}'.format(message))
+        print ('[Auto Reduction Successful: {0}]'.format(message))
     elif not status:
         # error message
         raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)

@@ -16,7 +16,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
     """ GUI (dialog) for process vanadium data
     """
     # Define signals
-    myStripPeakSignal = QtCore.pyqtSignal(int, float, str, bool)  # signal to send out
+    myStripPeakSignal = QtCore.pyqtSignal(int, float, str, bool, list)  # signal to send out
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
     mySmoothVanadiumSignal = QtCore.pyqtSignal(str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
@@ -283,10 +283,20 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
             gutil.pop_dialog_error(self, 'Both FWHM and Tolerance must be specified.')
             return
 
+        # append the banks
+        bank_list = list()
+        if self.ui.checkBox_90degBank.isChecked():
+            bank_list.extend([1, 2])
+        if self.ui.checkBox_highAngleBank.isChecked():
+            bank_list.append(3)
+        if len(bank_list) == 0:
+            gutil.pop_dialog_information(self, 'Neither West/East nor High angle bank is selected.')
+            return
+
         background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
-        self.myStripPeakSignal.emit(peak_fwhm, fit_tolerance, background_type, is_high_background)
+        self.myStripPeakSignal.emit(peak_fwhm, fit_tolerance, background_type, is_high_background, bank_list)
 
         return
 

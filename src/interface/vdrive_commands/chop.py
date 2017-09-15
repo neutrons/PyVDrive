@@ -309,6 +309,11 @@ class VdriveChop(VDriveCommand):
         :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """
+        # Go through all the arguments
+        if 'HELP' in self._commandArgsDict:
+            # pop out the window
+            return True, 'pop'
+
         # parse arguments
         self.set_ipts()
 
@@ -340,11 +345,6 @@ class VdriveChop(VDriveCommand):
             return False, error_message
         run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
         self._controller.add_runs_to_project(run_info_list)
-
-        # Go through all the arguments
-        if 'HELP' in self._commandArgsDict:
-            # pop out the window
-            return True, 'pop'
 
         if 'INFO' in self._commandArgsDict:
             # get the chopping-help information
@@ -455,7 +455,6 @@ class VdriveChop(VDriveCommand):
                                                                dry_run=is_dry_run,
                                                                chop_loadframe_log=chop_load_frame,
                                                                chop_furnace_log=chop_furnace_log)
-
 
             elif time_step is not None:
                 # chop by time and reduce

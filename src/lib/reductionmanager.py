@@ -746,7 +746,7 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def reduce_run(self, ipts_number, run_number, event_file, output_directory, vanadium=False,
+    def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
                    vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
         """
         Reduce run with selected options
@@ -757,6 +757,7 @@ class ReductionManager(object):
         :param run_number:
         :param event_file:
         :param output_directory:
+        :param merge_banks:
         :param vanadium:
         :param vanadium_tuple:
         :param gsas:
@@ -766,19 +767,24 @@ class ReductionManager(object):
         """
         # set up reduction options
         reduction_setup = reduce_VULCAN.ReductionSetup()
-        reduction_setup.set_default_calibration_files()
 
         # run number, ipts and etc
         reduction_setup.set_run_number(run_number)
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
+        reduction_setup.set_banks_to_merge(merge_banks)
+        reduction_setup.set_default_calibration_files()
+
         if binning_parameters is not None:
             try:
                 tof_min, bin_size, tof_max = binning_parameters
             except IndexError as index_err:
-                raise NotImplementedError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
-                                          .format(binning_parameters, index_err))
+                raise RuntimeError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
+                                   ''.format(binning_parameters, index_err))
             reduction_setup.set_binning_parameters(tof_min, bin_size, tof_max)
+            reduction_setup.set_align_vdrive_bin(False)
+        else:
+            reduction_setup.set_align_vdrive_bin(True)
         # END-IF
 
         # vanadium
@@ -805,8 +811,9 @@ class ReductionManager(object):
         # END-IF (standard sample tuple)
 
         # reduce
+        reduction_setup.is_auto_reduction_service = False
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
-        reduce_good, message = reducer.execute_vulcan_reduction()
+        reduce_good, message = reducer.execute_vulcan_reduction(output_logs=False)
 
         # record reduction tracker
         if reduce_good:

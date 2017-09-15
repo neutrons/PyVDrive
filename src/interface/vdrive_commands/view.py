@@ -11,23 +11,30 @@
 
 
 from procss_vcommand import VDriveCommand
+from PyVDrive.lib import vulcan_util
 
 
 class VdriveView(VDriveCommand):
     """
     Process command VIEW or VDRIVEVIEW
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'CHOPRUN', 'RUNV', 'MINV', 'MAXV', 'NORM', 'DIR', 'SHOW',
+                     'PEAK']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
+        'RUNV': 'Vanadium run number for calibration',
         'CHOPRUN': 'Run number of the chopped run.',
-        'MinV': 'Minimum X value to plot',
-        'MaxV': 'Maximum X value to plot',
+        'MINV': 'Minimum X value to plot',
+        'MAXV': 'Maximum X value to plot',
         'NORM': 'Do normalize to the reduced data',
-        'DIR': 'User specified directory to find the reduced data (including those being chopped)'
+        'DIR': 'User specified directory to find the reduced data (including those being chopped)',
+        'PEAK': 'Integrate peak and output value. PEAK=1: output to console. Otherwise, output '
+                'to the file name',
+        # TODO/ISSUE/NOWNOW - Implement this 'SHOW'
+        'SHOW': 'Launch the reduced-data viewer'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -62,6 +69,12 @@ class VdriveView(VDriveCommand):
         self._maxX = None  # maximum X value to plot
         self._normalizeData = False  # whether the data will be normalized
         self._unit = 'dSpacing'  # unit
+
+        self._peakValueFileName = None
+        self._outputPeakValueToConsole = False
+
+        self._normByVanadium = False
+        self._vanRunNumberDict = dict()
 
         return
 
@@ -117,10 +130,14 @@ class VdriveView(VDriveCommand):
             self._figureDimension = 2
 
         # min and max value
-        if 'MinV' in self._commandArgsDict:
-            self._minX = float(self._commandArgsDict['MinV'])
-        if 'MaxV' in self._commandArgsDict:
-            self._maxX = float(self._commandArgsDict['MaxV'])
+        has_min = False
+        has_max = False
+        if 'MINV' in self._commandArgsDict:
+            self._minX = float(self._commandArgsDict['MINV'])
+            has_min = True
+        if 'MAXV' in self._commandArgsDict:
+            self._maxX = float(self._commandArgsDict['MAXV'])
+            has_max = True
 
         # Normalized?
         if 'NORM' in self._commandArgsDict:
@@ -130,6 +147,55 @@ class VdriveView(VDriveCommand):
             else:
                 self._normalizeData = False
         # END-IF
+
+        # RUNV
+        auto_search_van = False
+        van_run_number = None
+        if 'RUNV' in self._commandArgsDict:
+            van_run_str = str(self._commandArgsDict['RUNV'])
+            if van_run_str == 'auto':
+                auto_search_van = True
+            elif van_run_str.isdigit():
+                van_run_number = int(van_run_str)
+            else:
+                return False, 'Vanadium run {0} is not recognized'.format(van_run_str)
+        # END-IF
+
+        # match vanadium run numbers
+        if van_run_number is not None:
+            # vanadium run number is set up by user
+            for run_number in self._runNumberList:
+                self._vanRunNumberDict[run_number] = van_run_number
+
+        elif auto_search_van:
+            # search vanadium
+            van_locator = vulcan_util.AutoVanadiumCalibrationLocator(ipts=self._iptsNumber)
+            for run_number in self._runNumberList:
+                van_run_number = van_locator.search_vanadium_gda(run_number)
+                if isinstance(van_run_number, list):
+                    error_msg = 'Run {0} has more than {1} vanadium GSAS file corresponding.' \
+                                ''.format(run_number, len(van_run_number))
+                    if len(van_run_number) > 0:
+                        error_msg += 'Candidates are {0}'.format(van_run_number)
+                    return False, error_msg
+                self._vanRunNumberDict[run_number] = van_run_number
+            # END-IF
+        # END-IF-ELSE
+
+        # Calculate peak parameters
+        if 'PEAK' in self._commandArgsDict:
+            peak_str = str(self._commandArgsDict['PEAK']).strip()
+            if peak_str != '0':
+                # check
+                if not (has_min and has_max):
+                    return False, 'PEAK = {0}. Both MinV and MaxV must be specified.'.format(peak_str)
+                if peak_str == '1':
+                    self._outputPeakValueToConsole = True
+                    self._peakValueFileName = None
+                else:
+                    self._peakValueFileName = peak_str
+                    self._outputPeakValueToConsole = False
+        # END-IF ('PEAK')
 
         # determine unit according to MinV or MaxV
         if self._maxX is not None:
@@ -146,6 +212,35 @@ class VdriveView(VDriveCommand):
                 self._unit = 'dSpacing'
 
         return True, ''
+
+    @property
+    def do_calculate_peak_parameter(self):
+        """
+        blabla
+        :return:
+        """
+        return self._outputPeakValueToConsole or self._peakValueFileName is not None
+
+    @property
+    def do_vanadium_normalization(self):
+        """check whether VIEW command is required to do vanadium calibration
+        """
+        return self._normByVanadium
+
+    def get_vanadium_number(self, run_number):
+        """get vanadium run number
+        :return:
+        """
+        if self._normByVanadium:
+            if run_number in self._vanRunNumberDict:
+                van_number = self._vanRunNumberDict[run_number]
+            else:
+                raise RuntimeError('Run number {0} does not exist in vanadium number dictionary ({1})'
+                                   ''.format(run_number, self._vanRunNumberDict.keys()))
+        else:
+            raise RuntimeError('No vanadium calibration is set up.')
+
+        return van_number
 
     @property
     def is_1_d(self):
@@ -235,6 +330,22 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._reducedDataDir
+
+    @property
+    def output_peak_parameters_to_console(self):
+        """
+        blabla
+        :return:
+        """
+        return self._outputPeakValueToConsole
+
+    @property
+    def peak_parameters_file(self):
+        """
+        blabla
+        :return:
+        """
+        return self._peakValueFileName
 
     @property
     def unit(self):

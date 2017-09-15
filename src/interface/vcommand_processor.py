@@ -58,8 +58,6 @@ class VdriveCommandProcessor(object):
         """
         arg_dict = dict()
         for index, term in enumerate(command_args):
-            print '[DB] Input: ', term
-
             term = term.strip()
             if len(term) == 0:
                 # empty string. might appear at the end of the command
@@ -194,8 +192,9 @@ class VdriveCommandProcessor(object):
         # process for special case: log-pick-helper
         if message == 'pop':
             log_window = self._mainWindow.do_launch_log_picker_window()
-            log_window.load_run(self._chopRunNumberList[0])
-            log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
+            if isinstance(self._chopRunNumberList, list) and len(self._chopRunNumberList) > 0:
+                log_window.load_run(self._chopRunNumberList[0])
+                log_window.setWindowTitle('IPTS {0} Run {1}'.format(self._chopIPTSNumber, self._chopRunNumberList[0]))
         # END-IF
 
         return status, message
@@ -246,8 +245,14 @@ class VdriveCommandProcessor(object):
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
-            view_window.add_run_numbers(processor.get_run_tuple_list())
-            # plot
+
+            vanadium_dict = None
+            if processor.do_vanadium_normalization:
+                vanadium_dict = dict()
+                for run_number in processor.get_run_number():
+                    vanadium_dict[run_number] = processor.get_vanadium_number(run_number)
+
+            view_window.add_run_numbers(processor.get_run_tuple_list(), vanadium_dict)
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
         elif processor.is_chopped_run:
             # 2-D image for chopped run
@@ -262,6 +267,21 @@ class VdriveCommandProcessor(object):
             view_window.add_run_numbers(processor.get_run_tuple_list())
             view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
         # END-FOR
+
+        # write out the peak parameters
+        if processor.do_calculate_peak_parameter:
+            ipts_number, run_number_list = processor.get_ipts_runs()
+            status, ret_obj = self._myController.calculate_peak_parameters(ipts_number, run_number_list,
+                                                                           processor.x_min, processor.x_max,
+                                                                           processor.output_peak_parameters_to_console,
+                                                                           processor.peak_parameters_file)
+            if status:
+                message = ''
+                for bank_id in ret_obj.keys():
+                    message += 'Bank {0}\n{1}\n'.format(bank_id, ret_obj[bank_id])
+            else:
+                message = ret_obj
+        # END-IF-ELSE
 
         return status, message
 

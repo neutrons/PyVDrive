@@ -49,7 +49,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # current status
         self._iptsNumber = None
-        self._runNumberList = None
+        self._runNumberList = list()
 
         self._currRunNumber = None
         self._currChoppedData = False
@@ -251,16 +251,25 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
         is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
 
-        # load
-        # FIXME/TODO/NOWNOW - It has not been implemented at all! Consider to refactor with
-        #   load_chopped_diffraction_files
-        data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+        # import GSAS in SNS archive: data key is workspace name
+        try:
+            data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+        except RuntimeError as run_error:
+            GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+                                              ''.format(run_number, run_error))
+            return
 
         # set sequence list
         if is_chopped_data:
             seq_list = data_key['chopped sequence']
         else:
             seq_list = None
+
+        # add data
+        if is_chopped_data:
+            raise NotImplementedError('It is not implemented to plot chopped data from GSAS.')
+        else:
+            self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
 
         # set the label
         self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
@@ -336,7 +345,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
-        add a new data set to this data viewer window bit without plotting
+        add a new data set to this data viewer window BUT without plotting including
+        1. data management dictionary
+        2. combo-box as data key
         :param ipts_number:
         :param run_number:
         :param controller_data_key:
@@ -975,9 +986,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param unit:
         :return:
         """
-        if run_number in self._reducedDataDict and self._reducedDataDict[run_number]['unit'] == unit:
-            # data existing and unit is same
-            return True, None
+        # search in this object's reduced data dictionary
+        if run_number in self._reducedDataDict:
+            assert isinstance(self._reducedDataDict[run_number], dict),\
+                'Expected run data info {0} is stored in a dictionary but not a {1}.' \
+                ''.format(self._reducedDataDict[run_number], type(self._reducedDataDict[run_number]))
+
+            if self._reducedDataDict[run_number]['unit'] == unit:
+                # data existing and unit is same
+                return True, None
 
         # find out the input run number is a workspace name or a run number
         if isinstance(run_number, str) and run_number.isdigit() is False:
@@ -1005,6 +1022,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # if not in memory, try to load from archive
         if not status and not is_workspace:
             # or archive
+            print '[DB...BAT] Loading data without searching archive fails... {0}'.format(ret_obj)
             status, ret_obj = self._myController.get_reduced_data(run_number, unit,
                                                                   ipts_number=self._iptsNumber,
                                                                   search_archive=True)
@@ -1075,25 +1093,20 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         # check existence of data
         if data_key not in self._reducedDataDict:
-            raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
-                           ''.format(self._reducedDataDict.keys(), data_key))
+            # check again whether the input data key is an integer but converted to string
+            raise_key = True
+            if isinstance(data_key, str) and data_key.isdigit():
+                data_key = int(data_key)
+                if data_key in self._reducedDataDict:
+                    raise_key = False
+
+            if raise_key: 
+                raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
+                               ''.format(self._reducedDataDict.keys(), data_key))
+
         if bank_id not in self._reducedDataDict[data_key]:
             raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
                                ''.format(bank_id, type(bank_id), data_key, self._reducedDataDict[data_key].keys()))
-
-        # # check other inputs
-        # if color is None:
-        #     bank_color = {1: 'red', 2: 'blue', 3: 'green'}[int(bank_id)]
-        # else:
-        #     assert isinstance(color, str), 'Color {0} must be either None or string but not a {1}.' \
-        #                                    ''.format(color, type(color))
-        #     bank_color = color
-
-        # # clear canvas
-        # if clear_previous:
-        #     # clear canvas and set X limit to 0. and 1.
-        #     self.ui.graphicsView_mainPlot.reset_1d_plots()
-
         # get data and unit
         self._currUnit = str(self.ui.comboBox_unit.currentText())
         status, error_message = self.load_reduced_data(run_number=data_key, unit=self._currUnit)
@@ -1104,14 +1117,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         vec_y = self._reducedDataDict[data_key][bank_id][1]
 
         # plot
+        print '[DB...BAT] Check Unit = {0}, X Range = {1}, {2}'.format(self._currUnit, self._minX,
+                                                                       self._maxX)
+
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                                       over_plot=not clear_previous,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None)
-        # line_id = self.ui.graphicsView_mainPlot.plot_1d_data(vec_x, vec_y, x_unit=self._currUnit, label=label,
-        #                                                      line_key=data_key, title=title, line_color=bank_color)
 
         self.ui.graphicsView_mainPlot.auto_rescale()
+        self.ui.graphicsView_mainPlot.setXYLimit(self._minX, self._maxX)
 
         # check the bank ID list
         if self.ui.comboBox_spectraList.count() != len(self._reducedDataDict):
@@ -1327,23 +1342,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
          1. run number is a positive integer
          2. bank id is a positive integer
         Guarantees:
-        :param run_number:
+        :param run_number: integer (run number) or string (workspace name/key)
         :param bank_id:
         :param over_plot:
         :param unit:  default (None) by using the current text in the unit-combo-box
         :return:
         """
-        # get run number even if it is a string of integer & check requirements
-        if isinstance(run_number, str) and run_number.isdigit():
-            run_number = int(run_number)
-        else:
-            assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
-                                                ''.format(run_number, type(run_number))
-        # END-IF
-        if run_number <= 0:
-            raise RuntimeError('Run number {0} must be a positive number.'.format(run_number))
-
-        # check bank ID
+        # check bank ID; leave the check for run_number to load_reduced_data
         assert isinstance(bank_id, int), 'Bank ID %s must be an integer, but not %s.' % (str(bank_id),
                                                                                          str(type(bank_id)))
         if bank_id <= 0:
@@ -1556,7 +1561,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
         """
-        save GSAS file
+        save GSAS file from GUI
         :param output_file_name:
         :param ipts_number:
         :param run_number:
@@ -1566,19 +1571,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # convert string
         output_file_name = str(output_file_name)
 
-        status, error_message = self._myController.save_processed_vanadium(van_info_tuple, output_file_name)
+        status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+                                                                           output_file_name=output_file_name)
         if not status:
             GuiUtility.pop_dialog_error(self, error_message)
 
         return
 
-    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background):
+    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background, bank_list):
         """
         process the signal to strip vanadium peaks
         :param peak_fwhm:
         :param tolerance:
         :param background_type:
         :param is_high_background:
+        :param bank_list:
         :return:
         """
         # from signal, the string is of type unicode.
@@ -1596,13 +1603,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
-        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number,
+        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
                                                                   peak_fwhm, tolerance,
                                                                   background_type, is_high_background,
                                                                   data_key)
         if status:
             result_ws_name = ret_obj
-            self.load_reduced_data(run_number=result_ws_name)
+            # self.load_reduced_data(run_number=controller_data_key, unit=self._currUnit)
+            self.load_reduced_data(run_number=result_ws_name, unit=self._currUnit)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)

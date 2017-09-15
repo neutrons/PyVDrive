@@ -1271,7 +1271,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Plot data: load bank 1 as default
         if run_number is None:
-            status, ret_obj = self._myController.get_reduced_data(data_key, 'dSpacing')
+            status, ret_obj = self._myController.get_reduced_data(data_key, 'dSpacing', is_workspace=True)
         else:
             status, ret_obj = self._myController.get_reduced_data(run_number, 'dSpacing')
         if status is False:

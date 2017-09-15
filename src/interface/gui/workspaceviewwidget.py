@@ -141,16 +141,13 @@ class WorkspaceViewWidget(QtGui.QWidget):
             try:
                 status, err_msg = self._myMainWindow.execute_command(script)
             except AssertionError as ass_err:
-                status = False,
+                status = False
                 err_msg = 'Failed to execute VDRIVE command due to %s.' % str(ass_err)
-            # except KeyError as key_err:
-            #     status = False
-            #     err_msg = 'Failed to execute %s due to unrecognized key word: %s.' % (command, str(key_err))
 
             if status:
                 err_msg = 'VDRIVE command %s is executed successfully.\n%s.' % (command, err_msg)
             else:
-                err_msg = 'Failed to execute VDRIVE command %s failed due to %s.' % (command, err_msg)
+                err_msg = 'Failed to execute VDRIVE command %s due to\n%s.' % (command, err_msg)
 
         return err_msg
 
