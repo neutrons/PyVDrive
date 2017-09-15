@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>937</width>
-    <height>720</height>
+    <width>1066</width>
+    <height>838</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -56,7 +56,7 @@
      </widget>
     </item>
     <item row="1" column="0" colspan="6">
-     <widget class="QTableWidget" name="tableWidget_recordsInfoTable"/>
+     <widget class="ExperimentRecordTable" name="tableWidget_recordsInfoTable"/>
     </item>
     <item row="2" column="5">
      <widget class="QPushButton" name="pushButton_clearTable">
@@ -72,8 +72,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>937</width>
-     <height>22</height>
+     <width>1066</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -91,6 +91,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ExperimentRecordTable</class>
+   <extends>QTableWidget</extends>
+   <header>vdrivetablewidgets</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
