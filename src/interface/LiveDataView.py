@@ -93,11 +93,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
 
         self.ui.spinBox_currentIndex.setValue(self._currAccumulateIndex)
+        total_index = self._controller.get_live_counter()
+        self.ui.spinBox_totalIndex.setValue(total_index)
+
+        print '[UI-DB] Acc Index = {0}, Total Index = {1}'.format(self._currAccumulateIndex, total_index)
 
         self._currAccumulateIndex += 1
 
-        total_index = self._controller.get_live_counter()
-        self.ui.spinBox_totalIndex.setValue(total_index)
+        # ws
+        ws_name_list = self._controller.get_workspaces()
+        self.ui.plainTextEdit_Log.setText('{0}\n'.format(ws_name_list))
 
         return
 
