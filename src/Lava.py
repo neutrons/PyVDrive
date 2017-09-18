@@ -84,8 +84,11 @@ class LauncherManager(QtGui.QDialog):
         :return:
         """
         import interface.LiveDataView
+        # import lib.LiveDataDriver
 
-        live_view = interface.LiveDataView.VulcanLiveDataView(self)
+        # driver = lib.LiveDataDriver.LiveDataDriver()
+
+        live_view = interface.LiveDataView.VulcanLiveDataView(self, None)
 
         live_view.show()
 

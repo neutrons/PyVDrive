@@ -23,26 +23,6 @@ class VulcanExperimentRecordView(QtGui.QMainWindow):
         return
 
 
-    def launch_live_data_processor(self):
-        """
-
-        :return:
-        """
-        #  post processing test
-        CreateWorkspace(OutputWorkspace='counter', DataX=[0], DataY=[0], NSpec=1)
-        post_script_name = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'
-
-        # Test for script: whatever has all the log information...
-        # and output_1, output_2 will do good still
-        StartLiveData(UpdateEvery=5, Instrument='VULCAN', Listener='SNSLiveEventDataListener',
-                      Address='bl7-daq1.sns.gov:31415', StartTime='1990-01-01T00:00:00',
-                      ProcessingScriptFilename=post_script_name,
-                      PreserveEvents=False,
-                      # AccumulationWorkspace='live_vulcan_x',
-                      AccumulationMethod='Add',
-                      OutputWorkspace='whatever')
-
-
     def live_monitor(self):
         """
 

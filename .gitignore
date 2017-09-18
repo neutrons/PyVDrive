@@ -159,6 +159,9 @@ Desktop.ini
 # PyCharm IDE
 .idea/
 
+# prototype
+prototypes/
+
 # Mac OS X Finder
 .DS_Store
 
