@@ -1,5 +1,5 @@
 import sys
-#sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 import mantid.simpleapi as mantidsimple
 from mantid.api import AlgorithmManager
