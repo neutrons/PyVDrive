@@ -170,7 +170,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 continue
 
             # decide whether a new workspace shall be started
-            WORKSPACE_LIMIT = 1 * 60 / 10
+            WORKSPACE_LIMIT = 5 * 60 / 10
             prev_acc_name = None
             if self._accumulatedWorkspace is None or len(self._accumulatedList) == WORKSPACE_LIMIT:
                 # reset if pre-existing of accumulated workspace
