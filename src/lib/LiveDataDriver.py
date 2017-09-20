@@ -29,13 +29,15 @@ class LiveDataDriver(QtCore.QThread):
         """
         initialization
         """
+        super(LiveDataDriver, self).__init__()
+
         # clear the existing workspace with same name
         if mantid_helper.workspace_does_exist(LiveDataDriver.COUNTER_WORKSPACE_NAME):
             mantid_helper.delete_workspace(LiveDataDriver.COUNTER_WORKSPACE_NAME)
 
-        # create workspace
+        # create workspace: workspace index 1 will be used to record number of events
         mantidsimple.CreateWorkspace(OutputWorkspace=LiveDataDriver.COUNTER_WORKSPACE_NAME,
-                                     DataX=[0], DataY=[0], NSpec=1)
+                                     DataX=[0, 0], DataY=[0, 0], NSpec=2)
 
         # get the live reduction script
         self._live_reduction_script = LiveDataDriver.LIVE_PROCESS_SCRIPTS
@@ -55,7 +57,19 @@ class LiveDataDriver(QtCore.QThread):
 
         return curr_index
 
-    def get_workspaces(self):
+    @staticmethod
+    def get_live_events():
+        """
+        check
+        :return:
+        """
+        counter_ws = mantid_helper.retrieve_workspace(LiveDataDriver.COUNTER_WORKSPACE_NAME)
+        live_events = counter_ws.readX(1)[0]
+
+        return live_events
+
+    @staticmethod
+    def get_workspaces():
         """
         blabla
         :return:

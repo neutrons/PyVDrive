@@ -44,7 +44,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # collection of workspace names
         self._workspaceSet = set()
-        # deleted workspace set
+
+        # accumulated workspace
+        self._accumulatedWorkspace = None
+        self._accumulatedList = list()  # list of accumulated workspace
 
         return
 
@@ -142,8 +145,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_x, vec_y, vec_e = data_set_dict[bank_id]
                 self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
                                                           ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
-                self.ui.graphicsView_currentView.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id], label='bank {0}'.format(bank_id),
+                self.ui.graphicsView_currentView.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
+                                                             label='{0}: bank {1}'.format(ws_name, bank_id),
                                                              x_label=current_unit)
+
+            # update other information
+            num_events = int(self._controller.get_live_events())
+            self.ui.lineEdit_numberEventsNewsReduced.setText(str(num_events))
+            self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name))
 
         # END-FOR
 
