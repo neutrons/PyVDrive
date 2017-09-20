@@ -39,6 +39,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
 
+        # menu bar
+        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+                     self.do_quit)
+        self.connect(self.ui.actionClear_Logs, QtCore.SIGNAL('triggered()'),
+                     self.do_clear_log)
+        self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
+                     self.do_launch_ipython)
+
         # multiple thread pool
         self._checkStateTimer = None
 
@@ -48,6 +56,37 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # accumulated workspace
         self._accumulatedWorkspace = None
         self._accumulatedList = list()  # list of accumulated workspace
+
+        return
+
+    def do_clear_log(self):
+        """
+
+        :return:
+        """
+        self.ui.plainTextEdit_Log.clear()
+
+        return
+
+    def do_launch_ipython(self):
+        """
+
+        :return:
+        """
+
+        # TODO/ISSUE/NOW - blabla
+
+        return
+
+    def do_quit(self):
+        """
+
+        :return:
+        """
+        # stop live view
+        self.do_stop_live()
+
+        self.close()
 
         return
 
@@ -116,8 +155,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             if ws_name.startswith('output'):
                 self.ui.plainTextEdit_Log.appendPlainText('Processing new workspace {0}'.format(ws_name))
+            else:
+                # also a new workspace might be the accumulated workspace
+                continue
 
+            # get reference to workspace
             workspace_i = helper.retrieve_workspace(ws_name)
+
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
@@ -125,17 +169,36 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.ui.plainTextEdit_Log.setPlainText(log_message)
                 continue
 
+            # decide whether a new workspace shall be started
+            WORKSPACE_LIMIT = 1 * 60 / 10
+            prev_acc_name = None
+            if self._accumulatedWorkspace is None or len(self._accumulatedList) == WORKSPACE_LIMIT:
+                # reset if pre-existing of accumulated workspace
+                if self._accumulatedWorkspace is not None:
+                    prev_acc_name = self._accumulatedWorkspace.name()
+                    self._accumulatedList = list()
+                # clone workspace
+                accumulate_name = 'FiveMinutes_{0}'.format(self._currAccumulateIndex)
+                self._accumulatedWorkspace = helper.clone_workspace(ws_name, accumulate_name)
+
+            else:
+                # add
+                self._accumulatedWorkspace += workspace_i
+                accumulate_name = self._accumulatedWorkspace.name()
+            self._accumulatedList.append(ws_name)
+
             # plot
             # self.ui.plainTextEdit_Log.clear()
             self.ui.plainTextEdit_Log.appendPlainText('Plotting {0}: X-size = {1}'
-                                                      ''.format(ws_name, len(workspace_i.readX(0))))
+                                                      ''.format(accumulate_name,
+                                                                len(self._accumulatedWorkspace.readX(0))))
             self.ui.plainTextEdit_Log.appendPlainText('\n')
 
             data_set_dict = dict()
-            current_unit = 'any unit'
+            current_unit = 'TOF'
             for i in range(3):
-                vec_x = workspace_i.readX(i)[:-1]
-                vec_y = workspace_i.readY(i)
+                vec_x = self._accumulatedWorkspace.readX(i)[:-1]
+                vec_y = self._accumulatedWorkspace.readY(i)
                 data_set_dict[i+1] = vec_x, vec_y, None
 
             # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
@@ -146,13 +209,32 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
                                                           ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
                 self.ui.graphicsView_currentView.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
-                                                             label='{0}: bank {1}'.format(ws_name, bank_id),
+                                                             label='{0}: bank {1}'.format(accumulate_name, bank_id),
                                                              x_label=current_unit)
 
             # update other information
             num_events = int(self._controller.get_live_events())
             self.ui.lineEdit_numberEventsNewsReduced.setText(str(num_events))
             self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name))
+
+            # plot previous
+            if prev_acc_name is not None:
+                prev_acc_ws = helper.retrieve_workspace(prev_acc_name)
+                data_set_dict = dict()
+                current_unit = 'TOF'
+                for i in range(3):
+                    vec_x = prev_acc_ws.readX(i)[:-1]
+                    vec_y = prev_acc_ws.readY(i)
+                    data_set_dict[i + 1] = vec_x, vec_y, None
+
+                # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
+                #
+                self.ui.graphicsView_previous.clear_all_lines()
+                for bank_id in data_set_dict.keys():
+                    vec_x, vec_y, vec_e = data_set_dict[bank_id]
+                    self.ui.graphicsView_previous.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
+                                                              label='{0}: bank {1}'.format(prev_acc_name, bank_id),
+                                                              x_label=current_unit)
 
         # END-FOR
 

@@ -26,6 +26,19 @@ VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
+def clone_workspace(srs_ws_name, target_ws_name):
+    """blabla"""
+
+    assert isinstance(srs_ws_name, str), 'blabla'
+    assert isinstance(target_ws_name, str), 'blabla'
+
+    mantidapi.CloneWorkspace(InputWorkspace=srs_ws_name, OutputWorkspace=target_ws_name)
+
+    output_ws = ADS.retrieve(target_ws_name)
+
+    return output_ws
+
+
 def convert_to_non_overlap_splitters_bf(split_ws_name):
     """
     convert a Table splitters workspace containing overlapped time segment
