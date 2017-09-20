@@ -14,6 +14,7 @@ import vdrivehelper
 from reduce_VULCAN import align_bins
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
+WORKSPACE_2D_ID = 'Workspace2D'
 
 # define constants
 VULCAN_L1 = 43.754
@@ -1020,6 +1021,25 @@ def is_event_workspace(workspace_name):
     assert event_ws is not None
 
     return event_ws.id() == EVENT_WORKSPACE_ID
+
+
+def is_matrix_workspace(workspace_name):
+    """
+    check wehther a workspace is a MatrixWorkspace
+    :param workspace_name:
+    :return:
+    """
+    # Check requirement
+    assert isinstance(workspace_name, str), 'input workspace name {0} is not a string but a {1}' \
+                                            ''.format(workspace_name, type(workspace_name))
+
+    # get workspace
+    matrix_workspace = retrieve_workspace(workspace_name)
+    assert matrix_workspace is not None, 'blabla'
+
+    is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
+
+    return is_matrix
 
 
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):

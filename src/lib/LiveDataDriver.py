@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+#sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 import mantid.simpleapi as mantidsimple
 from mantid.api import AlgorithmManager
@@ -23,7 +23,7 @@ class LiveDataDriver(QtCore.QThread):
     """
     COUNTER_WORKSPACE_NAME = '_VULCAN_LIVE_COUNTER'
     LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_test.py'
-    #LIVE_PROCESS_SCRIPTS = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'  # local test only
+    LIVE_PROCESS_SCRIPTS = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'  # local test only
 
     def __init__(self):
         """
@@ -56,6 +56,10 @@ class LiveDataDriver(QtCore.QThread):
         return curr_index
 
     def get_workspaces(self):
+        """
+        blabla
+        :return:
+        """
         ws_names = ADS.getObjectNames()
         
         return ws_names
@@ -67,7 +71,7 @@ class LiveDataDriver(QtCore.QThread):
         """
         # Test for script: whatever has all the log information...
         # and output_1, output_2 will do good still
-        mantidsimple.StartLiveData(UpdateEvery=5,
+        mantidsimple.StartLiveData(UpdateEvery=10,
                                    Instrument='VULCAN',
                                    Listener='SNSLiveEventDataListener',
                                    Address='bl7-daq1.sns.gov:31415',
@@ -76,7 +80,6 @@ class LiveDataDriver(QtCore.QThread):
                                    PreserveEvents=False,
                                    AccumulationMethod='Add',
                                    OutputWorkspace='whatever')
-
 
         return
 
@@ -90,7 +93,6 @@ class LiveDataDriver(QtCore.QThread):
         self._thread_continue = False
 
         return
-
 
 
 def main():
