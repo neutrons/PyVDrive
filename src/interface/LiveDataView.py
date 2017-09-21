@@ -6,6 +6,9 @@ import PyVDrive.lib.LiveDataDriver as ld
 import PyVDrive.lib.mantid_helper as helper
 
 
+# TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
+
+
 class VulcanLiveDataView(QtGui.QMainWindow):
     """
     Reduced live data viewer for VULCAN
@@ -46,6 +49,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_clear_log)
         self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
                      self.do_launch_ipython)
+
+        # other widgets
+        self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_change_unit)
 
         # multiple thread pool
         self._checkStateTimer = None
@@ -117,6 +124,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def evt_change_unit(self):
+        """ blabla """
+        return
+
     def add_new_workspace(self, ws_name):
         """
         add a new workspace to the list.  if the list is full, then replace the existing one.
@@ -144,7 +155,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if len(ws_name_list) == 0:
             return
 
+        # TODO/ISSUE/NOW - Shall be refactored to other part of the code
         COLOR = {1: 'black', 2: 'red', 3: 'blue'}
+        self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
+                                 2: self.ui.graphicsView_currentViewB2,
+                                 3: self.ui.graphicsView_currentViewB3}
 
         # sort
         ws_name_list.sort(reverse=True)
@@ -203,14 +218,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
             #
-            self.ui.graphicsView_currentView.clear_all_lines()
             for bank_id in data_set_dict.keys():
                 vec_x, vec_y, vec_e = data_set_dict[bank_id]
                 self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
                                                           ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
-                self.ui.graphicsView_currentView.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
-                                                             label='{0}: bank {1}'.format(accumulate_name, bank_id),
-                                                             x_label=current_unit)
+                self._mainGraphicDict[bank_id].clear_all_lines()
+                self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
+                                                           label='{0}: bank {1}'.format(accumulate_name, bank_id),
+                                                           x_label=current_unit)
 
             # update other information
             num_events = int(self._controller.get_live_events())
@@ -229,12 +244,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
                 # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
                 #
-                self.ui.graphicsView_previous.clear_all_lines()
+                # self.ui.graphicsView_previous.clear_all_lines()
+                # need to read into option
                 for bank_id in data_set_dict.keys():
                     vec_x, vec_y, vec_e = data_set_dict[bank_id]
-                    self.ui.graphicsView_previous.add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
-                                                              label='{0}: bank {1}'.format(prev_acc_name, bank_id),
-                                                              x_label=current_unit)
+                    self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color='black',
+                                                               label='{0}: bank {1}'.format(prev_acc_name, bank_id),
+                                                               x_label=current_unit)
 
         # END-FOR
 
@@ -299,21 +315,22 @@ class TimerThread(QtCore.QThread):
         return
 
     def run(self):
-        """
-        bla
+        """ run the timer thread.  this thread won't be kill until flag _continueTimerLoop is set to False
         :return:
         """
         import time
 
         while self._continueTimerLoop:
             time.sleep(1)
-            # self._parent.update_timer()
             self.time_due.emit(1)
+        # END-WHILE
 
-        # self.data_downloaded.emit('%s\n%s' % (self.url, info))
-
+        return
 
     def stop(self):
-
+        """ stop the timer by turn off _continueTimeLoop (flag)
+        :return:
+        """
         self._continueTimerLoop = False
 
+        return
