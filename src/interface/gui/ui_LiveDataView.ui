@@ -84,7 +84,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox">
+       <widget class="QCheckBox" name="checkBox_showPrevReduced">
         <property name="text">
          <string>Show Prevous</string>
         </property>
@@ -223,22 +223,6 @@
         </property>
        </spacer>
       </item>
-      <item row="0" column="10">
-       <spacer name="horizontalSpacer_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Preferred</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
       <item row="1" column="10">
        <widget class="QPushButton" name="pushButton_stopLiveReduction">
         <property name="sizePolicy">
@@ -350,15 +334,18 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="10">
+       <widget class="QTimeEdit" name="timeEdit_collectTime"/>
+      </item>
      </layout>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
-       <widget class="QGraphicsView" name="graphicsView_2D_2"/>
+       <widget class="MplGraphicsView2D" name="graphicsView_2D"/>
       </item>
       <item>
-       <widget class="MplGraphicsView" name="graphicsView_comparison_2"/>
+       <widget class="MplGraphicsView" name="graphicsView_comparison"/>
       </item>
      </layout>
     </item>
@@ -519,6 +506,11 @@
    <class>MplGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>mplgraphicsview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MplGraphicsView2D</class>
+   <extends>QGraphicsView</extends>
+   <header>mplgraphicsview2d.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

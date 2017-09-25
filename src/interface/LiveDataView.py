@@ -54,6 +54,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_change_unit)
 
+        # TODO/ISSUE/NOWNOW - 
+        # self.connect(self.ui.checkBox_showPrevReduced, , )
+
         # multiple thread pool
         self._checkStateTimer = None
 
@@ -65,6 +68,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._accumulatedList = list()  # list of accumulated workspace
 
         return
+
+    def _init_widgets(self):
+        # TODO/ISSUE/NOWNOW - 
+        # self.connect(self.ui.checkBox_showPrevReduced, , )
+
+
+    def showHidePrevReduced(self):
+        # TODO/ISSUE/NOWNOW - Implement
+
 
     def do_clear_log(self):
         """
@@ -256,6 +268,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def update_2d_plot(self):
+        # TODO/ISSUE/NOW - Maybe need a better name but definiately IMPLEMENT IT!
+
+        return
+
     def update_timer(self, i_signal):
         """
         update timer
@@ -290,6 +307,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 message += 'workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
         # self.ui.plainTextEdit_Log.clear()
         self.ui.plainTextEdit_Log.appendPlainText(message)
+
+        # TODO/NOW - Implement timer
+        print self.ui.timeEdit_collectTime
 
         return
 
