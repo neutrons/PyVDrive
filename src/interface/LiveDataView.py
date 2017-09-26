@@ -36,6 +36,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui = ui_LiveDataView.Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # initialize widgets
+        self._init_widgets()
+
         # set up the event handlers
         self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_start_live)
@@ -54,8 +57,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_change_unit)
 
-        # TODO/ISSUE/NOWNOW - 
-        # self.connect(self.ui.checkBox_showPrevReduced, , )
+        self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_show_high_prev_data)
 
         # multiple thread pool
         self._checkStateTimer = None
@@ -67,16 +70,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._accumulatedWorkspace = None
         self._accumulatedList = list()  # list of accumulated workspace
 
+        self._bankColorDict = {1: 'black', 2: 'red', 3: 'blue'}
+        self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
+                                 2: self.ui.graphicsView_currentViewB2,
+                                 3: self.ui.graphicsView_currentViewB3}
+
         return
 
     def _init_widgets(self):
-        # TODO/ISSUE/NOWNOW - 
-        # self.connect(self.ui.checkBox_showPrevReduced, , )
+        """
+        initialize some widgets
+        :return:
+        """
+        # widgets to show/high previous reduced data
+        self.ui.checkBox_showPrevReduced.setEnabled(True)
+        self.ui.lineEdit_showPrevNCycles.setText(1)
 
-
-    def showHidePrevReduced(self):
-        # TODO/ISSUE/NOWNOW - Implement
-
+        return
 
     def do_clear_log(self):
         """
@@ -140,6 +150,27 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """ blabla """
         return
 
+    def evt_show_high_prev_data(self):
+        """
+        show or high previous data
+        :return:
+        """
+        # get state
+        state = self.ui.checkBox_showPrevReduced.isChecked()
+
+        # turn on or off the widgets related
+        self.ui.lineEdit_showPrevNCycles.setEnabled(state)
+
+        # plot or hide plot
+        for bank_id in self._bankGraphic:
+            if state:
+                self._mainGraphicDict[bank_id].plotPreviousRun(self._reducedWorkspace[-2], bank_id)
+            else:
+                self._mainGraphicDict[bank_id].hidePreviousRun()
+        # END-IF
+
+        return
+
     def add_new_workspace(self, ws_name):
         """
         add a new workspace to the list.  if the list is full, then replace the existing one.
@@ -166,12 +197,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         assert isinstance(ws_name_list, list), 'blabla'
         if len(ws_name_list) == 0:
             return
-
-        # TODO/ISSUE/NOW - Shall be refactored to other part of the code
-        COLOR = {1: 'black', 2: 'red', 3: 'blue'}
-        self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
-                                 2: self.ui.graphicsView_currentViewB2,
-                                 3: self.ui.graphicsView_currentViewB3}
 
         # sort
         ws_name_list.sort(reverse=True)
@@ -245,7 +270,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name))
 
             # plot previous
-            if prev_acc_name is not None:
+            if self.ui.checkBox_showPrevReduced.isChecked():
+                # prev_acc_name is not None and
+
+
+
                 prev_acc_ws = helper.retrieve_workspace(prev_acc_name)
                 data_set_dict = dict()
                 current_unit = 'TOF'
