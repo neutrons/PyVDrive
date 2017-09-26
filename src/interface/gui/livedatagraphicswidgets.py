@@ -22,7 +22,7 @@ class SingleBankView(MplGraphicsView):
 
         return
 
-    def delete_previoius_run(self):
+    def delete_previous_run(self):
         """
 
         :return:
@@ -49,13 +49,13 @@ class SingleBankView(MplGraphicsView):
 
         # update
         self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
-                                              label=line_label, x_label=unit)
+                                               label=line_label, x_label=unit)
 
         return
 
-    def update_current_plot(self, vec_x, vec_y, line_color, line_label, unit):
+    def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit):
         """
-
+        update/plot current accumulated
         :return:
         """
         # remove existing line

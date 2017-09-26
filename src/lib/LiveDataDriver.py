@@ -46,6 +46,45 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
+    def convert_unit(self, src_ws, target_unit, new_ws_name):
+        """
+
+        :param ws_name:
+        :param target_unit:
+        :return:
+        """
+        if isinstance(src_ws, str):
+            src_ws = ADS.retrieve(src_ws)
+
+        # TODO/ISSUE/NOW - Implement!
+
+        return new_ws, is_new_ws
+
+    @staticmethod
+    def delete_workspace(workspace_name, no_throw=False):
+        """
+        Delete a workspace from Mantid's AnalysisDataService
+        Args:
+            workspace_name: name of a workspace as a string instance
+            no_throw: if True, then it won't throw any exception if the workspace does not exist in AnalysisDataService
+
+        Returns: None
+
+        """
+        # check
+        assert isinstance(workspace_name, str), \
+            'Input workspace name must be a string, but not %s.' % str(type(workspace_name))
+
+        # check whether the workspace exists
+        does_exit = ADS.doesExist(workspace_name)
+        if does_exit:
+            # delete
+            mantid_helper.delete_workspace(workspace=workspace_name)
+        elif not no_throw:
+            raise RuntimeError('Workspace %s does not exist.' % workspace_name)
+
+        return
+
     @staticmethod
     def get_live_counter():
         """

@@ -128,13 +128,13 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="MplGraphicsView" name="graphicsView_currentViewB1"/>
+       <widget class="SingleBankView" name="graphicsView_currentViewB1"/>
       </item>
       <item>
-       <widget class="MplGraphicsView" name="graphicsView_currentViewB2"/>
+       <widget class="SingleBankView" name="graphicsView_currentViewB2"/>
       </item>
       <item>
-       <widget class="MplGraphicsView" name="graphicsView_currentViewB3"/>
+       <widget class="SingleBankView" name="graphicsView_currentViewB3"/>
       </item>
      </layout>
     </item>
@@ -511,6 +511,11 @@
    <class>MplGraphicsView2D</class>
    <extends>QGraphicsView</extends>
    <header>mplgraphicsview2d.h</header>
+  </customwidget>
+  <customwidget>
+   <class>SingleBankView</class>
+   <extends>QGraphicsView</extends>
+   <header>livedatagraphicswidgets.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
