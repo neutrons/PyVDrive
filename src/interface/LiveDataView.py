@@ -1,6 +1,8 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import random
+from datetime import datetime
+from PyQt4.QtCore import QTime
 
 import gui.ui_LiveDataView as ui_LiveDataView
 import PyVDrive.lib.LiveDataDriver as ld
@@ -29,7 +31,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         super(VulcanLiveDataView, self).__init__(parent)
 
         # get hold of controller/driver
-        self._controller = live_driver
+        if live_driver is None:
+            self._controller = ld.LiveDataDriver()
+        else:
+            self._controller = live_driver
 
         # define data structure
         self._myTimeStep = 10  # seconds
@@ -83,10 +88,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._accumulatedWorkspace = None
         self._accumulatedList = list()  # list of accumulated workspace
 
-        self._bankColorDict = {1: 'black', 2: 'red', 3: 'blue'}
+        self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
                                  2: self.ui.graphicsView_currentViewB2,
                                  3: self.ui.graphicsView_currentViewB3}
+
+        # timer for accumulation start time
+        self._accStartTime = datetime.now()
 
         # random seed
         random.seed(1)
@@ -199,7 +207,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._checkStateTimer.start()
 
         # start start listener
-        self._controller = ld.LiveDataDriver()
+        # self._controller = ld.LiveDataDriver()
         self._controller.run()
 
         return
@@ -222,6 +230,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
+        self.ui.plainTextEdit_Log.appendPlainText('[INFO] Plot in-accumulation data of unit {0}'.format(target_unit))
+
+        # check
+        if self._accumulatedWorkspace is None:
+            self.ui.plainTextEdit_Log.appendPlainText('[WARNING] No in-accumulation workspace in ADS.')
+            return
 
         # get the workspace names
         in_sum_name = '_temp_curr_ws_{0}'.format(random.randint(1, 10000))
@@ -235,6 +249,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             color_i = self._bankColorDict[bank_id]
             label_i = 'in accumulation bank {0}'.format(bank_id)
             self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
+
+            if target_unit == 'TOF':
+                self._mainGraphicDict[bank_id].setXYLimit(0, 70000)
+            else:
+                self._mainGraphicDict[bank_id].setXYLimit(0, 5.0)
         # END-FOR
 
         if is_new_ws:
@@ -262,22 +281,42 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # plot previous ones
         prev_ws_index = -1 - int(self.ui.lineEdit_showPrevNCycles.text())
-        prev_ws = self._mySummedWorkspaceList[prev_ws_index]
-
-        # skip if the previous plotted is sam
-        if prev_ws.name() == self._plotPrevCycleName:
+        if len(self._mySummedWorkspaceList) < abs(prev_ws_index):
+            self.ui.plainTextEdit_Log.appendPlainText(
+                'There are only {0} previously accumulated and reduced workspace.  '
+                'Unable to access previously {1}-th workspace.'.format(len(self._mySummedWorkspaceList),
+                                                                       abs(prev_ws_index)-1))
             return
         else:
-            self._plotPrevCycleName = prev_ws.name()
+            prev_ws = self._mySummedWorkspaceList[prev_ws_index]
+            prev_ws_name = prev_ws.name()
+
+        # skip if the previous plotted is sam
+        if prev_ws_name == self._plotPrevCycleName:
+            debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
+                            ''.format(prev_ws_name)
+            print '[DB...BAT] {0}'.format(debug_message)
+            self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
+            return
+        else:
+            self._plotPrevCycleName = prev_ws_name
 
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
-        prev_ws_name = '_temp_prev_ws_{0}'.format(random.randint(1, 10000))
-        prev_ws, is_new_ws = self._controller.convert_unit(prev_ws, target_unit, prev_ws_name)
+        prev_ws_name_tmp = '_temp_prev_ws_{0}'.format(random.randint(1, 10000))
+        prev_ws, is_new_ws = self._controller.convert_unit(prev_ws, target_unit, prev_ws_name_tmp)
+
+        # plot
+        line_label = '{0}'.format(prev_ws_name)
+        for bank_id in range(1, 4):
+            vec_y = prev_ws.readY(bank_id-1)[:]
+            vec_x = prev_ws.readX(bank_id-1)[:len(vec_y)]
+            print '[DB...BAT...TRACE] Plot bank {0} of previous cycle {1}'.format(bank_id, prev_ws_name)
+            self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label, target_unit)
 
         # clean
         if is_new_ws:
-            self._controller.delete_workspace(prev_ws_name)
+            self._controller.delete_workspace(prev_ws_name_tmp)
 
         return
 
@@ -288,44 +327,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         self.plot_data_in_accumulation()
         self.plot_data_previous_cycle()
-
-        # # get new unit
-        # new_unit = str(self.ui.comboBox_currUnits.currentText())
-        #
-        # # get the workspace names
-        # in_sum_name = '_temp_curr_ws_{0}'.format(random.randint(1, 10000))
-        # in_sum_ws = self._controller.convert_unit(self._accumulatedWorkspace, new_unit, in_sum_name)
-        #
-        # if self.ui.checkBox_showPrevReduced.isChecked():
-        #     prev_ws_index = -1 - int(self.ui.lineEdit_showPrevNCycles.text())
-        #     prev_ws = self._mySummedWorkspaceList[prev_ws_index]
-        #     prev_ws_name = '_temp_prev_ws_{0}'.format(random.randint(1, 10000))
-        #     prev_ws = self._controller.convert_unit(prev_ws, new_unit, prev_ws_name)
-        # else:
-        #     prev_ws = None
-        #     prev_ws_name = ''
-        #
-        # # plot
-        # for bank_id in range(1, 4):
-        #     # get data
-        #     vec_y_i = in_sum_ws.readY(bank_id-1)
-        #     vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
-        #     color_i = self._bankColorDict[bank_id]
-        #     label_i = 'in accumulation bank {0}'.format(bank_id)
-        #     self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, new_unit)
-        #
-        #     if prev_ws is not None:
-        #         vec_y_i = prev_ws.readY(bank_id)
-        #         vec_x_i = prev_ws.readX(bank_id)[:len(vec_y_i)]
-        #         label_i = 'previous {0} run bank {1}'.format(str(self.ui.lineEdit_showPrevNCycles), bank_id)
-        #         self._mainGraphicDict[bank_id].plot_previous_run(vec_x_i, vec_y_i, 'black', label_i, new_unit)
-        #     # END-IF
-        # # END-FOR
-        #
-        # # clean
-        # self._controller.delete_workspace(in_sum_name)
-        # if prev_ws is not None:
-        #     self._controller.delete_workspace(prev_ws_name)
 
         return
 
@@ -345,13 +346,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self.plot_data_previous_cycle()
         else:
             self.hide_data_previous_cycle()
-
-        # for bank_id in self._bankColorDict:
-        #     if state:
-        #         self._mainGraphicDict[bank_id].plotPreviousRun(self._reducedWorkspace[-2], bank_id)
-        #     else:
-        #         self._mainGraphicDict[bank_id].hidePreviousRun()
-        # # END-IF
 
         return
 
@@ -418,6 +412,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # get reference to workspace
             workspace_i = helper.retrieve_workspace(ws_name_i)
+            run_number_i = workspace_i.getRunNumber()
+            self.ui.lineEdit_runNumber.setText(str(run_number_i))
 
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
@@ -428,7 +424,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # now it is the workspace that is to plot
             self.sum_incremental_workspaces(workspace_i)
-            accumulate_name = self._accumulatedWorkspace.name()
+            #  accumulate_name = self._accumulatedWorkspace.name()
 
             # always plot the current in-accumulation one
             self.plot_data_in_accumulation()
@@ -436,75 +432,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # previous one if it is checked to plot
             if self.ui.checkBox_showPrevReduced.isChecked():
                 self.plot_data_previous_cycle()
-
-            # # decide whether a new workspace shall be started
-            # WORKSPACE_LIMIT = 5 * 60 / 10
-            # prev_acc_name = None
-            # if self._accumulatedWorkspace is None or len(self._accumulatedList) == WORKSPACE_LIMIT:
-            #     # reset if pre-existing of accumulated workspace
-            #     if self._accumulatedWorkspace is not None:
-            #         prev_acc_name = self._accumulatedWorkspace.name()
-            #         self._accumulatedList = list()
-            #     # clone workspace
-            #     accumulate_name = 'FiveMinutes_{0}'.format(self._currAccumulateIndex)
-            #     self._accumulatedWorkspace = helper.clone_workspace(ws_name, accumulate_name)
-            #     self._mySummedWorkspaceList.append(self._accumulatedWorkspace)
-            #
-            # else:
-            #     # add
-            #     self._accumulatedWorkspace += workspace_i
-            #     accumulate_name = self._accumulatedWorkspace.name()
-            # self._accumulatedList.append(ws_name)
-            # # including workspace name and status (on/off)
-            #
-            # target_unit = str(self.ui.comboBox_currUnits.currentText())
-            # for bank_id in range(1, 4):
-            #     # convert unit if necessary
-            #     to_plot_ws = self._controller.convert_unit()
-            #
-            #
-            #
-            #
-            #     vec_x = self._accumulatedWorkspace.readX(i)[:-1]
-            #     vec_y = self._accumulatedWorkspace.readY(i)
-            #     data_set_dict[i+1] = vec_x, vec_y, None
-            #
-            #     vec_x, vec_y, vec_e = data_set_dict[bank_id]
-            #     self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
-            #                                               ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
-            #     self._mainGraphicDict[bank_id].clear_all_lines()
-            #     self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
-            #                                                label='{0}: bank {1}'.format(accumulate_name, bank_id),
-            #                                                x_label=current_unit)
-            #
-            # # update other information
-            # num_events = int(self._controller.get_live_events())
-            # self.ui.lineEdit_numberEventsNewsReduced.setText(str(num_events))
-            # self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name_i))
-            #
-            # # plot previous
-            # if self.ui.checkBox_showPrevReduced.isChecked():
-            #     # prev_acc_name is not None and
-            #
-            #     prev_acc_ws = helper.retrieve_workspace(prev_acc_name)
-            #     data_set_dict = dict()
-            #     current_unit = 'TOF'
-            #     for i in range(3):
-            #         vec_x = prev_acc_ws.readX(i)[:-1]
-            #         vec_y = prev_acc_ws.readY(i)
-            #         data_set_dict[i + 1] = vec_x, vec_y, None
-            #
-            #     # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
-            #     #
-            #     # self.ui.graphicsView_previous.clear_all_lines()
-            #     # need to read into option
-            #     for bank_id in data_set_dict.keys():
-            #         vec_x, vec_y, vec_e = data_set_dict[bank_id]
-            #         self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color='black',
-            #                                                    label='{0}: bank {1}'.format(prev_acc_name, bank_id),
-            #                                                    x_label=current_unit)
-
         # END-FOR
+
+        # update timer
+        curr_time = datetime.now()
+        delta_time = curr_time - self._accStartTime
+        total_seconds = int(delta_time.total_seconds())
+        hours = total_seconds / 3600
+        mins = total_seconds % 3600 / 60
+        seconds = total_seconds % 60
+        self.ui.lineEdit_collectionTime.setText('{0:02}:{1:02}:{2:02}'.format(hours, mins, seconds))
 
         return
 
@@ -528,6 +465,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # append to list
             self._mySummedWorkspaceList.append(self._accumulatedWorkspace)
+
+            # restart time
+            self._accStartTime = datetime.now()
 
         else:
             # add to existing
@@ -580,16 +520,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         self._currAccumulateIndex += 1
 
-        message = '{0}\nNew Workspace: {1}'.format(ws_name_list, new_ws_name_list)
+        # message = '{0}\nNew Workspace: {1}'.format(ws_name_list, new_ws_name_list)
+        message = ''
         for ws_name in new_ws_name_list:
             ws_i = helper.retrieve_workspace(ws_name)
             if ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
-                message += 'workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
+                message += 'New workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
         # self.ui.plainTextEdit_Log.clear()
         self.ui.plainTextEdit_Log.appendPlainText(message)
-
-        # TODO/NOW - Implement timer
-        print self.ui.timeEdit_collectTime
 
         return
 

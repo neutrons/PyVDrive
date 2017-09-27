@@ -51,6 +51,10 @@ class SingleBankView(MplGraphicsView):
         self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
                                                label=line_label, x_label=unit)
 
+        # set Y label
+        max_y = max(vec_y) * 1.05
+        self.setXYLimit(ymin=0, ymax=max_y)
+
         return
 
     def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit):
@@ -65,5 +69,9 @@ class SingleBankView(MplGraphicsView):
         # plot
         self._currentRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
                                               label=line_label, x_label=unit)
+
+        if self._previousRunID is None:
+            max_y = max(vec_y) * 1.05
+            self.setXYLimit(ymin=0, ymax=max_y)
 
         return

@@ -271,7 +271,12 @@ class VdriveView(VDriveCommand):
         get the sequence range of the chopped data, which is previously parsed into this instance from VDRIVE command
         :return:
         """
-        return self._choppedRunSeqList[:]
+        if self._choppedRunSeqList is None:
+            sequence = None
+        else:
+            sequence = self._choppedRunSeqList[:]
+
+        return sequence
 
     def get_help(self):
         """

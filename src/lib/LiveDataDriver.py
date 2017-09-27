@@ -46,11 +46,13 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
-    def convert_unit(self, src_ws, target_unit, new_ws_name):
+    @staticmethod
+    def convert_unit(src_ws, target_unit, new_ws_name):
         """
 
-        :param ws_name:
+        :param src_ws:
         :param target_unit:
+        :param new_ws_name:
         :return:
         """
         # check
@@ -62,17 +64,17 @@ class LiveDataDriver(QtCore.QThread):
             src_ws = ADS.retrieve(src_ws)
 
         # check units
-        src_unit = src_ws.getAxis(0).getUnit().ID()
+        src_unit = src_ws.getAxis(0).getUnit().unitID()
         if src_unit == target_unit:
             # same unit. do nothing.  copy reference and return
             new_ws = src_ws
             is_new_ws = False
+        else:
+            # covert unit by calling Mantid
+            mantidsimple.ConvertUnits(InputWorkspace=src_ws, Target=target_unit, OutputWorkspace=new_ws_name)
+            new_ws = ADS.retrieve(new_ws_name)
+            is_new_ws = True
         # END-IF
-
-        # covert unit by calling Mantid
-        mantidsimple.ConvertUnits(InputWorkspace=src_ws, Target=target_unit, OutputWorkspace=new_ws_name)
-        new_ws = ADS.retrieve(new_ws_name)
-        is_new_ws = True
 
         return new_ws, is_new_ws
 
