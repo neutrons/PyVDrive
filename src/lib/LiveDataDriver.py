@@ -53,10 +53,26 @@ class LiveDataDriver(QtCore.QThread):
         :param target_unit:
         :return:
         """
+        # check
+        assert isinstance(target_unit, str), 'blabla must be string'
+        assert isinstance(new_ws_name, str), 'blabla must be string 2'
+
+        # convert workspace to workspace
         if isinstance(src_ws, str):
             src_ws = ADS.retrieve(src_ws)
 
-        # TODO/ISSUE/NOW - Implement!
+        # check units
+        src_unit = src_ws.getAxis(0).getUnit().ID()
+        if src_unit == target_unit:
+            # same unit. do nothing.  copy reference and return
+            new_ws = src_ws
+            is_new_ws = False
+        # END-IF
+
+        # covert unit by calling Mantid
+        mantidsimple.ConvertUnits(InputWorkspace=src_ws, Target=target_unit, OutputWorkspace=new_ws_name)
+        new_ws = ADS.retrieve(new_ws_name)
+        is_new_ws = True
 
         return new_ws, is_new_ws
 

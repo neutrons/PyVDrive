@@ -42,6 +42,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # index for accumulated workspaces
         self._currAccumulateIndex = 0
+        # about previous round pot
+        self._plotPrevCycleName = None
 
         # start UI
         self.ui = ui_LiveDataView.Ui_MainWindow()
@@ -248,15 +250,25 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         # return if there is no such need
         if self.ui.checkBox_showPrevReduced.isChecked() is False:
-            if self._isPrevCyclePlotted:
+            if self._plotPrevCycleName is not None:
                 # if previous cycles are plotted, then remove them
                 for bank_id in range(1, 4):
                     self._mainGraphicDict[bank_id].delete_previous_run()
+                self._plotPrevCycleName = None
+            else:
+                raise RuntimeError('Simply not possible!')
             return
+        # END-IF
 
         # plot previous ones
         prev_ws_index = -1 - int(self.ui.lineEdit_showPrevNCycles.text())
         prev_ws = self._mySummedWorkspaceList[prev_ws_index]
+
+        # skip if the previous plotted is sam
+        if prev_ws.name() == self._plotPrevCycleName:
+            return
+        else:
+            self._plotPrevCycleName = prev_ws.name()
 
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
@@ -380,13 +392,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return list()
 
     def process_new_workspaces(self, ws_name_list):
-        """
-        blabla
+        """ get a list of current workspaces, compare with the existing (or previously recorded workspaces),
+        find out new workspace available to plot
         :param ws_name_list:
         :return:
         """
         # check
-        assert isinstance(ws_name_list, list), 'blabla'
+        assert isinstance(ws_name_list, list), 'workspace names {0} must be given in a list but not a {1}.' \
+                                               ''.format(ws_name_list, type(ws_name_list))
         if len(ws_name_list) == 0:
             return
 
@@ -413,6 +426,17 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.ui.plainTextEdit_Log.setPlainText(log_message)
                 continue
 
+            # now it is the workspace that is to plot
+            self.sum_incremental_workspaces(workspace_i)
+            accumulate_name = self._accumulatedWorkspace.name()
+
+            # always plot the current in-accumulation one
+            self.plot_data_in_accumulation()
+
+            # previous one if it is checked to plot
+            if self.ui.checkBox_showPrevReduced.isChecked():
+                self.plot_data_previous_cycle()
+
             # # decide whether a new workspace shall be started
             # WORKSPACE_LIMIT = 5 * 60 / 10
             # prev_acc_name = None
@@ -431,67 +455,54 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             #     self._accumulatedWorkspace += workspace_i
             #     accumulate_name = self._accumulatedWorkspace.name()
             # self._accumulatedList.append(ws_name)
-
-            self.sum_incremental_workspaces(workspace_i)
-            accumulate_name = self._accumulatedWorkspace.name()
-
-            # TODO/ISSUE/NOW - Find out how to have a record whether the previously cycle is plotted or not
-            # including workspace name and status (on/off)
-
-            # plot
-            # self.ui.plainTextEdit_Log.clear()
-            self.ui.plainTextEdit_Log.appendPlainText('Plotting {0}: X-size = {1}'
-                                                      ''.format(accumulate_name,
-                                                                len(self._accumulatedWorkspace.readX(0))))
-            self.ui.plainTextEdit_Log.appendPlainText('\n')
-
-            # TODO/ISSUE/ - Fixed to bank 1, 2, 3
-            target_unit = str(self.ui.comboBox_currUnits.currentText())
-            for bank_id in range(1, 4):
-                # convert unit if necessary
-                to_plot_ws = self._controller.convert_unit()
-
-
-
-
-                vec_x = self._accumulatedWorkspace.readX(i)[:-1]
-                vec_y = self._accumulatedWorkspace.readY(i)
-                data_set_dict[i+1] = vec_x, vec_y, None
-
-                vec_x, vec_y, vec_e = data_set_dict[bank_id]
-                self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
-                                                          ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
-                self._mainGraphicDict[bank_id].clear_all_lines()
-                self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
-                                                           label='{0}: bank {1}'.format(accumulate_name, bank_id),
-                                                           x_label=current_unit)
-
-            # update other information
-            num_events = int(self._controller.get_live_events())
-            self.ui.lineEdit_numberEventsNewsReduced.setText(str(num_events))
-            self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name_i))
-
-            # plot previous
-            if self.ui.checkBox_showPrevReduced.isChecked():
-                # prev_acc_name is not None and
-
-                prev_acc_ws = helper.retrieve_workspace(prev_acc_name)
-                data_set_dict = dict()
-                current_unit = 'TOF'
-                for i in range(3):
-                    vec_x = prev_acc_ws.readX(i)[:-1]
-                    vec_y = prev_acc_ws.readY(i)
-                    data_set_dict[i + 1] = vec_x, vec_y, None
-
-                # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
-                #
-                # self.ui.graphicsView_previous.clear_all_lines()
-                # need to read into option
-                for bank_id in data_set_dict.keys():
-                    vec_x, vec_y, vec_e = data_set_dict[bank_id]
-                    self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color='black',
-                                                               label='{0}: bank {1}'.format(prev_acc_name, bank_id),
-                                                               x_label=current_unit)
+            # # including workspace name and status (on/off)
+            #
+            # target_unit = str(self.ui.comboBox_currUnits.currentText())
+            # for bank_id in range(1, 4):
+            #     # convert unit if necessary
+            #     to_plot_ws = self._controller.convert_unit()
+            #
+            #
+            #
+            #
+            #     vec_x = self._accumulatedWorkspace.readX(i)[:-1]
+            #     vec_y = self._accumulatedWorkspace.readY(i)
+            #     data_set_dict[i+1] = vec_x, vec_y, None
+            #
+            #     vec_x, vec_y, vec_e = data_set_dict[bank_id]
+            #     self.ui.plainTextEdit_Log.appendPlainText('X range: {0}, {1}.  Y range: {2}, {3}'
+            #                                               ''.format(vec_x[0], vec_x[-1], min(vec_y), max(vec_y)))
+            #     self._mainGraphicDict[bank_id].clear_all_lines()
+            #     self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color=COLOR[bank_id],
+            #                                                label='{0}: bank {1}'.format(accumulate_name, bank_id),
+            #                                                x_label=current_unit)
+            #
+            # # update other information
+            # num_events = int(self._controller.get_live_events())
+            # self.ui.lineEdit_numberEventsNewsReduced.setText(str(num_events))
+            # self.ui.lineEdit_newestReducedWorkspace.setText(str(ws_name_i))
+            #
+            # # plot previous
+            # if self.ui.checkBox_showPrevReduced.isChecked():
+            #     # prev_acc_name is not None and
+            #
+            #     prev_acc_ws = helper.retrieve_workspace(prev_acc_name)
+            #     data_set_dict = dict()
+            #     current_unit = 'TOF'
+            #     for i in range(3):
+            #         vec_x = prev_acc_ws.readX(i)[:-1]
+            #         vec_y = prev_acc_ws.readY(i)
+            #         data_set_dict[i + 1] = vec_x, vec_y, None
+            #
+            #     # data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name)
+            #     #
+            #     # self.ui.graphicsView_previous.clear_all_lines()
+            #     # need to read into option
+            #     for bank_id in data_set_dict.keys():
+            #         vec_x, vec_y, vec_e = data_set_dict[bank_id]
+            #         self._mainGraphicDict[bank_id].add_plot_1d(vec_x, vec_y, color='black',
+            #                                                    label='{0}: bank {1}'.format(prev_acc_name, bank_id),
+            #                                                    x_label=current_unit)
 
         # END-FOR
 
