@@ -1161,6 +1161,39 @@ class VDriveAPI(object):
 
         return True, in_file_name
 
+    def normalize_by_proton_charge(self, ws_name, ipts_number, run_number, chop_sequence=None):
+        """normalize by proton charges
+        :param ws_name:
+        :param ipts_number:
+        :param run_number:
+        :param chop_sequence:
+        :return:
+        """
+        # get information
+        proton_charge = self._myArchiveManager.get_proton_charge(ipts_number, run_number, chop_sequence)
+
+        workspace = mantid_helper.retrieve_workspace(ws_name, True)
+        print '[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace)
+
+        workspace *= (1./proton_charge)
+
+        return
+
+    @staticmethod
+    def normalise_by_vanadium(data_ws_name, van_ws_name):
+        """
+        normalize by vanadium
+        :param data_ws_name:
+        :param van_ws_name:
+        :return:
+        """
+        try:
+            mantid_helper.normalize_by_vanadium(data_ws_name, van_ws_name)
+        except RuntimeError as run_err:
+            return False, 'Unable to normalize by vanadium due to {0}'.format(run_err)
+
+        return True, None
+
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
                                 binning_parameters, align_to_vdrive_bin,
@@ -1527,7 +1560,7 @@ class VDriveAPI(object):
 
     # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
-                          binning_parameters=None):
+                          binning_parameters=None, smoothed=False):
         """
         Load vanadium runs
         :param ipts_number:
@@ -1542,7 +1575,12 @@ class VDriveAPI(object):
         if use_reduced_file:
             # search reduced GSAS file
             try:
-                van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+                if smoothed:
+                    van_file_name = self._myArchiveManager.get_smoothed_vanadium(ipts_number, run_number,
+                                                                                 check_exist=True)
+                else:
+                    van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+                print '[DB...BAT...TRACE] ', van_file_name
             except RuntimeError as run_err:
                 print '[WARNING]: {0}'.format(run_err)
                 van_file_name = None

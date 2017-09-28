@@ -159,6 +159,7 @@ class VdriveView(VDriveCommand):
                 van_run_number = int(van_run_str)
             else:
                 return False, 'Vanadium run {0} is not recognized'.format(van_run_str)
+            self._normByVanadium = True
         # END-IF
 
         # match vanadium run numbers
@@ -220,6 +221,14 @@ class VdriveView(VDriveCommand):
         :return:
         """
         return self._outputPeakValueToConsole or self._peakValueFileName is not None
+
+    @property
+    def do_proton_charge_normalization(self):
+        """
+        return flag whether data will be normalized by proton charge
+        :return:
+        """
+        return self._normalizeData
 
     @property
     def do_vanadium_normalization(self):

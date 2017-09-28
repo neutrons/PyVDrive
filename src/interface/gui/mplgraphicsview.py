@@ -624,7 +624,7 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
-    def auto_rescale(self):
+    def auto_rescale(self, vec_y=None):
         """
         rescale the canvas in an automatic way
         :return:
@@ -645,13 +645,21 @@ class MplGraphicsView(QtGui.QWidget):
             left_x_bound = None
 
         # FIXME - This is not good!
-        curr_y_min, curr_y_max = self.getYLimit()
-        if curr_y_min > upper_y_bound:
-            lower_y_bound = 0.
+        if vec_y is None:
+            curr_y_min, curr_y_max = self.getYLimit()
+            if curr_y_min > upper_y_bound:
+                lower_y_bound = 0.
+            else:
+                lower_y_bound = None
         else:
-            lower_y_bound = None
+            min_y = min(vec_y)
+            max_y = max(vec_y)
+            dy = max_y - min_y
+            lower_y_bound = min(0, min_y - dy * 0.05)
+            upper_y_bound = max_y + dy * 0.05
+        # END-IF-ELSE
 
-        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin= lower_y_bound, ymax=upper_y_bound)
+        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin=lower_y_bound, ymax=upper_y_bound)
 
         return
 
