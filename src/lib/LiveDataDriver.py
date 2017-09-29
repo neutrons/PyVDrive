@@ -150,7 +150,8 @@ class LiveDataDriver(QtCore.QThread):
                                    ProcessingScriptFilename=self._live_reduction_script,
                                    PreserveEvents=False,
                                    AccumulationMethod='Add',
-                                   OutputWorkspace='whatever')
+                                   RunTransitionBehavior='Rename',
+                                   OutputWorkspace='VULCAN_Live')
 
         return
 
