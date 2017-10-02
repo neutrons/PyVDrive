@@ -779,16 +779,18 @@ class VDriveAPI(object):
 
     def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
         """
-        blabla
+        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the 
+        previously chopped and reduced data
         :param ipts_number:
         :param run_number:
         :param chopped_data:
         :return:
         """
         if chopped_data:
+            # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
         else:
-            # TODO/ISSUE/NOWNOW - Easy implement
+            # regular GSAS file directory
             sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
 
         return sns_dir
@@ -948,11 +950,11 @@ class VDriveAPI(object):
         assert run_number is not None, 'Run number cannot be None.'
 
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
-            # blabla
+            # input (run number) is workspace's name
             ws_name = run_number
             sample_name_list = mantid_helper.get_sample_log_names(ws_name, smart=True)
         else:
-            # blabla
+            # a key or run
             chopper = self._myProject.get_chopper(run_number)
             sample_name_list = chopper.get_sample_log_names(smart)
 
@@ -974,13 +976,12 @@ class VDriveAPI(object):
 
         # 2 cases: run_number is workspace or run_number is run number
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
-            # blabla
+            # input (run number) is workspace's name
             ws_name = run_number
             vec_times, vec_value = mantid_helper.get_sample_log_value(ws_name, log_name, start_time=None,
                                                                       stop_time=None, relative=relative)
         else:
-            # blabla
-            # get chopper
+            # get chopper for (integer) run number
             chopper = self._myProject.get_chopper(run_number)
 
             # get log values
@@ -1020,8 +1021,7 @@ class VDriveAPI(object):
         return peak_list
 
     def has_chopped_data(self, run_number, reduced):
-        """
-        blabla
+        """check whether a run has chopped data reduced or not
         :param run_number:
         :param reduced:
         :return:
