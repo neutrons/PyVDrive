@@ -1,5 +1,20 @@
 # Zoo of graphics view widgets for "Live Data"
 from mplgraphicsview import MplGraphicsView
+from mplgraphicsview1d import MplGraphicsView1D
+
+
+class GeneralPurpose1DView(MplGraphicsView1D):
+    """
+
+    """
+    def __init__(self, parent):
+        """
+        blabla
+        :param parent:
+        """
+        super(GeneralPurpose1DView, self).__init__(parent, 1, 1)
+
+        return
 
 
 class SingleBankView(MplGraphicsView):

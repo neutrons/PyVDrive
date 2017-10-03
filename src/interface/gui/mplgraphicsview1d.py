@@ -145,7 +145,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         self._my1DPlotDict[line_key] = label
 
         # update minimum and maximum
-        self._update_plot_line_information(remove_line=False, self._statDict[line_key])
+        self._update_plot_line_information(self._statDict[line_key], remove_line=False)
 
         return line_key
 
