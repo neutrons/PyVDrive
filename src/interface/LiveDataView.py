@@ -1,8 +1,8 @@
+from datetime import datetime
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import random
-from datetime import datetime
-from PyQt4.QtCore import QTime
+import time
 
 import gui.ui_LiveDataView as ui_LiveDataView
 import PyVDrive.lib.LiveDataDriver as ld
@@ -22,6 +22,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
+    # decide whether a new workspace shall be started
+    # TODO/ISSUE/NOW - This shall be made more flexible!
+    WORKSPACE_LIMIT = 5 * 60 / 10
+
     def __init__(self, parent, live_driver):
         """
         init
@@ -78,6 +82,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_show_high_prev_data)
 
+        # connect for testing buttons
+        self.connect(self.ui.pushButton_dbPlotLeft, QtCore.SIGNAL('clicked()'),
+                     self.test_plot_left)
+        self.connect(self.ui.pushButton_dbPlotRight, QtCore.SIGNAL('clicked()'),
+                     self.test_plot_right)
+        self.connect(self.ui.pushButton_dbUpdateLeft, QtCore.SIGNAL('clicked()'),
+                     self.test_update_left)
+
+        # ---------- END OF TESTING WIDGETS --------------
+
         # multiple thread pool
         self._checkStateTimer = None
 
@@ -131,7 +145,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             """
             class
             """
-
             def __init__(self, parent=None):
                 """
                 Init
@@ -185,8 +198,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def do_quit(self):
-        """
-
+        """quit the application
         :return:
         """
         # stop live view
@@ -201,13 +213,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         start live data reduction and view
         :return:
         """
-
         # start timer
         self._checkStateTimer = TimerThread(self._myTimeStep, self)
         self._checkStateTimer.start()
 
         # start start listener
-        # self._controller = ld.LiveDataDriver()
         self._controller.run()
 
         return
@@ -376,13 +386,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def get_reserved_commands(self):
-        """
-
+    @staticmethod
+    def get_reserved_commands():
+        """an empty method for IPython console
         :return:
         """
-        # TODO/ISSUE/NOW - Implement
-
         return list()
 
     def process_new_workspaces(self, ws_name_list):
@@ -450,12 +458,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         :return:
         """
-        # decide whether a new workspace shall be started
-        # TODO/ISSUE/NOW - This shall be made more flexible!
-        WORKSPACE_LIMIT = 5 * 60 / 10
-
         ws_name = workspace_i.name()
-        if self._accumulatedWorkspace is None or len(self._accumulatedList) == WORKSPACE_LIMIT:
+        if self._accumulatedWorkspace is None or len(self._accumulatedList) == VulcanLiveDataView.WORKSPACE_LIMIT:
             # reset if pre-existing of accumulated workspace
             self._accumulatedList = list()
 
@@ -471,11 +475,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         else:
             # add to existing
-            assert self._accumulatedWorkspace.getNumberHistograms() == workspace_i.getNumberHistograms(), 'blabla xx'
+            if self._accumulatedWorkspace.getNumberHistograms() != workspace_i.getNumberHistograms():
+                raise RuntimeError('Accumulated workspace {0} has different number of spectra ({1}) than the '
+                                   'incremental workspace {2} ({3}).'
+                                   ''.format(self._accumulatedWorkspace.name(),
+                                             self._accumulatedWorkspace.getNumberHistograms(),
+                                             workspace_i.getNumberHistograms.name(),
+                                             workspace_i.getNumberHistograms()))
 
             for iws in range(workspace_i.getNumberHistograms()):
-                assert len(self._accumulatedWorkspace.readY(iws)) == len(workspace_i.readY(iws)),\
-                    'blabla yy {0}'.format(iws)
+                if len(self._accumulatedWorkspace.readY(iws)) != len(workspace_i.readY(iws)):
+                    raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
+                                       'incremental workspace {3} ({4}).'
+                                       ''.format(iws, self._accumulatedWorkspace.name(),
+                                                 len(self._accumulatedWorkspace.readX(iws)),
+                                                 workspace_i.name(),
+                                                 len(workspace_i.readX(iws))))
+                # END-IF
 
                 self._accumulatedWorkspace.setY(iws, self._accumulatedWorkspace.readY(iws) + workspace_i.readY(iws))
             # END-iws
@@ -531,23 +547,52 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def test_plot_left(self):
+        """
+        test plot at the left Y axis
+        :return:
+        """
+        raise NotImplementedError('Plot Left ASAP')
+
+    def test_plot_right(self):
+        """
+        test plot at the right Y axis
+        :return:
+        """
+        raise NotImplementedError('Plot Right ASAP')
+
+    def test_update_left(self):
+        """
+        test update
+        :return:
+        """
+        raise NotImplementedError('Update Left ASAP')
+
 
 class TimerThread(QtCore.QThread):
+    """
+    Thread functions as a timer to check for the change of workspaces
+    """
 
+    # signal
     time_due = QtCore.pyqtSignal(int)
 
     def __init__(self, time_step, parent):
         """
-        blabla
+        initialization
         :param time_step:
         :param parent:
         """
-        QtCore.QThread.__init__(self)
+        # call base class's constructor
+        super(TimerThread, self).__init__()
 
+        # set up parent
         self._parent = parent
 
+        # define status
         self._continueTimerLoop = True
 
+        # connect to parent
         self.time_due.connect(self._parent.update_timer)
 
         return
@@ -556,8 +601,6 @@ class TimerThread(QtCore.QThread):
         """ run the timer thread.  this thread won't be kill until flag _continueTimerLoop is set to False
         :return:
         """
-        import time
-
         while self._continueTimerLoop:
             time.sleep(1)
             self.time_due.emit(1)
