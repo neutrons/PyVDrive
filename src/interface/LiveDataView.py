@@ -3,6 +3,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import random
 import time
+import numpy
 
 import gui.ui_LiveDataView as ui_LiveDataView
 import PyVDrive.lib.LiveDataDriver as ld
@@ -552,14 +553,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         test plot at the left Y axis
         :return:
         """
-        raise NotImplementedError('Plot Left ASAP')
+        vec_x = numpy.arange(0, 10, 0.1, dtype='float')
+        vec_y = numpy.sin(vec_x)
+
+        self.ui.graphicsView_comparison.add_plot(vec_x, vec_y)
+        self.ui.graphicsView_comparison.setXYLimit(ymin=-1, ymax=3)
+
+        return
 
     def test_plot_right(self):
         """
         test plot at the right Y axis
         :return:
         """
-        raise NotImplementedError('Plot Right ASAP')
+        vec_x = numpy.arange(0, 10, 0.1, dtype='float')
+        vec_y = numpy.cos(vec_x)
+
+        self.ui.graphicsView_comparison.add_plot(vec_x, vec_y, is_right=True)
 
     def test_update_left(self):
         """

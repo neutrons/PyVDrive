@@ -62,6 +62,8 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param row_size: number of figures per column, i.e., number of rows
         :param col_size: number of figures per row, i.e., number of columns
         """
+        # TODO/ISSUE/NOWNOW/77 - Make it more flexible
+
         # Initialize parent
         QtGui.QWidget.__init__(self, parent)
 
@@ -90,6 +92,15 @@ class MplGraphicsView1D(QtGui.QWidget):
         # some statistic recorder for convenient operation
         self._statDict = dict()
         self._statRightPlotDict = dict()
+
+        return
+
+    def _update_plot_line_information(self, line_id, remove_line):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/NOWNOW/77 - refer to mplgraphicsciw
 
         return
 
