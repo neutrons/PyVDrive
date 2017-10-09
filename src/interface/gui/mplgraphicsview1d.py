@@ -56,7 +56,7 @@ class MplGraphicsView1D(QtGui.QWidget):
     1. specific for 1-D data
     2.
     """
-    def __init__(self, parent, row_size=1, col_size=1, tool_bar=True):
+    def __init__(self, parent, row_size=None, col_size=None, tool_bar=True):
         """Initialization
         :param parent:
         :param row_size: number of figures per column, i.e., number of rows
@@ -67,7 +67,8 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
-        self._myCanvas.set_axes(row_size, col_size)
+        if row_size is not None:
+            self._myCanvas.set_axes(row_size, col_size)
         if tool_bar:
             self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
         else:
@@ -119,7 +120,8 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
-    def add_plot(self, vec_x, vec_y, y_err=None, row_index=0, col_index=0, is_right=False, color=None, label='',
+    # TODO/ISSUE/NOW - Make index to row index and col index!!!
+    def add_plot(self, vec_x, vec_y, y_err=None, row_index=1, col_index=1, is_right=False, color=None, label='',
                  x_label=None, y_label=None, marker=None, line_style=None, line_width=1, show_legend=True):
         """Add a plot in 1D
         :param row_index:
@@ -150,7 +152,8 @@ class MplGraphicsView1D(QtGui.QWidget):
 
             self._statRightPlotDict[line_key] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
         else:
-            line_key = self._myCanvas.add_main_plot(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
+            line_key = self._myCanvas.add_main_plot(row_index, col_index, vec_x, vec_y, y_err, color, label, x_label,
+                                                    y_label, marker, line_style,
                                                     line_width, show_legend)
 
         # record min/max
@@ -499,6 +502,15 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
+    def setup(self, row_size, col_size):
+        """
+
+        :param row_size:
+        :param col_size:
+        :return:
+        """
+        self._myCanvas.set_subplots(row_size, col_size)
+
     def update_line(self, ikey, vec_x=None, vec_y=None, line_style=None, line_color=None,
                     marker=None, marker_color=None):
         """
@@ -602,7 +614,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                 sub_plot_index = row_index * col_size + col_index + 1
                 subplot_ref = self.fig.add_subplot(row_size, col_size, sub_plot_index)
                 print '[DB...BAT] Subplot index = ', sub_plot_index, ' Return = ', subplot_ref, ' of type ', type(subplot_ref)
-                self.axes_main[row_index, col_index] = sub_plot_index
+                self.axes_main[row_index, col_index] = subplot_ref
                 self._legendStatusDict[row_index, col_index] = False
             # END-FOR
         # END-FOR
@@ -703,7 +715,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # set/update legend
         if show_legend:
-            self._setup_legend()
+            self._setup_legend(row_index, col_index)
 
         # Register
         line_key = self._lineIndex
@@ -1234,7 +1246,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                                            ''.format(col_index, type(col_index))
 
         if (row_index, col_index) not in self.axes_main:
-            raise RuntimeError('Subplot index {0}, {1} does not exist.'.format(row_index, col_index))
+            raise RuntimeError('Subplot index {0}, {1} does not exist. Keys are {2}'
+                               ''.format(row_index, col_index, self.axes_main.keys()))
 
         return
 
