@@ -98,14 +98,46 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
-    def _update_plot_line_information(self, line_id, remove_line):
-        """
-
+    def _update_plot_line_information(self, row_index, col_index, line_id, remove_line, label=None):
+        """update the plot line information
+        :param row_index:
+        :param col_index:
+        :param line_id:
+        :param remove_line:
+        :param label:
         :return:
         """
-        # TODO/ISSUE/NOWNOW/77 - refer to mplgraphicsciw
+        # check input
+        assert isinstance(line_id, str), 'Line ID {0} must be a string but not a {1}.' \
+                                         ''.format(line_id, str(line_id))
+        assert isinstance(row_index, int), 'Row index {0} must be an integer but not a {1}.' \
+                                           ''.format(row_index, type(row_index))
+        assert isinstance(col_index, int), 'Column index {0} must be an integer but not a {1}.' \
+                                           ''.format(col_index, type(col_index))
+        if (row_index, col_index) not in self._my1DPlotDict:
+            raise RuntimeError('Subplot ({0}, {1}) does not exist. Existing subplots are {2}.'
+                               ''.format(row_index, col_index, self._my1DPlotDict.keys()))
+
+        # check
+        if remove_line:
+            # remove a line
+            if line_id in self._my1DPlotDict[row_index, col_index]:
+                del self._my1DPlotDict[line_id][row_index, col_index]
+            else:
+                raise RuntimeError('Line ID does {0} is not registered.'.format(line_id))
+        else:
+            # add a line
+            assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
+                                           ''.format(remove_line, label)
+            if line_id in self._my1DPlotDict[row_index, col_index]:
+                print '[WARNING] Line (ID = {0}) is already registered.'.format(line_id)
+
+            self._my1DPlotDict[line_id][row_index, col_index] = label
+        # END-IF
 
         return
+
+    # TODO/ISSUE/NOWNOW/FIXME - write operatoin to _my1DPlotDict can only be through _update_plot_line_information()
 
     def add_arrow(self, start_x, start_y, stop_x, stop_y):
         """
