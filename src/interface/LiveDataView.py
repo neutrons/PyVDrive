@@ -141,7 +141,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         :return:
         """
-        # TODO/ISSUE/NOW - Find out how to generalize this class to a standalone class.. (VDrivePlot)
+        # TODO/TODO/ISSUE/NOW - Find out how to generalize this class to a standalone class.. (VDrivePlot)
         class WorkspacesView(QtGui.QMainWindow):
             """
             class
@@ -269,6 +269,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if is_new_ws:
             self._controller.delete_workspace(in_sum_name)
+
+        # TODO/TODO/NEW/ISSUE - Plot 2D
+        self.update_2d_plot()
 
         return
 
@@ -506,7 +509,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def update_2d_plot(self):
-        # TODO/ISSUE/NOW - Maybe need a better name but definiately IMPLEMENT IT!
+        # TODO/ISSUE/NOW/TODO/NOW - Maybe need a better name but definiately IMPLEMENT IT!
 
         return
 
