@@ -41,6 +41,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         else:
             self._controller = live_driver
 
+        # sub window
+        self._workspaceView = None
+
         # define data structure
         self._myTimeStep = 10  # seconds
         self._myWorkspaceNumber = 1800  # containing 1 hour data for dT = 10 seconds
@@ -141,56 +144,59 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         :return:
         """
-        # TODO/TODO/ISSUE/NOW - Find out how to generalize this class to a standalone class.. (VDrivePlot)
-        class WorkspacesView(QtGui.QMainWindow):
-            """
-            class
-            """
-            def __init__(self, parent=None):
-                """
-                Init
-                :param parent:
-                """
-                from gui.workspaceviewwidget import WorkspaceViewWidget
+        from gui.pvipythonwidget import IPythonWorkspaceViewer
 
-                QtGui.QMainWindow.__init__(self)
+        # # TEST/TODO - Find out how to generalize this class to a standalone class.. (VDrivePlot)
+        # class WorkspacesView(QtGui.QMainWindow):
+        #     """
+        #     class
+        #     """
+        #     def __init__(self, parent=None):
+        #         """
+        #         Init
+        #         :param parent:
+        #         """
+        #         from gui.workspaceviewwidget import WorkspaceViewWidget
+        #
+        #         QtGui.QMainWindow.__init__(self)
+        #
+        #         # set up
+        #         self.setObjectName(_fromUtf8("MainWindow"))
+        #         self.resize(1600, 1200)
+        #         self.centralwidget = QtGui.QWidget(self)
+        #         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
+        #         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
+        #         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        #         self.widget = WorkspaceViewWidget(self)
+        #         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+        #         sizePolicy.setHorizontalStretch(0)
+        #         sizePolicy.setVerticalStretch(0)
+        #         sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+        #         self.widget.setSizePolicy(sizePolicy)
+        #         self.widget.setObjectName(_fromUtf8("widget"))
+        #         self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
+        #         self.label = QtGui.QLabel(self.centralwidget)
+        #         self.label.setObjectName(_fromUtf8("label"))
+        #         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        #         self.setCentralWidget(self.centralwidget)
+        #         self.menubar = QtGui.QMenuBar(self)
+        #         self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
+        #         self.menubar.setObjectName(_fromUtf8("menubar"))
+        #         self.setMenuBar(self.menubar)
+        #         self.statusbar = QtGui.QStatusBar(self)
+        #         self.statusbar.setObjectName(_fromUtf8("statusbar"))
+        #         self.setStatusBar(self.statusbar)
+        #         self.toolBar = QtGui.QToolBar(self)
+        #         self.toolBar.setObjectName(_fromUtf8("toolBar"))
+        #         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
+        #
+        #         # self.retranslateUi(self)
+        #         QtCore.QMetaObject.connectSlotsByName(self)
+        #
+        #         return
 
-                # set up
-                self.setObjectName(_fromUtf8("MainWindow"))
-                self.resize(1600, 1200)
-                self.centralwidget = QtGui.QWidget(self)
-                self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
-                self.gridLayout = QtGui.QGridLayout(self.centralwidget)
-                self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-                self.widget = WorkspaceViewWidget(self)
-                sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-                sizePolicy.setHorizontalStretch(0)
-                sizePolicy.setVerticalStretch(0)
-                sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
-                self.widget.setSizePolicy(sizePolicy)
-                self.widget.setObjectName(_fromUtf8("widget"))
-                self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
-                self.label = QtGui.QLabel(self.centralwidget)
-                self.label.setObjectName(_fromUtf8("label"))
-                self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-                self.setCentralWidget(self.centralwidget)
-                self.menubar = QtGui.QMenuBar(self)
-                self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
-                self.menubar.setObjectName(_fromUtf8("menubar"))
-                self.setMenuBar(self.menubar)
-                self.statusbar = QtGui.QStatusBar(self)
-                self.statusbar.setObjectName(_fromUtf8("statusbar"))
-                self.setStatusBar(self.statusbar)
-                self.toolBar = QtGui.QToolBar(self)
-                self.toolBar.setObjectName(_fromUtf8("toolBar"))
-                self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
-
-                # self.retranslateUi(self)
-                QtCore.QMetaObject.connectSlotsByName(self)
-
-                return
-
-        self._workspaceView = WorkspacesView(self)
+        if self._workspaceView is None:
+            self._workspaceView = IPythonWorkspaceViewer(self)
         self._workspaceView.widget.set_main_window(self)
         self._workspaceView.show()
 
@@ -509,7 +515,19 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def update_2d_plot(self):
-        # TODO/ISSUE/NOW/TODO/NOW - Maybe need a better name but definiately IMPLEMENT IT!
+        """
+        update 2D contour plot for the reduced data in the last N time-intervals
+        :return:
+        """
+        # TODO/ISSUE/NOW/TODO/NOW - In implementing
+
+        # get bank ID
+        bank_id = int(self.ui.whatever_bankID.text())
+
+        # get the last N time-intervals and create the meshdata
+        data_list = list()
+        for n in N:
+            data_set = self.get_data(last=n, bank_id=bank_id)
 
         return
 
