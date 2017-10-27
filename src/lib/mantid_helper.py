@@ -836,7 +836,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         else:
             vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
-        vec_y = workspace.readY()
+        vec_y = workspace.readY(required_workspace_index)
         size_y = len(vec_y)
         vec_e = workspace.readE(required_workspace_index)
 

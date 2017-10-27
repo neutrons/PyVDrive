@@ -68,7 +68,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
         if row_size is not None:
-            self._myCanvas.set_axes(row_size, col_size)
+            self._myCanvas.set_subplots(row_size, col_size)
         if tool_bar:
             self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
         else:
@@ -579,22 +579,9 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         self.fig = Figure()
         self.fig.patch.set_facecolor('white')
 
-        # data structure for sub plots
-        self._numSubPlots = 0
-        self.axes_main = dict()
-        self.axes_right = dict()
-
-        # the subplots are not set up in the initiazation
-        if row_size is not None and col_size is not None:
-            self.set_subplots(row_size, col_size)
-
         # Initialize parent class and set parent
-        FigureCanvas.__init__(self, self.fig)
+        super(Qt4MplCanvasMultiFigure, self).__init__(self.fig)
         self.setParent(parent)
-
-        # Set size policy to be able to expanding and resizable with frame
-        FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
 
         # Variables to manage all lines/subplot
         self._lineDict = {}
@@ -603,6 +590,19 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         # legend and color bar
         self._legendStatusDict = dict()
         self._legendFontSize = 8
+
+        # data structure for sub plots
+        self._numSubPlots = 0
+        self.axes_main = dict()
+        self.axes_right = dict()
+
+        # the subplots are not set up in the initialization
+        if row_size is not None and col_size is not None:
+            self.set_subplots(row_size, col_size)
+
+        # Set size policy to be able to expanding and resizable with frame
+        FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
 
         return
 

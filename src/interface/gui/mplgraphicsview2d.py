@@ -366,7 +366,7 @@ class MplGraphicsView2D(QtGui.QWidget):
         """ Initialization
         """
         # Initialize parent
-        QtGui.QWidget.__init__(self, parent)
+        super(MplGraphicsView2D, self).__init__(parent)
 
         # set up canvas
         self._myCanvas = Qt4MplCanvas(self)
@@ -597,6 +597,17 @@ class MplGraphicsView2D(QtGui.QWidget):
 
         return my_id
 
+    def add_image(self, image_file_name):
+        """ Add an image by file
+        """
+        # check
+        if os.path.exists(image_file_name) is False:
+            raise NotImplementedError("Image file %s does not exist." % image_file_name)
+
+        self._myCanvas.addImage(image_file_name)
+
+        return
+
     def add_plot_2d(self, array2d, x_min, x_max, y_min, y_max, hold_prev_image=True, y_tick_label=None):
         """
         Add a 2D image to canvas
@@ -610,17 +621,6 @@ class MplGraphicsView2D(QtGui.QWidget):
         :return:
         """
         self._myCanvas.addPlot2D(array2d, x_min, x_max, y_min, y_max, hold_prev_image, y_tick_label)
-
-        return
-
-    def addImage(self, imagefilename):
-        """ Add an image by file
-        """
-        # check
-        if os.path.exists(imagefilename) is False:
-            raise NotImplementedError("Image file %s does not exist." % (imagefilename))
-
-        self._myCanvas.addImage(imagefilename)
 
         return
 
@@ -1270,9 +1270,14 @@ class Qt4MplCanvas(FigureCanvas):
 
     def addPlot2D(self, array2d, xmin, xmax, ymin, ymax, holdprev, yticklabels=None):
         """ Add a 2D plot
-
-        Arguments:
-         - yticklabels :: list of string for y ticks
+        :param array2d:
+        :param xmin:
+        :param xmax:
+        :param ymin:
+        :param ymax:
+        :param holdprev:
+        :param yticklabels:  list of string for y ticks
+        :return:
         """
         # Release the current image
         self.axes.hold(holdprev)
@@ -1307,13 +1312,19 @@ class Qt4MplCanvas(FigureCanvas):
         return
 
     def add_contour_plot(self, vec_x, vec_y, matrix_z):
-        """
-
-        :param vec_x:
-        :param vec_y:
+        """ add a contour plot
+        Example: reduced data: vec_x: d-values, vec_y: run numbers, matrix_z, matrix for intensities
+        :param vec_x: a list of a vector for X axis
+        :param vec_y: a list of a vector for Y axis
         :param matrix_z:
         :return:
         """
+        # check input
+        # TODO - labor
+        assert isinstance(vec_x, list) or isinstance(vec_x, np.ndarray), 'blabla'
+        assert isinstance(vec_y, list) or isinstance(vec_y, np.ndarray), 'blabla'
+        assert isinstance(matrix_z, np.ndarray), 'blabla'
+
         # create mesh grid
         grid_x, grid_y = np.meshgrid(vec_x, vec_y)
 
@@ -1330,7 +1341,7 @@ class Qt4MplCanvas(FigureCanvas):
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
         print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
 
-        # TODO/ISSUE/55: how to make this part more powerful
+        # TODO/ISSUE/NOW: how to make this part more flexible
         if len(labels) == 2*len(vec_y) - 1:
             new_labels = [''] * len(labels)
             for i in range(len(vec_y)):

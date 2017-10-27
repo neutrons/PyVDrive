@@ -8,13 +8,13 @@ import numpy
 import gui.ui_LiveDataView as ui_LiveDataView
 import PyVDrive.lib.LiveDataDriver as ld
 import PyVDrive.lib.mantid_helper as helper
+from gui.pvipythonwidget import IPythonWorkspaceViewer
 
 # include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
-
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 
@@ -28,8 +28,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     WORKSPACE_LIMIT = 5 * 60 / 10
 
     def __init__(self, parent, live_driver):
-        """
-        init
+        """initialization
         :param parent:
         """
         # call parent
@@ -43,6 +42,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # sub window
         self._workspaceView = None
+        self._myChildWindows = list()
 
         # define data structure
         self._myTimeStep = 10  # seconds
@@ -57,6 +57,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._currAccumulateIndex = 0
         # about previous round pot
         self._plotPrevCycleName = None
+        # Bank ID (current): shall be updated with event to handle change of bank ID selection
+        self._currentBankID = 1
 
         # start UI
         self.ui = ui_LiveDataView.Ui_MainWindow()
@@ -70,6 +72,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_start_live)
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
+
+        # 2D contour
+        self.connect(self.ui.pushButton_refresh2D, QtCore.SIGNAL('clicked()'),
+                     self.do_refresh_2d)
 
         # menu bar
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
@@ -128,6 +134,32 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
 
+        # TODO/TODO/NOW - Implement event handler to check/dis-check these
+        # checkBox_2dBank1, checkBox_2dBank2, checkBox_2dBank3
+
+        return
+
+    def add_new_workspace(self, ws_name):
+        """
+        add a new workspace to the list.  if the list is full, then replace the existing one.
+        :param ws_name:
+        :return:
+        """
+        # replace previous one
+        if self._myWorkspaceList[self._myListIndex] is not None:
+            prev_ws_name = self._myWorkspaceList[self._myListIndex]
+            self._controller.delete_workspace(prev_ws_name)
+
+        # set the new one
+        self._myWorkspaceList[self._myListIndex] = ws_name
+
+        # update index
+        self._myListIndex += 1
+        if self._myListIndex == len(self._myWorkspaceList):
+            self._myListIndex = 0
+        elif self._myListIndex > len(self._myWorkspaceList):
+            raise RuntimeError("Impossible for myListIndex")
+
         return
 
     def do_clear_log(self):
@@ -144,57 +176,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         :return:
         """
-        from gui.pvipythonwidget import IPythonWorkspaceViewer
-
-        # # TEST/TODO - Find out how to generalize this class to a standalone class.. (VDrivePlot)
-        # class WorkspacesView(QtGui.QMainWindow):
-        #     """
-        #     class
-        #     """
-        #     def __init__(self, parent=None):
-        #         """
-        #         Init
-        #         :param parent:
-        #         """
-        #         from gui.workspaceviewwidget import WorkspaceViewWidget
-        #
-        #         QtGui.QMainWindow.__init__(self)
-        #
-        #         # set up
-        #         self.setObjectName(_fromUtf8("MainWindow"))
-        #         self.resize(1600, 1200)
-        #         self.centralwidget = QtGui.QWidget(self)
-        #         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
-        #         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
-        #         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        #         self.widget = WorkspaceViewWidget(self)
-        #         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-        #         sizePolicy.setHorizontalStretch(0)
-        #         sizePolicy.setVerticalStretch(0)
-        #         sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
-        #         self.widget.setSizePolicy(sizePolicy)
-        #         self.widget.setObjectName(_fromUtf8("widget"))
-        #         self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
-        #         self.label = QtGui.QLabel(self.centralwidget)
-        #         self.label.setObjectName(_fromUtf8("label"))
-        #         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-        #         self.setCentralWidget(self.centralwidget)
-        #         self.menubar = QtGui.QMenuBar(self)
-        #         self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
-        #         self.menubar.setObjectName(_fromUtf8("menubar"))
-        #         self.setMenuBar(self.menubar)
-        #         self.statusbar = QtGui.QStatusBar(self)
-        #         self.statusbar.setObjectName(_fromUtf8("statusbar"))
-        #         self.setStatusBar(self.statusbar)
-        #         self.toolBar = QtGui.QToolBar(self)
-        #         self.toolBar.setObjectName(_fromUtf8("toolBar"))
-        #         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
-        #
-        #         # self.retranslateUi(self)
-        #         QtCore.QMetaObject.connectSlotsByName(self)
-        #
-        #         return
-
         if self._workspaceView is None:
             self._workspaceView = IPythonWorkspaceViewer(self)
         self._workspaceView.widget.set_main_window(self)
@@ -212,6 +193,21 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.do_stop_live()
 
         self.close()
+
+        return
+
+    def do_refresh_2d(self):
+        """
+        refresh 2D contour view
+        :return:
+        """
+        # TODO/FIXME - It is in the stage to test 2D plotting before real implementation!
+        self.update_2d_plot()
+
+        # test the 1D plot too
+        # lineEdit_last_n_th.text()
+        #
+        self.ui.graphicsView_comparison
 
         return
 
@@ -237,6 +233,112 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._checkStateTimer.stop()
 
         self._controller.stop()
+
+        return
+
+    def evt_bank_view_change_unit(self):
+        """
+        change the unit of the plotted workspaces of the top 3 bank view
+        :return:
+        """
+        self.plot_data_in_accumulation()
+        self.plot_data_previous_cycle()
+
+        return
+
+    def evt_show_high_prev_data(self):
+        """
+        show or high previous data
+        :return:
+        """
+        # get state
+        state = self.ui.checkBox_showPrevReduced.isChecked()
+
+        # turn on or off the widgets related
+        self.ui.lineEdit_showPrevNCycles.setEnabled(state)
+
+        # plot or hide plot
+        if state:
+            self.plot_data_previous_cycle()
+        else:
+            self.hide_data_previous_cycle()
+
+        return
+
+    @staticmethod
+    def get_reserved_commands():
+        """an empty method for IPython console
+        :return:
+        """
+        return list()
+
+    def get_last_n_round_data(self, last, bank_id):
+        """
+        get data to plot about the last N runs
+        :param last:
+        :param bank_id:
+        :return: dictionary of ... (blabla)
+        """
+        # check inputs
+        # blabla TODO - Labor
+
+        # ------------  This is a block for test only --------------------
+        # TODO/TODO/FIXME/FIXME - Delete after test
+        vec_x = numpy.arange(start=0.5, stop=3.0, step=0.01, dtype='float')
+        for i in range(20):
+            vec_y = numpy.sin(vec_x + float(i) * 0.1) + float(i)
+            vec_e = numpy.sqrt(numpy.abs(vec_y))
+            helper.create_workspace_2d(vec_x, vec_y, vec_e=vec_e, output_ws_name='temp{0}'.format(i))
+            self._myWorkspaceList[i] = 'temp{0}'.format(i)
+            ws_i = helper.retrieve_workspace('temp{0}'.format(i))
+            ws_i.getAxis(0).setUnit('dSpacing')
+        self._myListIndex = 19
+        # -----------------------------------------------------------------
+
+        # get list of workspace to plot
+        ws_name_list = list()
+        ws_index_list = list()
+        for last_i in range(last):
+            # get current workspace's position in the list
+            ws_list_index = self._myListIndex - last_i
+            if ws_list_index < 0:
+                # loop back to the end of the list
+                ws_list_index += len(self._myWorkspaceList)
+
+            # get workspace name
+            ws_name_i = self._myWorkspaceList[ws_list_index]
+            if ws_name_i is None:
+                break
+            elif helper.workspace_does_exist(ws_name_i) is False:
+                break
+            else:
+                ws_name_list.append(ws_name_i)
+                ws_index_list.append(last_i)
+        # END-FOR
+
+        # reverse the order
+        ws_name_list.reverse()
+        ws_index_list.reverse()
+
+        # get data
+        data_set = dict()
+        for index, ws_name in enumerate(ws_name_list):
+            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name,
+                                                                         bank_id=bank_id, target_unit='dSpacing',
+                                                                         point_data=True, start_bank_id=1)
+            data_set[ws_index_list[index]] = data_set_dict[bank_id]
+        # END-FOR
+
+        return data_set
+
+    def hide_data_previous_cycle(self):
+        """
+
+        :return:
+        """
+        for bank_id in self._bankColorDict:
+            self._mainGraphicDict[bank_id].delete_previous_run()
+        # END-FOR
 
         return
 
@@ -276,7 +378,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if is_new_ws:
             self._controller.delete_workspace(in_sum_name)
 
-        # TODO/TODO/NEW/ISSUE - Plot 2D
+        # Plot 2D
         self.update_2d_plot()
 
         return
@@ -339,69 +441,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.delete_workspace(prev_ws_name_tmp)
 
         return
-
-    def evt_bank_view_change_unit(self):
-        """
-        change the unit of the plotted workspaces of the top 3 bank view
-        :return:
-        """
-        self.plot_data_in_accumulation()
-        self.plot_data_previous_cycle()
-
-        return
-
-    def evt_show_high_prev_data(self):
-        """
-        show or high previous data
-        :return:
-        """
-        # get state
-        state = self.ui.checkBox_showPrevReduced.isChecked()
-
-        # turn on or off the widgets related
-        self.ui.lineEdit_showPrevNCycles.setEnabled(state)
-
-        # plot or hide plot
-        if state:
-            self.plot_data_previous_cycle()
-        else:
-            self.hide_data_previous_cycle()
-
-        return
-
-    def hide_data_previous_cycle(self):
-        """
-
-        :return:
-        """
-        for bank_id in self._bankColorDict:
-            self._mainGraphicDict[bank_id].delete_previous_run()
-        # END-FOR
-
-        return
-
-    def add_new_workspace(self, ws_name):
-        """
-        add a new workspace to the list.  if the list is full, then replace the existing one.
-        :param ws_name:
-        :return:
-        """
-        # replace previous one
-        if self._myWorkspaceList[self._myListIndex] is not None:
-            prev_ws_name = self._myWorkspaceList[self._myListIndex]
-            self._controller.delete_workspace(prev_ws_name)
-
-        # set the new one
-        self._myWorkspaceList[self._myListIndex] = ws_name
-
-        return
-
-    @staticmethod
-    def get_reserved_commands():
-        """an empty method for IPython console
-        :return:
-        """
-        return list()
 
     def process_new_workspaces(self, ws_name_list):
         """ get a list of current workspaces, compare with the existing (or previously recorded workspaces),
@@ -519,15 +558,34 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         update 2D contour plot for the reduced data in the last N time-intervals
         :return:
         """
-        # TODO/ISSUE/NOW/TODO/NOW - In implementing
+        # TODO/TEST - By fake and real data
+
+        def parse_set_last_n():
+            """
+            parse and set last N intervals to plot
+            :return:
+            """
+            n_str = str(self.ui.lineEdit_lastNInterval2D.text())
+            if len(n_str) == 0:
+                n_str = 10
+                self.ui.lineEdit_lastNInterval2D.setText('10')
+            last_n = int(n_str)
+            if last_n <= 0:
+                last_n = 10  # default value
+                self.ui.lineEdit_lastNInterval2D.setText('10')
+
+            return last_n
 
         # get bank ID
-        bank_id = int(self.ui.whatever_bankID.text())
+        bank_id = self._currentBankID
 
         # get the last N time-intervals and create the meshdata
-        data_list = list()
-        for n in N:
-            data_set = self.get_data(last=n, bank_id=bank_id)
+        last_n_run = parse_set_last_n()
+        # retrieve data
+        data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
+
+        # plot
+        self.ui.graphicsView_2D.plot_contour(data_set_dict)
 
         return
 

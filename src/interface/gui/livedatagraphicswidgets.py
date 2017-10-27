@@ -1,6 +1,9 @@
 # Zoo of graphics view widgets for "Live Data"
+import numpy
+
 from mplgraphicsview import MplGraphicsView
 from mplgraphicsview1d import MplGraphicsView1D
+from mplgraphicsview2d import MplGraphicsView2D
 
 
 class GeneralPurpose1DView(MplGraphicsView1D):
@@ -13,6 +16,60 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         :param parent:
         """
         super(GeneralPurpose1DView, self).__init__(parent, 1, 1)
+
+        return
+
+
+class Live2DView(MplGraphicsView2D):
+    """
+    canvas for visualization of multiple reduced data in 2D
+    """
+    def __init__(self, parent):
+        """
+        blabla
+        :param parent:
+        """
+        super(Live2DView, self).__init__(parent)
+
+        return
+
+    def plot_contour(self, data_set_dict):
+        """
+
+        :param data_set_dict: dictionary such that
+        :return:
+        """
+        # Check inputs
+        # blabla
+
+        # TODO/NOW/TODO - doc and check
+
+        # construct
+        vec_x = data_set_dict[0][0]
+        vec_y = numpy.array(data_set_dict.keys().sort())
+        vec_y = data_set_dict.keys()
+
+        size_x = len(vec_x)
+
+        # build mesh and matrix y
+        print vec_x
+        print vec_y
+        grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
+        matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
+        for index in vec_y:
+            # vector X
+            vec_x_i = data_set_dict[index][0]
+            if len(vec_x_i) != size_x:
+                # TODO/TODO/labor - better message
+                raise RuntimeError('blabla')
+
+            # vector Y
+            matrix_y[:index] = data_set_dict[index][1]  #
+        # END-FOR
+
+        # clear canvas and add contour plot
+        self.clear_canvas()
+        self.canvas().add_contour_plot(vec_x, vec_y, matrix_y)
 
         return
 
