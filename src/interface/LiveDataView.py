@@ -92,6 +92,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_show_high_prev_data)
 
+        self.connect(self.ui.checkBox_2dBank1, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_bank1_changed)
+        self.connect(self.ui.checkBox_2dBank2, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_bank2_changed)
+        self.connect(self.ui.checkBox_2dBank3, QtCore.SIGNAL('stateChanged(int)'),
+                     self.evt_bank3_changed)
+
         # connect for testing buttons
         self.connect(self.ui.pushButton_dbPlotLeft, QtCore.SIGNAL('clicked()'),
                      self.test_plot_left)
@@ -120,6 +127,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # timer for accumulation start time
         self._accStartTime = datetime.now()
 
+        # mutexes
+        self._bankSelectMutex = False
+
         # random seed
         random.seed(1)
 
@@ -134,8 +144,106 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
 
-        # TODO/TODO/NOW - Implement event handler to check/dis-check these
-        # checkBox_2dBank1, checkBox_2dBank2, checkBox_2dBank3
+        self._bankSelectMutex = True
+        self._set_bank_checkbox()
+        self.ui.checkBox_2dBank1.setChecked(True)
+        self._bankSelectMutex = False
+
+        return
+
+    def _set_bank_checkbox(self):
+        """
+        uncheck all the checkboxes for bank ID
+        :return:
+        """
+        self._bankSelectMutex = True
+        self.ui.checkBox_2dBank1.setChecked(False)
+        self.ui.checkBox_2dBank2.setChecked(False)
+        self.ui.checkBox_2dBank3.setChecked(False)
+        self._bankSelectMutex = False
+
+        return
+
+    def evt_bank1_changed(self):
+        """
+        handling event as any of
+        :return:
+        """
+        if self._bankSelectMutex:
+            return
+
+        # get the selected status
+        checked = self.ui.checkBox_2dBank1.isChecked()
+
+        # turn on mutex
+        self._bankSelectMutex = True
+
+        if not checked:
+            # cannot be unchecked by itself
+            self.ui.checkBox_2dBank1.setChecked(True)
+        else:
+            # disable others
+            self._set_bank_checkbox()
+            self.ui.checkBox_2dBank1.setChecked(True)
+
+        # turn off mutex
+        self._bankSelectMutex = False
+
+        return
+
+    def evt_bank2_changed(self):
+        """
+        handling event as any of
+        :return:
+        """
+        # check mutex
+        if self._bankSelectMutex:
+            return
+
+        # get the selected status
+        checked = self.ui.checkBox_2dBank2.isChecked()
+
+        # turn on mutex
+        self._bankSelectMutex = True
+
+        if not checked:
+            # cannot be unchecked by itself
+            self.ui.checkBox_2dBank2.setChecked(True)
+        else:
+            # disable others
+            self._set_bank_checkbox()
+            self.ui.checkBox_2dBank2.setChecked(True)
+
+        # turn off mutex
+        self._bankSelectMutex = False
+
+        return
+
+    def evt_bank3_changed(self):
+        """
+        handling event as any of
+        :return:
+        """
+        # check mutex
+        if self._bankSelectMutex:
+            return
+
+        # get the selected status
+        checked = self.ui.checkBox_2dBank3.isChecked()
+
+        # turn on mutex
+        self._bankSelectMutex = True
+
+        if not checked:
+            # cannot be unchecked by itself
+            self.ui.checkBox_2dBank3.setChecked(True)
+        else:
+            # disable others
+            self._set_bank_checkbox()
+            self.ui.checkBox_2dBank3.setChecked(True)
+
+        # turn off mutex
+        self._bankSelectMutex = False
 
         return
 
@@ -207,7 +315,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # test the 1D plot too
         # lineEdit_last_n_th.text()
         #
-        self.ui.graphicsView_comparison
+        data_dict = self.get_last_n_round_data(1, 1)
+        print data_dict
+        vec_x, vec_y, vec_e = data_dict[0]
+
+        self.ui.graphicsView_comparison.add_plot(vec_x=vec_x, vec_y=vec_y)
 
         return
 
@@ -277,14 +389,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         get data to plot about the last N runs
         :param last:
         :param bank_id:
-        :return: dictionary of ... (blabla)
+        :return: dictionary of data: key = index (integer),
+                    value = tuple a 2-tuple (vecx, vecy, vece)
         """
         # check inputs
-        # blabla TODO - Labor
+        assert isinstance(last, int), 'Last N intervals {0} must be given by an integer,' \
+                                      'but not a {1}.'.format(last, type(last))
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+
+        if last <= 0:
+            raise RuntimeError('Last N intervals must be a postive number.')
+        if not 1 <= bank_id <= 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
         # ------------  This is a block for test only --------------------
         # TODO/TODO/FIXME/FIXME - Delete after test
-        vec_x = numpy.arange(start=0.5, stop=3.0, step=0.01, dtype='float')
+        vec_x = numpy.arange(start=0.5, stop=9.0, step=0.01, dtype='float')
         for i in range(20):
             vec_y = numpy.sin(vec_x + float(i) * 0.1) + float(i)
             vec_e = numpy.sqrt(numpy.abs(vec_y))

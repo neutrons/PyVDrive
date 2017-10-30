@@ -69,6 +69,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
         if row_size is not None:
             self._myCanvas.set_subplots(row_size, col_size)
+
         if tool_bar:
             self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
         else:
@@ -90,9 +91,11 @@ class MplGraphicsView1D(QtGui.QWidget):
         self.setAutoLineMarkerColorCombo()
 
         # records for all the lines that are plot on the canvas
+        # key = line key, value = label, x-min, x-max, y-min and y-max
         self._my1DPlotDict = dict()
 
-        # some statistic recorder for convenient operation
+        # some x, y range recorder for convenient operation
+        # key =
         self._statDict = dict()
         self._statRightPlotDict = dict()
 
@@ -137,7 +140,7 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
-    # TODO/ISSUE/NOWNOW/FIXME - write operatoin to _my1DPlotDict can only be through _update_plot_line_information()
+    # TODO/ISSUE/NOWNOW/FIXME - write operation to _my1DPlotDict can only be through _update_plot_line_information()
 
     def add_arrow(self, start_x, start_y, stop_x, stop_y):
         """
@@ -153,7 +156,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         return
 
     # TODO/ISSUE/NOW - Make index to row index and col index!!!
-    def add_plot(self, vec_x, vec_y, y_err=None, row_index=1, col_index=1, is_right=False, color=None, label='',
+    def add_plot(self, vec_x, vec_y, y_err=None, row_index=0, col_index=0, is_right=False, color=None, label='',
                  x_label=None, y_label=None, marker=None, line_style=None, line_width=1, show_legend=True):
         """Add a plot in 1D
         :param row_index:
@@ -190,49 +193,68 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # record min/max
         self._statDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
-        self._my1DPlotDict[line_key] = label
-
-        # update minimum and maximum
-        self._update_plot_line_information(self._statDict[line_key], remove_line=False)
+        # update label
+        self._update_plot_line_information(row_index, col_index, line_key, remove_line=False, label=label)
 
         return line_key
 
-    def auto_rescale(self, vec_y=None):
+    def auto_rescale(self, row_index=None, col_index=None, percent_room=0.05,
+                     lower_y_boundary=None, upper_y_boundary=None):
         """
-        rescale the canvas in an automatic way
+        auto scale along the Y axis
+        :param row_index: if None, then all the subplots
+        :param col_index:
+        :param percent_room:
+        :param lower_y_boundary:
+        :param upper_y_boundary:
         :return:
         """
-        # TODO/ISSUE/62/GENERAL - How about the definition of _maxX, _maxY,..., ...
-        # get right_x_bound and upper_y_bound
-        delta_x = self._maxX
-        delta_y = self._maxY
+        # TODO/TEST/NOW - Complete the application
 
-        right_x_bound = self._maxX + 0.05 * delta_x
-        upper_y_bound = self._maxY + 0.05 * delta_y
-
-        # set optionally xmin
-        curr_x_min, curr_x_max = self.getXLimit()
-        if curr_x_min > right_x_bound:
-            left_x_bound = 0.
+        if row_index is not None and col_index is not None:
+            # check
+            assert isinstance(row_index, int), 'blabla'
+            assert isinstance(col_index, int), 'blabla'
+            # set
+            index_tup_list = [row_index, col_index]
         else:
-            left_x_bound = None
+            index_tup_list = self.get_subplots_indexes()
 
-        # FIXME - This is not good!
-        if vec_y is None:
-            curr_y_min, curr_y_max = self.get_y_limit()
-            if curr_y_min > upper_y_bound:
-                lower_y_bound = 0.
-            else:
-                lower_y_bound = None
-        else:
-            min_y = min(vec_y)
-            max_y = max(vec_y)
-            dy = max_y - min_y
-            lower_y_bound = min(0, min_y - dy * 0.05)
-            upper_y_bound = max_y + dy * 0.05
-        # END-IF-ELSE
+        # re-set limits
+        assert isinstance(percent_room, float), 'blabla'
 
-        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin=lower_y_bound, ymax=upper_y_bound)
+        for row_index, col_index in index_tup_list:
+            # collect all min and max of Y
+            min_y_list = list()
+            max_y_list = list()
+
+            # get line IDs
+            subplot_line_indexes = self._myCanvas.get_line_keys(row_index, col_index)
+
+            for line_key in subplot_line_indexes:
+                min_i = self._my1DPlotDict[line_key][3]
+                max_i = self._my1DPlotDict[line_key][4]
+                min_y_list.append(min_i)
+                max_y_list.append(max_i)
+            # END-FOR
+
+            # get real min and max
+            min_y = np.min(np.array(min_y_list))
+            max_y = np.max(np.array(max_y_list))
+
+            delta_y = max_y - min_y
+
+            upper_y = max_y + delta_y * percent_room
+            lower_y = min_y - delta_y * percent_room
+
+            if lower_y_boundary is not None and lower_y_boundary < lower_y:
+                lower_y = lower_y_boundary
+            if upper_y_boundary is not None and upper_y_boundary > upper_y:
+                upper_y = upper_y_boundary
+
+            # set limit
+            self._myCanvas.set_y_limits(row_index, col_index, lower_y, upper_y, apply_change=True)
+        # END-FOR
 
         return
 
@@ -244,8 +266,11 @@ class MplGraphicsView1D(QtGui.QWidget):
 
     def clear_all_lines(self):
         """
+        clear all lines on the canvas
+        :return:
         """
-        self._myCanvas.clear_all_1d_plots()
+        for row_index, col_index in self._whatever:
+            self._myCanvas.clear_all_1d_plots(row_index, col_index)
 
         self._statRightPlotDict.clear()
         self._statDict.clear()
@@ -260,24 +285,10 @@ class MplGraphicsView1D(QtGui.QWidget):
     def clear_canvas(self):
         """ Clear canvas
         """
-        # clear all the records
-        self._statDict.clear()
-        self._my1DPlotDict.clear()
-
-        # about zoom
-        self._isZoomed = False
-        self._homeXYLimit = None
+        #  clear all the lines
+        self.clear_all_lines()
 
         return self._myCanvas.clear_canvas()
-
-    def clear_line(self, row_index, col_index):
-        """clear one specific line
-        :param row_index:
-        :param col_index:
-        :return:
-        """
-
-
 
     def draw(self):
         """ Draw to commit the change
@@ -381,7 +392,7 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return max_y
 
-    def remove_line(self, line_id):
+    def remove_line(self, row_index, col_index, line_id):
         """ Remove a line
         :param line_id:
         :return:
@@ -451,6 +462,13 @@ class MplGraphicsView1D(QtGui.QWidget):
             raise RuntimeError('Implement 2-way as soon as possible!')
 
         return 1.E100, 1.E100
+
+    def get_subplots_indexes(self):
+        """
+        get the indexes of all the subplots
+        :return: a list of 2-tuples as (row-index, column-index)
+        """
+        return self._myCanvas.subplot_indexes
 
     def getLineStyleList(self):
         """
@@ -562,6 +580,11 @@ class MplGraphicsView1D(QtGui.QWidget):
         if ikey not in self._my1DPlotDict:
             raise RuntimeError('Line with ID {0} is not recorded as a plot on canvas.'.format(ikey))
 
+        # update
+        if vec_y is not None:
+            # TODO/ISSUE/NOW - Find out what to update with my1DPlotDict
+            blabla
+
         return self._myCanvas.updateLine(ikey, vec_x, vec_y, line_style, line_color, marker, marker_color)
 
 
@@ -593,7 +616,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # data structure for sub plots
         self._numSubPlots = 0
-        self.axes_main = dict()
+        self.axes_main = dict()  # keys are 2-tuple, starting from (0, 0)
         self.axes_right = dict()
 
         # the subplots are not set up in the initialization
@@ -605,6 +628,14 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         FigureCanvas.updateGeometry(self)
 
         return
+
+    @property
+    def subplot_indexes(self):
+        """
+
+        :return:  a list of 2 - tuples as (row - index, column - index)
+        """
+        return sorted(self.axes_main.keys())
 
     def set_subplots(self, row_size, col_size):
         """
