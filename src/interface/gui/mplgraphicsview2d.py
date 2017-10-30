@@ -1328,6 +1328,8 @@ class Qt4MplCanvas(FigureCanvas):
         # create mesh grid
         grid_x, grid_y = np.meshgrid(vec_x, vec_y)
 
+        print '[DB...BAT] Grid X and Grid Y size: ', grid_x.shape, grid_y.shape
+
         # check size
         assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
                                                '' % (len(vec_x), len(vec_y), matrix_z.shape)
@@ -1335,7 +1337,7 @@ class Qt4MplCanvas(FigureCanvas):
         # Release the current image
         self.axes.hold(False)
 
-        # Do plot
+        # Do plot: resolution on Z axis (color bar is set to 100)
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
@@ -1347,6 +1349,10 @@ class Qt4MplCanvas(FigureCanvas):
             for i in range(len(vec_y)):
                 new_labels[i*2] = '%d' % int(vec_y[i])
             self.axes.set_yticklabels(new_labels)
+
+        print
+        print
+        print matrix_z[4:]
 
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')

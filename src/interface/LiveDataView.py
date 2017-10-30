@@ -18,6 +18,9 @@ except AttributeError:
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 
+# Note: Atomic workspace: output_xxxx
+#       Accumulated workspace: adding output_xxx together
+
 
 class VulcanLiveDataView(QtGui.QMainWindow):
     """
@@ -405,15 +408,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # ------------  This is a block for test only --------------------
         # TODO/TODO/FIXME/FIXME - Delete after test
-        vec_x = numpy.arange(start=0.5, stop=9.0, step=0.01, dtype='float')
-        for i in range(20):
-            vec_y = numpy.sin(vec_x + float(i) * 0.1) + float(i)
-            vec_e = numpy.sqrt(numpy.abs(vec_y))
-            helper.create_workspace_2d(vec_x, vec_y, vec_e=vec_e, output_ws_name='temp{0}'.format(i))
-            self._myWorkspaceList[i] = 'temp{0}'.format(i)
-            ws_i = helper.retrieve_workspace('temp{0}'.format(i))
-            ws_i.getAxis(0).setUnit('dSpacing')
-        self._myListIndex = 19
+        if False:
+            vec_x = numpy.arange(start=0.5, stop=9.0, step=0.01, dtype='float')
+            for i in range(20):
+                vec_y = numpy.sin(vec_x + float(i) * 0.1) + float(i)
+                vec_e = numpy.sqrt(numpy.abs(vec_y))
+                helper.create_workspace_2d(vec_x, vec_y, vec_e=vec_e, output_ws_name='temp{0}'.format(i))
+                self._myWorkspaceList[i] = 'temp{0}'.format(i)
+                ws_i = helper.retrieve_workspace('temp{0}'.format(i))
+                ws_i.getAxis(0).setUnit('dSpacing')
+            self._myListIndex = 19
         # -----------------------------------------------------------------
 
         # get list of workspace to plot
@@ -706,7 +710,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
 
         # plot
-        self.ui.graphicsView_2D.plot_contour(data_set_dict)
+        if len(data_set_dict) > 0:
+            self.ui.graphicsView_2D.plot_contour(data_set_dict)
 
         return
 
