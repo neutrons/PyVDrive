@@ -49,7 +49,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # define data structure
         self._myTimeStep = 10  # seconds
-        self._myWorkspaceNumber = 1800  # containing 1 hour data for dT = 10 seconds
+        self._myWorkspaceNumber = 360  # containing 1 hour data for dT = 10 seconds
         self._myWorkspaceList = [None] * self._myWorkspaceNumber  # a holder for workspace names
         self._myListIndex = 0
 
@@ -129,6 +129,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # timer for accumulation start time
         self._accStartTime = datetime.now()
+        self._processedRunNumberList = list()
 
         # mutexes
         self._bankSelectMutex = False
@@ -256,6 +257,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param ws_name:
         :return:
         """
+        print '[DB...BAT] Add workspace {0} to {1}-th in the list.'.format(ws_name, self._myListIndex)
+
         # replace previous one
         if self._myWorkspaceList[self._myListIndex] is not None:
             prev_ws_name = self._myWorkspaceList[self._myListIndex]
@@ -402,7 +405,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                          ''.format(bank_id, type(bank_id))
 
         if last <= 0:
-            raise RuntimeError('Last N intervals must be a postive number.')
+            raise RuntimeError('Last N intervals must be a positive number.')
         if not 1 <= bank_id <= 3:
             raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
@@ -591,6 +594,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             else:
                 # also a new workspace might be the accumulated workspace
                 continue
+
+            # add new workspace to data manager
+            self.add_new_workspace(ws_name_i)
 
             # get reference to workspace
             workspace_i = helper.retrieve_workspace(ws_name_i)
