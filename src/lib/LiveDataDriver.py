@@ -131,7 +131,20 @@ class LiveDataDriver(QtCore.QThread):
         blabla
         :return:
         """
-        ws_names = ADS.getObjectNames()
+        try:
+            ws_names = ADS.getObjectNames()
+        except RuntimeError as run_err:
+            # TODO/TODO/NOW/TONIGHT/ - How to solve this?
+            """
+            Traceback (most recent call last):
+            File "/SNS/users/wzz/Projects/PyVDrive/PyVDrive/src/interface/LiveDataView.py", line 724, in update_timer
+            ws_name_list = self._controller.get_workspaces()
+            File "/SNS/users/wzz/local/lib/python/site-packages/PyVDrive/lib/LiveDataDriver.py", line 134, in get_workspaces
+            ws_names = ADS.getObjectNames()
+            RuntimeError: Attempt to use destroyed singleton N6Mantid6Kernel17ConfigServiceImplE
+            """
+            print '[ERROR]'
+            return None
         
         return ws_names
 
