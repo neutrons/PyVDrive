@@ -356,7 +356,7 @@ class IndicatorManager(object):
         return
 
 
-class MplGraphicsView(QtGui.QWidget):
+class MplGraphicsView2D(QtGui.QWidget):
     """ A combined graphics view including matplotlib canvas and
     a navigation tool bar
 
@@ -366,7 +366,7 @@ class MplGraphicsView(QtGui.QWidget):
         """ Initialization
         """
         # Initialize parent
-        QtGui.QWidget.__init__(self, parent)
+        super(MplGraphicsView2D, self).__init__(parent)
 
         # set up canvas
         self._myCanvas = Qt4MplCanvas(self)
@@ -597,6 +597,17 @@ class MplGraphicsView(QtGui.QWidget):
 
         return my_id
 
+    def add_image(self, image_file_name):
+        """ Add an image by file
+        """
+        # check
+        if os.path.exists(image_file_name) is False:
+            raise NotImplementedError("Image file %s does not exist." % image_file_name)
+
+        self._myCanvas.addImage(image_file_name)
+
+        return
+
     def add_plot_2d(self, array2d, x_min, x_max, y_min, y_max, hold_prev_image=True, y_tick_label=None):
         """
         Add a 2D image to canvas
@@ -613,18 +624,7 @@ class MplGraphicsView(QtGui.QWidget):
 
         return
 
-    def addImage(self, imagefilename):
-        """ Add an image by file
-        """
-        # check
-        if os.path.exists(imagefilename) is False:
-            raise NotImplementedError("Image file %s does not exist." % (imagefilename))
-
-        self._myCanvas.addImage(imagefilename)
-
-        return
-
-    def auto_rescale(self, vec_y=None):
+    def auto_rescale(self):
         """
         rescale the canvas in an automatic way
         :return:
@@ -645,21 +645,13 @@ class MplGraphicsView(QtGui.QWidget):
             left_x_bound = None
 
         # FIXME - This is not good!
-        if vec_y is None:
-            curr_y_min, curr_y_max = self.getYLimit()
-            if curr_y_min > upper_y_bound:
-                lower_y_bound = 0.
-            else:
-                lower_y_bound = None
+        curr_y_min, curr_y_max = self.getYLimit()
+        if curr_y_min > upper_y_bound:
+            lower_y_bound = 0.
         else:
-            min_y = min(vec_y)
-            max_y = max(vec_y)
-            dy = max_y - min_y
-            lower_y_bound = min(0, min_y - dy * 0.05)
-            upper_y_bound = max_y + dy * 0.05
-        # END-IF-ELSE
+            lower_y_bound = None
 
-        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin=lower_y_bound, ymax=upper_y_bound)
+        self.setXYLimit(xmin=left_x_bound, xmax=right_x_bound, ymin= lower_y_bound, ymax=upper_y_bound)
 
         return
 
@@ -1278,9 +1270,14 @@ class Qt4MplCanvas(FigureCanvas):
 
     def addPlot2D(self, array2d, xmin, xmax, ymin, ymax, holdprev, yticklabels=None):
         """ Add a 2D plot
-
-        Arguments:
-         - yticklabels :: list of string for y ticks
+        :param array2d:
+        :param xmin:
+        :param xmax:
+        :param ymin:
+        :param ymax:
+        :param holdprev:
+        :param yticklabels:  list of string for y ticks
+        :return:
         """
         # Release the current image
         self.axes.hold(holdprev)
@@ -1315,15 +1312,23 @@ class Qt4MplCanvas(FigureCanvas):
         return
 
     def add_contour_plot(self, vec_x, vec_y, matrix_z):
-        """
-
-        :param vec_x:
-        :param vec_y:
+        """ add a contour plot
+        Example: reduced data: vec_x: d-values, vec_y: run numbers, matrix_z, matrix for intensities
+        :param vec_x: a list of a vector for X axis
+        :param vec_y: a list of a vector for Y axis
         :param matrix_z:
         :return:
         """
+        # check input
+        # TODO - labor
+        assert isinstance(vec_x, list) or isinstance(vec_x, np.ndarray), 'blabla'
+        assert isinstance(vec_y, list) or isinstance(vec_y, np.ndarray), 'blabla'
+        assert isinstance(matrix_z, np.ndarray), 'blabla'
+
         # create mesh grid
         grid_x, grid_y = np.meshgrid(vec_x, vec_y)
+
+        print '[DB...BAT] Grid X and Grid Y size: ', grid_x.shape, grid_y.shape
 
         # check size
         assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
@@ -1332,18 +1337,22 @@ class Qt4MplCanvas(FigureCanvas):
         # Release the current image
         self.axes.hold(False)
 
-        # Do plot
+        # Do plot: resolution on Z axis (color bar is set to 100)
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
         print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
 
-        # TODO/ISSUE/55: how to make this part more powerful
+        # TODO/ISSUE/NOW: how to make this part more flexible
         if len(labels) == 2*len(vec_y) - 1:
             new_labels = [''] * len(labels)
             for i in range(len(vec_y)):
                 new_labels[i*2] = '%d' % int(vec_y[i])
             self.axes.set_yticklabels(new_labels)
+
+        print
+        print
+        print matrix_z[4:]
 
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')

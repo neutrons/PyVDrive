@@ -133,13 +133,14 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def calculate_peak_parameters(self, ipts_number, run_number_list, x_min, x_max, write_to_console,
+    def calculate_peak_parameters(self, ipts_number, run_number_list, chop_list, x_min, x_max, write_to_console,
                                   output_file):
         """Calculate a peak or several overlapped peaks' parameters
 
         These parameters include integral intensity, average d-spacing and variance
         :param ipts_number:
         :param run_number_list:
+        :param chop_list:
         :param x_min:
         :param x_max:
         :param write_to_console:
@@ -148,6 +149,7 @@ class VDriveAPI(object):
         """
         try:
             data_dict = self._myProject.calculate_peaks_parameter(ipts_number, run_number_list,
+                                                                  chop_list,
                                                                   x_min, x_max, write_to_console,
                                                                   output_file)
 
@@ -777,16 +779,18 @@ class VDriveAPI(object):
 
     def get_archived_data_dir(self, ipts_number, run_number, chopped_data):
         """
-        blabla
+        get the directory of the SNS archived data (GSAS file) by ITPS number, Run number and whether it is the 
+        previously chopped and reduced data
         :param ipts_number:
         :param run_number:
         :param chopped_data:
         :return:
         """
         if chopped_data:
+            # chopped data
             sns_dir = self.archive_manager.get_vulcan_chopped_gsas_dir(ipts_number, run_number)
         else:
-            # TODO/ISSUE/NOWNOW - Easy implement
+            # regular GSAS file directory
             sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
 
         return sns_dir
@@ -946,11 +950,11 @@ class VDriveAPI(object):
         assert run_number is not None, 'Run number cannot be None.'
 
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
-            # blabla
+            # input (run number) is workspace's name
             ws_name = run_number
             sample_name_list = mantid_helper.get_sample_log_names(ws_name, smart=True)
         else:
-            # blabla
+            # a key or run
             chopper = self._myProject.get_chopper(run_number)
             sample_name_list = chopper.get_sample_log_names(smart)
 
@@ -972,13 +976,12 @@ class VDriveAPI(object):
 
         # 2 cases: run_number is workspace or run_number is run number
         if isinstance(run_number, str) and mantid_helper.workspace_does_exist(run_number):
-            # blabla
+            # input (run number) is workspace's name
             ws_name = run_number
             vec_times, vec_value = mantid_helper.get_sample_log_value(ws_name, log_name, start_time=None,
                                                                       stop_time=None, relative=relative)
         else:
-            # blabla
-            # get chopper
+            # get chopper for (integer) run number
             chopper = self._myProject.get_chopper(run_number)
 
             # get log values
@@ -1018,8 +1021,7 @@ class VDriveAPI(object):
         return peak_list
 
     def has_chopped_data(self, run_number, reduced):
-        """
-        blabla
+        """check whether a run has chopped data reduced or not
         :param run_number:
         :param reduced:
         :return:
@@ -1158,6 +1160,39 @@ class VDriveAPI(object):
         self._myProject.load_session_from_dict(save_dict['myProject'])
 
         return True, in_file_name
+
+    def normalize_by_proton_charge(self, ws_name, ipts_number, run_number, chop_sequence=None):
+        """normalize by proton charges
+        :param ws_name:
+        :param ipts_number:
+        :param run_number:
+        :param chop_sequence:
+        :return:
+        """
+        # get information
+        proton_charge = self._myArchiveManager.get_proton_charge(ipts_number, run_number, chop_sequence)
+
+        workspace = mantid_helper.retrieve_workspace(ws_name, True)
+        print '[DB...BAT...TRACE] PC = {0}, Acting on workspace {1}'.format(proton_charge, workspace)
+
+        workspace *= (1./proton_charge)
+
+        return
+
+    @staticmethod
+    def normalise_by_vanadium(data_ws_name, van_ws_name):
+        """
+        normalize by vanadium
+        :param data_ws_name:
+        :param van_ws_name:
+        :return:
+        """
+        try:
+            mantid_helper.normalize_by_vanadium(data_ws_name, van_ws_name)
+        except RuntimeError as run_err:
+            return False, 'Unable to normalize by vanadium due to {0}'.format(run_err)
+
+        return True, None
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
@@ -1525,7 +1560,7 @@ class VDriveAPI(object):
 
     # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
-                          binning_parameters=None):
+                          binning_parameters=None, smoothed=False):
         """
         Load vanadium runs
         :param ipts_number:
@@ -1540,7 +1575,12 @@ class VDriveAPI(object):
         if use_reduced_file:
             # search reduced GSAS file
             try:
-                van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+                if smoothed:
+                    van_file_name = self._myArchiveManager.get_smoothed_vanadium(ipts_number, run_number,
+                                                                                 check_exist=True)
+                else:
+                    van_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
+                print '[DB...BAT...TRACE] ', van_file_name
             except RuntimeError as run_err:
                 print '[WARNING]: {0}'.format(run_err)
                 van_file_name = None

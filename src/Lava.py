@@ -79,6 +79,21 @@ class LauncherManager(QtGui.QDialog):
 
         return
 
+    def do_lauch_live_view(self):
+        """ launch live view
+        :return:
+        """
+        import interface.LiveDataView
+        # import lib.LiveDataDriver
+
+        # driver = lib.LiveDataDriver.LiveDataDriver()
+
+        live_view = interface.LiveDataView.VulcanLiveDataView(self, None)
+
+        live_view.show()
+
+        return
+
     def do_launch_peak_picker(self):
         """
         launch peak picker window
@@ -116,6 +131,17 @@ class LauncherManager(QtGui.QDialog):
 
         if not self.ui.checkBox_keepOpen.isChecked():
             self.close()
+
+        return
+
+    def do_launch_record_view(self):
+        """launch the experimental record viewer
+        :return:
+        """
+        import interface.ExperimentRecordView as ev
+
+        viewer = ev.VulcanExperimentRecordView(self)
+        viewer.show()
 
         return
 
@@ -164,6 +190,8 @@ elif isinstance(option, str) and (option.lower().startswith('-h') or option.lowe
     print '  -c: launch chopping/slicing interface'
     print '  -p: launch peak processing interface'
     print '  -v: launch reduced data view interface'
+    print '  --live: launch live data view interface'
+    print '  --record: launch experimental record manager'
     sys.exit(1)
 
 elif option.lower() == '-m':
@@ -189,6 +217,14 @@ elif isinstance(option, str) and option.lower().startswith('-v'):
 elif isinstance(option, str) and option.lower().count('t') and option.lower().count('c'):
     launcher.do_launch_chopper()
     launcher.do_launch_terminal()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('--live'):
+    launcher.do_lauch_live_view()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('--record'):
+    launcher.do_launch_record_view()
     launcher.close()
 
 

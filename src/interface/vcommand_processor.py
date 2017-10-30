@@ -236,6 +236,7 @@ class VdriveCommandProcessor(object):
             # this is for help
             return status, message
 
+        # viewing
         view_window = self._mainWindow.do_launch_reduced_data_viewer()
         view_window.set_ipts_number(processor.get_ipts_number())
 
@@ -254,13 +255,23 @@ class VdriveCommandProcessor(object):
 
             view_window.add_run_numbers(processor.get_run_tuple_list(), vanadium_dict)
             view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
+
         elif processor.is_chopped_run:
-            # 2-D image for chopped run
+            # chopped run... can be 1D (only 1 chopped data) or 2D (more than 1 chopped data)
+            # get normalization information
+            if processor.do_vanadium_normalization:
+                van_run = processor.get_vanadium_number(processor.get_run_number())
+            else:
+                van_run = None
+            pc_norm = processor.do_proton_charge_normalization
+
             view_window.plot_chopped_data_2d(run_number=processor.get_run_number(),
                                              chop_sequence=processor.get_chopped_sequence_range(),
                                              bank_id=1,
                                              bank_id_from_1=True,
-                                             chopped_data_dir=processor.get_reduced_data_directory())
+                                             chopped_data_dir=processor.get_reduced_data_directory(),
+                                             vanadium_run_number=van_run,
+                                             proton_charge_normalization=pc_norm)
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
@@ -271,10 +282,12 @@ class VdriveCommandProcessor(object):
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:
             ipts_number, run_number_list = processor.get_ipts_runs()
-            status, ret_obj = self._myController.calculate_peak_parameters(ipts_number, run_number_list,
+            chop_list = processor.get_chopped_sequence_range()
+            status, ret_obj = self._myController.calculate_peak_parameters(ipts_number, run_number_list, chop_list,
                                                                            processor.x_min, processor.x_max,
                                                                            processor.output_peak_parameters_to_console,
                                                                            processor.peak_parameters_file)
+
             if status:
                 message = ''
                 for bank_id in ret_obj.keys():

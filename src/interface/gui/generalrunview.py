@@ -141,7 +141,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         self._onCanvasIDList.append(self._currLineID)
 
         # re-scale
-        self.auto_rescale()
+        self.auto_rescale(vec_y)
 
         return self._currLineID
 

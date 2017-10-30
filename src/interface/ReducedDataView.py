@@ -1161,17 +1161,25 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                             run_id=self._currRunNumber, bank_id=bank_id,
                                                             over_plot=over_plot, chop_tag=chop_tag)
 
+        # set the X limit
+        if self._maxX < 1E19:  # 1E20 is the default value
+            self.ui.graphicsView_mainPlot.setXYLimit(xmin=self._minX, xmax=self._maxX)
+
         # set the state flag for what is plot
         self._currentPlotSampleLogs = False
 
         return
 
-    def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None):
-        """
-        Plot a chopped run, which is only called from IDL-like command .. 2D
+    def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None,
+                             vanadium_run_number=None, proton_charge_normalization=False):
+        """Plot a chopped run, which is only called from IDL-like command .. 2D
+        :param run_number:
+        :param chop_sequence:
         :param bank_id:
         :param bank_id_from_1:
-        :param chopped_data_dir: directory of chopped data
+        :param chopped_data_dir:
+        :param vanadium_run_number:
+        :param proton_charge_normalization:
         :return:
         """
         # check inputs' validity
@@ -1199,6 +1207,31 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                                                               chop_sequence,
                                                                                               'gsas')
         # END-IF-ELSE
+
+        # process loaded data
+        if vanadium_run_number is not None:
+            assert isinstance(vanadium_run_number, int), 'blabla'
+            status, ret_obj = self._myController.load_vanadium_run(self._iptsNumber, vanadium_run_number,
+                                                                   use_reduced_file=True, smoothed=True)
+            if status:
+                van_key = ret_obj
+            else:
+                err_msg = ret_obj
+                GuiUtility.pop_dialog_error(self, 'Unable to load archived vanadium run {0} due to {1}.'
+                                                  ''.format(vanadium_run_number, err_msg))
+                return
+            for gsas_ws_name in data_key_dict.keys():
+                print '[DB...BAT...TRACE] ', gsas_ws_name, van_key
+                status, err_msg = self._myController.normalise_by_vanadium(gsas_ws_name, van_key)
+                if not status:
+                    GuiUtility.pop_dialog_error(self, err_msg)
+                    return
+        # END-IF
+
+        # normalize by proton charges
+        if proton_charge_normalization:
+            for gsas_ws_name in data_key_dict.keys():
+                self._myController.normalize_by_proton_charge(gsas_ws_name, self._iptsNumber, run_number, chop_sequence)
 
         # get workspaces from data key dictionary and add to data management
         diff_ws_list = self.process_loaded_chop_suite(data_key_dict)

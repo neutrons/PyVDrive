@@ -414,6 +414,78 @@ class DataArchiveManager(object):
         return partial_list
 
     @staticmethod
+    def get_proton_charge(ipts_number, run_number, chop_sequence):
+        """
+
+        :param ipts_number:
+        :param run_number:
+        :param chop_sequence:
+        :return:
+        """
+        import pandas
+
+        # check inputs' types
+        assert isinstance(ipts_number, int), 'blabla1'
+        assert isinstance(run_number, int), 'blabla2'
+
+        # file
+        if chop_sequence is None:
+            # regular run: load the NeXus file and find out
+            nexus_file = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts_number, run_number)
+            if not os.path.exists(nexus_file):
+                nexus_file2 = '/SNS/VULCAN/IPTS-{0}/data/VULCAN_{1}_event.nxs'.format(ipts_number, run_number)
+                if os.path.exists(nexus_file2) is False:
+                    raise RuntimeError('Unable to locate NeXus file for IPTS-{0} Run {1} with name '
+                                       '{2} or {3}'.format(ipts_number, run_number, nexus_file, nexus_file2))
+                else:
+                    nexus_file = nexus_file2
+            # END-IF
+
+            # load data, get proton charge and delete
+            out_name = '{0}_Meta'.format(run_number)
+            mantid_helper.load_nexus(data_file_name=nexus_file, output_ws_name=out_name, meta_data_only=True)
+            proton_charge = mantid_helper.get_sample_log_value_single(out_name, 'gd_prtn_chrg')
+            # convert unit from picoCoulumb to uA.hour
+            proton_charge *= 1E6 * 3600.
+            mantid_helper.delete_workspace(out_name)
+
+        else:
+            # chopped run: get the proton charge value from
+            record_file_name = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}/{1}sampleenv_chopped_mean.txt' \
+                               ''.format(ipts_number, run_number)
+            if os.path.exists(record_file_name) is False:
+                raise RuntimeError('Unable to locate chopped data record file {0}'.format(record_file_name))
+
+            # import csv
+            data_set = pandas.read_csv(record_file_name, header=None, delim_whitespace=True, index_col=0)
+            try:
+                proton_charge = data_set.loc[chop_sequence][1]
+                proton_charge = float(proton_charge)
+            except KeyError as key_err:
+                raise RuntimeError('Unable to find chop sequence {0} in {1} due to {2}'
+                                   ''.format(chop_sequence, record_file_name, key_err))
+        # END-IF
+
+        return proton_charge
+
+    @staticmethod
+    def get_smoothed_vanadium(ipts_number, van_run_number, check_exist=True):
+        """
+
+        :param ipts_number:
+        :param van_run_number:
+        :param check_exist:
+        :return:
+        """
+        smoothed_van_file = '/SNS/VULCAN/IPTS-{0}/shared/Instrument/{1}-s.gda'.format(ipts_number, van_run_number)
+
+        if check_exist and os.path.exists(smoothed_van_file) is False:
+            raise RuntimeError('Smoothed vanadium run {0} cannot be found with IPTS {1} as {2}.'
+                               ''.format(van_run_number, ipts_number, smoothed_van_file))
+
+        return smoothed_van_file
+
+    @staticmethod
     def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
         """
         blabla

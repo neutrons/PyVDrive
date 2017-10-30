@@ -96,7 +96,7 @@ class ProjectManager(object):
 
         return
 
-    def calculate_peaks_parameter(self, ipts_number, run_number_list, x_min, x_max, to_console, file_name):
+    def calculate_peaks_parameter(self, ipts_number, run_number_list, chop_list, x_min, x_max, to_console, file_name):
         """Calculate a peak or several overlapped peaks' parameters
 
         These parameters include integral intensity, average d-spacing and variance
@@ -104,18 +104,22 @@ class ProjectManager(object):
         :except RuntimeError:
         :param ipts_number: None or integer.  None if by run number it is able to locate workspace
         :param run_number_list:
+        :param chop_list:
         :param x_min:
         :param x_max:
         :param to_console:
         :param file_name:
         :return: a dictionary of strings as formed message. key = bank ID
         """
+        import itertools
+
         # check inputs' types
         assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0} must be either ' \
                                                                     'integer or None.'.format(ipts_number)
         assert isinstance(run_number_list, list), 'Run numbers must be given as list.'
         assert isinstance(x_min, float) and isinstance(x_max, float),\
             'Min X {0} and Max X {1} must be integers.'.format(x_min, x_max)
+        assert chop_list is None or isinstance(chop_list, list), 'blabla'
 
         # check inputs' logic
         if x_min >= x_max:
@@ -132,16 +136,32 @@ class ProjectManager(object):
         # loop over run numbers
         output_dict = dict()
         error_str = ''
-        for run_number in run_number_list:
-            if self.has_reduced_workspace(ipts_number, run_number):
-                # get workspace from reduced
-                gsas_ws_name = self.get_reduced_workspace(ipts_number, run_number=run_number)
+
+        if chop_list is None:
+            chop_list = [None]
+        run_chop_pair = list(itertools.product(run_number_list, chop_list))
+
+        for run_number, chop_seq in run_chop_pair:
+            if chop_seq is None:
+                # non-chopped data
+                if self.has_reduced_workspace(ipts_number, run_number):
+                    # get workspace from reduced
+                    gsas_ws_name = self.get_reduced_workspace(ipts_number, run_number=run_number)
+                else:
+                    # from loaded data manager
+                    gsas_ws_name = '{0}_gsas'.format(run_number)
+                    if self.data_loading_manager.has_data(data_key=gsas_ws_name) is False:
+                        error_str += 'IPTS {0} run {1} is not either reduced or loaded' \
+                                     ''.format(ipts_number, run_number)
+                        continue
+                    # END-IF
+                # END-IF-ELSE (searching workspace)
             else:
-                # from loaded data manager
-                gsas_ws_name = '{0}_gsas'.format(run_number)
-                if self.data_loading_manager.has_data(data_key=gsas_ws_name) is False:
-                    error_str += 'IPTS {0} run {1} is not either reduced or loaded' \
-                                 ''.format(ipts_number, run_number)
+                # chopped data
+                gsas_ws_name = '{0}_gsas'.format(chop_seq)
+                if not self.data_loading_manager.has_data(gsas_ws_name):
+                    error_str += 'IPTS {0} Run{1} Chop-seq {2} cannot be found of workspace name {3}.' \
+                                 ''.format(ipts_number, run_number, chop_seq, gsas_ws_name)
                     continue
             # END
 

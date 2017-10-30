@@ -255,6 +255,32 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         return
 
 
+class ExperimentRecordTable(NdavTable.NTableWidget):
+    """Experimental record information table
+    """
+    TableSetup = [('Run', 'int'),
+                  ('AutoRecord', 'str'),
+                  ('Align', 'str'),
+                  ('Data', 'str')]
+
+    def __init__(self, parent):
+        """ initialization
+        :param parent:
+        """
+        super(ExperimentRecordTable, self).__init__(parent)
+
+        return
+
+    def setup(self):
+        """
+        Init setup
+        :return:
+        """
+        self.init_setup(ExperimentRecordTable.TableSetup)
+
+        return
+
+
 class MTSFormatTable(NdavTable.NTableWidget):
     """ An extended class for users to set up the format of the MTS log file
     """

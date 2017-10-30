@@ -2756,19 +2756,27 @@ def main(argv):
     # dry run
     if reduction_setup.is_dry_run():
         # dry run
-        reducer.dry_run()
-
-    # execute
-    status, error_message = reduction_setup.check_validity()
-    if status and not reduction_setup.is_dry_run():
-        # reduce data
-        status, message = reducer.execute_vulcan_reduction(output_logs=True)
+        status, msg = reducer.dry_run()
+        if status:
+            print (msg)
+        else:
+            print ('Unable to execute dry run due to {0}'.format(msg))
+        # check validity
+        status, error_message = reduction_setup.check_validity()
         if not status:
-            raise RuntimeError('Auto reduction error: {0}'.format(message))
-        print ('[Auto Reduction Successful: {0}]'.format(message))
-    elif not status:
-        # error message
-        raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)
+            print ('Reduction setup is not valid due to {0}'.format(error_message))
+
+    else:
+        # execute
+        if status and not reduction_setup.is_dry_run():
+            # reduce data
+            status, message = reducer.execute_vulcan_reduction(output_logs=True)
+            if not status:
+                raise RuntimeError('Auto reduction error: {0}'.format(message))
+            print ('[Auto Reduction Successful: {0}]'.format(message))
+        elif not status:
+            # error message
+            raise RuntimeError('Reduction Setup is not valid:\n%s' % error_message)
 
     return
 

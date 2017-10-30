@@ -14,6 +14,7 @@ import vdrivehelper
 from reduce_VULCAN import align_bins
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
+WORKSPACE_2D_ID = 'Workspace2D'
 
 # define constants
 VULCAN_L1 = 43.754
@@ -23,6 +24,19 @@ VULCAN_2BANK_1_L2 = 2.009436
 VULCAN_2BANK_1_POLAR = 90.
 VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
+
+
+def clone_workspace(srs_ws_name, target_ws_name):
+    """blabla"""
+
+    assert isinstance(srs_ws_name, str), 'blabla'
+    assert isinstance(target_ws_name, str), 'blabla'
+
+    mantidapi.CloneWorkspace(InputWorkspace=srs_ws_name, OutputWorkspace=target_ws_name)
+
+    output_ws = ADS.retrieve(target_ws_name)
+
+    return output_ws
 
 
 def convert_to_non_overlap_splitters_bf(split_ws_name):
@@ -604,6 +618,20 @@ def get_sample_log_names(src_workspace, smart=False):
     return name_list
 
 
+def get_sample_log_value_single(src_workspace, sample_log_name):
+    """
+
+    :param src_workspace:
+    :param sample_log_name:
+    :return:
+    """
+    meta_ws = retrieve_workspace(src_workspace, True)
+
+    log_value = meta_ws.getRun().getProperty(sample_log_name).value
+
+    return log_value
+
+
 def get_sample_log_value(src_workspace, sample_log_name, start_time, stop_time, relative):
     """
     Get sample log value
@@ -808,7 +836,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         else:
             vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
-        vec_y = workspace.readY()
+        vec_y = workspace.readY(required_workspace_index)
         size_y = len(vec_y)
         vec_e = workspace.readE(required_workspace_index)
 
@@ -950,26 +978,6 @@ def event_data_ws_name(run_number):
     return 'VULCAN_%d_Raw' % run_number
 
 
-def retrieve_workspace(ws_name):
-    """ Retrieve workspace from AnalysisDataService
-    Purpose:
-        Get workspace from Mantid's analysis data service
-    Requirements:
-        workspace name is a string
-    Guarantee:
-        return the reference to the workspace or None if it does not exist
-    :param ws_name:
-    :return: workspace instance
-    """
-    assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
-                                                                                                  str(type(ws_name)))
-
-    if ADS.doesExist(ws_name) is False:
-        return None
-
-    return mantidapi.AnalysisDataService.retrieve(ws_name)
-
-
 def get_standard_ws_name(file_name, meta_only):
     """
     Get the standard name for a loaded workspace
@@ -1020,6 +1028,25 @@ def is_event_workspace(workspace_name):
     assert event_ws is not None
 
     return event_ws.id() == EVENT_WORKSPACE_ID
+
+
+def is_matrix_workspace(workspace_name):
+    """
+    check wehther a workspace is a MatrixWorkspace
+    :param workspace_name:
+    :return:
+    """
+    # Check requirement
+    assert isinstance(workspace_name, str), 'input workspace name {0} is not a string but a {1}' \
+                                            ''.format(workspace_name, type(workspace_name))
+
+    # get workspace
+    matrix_workspace = retrieve_workspace(workspace_name)
+    assert matrix_workspace is not None, 'blabla'
+
+    is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
+
+    return is_matrix
 
 
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
@@ -1387,6 +1414,58 @@ def mtd_normalize_by_current(event_ws_name):
     assert out_ws is not None
     
     return
+
+
+def normalize_by_vanadium(data_ws_name, van_ws_name):
+    """
+    normalize by vanadium
+    :param data_ws_name:
+    :param van_ws_name:
+    :return:
+    """
+    # check inputs
+    assert isinstance(data_ws_name, str), 'blabla 123'
+    assert isinstance(van_ws_name, str), 'blabla 124'
+
+    # get workspace
+    data_ws = retrieve_workspace(data_ws_name, True)
+    van_ws = retrieve_workspace(van_ws_name, True)
+
+    if data_ws.getNumberHistograms() != van_ws.getNumberHistograms():
+        raise RuntimeError('Unmatched histograms')
+
+    mantidapi.Divide(LHSWorkspace=data_ws, RHSWorkspace=van_ws, OutputWorkspace=data_ws_name,
+                     AllowDifferentNumberSpectra=False, ClearRHSWorkspace=False,
+                     WarnOnZeroDivide=True)
+
+    return
+
+
+def retrieve_workspace(ws_name, raise_if_not_exist=False):
+    """
+    Retrieve workspace from AnalysisDataService
+    Purpose:
+        Get workspace from Mantid's analysis data service
+
+    Requirements:
+        workspace name is a string
+    Guarantee:
+        return the reference to the workspace or None if it does not exist
+    :param ws_name:
+    :param raise_if_not_exist:
+    :return: workspace instance (1)
+    """
+    assert isinstance(ws_name, str), 'Input ws_name %s is not of type string, but of type %s.' % (str(ws_name),
+                                                                                                  str(type(
+                                                                                                      ws_name)))
+
+    if ADS.doesExist(ws_name) is False:
+        if raise_if_not_exist:
+            raise RuntimeError('ADS does not exist workspace named as {0}.'.format(ws_name))
+        else:
+            return None
+
+    return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
 def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
