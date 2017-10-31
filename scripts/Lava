@@ -1,12 +1,15 @@
 #!/usr/bin/python
 
-from interface.gui.mantidipythonwidget import MantidIPythonWidget
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import sys
 import os
 from PyQt4 import QtGui, QtCore
 
-from interface.gui import ui_LaunchManager
-from interface.VDrivePlot import VdriveMainWindow
+from pyvdrive.interface.gui import ui_LaunchManager
+from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+import pyvdrive.interface.LiveDataView
+import pyvdrive.interface.PeakPickWindow as PeakPickWindow
+import pyvdrive.interface.ExperimentRecordView as ev
 
 #  Script used to start the VDrive reduction GUI from MantidPlot
 
@@ -84,11 +87,6 @@ class LauncherManager(QtGui.QDialog):
         """ launch live view
         :return:
         """
-        import interface.LiveDataView
-        # import lib.LiveDataDriver
-
-        # driver = lib.LiveDataDriver.LiveDataDriver()
-
         live_view = interface.LiveDataView.VulcanLiveDataView(self, None)
 
         live_view.show()
@@ -100,7 +98,6 @@ class LauncherManager(QtGui.QDialog):
         launch peak picker window
         :return:
         """
-        import interface.PeakPickWindow as PeakPickWindow
 
         self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow)
         self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
@@ -139,7 +136,6 @@ class LauncherManager(QtGui.QDialog):
         """launch the experimental record viewer
         :return:
         """
-        import interface.ExperimentRecordView as ev
 
         viewer = ev.VulcanExperimentRecordView(self)
         viewer.show()

@@ -23,7 +23,9 @@ import socket
 # if it is on analysis computer...
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
-import PyVDrive.lib.peak_util as peak_util
+
+
+import pyvdrive.lib.peak_util as peak_util
 
 
 # List of supported unit cell

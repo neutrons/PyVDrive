@@ -1,6 +1,6 @@
 import os
 import procss_vcommand
-import PyVDrive.lib.vulcan_util as vulcan_util
+import pyvdrive.lib.vulcan_util as vulcan_util
 
 # VDRIVEBIN, i.e., VBIN
 # 

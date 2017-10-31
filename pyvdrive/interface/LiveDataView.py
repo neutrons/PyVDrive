@@ -6,8 +6,8 @@ import time
 import numpy
 
 import gui.ui_LiveDataView as ui_LiveDataView
-import PyVDrive.lib.LiveDataDriver as ld
-import PyVDrive.lib.mantid_helper as helper
+import pyvdrive.lib.LiveDataDriver as ld
+import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
 
 # include this try/except block to remap QString needed when using IPython

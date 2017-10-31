@@ -826,11 +826,15 @@ class ProjectManager(object):
         Load the standard binning NeXus file to a workspace
         :return:
         """
+        # find the template file
         template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
-        print os.path.exists(template_file_name)
+        if not os.path.exists(template_file_name):
+            template_file_name = '/SNS/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
+        if not os.path.exists(template_file_name):
+            raise RuntimeError('Unable to load binning template NeXus file {0}.'.format(template_file_name))
 
+        # load it!
         self._vdriveBinTemplateName = 'VDriveBinTemplate'
-
         mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
 
         return

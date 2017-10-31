@@ -32,8 +32,8 @@ import config
 
 
 """ import PyVDrive library """
-import PyVDrive
-import PyVDrive.lib.VDriveAPI as VdriveAPI
+import pyvdrive as PyVDrive
+import pyvdrive.lib.VDriveAPI as VdriveAPI
 
 __author__ = 'wzz'
 

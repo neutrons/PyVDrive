@@ -11,7 +11,7 @@
 
 
 from procss_vcommand import VDriveCommand
-from PyVDrive.lib import vulcan_util
+from pyvdrive.lib import vulcan_util
 
 
 class VdriveView(VDriveCommand):
