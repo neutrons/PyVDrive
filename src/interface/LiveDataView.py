@@ -724,10 +724,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     def update_timer(self, i_signal):
         """
         update timer
+        :param i_signal: signal integer from event
         :return:
         """
         # refresh with workspace list
-        ws_name_list = self._controller.get_workspaces()
+        try:
+            ws_name_list = self._controller.get_workspaces()
+        except RuntimeError as run_err:
+            self.ui.plainTextEdit_Log.setPlainText('[Error]: {0}'.format(run_err))
+            return
+
         ws_name_set = set(ws_name_list)
         diff_set = ws_name_set - self._workspaceSet
         if len(diff_set) > 0:

@@ -127,30 +127,19 @@ class LiveDataDriver(QtCore.QThread):
 
     @staticmethod
     def get_workspaces():
-        """
-        blabla
+        """get the workspace from Mantid ADS
+        :except: RuntimeError if ADS crashes
         :return:
         """
         try:
             ws_names = ADS.getObjectNames()
         except RuntimeError as run_err:
-            # TODO/TODO/NOW/TONIGHT/ - How to solve this?
-            """
-            Traceback (most recent call last):
-            File "/SNS/users/wzz/Projects/PyVDrive/PyVDrive/src/interface/LiveDataView.py", line 724, in update_timer
-            ws_name_list = self._controller.get_workspaces()
-            File "/SNS/users/wzz/local/lib/python/site-packages/PyVDrive/lib/LiveDataDriver.py", line 134, in get_workspaces
-            ws_names = ADS.getObjectNames()
-            RuntimeError: Attempt to use destroyed singleton N6Mantid6Kernel17ConfigServiceImplE
-            """
-            print '[ERROR]'
-            return None
+            raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
         
         return ws_names
 
     def run(self):
-        """
-
+        """ main method to start live data
         :return:
         """
         # Test for script: whatever has all the log information...
