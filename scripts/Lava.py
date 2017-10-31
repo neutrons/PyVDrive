@@ -87,7 +87,7 @@ class LauncherManager(QtGui.QDialog):
         """ launch live view
         :return:
         """
-        live_view = interface.LiveDataView.VulcanLiveDataView(self, None)
+        live_view = pyvdrive.interface.LiveDataView.VulcanLiveDataView(self, None)
 
         live_view.show()
 
