@@ -127,17 +127,19 @@ class LiveDataDriver(QtCore.QThread):
 
     @staticmethod
     def get_workspaces():
-        """
-        blabla
+        """get the workspace from Mantid ADS
+        :except: RuntimeError if ADS crashes
         :return:
         """
-        ws_names = ADS.getObjectNames()
+        try:
+            ws_names = ADS.getObjectNames()
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
         
         return ws_names
 
     def run(self):
-        """
-
+        """ main method to start live data
         :return:
         """
         # Test for script: whatever has all the log information...
