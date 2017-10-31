@@ -689,7 +689,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         update 2D contour plot for the reduced data in the last N time-intervals
         :return:
         """
-        # TODO/TEST - By fake and real data
+        # TODO/TEST - By real data (fake data is passed)
 
         def parse_set_last_n():
             """
