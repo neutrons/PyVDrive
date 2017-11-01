@@ -19,7 +19,7 @@ except AttributeError:
 # import config
 # 
 #import GUI components generated from Qt Designer .ui file
-from ui_VanDatabaseCriterialSetup import *
+from ui_VanDatabaseCriterialSetup_ui import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

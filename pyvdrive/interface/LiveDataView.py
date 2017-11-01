@@ -5,7 +5,7 @@ import random
 import time
 import numpy
 
-import gui.ui_LiveDataView as ui_LiveDataView
+import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer

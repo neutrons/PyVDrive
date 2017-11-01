@@ -12,7 +12,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import ui_AppLog
+import gui.ui_AppLog_ui as ui_AppLog
 
 class MyAppLogDialog(QWidget):
     """
@@ -28,7 +28,7 @@ class MyAppLogDialog(QWidget):
         self._myParent = parent
 
         # Set up widget
-        self.ui = ui.ui_AppLog.Ui_Dialog()
+        self.ui = ui_AppLog.Ui_Dialog()
         self.ui.setupUi(self)
 
         # Set up initial text

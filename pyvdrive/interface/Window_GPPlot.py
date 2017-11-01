@@ -22,7 +22,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_GPPlot as ui_GPPlot
+import gui.ui_GPPlot_ui as ui_GPPlot
 
 
 class Window_GPPlot(QMainWindow):

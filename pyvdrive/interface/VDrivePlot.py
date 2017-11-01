@@ -17,7 +17,7 @@ import socket
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
-import gui.ui_VdrivePlot as mainUi
+import gui.ui_VdrivePlot_ui as mainUi
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView

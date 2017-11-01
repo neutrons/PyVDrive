@@ -1,7 +1,7 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-import gui.ui_ExperimentRecord as ui_ExperimentRecord
+import gui.ui_ExperimentRecord_ui as ui_ExperimentRecord
 
 
 class VulcanExperimentRecordView(QtGui.QMainWindow):

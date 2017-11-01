@@ -1,5 +1,5 @@
 from PyQt4 import QtCore, QtGui
-import gui.ui_GroupPeakDialog
+import gui.ui_GroupPeakDialog_ui
 
 
 class GroupPeakDialog(QtGui.QMainWindow):
@@ -19,7 +19,7 @@ class GroupPeakDialog(QtGui.QMainWindow):
         self._parentWindow = parent
 
         # set up UI
-        self.ui = gui.ui_GroupPeakDialog.Ui_MainWindow()
+        self.ui = gui.ui_GroupPeakDialog_ui.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # init set up of widgets

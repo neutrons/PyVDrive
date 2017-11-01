@@ -14,7 +14,7 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as gutil
-import gui.ui_DialogAddRunsIPTS as dlgrun
+import gui.ui_DialogAddRunsIPTS_ui as dlgrun
 
 
 class AddRunsByIPTSDialog(QtGui.QDialog):

@@ -14,7 +14,7 @@ except AttributeError:
 
 #import GUI components generated from Qt Designer .ui file
 import GuiUtility as gutil
-from ui_selectRuns import *
+from ui_selectRuns_ui import *
 
 
 class SelectRunsDialog(QtGui.QMainWindow):

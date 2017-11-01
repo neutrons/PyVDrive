@@ -6,7 +6,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_loadVulcanMTSLogFile as LoadUI
+import gui.ui_loadVulcanMTSLogFile_ui as LoadUI
 import gui.GuiUtility as GUtil
 
 __author__ = 'wzz'
