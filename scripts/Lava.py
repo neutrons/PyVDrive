@@ -1,11 +1,12 @@
 #!/usr/bin/python
+import sys
+sys.path.append('/SNS/users/wzz/local/lib/python2.7/site-packages')
 
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
-import sys
 import os
 from PyQt4 import QtGui, QtCore
 
-from pyvdrive.interface.gui import ui_LaunchManager
+from pyvdrive.interface.gui import ui_LaunchManager_ui
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 import pyvdrive.interface.LiveDataView
 import pyvdrive.interface.PeakPickWindow as PeakPickWindow
@@ -34,7 +35,7 @@ class LauncherManager(QtGui.QDialog):
         super(LauncherManager, self).__init__(None)
 
         # set up UI
-        self.ui = ui_LaunchManager.Ui_Dialog_Launcher()
+        self.ui = ui_LaunchManager_ui.Ui_Dialog_Launcher()
         self.ui.setupUi(self)
 
         # init widgets
