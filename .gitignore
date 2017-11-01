@@ -156,6 +156,8 @@ Thumbs.db
 
 # build for egg
 .eggs/
+dist/
+pyvdrive.egg-info/
 
 # Folder config file
 Desktop.ini
