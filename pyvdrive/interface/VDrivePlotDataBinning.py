@@ -141,6 +141,7 @@ class VulcanGuiReduction(object):
         else:
             # regular binning
             print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
+            # TODO/TODO/ISSUE/ERROR: TypeError: reduce_data_set() takes at least 4 arguments (8 given)
             status, ret_obj = self.controller.reduce_data_set(**arg_dict)
 
         if status is False:

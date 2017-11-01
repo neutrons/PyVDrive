@@ -338,6 +338,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         status, current_run = self.get_current_run()
 
         if self._mainWindow is not None:
+            # TODO/FIXME - 'VdriveMainWindow' object has no attribute 'set_run'
             self._mainWindow.set_run(current_run)
 
         return

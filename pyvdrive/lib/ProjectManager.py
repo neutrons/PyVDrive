@@ -69,8 +69,10 @@ class ProjectManager(object):
         assert isinstance(ipts_number, int), 'ipts number, blabla'
         assert isinstance(file_name, str), 'file name blabla'
 
-        self._dataFileDict[run_number] = (file_name, ipts_number)
+        self._dataFileDict[run_number] = file_name, ipts_number
         self._baseDataFileNameList.append(os.path.basename(file_name))
+
+        print '[DB...BAT] Add run {0} with file {1}.'.format(run_number, file_name)
 
         return
 
@@ -870,7 +872,6 @@ class ProjectManager(object):
         # Check requirements
         assert isinstance(run_number_list, list), 'Run numbers {0} must be a list but not a {1}.' \
                                                   ''.format(run_number_list, type(run_number_list))
-        print '[INFO] Mark runs {0} to reduce.'.format(run_number_list)
 
         # Mark each runs
         for run_number in sorted(run_number_list):
