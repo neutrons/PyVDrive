@@ -5,6 +5,7 @@ import random
 import time
 import numpy
 
+import LiveDataDialogs
 import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
@@ -101,6 +102,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.evt_bank2_changed)
         self.connect(self.ui.checkBox_2dBank3, QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_bank3_changed)
+
+        # general purpose
+        self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
+                     self.do_setup_gpplot)
 
         # connect for testing buttons
         self.connect(self.ui.pushButton_dbPlotLeft, QtCore.SIGNAL('clicked()'),
@@ -340,6 +345,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # start start listener
         self._controller.run()
+
+        return
+
+    def do_setup_gpplot(self):
+        """ set up general-purpose view by ...
+        :return:
+        """
+        self._gpPlotSetupDialog = LiveDataDialogs.SampleLogPlotSetupDialog(self)
+        self._gpPlotSetupDialog.show()
 
         return
 
