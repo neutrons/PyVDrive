@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PyVDrive
+GenericName=PyVDrive
+Comment=VDRive for Vulcan
+TryExec=Lava
+Exec=Lava %F
+Categories=Science;Qt;
+Icon=pyvdrive
+Terminal=false
+StartupNotify=true
+MimeType=text/x-python;

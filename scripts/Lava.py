@@ -1,0 +1,229 @@
+#!/usr/bin/python
+import sys
+sys.path.append('/SNS/users/wzz/local/lib/python2.7/site-packages')
+
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+import os
+from PyQt4 import QtGui, QtCore
+
+from pyvdrive.interface.gui import ui_LaunchManager_ui
+from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+import pyvdrive.interface.LiveDataView
+import pyvdrive.interface.PeakPickWindow as PeakPickWindow
+import pyvdrive.interface.ExperimentRecordView as ev
+
+#  Script used to start the VDrive reduction GUI from MantidPlot
+
+# a fix to iPython console
+home_dir = os.path.expanduser('~')
+if home_dir.startswith('/home/wzz') is False:
+    # Mac debug build
+    sys.path.append('/Users/wzz/MantidBuild/debug/bin')
+    # Analysis cluster build
+    # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+    sys.path.append('/opt/mantidnightly/bin')
+
+
+class LauncherManager(QtGui.QDialog):
+    """
+    Launcher manager
+    """
+    def __init__(self):
+        """
+
+        """
+        super(LauncherManager, self).__init__(None)
+
+        # set up UI
+        self.ui = ui_LaunchManager_ui.Ui_Dialog_Launcher()
+        self.ui.setupUi(self)
+
+        # init widgets
+        self.ui.checkBox_keepOpen.setChecked(True)
+
+        # define event handlers
+        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+                     self.do_exit)
+        self.connect(self.ui.pushButton_vdrivePlot, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_vdrive)
+        self.connect(self.ui.pushButton_choppingHelper, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_chopper)
+        self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_peak_picker)
+        self.connect(self.ui.pushButton_reducedDataViewer, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_viewer)
+        self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
+                     self.do_launch_terminal)
+
+        # initialize main window (may not be shown though)
+        self._mainReducerWindow = VdriveMainWindow()  # the main ui class in this file is called MainWindow
+
+        self._myPeakPickerWindow = None
+        self._myLogPickerWindow = None
+
+        return
+
+    def do_exit(self):
+        """
+        exit the application
+        :return:
+        """
+        self.close()
+
+        return
+
+    def do_launch_chopper(self):
+        """
+        launch the log picker window
+        :return:
+        """
+        self._mainReducerWindow.do_launch_log_picker_window()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+    def do_lauch_live_view(self):
+        """ launch live view
+        :return:
+        """
+        live_view = pyvdrive.interface.LiveDataView.VulcanLiveDataView(self, None)
+
+        live_view.show()
+
+        return
+
+    def do_launch_peak_picker(self):
+        """
+        launch peak picker window
+        :return:
+        """
+
+        self._myPeakPickerWindow = PeakPickWindow.PeakPickerWindow(self._mainReducerWindow)
+        self._myPeakPickerWindow.set_controller(self._mainReducerWindow.get_controller())
+        self._myPeakPickerWindow.show()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+    def do_launch_terminal(self):
+        """
+
+        :return:
+        """
+        self._mainReducerWindow.menu_workspaces_view()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+    def do_launch_vdrive(self):
+        """
+        launch the main VDrivePlot window
+        :return:
+        """
+        self._mainReducerWindow.show()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+    def do_launch_record_view(self):
+        """launch the experimental record viewer
+        :return:
+        """
+
+        viewer = ev.VulcanExperimentRecordView(self)
+        viewer.show()
+
+        return
+
+    def do_launch_viewer(self):
+        """
+        launch reduced data view
+        :return:
+        """
+        self._mainReducerWindow.do_launch_reduced_data_viewer()
+
+        if not self.ui.checkBox_keepOpen.isChecked():
+            self.close()
+
+        return
+
+
+# END-DEFINITION (class)
+
+
+# Main application
+def lava_app():
+    if QtGui.QApplication.instance():
+        _app = QtGui.QApplication.instance()
+    else:
+        _app = QtGui.QApplication(sys.argv)
+    return _app
+
+# get arguments
+args = sys.argv
+if len(args) == 2:
+    option = args[1]
+else:
+    option = None
+
+app = lava_app()
+
+launcher = LauncherManager()
+launcher.show()
+
+if option is None:
+    pass
+
+elif isinstance(option, str) and (option.lower().startswith('-h') or option.lower().startswith('--h')):
+    print 'Options:'
+    print '  -t: launch IPython terminal'
+    print '  -c: launch chopping/slicing interface'
+    print '  -p: launch peak processing interface'
+    print '  -v: launch reduced data view interface'
+    print '  --live: launch live data view interface'
+    print '  --record: launch experimental record manager'
+    sys.exit(1)
+
+elif option.lower() == '-m':
+    launcher.do_launch_vdrive()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower() == '-t':
+    launcher.do_launch_terminal()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('-c'):
+    launcher.do_launch_chopper()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('-p'):
+    launcher.do_launch_peak_picker()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('-v'):
+    launcher.do_launch_viewer()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().count('t') and option.lower().count('c'):
+    launcher.do_launch_chopper()
+    launcher.do_launch_terminal()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('--live'):
+    launcher.do_lauch_live_view()
+    launcher.close()
+
+elif isinstance(option, str) and option.lower().startswith('--record'):
+    launcher.do_launch_record_view()
+    launcher.close()
+
+
+app.exec_()

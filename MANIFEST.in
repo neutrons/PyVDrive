@@ -1,0 +1,8 @@
+recursive-include pyvdrive *.ui
+recursive-include resources *.png *.ico
+include scripts/pyvdrive.desktop
+include setup-requirements.txt
+include install-requirements.txt
+include test-requirements.txt
+include MANIFEST.in
+include README.md
