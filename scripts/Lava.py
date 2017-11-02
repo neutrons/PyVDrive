@@ -1,15 +1,27 @@
 #!/usr/bin/python
+print 1
 import sys
+print 2
 sys.path.append('/SNS/users/wzz/local/lib/python2.7/site-packages')
 
+print 3
+import pyvdrive
+print pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+print 3
 import os
+print 3
 from PyQt4 import QtGui, QtCore
 
+print 3
 from pyvdrive.interface.gui import ui_LaunchManager_ui
+print 3
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+print 3
 import pyvdrive.interface.LiveDataView
+print 3
 import pyvdrive.interface.PeakPickWindow as PeakPickWindow
+print 3
 import pyvdrive.interface.ExperimentRecordView as ev
 
 #  Script used to start the VDrive reduction GUI from MantidPlot
