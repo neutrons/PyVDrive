@@ -85,6 +85,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
+    # TODO/NOW - Implement this!
     def chop_data_overlap_slicers(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws,
                                        delete_split_ws=True):

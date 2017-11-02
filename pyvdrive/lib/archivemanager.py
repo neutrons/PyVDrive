@@ -204,6 +204,7 @@ class DataArchiveManager(object):
         :exception: RuntimeError if unable to find the directory
         :param ipts_number:
         :param run_number: a list of string (i.e., files)
+        :param chop_child_list: a list of chopped child
         :return:
         """
         # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method!
@@ -415,8 +416,7 @@ class DataArchiveManager(object):
 
     @staticmethod
     def get_proton_charge(ipts_number, run_number, chop_sequence):
-        """
-
+        """ get proton charge (single value) from a run
         :param ipts_number:
         :param run_number:
         :param chop_sequence:
@@ -425,8 +425,10 @@ class DataArchiveManager(object):
         import pandas
 
         # check inputs' types
-        assert isinstance(ipts_number, int), 'blabla1'
-        assert isinstance(run_number, int), 'blabla2'
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} must be an integer but not a {1}.' \
+                                            ''.format(run_number, type(run_number))
 
         # file
         if chop_sequence is None:
@@ -487,11 +489,10 @@ class DataArchiveManager(object):
 
     @staticmethod
     def get_vulcan_chopped_gsas_dir(ipts_number, run_number):
-        """
-        blabla
+        """ get the directory where the chopped GSAS files are
         :param ipts_number:
         :param run_number:
-        :return:
+        :return: directory under ..../shared/
         """
         return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
 
@@ -802,7 +803,6 @@ def save_to_xml(save_dict, xml_file_name):
     :return:
     """
     # FIXME - Before the GUI tool is developed, python pickle is used temporarily
-    import pickle
 
     output = open(xml_file_name, 'wb')
 

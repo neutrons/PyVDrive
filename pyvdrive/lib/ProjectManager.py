@@ -950,6 +950,8 @@ class ProjectManager(object):
         :param gsas:
         :param binning_parameters:
         :param align_to_vdrive_bin:
+        :param vanadium_tuple:
+        :param standard_sample_tuple:
         :return:
         """
         # check inputs

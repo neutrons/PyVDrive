@@ -1050,7 +1050,8 @@ class VDriveAPI(object):
         :return:
         """
         # check
-        assert isinstance(is_chopped_data, bool), 'blabla'
+        assert isinstance(is_chopped_data, bool), 'Flag {0} to indicate the run is a chopped data must be a boolean ' \
+                                                  'but not a {1}'.format(is_chopped_data, type(is_chopped_data))
 
         # get data
         if is_chopped_data:
@@ -1197,9 +1198,8 @@ class VDriveAPI(object):
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
                                 binning_parameters, align_to_vdrive_bin,
-                                merge_banks):
-        """
-        blabla
+                                merge_banks, gsas=True):
+        """ reduce a set of chopped data
         :param ipts_number:
         :param run_number:
         :param raw_data_directory:
@@ -1208,9 +1208,11 @@ class VDriveAPI(object):
         :param binning_parameters:
         :param align_to_vdrive_bin:
         :param merge_banks:
+        :param gsas
         :return:
         """
         # TODO/ISSUE/71/NOWNOW - new option merge bank
+
         # get list of files
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
@@ -1237,12 +1239,13 @@ class VDriveAPI(object):
                           ''.format(ipts_number,run_number, raw_data_directory)
         # END-IF
 
-        gsas = True
-
         # reduce
         try:
             status, error_message = self._myProject.reduce_nexus_files(raw_file_list, output_directory, vanadium, gsas,
-                                                                       binning_parameters, align_to_vdrive_bin)
+                                                                       binning_parameters, merge_banks,
+                                                                       align_to_vdrive_bin,
+                                                                       vanadium_tuple=None,
+                                                                       standard_sample_tuple=None)
         except AssertionError as assert_err:
             raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
 
@@ -1398,8 +1401,7 @@ class VDriveAPI(object):
 
     @staticmethod
     def save_time_slicers(splitters_list, file_name):
-        """
-        blabla
+        """ save a set of time splitters to a file
         :param splitters_list:
         :param file_name:
         :return:

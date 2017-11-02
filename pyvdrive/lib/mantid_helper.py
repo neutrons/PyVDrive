@@ -941,13 +941,18 @@ def get_workspace_information(run_ws_name):
 
 
 def get_workspace_property(workspace_name, property_name, value_in_str=False):
-    """
-
+    """get a property's handler from a workspace's run object
     :param workspace_name:
     :param property_name:
-    :return:
+    :param value_in_str: flag for returned value. True: return property's value as a string. False: property instance
+    :return: a string (value of property) or an instance of property
     """
-    # TODO/ISSUE/NOWNOW - Better docs and checks
+    # check
+    assert isinstance(workspace_name, str), 'Workspace name {0} must be an integer but not a {1}.' \
+                                            ''.format(workspace_name, type(workspace_name))
+    assert isinstance(property_name, str), 'Property name {0} must be an integer but not a {1}.' \
+                                           ''.format(property_name, type(property_name))
+
     workspace = retrieve_workspace(workspace_name)
 
     if value_in_str:
@@ -957,8 +962,7 @@ def get_workspace_property(workspace_name, property_name, value_in_str=False):
 
 
 def get_workspace_unit(workspace_name):
-    """
-
+    """ get the unit of a workspace
     :param workspace_name:
     :return:
     """
