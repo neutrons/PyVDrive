@@ -30,7 +30,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="pushButton_apply">
        <property name="text">
         <string>Apply</string>
        </property>
@@ -53,7 +53,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="pushButton_quit">
        <property name="text">
         <string>Return</string>
        </property>
@@ -62,7 +62,7 @@
     </layout>
    </item>
    <item row="1" column="1">
-    <widget class="LogSelectorTable" name="tableWidget_2"/>
+    <widget class="LogSelectorTable" name="tableWidget_AxisY"/>
    </item>
    <item row="1" column="0">
     <widget class="LogSelectorTable" name="tableWidget_AxisX"/>

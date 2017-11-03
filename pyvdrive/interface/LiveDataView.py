@@ -46,6 +46,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # sub window
         self._workspaceView = None
+        self._gpPlotSetupDialog = None
         self._myChildWindows = list()
 
         # define data structure
@@ -353,6 +354,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         self._gpPlotSetupDialog = LiveDataDialogs.SampleLogPlotSetupDialog(self)
+        self._gpPlotSetupDialog.set_axis_options(['Time'], ['Temperature'])
         self._gpPlotSetupDialog.show()
 
         return
@@ -583,6 +585,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.delete_workspace(prev_ws_name_tmp)
 
         return
+
+    def plot_log_live(self, x_axis_name, y_axis_name):
+        """
+
+        :param x_axis_name:
+        :param y_axis_name:
+        :return:
+        """
+        # TODO/ISSUE/NOW - Implement Next
+        print '[DB...BAT] Plot {0} vs. {1}'.format(x_axis_name, y_axis_name)
 
     def process_new_workspaces(self, ws_name_list):
         """ get a list of current workspaces, compare with the existing (or previously recorded workspaces),

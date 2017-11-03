@@ -242,7 +242,6 @@ class NTableWidget(QtGui.QTableWidget):
 
         return ret_list
 
-
     def get_selected_columns(self):
         """
         Get selected columns with mouse actions
@@ -256,7 +255,6 @@ class NTableWidget(QtGui.QTableWidget):
             col_number_list.append(index.column())
 
         return col_number_list
-
 
     def get_selected_rows(self, status=True):
         """ Get the rows whose status is same as given status with checkbox
