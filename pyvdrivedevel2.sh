@@ -1,3 +1,4 @@
 python setup_dev.py build_py --inplace
-PYTHONPATH=${PWD}/build/lib.linux-x86_64-2.7/:$PYTHONPATH
-python scripts/Lava.py
+PYTHONPATH=$(dirname $0):$PYTHONPATH
+echo $PYTHONPATH
+python scripts/Lava.py --live

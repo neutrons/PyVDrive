@@ -5,7 +5,7 @@ import random
 import time
 import numpy
 
-import LiveDataDialogs
+from LiveDataChildWindows import SampleLogPlotSetupDialog
 import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
@@ -353,7 +353,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """ set up general-purpose view by ...
         :return:
         """
-        self._gpPlotSetupDialog = LiveDataDialogs.SampleLogPlotSetupDialog(self)
+        self._gpPlotSetupDialog = SampleLogPlotSetupDialog(self)
         self._gpPlotSetupDialog.set_axis_options(['Time'], ['Temperature'])
         self._gpPlotSetupDialog.show()
 
