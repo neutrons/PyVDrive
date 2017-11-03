@@ -72,6 +72,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         # records for all the lines that are plot on the canvas
         # key = [row, col][line key], value = label, x-min, x-max, y-min and y-max
         self._my1DPlotDict = dict()
+        self._my1DPlotDict[0, 0] = dict()  # init
 
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
@@ -134,6 +135,7 @@ class MplGraphicsView1D(QtGui.QWidget):
                                            ''.format(row_index, type(row_index))
         assert isinstance(col_index, int), 'Column index {0} must be an integer but not a {1}.' \
                                            ''.format(col_index, type(col_index))
+        # check
         if (row_index, col_index) not in self._my1DPlotDict:
             raise RuntimeError('Subplot ({0}, {1}) does not exist. Existing subplots are {2}.'
                                ''.format(row_index, col_index, self._my1DPlotDict.keys()))
@@ -149,6 +151,7 @@ class MplGraphicsView1D(QtGui.QWidget):
             # add a line
             assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
                                            ''.format(remove_line, label)
+
             if line_id in self._my1DPlotDict[row_index, col_index]:
                 print '[WARNING] Line (ID = {0}) is already registered.'.format(line_id)
 
@@ -300,12 +303,14 @@ class MplGraphicsView1D(QtGui.QWidget):
         clear all lines on the canvas
         :return:
         """
-        for row_index, col_index in self._whatever:
+        for row_index, col_index in self._myCanvas.subplot_indexes:
             self._myCanvas.clear_subplot_lines(row_index, col_index)
 
+        # TODO/CHECK/NOW - Only clear the 2-level entries.. (row, col) shall be kept
         self._statRightPlotDict.clear()
         self._statDict.clear()
-        self._my1DPlotDict.clear()
+        for row_index, col_index in self._my1DPlotDict.keys():
+            self._my1DPlotDict[row_index, col_index].clear()
 
         # about zoom
         self._isZoomed = False
@@ -586,6 +591,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         return self._myCanvas.updateLine(ikey, vec_x, vec_y, line_style, line_color, marker, marker_color)
 
 
+# TODO/TODO/FIXE/ASAP - Check all _lineDict to [row, col][line_key]
 class Qt4MplCanvasMultiFigure(FigureCanvas):
     """  A customized Qt widget for matplotlib figure.
     It can be used to replace GraphicsView of QtGui
@@ -605,7 +611,10 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         self.setParent(parent)
 
         # Variables to manage all lines/subplot
-        self._lineDict = {}
+        # default to 1 subplot at (0, 0)
+        self._lineDict = dict()
+        self._lineDict[0, 0] = dict()
+
         self._lineIndex = 0
 
         # legend and color bar
@@ -676,6 +685,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                 subplot_ref = self.fig.add_subplot(row_size, col_size, sub_plot_index)
                 print '[DB...BAT] Subplot index = ', sub_plot_index, ' Return = ', subplot_ref, ' of type ', type(subplot_ref)
                 self.axes_main[row_index, col_index] = subplot_ref
+                self._lineDict[row_index, col_index] = dict()
                 self._legendStatusDict[row_index, col_index] = False
             # END-FOR
         # END-FOR
@@ -781,7 +791,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         # Register
         line_key = self._lineIndex
         if len(r) == 1:
-            self._lineDict[line_key] = r[0]
+            self._lineDict[row_index, col_index][line_key] = r[0]
             self._lineIndex += 1
         else:
             msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(r), r)
@@ -894,7 +904,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             else:
                 # with single line
                 try:
-                    self.axes.lines.remove(mpl_line)
+                    self.axes_main[row_index, col_index].lines.remove(mpl_line)
                 except ValueError as e:
                     print "[Error] Plot %s is not in axes.lines which has %d lines. Error mesage: %s" % (
                         str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))

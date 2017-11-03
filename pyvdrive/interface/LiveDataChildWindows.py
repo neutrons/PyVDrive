@@ -84,15 +84,20 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def set_axis_options(self, x_axis_list, y_axis_list):
+    def set_axis_options(self, x_axis_list, y_axis_list, reset):
         """
         set the X-axis and Y-axis item list
         :param x_axis_list:
         :param y_axis_list:
+        :param reset:
         :return:
         """
         assert isinstance(x_axis_list, list), 'blabla1'
         assert isinstance(y_axis_list, list), 'blabla2'
+
+        if reset:
+            self.ui.tableWidget_AxisX.remove_all_rows()
+            self.ui.tableWidget_AxisY.remove_all_rows()
 
         self.ui.tableWidget_AxisX.add_axis_items(x_axis_list)
         self.ui.tableWidget_AxisY.add_axis_items(y_axis_list)

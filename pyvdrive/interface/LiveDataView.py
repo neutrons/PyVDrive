@@ -53,7 +53,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._myTimeStep = 10  # seconds
         self._myWorkspaceNumber = 360  # containing 1 hour data for dT = 10 seconds
         self._myWorkspaceList = [None] * self._myWorkspaceNumber  # a holder for workspace names
-        self._myListIndex = 0
+        self._myListIndex = 0  # This is always the next index to write except in add...()
 
         # summed workspace list
         self._mySummedWorkspaceList = list()   # name of summed workspaces
@@ -139,6 +139,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # mutexes
         self._bankSelectMutex = False
+
+        # log view
+        self._logPlotXName = None
+        self._logPlotYName = None
 
         # random seed
         random.seed(1)
@@ -335,6 +339,24 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def do_setup_gpplot(self):
+        """ set up general-purpose view by ...
+        :return:
+        """
+        if self._gpPlotSetupDialog is None:
+            self._gpPlotSetupDialog = SampleLogPlotSetupDialog(self)
+
+        # get axis
+        curr_ws_name = self._myWorkspaceList[self._myListIndex-1]
+        logs = helper.get_sample_log_names(curr_ws_name, smart=True)
+        x_axis_logs = ['Time']
+        # TODO/LATER: x_axis_logs.extend(logs)
+
+        self._gpPlotSetupDialog.set_axis_options(x_axis_logs, logs, reset=True)
+        self._gpPlotSetupDialog.show()
+
+        return
+
     def do_start_live(self):
         """
         start live data reduction and view
@@ -346,16 +368,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # start start listener
         self._controller.run()
-
-        return
-
-    def do_setup_gpplot(self):
-        """ set up general-purpose view by ...
-        :return:
-        """
-        self._gpPlotSetupDialog = SampleLogPlotSetupDialog(self)
-        self._gpPlotSetupDialog.set_axis_options(['Time'], ['Temperature'])
-        self._gpPlotSetupDialog.show()
 
         return
 
@@ -424,20 +436,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             raise RuntimeError('Last N intervals must be a positive number.')
         if not 1 <= bank_id <= 3:
             raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
-
-        # ------------  This is a block for test only --------------------
-        # TODO/TODO/FIXME/FIXME - Delete after test
-        if False:
-            vec_x = numpy.arange(start=0.5, stop=9.0, step=0.01, dtype='float')
-            for i in range(20):
-                vec_y = numpy.sin(vec_x + float(i) * 0.1) + float(i)
-                vec_e = numpy.sqrt(numpy.abs(vec_y))
-                helper.create_workspace_2d(vec_x, vec_y, vec_e=vec_e, output_ws_name='temp{0}'.format(i))
-                self._myWorkspaceList[i] = 'temp{0}'.format(i)
-                ws_i = helper.retrieve_workspace('temp{0}'.format(i))
-                ws_i.getAxis(0).setUnit('dSpacing')
-            self._myListIndex = 19
-        # -----------------------------------------------------------------
 
         # get list of workspace to plot
         ws_name_list = list()
@@ -586,15 +584,55 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    # TODO/RESOLVE/FIXME - workspace (output) only has 10 seconds log and refreshed each time
+    #                      how to resolve this issue?
     def plot_log_live(self, x_axis_name, y_axis_name):
         """
-
+        blabla
         :param x_axis_name:
         :param y_axis_name:
         :return:
         """
         # TODO/ISSUE/NOW - Implement Next
         print '[DB...BAT] Plot {0} vs. {1}'.format(x_axis_name, y_axis_name)
+
+        x_axis_name = str(x_axis_name)
+        y_axis_name = str(y_axis_name)
+
+        # process name in case of 'name (#)'
+        x_axis_name = x_axis_name.split('(')[0].strip()
+        y_axis_name = y_axis_name.split('(')[0].strip()
+
+        # get the data
+        if x_axis_name == 'Time':
+            curr_ws_name = self._myWorkspaceList[self._myListIndex-1]
+            log_property = helper.get_sample_log_tsp(curr_ws_name, y_axis_name)
+
+            start_time = log_property.firstTime()
+            curr_time = log_property.lastTime()
+
+            self.ui.lineEdit_logStarTime.setText('{0}'.format(start_time))
+            self.ui.lineEdit_logEndTime.setText('{0}'.format(curr_time))
+
+            time_vec = log_property.times
+            value_vec = log_property.value
+
+            # TODO/ISSUE/NOW - convert time vector (DateAndTime) to regular double vector
+            time_vec = numpy.arange(start=0, stop=len(value_vec))
+
+        else:
+            raise RuntimeError('Develop ASAP')
+
+        # clear all lines
+        # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
+        self.ui.graphicsView_comparison.clear_all_lines()
+        self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, label=y_axis_name)
+
+        # all success: keep it in record for auto update
+        self._logPlotXName = x_axis_name
+        self._logPlotYName = y_axis_name
+
+        return
 
     def process_new_workspaces(self, ws_name_list):
         """ get a list of current workspaces, compare with the existing (or previously recorded workspaces),
@@ -646,6 +684,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # previous one if it is checked to plot
             if self.ui.checkBox_showPrevReduced.isChecked():
                 self.plot_data_previous_cycle()
+
+            # update log
+            if self._logPlotXName is not None and self._logPlotYName is not None:
+                self.plot_log_live(self._logPlotXName, self._logPlotYName)
         # END-FOR
 
         # update timer
