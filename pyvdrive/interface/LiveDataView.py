@@ -104,6 +104,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_clear_log)
         self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
                      self.do_launch_ipython)
+        self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
+                     self.do_whatever)
 
         # other widgets
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
