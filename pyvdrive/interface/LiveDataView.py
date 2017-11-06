@@ -18,9 +18,17 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
+#
+# TODO - NEW TO TEST
+# 1. 2D contour plot on different bank
 
 # Note: Atomic workspace: output_xxxx
 #       Accumulated workspace: adding output_xxx together
+
+"""
+Note:
+1. workspace (output) only has 10 seconds log and refreshed each time how to resolve this issue?
+"""
 
 
 class VulcanLiveDataView(QtGui.QMainWindow):
@@ -64,6 +72,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._plotPrevCycleName = None
         # Bank ID (current): shall be updated with event to handle change of bank ID selection
         self._currentBankID = 1
+
+        # Live sample log related
+        self._currSampleLogX = None
+        self._currSampleLogY = None
+        self._currSampleLogTimeVector = None
+        self._currSampleLogValueVector = None
+        self._logStartTime = None
 
         # start UI
         self.ui = ui_LiveDataView.Ui_MainWindow()
@@ -140,10 +155,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # mutexes
         self._bankSelectMutex = False
 
-        # log view
-        self._logPlotXName = None
-        self._logPlotYName = None
-
         # random seed
         random.seed(1)
 
@@ -180,9 +191,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def evt_bank1_changed(self):
         """
-        handling event as any of
+        handling event as any of the bank checkbox is checked or uncheced
         :return:
         """
+        # return if mutex is on and no operation is required
         if self._bankSelectMutex:
             return
 
@@ -195,13 +207,21 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if not checked:
             # cannot be unchecked by itself
             self.ui.checkBox_2dBank1.setChecked(True)
+            re_plot = False
         else:
             # disable others
             self._set_bank_checkbox()
             self.ui.checkBox_2dBank1.setChecked(True)
+            # set flat to update 2D plot and re-set the current bank ID
+            re_plot = True
+            self._currentBankID = 1
 
         # turn off mutex
         self._bankSelectMutex = False
+
+        # plot if it is True
+        if re_plot:
+            self.update_2d_plot()
 
         return
 
@@ -210,7 +230,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         handling event as any of
         :return:
         """
-        # check mutex
+        # return if mutex is on and no operation is required
         if self._bankSelectMutex:
             return
 
@@ -223,13 +243,21 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if not checked:
             # cannot be unchecked by itself
             self.ui.checkBox_2dBank2.setChecked(True)
+            re_plot = False
         else:
             # disable others
             self._set_bank_checkbox()
             self.ui.checkBox_2dBank2.setChecked(True)
+            # set flat to update 2D plot and re-set the current bank ID
+            re_plot = True
+            self._currentBankID = 2
 
         # turn off mutex
         self._bankSelectMutex = False
+
+        # plot if it is True
+        if re_plot:
+            self.update_2d_plot()
 
         return
 
@@ -238,7 +266,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         handling event as any of
         :return:
         """
-        # check mutex
+        # return if mutex is on and no operation is required
         if self._bankSelectMutex:
             return
 
@@ -251,13 +279,21 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if not checked:
             # cannot be unchecked by itself
             self.ui.checkBox_2dBank3.setChecked(True)
+            re_plot = False
         else:
             # disable others
             self._set_bank_checkbox()
             self.ui.checkBox_2dBank3.setChecked(True)
+            # set flat to update 2D plot and re-set the current bank ID
+            re_plot = True
+            self._currentBankID = 3
 
         # turn off mutex
         self._bankSelectMutex = False
+
+        # plot if it is True
+        if re_plot:
+            self.update_2d_plot()
 
         return
 
@@ -325,17 +361,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         refresh 2D contour view
         :return:
         """
-        # TODO/FIXME - It is in the stage to test 2D plotting before real implementation!
         self.update_2d_plot()
-
-        # test the 1D plot too
-        # lineEdit_last_n_th.text()
-        #
-        data_dict = self.get_last_n_round_data(1, 1)
-        print data_dict
-        vec_x, vec_y, vec_e = data_dict[0]
-
-        self.ui.graphicsView_comparison.add_plot(vec_x=vec_x, vec_y=vec_y)
 
         return
 
@@ -418,29 +444,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         return list()
 
-    def get_last_n_round_data(self, last, bank_id):
+    # TODO/TEST/NEW Method
+    def get_last_n_round_workspaces(self, last):
         """
-        get data to plot about the last N runs
+        get the last round of workspaces
         :param last:
-        :param bank_id:
-        :return: dictionary of data: key = index (integer),
-                    value = tuple a 2-tuple (vecx, vecy, vece)
+        :return: 2-tuple: list as workspace names and list as indexes of workspaces
         """
-        # check inputs
         assert isinstance(last, int), 'Last N intervals {0} must be given by an integer,' \
                                       'but not a {1}.'.format(last, type(last))
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id, type(bank_id))
-
         if last <= 0:
             raise RuntimeError('Last N intervals must be a positive number.')
-        if not 1 <= bank_id <= 3:
-            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
         # get list of workspace to plot
         ws_name_list = list()
         ws_index_list = list()
-        for last_i in range(last):
+        for last_i in range(1, last+1):
             # get current workspace's position in the list
             ws_list_index = self._myListIndex - last_i
             if ws_list_index < 0:
@@ -450,8 +469,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # get workspace name
             ws_name_i = self._myWorkspaceList[ws_list_index]
             if ws_name_i is None:
+                print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace names are {3}' \
+                      ''.format(ws_list_index, self._myListIndex, last_i, self._myWorkspaceList)
                 break
             elif helper.workspace_does_exist(ws_name_i) is False:
+                # print '[DB...BAT] workspace {0} does not exist.'.format(ws_name_i)
                 break
             else:
                 ws_name_list.append(ws_name_i)
@@ -461,6 +483,25 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # reverse the order
         ws_name_list.reverse()
         ws_index_list.reverse()
+
+        return ws_name_list, ws_index_list
+
+    def get_last_n_round_data(self, last, bank_id):
+        """
+        get data to plot about the last N runs
+        :param last:
+        :param bank_id:
+        :return: dictionary of data: key = index (integer),
+                    value = tuple a 2-tuple (vecx, vecy, vece)
+        """
+        # check inputs
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        if not 1 <= bank_id <= 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
+
+        # get the last N workspaces
+        ws_name_list, ws_index_list = self.get_last_n_round_workspaces(last)
 
         # get data
         data_set = dict()
@@ -584,18 +625,44 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def load_sample_log(self, y_axis_name, last_n_intervals):
+        """
+        load a sample log from last N time intervals
+        :param y_axis_name:
+        :param last_n_intervals: starting from 1 because there is NO 'current' intervals as a workspace in ADS
+        :return:
+        """
+        # check input
+        assert isinstance(y_axis_name, str), 'Y-axis (sample log) name {0} must be a string but not a {1}.' \
+                                             ''.format(y_axis_name, type(y_axis_name))
+        assert isinstance(last_n_intervals, int), 'Last {0} interval must be an integer but not a {1}.' \
+                                                  ''.format(last_n_intervals, type(last_n_intervals))
+        if last_n_intervals <= 0:
+            raise RuntimeError('Last {0} intervals cannot be negative.'.format(last_n_intervals))
+
+        # get the workspace name list
+        ws_name_list, index_list = self.get_last_n_round_workspaces(last_n_intervals)
+        print '[DB...BAT] Last {0} intervals: {1}'.format(last_n_intervals, ws_name_list)
+
+        time_vec, log_value_vec = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+
+        return time_vec, log_value_vec
+
+    # TODO/ISSUE/NOW - In Implementation
     # TODO/RESOLVE/FIXME - workspace (output) only has 10 seconds log and refreshed each time
     #                      how to resolve this issue?
     def plot_log_live(self, x_axis_name, y_axis_name):
         """
-        blabla
+        Plot a sample log in live time
+        Required class variables
+          - self._currSampleLog = None
+          - self._currSampleLogTimeVector = None
+          - self._currSampleLogValueVector = None
         :param x_axis_name:
         :param y_axis_name:
         :return:
         """
-        # TODO/ISSUE/NOW - Implement Next
-        print '[DB...BAT] Plot {0} vs. {1}'.format(x_axis_name, y_axis_name)
-
+        # parse the user-specified X and Y axis name
         x_axis_name = str(x_axis_name)
         y_axis_name = str(y_axis_name)
 
@@ -603,24 +670,36 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         x_axis_name = x_axis_name.split('(')[0].strip()
         y_axis_name = y_axis_name.split('(')[0].strip()
 
+        # determine to append or start from new
+        if self._currSampleLogX != x_axis_name or self._currSampleLogY != y_axis_name \
+                or self._currSampleLogTimeVector is None:
+            append_log = False
+        else:
+            append_log = True
+
         # get the data
         if x_axis_name == 'Time':
-            curr_ws_name = self._myWorkspaceList[self._myListIndex-1]
-            log_property = helper.get_sample_log_tsp(curr_ws_name, y_axis_name)
+            # regular time-value plot
+            if append_log:
+                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
+                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                numpy.append(self._currSampleLogTimeVector, time_vec)
+                numpy.append(self._currSampleLogValueVector, value_vec)
+            else:
+                # New mode
+                # TODO/ISSUE - Implement LastNLog!
+                LastNLog = 1
+                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=LastNLog)
+                # set log start time
+                # TODO/ISSUE/ - shall give users with more choice
+                self._logStartTime = date_time_vec[0]
 
-            start_time = log_property.firstTime()
-            curr_time = log_property.lastTime()
-
-            self.ui.lineEdit_logStarTime.setText('{0}'.format(start_time))
-            self.ui.lineEdit_logEndTime.setText('{0}'.format(curr_time))
-
-            time_vec = log_property.times
-            value_vec = log_property.value
-
-            # TODO/ISSUE/NOW - convert time vector (DateAndTime) to regular double vector
-            time_vec = numpy.arange(start=0, stop=len(value_vec))
-
+                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                self._currSampleLogTimeVector = time_vec
+                self._currSampleLogValueVector = value_vec
+            # END-IF-ELSE
         else:
+            # relation between two sample logs: not implemented
             raise RuntimeError('Develop ASAP')
 
         # clear all lines
@@ -629,8 +708,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, label=y_axis_name)
 
         # all success: keep it in record for auto update
-        self._logPlotXName = x_axis_name
-        self._logPlotYName = y_axis_name
+        self._currSampleLogX = x_axis_name
+        self._currSampleLogY = y_axis_name
 
         return
 
@@ -686,8 +765,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.plot_data_previous_cycle()
 
             # update log
-            if self._logPlotXName is not None and self._logPlotYName is not None:
-                self.plot_log_live(self._logPlotXName, self._logPlotYName)
+            if self._currSampleLogX is not None and self._currSampleLogY is not None:
+                self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
         # END-FOR
 
         # update timer
@@ -757,8 +836,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         update 2D contour plot for the reduced data in the last N time-intervals
         :return:
         """
-        # TODO/TEST - By real data (fake data is passed)
-
         def parse_set_last_n():
             """
             parse and set last N intervals to plot

@@ -1,6 +1,7 @@
 import sys
 sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
+import numpy
 import mantid.simpleapi as mantidsimple
 from mantid.api import AlgorithmManager
 from mantid.api import AnalysisDataService as ADS
@@ -46,18 +47,51 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
+    # TODO/TEST/New Method
+    @staticmethod
+    def convert_time_stamps(date_time_vec, relative):
+        """convert a vector of DateAndTime instance to a vector of double as relative
+        time to a specified time in DateAndTime
+        :param date_time_vec:
+        :param relative: start time
+        :return: a vector of time stamps in double/float in unit of seconds
+        """
+        # check inputs
+        assert isinstance(date_time_vec, numpy.ndarray), 'Input time vector must be a numpy.array but not' \
+                                                         ' a {0}.'.format(type(date_time_vec))
+        assert relative is None or relative.__class__.__name__.count('DateAndTime') > 0, \
+            'Relative time {0} must be None or a DateAndTime instance but not a {1}.' \
+            ''.format(relative, type(relative))
+
+        # create an array
+        shape = len(date_time_vec)
+        time_vec = numpy.ndarray(shape=(shape,), dtype='float')
+
+        if relative is None:
+            start_time = 0
+        else:
+            start_time = relative.totalNanoseconds()
+
+        # convert
+        for i in range(shape):
+            time_i = (date_time_vec[i] - start_time) * 1.E-9
+            time_vec[i] = time_i
+
+        return time_vec
+
     @staticmethod
     def convert_unit(src_ws, target_unit, new_ws_name):
-        """
-
+        """Convert the unit of a workspace
         :param src_ws:
         :param target_unit:
         :param new_ws_name:
         :return:
         """
         # check
-        assert isinstance(target_unit, str), 'blabla must be string'
-        assert isinstance(new_ws_name, str), 'blabla must be string 2'
+        assert isinstance(target_unit, str), 'Target unit {0} must be string but not a {1}' \
+                                             ''.format(target_unit, type(target_unit))
+        assert isinstance(new_ws_name, str), 'New workspace name {0} must be string but not a {1}.' \
+                                             ''.format(new_ws_name, type(new_ws_name))
 
         # convert workspace to workspace
         if isinstance(src_ws, str):
@@ -137,6 +171,53 @@ class LiveDataDriver(QtCore.QThread):
             raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
         
         return ws_names
+
+    # TODO/TEST/New Method
+    @staticmethod
+    def parse_sample_log(ws_name_list, sample_log_name):
+        """parse the sample log time stamps and value from a series of workspaces
+        :except RuntimeError:
+        :param ws_name_list:
+        :param sample_log_name:
+        :return:
+        """
+        # check inputs
+        assert isinstance(ws_name_list, list), 'Workspace names {0} must be given as a list but not a {1}.' \
+                                               ''.format(ws_name_list, type(ws_name_list))
+        assert isinstance(sample_log_name, str), 'Sample log name {0} must be a string but not a {1}.' \
+                                                 ''.format(sample_log_name, type(sample_log_name))
+
+        date_time_vec = None
+        sample_value_vec = None
+
+        for seq_index, ws_name in enumerate(ws_name_list):
+            if ADS.doesExist(ws_name) is False:
+                raise RuntimeError('Workspace {0} does not exist.'.format(ws_name))
+
+            temp_workspace = ADS.retrieve(ws_name)
+            time_series = temp_workspace.run().getProperty(sample_log_name)
+
+            time_vec_i = time_series.times
+            value_vec_i = time_series.values
+
+            if date_time_vec is None:
+                # first workspace to process
+                date_time_vec = time_vec_i
+                sample_value_vec = value_vec_i
+            else:
+                # in append mode
+                # check
+                if date_time_vec[-1] >= time_vec_i[0]:
+                    raise RuntimeError('Previous workspace {0} is later than the current one {1}.'
+                                       ''.format(ws_name_list[seq_index-1], ws_name))
+
+                # append
+                numpy.append(date_time_vec, time_vec_i)
+                numpy.append(sample_value_vec, value_vec_i)
+            # END-IF-ELSE
+        # END-FOR (workspaces)
+
+        return date_time_vec, sample_value_vec
 
     def run(self):
         """ main method to start live data
