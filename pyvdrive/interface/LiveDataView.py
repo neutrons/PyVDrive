@@ -303,8 +303,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param ws_name:
         :return:
         """
-        print '[DB...BAT] Add workspace {0} to {1}-th in the list.'.format(ws_name, self._myListIndex)
-
         # replace previous one
         if self._myWorkspaceList[self._myListIndex] is not None:
             prev_ws_name = self._myWorkspaceList[self._myListIndex]
@@ -323,8 +321,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def do_clear_log(self):
-        """
-
+        """ clear the live data processing log
         :return:
         """
         self.ui.plainTextEdit_Log.clear()
@@ -332,8 +329,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def do_launch_ipython(self):
-        """
-
+        """ launch IPython console
         :return:
         """
         if self._workspaceView is None:
@@ -469,8 +465,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # get workspace name
             ws_name_i = self._myWorkspaceList[ws_list_index]
             if ws_name_i is None:
-                print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace names are {3}' \
-                      ''.format(ws_list_index, self._myListIndex, last_i, self._myWorkspaceList)
+                # print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace
+                # names are {3}' \
+                #       ''.format(ws_list_index, self._myListIndex, last_i, self._myWorkspaceList)
                 break
             elif helper.workspace_does_exist(ws_name_i) is False:
                 # print '[DB...BAT] workspace {0} does not exist.'.format(ws_name_i)
@@ -526,8 +523,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def plot_data_in_accumulation(self):
-        """
-        plot data that is in accumulation
+        """ plot data that is in accumulation
         :return:
         """
         # get new unit
@@ -600,7 +596,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if prev_ws_name == self._plotPrevCycleName:
             debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
                             ''.format(prev_ws_name)
-            print '[DB...BAT] {0}'.format(debug_message)
             self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
             return
         else:
@@ -616,7 +611,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         for bank_id in range(1, 4):
             vec_y = prev_ws.readY(bank_id-1)[:]
             vec_x = prev_ws.readX(bank_id-1)[:len(vec_y)]
-            print '[DB...BAT...TRACE] Plot bank {0} of previous cycle {1}'.format(bank_id, prev_ws_name)
             self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label, target_unit)
 
         # clean
@@ -648,9 +642,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return time_vec, log_value_vec
 
-    # TODO/ISSUE/NOW - In Implementation
-    # TODO/RESOLVE/FIXME - workspace (output) only has 10 seconds log and refreshed each time
-    #                      how to resolve this issue?
     def plot_log_live(self, x_axis_name, y_axis_name):
         """
         Plot a sample log in live time
@@ -674,6 +665,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if self._currSampleLogX != x_axis_name or self._currSampleLogY != y_axis_name \
                 or self._currSampleLogTimeVector is None:
             append_log = False
+            # print '[DB] Log View X-axis: {0} vs {1}'.format(self._currSampleLogX, x_axis_name)
+            # print '[DB] Log View Y-axis: {0} vs {1}'.format(self._currSampleLogY, y_axis_name)
+            # print '[DB] Sample log time vector: {0}'.format(self._currSampleLogTimeVector)
+
         else:
             append_log = True
 
@@ -683,8 +678,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if append_log:
                 date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
                 time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
-                numpy.append(self._currSampleLogTimeVector, time_vec)
-                numpy.append(self._currSampleLogValueVector, value_vec)
+                self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
+                self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
+                debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
+                                ''.format(time_vec[0], self._logStartTime)
+                print '[DB...BAT] {0}'.format(debug_message)
+                self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
             else:
                 # New mode
                 # TODO/ISSUE - Implement LastNLog!
@@ -705,7 +704,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # clear all lines
         # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
         self.ui.graphicsView_comparison.clear_all_lines()
-        self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, label=y_axis_name)
+        self.ui.graphicsView_comparison.add_plot(self._currSampleLogTimeVector, self._currSampleLogValueVector,
+                                                 label=y_axis_name)
 
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
@@ -861,7 +861,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
 
         # plot
-        if len(data_set_dict) > 0:
+        if len(data_set_dict) > 1:
             self.ui.graphicsView_2D.plot_contour(data_set_dict)
 
         return

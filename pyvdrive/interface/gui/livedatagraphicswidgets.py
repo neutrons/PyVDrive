@@ -35,7 +35,7 @@ class Live2DView(MplGraphicsView2D):
 
     def plot_contour(self, data_set_dict):
         """
-
+        blabla
         :param data_set_dict: dictionary such that
         :return:
         """
@@ -45,14 +45,14 @@ class Live2DView(MplGraphicsView2D):
         # TODO/NOW/TODO - doc and check
 
         # construct
-        vec_x = data_set_dict[0][0]
-        vec_y = numpy.array(sorted(data_set_dict.keys()))
+        x_list = sorted(data_set_dict.keys())
+        vec_x = data_set_dict[x_list[0]][0]
+        vec_y = numpy.array(x_list)
         size_x = len(vec_x)
 
         # build mesh and matrix y
         grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
         matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
-        print '[DB...BAT] Matrix Y has size ', matrix_y.shape
         for index in vec_y:
             # vector X
             vec_x_i = data_set_dict[index][0]

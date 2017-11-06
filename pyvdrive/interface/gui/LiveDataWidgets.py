@@ -34,7 +34,6 @@ class LogSelectorTable(NTableWidget.NTableWidget):
                                         ''.format(items, type(items))
 
         # add
-        print '[DB...BAT] Add rows: {0}'.format(items)
         for item_name in items:
             self.append_row([item_name, False])
 

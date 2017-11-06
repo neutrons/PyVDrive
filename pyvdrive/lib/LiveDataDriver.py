@@ -3,6 +3,7 @@ sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
 import numpy
 import mantid.simpleapi as mantidsimple
+import mantid
 from mantid.api import AlgorithmManager
 from mantid.api import AnalysisDataService as ADS
 import mantid_helper
@@ -57,8 +58,9 @@ class LiveDataDriver(QtCore.QThread):
         :return: a vector of time stamps in double/float in unit of seconds
         """
         # check inputs
-        assert isinstance(date_time_vec, numpy.ndarray), 'Input time vector must be a numpy.array but not' \
-                                                         ' a {0}.'.format(type(date_time_vec))
+        assert isinstance(date_time_vec, numpy.ndarray) or \
+               isinstance(date_time_vec, mantid.kernel._kernel.std_vector_dateandtime),\
+            'Input time vector must be a numpy.array but not a {0}.'.format(type(date_time_vec))
         assert relative is None or relative.__class__.__name__.count('DateAndTime') > 0, \
             'Relative time {0} must be None or a DateAndTime instance but not a {1}.' \
             ''.format(relative, type(relative))
@@ -74,7 +76,7 @@ class LiveDataDriver(QtCore.QThread):
 
         # convert
         for i in range(shape):
-            time_i = (date_time_vec[i] - start_time) * 1.E-9
+            time_i = (date_time_vec[i].totalNanoseconds() - start_time) * 1.E-9
             time_vec[i] = time_i
 
         return time_vec
@@ -198,7 +200,7 @@ class LiveDataDriver(QtCore.QThread):
             time_series = temp_workspace.run().getProperty(sample_log_name)
 
             time_vec_i = time_series.times
-            value_vec_i = time_series.values
+            value_vec_i = time_series.value
 
             if date_time_vec is None:
                 # first workspace to process
