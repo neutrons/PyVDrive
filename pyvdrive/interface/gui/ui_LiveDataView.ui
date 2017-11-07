@@ -390,7 +390,7 @@
           <item>
            <widget class="QLabel" name="label_15">
             <property name="text">
-             <string>Intervals</string>
+             <string>Intervals (Live)</string>
             </property>
            </widget>
           </item>
