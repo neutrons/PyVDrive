@@ -92,8 +92,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_start_live)
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
+        self.connect(self.ui.pushButton_setROI, QtCore.SIGNAL('clicked()'),
+                     self.do_set_roi)
 
         # 2D contour
+
         self.connect(self.ui.pushButton_refresh2D, QtCore.SIGNAL('clicked()'),
                      self.do_refresh_2d)
 
@@ -105,7 +108,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
                      self.do_launch_ipython)
         self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
-                     self.do_whatever)
+                     self.menu_launch_setup)
 
         # other widgets
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -124,16 +127,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # general purpose
         self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
                      self.do_setup_gpplot)
-
-        # connect for testing buttons
-        self.connect(self.ui.pushButton_dbPlotLeft, QtCore.SIGNAL('clicked()'),
-                     self.test_plot_left)
-        self.connect(self.ui.pushButton_dbPlotRight, QtCore.SIGNAL('clicked()'),
-                     self.test_plot_right)
-        self.connect(self.ui.pushButton_dbUpdateLeft, QtCore.SIGNAL('clicked()'),
-                     self.test_update_left)
-
-        # ---------- END OF TESTING WIDGETS --------------
 
         # multiple thread pool
         self._checkStateTimer = None
@@ -381,6 +374,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def do_set_roi(self):
+        """
+        blabla
+        :return:
+        """
+        # TODO/ISSUE/TODO/FIXME - ASAP
+
+        return
+
     def do_start_live(self):
         """
         start live data reduction and view
@@ -484,6 +486,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         ws_index_list.reverse()
 
         return ws_name_list, ws_index_list
+
+    def menu_launch_setup(self):
+        # TODO/TODO/ISSUE/NOW
+        return
 
     def get_last_n_round_data(self, last, bank_id):
         """
@@ -724,6 +730,17 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # check
         assert isinstance(ws_name_list, list), 'workspace names {0} must be given in a list but not a {1}.' \
                                                ''.format(ws_name_list, type(ws_name_list))
+
+        # update timer
+        curr_time = datetime.now()
+        delta_time = curr_time - self._accStartTime
+        total_seconds = int(delta_time.total_seconds())
+        hours = total_seconds / 3600
+        minutes = total_seconds % 3600 / 60
+        seconds = total_seconds % 60
+        self.ui.lineEdit_collectionTime.setText('{0:02}:{1:02}:{2:02}'.format(hours, minutes, seconds))
+
+        # return if there is no new workspace to process
         if len(ws_name_list) == 0:
             return
 
@@ -770,15 +787,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if self._currSampleLogX is not None and self._currSampleLogY is not None:
                 self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
         # END-FOR
-
-        # update timer
-        curr_time = datetime.now()
-        delta_time = curr_time - self._accStartTime
-        total_seconds = int(delta_time.total_seconds())
-        hours = total_seconds / 3600
-        mins = total_seconds % 3600 / 60
-        seconds = total_seconds % 60
-        self.ui.lineEdit_collectionTime.setText('{0:02}:{1:02}:{2:02}'.format(hours, mins, seconds))
 
         return
 
@@ -881,6 +889,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self.ui.plainTextEdit_Log.setPlainText('[Error]: {0}'.format(run_err))
             return
 
+        # check whether there is any new workspace in ADS
         ws_name_set = set(ws_name_list)
         diff_set = ws_name_set - self._workspaceSet
         if len(diff_set) > 0:
@@ -911,36 +920,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.plainTextEdit_Log.appendPlainText(message)
 
         return
-
-    def test_plot_left(self):
-        """
-        test plot at the left Y axis
-        :return:
-        """
-        vec_x = numpy.arange(0, 10, 0.1, dtype='float')
-        vec_y = numpy.sin(vec_x)
-
-        self.ui.graphicsView_comparison.add_plot(vec_x, vec_y)
-        self.ui.graphicsView_comparison.setXYLimit(ymin=-1, ymax=3)
-
-        return
-
-    def test_plot_right(self):
-        """
-        test plot at the right Y axis
-        :return:
-        """
-        vec_x = numpy.arange(0, 10, 0.1, dtype='float')
-        vec_y = numpy.cos(vec_x)
-
-        self.ui.graphicsView_comparison.add_plot(vec_x, vec_y, is_right=True)
-
-    def test_update_left(self):
-        """
-        test update
-        :return:
-        """
-        raise NotImplementedError('Update Left ASAP')
 
 
 class TimerThread(QtCore.QThread):

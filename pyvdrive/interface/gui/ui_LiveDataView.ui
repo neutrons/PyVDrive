@@ -214,7 +214,7 @@
        </widget>
       </item>
       <item row="0" column="8">
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="pushButton_setROI">
         <property name="text">
          <string>Set ROI</string>
         </property>
@@ -539,7 +539,7 @@
      <x>0</x>
      <y>0</y>
      <width>1462</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
