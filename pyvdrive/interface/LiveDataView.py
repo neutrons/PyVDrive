@@ -20,7 +20,8 @@ except AttributeError:
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
 # TODO - NEW TO TEST
-# 1. 2D contour plot on different bank
+# 1. Test live plot with improved data structure
+# 2. 2D contour plot for reduced runs and in-accumulation run
 
 # Note: Atomic workspace: output_xxxx
 #       Accumulated workspace: adding output_xxx together
@@ -35,10 +36,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
-    # decide whether a new workspace shall be started
-    # TODO/ISSUE/NOW - This shall be made more flexible!
-    WORKSPACE_LIMIT = 5 * 60 / 10
-
     def __init__(self, parent, live_driver):
         """initialization
         :param parent:
@@ -57,17 +54,33 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._gpPlotSetupDialog = None
         self._myChildWindows = list()
 
-        # define data structure
-        self._myTimeStep = 10  # seconds
-        self._myWorkspaceNumber = 360  # containing 1 hour data for dT = 10 seconds
-        self._myWorkspaceList = [None] * self._myWorkspaceNumber  # a holder for workspace names
-        self._myListIndex = 0  # This is always the next index to write except in add...()
+        # collection of workspace names
+        self._workspaceSet = set()
 
-        # summed workspace list
-        self._mySummedWorkspaceList = list()   # name of summed workspaces
+        # define data structure by setting some default
+        self._myAccumulationWorkspaceNumber = 72  # default as 72 * 1/12 = 6 hours
+        self._myRefreshTimeStep = 10  # seconds
+        self._myAccumulationTime = 300  # 30 x 10 = 300 seconds = 5 min per accumulation
+        # decide whether a new workspace shall be started
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+        # containing 2 sets of incremental workspaces for safe
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2
+        # incremental workspace list
+        self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
+        self._myIncrementalListIndex = 0  # This is always the next index to write except in add...()
+        # summed workspace list and index for accumulated workspaces
+        self._myAccumulationWorkspaceList = [None] * self._myAccumulationWorkspaceNumber  # name of summed workspaces
+        self._myAccumulationListIndex = 0
 
-        # index for accumulated workspaces
-        self._currAccumulateIndex = 0
+        # GSAS workspaces recorded in dictionary: key = run number, value = workspace name
+        self._myGSASWorkspaceDict = dict()
+        self._myMaxGSASWorkspaceNumber = 100  # only the latest will be recorded.
+
+        # workspace manager for accumulating operation
+        # workspace that is currently in accumulation
+        self._inAccumulationWorkspaceName = None
+        self._inAccumulationIncrementalWorkspaceList = list()  # list of accumulated workspace
+
         # about previous round pot
         self._plotPrevCycleName = None
         # Bank ID (current): shall be updated with event to handle change of bank ID selection
@@ -131,13 +144,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # multiple thread pool
         self._checkStateTimer = None
 
-        # collection of workspace names
-        self._workspaceSet = set()
-
-        # accumulated workspace
-        self._accumulatedWorkspace = None
-        self._accumulatedList = list()  # list of accumulated workspace
-
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
                                  2: self.ui.graphicsView_currentViewB2,
@@ -171,6 +177,52 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    # TODO/NOW/TEST - In implement
+    def _set_workspace_manager(self, max_acc_ws_number, accumulation_time, update_time):
+        """
+        set the workspace numbers, indicators and etc.
+        Note: all the time given will be in seconds
+        :param max_acc_ws_number: number of accumulated workspace that will be stored in memory
+        :param accumulation_time: for long run, the time for a chopped section, i.e., an accumulation workspace's time
+        :param update_time: frequency for update
+        :return:
+        """
+        # check inputs
+        assert isinstance(max_acc_ws_number, int), 'blabla 1'
+        assert isinstance(accumulation_time, int), 'blabla 2'
+        assert isinstance(update_time, int), 'blabla 3'
+
+        # logic check
+        if max_acc_ws_number < 2:
+            raise RuntimeError('Maximum accumulation workspace number (now {0}) must be larger or equal to 2.'
+                               ''.format(max_acc_ws_number))
+        if update_time <= 0:
+            raise RuntimeError('Update/refresh time (in second) {0} must be a positive integer.'.format(update_time))
+        if accumulation_time < update_time:
+            raise RuntimeError('Accumulation time {0} cannot be shorted than update time {1}.'
+                               ''.format(accumulation_time, update_time))
+
+        # set as all the inputs are validated
+        self._myAccumulationWorkspaceNumber = max_acc_ws_number
+        self._myRefreshTimeStep = update_time
+        if accumulation_time % update_time == 0:
+            self._myAccumulationTime = accumulation_time
+        else:
+            # accumulation time is not a multiplication to update/refresh time
+            self._myAccumulationTime = (self._myAccumulationTime/self._myRefreshTimeStep + 1) * self._myRefreshTimeStep
+            # TODO/ISSUE/NOW - Implement write_log and refactor
+            self.write_log(level='warning', message='Accumulation time is modified to {0}'
+                                                    ''.format(self._myAccumulationTime))
+        # END-IF
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2  # leave some space
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+
+        # set the lists
+        self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber
+        self._myAccumulationWorkspaceList = [None] * self._myAccumulationWorkspaceNumber
+
+        return
+
     def _set_bank_checkbox(self):
         """
         uncheck all the checkboxes for bank ID
@@ -181,6 +233,21 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_2dBank2.setChecked(False)
         self.ui.checkBox_2dBank3.setChecked(False)
         self._bankSelectMutex = False
+
+        return
+
+    @property
+    def plotrun(self):
+        return self._plotRun
+
+    @plotrun.setter
+    def plotrun(self, state):
+        """
+        set to plot run
+        :param state:
+        :return:
+        """
+        self._plotRun = state
 
         return
 
@@ -299,18 +366,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # replace previous one
-        if self._myWorkspaceList[self._myListIndex] is not None:
-            prev_ws_name = self._myWorkspaceList[self._myListIndex]
+        if self._myIncrementalWorkspaceList[self._myIncrementalListIndex] is not None:
+            prev_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex]
             self._controller.delete_workspace(prev_ws_name)
 
         # set the new one
-        self._myWorkspaceList[self._myListIndex] = ws_name
+        self._myIncrementalWorkspaceList[self._myIncrementalListIndex] = ws_name
 
         # update index
-        self._myListIndex += 1
-        if self._myListIndex == len(self._myWorkspaceList):
-            self._myListIndex = 0
-        elif self._myListIndex > len(self._myWorkspaceList):
+        self._myIncrementalListIndex += 1
+        if self._myIncrementalListIndex == len(self._myIncrementalWorkspaceList):
+            self._myIncrementalListIndex = 0
+        elif self._myIncrementalListIndex > len(self._myIncrementalWorkspaceList):
             raise RuntimeError("Impossible for myListIndex")
 
         return
@@ -364,7 +431,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._gpPlotSetupDialog = SampleLogPlotSetupDialog(self)
 
         # get axis
-        curr_ws_name = self._myWorkspaceList[self._myListIndex-1]
+        curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
         logs = helper.get_sample_log_names(curr_ws_name, smart=True)
         x_axis_logs = ['Time']
         # TODO/LATER: x_axis_logs.extend(logs)
@@ -389,7 +456,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # start timer
-        self._checkStateTimer = TimerThread(self._myTimeStep, self)
+        self._checkStateTimer = TimerThread(self._myRefreshTimeStep, self)
         self._checkStateTimer.start()
 
         # start start listener
@@ -461,13 +528,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         ws_index_list = list()
         for last_i in range(1, last+1):
             # get current workspace's position in the list
-            ws_list_index = self._myListIndex - last_i
+            ws_list_index = self._myIncrementalListIndex - last_i
             if ws_list_index < 0:
                 # loop back to the end of the list
-                ws_list_index += len(self._myWorkspaceList)
+                ws_list_index += len(self._myIncrementalWorkspaceList)
 
             # get workspace name
-            ws_name_i = self._myWorkspaceList[ws_list_index]
+            ws_name_i = self._myIncrementalWorkspaceList[ws_list_index]
             if ws_name_i is None:
                 # print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace
                 # names are {3}' \
@@ -539,13 +606,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.plainTextEdit_Log.appendPlainText('[INFO] Plot in-accumulation data of unit {0}'.format(target_unit))
 
         # check
-        if self._accumulatedWorkspace is None:
+        if self._inAccumulationWorkspaceName is None:
             self.ui.plainTextEdit_Log.appendPlainText('[WARNING] No in-accumulation workspace in ADS.')
             return
 
         # get the workspace names
         in_sum_name = '_temp_curr_ws_{0}'.format(random.randint(1, 10000))
-        in_sum_ws, is_new_ws = self._controller.convert_unit(self._accumulatedWorkspace, target_unit, in_sum_name)
+        in_sum_ws, is_new_ws = self._controller.convert_unit(self._inAccumulationWorkspaceName, target_unit, in_sum_name)
 
         # plot
         for bank_id in range(1, 4):
@@ -590,14 +657,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # plot previous ones
         prev_ws_index = -1 - int(self.ui.lineEdit_showPrevNCycles.text())
-        if len(self._mySummedWorkspaceList) < abs(prev_ws_index):
+        if len(self._myAccumulationWorkspaceList) < abs(prev_ws_index):
             self.ui.plainTextEdit_Log.appendPlainText(
                 'There are only {0} previously accumulated and reduced workspace.  '
-                'Unable to access previously {1}-th workspace.'.format(len(self._mySummedWorkspaceList),
-                                                                       abs(prev_ws_index)-1))
+                'Unable to access previously {1}-th workspace.'.format(len(self._myAccumulationWorkspaceList),
+                                                                       abs(prev_ws_index) - 1))
             return
         else:
-            prev_ws = self._mySummedWorkspaceList[prev_ws_index]
+            prev_ws = self._myAccumulationWorkspaceList[prev_ws_index]
             prev_ws_name = prev_ws.name()
 
         # skip if the previous plotted is sam
@@ -791,53 +858,65 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
     def sum_incremental_workspaces(self, workspace_i):
-        """
-
+        """sum up the incremental workspace to an accumulated workspace
+        :param workspace_i: a MatrixWorkspace instance
         :return:
         """
-        ws_name = workspace_i.name()
-        if self._accumulatedWorkspace is None or len(self._accumulatedList) == VulcanLiveDataView.WORKSPACE_LIMIT:
-            # reset if pre-existing of accumulated workspace
-            self._accumulatedList = list()
+        try:
+            ws_name = workspace_i.name()
+        except AttributeError as att_err:
+            raise RuntimeError('Input workspace {0} of type {1} is not a MatrixWorkspace: Error {2}'
+                               ''.format(workspace_i, type(workspace_i), att_err))
+
+        if self._inAccumulationWorkspaceName is None or \
+                        len(self._inAccumulationIncrementalWorkspaceList) == self._myMaxIncrementalNumber:
+            # reset if pre-existing of accumulated workspace. It is a time of a new accumulation workspace
+            self._inAccumulationIncrementalWorkspaceList = list()
 
             # clone workspace
-            accumulate_name = 'Accumulated_{0}'.format(self._currAccumulateIndex)
-            self._accumulatedWorkspace = helper.clone_workspace(ws_name, accumulate_name)
+            accumulate_name = 'Accumulated_{0}'.format(self._myAccumulationListIndex)
+            self._inAccumulationWorkspaceName = helper.clone_workspace(ws_name, accumulate_name)
 
-            # append to list
-            self._mySummedWorkspaceList.append(self._accumulatedWorkspace)
+            # add to list
+            list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber
+            if self._myAccumulationWorkspaceList[list_index] is not None:
+                self._controller.delete_workspace(self._myAccumulationWorkspaceList[list_index])
+            self._myAccumulationWorkspaceList[list_index] = accumulate_name
 
-            # restart time
+            # restart timer
             self._accStartTime = datetime.now()
 
+            # increase list index
+            self._myAccumulationListIndex += 1
+
         else:
-            # add to existing
-            if self._accumulatedWorkspace.getNumberHistograms() != workspace_i.getNumberHistograms():
+            # add to existing accumulation workspace
+            if self._inAccumulationWorkspaceName.getNumberHistograms() != workspace_i.getNumberHistograms():
                 raise RuntimeError('Accumulated workspace {0} has different number of spectra ({1}) than the '
                                    'incremental workspace {2} ({3}).'
-                                   ''.format(self._accumulatedWorkspace.name(),
-                                             self._accumulatedWorkspace.getNumberHistograms(),
+                                   ''.format(self._inAccumulationWorkspaceName.name(),
+                                             self._inAccumulationWorkspaceName.getNumberHistograms(),
                                              workspace_i.getNumberHistograms.name(),
                                              workspace_i.getNumberHistograms()))
 
             for iws in range(workspace_i.getNumberHistograms()):
-                if len(self._accumulatedWorkspace.readY(iws)) != len(workspace_i.readY(iws)):
+                if len(self._inAccumulationWorkspaceName.readY(iws)) != len(workspace_i.readY(iws)):
                     raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
                                        'incremental workspace {3} ({4}).'
-                                       ''.format(iws, self._accumulatedWorkspace.name(),
-                                                 len(self._accumulatedWorkspace.readX(iws)),
+                                       ''.format(iws, self._inAccumulationWorkspaceName.name(),
+                                                 len(self._inAccumulationWorkspaceName.readX(iws)),
                                                  workspace_i.name(),
                                                  len(workspace_i.readX(iws))))
                 # END-IF
 
-                self._accumulatedWorkspace.setY(iws, self._accumulatedWorkspace.readY(iws) + workspace_i.readY(iws))
+                self._inAccumulationWorkspaceName.setY(iws, self._inAccumulationWorkspaceName.readY(iws) + workspace_i.readY(iws))
             # END-iws
 
             # update the workspace
-            self._mySummedWorkspaceList[-1] = self._accumulatedWorkspace
+            self._myAccumulationWorkspaceList[-1] = self._inAccumulationWorkspaceName
 
         # update the list of source accumulated workspace
-        self._accumulatedList.append(ws_name)
+        self._inAccumulationIncrementalWorkspaceList.append(ws_name)
 
         return
 
@@ -902,13 +981,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.process_new_workspaces(new_ws_name_list)
 
         # update GUI
-        self.ui.spinBox_currentIndex.setValue(self._currAccumulateIndex)
+        self.ui.spinBox_currentIndex.setValue(self._myAccumulationListIndex)
         total_index = self._controller.get_live_counter()
         self.ui.spinBox_totalIndex.setValue(total_index)
 
         # print '[UI-DB] Acc Index = {0}, Total Index = {1}'.format(self._currAccumulateIndex, total_index)
 
-        self._currAccumulateIndex += 1
+        # some counter += 1
 
         # message = '{0}\nNew Workspace: {1}'.format(ws_name_list, new_ws_name_list)
         message = ''
