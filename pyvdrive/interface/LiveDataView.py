@@ -60,7 +60,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # define data structure by setting some default
         self._myAccumulationWorkspaceNumber = 72  # default as 72 * 1/12 = 6 hours
         self._myRefreshTimeStep = 10  # seconds
-        self._myAccumulationTime = 300  # 30 x 10 = 300 seconds = 5 min per accumulation
+        self._myAccumulationTime = 30  # 30 x 10 = 300 seconds = 5 min per accumulation
         # decide whether a new workspace shall be started
         self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
         # containing 2 sets of incremental workspaces for safe
@@ -151,7 +151,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # timer for accumulation start time
         self._accStartTime = datetime.now()
+
+        # list of run numbers to process
         self._processedRunNumberList = list()
+
+        # flag for 2D plotting
+        self._2dMode = 'acc'  # options are 'acc', 'runs', 'unit' (for each refreshed workspace)
 
         # mutexes
         self._bankSelectMutex = False
@@ -556,7 +561,68 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def menu_launch_setup(self):
         # TODO/TODO/ISSUE/NOW
+        import LiveDataChildWindows
+
+        self._liveSetupDialog = LiveDataChildWindows.LiveViewSetupDialog(self)
+        self._liveSetupDialog.show()
+
         return
+
+    def get_last_n_acc_data(self, last, bank_id):
+        """
+        get last n accumulation data including the current one
+        :param last:
+        :param bank_id:
+        :return:
+        """
+        # check inputs' types
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        if not 1 <= bank_id <= 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
+
+        assert isinstance(last, int), 'blabla'
+        if last < 2:
+            raise RuntimeError('blabla')
+
+        # collect last N accumulated
+        print '[DB...BAT] Get Last {0} Accumulated Data'.format(last)
+
+        acc_data_dict = dict()
+        prev_acc_index = self._myAccumulationListIndex
+        debug_info = ''
+        for inverse_index in range(last):
+            # start from self._myAccumulationListIndex - 1
+            list_index = self._myAccumulationListIndex - 1 - inverse_index
+            ws_name_i = self._myAccumulationWorkspaceList[list_index]
+            print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
+                  ''.format(inverse_index, list_index, self._myAccumulationListIndex, self._inAccumulationWorkspaceName)
+
+            if ws_name_i is None:
+                # no workspace is set for that
+                break
+
+            # get the accumulation index of the workspace
+            acc_index = int(ws_name_i.split('_')[-1])
+            debug_info += '{0}: {1} | '.format(acc_index, ws_name_i)
+            if acc_index >= prev_acc_index:
+                # buffer is smaller than the number of acc required and limit is reached
+                break
+            else:
+                prev_acc_index = acc_index
+
+            # get data from memory
+            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name_i,
+                                                                         bank_id=bank_id, target_unit='dSpacing',
+                                                                         point_data=True, start_bank_id=1)
+            acc_data_dict[acc_index] = data_set_dict[bank_id]
+        # END-FOR
+
+        # TODO/NOW - to method
+        debug_info += '\n'
+        self.ui.plainTextEdit_Log.appendPlainText(debug_info)
+
+        return acc_data_dict
 
     def get_last_n_round_data(self, last, bank_id):
         """
@@ -639,7 +705,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def plot_data_previous_cycle(self):
         """
-        plot data collected and reduced in previous cycles
+        plot data collected and reduced in previous accumulated workspace
         this method has no idea whether it should keep the previous reduced plot or not
         :return:
         """
@@ -655,20 +721,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             return
         # END-IF
 
-        # plot previous ones
-        prev_ws_index = -1 - int(self.ui.lineEdit_showPrevNCycles.text())
-        if len(self._myAccumulationWorkspaceList) < abs(prev_ws_index):
+        # get the previous-N cycle accumulated workspace's name: remember that currentIndex is 1 beyond what it is
+        prev_ws_index = self._myAccumulationListIndex - 1 - int(self.ui.lineEdit_showPrevNCycles.text())
+        if self._myAccumulationWorkspaceList[prev_ws_index] is None:
+            # minor/TODO/NOW - refactor to method
             self.ui.plainTextEdit_Log.appendPlainText(
                 'There are only {0} previously accumulated and reduced workspace.  '
                 'Unable to access previously {1}-th workspace.'.format(len(self._myAccumulationWorkspaceList),
                                                                        abs(prev_ws_index) - 1))
             return
+
         else:
-            prev_ws = self._myAccumulationWorkspaceList[prev_ws_index]
-            prev_ws_name = prev_ws.name()
+            prev_ws_name = self._myAccumulationWorkspaceList[prev_ws_index]
+        # END-IF-ELSE
 
         # skip if the previous plotted is sam
         if prev_ws_name == self._plotPrevCycleName:
+            # minor/TODO/NOW - refactor to method
             debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
                             ''.format(prev_ws_name)
             self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
@@ -676,10 +745,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         else:
             self._plotPrevCycleName = prev_ws_name
 
+        # plot previous ones
+
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
         prev_ws_name_tmp = '_temp_prev_ws_{0}'.format(random.randint(1, 10000))
-        prev_ws, is_new_ws = self._controller.convert_unit(prev_ws, target_unit, prev_ws_name_tmp)
+        prev_ws, is_new_ws = self._controller.convert_unit(prev_ws_name, target_unit, prev_ws_name_tmp)
 
         # plot
         line_label = '{0}'.format(prev_ws_name)
@@ -717,9 +788,19 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return time_vec, log_value_vec
 
+    def plot_new_log_live(self, x_axis_name, y_axis_name):
+        # TODO/NOW/TODO/IMPLEMENT
+
+        # start from the current in-accumulation run
+        blabla
+
+        # trace back to previously accumulated runs until run number changed to non-zero
+        blabla
+
     def plot_log_live(self, x_axis_name, y_axis_name):
         """
         Plot a sample log in live time
+        Note: this model works in most case except a new sample log is chosen to
         Required class variables
           - self._currSampleLog = None
           - self._currSampleLogTimeVector = None
@@ -728,13 +809,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param y_axis_name:
         :return:
         """
-        # parse the user-specified X and Y axis name
-        x_axis_name = str(x_axis_name)
-        y_axis_name = str(y_axis_name)
-
-        # process name in case of 'name (#)'
-        x_axis_name = x_axis_name.split('(')[0].strip()
-        y_axis_name = y_axis_name.split('(')[0].strip()
+        # parse the user-specified X and Y axis name and process name in case of 'name (#)'
+        x_axis_name = str(x_axis_name).split('(')[0].strip()
+        y_axis_name = str(y_axis_name).split('(')[0].strip()
 
         # determine to append or start from new
         if self._currSampleLogX != x_axis_name or self._currSampleLogY != y_axis_name \
@@ -827,6 +904,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # add new workspace to data manager
             self.add_new_workspace(ws_name_i)
 
+            # update info
+            self.ui.lineEdit_newestReducedWorkspace.setText(ws_name_i)
+
             # get reference to workspace
             workspace_i = helper.retrieve_workspace(ws_name_i)
             run_number_i = workspace_i.getRunNumber()
@@ -875,13 +955,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # clone workspace
             accumulate_name = 'Accumulated_{0}'.format(self._myAccumulationListIndex)
-            self._inAccumulationWorkspaceName = helper.clone_workspace(ws_name, accumulate_name)
+            helper.clone_workspace(ws_name, accumulate_name)
+            self._inAccumulationWorkspaceName = accumulate_name
 
             # add to list
             list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber
             if self._myAccumulationWorkspaceList[list_index] is not None:
                 self._controller.delete_workspace(self._myAccumulationWorkspaceList[list_index])
             self._myAccumulationWorkspaceList[list_index] = accumulate_name
+            print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
+                  ''.format(list_index, self._myAccumulationWorkspaceList[list_index])
 
             # restart timer
             self._accStartTime = datetime.now()
@@ -889,31 +972,39 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # increase list index
             self._myAccumulationListIndex += 1
 
+            # set the info
+            self.ui.lineEdit_inAccWsName.setText(self._inAccumulationWorkspaceName)
+            self.ui.spinBox_currentIndex.setValue(self._myAccumulationListIndex)
+
         else:
             # add to existing accumulation workspace
-            if self._inAccumulationWorkspaceName.getNumberHistograms() != workspace_i.getNumberHistograms():
+            ws_in_acc = helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
+
+            # more check on histogram number and spectrum size
+            if ws_in_acc.getNumberHistograms() != workspace_i.getNumberHistograms():
                 raise RuntimeError('Accumulated workspace {0} has different number of spectra ({1}) than the '
                                    'incremental workspace {2} ({3}).'
-                                   ''.format(self._inAccumulationWorkspaceName.name(),
-                                             self._inAccumulationWorkspaceName.getNumberHistograms(),
+                                   ''.format(self._inAccumulationWorkspaceName,
+                                             ws_in_acc.getNumberHistograms(),
                                              workspace_i.getNumberHistograms.name(),
                                              workspace_i.getNumberHistograms()))
 
+            # TODO/NOW - use Plus to replace
+            # Plus(LHSWorkspace=self._inAccumulationWorkspaceName, RHSWorkspace=b, OutputWorkspacex=c)
+
             for iws in range(workspace_i.getNumberHistograms()):
-                if len(self._inAccumulationWorkspaceName.readY(iws)) != len(workspace_i.readY(iws)):
+                if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
                     raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
                                        'incremental workspace {3} ({4}).'
-                                       ''.format(iws, self._inAccumulationWorkspaceName.name(),
-                                                 len(self._inAccumulationWorkspaceName.readX(iws)),
+                                       ''.format(iws, self._inAccumulationWorkspaceName,
+                                                 len(ws_in_acc.readX(iws)),
                                                  workspace_i.name(),
                                                  len(workspace_i.readX(iws))))
                 # END-IF
 
-                self._inAccumulationWorkspaceName.setY(iws, self._inAccumulationWorkspaceName.readY(iws) + workspace_i.readY(iws))
+                ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
             # END-iws
-
-            # update the workspace
-            self._myAccumulationWorkspaceList[-1] = self._inAccumulationWorkspaceName
+        # END-IF-ELSE
 
         # update the list of source accumulated workspace
         self._inAccumulationIncrementalWorkspaceList.append(ws_name)
@@ -947,7 +1038,20 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # get the last N time-intervals and create the meshdata
         last_n_run = parse_set_last_n()
         # retrieve data
-        data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
+
+        # TODO/ISSUE/NOW/FIXME - It is in a debug mode
+        self._2dMode = 'acc'                        #
+        # --------------------------------------------
+
+        if self._2dMode == 'unit':
+            data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
+        elif self._2dMode == 'acc':
+            # plot accumulations
+            data_set_dict = self.get_last_n_acc_data(last_n_run, bank_id=bank_id)
+        elif self._2dMode == 'runs':
+            data_set_dict = self.get_last_n_runs_data(last_n_run, bank_id=bank_id)
+        else:
+            raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
 
         # plot
         if len(data_set_dict) > 1:
@@ -981,7 +1085,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.process_new_workspaces(new_ws_name_list)
 
         # update GUI
-        self.ui.spinBox_currentIndex.setValue(self._myAccumulationListIndex)
         total_index = self._controller.get_live_counter()
         self.ui.spinBox_totalIndex.setValue(total_index)
 

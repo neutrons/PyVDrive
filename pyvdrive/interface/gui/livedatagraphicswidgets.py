@@ -51,8 +51,13 @@ class Live2DView(MplGraphicsView2D):
         size_x = len(vec_x)
 
         # build mesh and matrix y
-        grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
-        matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
+        # grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
+        # print '[DB...BAT] original size: {0}, {1} and grid shape = {2}'.format(len(vec_x), len(vec_y), grid_x.shape)
+        # original size: 2257, 2 and grid shape = (2, 2257)
+        # matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
+
+        grid_shape = len(vec_y), len(vec_x)
+        matrix_y = numpy.ndarray(grid_shape, dtype='float')
         for index in vec_y:
             # vector X
             vec_x_i = data_set_dict[index][0]
@@ -111,6 +116,8 @@ class SingleBankView(MplGraphicsView):
 
         :return:
         """
+        # TODO/ISSUE/NOW - Use update instead of delete and move
+
         # delete previous one (if they are different)
         if self._previousRunID is not None:
             self.remove_line(self._previousRunID)
@@ -131,6 +138,8 @@ class SingleBankView(MplGraphicsView):
         update/plot current accumulated
         :return:
         """
+        # TODO/ISSUE/NOW - Use update instead of delete and move
+
         # remove existing line
         if self._currentRunID is not None:
             self.remove_line(self._currentRunID)

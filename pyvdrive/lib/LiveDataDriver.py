@@ -97,6 +97,8 @@ class LiveDataDriver(QtCore.QThread):
 
         # convert workspace to workspace
         if isinstance(src_ws, str):
+            if ADS.doesExist(src_ws) is False:
+                raise RuntimeError('blabla')
             src_ws = ADS.retrieve(src_ws)
 
         # check units
@@ -173,6 +175,10 @@ class LiveDataDriver(QtCore.QThread):
             raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
         
         return ws_names
+
+    def load_reduced_runs(self, ipts_number, run_number):
+        # TODO/NOW/Implement
+        blabla
 
     # TODO/TEST/New Method
     @staticmethod

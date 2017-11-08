@@ -1,6 +1,47 @@
 from PyQt4 import QtCore, QtGui
 import gui.GuiUtility as GuiUtility
 import gui.ui_LiveDataGPPlotSetup_ui as dialog_ui
+import gui.ui_LiveDataViewSetup_ui as SetupDialogUi
+
+
+class LiveViewSetupDialog(QtGui.QDialog):
+    """
+    blabla
+    """
+    def __init__(self, parent):
+        super(LiveViewSetupDialog, self).__init__(parent)
+
+        self.ui = SetupDialogUi.Ui_Dialog()
+        self.ui.setupUi(self)
+
+        self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
+                     self.toggle_options)
+
+        return
+
+    def do_set_refresh_rate(self):
+        # TODO/NOW
+        self.ui.pushButton_setRefreshRate
+        self.ui.lineEdit_updateFreq
+
+    def do_set_acc_plot(self):
+        # TODO/NOW
+        self.ui.pushButton_setLiveUpdate
+        self.ui.lineEdit_maxRunTime
+        self.ui.lineEdit_collectionPeriod
+
+    def do_set_run_view(self):
+        # TODO/NOW
+        self.ui.pushButton_setupMix2D
+        self.ui.lineEdit_run0
+
+    def do_quit(self):
+        self.ui.pushButton_quit
+
+    def toggle_options(self):
+
+        self.ui.radioButton_plotAcc
+        self.ui.radioButton_plotRun
 
 
 class SampleLogPlotSetupDialog(QtGui.QDialog):
