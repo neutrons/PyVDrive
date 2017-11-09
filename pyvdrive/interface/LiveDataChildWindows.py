@@ -6,42 +6,113 @@ import gui.ui_LiveDataViewSetup_ui as SetupDialogUi
 
 class LiveViewSetupDialog(QtGui.QDialog):
     """
-    blabla
+    A dialog to set up the Live data viewing parameters
     """
     def __init__(self, parent):
+        """
+        initialization
+        :param parent:
+        """
+        # call base
         super(LiveViewSetupDialog, self).__init__(parent)
 
+        # my parent
+        self._myParent = parent
+
+        # UI
         self.ui = SetupDialogUi.Ui_Dialog()
         self.ui.setupUi(self)
+
+        # define the event handlers
+        self.connect(self.ui.pushButton_setRefreshRate, QtCore.SIGNAL('clicked()'),
+                     self.do_set_refresh_rate)
+        self.connect(self.ui.pushButton_setLiveUpdate, QtCore.SIGNAL('clicked()'),
+                     self.do_set_acc_plot)
+        self.connect(self.ui.pushButton_setupMix2D, QtCore.SIGNAL('clicked()'),
+                     self.do_set_run_view)
+        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+                     self.do_quit)
 
         self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
                      self.toggle_options)
 
+        # initialize some widget
+        self.ui.radioButton_plotAcc.setChecked(True)
+        self.ui.radioButton_plotRun.setChecked(False)
+
         return
 
     def do_set_refresh_rate(self):
-        # TODO/NOW
-        self.ui.pushButton_setRefreshRate
-        self.ui.lineEdit_updateFreq
+        """
+        set the update/refresh rate in unit as second
+        :return:
+        """
+        try:
+            refresh_unit_time = int(str(self.ui.lineEdit_updateFreq.text()))
+            self._myParent.set_refresh_rate(refresh_unit_time)
+        except ValueError as value_err:
+            raise RuntimeError('Update/refresh time step {0} cannot be parsed to an integer due to {1}.'
+                               ''.format(self.ui.lineEdit_updateFreq.text(), value_err))
+
+        return
 
     def do_set_acc_plot(self):
-        # TODO/NOW
-        self.ui.pushButton_setLiveUpdate
-        self.ui.lineEdit_maxRunTime
-        self.ui.lineEdit_collectionPeriod
+        """
+        set the accumulation/update unit
+        :return:
+        """
+        try:
+            accum_time = int(str(self.ui.lineEdit_collectionPeriod.text()))
+            self._myParent.set_accumulation_time(accum_time)
+        except ValueError as value_err:
+            raise RuntimeError('Accumulation time {0} cannot be parsed to an integer due to {1}.'
+                               ''.format(str(self.ui.lineEdit_collectionPeriod.text()), value_err))
+
+        return
 
     def do_set_run_view(self):
-        # TODO/NOW
-        self.ui.pushButton_setupMix2D
-        self.ui.lineEdit_run0
+        """
+        set up the parameters that are required for showing reduced run in 2D view
+        :return:
+        """
+        try:
+            max_time = int(str(self.ui.lineEdit_maxRunTime.text()))
+            start_run = int(str(self.ui.lineEdit_run0.text()))
+
+            self._myParent.set_accumulation_time(max_time)
+            self._myParent.set_plot_run(True, start_run)
+
+        except ValueError as value_err:
+            raise RuntimeError('Unable to set up maximum accumulation time and '
+                               'start run due to {0}'.format(value_err))
+
+        return
 
     def do_quit(self):
-        self.ui.pushButton_quit
+        """
+        quit the window
+        :return:
+        """
+        self.close()
 
     def toggle_options(self):
+        """
+        toggle the widgets between long-run live update and short-run reduced data
+        :return:
+        """
+        enable_group1 = self.ui.radioButton_plotAcc.isChecked()
+        enable_group2 = self.ui.radioButton_plotRun.isChecked()
 
-        self.ui.radioButton_plotAcc
-        self.ui.radioButton_plotRun
+        # group 1
+        self.ui.pushButton_setLiveUpdate.setEnabled(enable_group1)
+        self.ui.lineEdit_maxRunTime.setEnabled(enable_group1)
+        self.ui.lineEdit_collectionPeriod.setEnabled(enable_group1)
+
+        # group 2
+        self.ui.pushButton_setupMix2D.setEnabled(enable_group2)
+        self.ui.lineEdit_run0.setEnabled(enable_group2)
+
+        return
 
 
 class SampleLogPlotSetupDialog(QtGui.QDialog):

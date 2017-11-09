@@ -48,7 +48,6 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
-    # TODO/TEST/New Method
     @staticmethod
     def convert_time_stamps(date_time_vec, relative):
         """convert a vector of DateAndTime instance to a vector of double as relative
@@ -177,10 +176,10 @@ class LiveDataDriver(QtCore.QThread):
         return ws_names
 
     def load_reduced_runs(self, ipts_number, run_number):
-        # TODO/NOW/Implement
+        # TODO/NOW/TODO/Implement
         blabla
 
-    # TODO/TEST/New Method
+    # TEST TODO/New Method
     @staticmethod
     def parse_sample_log(ws_name_list, sample_log_name):
         """parse the sample log time stamps and value from a series of workspaces
@@ -226,6 +225,41 @@ class LiveDataDriver(QtCore.QThread):
         # END-FOR (workspaces)
 
         return date_time_vec, sample_value_vec
+
+    @staticmethod
+    def sum_workspaces(workspace_name_list, target_workspace_name):
+        """
+        sum workspaces together
+        example: [self._inAccumulationWorkspaceName, workspace_i],  self._inAccumulationWorkspaceName)
+        :param workspace_name_list:
+        :param target_workspace_name:
+        :return:
+        """
+        # TODO/NOW - validate input
+        # blabla
+
+        if len(workspace_name_list) != 2:
+            raise RuntimeError('Prototype must have 2 inputs')
+
+        if True:
+            mantidsimple.Plus(LHSWorkspace=workspace_name_list[0], RHSWorkspace=workspace_name_list[1],
+                              OutputWorkspace=target_workspace_name)
+        else:
+            # old method
+            ws_in_acc = mantid_helper.retrieve_workspace(workspace_name_list[0])
+            workspace_i = mantid_helper.retrieve_workspace(target_workspace_name[1])
+            for iws in range(workspace_i.getNumberHistograms()):
+                if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
+                    raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
+                                       'incremental workspace {3} ({4}).'
+                                       ''.format(iws, workspace_name_list[0], len(ws_in_acc.readX(iws)),
+                                                 workspace_i.name(), len(workspace_i.readX(iws))))
+                # END-IF
+                ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
+            # END-FOR
+        # END-IF-ELSE
+
+        return
 
     def run(self):
         """ main method to start live data

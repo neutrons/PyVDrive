@@ -6,10 +6,12 @@ import time
 import numpy
 
 from LiveDataChildWindows import SampleLogPlotSetupDialog
+from LiveDataChildWindows import LiveViewSetupDialog
 import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
+
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -52,6 +54,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # sub window
         self._workspaceView = None
         self._gpPlotSetupDialog = None
+        self._liveSetupDialog = None
         self._myChildWindows = list()
 
         # collection of workspace names
@@ -146,7 +149,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
-                                 2: self.ui.graphicsView_currentViewB2,
+                                 2: self.              ui.graphicsView_currentViewB2,
                                  3: self.ui.graphicsView_currentViewB3}
 
         # timer for accumulation start time
@@ -157,6 +160,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # flag for 2D plotting
         self._2dMode = 'acc'  # options are 'acc', 'runs', 'unit' (for each refreshed workspace)
+        # about 'runs' option
+        self._2dStartRunNumber = None
 
         # mutexes
         self._bankSelectMutex = False
@@ -182,7 +187,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    # TODO/NOW/TEST - In implement
+    # TEST TODO/NOW - recently implemented
     def _set_workspace_manager(self, max_acc_ws_number, accumulation_time, update_time):
         """
         set the workspace numbers, indicators and etc.
@@ -446,12 +451,26 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    # TEST TODO - newly implemented
     def do_set_roi(self):
-        """
-        blabla
+        """ set the region of interest by set the X limits on the canvas
         :return:
         """
-        # TODO/ISSUE/TODO/FIXME - ASAP
+        try:
+            left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
+            self.ui.graphicsView_currentViewB1.setXYLimit(x_min=left_x_bound)
+            self.ui.graphicsView_currentViewB2.setXYLimit(x_min=left_x_bound)
+            self.ui.graphicsView_currentViewB3.setXYLimit(x_min=left_x_bound)
+        except ValueError:
+            pass
+
+        try:
+            right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
+            self.ui.graphicsView_currentViewB1.setXYLimit(x_max=right_x_bound)
+            self.ui.graphicsView_currentViewB2.setXYLimit(x_max=right_x_bound)
+            self.ui.graphicsView_currentViewB3.setXYLimit(x_max=right_x_bound)
+        except ValueError:
+            pass
 
         return
 
@@ -560,10 +579,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return ws_name_list, ws_index_list
 
     def menu_launch_setup(self):
-        # TODO/TODO/ISSUE/NOW
-        import LiveDataChildWindows
+        """
+        launch live data setup dialog
+        :return:
+        """
+        if self._liveSetupDialog is None:
+            self._liveSetupDialog = LiveViewSetupDialog(self)
+            self._myChildWindows.append(self._liveSetupDialog)
 
-        self._liveSetupDialog = LiveDataChildWindows.LiveViewSetupDialog(self)
         self._liveSetupDialog.show()
 
         return
@@ -937,6 +960,62 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def set_accumulation_time(self, accumulation_time):
+        """
+        set the accumulation time
+        :param accumulation_time:
+        :return:
+        """
+        # check
+        assert isinstance(accumulation_time, int), 'blabla2'
+
+        self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
+                                    accumulation_time=accumulation_time,
+                                    update_time=self._myRefreshTimeStep)
+
+        return
+
+    def set_plot_run(self, plot_runs, start_run):
+        """
+        set the 2D figure to plot reduced runs instead of accumulated live data
+        :param plot_runs:
+        :param start_run:
+        :return:
+        """
+        # check inputs
+        assert isinstance(plot_runs, bool), 'blabla5'
+
+        # set!
+        if plot_runs:
+            # plot reduced runs in 2D view
+            self._2dMode = 'runs'
+            assert isinstance(start_run, int), 'blabla8'
+
+            if start_run <= 0:
+                raise RuntimeError('Starting run number {0} cannot be less than 1.'.format(start_run))
+
+            self._2dStartRunNumber = start_run
+        else:
+            # plot regular ones
+            self._2dMode = 'acc'
+
+        return
+
+    def set_refresh_rate(self, update_period):
+        """
+        set the refresh rate
+        :param update_period:
+        :return:
+        """
+        # check
+        assert isinstance(update_period, int), 'blabla3'
+
+        self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
+                                    accumulation_time=self._myAccumulationTime,
+                                    update_time=update_period)
+
+        return
+
     def sum_incremental_workspaces(self, workspace_i):
         """sum up the incremental workspace to an accumulated workspace
         :param workspace_i: a MatrixWorkspace instance
@@ -988,21 +1067,26 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                              ws_in_acc.getNumberHistograms(),
                                              workspace_i.getNumberHistograms.name(),
                                              workspace_i.getNumberHistograms()))
+            # END-IF (test)
 
-            # TODO/NOW - use Plus to replace
-            # Plus(LHSWorkspace=self._inAccumulationWorkspaceName, RHSWorkspace=b, OutputWorkspacex=c)
+            # sum 2 workspaces together
+            self._controller.sum_workspaces([self._inAccumulationWorkspaceName, workspace_i],
+                                            self._inAccumulationWorkspaceName)
 
-            for iws in range(workspace_i.getNumberHistograms()):
-                if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
-                    raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
-                                       'incremental workspace {3} ({4}).'
-                                       ''.format(iws, self._inAccumulationWorkspaceName,
-                                                 len(ws_in_acc.readX(iws)),
-                                                 workspace_i.name(),
-                                                 len(workspace_i.readX(iws))))
-                # END-IF
-
-                ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
+            # # TODO/NOW - use Plus to replace
+            # # Plus(LHSWorkspace=self._inAccumulationWorkspaceName, RHSWorkspace=b, OutputWorkspacex=c)
+            #
+            # for iws in range(workspace_i.getNumberHistograms()):
+            #     if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
+            #         raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
+            #                            'incremental workspace {3} ({4}).'
+            #                            ''.format(iws, self._inAccumulationWorkspaceName,
+            #                                      len(ws_in_acc.readX(iws)),
+            #                                      workspace_i.name(),
+            #                                      len(workspace_i.readX(iws))))
+            #   # END-IF
+            #
+            #   ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
             # END-iws
         # END-IF-ELSE
 
