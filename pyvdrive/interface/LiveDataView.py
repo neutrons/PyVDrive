@@ -61,7 +61,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._workspaceSet = set()
 
         # define data structure by setting some default
-        self._myAccumulationWorkspaceNumber = 72  # default as 72 * 1/12 = 6 hours
+        self._myAccumulationWorkspaceNumber = 360  # default as 360 * 0.5 (min) = = 180 min = 3 hours
         self._myRefreshTimeStep = 10  # seconds
         self._myAccumulationTime = 30  # 30 x 10 = 300 seconds = 5 min per accumulation
         # decide whether a new workspace shall be started
@@ -88,6 +88,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._plotPrevCycleName = None
         # Bank ID (current): shall be updated with event to handle change of bank ID selection
         self._currentBankID = 1
+
+        # plotting setup
+        self._bankViewDMin = None
+        self._bankViewDMax = None
 
         # Live sample log related
         self._currSampleLogX = None
@@ -458,21 +462,37 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         try:
             left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
-            self.ui.graphicsView_currentViewB1.setXYLimit(x_min=left_x_bound)
-            self.ui.graphicsView_currentViewB2.setXYLimit(x_min=left_x_bound)
-            self.ui.graphicsView_currentViewB3.setXYLimit(x_min=left_x_bound)
+            # self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound)
+            # self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound)
+            # self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound)
+            self._bankViewDMin = left_x_bound
         except ValueError:
-            pass
+            # keep as before
+            left_x_bound = None
 
         try:
             right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
-            self.ui.graphicsView_currentViewB1.setXYLimit(x_max=right_x_bound)
-            self.ui.graphicsView_currentViewB2.setXYLimit(x_max=right_x_bound)
-            self.ui.graphicsView_currentViewB3.setXYLimit(x_max=right_x_bound)
+            # self.ui.graphicsView_currentViewB1.setXYLimit(xmax=right_x_bound)
+            # self.ui.graphicsView_currentViewB2.setXYLimit(xmax=right_x_bound)
+            # self.ui.graphicsView_currentViewB3.setXYLimit(xmax=right_x_bound)
+            self._bankViewDMax = right_x_bound
         except ValueError:
-            pass
+            # keep as before
+            right_x_bound = None
+
+        # set limit
+        self.set_bank_view_roi(left_x_bound, right_x_bound)
 
         return
+
+    def set_bank_view_roi(self, left_x_bound, right_x_bound):
+        """
+        set region of interest on the 3 bank viewer
+        :return:
+        """
+        self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
 
     def do_start_live(self):
         """
@@ -811,7 +831,41 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return time_vec, log_value_vec
 
+    def plot_log_with_reduced(self, x_axis_name, y_axis_name):
+        """
+        plot sample logs with previously reduced data
+        :param x_axis_name:
+        :param y_axis_name:
+        :return:
+        """
+        # load sample log data
+        try:
+            ipts_number = int(self.ui.lineEdit_currIPTS.text())
+        except ValueError:
+            self.ui.plainTextEdit_Log.setPlainText('Unable to parse IPTS {0} to load reduced data.'
+                                                   ''.format(self.ui.lineEdit_currIPTS.text()))
+            return
+
+        curr_run_number = int(self.ui.lineEdit_runNumber.text())
+
+        if self._controller.has_loaded_logs(ipts_number, self._2dStartRunNumber, curr_run_number):
+            x_axis_vec, y_axis_vec = self._controller.get_loaded_logs(self._2dStartRunNumber, curr_run_number,
+                                                                      self._inAccumulationWorkspaceName)
+        else:
+            self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
+                                                    run_on_thread=True)
+
+
+
+
     def plot_new_log_live(self, x_axis_name, y_axis_name):
+        """
+        plot the log in live data by loading the previously accumulated runs
+        :param x_axis_name:
+        :param y_axis_name:
+        :return:
+        """
+
         # TODO/NOW/TODO/IMPLEMENT
 
         # start from the current in-accumulation run
@@ -953,6 +1007,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if self.ui.checkBox_showPrevReduced.isChecked():
                 self.plot_data_previous_cycle()
 
+            # re-set the ROI if the unit is d-spacing
+            if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
+                self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
+
             # update log
             if self._currSampleLogX is not None and self._currSampleLogY is not None:
                 self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
@@ -1072,22 +1130,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # sum 2 workspaces together
             self._controller.sum_workspaces([self._inAccumulationWorkspaceName, workspace_i],
                                             self._inAccumulationWorkspaceName)
-
-            # # TODO/NOW - use Plus to replace
-            # # Plus(LHSWorkspace=self._inAccumulationWorkspaceName, RHSWorkspace=b, OutputWorkspacex=c)
-            #
-            # for iws in range(workspace_i.getNumberHistograms()):
-            #     if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
-            #         raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
-            #                            'incremental workspace {3} ({4}).'
-            #                            ''.format(iws, self._inAccumulationWorkspaceName,
-            #                                      len(ws_in_acc.readX(iws)),
-            #                                      workspace_i.name(),
-            #                                      len(workspace_i.readX(iws))))
-            #   # END-IF
-            #
-            #   ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
-            # END-iws
         # END-IF-ELSE
 
         # update the list of source accumulated workspace
@@ -1186,6 +1228,51 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.plainTextEdit_Log.appendPlainText(message)
 
         return
+
+
+class SampleLoadingThread(QtCore.QThread):
+    """
+    Thread function to load sample logs from Nexus files
+    """
+    # signal
+    FileLoaded = QtCore.pyqtSignal(str, str)  # x-axis, y-axis name
+
+    def __init__(self, parent, x_axis_name, y_axis_name, ipts_number, start_run, stop_run):
+        """
+        blabla
+        :param x_axis_name:
+        :param y_axis_name:
+        :param ipts_number:
+        :param start_run:
+        :param stop_run:
+        """
+        super(SampleLoadingThread, self).__init__()
+
+        # check inputs ... blabla
+
+        self._parent = parent
+        self._x_name = x_axis_name
+        self._y_name = y_axis_name
+        self._iptsNumber = ipts_number
+        self.first_run_number = start_run
+        self.stop_run_number = stop_run   # exclusive
+
+        # define the signal connection
+        self.FileLoaded.connect(self._parent.plot_log_with_reduced)
+
+        return
+
+    def run(self):
+        """
+        main to process data
+        :return:
+        """
+        archive_manager = self._parent.get_archive_manager()
+        if self.stop_run_number == 0:
+            self.stop_run_number = None
+        archive_manager.load_nexus_files(self._iptsNumber, self.first_run_number, self.stop_run_number,
+                                         meta_data_only=True)
+
 
 
 class TimerThread(QtCore.QThread):
