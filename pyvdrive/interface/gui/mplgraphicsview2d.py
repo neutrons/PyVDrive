@@ -1281,8 +1281,8 @@ class Qt4MplCanvas(FigureCanvas):
         assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
                                                '' % (len(vec_x), len(vec_y), matrix_z.shape)
 
-        # Release the current image
-        self.axes.hold(False)
+        # # Release the current image
+        # self.axes.hold(False)
 
         # Do plot: resolution on Z axis (color bar is set to 100)
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
