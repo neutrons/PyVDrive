@@ -72,6 +72,6 @@ class VulcanExperimentRecordView(QtGui.QMainWindow):
                             DMin='0.5', DMax='3.5', PreserveEvents=False)
         # PrimaryFlightPath=43, SpectrumIDs='0-2', L2='2,2,2', Polar='90,270,145', Azimuthal='0, 0, 0')
         EditInstrumentGeometry(Workspace=curr_ws_name, PrimaryFlightPath=43.753999999999998,
-                               SpectrumIDs='1,2',
+                               SpectrumIDs='1,2,3',
                                L2='2.00944,2.00944,2.00944', Polar='90,270,135')
 

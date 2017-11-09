@@ -1093,7 +1093,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                                                 PrimaryFlightPath=43.753999999999998,
                                                 SpectrumIDs='1,2,3',
                                                 L2='2.0,2.0,2.0',
-                                                Polar='90,270,150')
+                                                Polar='90,270,135')
     else:
         raise RuntimeError('It is not implemented for GSAS file having more than 3 spectra ({0} now).'
                            ''.format(num_spec))
