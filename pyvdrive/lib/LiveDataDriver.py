@@ -99,6 +99,8 @@ class LiveDataDriver(QtCore.QThread):
             if ADS.doesExist(src_ws) is False:
                 raise RuntimeError('blabla')
             src_ws = ADS.retrieve(src_ws)
+        else:
+            assert src_ws is not None, 'Source workspace of convert unit cannot be None.'
 
         # check units
         src_unit = src_ws.getAxis(0).getUnit().unitID()

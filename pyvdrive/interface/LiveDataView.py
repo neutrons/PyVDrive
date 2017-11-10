@@ -735,15 +735,20 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         in_sum_name = '_temp_curr_ws_{0}'.format(random.randint(1, 10000))
         in_sum_ws, is_new_ws = self._controller.convert_unit(self._inAccumulationWorkspaceName, target_unit,
                                                              in_sum_name)
+        in_sum_ws_name = in_sum_ws.name()
 
         # plot
         for bank_id in range(1, 4):
             # get data
-            vec_y_i = in_sum_ws.readY(bank_id-1)
-            vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
-            color_i = self._bankColorDict[bank_id]
-            label_i = 'in accumulation bank {0}'.format(bank_id)
-            self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
+            try:
+                vec_y_i = in_sum_ws.readY(bank_id-1)
+                vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
+                color_i = self._bankColorDict[bank_id]
+                label_i = 'in accumulation bank {0}'.format(bank_id)
+                self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
+            except RuntimeError as run_err:
+                print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_name, run_err)
+                return
 
             if target_unit == 'TOF':
                 self._mainGraphicDict[bank_id].setXYLimit(0, 70000)
