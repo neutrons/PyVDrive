@@ -1173,7 +1173,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._inAccumulationIncrementalWorkspaceList = list()
 
             # clone workspace
-            accumulate_name = 'Accumulated_{0}'.format(self._myAccumulationListIndex)
+            accumulate_name = 'Accumulated_{0:05d}'.format(self._myAccumulationListIndex)
             helper.clone_workspace(ws_name, accumulate_name)
             self._inAccumulationWorkspaceName = accumulate_name
 

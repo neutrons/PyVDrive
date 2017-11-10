@@ -250,7 +250,7 @@ class LiveDataDriver(QtCore.QThread):
 
             self._peakIntensityDict[ws_name] = (time_stamp, value_list)
 
-            print '[INFO] Workspace {0} Time = {1} Peak Intensity = {1}'.format(ws_name, time_stamp, value_list)
+            print '[INFO] Workspace {0} Time = {1} Peak Intensity = {2}'.format(ws_name, time_stamp, value_list)
         # END-FOR
 
         return
