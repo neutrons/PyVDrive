@@ -100,6 +100,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._currSampleLogValueVector = None
         self._logStartTime = None
 
+        # other time
+        self._liveStartTimeStamp = None
+
         # start UI
         self.ui = ui_LiveDataView.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -845,12 +848,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param d_max:
         :return:
         """
-        self._controller.integratd_peaks(self._myAccumulationWorkspaceList, self._myAccumulationListIndex,
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, self._myAccumulationListIndex,
                                          d_min, d_max)
 
         self._integratePeakFlag = True
         self._minDPeakIntegration = d_min
         self._maxDPeakIntegration = d_max
+        self._currSampleLogX = 'Time'
 
         return
 
@@ -877,6 +881,28 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return time_vec, log_value_vec
 
+    def plot_integrate_peak(self, d_min, d_max):
+        """
+        blabla
+        :param d_min:
+        :param d_max:
+        :return:
+        """
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, 0, d_min, d_max)
+
+        vec_time, vec_peak_intensity = self._controller.get_peak_intensities(bank_id=1, time0=self._liveStartTimeStamp)
+
+        # TODO/ISSUE/NOW Better to use update
+        self.ui.graphicsView_comparison.clear_all_lines()
+        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_intensity,
+                                                 label='Bank 1 Intensity', line_style='--', marker='o', color='blue')
+
+        vec_time, vec_peak_intensity = self._controller.get_peak_intensities(bank_id=2, time0=self._liveStartTimeStamp)
+        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_intensity,
+                                                 label='Bank 2 Intensity', line_style='--', marker='D', color='red')
+
+        return
+
     def plot_log_with_reduced(self, x_axis_name, y_axis_name):
         """
         plot sample logs with previously reduced data
@@ -902,7 +928,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                     run_on_thread=True)
 
         blabla
-
 
     def plot_new_log_live(self, x_axis_name, y_axis_name):
         """
@@ -1040,6 +1065,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             run_number_i = workspace_i.getRunNumber()
             self.ui.lineEdit_runNumber.setText(str(run_number_i))
 
+            # live data start time
+            if self._liveStartTimeStamp is None:
+                self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').firstTime()
+
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
@@ -1150,8 +1179,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # add to list
             list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber
+
             if self._myAccumulationWorkspaceList[list_index] is not None:
-                self._controller.delete_workspace(self._myAccumulationWorkspaceList[list_index])
+                old_ws_name = self._myAccumulationWorkspaceList[list_index]
+                print '[INFO] Delete old workspace {0}'.format(old_ws_name)
+                self._controller.delete_workspace(old_ws_name)
             self._myAccumulationWorkspaceList[list_index] = accumulate_name
             print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
                   ''.format(list_index, self._myAccumulationWorkspaceList[list_index])

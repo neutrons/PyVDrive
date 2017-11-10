@@ -180,7 +180,37 @@ class LiveDataDriver(QtCore.QThread):
         
         return ws_names
 
-    def integratd_peaks(self, accumulated_workspace_list, whatever_index, d_min, d_max):
+    def get_peak_intensities(self, bank_id, time0):
+        """
+        blabla
+        :return:
+        """
+        # TODO/BLABLA - check
+        # blabla
+
+        time0_ns = time0.totalNanoseconds()
+        ws_index = bank_id - 1
+
+        time_value_list = list()
+        for tup_value in self._peakIntensityDict.values():
+            time_i, intensities = tup_value
+            time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
+            time_value_list.append((time_i_rel, intensities[ws_index]))
+        # END-FOR
+
+        time_value_list.sort()
+
+        # convert to vector
+        vec_time = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
+        vec_intensity = numpy.ndarray(shape=len(time_value_list, ), dtype='float')
+        for index, tup_value in enumerate(time_value_list):
+            time_i, int_i = tup_value
+            vec_time[index] = time_i
+            vec_intensity[index] = int_i
+
+        return vec_time, vec_intensity
+
+    def integrate_peaks(self, accumulated_workspace_list, whatever_index, d_min, d_max):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
         :param whatever_index: 
@@ -188,8 +218,42 @@ class LiveDataDriver(QtCore.QThread):
         :param d_max: 
         :return: 
         """
+        # the last workspace might be partially accumulated
+        calculated_ws_list = sorted(self._peakIntensityDict.keys())[:-1]
 
+        # loop round all the input workspaces
+        for ws_name in accumulated_workspace_list:
+            # do not touch the workspaces that already have peak integrated
+            if ws_name in calculated_ws_list:
+                continue
+            if ws_name is None:
+                continue
 
+            # get workspace
+            workspace_i = mantid_helper.retrieve_workspace(ws_name, True)
+            value_list = list()
+
+            # calculate peak intensity
+            for iws in range(workspace_i.getNumberHistograms()):
+                vec_x = workspace_i.readX(iws)
+                vec_y = workspace_i.readY(iws)
+
+                index_min = numpy.searchsorted(vec_x, d_min)
+                index_max = numpy.searchsorted(vec_x, d_max)
+                delta_d = vec_x[index_min+1:index_max] - vec_x[index_min:index_max-1]
+                peak_intensity_i = numpy.sum(delta_d * vec_y[index_min:index_max-1])
+                value_list.append(peak_intensity_i)
+            # END-FOR (iws)
+
+            # get average time
+            time_stamp = workspace_i.run().getProperty('proton_charge').lastTime()
+
+            self._peakIntensityDict[ws_name] = (time_stamp, value_list)
+
+            print '[INFO] Workspace {0} Time = {1} Peak Intensity = {1}'.format(ws_name, time_stamp, value_list)
+        # END-FOR
+
+        return
 
     def load_reduced_runs(self, ipts_number, run_number):
         # TODO/NOW/TODO/Implement
@@ -260,6 +324,10 @@ class LiveDataDriver(QtCore.QThread):
         if True:
             mantidsimple.Plus(LHSWorkspace=workspace_name_list[0], RHSWorkspace=workspace_name_list[1],
                               OutputWorkspace=target_workspace_name)
+
+            # TODO/NOW/ISSUE - ASAP
+            # need to check run number and set run number correct! run number (> 0) will overwrite run number (==0)
+            # example:  run.addProperty('run_number', 100, replace=True)
         else:
             # old method
             ws_in_acc = mantid_helper.retrieve_workspace(workspace_name_list[0])
