@@ -167,6 +167,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # about 'runs' option
         self._2dStartRunNumber = None
 
+        # peak integration
+        self._integratePeakFlag = False
+        self._minDPeakIntegration = None
+        self._maxDPeakIntegration = None
+
         # mutexes
         self._bankSelectMutex = False
 
@@ -833,6 +838,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def integrate_peak_live(self, d_min, d_max):
+        """
+        set up to integrate peak live
+        :param d_min:
+        :param d_max:
+        :return:
+        """
+        self._controller.integratd_peaks(self._myAccumulationWorkspaceList, self._myAccumulationListIndex,
+                                         d_min, d_max)
+
+        self._integratePeakFlag = True
+        self._minDPeakIntegration = d_min
+        self._maxDPeakIntegration = d_max
+
+        return
+
     def load_sample_log(self, y_axis_name, last_n_intervals):
         """
         load a sample log from last N time intervals
@@ -880,7 +901,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
 
-
+        blabla
 
 
     def plot_new_log_live(self, x_axis_name, y_axis_name):
@@ -964,6 +985,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
         self._currSampleLogY = y_axis_name
+        # turn off the flag to plot integrated peaks
+        self._integratePeakFlag = False
 
         return
 
@@ -1042,6 +1065,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # update log
             if self._currSampleLogX is not None and self._currSampleLogY is not None:
                 self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
+            elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
+                self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
         # END-FOR
 
         return

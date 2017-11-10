@@ -46,6 +46,9 @@ class LiveDataDriver(QtCore.QThread):
 
         self._thread_continue = True
 
+        # more containers
+        self._peakIntensityDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
+
         return
 
     @staticmethod
@@ -176,6 +179,17 @@ class LiveDataDriver(QtCore.QThread):
             raise RuntimeError('Unable to get workspaces\' names from ADS due to \n{0}'.format(run_err))
         
         return ws_names
+
+    def integratd_peaks(self, accumulated_workspace_list, whatever_index, d_min, d_max):
+        """ integrate peaks for a list of
+        :param accumulated_workspace_list: 
+        :param whatever_index: 
+        :param d_min: 
+        :param d_max: 
+        :return: 
+        """
+
+
 
     def load_reduced_runs(self, ipts_number, run_number):
         # TODO/NOW/TODO/Implement

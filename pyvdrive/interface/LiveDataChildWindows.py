@@ -120,6 +120,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     """
     # define signal
     PlotSignal = QtCore.pyqtSignal(str, str)
+    PeakIntegrateSignal = QtCore.pyqtSignal(float, float)
 
     def __init__(self, parent=None):
         """ Initialization
@@ -144,6 +145,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self._myControlWindow = parent  # real parent window launch this dialog
         if parent is not None:
             self.PlotSignal.connect(self._myControlWindow.plot_log_live)
+            self.PeakIntegrateSignal.connect(self._myControlWindow.integrate_peak_live)
 
         return
 
@@ -168,17 +170,33 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
             GuiUtility.pop_dialog_error(self, err_msg)
             return
 
-        # get Y-axis item
-        try:
-            y_axis_name = self.ui.tableWidget_AxisY.get_selected_item()
-        except RuntimeError as run_err:
-            err_msg = 'One and only one item can be selected for Y-axis. Now {0} is selected.' \
-                      ''.format(run_err)
-            GuiUtility.pop_dialog_error(self, err_msg)
-            return
+        # high priority to integrate peaks
+        if self.ui.checkBox_integratePeak.isChecked():
+            # set up peak integration
+            min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
+            max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
+            try:
+                min_d = float(min_d_str)
+                max_d = float(max_d_str)
+            except ValueError as value_err:
+                raise RuntimeError('Min-D {0} or/and Max-D {1} cannot be parsed as a float due to {2}'
+                                   ''.format(min_d_str, max_d_str, value_err))
 
-        # send signal to parent window to plot
-        self.PlotSignal.emit(x_axis_name, y_axis_name)
+            self.PeakIntegrateSignal.emit(min_d, max_d)
+
+        else:
+            # get Y-axis item
+            try:
+                y_axis_name = self.ui.tableWidget_AxisY.get_selected_item()
+            except RuntimeError as run_err:
+                err_msg = 'One and only one item can be selected for Y-axis. Now {0} is selected.' \
+                          ''.format(run_err)
+                GuiUtility.pop_dialog_error(self, err_msg)
+                return
+
+            # send signal to parent window to plot
+            self.PlotSignal.emit(x_axis_name, y_axis_name)
+        # END-IF-ELSE
 
         return
 
