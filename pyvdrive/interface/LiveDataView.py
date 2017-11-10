@@ -670,6 +670,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name_i,
                                                                          bank_id=bank_id, target_unit='dSpacing',
                                                                          point_data=True, start_bank_id=1)
+            # check .. here .. # TODO/DEBUG/REMOVE BUG FIXED
+            data_bank = data_set_dict[bank_id]
+            vec_y = data_bank[1]
+            info = 'Workspace {0} Bank ID {1} Min and Max Y are {2} and {3}.'.format(ws_name_i, bank_id,
+                                                                                     numpy.min(vec_y), numpy.max(vec_y))
+            self.ui.plainTextEdit_Log.appendPlainText(info + '\n')
+
             acc_data_dict[acc_index] = data_set_dict[bank_id]
         # END-FOR
 
@@ -747,7 +754,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 label_i = 'in accumulation bank {0}'.format(bank_id)
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
             except RuntimeError as run_err:
-                print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_name, run_err)
+                print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_ws_name, run_err)
                 return
 
             if target_unit == 'TOF':
@@ -995,6 +1002,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             else:
                 # also a new workspace might be the accumulated workspace
                 continue
+
+            # convert unit
+            helper.mtd_convert_units(ws_name_i, 'dSpacing')
 
             # add new workspace to data manager
             self.add_new_workspace(ws_name_i)

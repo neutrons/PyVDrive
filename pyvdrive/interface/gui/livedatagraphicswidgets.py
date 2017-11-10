@@ -58,6 +58,7 @@ class Live2DView(MplGraphicsView2D):
 
         grid_shape = len(vec_y), len(vec_x)
         matrix_y = numpy.ndarray(grid_shape, dtype='float')
+        matrix_index = 0
         for index in vec_y:
             # vector X
             vec_x_i = data_set_dict[index][0]
@@ -66,7 +67,8 @@ class Live2DView(MplGraphicsView2D):
                 raise RuntimeError('blabla')
 
             # vector Y: each row will have the value of a pattern
-            matrix_y[index:] = data_set_dict[index][1]  #
+            matrix_y[matrix_index:] = data_set_dict[index][1]  #
+            matrix_index += 1
         # END-FOR
 
         # clear canvas and add contour plot

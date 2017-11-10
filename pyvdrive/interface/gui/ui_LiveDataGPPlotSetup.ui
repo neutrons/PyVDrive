@@ -14,6 +14,17 @@
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QCheckBox" name="checkBox">
+       <property name="text">
+        <string>Epoch Time</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item row="2" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -61,11 +72,19 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="1">
-    <widget class="LogSelectorTable" name="tableWidget_AxisY"/>
-   </item>
-   <item row="1" column="0">
-    <widget class="LogSelectorTable" name="tableWidget_AxisX"/>
+   <item row="0" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Y-Axis</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEdit_itemY"/>
+     </item>
+    </layout>
    </item>
    <item row="0" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -81,30 +100,53 @@
      </item>
     </layout>
    </item>
-   <item row="0" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
+   <item row="1" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Y-Axis</string>
-       </property>
-      </widget>
+      <widget class="LogSelectorTable" name="tableWidget_AxisX"/>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit_itemY"/>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEdit_dMaxPeakIntegrate">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEdit_minDPeakIntegrate">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="checkBox_integratePeak">
+         <property name="text">
+          <string>Integrate Peak</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Peak Range (d)</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
-   <item row="2" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_4">
-     <item>
-      <widget class="QCheckBox" name="checkBox">
-       <property name="text">
-        <string>Epoch Time</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+   <item row="1" column="1">
+    <widget class="LogSelectorTable" name="tableWidget_AxisY"/>
    </item>
   </layout>
  </widget>

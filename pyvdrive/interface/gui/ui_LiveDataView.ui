@@ -249,12 +249,12 @@
        <widget class="QComboBox" name="comboBox_currUnits">
         <item>
          <property name="text">
-          <string>TOF</string>
+          <string>dSpacing</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>dSpacing</string>
+          <string>TOF</string>
          </property>
         </item>
        </widget>
@@ -539,7 +539,7 @@
      <x>0</x>
      <y>0</y>
      <width>1462</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
