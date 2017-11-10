@@ -578,7 +578,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 ws_list_index += len(self._myIncrementalWorkspaceList)
 
             # get workspace name
-            ws_name_i = self._myIncrementalWorkspaceList[ws_list_index]
+            try:
+                ws_name_i = self._myIncrementalWorkspaceList[ws_list_index]
+            except IndexError as index_err:
+                raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
+                                   ''.format(ws_list_index, len(self._myIncrementalWorkspaceList),
+                                             index_err))
             if ws_name_i is None:
                 # print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace
                 # names are {3}' \
@@ -636,10 +641,17 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         debug_info = ''
         for inverse_index in range(last):
             # start from self._myAccumulationListIndex - 1
-            list_index = self._myAccumulationListIndex - 1 - inverse_index
-            ws_name_i = self._myAccumulationWorkspaceList[list_index]
-            print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
-                  ''.format(inverse_index, list_index, self._myAccumulationListIndex, self._inAccumulationWorkspaceName)
+            list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber - 1 - inverse_index
+            try:
+                ws_name_i = self._myAccumulationWorkspaceList[list_index]
+                print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
+                      ''.format(inverse_index, list_index, self._myAccumulationListIndex,
+                                self._inAccumulationWorkspaceName)
+            except IndexError as index_err:
+                raise RuntimeError('Inverted workspace index {0} is converted to workspace index {1} '
+                                   'and out of range [0, {2}) due to {3}.'
+                                   ''.format(inverse_index, list_index, len(self._myAccumulationWorkspaceList),
+                                             index_err))
 
             if ws_name_i is None:
                 # no workspace is set for that
@@ -721,7 +733,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # get the workspace names
         in_sum_name = '_temp_curr_ws_{0}'.format(random.randint(1, 10000))
-        in_sum_ws, is_new_ws = self._controller.convert_unit(self._inAccumulationWorkspaceName, target_unit, in_sum_name)
+        in_sum_ws, is_new_ws = self._controller.convert_unit(self._inAccumulationWorkspaceName, target_unit,
+                                                             in_sum_name)
 
         # plot
         for bank_id in range(1, 4):
