@@ -1088,6 +1088,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.plot_data_previous_cycle()
 
             # re-set the ROI if the unit is d-spacing
+            db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(), self._bankViewDMin, self._bankViewDMax)
+            self.ui.plainTextEdit_Log.setPlainText('[DB]: {0}'.format(db_msg))
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
                 self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
 
