@@ -586,7 +586,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         # get current index of the combo box and find out the next
         current_index = self.ui.comboBox_logNames.currentIndex()
         max_index = self.ui.comboBox_logNames.size()
-        next_index = (current_index + 1) % max_index
+        # TODO/TODO/FIXME/FIXME - logNames.size() may not a correction method to find total number of entries of a combo box
+        next_index = (current_index + 1) % int(max_index)
 
         # advance to the next one
         self.ui.comboBox_logNames.setCurrentIndex(next_index)

@@ -360,7 +360,7 @@ class MplGraphicsView(QtGui.QWidget):
     """ A combined graphics view including matplotlib canvas and
     a navigation tool bar
 
-    Note: Merged with HFIR_Powder_Reduction.MplFigureCAnvas
+    Note: Merged with HFIR_Powder_Reduction.MplFigureCanvas
     """
     def __init__(self, parent):
         """ Initialization
@@ -1170,7 +1170,7 @@ class Qt4MplCanvas(FigureCanvas):
             raise NotImplementedError('Input vec_x, vec_y and y_error must have same size.')
 
         # Hold previous data
-        self.axes.hold(True)
+        # self.axes.hold(True)
 
         # set x-axis and y-axis label
         if x_label is not None:

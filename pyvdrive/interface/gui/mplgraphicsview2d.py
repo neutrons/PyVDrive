@@ -1215,59 +1215,6 @@ class Qt4MplCanvas(FigureCanvas):
 
         return line_key
 
-    def add_1d_plot_right(self, x, y, color=None, label="", x_label=None, ylabel=None, marker=None, linestyle=None,
-                          linewidth=1):
-        """ Add a line (1-d plot) at right axis
-        """
-        if self.axes2 is None:
-            self.axes2 = self.axes.twinx()
-
-        # Hold previous data
-        self.axes2.hold(True)
-
-        # Default
-        if color is None:
-            color = (0, 1, 0, 1)
-        if marker is None:
-            marker = 'o'
-        if linestyle is None:
-            linestyle = '-'
-
-        # Special default
-        if len(label) == 0:
-            label = 'right'
-            color = 'red'
-
-        # color must be RGBA (4-tuple)
-        r = self.axes2.plot(x, y, color=color, marker=marker, linestyle=linestyle,
-                            label=label, linewidth=linewidth)
-        # return: list of matplotlib.lines.Line2D object
-
-        self.axes2.set_aspect('auto')
-
-        # set x-axis and y-axis label
-        if x_label is not None:
-            self.axes2.set_xlabel(x_label, fontsize=20)
-        if ylabel is not None:
-            self.axes2.set_ylabel(ylabel, fontsize=20)
-
-        # set/update legend
-        self._setup_legend()
-
-        # Register
-        line_key = -1
-        if len(r) == 1:
-            line_key = self._lineIndex
-            self._lineDict[line_key] = r[0]
-            self._lineIndex += 1
-        else:
-            print "Impoooooooooooooooosible!"
-
-        # Flush/commit
-        self.draw()
-
-        return line_key
-
     def addPlot2D(self, array2d, xmin, xmax, ymin, ymax, holdprev, yticklabels=None):
         """ Add a 2D plot
         :param array2d:
@@ -1327,15 +1274,15 @@ class Qt4MplCanvas(FigureCanvas):
 
         # create mesh grid
         grid_x, grid_y = np.meshgrid(vec_x, vec_y)
-
-        print '[DB...BAT] Grid X and Grid Y size: ', grid_x.shape, grid_y.shape
+        #
+        # print '[DB...BAT] Grid X and Grid Y size: ', grid_x.shape, grid_y.shape
 
         # check size
         assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
                                                '' % (len(vec_x), len(vec_y), matrix_z.shape)
 
-        # Release the current image
-        self.axes.hold(False)
+        # # Release the current image
+        # self.axes.hold(False)
 
         # Do plot: resolution on Z axis (color bar is set to 100)
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
@@ -1349,10 +1296,7 @@ class Qt4MplCanvas(FigureCanvas):
             for i in range(len(vec_y)):
                 new_labels[i*2] = '%d' % int(vec_y[i])
             self.axes.set_yticklabels(new_labels)
-
-        print
-        print
-        print matrix_z[4:]
+        # END-IF
 
         # explicitly set aspect ratio of the image
         self.axes.set_aspect('auto')
@@ -1602,52 +1546,6 @@ class Qt4MplCanvas(FigureCanvas):
 
             # set flag on
             self._isLegendOn = True
-
-        return
-
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
-        """
-        Update a plot line or a series plot line
-        Args:
-            ikey:
-            vecx:
-            vecy:
-            linestyle:
-            linecolor:
-            marker:
-            markercolor:
-
-        Returns:
-
-        """
-        line = self._lineDict[ikey]
-        if line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % ikey
-            return
-
-        if vecx is not None and vecy is not None:
-            line.set_xdata(vecx)
-            line.set_ydata(vecy)
-
-        if linecolor is not None:
-            line.set_color(linecolor)
-
-        if linestyle is not None:
-            line.set_linestyle(linestyle)
-
-        if marker is not None:
-            line.set_marker(marker)
-
-        if markercolor is not None:
-            line.set_markerfacecolor(markercolor)
-
-        oldlabel = line.get_label()
-        line.set_label(oldlabel)
-
-        self._setup_legend()
-
-        # commit
-        self.draw()
 
         return
 

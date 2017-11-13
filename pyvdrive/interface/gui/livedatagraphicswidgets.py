@@ -35,7 +35,7 @@ class Live2DView(MplGraphicsView2D):
 
     def plot_contour(self, data_set_dict):
         """
-
+        blabla
         :param data_set_dict: dictionary such that
         :return:
         """
@@ -45,14 +45,20 @@ class Live2DView(MplGraphicsView2D):
         # TODO/NOW/TODO - doc and check
 
         # construct
-        vec_x = data_set_dict[0][0]
-        vec_y = numpy.array(sorted(data_set_dict.keys()))
+        x_list = sorted(data_set_dict.keys())
+        vec_x = data_set_dict[x_list[0]][0]
+        vec_y = numpy.array(x_list)
         size_x = len(vec_x)
 
         # build mesh and matrix y
-        grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
-        matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
-        print '[DB...BAT] Matrix Y has size ', matrix_y.shape
+        # grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
+        # print '[DB...BAT] original size: {0}, {1} and grid shape = {2}'.format(len(vec_x), len(vec_y), grid_x.shape)
+        # original size: 2257, 2 and grid shape = (2, 2257)
+        # matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
+
+        grid_shape = len(vec_y), len(vec_x)
+        matrix_y = numpy.ndarray(grid_shape, dtype='float')
+        matrix_index = 0
         for index in vec_y:
             # vector X
             vec_x_i = data_set_dict[index][0]
@@ -61,7 +67,8 @@ class Live2DView(MplGraphicsView2D):
                 raise RuntimeError('blabla')
 
             # vector Y: each row will have the value of a pattern
-            matrix_y[index:] = data_set_dict[index][1]  #
+            matrix_y[matrix_index:] = data_set_dict[index][1]  #
+            matrix_index += 1
         # END-FOR
 
         # clear canvas and add contour plot
@@ -111,6 +118,8 @@ class SingleBankView(MplGraphicsView):
 
         :return:
         """
+        # TODO/ISSUE/NOW - Use update instead of delete and move
+
         # delete previous one (if they are different)
         if self._previousRunID is not None:
             self.remove_line(self._previousRunID)
@@ -131,6 +140,8 @@ class SingleBankView(MplGraphicsView):
         update/plot current accumulated
         :return:
         """
+        # TODO/ISSUE/NOW - Use update instead of delete and move
+
         # remove existing line
         if self._currentRunID is not None:
             self.remove_line(self._currentRunID)

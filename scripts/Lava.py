@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import sys
-sys.path.append('/SNS/users/wzz/local/lib/python2.7/site-packages')
+sys.path.append('/SNS/users/wzz/.local//lib/python2.7/site-packages')
 
+import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os
 from PyQt4 import QtGui, QtCore
@@ -18,7 +19,7 @@ import pyvdrive.interface.ExperimentRecordView as ev
 home_dir = os.path.expanduser('~')
 if home_dir.startswith('/home/wzz') is False:
     # Mac debug build
-    sys.path.append('/Users/wzz/MantidBuild/debug/bin')
+    sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
     # Analysis cluster build
     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
     sys.path.append('/opt/mantidnightly/bin')
