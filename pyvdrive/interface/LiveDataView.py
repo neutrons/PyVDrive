@@ -799,14 +799,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # END-IF
 
         # get the previous-N cycle accumulated workspace's name: remember that currentIndex is 1 beyond what it is
-        prev_ws_index = self._myAccumulationListIndex - 1 - int(self.ui.lineEdit_showPrevNCycles.text())
+        prev_ws_index = (self._myAccumulationListIndex - 1 - int(self.ui.lineEdit_showPrevNCycles.text()))
+        prev_ws_index %= self._myAccumulationWorkspaceNumber
         if self._myAccumulationWorkspaceList[prev_ws_index] is None:
             message = 'There are only {0} previously accumulated and reduced workspace. ' \
-                      'Unable to access previously {1}-th workspace.'.format(len(self._myAccumulationWorkspaceList),
-                                                                       abs(prev_ws_index) - 1)
+                      'Unable to access previously {1}-th workspace.' \
+                      ''.format(len(self._myAccumulationWorkspaceList), abs(prev_ws_index) - 1)
             self.write_log('error', message)
             return
-
         else:
             prev_ws_name = self._myAccumulationWorkspaceList[prev_ws_index]
         # END-IF-ELSE
@@ -889,7 +889,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param d_max:
         :return:
         """
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, 0, d_min, d_max)
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max)
 
         vec_time, vec_peak_intensity = self._controller.get_peak_intensities(bank_id=1, time0=self._liveStartTimeStamp)
 
@@ -1216,7 +1216,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # END-IF (test)
 
             # sum 2 workspaces together
-            self._controller.sum_workspaces([self._inAccumulationWorkspaceName, workspace_i],
+            self._controller.sum_workspaces([self._inAccumulationWorkspaceName, ws_name],
                                             self._inAccumulationWorkspaceName)
         # END-IF-ELSE
 
@@ -1313,7 +1313,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
                 message += 'New workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
         # END-FOR
-        self.write_log('information', message)
+        if len(message) > 0:
+            self.write_log('information', message)
 
         return
 
