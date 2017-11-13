@@ -25,7 +25,7 @@ class LiveDataDriver(QtCore.QThread):
     """
     COUNTER_WORKSPACE_NAME = '_VULCAN_LIVE_COUNTER'
     # TODO/FIXME/NOW - Make this script more robust and informative
-    LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_test.py'
+    LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_beta.py'
     # LIVE_PROCESS_SCRIPTS = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'  # local test only
 
     def __init__(self):
