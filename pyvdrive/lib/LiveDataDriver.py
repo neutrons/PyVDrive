@@ -24,6 +24,7 @@ class LiveDataDriver(QtCore.QThread):
     Driver/manager for live data monitoring and reduction
     """
     COUNTER_WORKSPACE_NAME = '_VULCAN_LIVE_COUNTER'
+    # TODO/FIXME/NOW - Make this script more robust and informative
     LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_test.py'
     # LIVE_PROCESS_SCRIPTS = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'  # local test only
 
@@ -100,7 +101,8 @@ class LiveDataDriver(QtCore.QThread):
         # convert workspace to workspace
         if isinstance(src_ws, str):
             if ADS.doesExist(src_ws) is False:
-                raise RuntimeError('blabla')
+                raise RuntimeError('Source workspace with name {0} for unit conversion does not exist.'
+                                   ''.format(src_ws))
             src_ws = ADS.retrieve(src_ws)
         else:
             assert src_ws is not None, 'Source workspace of convert unit cannot be None.'
@@ -181,14 +183,22 @@ class LiveDataDriver(QtCore.QThread):
         return ws_names
 
     def get_peak_intensities(self, bank_id, time0):
-        """
-        blabla
+        """ get the peaks' intensities along with time
+        :param bank_id: bank ID
+        :param time0: time zero for time stamps
         :return:
         """
-        # TODO/BLABLA - check
-        # blabla
+        # check whether inputs are valid
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        if bank_id < 1 or bank_id > 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
-        time0_ns = time0.totalNanoseconds()
+        try:
+            time0_ns = time0.totalNanoseconds()
+        except AttributeError as att_err:
+            raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
+                               ''.format(att_err))
         ws_index = bank_id - 1
 
         time_value_list = list()
@@ -202,7 +212,7 @@ class LiveDataDriver(QtCore.QThread):
 
         # convert to vector
         vec_time = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
-        vec_intensity = numpy.ndarray(shape=len(time_value_list, ), dtype='float')
+        vec_intensity = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
         for index, tup_value in enumerate(time_value_list):
             time_i, int_i = tup_value
             vec_time[index] = time_i
@@ -210,11 +220,10 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, vec_intensity
 
-    def integrate_peaks(self, accumulated_workspace_list, whatever_index, d_min, d_max):
+    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
-        :param whatever_index: 
-        :param d_min: 
+        :param d_min:
         :param d_max: 
         :return: 
         """
@@ -309,41 +318,48 @@ class LiveDataDriver(QtCore.QThread):
     @staticmethod
     def sum_workspaces(workspace_name_list, target_workspace_name):
         """
-        sum workspaces together
+        sum 2 workspaces together
         example: [self._inAccumulationWorkspaceName, workspace_i],  self._inAccumulationWorkspaceName)
         :param workspace_name_list:
         :param target_workspace_name:
-        :return:
+        :return: None or warning message
         """
-        # TODO/NOW - validate input
-        # blabla
+        # check whether inputs are valid
+        assert isinstance(workspace_name_list, list), 'Workspace names {0} must be given in list but not {1}.' \
+                                                      ''.format(workspace_name_list, type(workspace_name_list))
+        assert isinstance(target_workspace_name, str), 'Target workspace name {0} for summed workspaces must be of ' \
+                                                       'type {1}'.format(target_workspace_name,
+                                                                         type(target_workspace_name))
 
         if len(workspace_name_list) != 2:
-            raise RuntimeError('Prototype must have 2 inputs')
+            raise RuntimeError('Sum workspaces must have 2 inputs')
 
-        if True:
-            mantidsimple.Plus(LHSWorkspace=workspace_name_list[0], RHSWorkspace=workspace_name_list[1],
-                              OutputWorkspace=target_workspace_name)
+        # plus
+        mantidsimple.Plus(LHSWorkspace=workspace_name_list[0], RHSWorkspace=workspace_name_list[1],
+                          OutputWorkspace=target_workspace_name)
 
-            # TODO/NOW/ISSUE - ASAP
-            # need to check run number and set run number correct! run number (> 0) will overwrite run number (==0)
-            # example:  run.addProperty('run_number', 100, replace=True)
+        # set the run number correctly
+        left_ws = ADS.retrieve(workspace_name_list[0])
+        right_ws = ADS.retrieve(workspace_name_list[1])
+        left_run_number = left_ws.getRunNumber()
+        right_run_number = right_ws.getRunNumber()
+        target_ws = ADS.retrieve(target_workspace_name)
+
+        return_value = None
+        if left_run_number == right_run_number:
+            # same so do nothing
+            pass
+        elif left_run_number == 0:
+            # one with run 0 and one is different
+            target_ws.getRun().addProperty('run_number', right_run_number, replace=True)
         else:
-            # old method
-            ws_in_acc = mantid_helper.retrieve_workspace(workspace_name_list[0])
-            workspace_i = mantid_helper.retrieve_workspace(target_workspace_name[1])
-            for iws in range(workspace_i.getNumberHistograms()):
-                if len(ws_in_acc.readY(iws)) != len(workspace_i.readY(iws)):
-                    raise RuntimeError('Spectrum {0}: accumulated workspace {1} has a different X size ({2}) than '
-                                       'incremental workspace {3} ({4}).'
-                                       ''.format(iws, workspace_name_list[0], len(ws_in_acc.readX(iws)),
-                                                 workspace_i.name(), len(workspace_i.readX(iws))))
-                # END-IF
-                ws_in_acc.setY(iws, ws_in_acc.readY(iws) + workspace_i.readY(iws))
-            # END-FOR
-        # END-IF-ELSE
+            # they are different... warning
+            return_value = 'Workspaces to sum have 2 different run numbers {0} and {1}.' \
+                           ''.format(left_run_number, right_run_number)
+            print ('[WARNING] {0}'.format(return_value))
+        # END-IF
 
-        return
+        return return_value
 
     def run(self):
         """ main method to start live data

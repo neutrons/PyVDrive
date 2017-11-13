@@ -210,7 +210,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check inputs
-        assert isinstance(max_acc_ws_number, int), 'blabla 1'
+        assert isinstance(max_acc_ws_number, int), 'Maximum accumulation workspace number {0} must be' \
+                                                   'an integer but not a {1}'.format(max_acc_ws_number,
+                                                                                     type(max_acc_ws_number))
         assert isinstance(accumulation_time, int), 'blabla 2'
         assert isinstance(update_time, int), 'blabla 3'
 
@@ -232,7 +234,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         else:
             # accumulation time is not a multiplication to update/refresh time
             self._myAccumulationTime = (self._myAccumulationTime/self._myRefreshTimeStep + 1) * self._myRefreshTimeStep
-            # TODO/ISSUE/NOW - Implement write_log and refactor
             self.write_log(level='warning', message='Accumulation time is modified to {0}'
                                                     ''.format(self._myAccumulationTime))
         # END-IF
@@ -637,12 +638,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if not 1 <= bank_id <= 3:
             raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
-        assert isinstance(last, int), 'blabla'
+        assert isinstance(last, int), 'Last {0} accumulation data must be an integer but not a {1}' \
+                                      ''.format(last, type(last))
         if last < 2:
-            raise RuntimeError('blabla')
+            raise RuntimeError('Last {0} accumulation data must be larger than 2'.format(last))
 
         # collect last N accumulated
-        print '[DB...BAT] Get Last {0} Accumulated Data'.format(last)
+        self.write_log('debug', 'Get Last {0} Accumulated Data'.format(last))
 
         acc_data_dict = dict()
         prev_acc_index = self._myAccumulationListIndex
@@ -683,14 +685,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             vec_y = data_bank[1]
             info = 'Workspace {0} Bank ID {1} Min and Max Y are {2} and {3}.'.format(ws_name_i, bank_id,
                                                                                      numpy.min(vec_y), numpy.max(vec_y))
-            self.ui.plainTextEdit_Log.appendPlainText(info + '\n')
 
+            self.write_log('information', info)
             acc_data_dict[acc_index] = data_set_dict[bank_id]
         # END-FOR
 
-        # TODO/NOW - to method
-        debug_info += '\n'
-        self.ui.plainTextEdit_Log.appendPlainText(debug_info)
+        # write conclusion message
+        self.write_log('debug', debug_info)
 
         return acc_data_dict
 
@@ -739,11 +740,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         # get new unit
         target_unit = str(self.ui.comboBox_currUnits.currentText())
-        self.ui.plainTextEdit_Log.appendPlainText('[INFO] Plot in-accumulation data of unit {0}'.format(target_unit))
-
+        self.write_log('information',
+                       'Plot in-accumulation data of unit {0}'.format(target_unit))
         # check
         if self._inAccumulationWorkspaceName is None:
-            self.ui.plainTextEdit_Log.appendPlainText('[WARNING] No in-accumulation workspace in ADS.')
+            self.write_log('warning', 'No in-accumulation workspace in ADS.')
             return
 
         # get the workspace names
@@ -800,11 +801,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # get the previous-N cycle accumulated workspace's name: remember that currentIndex is 1 beyond what it is
         prev_ws_index = self._myAccumulationListIndex - 1 - int(self.ui.lineEdit_showPrevNCycles.text())
         if self._myAccumulationWorkspaceList[prev_ws_index] is None:
-            # minor/TODO/NOW - refactor to method
-            self.ui.plainTextEdit_Log.appendPlainText(
-                'There are only {0} previously accumulated and reduced workspace.  '
-                'Unable to access previously {1}-th workspace.'.format(len(self._myAccumulationWorkspaceList),
-                                                                       abs(prev_ws_index) - 1))
+            message = 'There are only {0} previously accumulated and reduced workspace. ' \
+                      'Unable to access previously {1}-th workspace.'.format(len(self._myAccumulationWorkspaceList),
+                                                                       abs(prev_ws_index) - 1)
+            self.write_log('error', message)
             return
 
         else:
@@ -816,7 +816,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # minor/TODO/NOW - refactor to method
             debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
                             ''.format(prev_ws_name)
-            self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
+            self.write_log('debug', debug_message)
             return
         else:
             self._plotPrevCycleName = prev_ws_name
@@ -843,14 +843,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def integrate_peak_live(self, d_min, d_max):
         """
-        set up to integrate peak live
+        set up to integrate peak with live data
         :param d_min:
         :param d_max:
         :return:
         """
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, self._myAccumulationListIndex,
-                                         d_min, d_max)
+        # integrate peak
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max)
 
+        # set the status flags
         self._integratePeakFlag = True
         self._minDPeakIntegration = d_min
         self._maxDPeakIntegration = d_max
@@ -914,8 +915,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         try:
             ipts_number = int(self.ui.lineEdit_currIPTS.text())
         except ValueError:
-            self.ui.plainTextEdit_Log.setPlainText('Unable to parse IPTS {0} to load reduced data.'
-                                                   ''.format(self.ui.lineEdit_currIPTS.text()))
+            self.write_log('error', 'Unable to parse IPTS {0} to load reduced data.'
+                                    ''.format(self.ui.lineEdit_currIPTS.text()))
             return
 
         curr_run_number = int(self.ui.lineEdit_runNumber.text())
@@ -927,7 +928,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
 
-        blabla
+        # TODO/NOW/ASAP
+        whatever()
 
     def plot_new_log_live(self, x_axis_name, y_axis_name):
         """
@@ -982,8 +984,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
                 debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
                                 ''.format(time_vec[0], self._logStartTime)
-                print '[DB...BAT] {0}'.format(debug_message)
-                self.ui.plainTextEdit_Log.appendPlainText('{0}\n'.format(debug_message))
+                self.write_log('debug', debug_message)
             else:
                 # New mode
                 # TODO/ISSUE - Implement LastNLog!
@@ -1046,7 +1047,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 continue
 
             if ws_name_i.startswith('output'):
-                self.ui.plainTextEdit_Log.appendPlainText('Processing new workspace {0}'.format(ws_name_i))
+                self.write_log('information', 'Processing new workspace {0}'.format(ws_name_i))
             else:
                 # also a new workspace might be the accumulated workspace
                 continue
@@ -1073,7 +1074,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
                 log_message = 'Workspace {0} of type {1} is not expected.\n'.format(workspace_i, type(workspace_i))
-                self.ui.plainTextEdit_Log.setPlainText(log_message)
+                self.write_log('error', log_message)
                 continue
 
             # now it is the workspace that is to plot
@@ -1089,7 +1090,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # re-set the ROI if the unit is d-spacing
             db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(), self._bankViewDMin, self._bankViewDMax)
-            self.ui.plainTextEdit_Log.setPlainText('[DB]: {0}'.format(db_msg))
+            self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
                 self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
 
@@ -1282,7 +1283,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         try:
             ws_name_list = self._controller.get_workspaces()
         except RuntimeError as run_err:
-            self.ui.plainTextEdit_Log.setPlainText('[Error]: {0}'.format(run_err))
+            self.write_log('error', 'Unable to get workspaces due to {0}'.format(run_err))
             return
 
         # check whether there is any new workspace in ADS
@@ -1311,7 +1312,30 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             ws_i = helper.retrieve_workspace(ws_name)
             if ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
                 message += 'New workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
-        # self.ui.plainTextEdit_Log.clear()
+        # END-FOR
+        self.write_log('information', message)
+
+        return
+
+    def write_log(self, level, message):
+        """ write message to the message log
+        :param level:
+        :param message:
+        :return:
+        """
+        message_prefix = ''
+
+        if level == 'warning':
+            message_prefix = 'WARNING'
+        elif level == 'information':
+            message_prefix = 'INFO'
+        elif level == 'error':
+            message_prefix = 'ERROR'
+        elif level == 'debug':
+            message_prefix = 'DEBUG'
+
+        # write
+        message = '[{0}]\t {1}'.format(message_prefix, message)
         self.ui.plainTextEdit_Log.appendPlainText(message)
 
         return
@@ -1325,8 +1349,7 @@ class SampleLoadingThread(QtCore.QThread):
     FileLoaded = QtCore.pyqtSignal(str, str)  # x-axis, y-axis name
 
     def __init__(self, parent, x_axis_name, y_axis_name, ipts_number, start_run, stop_run):
-        """
-        blabla
+        """ initialization
         :param x_axis_name:
         :param y_axis_name:
         :param ipts_number:
@@ -1335,7 +1358,18 @@ class SampleLoadingThread(QtCore.QThread):
         """
         super(SampleLoadingThread, self).__init__()
 
-        # check inputs ... blabla
+        # check inputs
+        assert parent is not None, 'Parent cannot be None.'
+        assert isinstance(x_axis_name, str), 'X-axis name {0} must be a string but not a {1}' \
+                                             ''.format(x_axis_name, type(x_axis_name))
+        assert isinstance(y_axis_name, str), 'Y-axis name {0} must be a string but not a {1}' \
+                                             ''.format(y_axis_name, type(y_axis_name))
+        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(start_run, int), 'Start run number {0} must be an integer but not a {1}' \
+                                           ''.format(start_run, type(start_run))
+        assert isinstance(stop_run, int), 'Stop run number {0} must be an integer but not a {1}' \
+                                          ''.format(stop_run, type(stop_run))
 
         self._parent = parent
         self._x_name = x_axis_name
