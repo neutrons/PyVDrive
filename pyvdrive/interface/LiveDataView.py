@@ -1310,7 +1310,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         message = ''
         for ws_name in new_ws_name_list:
             ws_i = helper.retrieve_workspace(ws_name)
-            if ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
+            if ws_i is None:
+                self.write_log('error', 'In update-timer: unable to retrieve workspace {0}'.format(ws_name))
+            elif ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
                 message += 'New workspace {0}: number of spectra = {1}'.format(ws_name, ws_i.getNumberHistograms())
         # END-FOR
         if len(message) > 0:
