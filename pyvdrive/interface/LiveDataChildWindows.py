@@ -32,6 +32,10 @@ class LiveViewSetupDialog(QtGui.QDialog):
                      self.do_set_run_view)
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
+        self.connect(self.ui.pushButton_browseGSS, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_van_gss)
+        self.connect(self.ui.pushButton_loadGSS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_van_gss)
 
         self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
                      self.toggle_options)
@@ -39,6 +43,25 @@ class LiveViewSetupDialog(QtGui.QDialog):
         # initialize some widget
         self.ui.radioButton_plotAcc.setChecked(True)
         self.ui.radioButton_plotRun.setChecked(False)
+
+        return
+
+    def do_browse_van_gss(self):
+        # blabla
+        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN'))
+        self.ui.lineEdit_vanGSSName.setText(file_name)
+
+    def do_load_van_gss(self):
+        """
+        blabla
+        :return:
+        """
+        file_name = str(self.ui.lineEdit_vanGSSName.text())
+
+        self._myParent._controller.load_smoothed_vanadium(file_name)
+
+        self.ui.textEdit_info.setText('{0} is loaded'.format(file_name))
+        self._myParent.ui.label_info.setText('Vanadium: {0}'.format(file_name))
 
         return
 

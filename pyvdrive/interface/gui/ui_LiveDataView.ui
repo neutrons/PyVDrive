@@ -101,6 +101,9 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Information including&lt;/p&gt;&lt;p&gt;1. in collection or stopped&lt;/p&gt;&lt;p&gt;2. ...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
          <string>TextLabel</string>
         </property>
@@ -335,7 +338,7 @@
       <item row="0" column="9">
        <widget class="QCheckBox" name="checkBox_normByVanadium">
         <property name="text">
-         <string>Nromalized By Vanadium</string>
+         <string>Normalized By Vanadium</string>
         </property>
        </widget>
       </item>

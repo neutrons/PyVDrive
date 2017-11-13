@@ -753,14 +753,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                              in_sum_name)
         in_sum_ws_name = in_sum_ws.name()
 
+        # use vanadium or not
+        norm_by_van = self.ui.checkBox_normByVanadium.isChecked()
+
         # plot
         for bank_id in range(1, 4):
             # get data
             try:
                 vec_y_i = in_sum_ws.readY(bank_id-1)
+                if norm_by_van:
+                    vec_y_van = self._controller.get_vanadium(bank_id)
+                    vec_y_i = vec_y_i / vec_y_van
+
                 vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
                 color_i = self._bankColorDict[bank_id]
                 label_i = 'in accumulation bank {0}'.format(bank_id)
+                # TODO/ISSUE/NOW - Use update line other than delete and re-plot
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
             except RuntimeError as run_err:
                 print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_ws_name, run_err)
@@ -830,9 +838,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # plot
         line_label = '{0}'.format(prev_ws_name)
+        norm_by_van = self.ui.checkBox_normByVanadium.isChecked()
         for bank_id in range(1, 4):
             vec_y = prev_ws.readY(bank_id-1)[:]
+            if norm_by_van:
+                vec_y_van = self._controller.get_vanadium(bank_id)
+                vec_y = vec_y / vec_y_van
             vec_x = prev_ws.readX(bank_id-1)[:len(vec_y)]
+            # TODO/NOW - Use update or new line?
             self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label, target_unit)
 
         # clean

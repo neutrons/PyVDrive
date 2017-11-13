@@ -50,6 +50,8 @@ class LiveDataDriver(QtCore.QThread):
         # more containers
         self._peakIntensityDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
 
+        self._vanadiumWorkspaceDict = dict()
+
         return
 
     @staticmethod
@@ -264,11 +266,75 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
+    def get_vanadium(self, bank_id):
+        # blabla
+        return ADS.retrieve(self._vanadiumWorkspaceDict[bank_id]).readY(0)
+
     def load_reduced_runs(self, ipts_number, run_number):
         # TODO/NOW/TODO/Implement
         blabla
 
-    # TEST TODO/New Method
+    # TEST TODO/NOW - Method-in-implementation
+    def load_smoothed_vanadium(self, van_gsas_file):
+        """
+
+        :param van_gsas_file:
+        :return:
+        """
+        # TODO/TODO/NOW/NOW - Clean the code
+
+        # import os
+        # gsas_path = os.path.join(os.path.expanduser('~/Downloads/'), '158559-s.gda')
+        # general
+        mantidsimple.LoadGSS(Filename=van_gsas_file, OutputWorkspace='vanadium')
+        mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998, SpectrumIDs='1-3',
+                               L2='2,2,2', Polar='90,270,150')
+        mantidsimple.ConvertUnits(InputWorkspace='vanadium', OutputWorkspace='vanadium', Target='dSpacing')
+
+        # bank 1 and 2
+        for bank in [1, 2]:
+            ws_name = 'van_bank_{0}'.format(bank)
+            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='van2banks', WorkspaceIndexList=bank-1)
+            mantidsimple.Rebin(InputWorkspace='van2banks', OutputWorkspace='van2banks', Params='0.3,-0.001, 3.5')
+            mantidsimple.FFTSmooth(InputWorkspace='van2banks', OutputWorkspace=ws_name, Filter='Butterworth', Params='20,2',
+                  IgnoreXBins=True, AllSpectra=True)
+            self._vanadiumWorkspaceDict[bank] = ws_name
+
+        # bank3
+        for bank in [3]:
+            # special processing for bank 3
+            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='vanhighbank', WorkspaceIndexList=bank-1)
+
+            # sort the bins
+            bank3ws = ADS.retrieve('vanhighbank')
+            vecx = bank3ws.readX(0)
+            vecy = bank3ws.readY(0)
+            xy_list = list()
+            for i in range(len(vecy)):
+                xy_list.append((vecx[i], vecy[i]))
+
+            xy_list.sort()
+
+            vec_x = numpy.ndarray(shape=(len(vecx),), dtype='float')
+            vec_y = numpy.ndarray(shape=(len(vecy),), dtype='float')
+
+            for i, xy in enumerate(xy_list):
+                vec_x[i] = xy[0]
+                vec_y[i] = xy[1]
+            vec_x[-1] = vecx[-1]
+
+            mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1, UnitX='dSpacing', OutputWorkspace='vanbank3')
+
+            mantidsimple.Rebin(InputWorkspace='vanbank3', OutputWorkspace='vanbank3', Params='0.3,-0.001, 3.5')
+            ws_name = 'van_bank_{0}'.format(bank)
+            mantidsimple.FFTSmooth(InputWorkspace='vanbank3', OutputWorkspace=ws_name, WorkspaceIndex=0, Filter='Butterworth',
+                  Params='20,2', IgnoreXBins=True, AllSpectra=True)
+
+            self._vanadiumWorkspaceDict[bank] = ws_name
+        # END-FOR
+
+        return
+
     @staticmethod
     def parse_sample_log(ws_name_list, sample_log_name):
         """parse the sample log time stamps and value from a series of workspaces
