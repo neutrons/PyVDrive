@@ -155,8 +155,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.ui.setupUi(self)
 
         # init widget
-        self.ui.tableWidget_AxisX.setup()
-        self.ui.tableWidget_AxisY.setup()
+        self._init_widgets()
 
         # link
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
@@ -172,6 +171,22 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
+    def _init_widgets(self):
+        """
+
+        :return:
+        """
+        # TODO/ISSUE/NOW
+
+        self.ui.tableWidget_AxisX.setup()
+        self.ui.tableWidget_AxisY.setup()
+
+        self.ui.radioButton_calculatePeak
+        self.ui.radioButton_viewSampleLog
+
+        self.ui.groupBox_livePeakView.setEnabled(True)
+        self.ui.groupBox_sampleLogView.setEnabled(False)
+
     def do_quit(self):
         """Quit without doing any operation
         :return:
@@ -184,6 +199,17 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         """Apply setup
         :return:
         """
+        # TODO/NOW - ASAP
+        if self.ui.radioButton_viewSampleLog.isEnabled():
+            blabla
+
+
+        elif self.ui.radioButton_calculatePeak.isEnabled():
+            blabla
+
+        else:
+            blabla
+
         # get X-axis item
         try:
             x_axis_name = self.ui.tableWidget_AxisX.get_selected_item()

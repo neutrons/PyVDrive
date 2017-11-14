@@ -475,8 +475,13 @@
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
            <widget class="QPushButton" name="pushButton_setupGeneralPurposePlot">
+            <property name="font">
+             <font>
+              <pointsize>9</pointsize>
+             </font>
+            </property>
             <property name="text">
-             <string>Setup</string>
+             <string>Multi-Purpose View Setup</string>
             </property>
            </widget>
           </item>

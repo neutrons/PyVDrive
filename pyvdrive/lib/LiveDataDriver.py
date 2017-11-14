@@ -51,9 +51,43 @@ class LiveDataDriver(QtCore.QThread):
         # more containers
         self._peakIntensityDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
 
-        self._vanadiumWorkspaceDict = dict()
+        self._vanadiumWorkspaceDict = dict()  # key: bank ID.  value: workspace name
 
         return
+
+    def calculate_live_peak_parameters(self, ws_name, bank_id, norm_by_van, d_min, d_max):
+        """
+        blabla
+        :param ws_name:
+        :param bank_id
+        :param norm_by_van:
+        :param d_min:
+        :param d_max:
+        :return: 3-tuple as (peak integrated intensity, average dSpacing value, variance)
+        """
+        import peak_util
+
+        # TODO/NOW - check
+
+        vec_d = ADS.retrieve(ws_name).readX(bank_id)
+
+        min_x_index = max(0, numpy.searchsorted(vec_d, d_min) - 1)
+        max_x_index = min(len(vec_d), numpy.searchsorted(vec_d, d_max) + 1)
+
+        # get Y
+        vec_y = ADS.retrieve(ws_name).readY(bank_id)
+        if norm_by_van and bank_id in self._vanadiumWorkspaceDict:
+            vec_van = self.get_vanadium(bank_id)
+            vec_y = vec_y / vec_van
+
+        # estimate background
+        bkgd_a, bkgd_b = peak_util.estimate_background(vec_d, vec_y, min_x_index, max_x_index)
+
+        # calculate peak intensity parameters
+        peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
+                                                                               max_x_index, bkgd_a, bkgd_b)
+
+        return peak_integral, average_d, variance
 
     @staticmethod
     def convert_time_stamps(date_time_vec, relative):

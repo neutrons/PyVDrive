@@ -453,6 +453,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if self._gpPlotSetupDialog is None:
             self._gpPlotSetupDialog = SampleLogPlotSetupDialog(self)
 
+        if self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1] is None:
+            self.write_log('error', 'Setup must be followed by starting run.')
+            return
+
         # get axis
         curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
         logs = helper.get_sample_log_names(curr_ws_name, smart=True)
@@ -522,9 +526,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         stop live data reduction and view
         :return:
         """
-        self._checkStateTimer.stop()
+        if self._checkStateTimer is not None:
+            self._checkStateTimer.stop()
 
-        self._controller.stop()
+        if self._controller is not None:
+            self._controller.stop()
 
         return
 
@@ -564,7 +570,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         return list()
 
-    # TODO/TEST/NEW Method
+    # TEST TODO/Newly Implemented Method
     def get_last_n_round_workspaces(self, last):
         """
         get the last round of workspaces
@@ -680,13 +686,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name_i,
                                                                          bank_id=bank_id, target_unit='dSpacing',
                                                                          point_data=True, start_bank_id=1)
-            # check .. here .. # TODO/DEBUG/REMOVE BUG FIXED
-            data_bank = data_set_dict[bank_id]
-            vec_y = data_bank[1]
-            info = 'Workspace {0} Bank ID {1} Min and Max Y are {2} and {3}.'.format(ws_name_i, bank_id,
-                                                                                     numpy.min(vec_y), numpy.max(vec_y))
-
-            self.write_log('information', info)
             acc_data_dict[acc_index] = data_set_dict[bank_id]
         # END-FOR
 
