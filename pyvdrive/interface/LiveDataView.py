@@ -1066,7 +1066,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 continue
 
             # convert unit
-            helper.mtd_convert_units(ws_name_i, 'dSpacing')
+            if helper.get_workspace_unit(ws_name_i) != 'dSpacing':
+                helper.mtd_convert_units(ws_name_i, 'dSpacing')
+            else:
+                self.write_log('information', 'Input workspace {0} has unit dSpacing.'.format(ws_name_i))
+
+            # rebin
+            helper.rebin(ws_name_i, '0.3,-0.001,3.5', preserve=False)
+
+            # reference to workspace
+            workspace_i = helper.retrieve_workspace(ws_name_i)
+
+            ws_x_info = ''
+            for iws in range(3):
+                ws_x_info += 'Workspace {0}: From {1} to {2}, # of bins = {3}\n'.format(iws, workspace_i.readX(0)[0],
+                                                                                        workspace_i.readX(0)[-1],
+                                                                                        len(workspace_i.readX(0)))
+            self.write_log('debug', ws_x_info)
 
             # add new workspace to data manager
             self.add_new_workspace(ws_name_i)
@@ -1075,7 +1091,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self.ui.lineEdit_newestReducedWorkspace.setText(ws_name_i)
 
             # get reference to workspace
-            workspace_i = helper.retrieve_workspace(ws_name_i)
             run_number_i = workspace_i.getRunNumber()
             self.ui.lineEdit_runNumber.setText(str(run_number_i))
 
