@@ -7,6 +7,7 @@ import mantid
 from mantid.api import AlgorithmManager
 from mantid.api import AnalysisDataService as ADS
 import mantid_helper
+import peak_util
 import logging
 import os
 import time
@@ -65,18 +66,30 @@ class LiveDataDriver(QtCore.QThread):
         :param d_max:
         :return: 3-tuple as (peak integrated intensity, average dSpacing value, variance)
         """
-        import peak_util
+        # check inputs
+        assert isinstance(ws_name, str), 'Input workspace name {0} must be a string but not a {1}' \
+                                         ''.format(ws_name, type(ws_name))
 
         # TODO/NOW - check
 
-        vec_d = ADS.retrieve(ws_name).readX(bank_id)
+        # check bank ID
+        if bank_id < 1 or bank_id > 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
+        else:
+            ws_index = bank_id - 1
 
+        # get workspace
+        workspace = mantid_helper.retrieve_workspace(ws_name, True)
+
+        # calculate x min and x max indexes
+        vec_d = workspace.readX(ws_index)
         min_x_index = max(0, numpy.searchsorted(vec_d, d_min) - 1)
         max_x_index = min(len(vec_d), numpy.searchsorted(vec_d, d_max) + 1)
 
         # get Y
-        vec_y = ADS.retrieve(ws_name).readY(bank_id)
+        vec_y = workspace.readY(ws_index)
         if norm_by_van and bank_id in self._vanadiumWorkspaceDict:
+            # normalize vanadium if the flag is on AND vanadium is loaded
             vec_van = self.get_vanadium(bank_id)
             vec_y = vec_y / vec_van
 
@@ -240,7 +253,7 @@ class LiveDataDriver(QtCore.QThread):
 
         time_value_list = list()
         for tup_value in self._peakIntensityDict.values():
-            time_i, intensities = tup_value
+            time_i, intensities, positions = tup_value
             time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
             time_value_list.append((time_i_rel, intensities[ws_index]))
         # END-FOR
@@ -257,11 +270,50 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, vec_intensity
 
-    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max):
+    def get_peak_positions(self, bank_id, time0):
+        """ get the peaks' positions (calculated) along with time
+        :param bank_id: bank ID
+        :param time0: time zero for time stamps
+        :return:
+        """
+        # check whether inputs are valid
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        if bank_id < 1 or bank_id > 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
+
+        try:
+            time0_ns = time0.totalNanoseconds()
+        except AttributeError as att_err:
+            raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
+                               ''.format(att_err))
+        ws_index = bank_id - 1
+
+        time_value_list = list()
+        for tup_value in self._peakIntensityDict.values():
+            time_i, intensities, positions = tup_value
+            time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
+            time_value_list.append((time_i_rel, positions[ws_index]))
+        # END-FOR
+
+        time_value_list.sort()
+
+        # convert to vector
+        vec_time = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
+        vec_center = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
+        for index, tup_value in enumerate(time_value_list):
+            time_i, center_i = tup_value
+            vec_time[index] = time_i
+            vec_center[index] = center_i
+
+        return vec_time, vec_center
+
+    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
         :param d_min:
-        :param d_max: 
+        :param d_max:
+        :param norm_by_vanadium
         :return: 
         """
         # the last workspace might be partially accumulated
@@ -277,26 +329,34 @@ class LiveDataDriver(QtCore.QThread):
 
             # get workspace
             workspace_i = mantid_helper.retrieve_workspace(ws_name, True)
-            value_list = list()
 
+            position_list = list()
+            intensity_list = list()
             # calculate peak intensity
             for iws in range(workspace_i.getNumberHistograms()):
-                vec_x = workspace_i.readX(iws)
-                vec_y = workspace_i.readY(iws)
+                value_tup = self.calculate_live_peak_parameters(ws_name=ws_name, bank_id=iws+1, norm_by_van=norm_by_vanadium,
+                                                                d_min=d_min, d_max=d_max)
+                intensity_i = value_tup[0]
+                intensity_list.append(intensity_i)
 
-                index_min = numpy.searchsorted(vec_x, d_min)
-                index_max = numpy.searchsorted(vec_x, d_max)
-                delta_d = vec_x[index_min+1:index_max] - vec_x[index_min:index_max-1]
-                peak_intensity_i = numpy.sum(delta_d * vec_y[index_min:index_max-1])
-                value_list.append(peak_intensity_i)
+                position_i = value_tup[1]
+                position_list.append(position_i)
+
+                # peak_integral, average_d, variance
+                # vec_x = workspace_i.readX(iws)
+                # vec_y = workspace_i.readY(iws)
+                #
+                # index_min = numpy.searchsorted(vec_x, d_min)
+                # index_max = numpy.searchsorted(vec_x, d_max)
+                # delta_d = vec_x[index_min+1:index_max] - vec_x[index_min:index_max-1]
+                # peak_intensity_i = numpy.sum(delta_d * vec_y[index_min:index_max-1])
+                # value_list.append(peak_intensity_i)
             # END-FOR (iws)
 
             # get average time
             time_stamp = workspace_i.run().getProperty('proton_charge').lastTime()
 
-            self._peakIntensityDict[ws_name] = (time_stamp, value_list)
-
-            print '[INFO] Workspace {0} Time = {1} Peak Intensity = {2}'.format(ws_name, time_stamp, value_list)
+            self._peakIntensityDict[ws_name] = (time_stamp, intensity_list, position_list)
         # END-FOR
 
         return

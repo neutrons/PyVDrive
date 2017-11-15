@@ -100,6 +100,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._currSampleLogValueVector = None
         self._logStartTime = None
 
+        # peak integration
+        self._integratePeakFlag = False
+        self._minDPeakIntegration = None
+        self._maxDPeakIntegration = None
+        self._plotPeakParameterIndex = 0
+        self._plotPeakVanadiumNorm = True
+
         # other time
         self._liveStartTimeStamp = None
 
@@ -169,11 +176,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._2dMode = 'acc'  # options are 'acc', 'runs', 'unit' (for each refreshed workspace)
         # about 'runs' option
         self._2dStartRunNumber = None
-
-        # peak integration
-        self._integratePeakFlag = False
-        self._minDPeakIntegration = None
-        self._maxDPeakIntegration = None
 
         # mutexes
         self._bankSelectMutex = False
@@ -853,21 +855,38 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def integrate_peak_live(self, d_min, d_max):
+    def integrate_peak_live(self, d_min, d_max, peak_param_type, norm_by_van):
         """
         set up to integrate peak with live data
         :param d_min:
         :param d_max:
+        :param peak_param_type:
+        :param norm_by_van
         :return:
         """
-        # integrate peak
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max)
+        # integrate peak for all the accumulated runs
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
+                                         norm_by_vanadium=norm_by_van)
 
         # set the status flags
         self._integratePeakFlag = True
         self._minDPeakIntegration = d_min
         self._maxDPeakIntegration = d_max
         self._currSampleLogX = 'Time'
+
+        # peak type
+        peak_param_type = str(peak_param_type).lower()
+        if peak_param_type.count('intensity') > 0:
+            self._plotPeakParameterIndex = 1
+        elif peak_param_type.count('center') > 0:
+            self._plotPeakParameterIndex = 0
+        else:
+            raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_param_type))
+
+        # normalize by vanadium
+        assert isinstance(norm_by_van, bool), 'Flag to normalize by vanadium {0} must be a boolean but not a {1}' \
+                                              ''.format(norm_by_van, type(norm_by_van))
+        self._plotPeakVanadiumNorm = norm_by_van
 
         return
 
@@ -896,23 +915,38 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def plot_integrate_peak(self, d_min, d_max):
         """
-        blabla
+        integrate peaks in live and plot
         :param d_min:
         :param d_max:
         :return:
         """
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max)
-
-        vec_time, vec_peak_intensity = self._controller.get_peak_intensities(bank_id=1, time0=self._liveStartTimeStamp)
+        # integrate a single peak across all the accumulated workspaces
+        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max, self._plotPeakVanadiumNorm)
 
         # TODO/ISSUE/NOW Better to use update
         self.ui.graphicsView_comparison.clear_all_lines()
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_intensity,
-                                                 label='Bank 1 Intensity', line_style='--', marker='o', color='blue')
 
-        vec_time, vec_peak_intensity = self._controller.get_peak_intensities(bank_id=2, time0=self._liveStartTimeStamp)
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_intensity,
-                                                 label='Bank 2 Intensity', line_style='--', marker='D', color='red')
+        # plot bank 1
+        if self._plotPeakParameterIndex == 0:
+            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=1, time0=self._liveStartTimeStamp)
+            label_1 = 'Bank 1 Position'
+        else:
+            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
+                                                                              time0=self._liveStartTimeStamp)
+            label_1 = 'Bank 1 Intensity'
+        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
+                                                 label=label_1, line_style='--', marker='o', color='blue')
+
+        # plot bank 2
+        if self._plotPeakParameterIndex == 0:
+            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=2, time0=self._liveStartTimeStamp)
+            label_2= 'Bank 2 Position'
+        else:
+            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=2,
+                                                                              time0=self._liveStartTimeStamp)
+            label_2 = 'Bank 2 Intensity'
+        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
+                                                 label=label_2, line_style='--', marker='D', color='red')
 
         return
 

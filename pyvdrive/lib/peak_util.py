@@ -135,7 +135,7 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
     # check input:
     assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
     assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
-    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+    if len(vec_d) - len(vec_y) > 1 or len(vec_d) - len(vec_y) < 0:
         raise RuntimeError('Vector of D and vector of Y have different size.')
     if left_x_index >= right_x_index:
         raise RuntimeError('Left X index cannot be equal or larger than right X index')
@@ -175,7 +175,7 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
     # check input:
     assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
     assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
-    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+    if len(vec_d) - len(vec_y) > 1 or len(vec_d) - len(vec_y) < 0:
         raise RuntimeError('Vector of D and vector of Y have different size.')
     if left_x_index >= right_x_index:
         raise RuntimeError('Left X index cannot be equal or larger than right X index')
@@ -213,7 +213,7 @@ def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, b
     # check input:
     assert isinstance(vec_d, numpy.ndarray), 'Vector of D must be a numpy array'
     assert isinstance(vec_y, numpy.ndarray), 'Vector of Y must be a numpy array'
-    if len(vec_y) - len(vec_d) > 1 or len(vec_y) - len(vec_d) < 0:
+    if len(vec_d) - len(vec_y) > 1 or len(vec_d) - len(vec_y) < 0:
         raise RuntimeError('Vector of D and vector of Y have different size.')
     if left_x_index >= right_x_index:
         raise RuntimeError('Left X index cannot be equal or larger than right X index')
