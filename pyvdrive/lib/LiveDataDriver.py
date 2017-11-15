@@ -8,9 +8,7 @@ from mantid.api import AlgorithmManager
 from mantid.api import AnalysisDataService as ADS
 import mantid_helper
 import peak_util
-import logging
-import os
-import time
+import archivemanager
 from PyQt4 import QtCore
 
 # TODO/ISSUE/NEXT - Find out how to use log files
@@ -35,6 +33,9 @@ class LiveDataDriver(QtCore.QThread):
         initialization
         """
         super(LiveDataDriver, self).__init__()
+
+        # archive manager
+        self._archiveManager = archivemanager.DataArchiveManager('VULCAN')
 
         # clear the existing workspace with same name
         if mantid_helper.workspace_does_exist(LiveDataDriver.COUNTER_WORKSPACE_NAME):
@@ -365,9 +366,22 @@ class LiveDataDriver(QtCore.QThread):
         # blabla
         return ADS.retrieve(self._vanadiumWorkspaceDict[bank_id]).readY(0)
 
-    def load_reduced_runs(self, ipts_number, run_number):
-        # TODO/NOW/TODO/Implement
-        blabla
+    # TODO/NOW/ - In-Implementation
+    def load_reduced_runs(self, ipts_number, run_number, output_ws_name):
+        """
+
+        :param ipts_number:
+        :param run_number:
+        :return:
+        """
+        assert isinstance(ipts_number, int), 'blabla2'
+        assert isinstance(run_number, int), 'blbbla3'
+
+        gsas_file_name = self._archiveManager.get_data_archive_gsas(ipts_number, run_number)
+
+        mantidsimple.LoadGSS(Filename=gsas_file_name, OutputWorkspace=output_ws_name)
+
+        return
 
     # TEST TODO/NOW - Method-in-implementation
     def load_smoothed_vanadium(self, van_gsas_file):

@@ -391,10 +391,17 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label_15">
-            <property name="text">
-             <string>Intervals (Live)</string>
-            </property>
+           <widget class="QComboBox" name="comboBox_2dPlotOptions">
+            <item>
+             <property name="text">
+              <string>Intervals (Live)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Runs</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item>
