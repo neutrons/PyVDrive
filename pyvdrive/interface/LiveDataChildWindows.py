@@ -32,6 +32,10 @@ class LiveViewSetupDialog(QtGui.QDialog):
                      self.do_set_run_view)
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
+        self.connect(self.ui.pushButton_browseGSS, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_van_gss)
+        self.connect(self.ui.pushButton_loadGSS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_van_gss)
 
         self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
                      self.toggle_options)
@@ -39,6 +43,25 @@ class LiveViewSetupDialog(QtGui.QDialog):
         # initialize some widget
         self.ui.radioButton_plotAcc.setChecked(True)
         self.ui.radioButton_plotRun.setChecked(False)
+
+        return
+
+    def do_browse_van_gss(self):
+        # blabla
+        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN'))
+        self.ui.lineEdit_vanGSSName.setText(file_name)
+
+    def do_load_van_gss(self):
+        """
+        blabla
+        :return:
+        """
+        file_name = str(self.ui.lineEdit_vanGSSName.text())
+
+        self._myParent._controller.load_smoothed_vanadium(file_name)
+
+        self.ui.textEdit_info.setText('{0} is loaded'.format(file_name))
+        self._myParent.ui.label_info.setText('Vanadium: {0}'.format(file_name))
 
         return
 
@@ -120,7 +143,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     """
     # define signal
     PlotSignal = QtCore.pyqtSignal(str, str)
-    PeakIntegrateSignal = QtCore.pyqtSignal(float, float)
+    PeakIntegrateSignal = QtCore.pyqtSignal(float, float, str, bool)
 
     def __init__(self, parent=None):
         """ Initialization
@@ -132,14 +155,18 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.ui.setupUi(self)
 
         # init widget
-        self.ui.tableWidget_AxisX.setup()
-        self.ui.tableWidget_AxisY.setup()
+        self._init_widgets()
 
         # link
         self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
                      self.do_quit)
         self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
                      self.do_apply)
+
+        self.connect(self.ui.radioButton_calculatePeak, QtCore.SIGNAL('toggled(bool)'),
+                     self.do_select_groups)
+        self.connect(self.ui.radioButton_viewSampleLog, QtCore.SIGNAL('toggled(bool)'),
+                     self.do_select_groups)
 
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
@@ -149,42 +176,47 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def do_quit(self):
-        """Quit without doing any operation
+    def _init_widgets(self):
+        """
+        initialize widgets
         :return:
         """
-        self.close()
+        # set up the Axes
+        self.ui.tableWidget_AxisX.setup()
+        self.ui.tableWidget_AxisY.setup()
+
+        # radio buttons: default to calculate Peak
+        self.ui.radioButton_calculatePeak.setChecked(True)
+        self.ui.radioButton_viewSampleLog.setChecked(False)
+
+        # set the groups
+        self.ui.groupBox_livePeakView.setEnabled(True)
+        self.ui.groupBox_sampleLogView.setEnabled(False)
+
+        # peak calculation special
+        self.ui.checkBox_normByVan.setChecked(True)
+        self.ui.comboBox_peakY.clear()
+        self.ui.comboBox_peakY.addItem('Peak Center')
+        self.ui.comboBox_peakY.addItem('Peak Intensity')
 
         return
 
+    # TODO/NOW - In-implementation
     def do_apply(self):
         """Apply setup
         :return:
         """
-        # get X-axis item
-        try:
-            x_axis_name = self.ui.tableWidget_AxisX.get_selected_item()
-        except RuntimeError as run_err:
-            err_msg = 'One and only one item can be selected for X-axis. Now {0} is selected.' \
-                      ''.format(run_err)
-            GuiUtility.pop_dialog_error(self, err_msg)
-            return
-
-        # high priority to integrate peaks
-        if self.ui.checkBox_integratePeak.isChecked():
-            # set up peak integration
-            min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
-            max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
+        if self.ui.radioButton_viewSampleLog.isChecked():
+            # apply sample log calculation
+            # get X-axis item
             try:
-                min_d = float(min_d_str)
-                max_d = float(max_d_str)
-            except ValueError as value_err:
-                raise RuntimeError('Min-D {0} or/and Max-D {1} cannot be parsed as a float due to {2}'
-                                   ''.format(min_d_str, max_d_str, value_err))
+                x_axis_name = self.ui.tableWidget_AxisX.get_selected_item()
+            except RuntimeError as run_err:
+                err_msg = 'One and only one item can be selected for X-axis. Now {0} is selected.' \
+                          ''.format(run_err)
+                GuiUtility.pop_dialog_error(self, err_msg)
+                return
 
-            self.PeakIntegrateSignal.emit(min_d, max_d)
-
-        else:
             # get Y-axis item
             try:
                 y_axis_name = self.ui.tableWidget_AxisY.get_selected_item()
@@ -196,7 +228,46 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
             # send signal to parent window to plot
             self.PlotSignal.emit(x_axis_name, y_axis_name)
+
+        elif self.ui.radioButton_calculatePeak.isChecked():
+            # apply peak calculation
+            # set up peak integration
+            min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
+            max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
+            peak_type = str(self.ui.comboBox_peakY.currentText())
+            try:
+                min_d = float(min_d_str)
+                max_d = float(max_d_str)
+            except ValueError as value_err:
+                raise RuntimeError('Min-D {0} or/and Max-D {1} cannot be parsed as a float due to {2}'
+                                   ''.format(min_d_str, max_d_str, value_err))
+
+            norm_by_van = self.ui.checkBox_normByVan.isChecked()
+            self.PeakIntegrateSignal.emit(min_d, max_d, peak_type, norm_by_van)
+
+        else:
+            # it is not a good choice
+            raise RuntimeError('Neither of two radio buttons is selected.  It is not an allowed '
+                               'case.')
         # END-IF-ELSE
+
+        return
+
+    def do_quit(self):
+        """Quit without doing any operation
+        :return:
+        """
+        self.close()
+
+        return
+
+    def do_select_groups(self):
+        """
+        event to select groups
+        :return:
+        """
+        self.ui.groupBox_livePeakView.setEnabled(self.ui.radioButton_calculatePeak.isChecked())
+        self.ui.groupBox_sampleLogView.setEnabled(self.ui.radioButton_viewSampleLog.isChecked())
 
         return
 

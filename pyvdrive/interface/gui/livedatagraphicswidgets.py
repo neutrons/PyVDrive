@@ -8,11 +8,11 @@ from mplgraphicsview2d import MplGraphicsView2D
 
 class GeneralPurpose1DView(MplGraphicsView1D):
     """
-
+    1D canvas for general-purpose
     """
     def __init__(self, parent):
         """
-        blabla
+        initialization
         :param parent:
         """
         super(GeneralPurpose1DView, self).__init__(parent, 1, 1)
@@ -26,7 +26,7 @@ class Live2DView(MplGraphicsView2D):
     """
     def __init__(self, parent):
         """
-        blabla
+        initialization on 2D view
         :param parent:
         """
         super(Live2DView, self).__init__(parent)
@@ -34,15 +34,13 @@ class Live2DView(MplGraphicsView2D):
         return
 
     def plot_contour(self, data_set_dict):
-        """
-        blabla
+        """ Plot 2D data as a contour plot
         :param data_set_dict: dictionary such that
         :return:
         """
         # Check inputs
-        # blabla
-
-        # TODO/NOW/TODO - doc and check
+        assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
+                                                ''.format(type(data_set_dict))
 
         # construct
         x_list = sorted(data_set_dict.keys())
@@ -50,12 +48,7 @@ class Live2DView(MplGraphicsView2D):
         vec_y = numpy.array(x_list)
         size_x = len(vec_x)
 
-        # build mesh and matrix y
-        # grid_x, grid_y = numpy.meshgrid(vec_x, vec_y)
-        # print '[DB...BAT] original size: {0}, {1} and grid shape = {2}'.format(len(vec_x), len(vec_y), grid_x.shape)
-        # original size: 2257, 2 and grid shape = (2, 2257)
-        # matrix_y = numpy.ndarray(grid_x.shape, dtype='float')
-
+        # create matrix on mesh
         grid_shape = len(vec_y), len(vec_x)
         matrix_y = numpy.ndarray(grid_shape, dtype='float')
         matrix_index = 0
@@ -63,8 +56,8 @@ class Live2DView(MplGraphicsView2D):
             # vector X
             vec_x_i = data_set_dict[index][0]
             if len(vec_x_i) != size_x:
-                # TODO/TODO/labor - better message
-                raise RuntimeError('blabla')
+                raise RuntimeError('Unable to form a contour plot because {0}-th vector has a different size {1} '
+                                   'than first size {2}'.format(index, len(vec_x_i), size_x))
 
             # vector Y: each row will have the value of a pattern
             matrix_y[matrix_index:] = data_set_dict[index][1]  #

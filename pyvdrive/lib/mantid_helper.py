@@ -1445,6 +1445,12 @@ def normalize_by_vanadium(data_ws_name, van_ws_name):
 
     return
 
+def rebin(workspace_name, params, preserve):
+    # TODO/ISSUE/NOW/DOC
+    mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
+                    Params=params,
+                    PreserveEvents=preserve)
+    return
 
 def retrieve_workspace(ws_name, raise_if_not_exist=False):
     """
