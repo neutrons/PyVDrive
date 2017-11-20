@@ -19,6 +19,30 @@ class GeneralPurpose1DView(MplGraphicsView1D):
 
         return
 
+    # TODO/NOW/89 - Implement!
+    def plot_sample_log(self, blabla):
+        """
+        Requirements
+        1. compare with currently plotted sample to determine whether it is to remove current plot and plot a new
+           line or update current line
+        2. determine color style and etc.
+        :param blabla:
+        :return:
+        """
+        pass
+
+    # TODO/NOW/89 - Implement!
+    def plot_peak_parameters(self, blabla):
+        """
+        Requirements
+        1. compare with currently plotted sample to determine whether it is to remove current plot and plot a new
+           line or update current line
+        2. determine color style and etc.
+        :param blabla:
+        :return:
+        """
+        pass
+
 
 class Live2DView(MplGraphicsView2D):
     """

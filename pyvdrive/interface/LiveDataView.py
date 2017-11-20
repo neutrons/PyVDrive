@@ -981,8 +981,17 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
                                                                               time0=self._liveStartTimeStamp)
             label_1 = 'Bank 1 Intensity'
+        # TODO/NOW/89 - should let graphicsView_comparison to manage plot!
         self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
                                                  label=label_1, line_style='--', marker='o', color='blue')
+
+        # FIXME / PROTOTYPE - This section is for testing left/right plot
+        vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
+                                                                          time0=self._liveStartTimeStamp)
+        label_1 = 'Bank 1 Intensity'
+        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params, is_right=True, y_label='Intensity',
+                                                 label=label_1, line_style='-.', marker='*', color='blue')
+        # END-FIXME / ---------------------------------------------------
 
         # plot bank 2
         if self._plotPeakParameterIndex == 0:
@@ -1204,8 +1213,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # update log
             if self._currSampleLogX is not None and self._currSampleLogY is not None:
+                # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
                 self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
             elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
+                # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
                 self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
         # END-FOR
 
