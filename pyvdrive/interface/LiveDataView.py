@@ -38,12 +38,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
+    IN_COLLECTION_MESSAGE = 'In Live Reduction   '
+
     def __init__(self, parent, live_driver):
-        """initialization
+        """ initialization
         :param parent:
+        :param live_driver:
         """
         # call parent
         super(VulcanLiveDataView, self).__init__(parent)
+
+        # configuration
+        self._myConfiguration = parent.configuration
 
         # get hold of controller/driver
         if live_driver is None:
@@ -199,9 +205,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_2dBank1.setChecked(True)
         self._bankSelectMutex = False
 
+        self.ui.label_info.setText('')
+
         return
 
-    # TEST TODO/NOW - recently implemented
     def _set_workspace_manager(self, max_acc_ws_number, accumulation_time, update_time):
         """
         set the workspace numbers, indicators and etc.
@@ -407,6 +414,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    @property
+    def controller(self):
+        """
+        get the reference to the controller instance of this window
+        :return:
+        """
+        return self._controller
+
     def do_clear_log(self):
         """ clear the live data processing log
         :return:
@@ -509,6 +524,28 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
         self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
 
+        return
+
+    def set_info(self, message, append=True, insert_at_beginning=False):
+        """
+
+        :param message:
+        :param append:
+        :param insert_at_beginning:
+        :return:
+        """
+        if append:
+            original_message = str(self.ui.label_info.text())
+
+            if insert_at_beginning:
+                message = '{0} | {1}'.format(message, original_message)
+            else:
+                message = '{0} | {1}'.format(original_message, message)
+
+        self.ui.label_info.setText(message)
+
+        return
+
     def do_start_live(self):
         """
         start live data reduction and view
@@ -520,6 +557,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # start start listener
         self._controller.run()
+
+        # edit the states
+        self.set_info(VulcanLiveDataView.IN_COLLECTION_MESSAGE, append=True,
+                      insert_at_beginning=True)
 
         return
 
@@ -533,6 +574,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if self._controller is not None:
             self._controller.stop()
+
+        # remove the message
+        curr_message = str(self.ui.label_info.text())
+        if curr_message.count(VulcanLiveDataView.IN_COLLECTION_MESSAGE) > 0:
+            new_msg = curr_message.replace(VulcanLiveDataView.IN_COLLECTION_MESSAGE + ' | ', '')
+            self.set_info(new_msg, append=False)
 
         return
 

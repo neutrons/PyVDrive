@@ -47,21 +47,33 @@ class LiveViewSetupDialog(QtGui.QDialog):
         return
 
     def do_browse_van_gss(self):
-        # blabla
-        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN'))
-        self.ui.lineEdit_vanGSSName.setText(file_name)
-
-    def do_load_van_gss(self):
         """
-        blabla
+        launch a dialog to find smoothed Vanadium GSAS file
         :return:
         """
+        # get file name
+        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
+        # add the line information
+        self.ui.lineEdit_vanGSSName.setText(file_name)
+
+        return
+
+    def do_load_van_gss(self):
+        """Load smoothed vanadium from GSAS file
+        :return:
+        """
+        # get file name
         file_name = str(self.ui.lineEdit_vanGSSName.text())
 
-        self._myParent._controller.load_smoothed_vanadium(file_name)
+        # let parent window to load
+        self._myParent.controller.load_smoothed_vanadium(file_name)
 
+        # set message
         self.ui.textEdit_info.setText('{0} is loaded'.format(file_name))
-        self._myParent.ui.label_info.setText('Vanadium: {0}'.format(file_name))
+
+        # append the new message to main window
+        info = 'Vanadium: {0}'.format(file_name)
+        self._myParent.set_info(info, append=True, insert_at_beginning=False)
 
         return
 
@@ -293,8 +305,10 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         :param reset:
         :return:
         """
-        assert isinstance(x_axis_list, list), 'blabla1'
-        assert isinstance(y_axis_list, list), 'blabla2'
+        assert isinstance(x_axis_list, list), 'X-axis items {0} must be given as a list but not' \
+                                              'a {1}.'.format(x_axis_list, type(x_axis_list))
+        assert isinstance(y_axis_list, list), 'Y-axis items {0} must be given as a list but not ' \
+                                              'a {1}.'.format(y_axis_list, type(y_axis_list))
 
         if reset:
             self.ui.tableWidget_AxisX.remove_all_rows()

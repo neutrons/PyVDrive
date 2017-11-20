@@ -64,6 +64,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # new work flow
         template_data_dir = PyVDrive.__path__[0]
 
+        # configuration
+        self._myConfiguration = config.PyVDriveConfiguration()
+
         self._myWorkflow = VdriveAPI.VDriveAPI('VULCAN', template_data_dir)
         self._numSnapViews = 6
 
@@ -681,6 +684,13 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # END_FOR(i)
 
         return
+
+    @property
+    def configuration(self):
+        """return configuration instance
+        :return:
+        """
+        return self._myConfiguration
 
     def add_runs_trees(self, ipts_number, ipts_dir, run_tuple_list):
         """

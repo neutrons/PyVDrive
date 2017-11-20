@@ -85,15 +85,18 @@ class LauncherManager(QtGui.QDialog):
 
         return
 
-    def do_lauch_live_view(self):
+    def do_launch_live_view(self, auto_start):
         """ launch live view
+        :param auto_start: flag to start the live view automatically
         :return:
         """
-        live_view = pyvdrive.interface.LiveDataView.VulcanLiveDataView(self, None)
+        live_view = pyvdrive.interface.LiveDataView.VulcanLiveDataView(self._mainReducerWindow, None)
 
         live_view.show()
+        # start live
+        live_view.do_start_live()
 
-        return
+        return live_view
 
     def do_launch_peak_picker(self):
         """
@@ -189,7 +192,8 @@ elif isinstance(option, str) and (option.lower().startswith('-h') or option.lowe
     print '  -c: launch chopping/slicing interface'
     print '  -p: launch peak processing interface'
     print '  -v: launch reduced data view interface'
-    print '  --live: launch live data view interface'
+    print '  --live: launch live data view interface in auto mode'
+    print '  --live-prof: launch live data view interface in professional mode'
     print '  --record: launch experimental record manager'
     sys.exit(1)
 
@@ -219,7 +223,9 @@ elif isinstance(option, str) and option.lower().count('t') and option.lower().co
     launcher.close()
 
 elif isinstance(option, str) and option.lower().startswith('--live'):
-    launcher.do_lauch_live_view()
+    # live view widget
+    auto_start = not option.lower().startswith('--live').count('prof')
+    launcher.do_launch_live_view(auto_start)
     launcher.close()
 
 elif isinstance(option, str) and option.lower().startswith('--record'):
