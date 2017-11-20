@@ -32,6 +32,13 @@ class PyVDriveConfiguration(object):
 
         return
 
+    def init_config(self):
+        """
+
+        :return:
+        """
+        return
+
     def import_config(self, config_file_name):
         """
         import configuration file.

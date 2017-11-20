@@ -81,6 +81,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="label_15">
+        <property name="text">
+         <string>Vanadium</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_loadedVanRuns"/>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_8">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -105,7 +115,7 @@
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Information including&lt;/p&gt;&lt;p&gt;1. in collection or stopped&lt;/p&gt;&lt;p&gt;2. ...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>TextLabel</string>
+         <string>[Live Info]</string>
         </property>
        </widget>
       </item>

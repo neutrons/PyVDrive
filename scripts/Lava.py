@@ -224,7 +224,7 @@ elif isinstance(option, str) and option.lower().count('t') and option.lower().co
 
 elif isinstance(option, str) and option.lower().startswith('--live'):
     # live view widget
-    auto_start = not option.lower().startswith('--live').count('prof')
+    auto_start = option.lower().count('prof') == 0
     launcher.do_launch_live_view(auto_start)
     launcher.close()
 
