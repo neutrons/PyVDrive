@@ -66,22 +66,22 @@ class MplGraphicsView1D(QtGui.QWidget):
         super(MplGraphicsView1D, self).__init__(parent)
 
         # set up other variables
-        # key = line ID, value = row, col
+        # key = line ID, value = row, col, bool (is main axes???)
         self._lineSubplotMap = dict()
 
         # records for all the lines that are plot on the canvas
         # key = [row, col][line key], value = label, x-min, x-max, y-min and y-max
-        self._my1DPlotDict = dict()
-        self._my1DPlotDict[0, 0] = dict()  # init
+        self._myMainPlotDict = dict()
+        self._myMainPlotDict[0, 0] = dict()  # init
+
+        # for right plot
+        self._myRightPlotDict = dict()
+        self._myRightPlotDict[0, 0] = dict()
 
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
         if row_size is not None and col_size is not None:
             self.set_subplots(row_size, col_size)
-            # self._myCanvas.set_subplots(row_size, col_size)
-            # subplot_indexes = self._myCanvas.subplot_indexes
-            # for index in subplot_indexes:
-            #     self._my1DPlotDict[index] = dict()
 
         if tool_bar:
             self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
@@ -105,17 +105,43 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # some x, y range recorder for convenient operation
         # key =
-        self._statDict = dict()
+        self._statMainPlotDict = dict()
         self._statRightPlotDict = dict()
 
         return
 
-    def _update_plot_line_information(self, row_index, col_index, line_id, remove_line, vec_x=None,
+    def _get_plot_y_range(self, row_index, col_index, line_id, is_main):
+        """
+        get the Y range (index 3 and 4) of a recorded plot
+        :param row_index:
+        :param col_index:
+        :param line_id:
+        :param is_main:
+        :return:
+        """
+        if is_main:
+            # from main plot
+            if (row_index, col_index) not in self._myMainPlotDict:
+                raise RuntimeError('Main plot does not have subplot ({0}, {1})'.format(row_index, col_index))
+            y_min = self._myMainPlotDict[row_index, col_index][line_id][3]
+            y_max = self._myMainPlotDict[row_index, col_index][line_id][4]
+        else:
+            # from right plot
+            if (row_index, col_index) not in self._myRightPlotDict:
+                raise RuntimeError('Right plot does not have subplot ({0}, {1})'.format(row_index, col_index))
+            y_min = self._myRightPlotDict[row_index, col_index][line_id][3]
+            y_max = self._myRightPlotDict[row_index, col_index][line_id][4]
+
+        return y_min, y_max
+
+    # TEST TODO - Just expanded to right axes
+    def _update_plot_line_information(self, row_index, col_index, line_id, is_main, remove_line, vec_x=None,
                                       vec_y=None, label=None):
         """update the plot line information
         :param row_index:
         :param col_index:
         :param line_id:
+        :param is_main: flag whether this is for main axes. Other wise it is for right axes
         :param remove_line:
         :param vec_x:
         :param vec_y:
@@ -126,7 +152,7 @@ class MplGraphicsView1D(QtGui.QWidget):
         if row_index is None or col_index is None:
             if not (line_id in self._lineSubplotMap):
                 raise RuntimeError('Line ID {0} is not recorded in line-subplot map'.format(line_id))
-            row_index, col_index = self._lineSubplotMap[line_id]
+            row_index, col_index, is_main = self._lineSubplotMap[line_id]
 
         # check inputs and others
         assert isinstance(line_id, int), 'Line ID {0} must be an integer but not a {1}.' \
@@ -135,25 +161,33 @@ class MplGraphicsView1D(QtGui.QWidget):
                                            ''.format(row_index, type(row_index))
         assert isinstance(col_index, int), 'Column index {0} must be an integer but not a {1}.' \
                                            ''.format(col_index, type(col_index))
-        # check
-        if (row_index, col_index) not in self._my1DPlotDict:
-            raise RuntimeError('Subplot ({0}, {1}) does not exist. Existing subplots are {2}.'
-                               ''.format(row_index, col_index, self._my1DPlotDict.keys()))
+
+        # get the mai or right
+        if is_main:
+            plot_dict = self._myMainPlotDict
+        else:
+            plot_dict = self._myRightPlotDict
 
         # check
+        if (row_index, col_index) not in plot_dict:
+            raise RuntimeError('Subplot ({0}, {1}) does not exist in main ({2}?). Existing subplots are {3}.'
+                               ''.format(row_index, col_index, is_main, plot_dict.keys()))
+
+        # update
         if remove_line:
-            # remove a line
-            if line_id in self._my1DPlotDict[row_index, col_index]:
-                del self._my1DPlotDict[row_index, col_index][line_id]
+            # remove a line from record
+            if line_id in plot_dict:
+                del plot_dict[line_id]
             else:
                 raise RuntimeError('Line ID does {0} is not registered.'.format(line_id))
         else:
-            # add a line
-            assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
-                                           ''.format(remove_line, label)
-
-            if line_id in self._my1DPlotDict[row_index, col_index]:
-                print '[WARNING] Line (ID = {0}) is already registered.'.format(line_id)
+            # add a NEW line or update an existing line
+            if line_id not in plot_dict:
+                assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
+                                               ''.format(remove_line, label)
+            elif label is None:
+                # for update version, using current label if no new label is given
+                label = plot_dict[line_id][0]
 
             # get range of x and y
             min_x = max_x = min_y = max_y = None
@@ -164,12 +198,10 @@ class MplGraphicsView1D(QtGui.QWidget):
                 min_y = np.max(vec_y)
                 max_y = np.max(vec_y)
 
-            self._my1DPlotDict[row_index, col_index][line_id] = [label, min_x, max_x, min_y, max_y]
+            plot_dict[line_id] = [label, min_x, max_x, min_y, max_y]
         # END-IF
 
         return
-
-    # TODO/ISSUE/NOWNOW/FIXME - write operation to _my1DPlotDict can only be through _update_plot_line_information()
 
     def add_arrow(self, start_x, start_y, stop_x, stop_y):
         """
@@ -180,11 +212,11 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param stop_y:
         :return:
         """
+        # FIXME - BROKEN! TODO/LATER
         self._myCanvas.add_arrow(start_x, start_y, stop_x, stop_y)
 
         return
 
-    # TODO/ISSUE/NOW - Make index to row index and col index!!!
     def add_plot(self, vec_x, vec_y, y_err=None, row_index=0, col_index=0, is_right=False, color=None, label='',
                  x_label=None, y_label=None, marker=None, line_style=None, line_width=1, show_legend=True):
         """Add a plot in 1D
@@ -210,29 +242,28 @@ class MplGraphicsView1D(QtGui.QWidget):
             return False
 
         if is_right:
-            # FIXME | DEBUG : use color 'orange' for debug purpose!
+            # plot to the right axis
             line_key = self._myCanvas.add_right_plot(row_index=row_index, col_index=col_index,
                                                      x=vec_x, y=vec_y, y_label=y_label,
-                                                     color='orange', label=label,  marker=marker,
+                                                     color=color, label=label,  marker=marker,
                                                      line_style=line_style, linewidth=line_width)
             self._statRightPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
 
-            # TODO/NOW/89 - Implement statDict and up_plot_line_information for right plot!
         else:
             # plot at the main axis
             line_key = self._myCanvas.add_main_plot(row_index, col_index, vec_x, vec_y, y_err, color, label, x_label,
                                                     y_label, marker, line_style,
                                                     line_width, show_legend)
             # record min/max
-            self._statDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
-            # update line information
-            self._update_plot_line_information(row_index, col_index, line_key, remove_line=False, label=label,
-                                               vec_x=vec_x, vec_y=vec_y)
+            self._statMainPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
+        # END-IF
 
-        # END-FOR
+        # update line information
+        self._update_plot_line_information(row_index, col_index, line_key, is_main=not is_right,
+                                           remove_line=False, label=label, vec_x=vec_x, vec_y=vec_y)
 
         # add line to dictionary
-        self._lineSubplotMap[line_key] = row_index, col_index
+        self._lineSubplotMap[line_key] = row_index, col_index, not is_right
 
         return line_key
 
@@ -247,19 +278,20 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param upper_y_boundary:
         :return:
         """
-        # TODO/TEST/NOW - Complete the application
-
         if row_index is not None and col_index is not None:
             # check
-            assert isinstance(row_index, int), 'blabla'
-            assert isinstance(col_index, int), 'blabla'
+            assert isinstance(row_index, int), 'row index {0} must be an integer but not a {1}' \
+                                               ''.format(row_index, type(row_index))
+            assert isinstance(col_index, int), 'column index {0}  must be an integer but not a {1}' \
+                                               ''.format(col_index, type(col_index))
             # set
             index_tup_list = [row_index, col_index]
         else:
             index_tup_list = self.get_subplots_indexes()
 
         # re-set limits
-        assert isinstance(percent_room, float), 'blabla'
+        assert isinstance(percent_room, float), 'Blank room percentage {0} must be a float but not a {1}' \
+                                                ''.format(percent_room, type(percent_room))
 
         for row_index, col_index in index_tup_list:
             # collect all min and max of Y
@@ -270,8 +302,7 @@ class MplGraphicsView1D(QtGui.QWidget):
             subplot_line_indexes = self._myCanvas.get_line_keys(row_index, col_index)
 
             for line_key in subplot_line_indexes:
-                min_i = self._my1DPlotDict[line_key][3]
-                max_i = self._my1DPlotDict[line_key][4]
+                min_i, max_i = self._get_plot_y_range(row_index, col_index, line_key, is_main=True)
                 min_y_list.append(min_i)
                 max_y_list.append(max_i)
             # END-FOR
@@ -312,9 +343,9 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # TODO/CHECK/NOW - Only clear the 2-level entries.. (row, col) shall be kept
         self._statRightPlotDict.clear()
-        self._statDict.clear()
-        for row_index, col_index in self._my1DPlotDict.keys():
-            self._my1DPlotDict[row_index, col_index].clear()
+        self._statMainPlotDict.clear()
+        for row_index, col_index in self._myMainPlotDict.keys():
+            self._myMainPlotDict[row_index, col_index].clear()
 
         # about zoom
         self._isZoomed = False
@@ -400,38 +431,6 @@ class MplGraphicsView1D(QtGui.QWidget):
         """
         return self._myCanvas.getYLimit()
 
-    def get_y_min(self):
-        """
-        Get the minimum Y value of the plots on canvas
-        :return:
-        """
-        if len(self._statDict) == 0:
-            return 1E10
-
-        line_id_list = self._statDict.keys()
-        min_y = self._statDict[line_id_list[0]][2]
-        for i_plot in range(1, len(line_id_list)):
-            if self._statDict[line_id_list[i_plot]][2] < min_y:
-                min_y = self._statDict[line_id_list[i_plot]][2]
-
-        return min_y
-
-    def get_y_max(self):
-        """
-        Get the maximum Y value of the plots on canvas
-        :return:
-        """
-        if len(self._statDict) == 0:
-            return -1E10
-
-        line_id_list = self._statDict.keys()
-        max_y = self._statDict[line_id_list[0]][3]
-        for i_plot in range(1, len(line_id_list)):
-            if self._statDict[line_id_list[i_plot]][3] > max_y:
-                max_y = self._statDict[line_id_list[i_plot]][3]
-
-        return max_y
-
     def remove_line(self, row_index, col_index, line_id):
         """ Remove a line
         :param line_id:
@@ -443,8 +442,8 @@ class MplGraphicsView1D(QtGui.QWidget):
         # remove the records
         self._update_plot_line_information(row_index, col_index, line_id=line_id, remove_line=True)
 
-        if line_id in self._statDict:
-            del self._statDict[line_id]
+        if line_id in self._statMainPlotDict:
+            del self._statMainPlotDict[line_id]
         else:
             del self._statRightPlotDict[line_id]
 
@@ -549,19 +548,21 @@ class MplGraphicsView1D(QtGui.QWidget):
 
     def set_subplots(self, row_size, col_size):
         """
-        set up the subplots.  This is the only  method that allows users to change the subplots
+        re-set up the subplots.  This is the only  method that allows users to change the subplots
         :param row_size:
         :param col_size:
         :return:
         """
+        # delete all the lines on canvas now
+        self.clear_all_lines()
+
+        # set the subplots
         self._myCanvas.set_subplots(row_size, col_size)
 
         # reset PlotDict
-        self._my1DPlotDict.clear()
-
         subplot_indexes = self._myCanvas.subplot_indexes
         for index in subplot_indexes:
-            self._my1DPlotDict[index] = dict()
+            self._myMainPlotDict[index] = dict()
 
         return
 
@@ -584,12 +585,13 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # get the row and column index
         if ikey in self._lineSubplotMap:
-            row_index, col_index = self._lineSubplotMap[ikey]
+            row_index, col_index, is_main = self._lineSubplotMap[ikey]
         else:
             raise RuntimeError('Line with ID {0} is not recorded as a plot on canvas.'.format(ikey))
 
         # update information
-        self._update_plot_line_information(row_index=row_index, col_index=col_index, line_id=ikey, remove_line=False,
+        self._update_plot_line_information(row_index=row_index, col_index=col_index, is_main=is_main,
+                                           line_id=ikey, remove_line=False,
                                            vec_y=vec_y)
 
         return self._myCanvas.updateLine(ikey, vec_x, vec_y, line_style, line_color, marker, marker_color)
