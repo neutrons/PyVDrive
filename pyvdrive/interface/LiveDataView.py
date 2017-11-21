@@ -562,6 +562,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.set_info(VulcanLiveDataView.IN_COLLECTION_MESSAGE, append=True,
                       insert_at_beginning=True)
 
+        # disable the start-live-data button
+        self.ui.pushButton_startLiveReduction.setEnabled(False)
+
         return
 
     def do_stop_live(self):
@@ -580,6 +583,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if curr_message.count(VulcanLiveDataView.IN_COLLECTION_MESSAGE) > 0:
             new_msg = curr_message.replace(VulcanLiveDataView.IN_COLLECTION_MESSAGE + ' | ', '')
             self.set_info(new_msg, append=False)
+
+        # enable the start-live-data button
+        self.ui.pushButton_startLiveReduction.setEnabled(True)
 
         return
 

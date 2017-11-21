@@ -78,6 +78,14 @@ class MplGraphicsView1D(QtGui.QWidget):
         self._myRightPlotDict = dict()
         self._myRightPlotDict[0, 0] = dict()
 
+        self._statMainPlotDict = dict()
+        self._statRightPlotDict = dict()
+
+        # auto line's maker+color list
+        self._myLineMarkerColorList = []
+        self._myLineMarkerColorIndex = 0
+        self.setAutoLineMarkerColorCombo()
+
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
         if row_size is not None and col_size is not None:
@@ -97,16 +105,6 @@ class MplGraphicsView1D(QtGui.QWidget):
         self._vBox = QtGui.QVBoxLayout(self)
         self._vBox.addWidget(self._myCanvas)
         self._vBox.addWidget(self._myToolBar)
-
-        # auto line's maker+color list
-        self._myLineMarkerColorList = []
-        self._myLineMarkerColorIndex = 0
-        self.setAutoLineMarkerColorCombo()
-
-        # some x, y range recorder for convenient operation
-        # key =
-        self._statMainPlotDict = dict()
-        self._statRightPlotDict = dict()
 
         return
 
@@ -674,23 +672,6 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if col_size < 1:
             raise RuntimeError('Column size {0} must be larger than 0.'.format(row_size))
 
-        # add sub plot]
-        # self.axes_main = list()
-        # self.axes_right = list()
-        # for i_row in range(row_size):
-        #     for i_col in range(col_size):
-        #         sub_index = row_size * 100 + col_size * 100 + ???
-        #         self.axes = self.fig.add_subplot(111)  # return: matplotlib.axes.AxesSubplot
-        #         self.fig.subplots_adjust(bottom=0.15)
-        #         self.axes2 = None
-        #     # END-FOR
-        # # END-FOR
-        #
-        #
-        # # initialize base class
-        #
-        #
-        # set up subplots
         for row_index in range(row_size):
             for col_index in range(col_size):
                 sub_plot_index = row_index * col_size + col_index + 1
@@ -1294,7 +1275,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         handles, labels = self.axes_main[row_index, col_index].get_legend_handles_labels()
         self.axes_main[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
 
-        self._legendStatusDict = True
+        self._legendStatusDict[row_index, col_index] = True
 
         return
 
