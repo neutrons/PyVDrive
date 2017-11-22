@@ -973,6 +973,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param d_max:
         :return:
         """
+        # FIXME TODO - REMOVE this method after testing
         # integrate a single peak across all the accumulated workspaces
         self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max, self._plotPeakVanadiumNorm)
 
@@ -1055,7 +1056,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # trace back to previously accumulated runs until run number changed to non-zero
         blabla
 
-    def plot_log_live(self, x_axis_name, y_axis_name):
+    def plot_log_live(self, x_axis_name, y_axis_name_list, d_min, d_max, norm_by_van):
         """
         Plot a sample log in live time
         Note: this model works in most case except a new sample log is chosen to
@@ -1068,59 +1069,196 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
+        # check and etc
+        assert isinstance(y_axis_name_list, list), '{0} shall be list but not {1}' \
+                                                   ''.format(y_axis_name_list, type(y_axis_name_list))
+
         x_axis_name = str(x_axis_name).split('(')[0].strip()
-        y_axis_name = str(y_axis_name).split('(')[0].strip()
+        y_axis_name_list.sort()
 
         # determine to append or start from new
-        if self._currSampleLogX != x_axis_name or self._currSampleLogY != y_axis_name \
-                or self._currSampleLogTimeVector is None:
-            append_log = False
-            # print '[DB] Log View X-axis: {0} vs {1}'.format(self._currSampleLogX, x_axis_name)
-            # print '[DB] Log View Y-axis: {0} vs {1}'.format(self._currSampleLogY, y_axis_name)
-            # print '[DB] Sample log time vector: {0}'.format(self._currSampleLogTimeVector)
-
+        if self._currSampleLogX == x_axis_name and self._currSampleLogY == y_axis_name_list:
+            append = True
         else:
-            append_log = True
+            append = False
 
-        # get the data
         if x_axis_name == 'Time':
-            # regular time-value plot
-            if append_log:
-                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
-                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
-                self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
-                self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
-                debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
-                                ''.format(time_vec[0], self._logStartTime)
-                self.write_log('debug', debug_message)
-            else:
-                # New mode
-                # TODO/ISSUE - Implement LastNLog!
-                LastNLog = 1
-                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=LastNLog)
-                # set log start time
-                # TODO/ISSUE/ - shall give users with more choice
-                self._logStartTime = date_time_vec[0]
-
-                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
-                self._currSampleLogTimeVector = time_vec
-                self._currSampleLogValueVector = value_vec
-            # END-IF-ELSE
+            # blabla
+            self.plot_time_arb_live(y_axis_name_list, d_min, d_max, norm_by_van, append)
         else:
-            # relation between two sample logs: not implemented
-            raise RuntimeError('Develop ASAP')
-
-        # clear all lines
-        # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
-        self.ui.graphicsView_comparison.clear_all_lines()
-        self.ui.graphicsView_comparison.add_plot(self._currSampleLogTimeVector, self._currSampleLogValueVector,
-                                                 label=y_axis_name)
+            # blabla
+            raise RuntimeError('blabla')
 
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
-        self._currSampleLogY = y_axis_name
+        self._currSampleLogY = y_axis_name_list
         # turn off the flag to plot integrated peaks
         self._integratePeakFlag = False
+
+        return
+
+    def plot_time_arb_live(self, y_axis_name_list, d_min, d_max, norm_by_van, append):
+        """
+        blabla
+        :param y_axis_name_list:
+        :param d_min:
+        :param d_max:
+        :param norm_by_van:
+        :return:
+        """
+        # check inputs
+        if len(y_axis_name_list) > 2:
+            raise RuntimeError('not supported')
+
+        # pre-screen for peak integration
+        integrate_peak = False
+        for y_axis_name in y_axis_name_list:
+            if y_axis_name.startswith('* Peak:'):
+                integrate_peak = True
+                break
+        if integrate_peak:
+            # integrate peak for all the accumulated runs
+            self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
+                                             norm_by_vanadium=norm_by_van)
+        # END-IF
+
+        # collect to plot
+        vec_x_list = list()
+        vec_y_list = list()
+        plot_setup_list = list()  # label Y, label-line, color, marker, line style
+        side_list = list()
+
+        for y_axis_name in y_axis_name_list:
+            if y_axis_name.startswith('* Peak:'):
+                # this is a peak
+                peak_name, plot_side = y_axis_name.split('* Peak:')[1].split()
+
+                # integrate a single peak across all the accumulated workspaces
+                self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
+                                                 norm_by_van)
+
+                # check again with d_min, d_max and norm by vanadium
+                if append:
+                    if d_min == self._minDPeakIntegration and \
+                                    d_max == self._maxDPeakIntegration and norm_by_van == self._plotPeakVanadiumNorm:
+                        append = False
+                # re-check append
+                for bank_id in [1, 2]:
+                    if peak_name.lower().count('intensity') > 0:
+                        vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
+                                                                                  time0=self._liveStartTimeStamp)
+                        marker = 'o'
+                    elif peak_name.lower.count('center') > 0:
+                        vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
+                                                                                    time0=self._liveStartTimeStamp)
+                        marker = 'D'
+
+                    else:
+                        raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+
+                    # label
+                    label_y = peak_name
+                    label_line = 'Bank {0}'.format(bank_id)
+                    line_style = 'None'
+                    color = [None, 'red', 'blue'][bank_id]
+
+                    # add to list
+                    vec_x_list.append(vec_time)
+                    vec_y_list.append(vec_value)
+                    plot_setup_list.append((label_y, label_line, color, marker, line_style))
+                    side_list.append(plot_side)
+                # END-BANK
+
+                # reset flags
+                if not append:
+                    self._minDPeakIntegration = d_min
+                    self._maxDPeakIntegration = d_max
+                    self._plotPeakVanadiumNorm = norm_by_van
+                # END-IF
+
+
+                # FIXME / PROTOTYPE - This section is for testing left/right plot
+                # label_1 = 'Bank 1 Intensity'
+                # self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params, is_right=True,
+                #                                          y_label='Intensity',
+                #                                          label=label_1, line_style='-.', marker='*', color='blue')
+
+            else:
+                # plot log
+                log_name, plot_side = y_axis_name.split()
+                y_label = log_name
+
+                if append:
+                    # blabla
+                    date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
+                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                    self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
+                    self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
+                    debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
+                                    ''.format(time_vec[0], self._logStartTime)
+                    self.write_log('debug', debug_message)
+
+                else:
+                    # New mode
+                    # TODO/ISSUE - Implement LastNLog!
+                    LastNLog = 1
+                    date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=LastNLog)
+                    # set log start time
+                    # TODO/ISSUE/ - shall give users with more choice
+                    self._logStartTime = date_time_vec[0]
+
+                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                    self._currSampleLogTimeVector = time_vec
+                    self._currSampleLogValueVector = value_vec
+                # END-IF-ELSE
+
+                time_vec = self._currSampleLogTimeVector
+                value_vec = self._currSampleLogValueVector
+
+                vec_x_list.append(time_vec)
+                vec_y_list.append(value_vec)
+                side_list.append(plot_side)
+                plot_setup_list.append((y_label, '', 'black', '*', '-'))
+            # END-IF-ELSE (peak or sample)
+        # END-FOR (y-axis-name)
+
+        # plot
+        if not append:
+                # update lines
+                # FIXME TODO VERY WRONG - Need to update lines but not re-write
+                # clear all lines
+                # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
+                self.ui.graphicsView_comparison.clear_all_lines()
+
+        for i_line in range(len(vec_x_list)):
+                time_vec = vec_x_list[i_line]
+                value_vec = vec_y_list[i_line]
+
+                plot_side = side_list[i_line]
+                if plot_side == 'left':
+                    is_right = False
+                elif plot_side == 'right':
+                    is_right = True
+                else:
+                    raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
+
+                label_y, label_line, color, marker, line_style = plot_setup_list[i_line]
+
+                if append:
+                    # update lines
+                    # FIXME TODO VERY WRONG - Need to update lines but not re-write
+                    self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
+                                                             y_label=label_y, label=label_line,
+                                                             line_style=line_style, marker=marker,
+                                                             color=color)
+                else:
+                    # wipe out previous plot new
+                    self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
+                                                             y_label=label_y, label=label_line,
+                                                             line_style=line_style, marker=marker,
+                                                             color=color)
+                # END-IF-ELSE (append)
+        # END-FOR
 
         return
 
@@ -1218,12 +1356,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
 
             # update log
-            if self._currSampleLogX is not None and self._currSampleLogY is not None:
-                # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
-                self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
-            elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
-                # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
-                self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
+            if self._currSampleLogX is not None:
+                if self._currSampleLogY is None:
+                    raise RuntimeError('Logical wrong to set up sampleX but not sampleY')
+            self.plot_log_live(self._currSampleLogX, self._currSampleLogY, self._minDPeakIntegration,
+                               self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
+
+            # if self._currSampleLogX is not None and self._currSampleLogY is not None:
+            #     # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
+            #     self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
+            # elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
+            #     # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
+            #     self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
         # END-FOR
 
         return

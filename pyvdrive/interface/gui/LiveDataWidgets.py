@@ -39,6 +39,19 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
         return
 
+    def get_all_items(self):
+        """
+        blabla
+        :return:
+        """
+        item_list = list()
+        num_rows = self.rowCount()
+        for i_row in range(num_rows):
+            item_name = self.get_cell_value(i_row, self._iColAxisName)
+            item_list.append(item_name)
+
+        return item_list
+
     def get_selected_item(self):
         """
         check all the rows to get the selected row

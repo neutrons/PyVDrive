@@ -154,8 +154,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
     # define signal
-    PlotSignal = QtCore.pyqtSignal(str, str)
-    PeakIntegrateSignal = QtCore.pyqtSignal(float, float, str, bool)
+    PlotSignal = QtCore.pyqtSignal(str, list, float, float, bool)  # x, y-list, dmin, dmax, norm-van
 
     def __init__(self, parent=None):
         """ Initialization
@@ -175,16 +174,16 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
                      self.do_apply)
 
-        self.connect(self.ui.radioButton_calculatePeak, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_select_groups)
-        self.connect(self.ui.radioButton_viewSampleLog, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_select_groups)
+        # push buttons to set up
+        self.connect(self.ui.pushButton_addPeakParam, QtCore.SIGNAL('clicked()'),
+                     self.do_add_peak_param)
+        self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_add_sample_log)
 
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
         if parent is not None:
             self.PlotSignal.connect(self._myControlWindow.plot_log_live)
-            self.PeakIntegrateSignal.connect(self._myControlWindow.integrate_peak_live)
 
         return
 
@@ -194,16 +193,8 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         :return:
         """
         # set up the Axes
-        self.ui.tableWidget_AxisX.setup()
-        self.ui.tableWidget_AxisY.setup()
-
-        # radio buttons: default to calculate Peak
-        self.ui.radioButton_calculatePeak.setChecked(True)
-        self.ui.radioButton_viewSampleLog.setChecked(False)
-
-        # set the groups
-        self.ui.groupBox_livePeakView.setEnabled(True)
-        self.ui.groupBox_sampleLogView.setEnabled(False)
+        self.ui.tableWidget_sampleLogs.setup()
+        self.ui.tableWidget_plotYAxis.setup()
 
         # peak calculation special
         self.ui.checkBox_normByVan.setChecked(True)
@@ -213,40 +204,33 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    # TODO/NOW - In-implementation
+    def do_add_(self):
+        peak_type = str(self.ui.comboBox_peakY.currentText())
+
+    # TEST TODO - Just implemented
     def do_apply(self):
         """Apply setup
         :return:
         """
-        if self.ui.radioButton_viewSampleLog.isChecked():
-            # apply sample log calculation
-            # get X-axis item
-            try:
-                x_axis_name = self.ui.tableWidget_AxisX.get_selected_item()
-            except RuntimeError as run_err:
-                err_msg = 'One and only one item can be selected for X-axis. Now {0} is selected.' \
-                          ''.format(run_err)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
+        # get x-axis name and y-axis name
+        x_axis_name = str(self.ui.comboBox_X.currentText())
 
-            # get Y-axis item
-            try:
-                y_axis_name = self.ui.tableWidget_AxisY.get_selected_item()
-            except RuntimeError as run_err:
-                err_msg = 'One and only one item can be selected for Y-axis. Now {0} is selected.' \
-                          ''.format(run_err)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
+        y_axis_name_list = self.ui.tableWidget_plotYAxis.get_all_items()
+        if len(y_axis_name_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
+            return
 
-            # send signal to parent window to plot
-            self.PlotSignal.emit(x_axis_name, y_axis_name)
+        # check whether there is any item related to peak integration
+        mess_peak = False
+        for y_axis_name in y_axis_name_list:
+            if y_axis_name.starswtih('* Peak:'):
+                mess_peak = True
 
-        elif self.ui.radioButton_calculatePeak.isChecked():
-            # apply peak calculation
+        # send signal to process peaks
+        if mess_peak:
             # set up peak integration
             min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
             max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
-            peak_type = str(self.ui.comboBox_peakY.currentText())
             try:
                 min_d = float(min_d_str)
                 max_d = float(max_d_str)
@@ -255,13 +239,13 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
                                    ''.format(min_d_str, max_d_str, value_err))
 
             norm_by_van = self.ui.checkBox_normByVan.isChecked()
-            self.PeakIntegrateSignal.emit(min_d, max_d, peak_type, norm_by_van)
-
         else:
-            # it is not a good choice
-            raise RuntimeError('Neither of two radio buttons is selected.  It is not an allowed '
-                               'case.')
+            min_d = max_d = 0
+            norm_by_van = False
         # END-IF-ELSE
+
+        # now it is the time to send message
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, min_d, max_d, norm_by_van)
 
         return
 
