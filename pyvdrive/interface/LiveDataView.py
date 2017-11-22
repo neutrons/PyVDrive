@@ -477,10 +477,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # get axis
         curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
         logs = helper.get_sample_log_names(curr_ws_name, smart=True)
-        x_axis_logs = ['Time']
-        # TODO/LATER: x_axis_logs.extend(logs)
 
-        self._gpPlotSetupDialog.set_axis_options(x_axis_logs, logs, reset=True)
+        self._gpPlotSetupDialog.set_axis_options(logs, reset=True)
         self._gpPlotSetupDialog.show()
 
         return
@@ -1079,8 +1077,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # determine to append or start from new
         if self._currSampleLogX == x_axis_name and self._currSampleLogY == y_axis_name_list:
             append = True
+            print '[APPEND.........DB...BAT] ', self._currSampleLogY, x_axis_name, self._currSampleLogY, y_axis_name_list
+
         else:
             append = False
+            print '[APPEND...NOT...DB...BAT] ', self._currSampleLogY, x_axis_name, self._currSampleLogY, y_axis_name_list
 
         if x_axis_name == 'Time':
             # blabla
@@ -1131,7 +1132,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         for y_axis_name in y_axis_name_list:
             if y_axis_name.startswith('* Peak:'):
                 # this is a peak
-                peak_name, plot_side = y_axis_name.split('* Peak:')[1].split()
+                assert isinstance(y_axis_name, str), '{0} shall be string'.format(y_axis_name)
+                peak_name, plot_side = y_axis_name.split('* Peak:')[1].strip().split()
 
                 # integrate a single peak across all the accumulated workspaces
                 self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
@@ -1148,7 +1150,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                         vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
                                                                                   time0=self._liveStartTimeStamp)
                         marker = 'o'
-                    elif peak_name.lower.count('center') > 0:
+                    elif peak_name.lower().count('center') > 0:
                         vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
                                                                                     time0=self._liveStartTimeStamp)
                         marker = 'D'
@@ -1159,7 +1161,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     # label
                     label_y = peak_name
                     label_line = 'Bank {0}'.format(bank_id)
-                    line_style = 'None'
+                    line_style = ' '
                     color = [None, 'red', 'blue'][bank_id]
 
                     # add to list
@@ -1190,19 +1192,23 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
                 if append:
                     # blabla
-                    date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
+                    date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=1)
                     time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
                     self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
                     self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
+                    # self._currSampleLogTimeVector = time_vec
+                    # self._currSampleLogValueVector = value_vec
+
                     debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
                                     ''.format(time_vec[0], self._logStartTime)
                     self.write_log('debug', debug_message)
+                    print '[DB...BAT] {0}'.format(debug_message)
 
                 else:
                     # New mode
                     # TODO/ISSUE - Implement LastNLog!
                     LastNLog = 1
-                    date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=LastNLog)
+                    date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=LastNLog)
                     # set log start time
                     # TODO/ISSUE/ - shall give users with more choice
                     self._logStartTime = date_time_vec[0]
@@ -1210,25 +1216,32 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
                     self._currSampleLogTimeVector = time_vec
                     self._currSampleLogValueVector = value_vec
+                    print '[DB...BAT] New mode... Not Append'
                 # END-IF-ELSE
 
                 time_vec = self._currSampleLogTimeVector
                 value_vec = self._currSampleLogValueVector
 
+                print '[DB...BAT] Sample Log: {0} ... {1}'.format(time_vec, value_vec)
+
+                # append
                 vec_x_list.append(time_vec)
                 vec_y_list.append(value_vec)
                 side_list.append(plot_side)
-                plot_setup_list.append((y_label, '', 'black', '*', '-'))
+                plot_setup_list.append((y_label, y_label, 'black', '*', '-'))
             # END-IF-ELSE (peak or sample)
         # END-FOR (y-axis-name)
 
         # plot
-        if not append:
+        if append:
                 # update lines
                 # FIXME TODO VERY WRONG - Need to update lines but not re-write
                 # clear all lines
                 # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
                 self.ui.graphicsView_comparison.clear_all_lines()
+        else:
+            # clear all lines
+            self.ui.graphicsView_comparison.clear_all_lines()
 
         for i_line in range(len(vec_x_list)):
                 time_vec = vec_x_list[i_line]
@@ -1359,8 +1372,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if self._currSampleLogX is not None:
                 if self._currSampleLogY is None:
                     raise RuntimeError('Logical wrong to set up sampleX but not sampleY')
-            self.plot_log_live(self._currSampleLogX, self._currSampleLogY, self._minDPeakIntegration,
-                               self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
+                self.plot_log_live(self._currSampleLogX, self._currSampleLogY, self._minDPeakIntegration,
+                                   self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
 
             # if self._currSampleLogX is not None and self._currSampleLogY is not None:
             #     # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure

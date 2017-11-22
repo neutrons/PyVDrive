@@ -461,6 +461,7 @@ class LiveDataDriver(QtCore.QThread):
         date_time_vec = None
         sample_value_vec = None
 
+        last_time = None
         for seq_index, ws_name in enumerate(ws_name_list):
             if ADS.doesExist(ws_name) is False:
                 raise RuntimeError('Workspace {0} does not exist.'.format(ws_name))
@@ -486,7 +487,22 @@ class LiveDataDriver(QtCore.QThread):
                 numpy.append(date_time_vec, time_vec_i)
                 numpy.append(sample_value_vec, value_vec_i)
             # END-IF-ELSE
+
+            last_time = temp_workspace.run().getProperty('proton_charge').lastTime()
         # END-FOR (workspaces)
+
+        if len(date_time_vec) == 1:
+            # blabla ... TODO add why!
+            print '[WARNING] One entry log {0}! last time = {1}'.format(sample_log_name, date_time_vec[0])
+            list_time = list(date_time_vec)
+            list_value = list(sample_value_vec)
+
+            list_time.append(last_time)
+            list_value.append(list_value[0])
+
+            date_time_vec = numpy.array(list_time)
+            sample_value_vec = numpy.array(list_value)
+        # END
 
         return date_time_vec, sample_value_vec
 

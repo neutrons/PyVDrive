@@ -196,7 +196,8 @@ class MplGraphicsView1D(QtGui.QWidget):
                 min_y = np.max(vec_y)
                 max_y = np.max(vec_y)
 
-            plot_dict[line_id] = [label, min_x, max_x, min_y, max_y]
+            # set information to plot dictionary
+            plot_dict[row_index, col_index][line_id] = [label, min_x, max_x, min_y, max_y]
         # END-IF
 
         return
@@ -342,8 +343,13 @@ class MplGraphicsView1D(QtGui.QWidget):
         # TODO/CHECK/NOW - Only clear the 2-level entries.. (row, col) shall be kept
         self._statRightPlotDict.clear()
         self._statMainPlotDict.clear()
+        print '[DB...BAT]: keys = ', self._myMainPlotDict.keys()
+
         for row_index, col_index in self._myMainPlotDict.keys():
             self._myMainPlotDict[row_index, col_index].clear()
+
+        for row_index, col_index in self._myRightPlotDict.keys():
+            self._myRightPlotDict[row_index, col_index].clear()
 
         # about zoom
         self._isZoomed = False
@@ -731,6 +737,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param show_legend:
         :return: line ID (i.e., new key)
         """
+        print '[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label)
+
         # Check input
         self._check_subplot_index(row_index, col_index)
 
@@ -814,6 +822,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param linewidth:
         :return:
         """
+        print '[DB...BAT] Add Right Y-label : {0}; Line-label : {1}'.format(y_label, label)
+
         # check
         self._check_subplot_index(row_index, col_index)
 
@@ -1243,7 +1253,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def _setup_legend(self, row_index, col_index, location='best', font_size=10):
+    def _setup_legend(self, row_index, col_index, location='best', is_main=True, font_size=10):
         """Set up legend
         self.axes.legend(): Handler is a Line2D object. Lable maps to the line object
         :param row_index:
@@ -1272,8 +1282,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if location not in allowed_location_list:
             location = 'best'
 
-        handles, labels = self.axes_main[row_index, col_index].get_legend_handles_labels()
-        self.axes_main[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
+        if is_main:
+            handles, labels = self.axes_main[row_index, col_index].get_legend_handles_labels()
+            self.axes_main[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
+        else:
+            handles, labels = self.axes_right[row_index, col_index].get_legend_handles_labels()
+            self.axes_right[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
 
         self._legendStatusDict[row_index, col_index] = True
 

@@ -204,8 +204,39 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def do_add_(self):
-        peak_type = str(self.ui.comboBox_peakY.currentText())
+    def do_add_peak_param(self):
+        # blabla
+        peak_type = str(self.ui.comboBox_peakY.currentText()).lower()
+        side = str(self.ui.comboBox_plotPeak.currentText()).lower()
+
+        if peak_type.count('intensity'):
+            peak_type = 'intensity'
+        elif peak_type.count('center'):
+            peak_type = 'center'
+        else:
+            raise RuntimeError('Who knows')
+
+        peak_info_str = '* Peak: {0} {1}'.format(peak_type, side)
+
+        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True])
+
+    def do_add_sample_log(self):
+        # blabla
+        try:
+            sample_log_name = self.ui.tableWidget_sampleLogs.get_selected_item()
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, str(run_err))
+            return
+
+        sample_log_name = sample_log_name.split('(')[0].strip()
+
+        side = str(self.ui.comboBox_plotLog.currentText()).lower()
+
+        log_info = '{0} {1}'.format(sample_log_name, side)
+
+        # add...
+        self.ui.tableWidget_plotYAxis.append_row([log_info, True])
+
 
     # TEST TODO - Just implemented
     def do_apply(self):
@@ -223,7 +254,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # check whether there is any item related to peak integration
         mess_peak = False
         for y_axis_name in y_axis_name_list:
-            if y_axis_name.starswtih('* Peak:'):
+            if y_axis_name.startswith('* Peak:'):
                 mess_peak = True
 
         # send signal to process peaks
@@ -235,8 +266,10 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
                 min_d = float(min_d_str)
                 max_d = float(max_d_str)
             except ValueError as value_err:
-                raise RuntimeError('Min-D {0} or/and Max-D {1} cannot be parsed as a float due to {2}'
-                                   ''.format(min_d_str, max_d_str, value_err))
+                err_msg = 'Min-D "{0}" or/and Max-D "{1}" cannot be parsed as a float due to {2}' \
+                          ''.format(min_d_str, max_d_str, value_err)
+                GuiUtility.pop_dialog_error(self, err_msg)
+                return
 
             norm_by_van = self.ui.checkBox_normByVan.isChecked()
         else:
@@ -257,16 +290,6 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def do_select_groups(self):
-        """
-        event to select groups
-        :return:
-        """
-        self.ui.groupBox_livePeakView.setEnabled(self.ui.radioButton_calculatePeak.isChecked())
-        self.ui.groupBox_sampleLogView.setEnabled(self.ui.radioButton_viewSampleLog.isChecked())
-
-        return
-
     def set_control_window(self, control_window):
         """
         set the controlling window
@@ -281,24 +304,20 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def set_axis_options(self, x_axis_list, y_axis_list, reset):
+    def set_axis_options(self, y_axis_list, reset):
         """
         set the X-axis and Y-axis item list
-        :param x_axis_list:
         :param y_axis_list:
         :param reset:
         :return:
         """
-        assert isinstance(x_axis_list, list), 'X-axis items {0} must be given as a list but not' \
-                                              'a {1}.'.format(x_axis_list, type(x_axis_list))
         assert isinstance(y_axis_list, list), 'Y-axis items {0} must be given as a list but not ' \
                                               'a {1}.'.format(y_axis_list, type(y_axis_list))
 
         if reset:
-            self.ui.tableWidget_AxisX.remove_all_rows()
-            self.ui.tableWidget_AxisY.remove_all_rows()
+            self.ui.tableWidget_sampleLogs.remove_all_rows()
+            self.ui.tableWidget_plotYAxis.remove_all_rows()
 
-        self.ui.tableWidget_AxisX.add_axis_items(x_axis_list)
-        self.ui.tableWidget_AxisY.add_axis_items(y_axis_list)
+        self.ui.tableWidget_sampleLogs.add_axis_items(y_axis_list)
 
         return
