@@ -713,9 +713,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber - 1 - inverse_index
             try:
                 ws_name_i = self._myAccumulationWorkspaceList[list_index]
-                print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
-                      ''.format(inverse_index, list_index, self._myAccumulationListIndex,
-                                self._inAccumulationWorkspaceName)
+                # print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
+                #       ''.format(inverse_index, list_index, self._myAccumulationListIndex,
+                #                 self._inAccumulationWorkspaceName)
             except IndexError as index_err:
                 raise RuntimeError('Inverted workspace index {0} is converted to workspace index {1} '
                                    'and out of range [0, {2}) due to {3}.'
@@ -823,7 +823,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 # TODO/ISSUE/NOW - Use update line other than delete and re-plot
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
             except RuntimeError as run_err:
-                print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_ws_name, run_err)
+                self.write_log('error', 'Unable to get data from workspace {0} due to {1}'
+                                        ''.format(in_sum_ws_name, run_err))
                 return
 
             if target_unit == 'TOF':
@@ -958,7 +959,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # get the workspace name list
         ws_name_list, index_list = self.get_last_n_round_workspaces(last_n_intervals)
-        print '[DB...BAT] Last {0} intervals: {1}'.format(last_n_intervals, ws_name_list)
 
         time_vec, log_value_vec = self._controller.parse_sample_log(ws_name_list, y_axis_name)
 
@@ -1077,11 +1077,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # determine to append or start from new
         if self._currSampleLogX == x_axis_name and self._currSampleLogY == y_axis_name_list:
             append = True
-            print '[APPEND.........DB...BAT] ', self._currSampleLogY, x_axis_name, self._currSampleLogY, y_axis_name_list
-
         else:
             append = False
-            print '[APPEND...NOT...DB...BAT] ', self._currSampleLogY, x_axis_name, self._currSampleLogY, y_axis_name_list
 
         if x_axis_name == 'Time':
             # blabla
@@ -1108,8 +1105,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param append: append mode
         :return:
         """
-        print '[.............DB......BAT] Append = {0}'.format(append)
-
         # check inputs
         if len(y_axis_name_list) > 2:
             raise RuntimeError('not supported')
@@ -1170,7 +1165,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     # label
                     label_y = peak_name
                     label_line = 'Bank {0}'.format(bank_id)
-                    line_style = ' '
+                    line_style = ':'
                     color = [None, 'red', 'blue'][bank_id]
 
                     # add to list
@@ -1222,19 +1217,19 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
                     self._currSampleLogTimeVector = time_vec
                     self._currSampleLogValueVector = value_vec
-                    print '[DB...BAT] New mode... Not Append'
+                    # print '[DB...BAT] New mode... Not Append'
                 # END-IF-ELSE
 
                 time_vec = self._currSampleLogTimeVector
                 value_vec = self._currSampleLogValueVector
 
-                print '[DB...BAT] Sample Log: {0} ... {1}'.format(time_vec, value_vec)
+                # print '[DB...BAT] Sample Log: {0} ... {1}'.format(time_vec, value_vec)
 
                 # append
                 vec_x_list.append(time_vec)
                 vec_y_list.append(value_vec)
                 side_list.append(plot_side)
-                plot_setup_list.append((y_label, y_label, 'black', '*', '-'))
+                plot_setup_list.append((y_label, y_label, 'black', '*', '--'))
             # END-IF-ELSE (peak or sample)
         # END-FOR (y-axis-name)
 
@@ -1474,11 +1469,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             if self._myAccumulationWorkspaceList[list_index] is not None:
                 old_ws_name = self._myAccumulationWorkspaceList[list_index]
-                print '[INFO] Delete old workspace {0}'.format(old_ws_name)
+                self.write_log('information', 'Delete old workspace {0}'.format(old_ws_name))
                 self._controller.delete_workspace(old_ws_name)
             self._myAccumulationWorkspaceList[list_index] = accumulate_name
-            print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
-                  ''.format(list_index, self._myAccumulationWorkspaceList[list_index])
+            # print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
+            #       ''.format(list_index, self._myAccumulationWorkspaceList[list_index])
 
             # restart timer
             self._accStartTime = datetime.now()
