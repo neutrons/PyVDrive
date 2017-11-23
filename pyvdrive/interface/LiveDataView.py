@@ -1085,7 +1085,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if x_axis_name == 'Time':
             # blabla
-            self.plot_time_arb_live(y_axis_name_list, d_min, d_max, norm_by_van, append)
+            self.plot_time_arb_live(y_axis_name_list, d_min, d_max, norm_by_van, append=append)
         else:
             # blabla
             raise RuntimeError('blabla')
@@ -1105,8 +1105,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param d_min:
         :param d_max:
         :param norm_by_van:
+        :param append: append mode
         :return:
         """
+        print '[.............DB......BAT] Append = {0}'.format(append)
+
         # check inputs
         if len(y_axis_name_list) > 2:
             raise RuntimeError('not supported')
@@ -1141,12 +1144,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
                 # check again with d_min, d_max and norm by vanadium
                 if append:
-                    if d_min == self._minDPeakIntegration and \
-                                    d_max == self._maxDPeakIntegration and norm_by_van == self._plotPeakVanadiumNorm:
-                        append = False
+                    if d_min != self._minDPeakIntegration or \
+                                    d_max != self._maxDPeakIntegration or norm_by_van != self._plotPeakVanadiumNorm:
+                        append_peak = False
+                    else:
+                        append_peak = True
+                else:
+                    append_peak = False
+
                 # re-check append
                 for bank_id in [1, 2]:
                     if peak_name.lower().count('intensity') > 0:
+                        # FIXME TODO ASAP - Need to consider update_peak as calculating peaks..
                         vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
                                                                                   time0=self._liveStartTimeStamp)
                         marker = 'o'
@@ -1172,7 +1181,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 # END-BANK
 
                 # reset flags
-                if not append:
+                if not append_peak:
                     self._minDPeakIntegration = d_min
                     self._maxDPeakIntegration = d_max
                     self._plotPeakVanadiumNorm = norm_by_van
@@ -1191,18 +1200,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 y_label = log_name
 
                 if append:
-                    # blabla
+                    # append mode
                     date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=1)
-                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
                     self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
                     self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
-                    # self._currSampleLogTimeVector = time_vec
-                    # self._currSampleLogValueVector = value_vec
 
                     debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
-                                    ''.format(time_vec[0], self._logStartTime)
+                                    ''.format(time_vec[0], self._liveStartTimeStamp)
                     self.write_log('debug', debug_message)
-                    print '[DB...BAT] {0}'.format(debug_message)
 
                 else:
                     # New mode
@@ -1213,7 +1219,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     # TODO/ISSUE/ - shall give users with more choice
                     self._logStartTime = date_time_vec[0]
 
-                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
+                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
                     self._currSampleLogTimeVector = time_vec
                     self._currSampleLogValueVector = value_vec
                     print '[DB...BAT] New mode... Not Append'
@@ -1343,6 +1349,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # live data start time
             if self._liveStartTimeStamp is None:
                 self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').firstTime()
+                self.ui.lineEdit_logStarTime.setText(str(self._liveStartTimeStamp))
 
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):

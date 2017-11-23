@@ -156,7 +156,7 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
 
     peak_integral = numpy.sum((sub_y - sub_b) * delta_d)
 
-    print '[DB...BAT] Integrated Peak Intensity = {0}'.format(peak_integral)
+    # print '[DB...BAT] Integrated Peak Intensity = {0}'.format(peak_integral)
 
     return peak_integral
 
@@ -194,7 +194,7 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
 
     mu = numpy.sum(sub_d * (sub_y - vec_back) * vec_dx) / peak_integral
 
-    print '[DB...BAT] Peak average d = {0}'.format(mu)
+    # print '[DB...BAT] Peak average d = {0}'.format(mu)
 
     return peak_integral, mu
 
