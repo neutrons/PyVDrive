@@ -79,6 +79,10 @@ def convert_to_utc(local_time):
 
     return utc_time
 
+def convert_utc_to_local_time(utc_time):
+    # TODO/NOW!
+    return
+
 
 def parse_time(date_time_str, local_est=True):
     """

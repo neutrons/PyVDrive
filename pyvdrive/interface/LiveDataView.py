@@ -398,9 +398,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # replace previous one
-        if self._myIncrementalWorkspaceList[self._myIncrementalListIndex] is not None:
-            prev_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex]
-            self._controller.delete_workspace(prev_ws_name)
+        try:
+            if self._myIncrementalWorkspaceList[self._myIncrementalListIndex] is not None:
+                prev_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex]
+                self._controller.delete_workspace(prev_ws_name)
+        except IndexError as index_err:
+            msg = 'Cyclic incremental index {0} is out of range {1}.  It is not possible.' \
+                  ''.format(self._myIncrementalListIndex, len(self._myIncrementalWorkspaceList))
+            raise RuntimeError('{0}: {1}'.format(msg, index_err))
 
         # set the new one
         self._myIncrementalWorkspaceList[self._myIncrementalListIndex] = ws_name
@@ -964,53 +969,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return time_vec, log_value_vec
 
-    def plot_integrate_peak(self, d_min, d_max):
-        """
-        integrate peaks in live and plot
-        :param d_min:
-        :param d_max:
-        :return:
-        """
-        # FIXME TODO - REMOVE this method after testing
-        # integrate a single peak across all the accumulated workspaces
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max, self._plotPeakVanadiumNorm)
-
-        # TODO/ISSUE/NOW Better to use update
-        self.ui.graphicsView_comparison.clear_all_lines()
-
-        # plot bank 1
-        if self._plotPeakParameterIndex == 0:
-            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=1, time0=self._liveStartTimeStamp)
-            label_1 = 'Bank 1 Position'
-        else:
-            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
-                                                                              time0=self._liveStartTimeStamp)
-            label_1 = 'Bank 1 Intensity'
-        # TODO/NOW/89 - should let graphicsView_comparison to manage plot!
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
-                                                 label=label_1, line_style='--', marker='o', color='blue')
-
-        # FIXME / PROTOTYPE - This section is for testing left/right plot
-        vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
-                                                                          time0=self._liveStartTimeStamp)
-        label_1 = 'Bank 1 Intensity'
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params, is_right=True, y_label='Intensity',
-                                                 label=label_1, line_style='-.', marker='*', color='blue')
-        # END-FIXME / ---------------------------------------------------
-
-        # plot bank 2
-        if self._plotPeakParameterIndex == 0:
-            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=2, time0=self._liveStartTimeStamp)
-            label_2= 'Bank 2 Position'
-        else:
-            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=2,
-                                                                              time0=self._liveStartTimeStamp)
-            label_2 = 'Bank 2 Intensity'
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
-                                                 label=label_2, line_style='--', marker='D', color='red')
-
-        return
-
     def plot_log_with_reduced(self, x_axis_name, y_axis_name):
         """
         plot sample logs with previously reduced data
@@ -1236,13 +1194,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # plot
         if append:
                 # update lines
-                # FIXME TODO VERY WRONG - Need to update lines but not re-write
-                # clear all lines
-                # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
-                self.ui.graphicsView_comparison.clear_all_lines()
+                pass
+                # # FIXME TODO VERY WRONG - Need to update lines but not re-write
+                # # clear all lines
+                # # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
+                # self.ui.graphicsView_comparison.clear_all_lines()
         else:
             # clear all lines
-            self.ui.graphicsView_comparison.clear_all_lines()
+            self.ui.graphicsView_comparison.remove_all_plots()
 
         for i_line in range(len(vec_x_list)):
                 time_vec = vec_x_list[i_line]
@@ -1250,28 +1209,36 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
                 plot_side = side_list[i_line]
                 if plot_side == 'left':
-                    is_right = False
+                    is_main = True
                 elif plot_side == 'right':
-                    is_right = True
+                    is_main = False
                 else:
                     raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
 
                 label_y, label_line, color, marker, line_style = plot_setup_list[i_line]
 
-                if append:
-                    # update lines
-                    # FIXME TODO VERY WRONG - Need to update lines but not re-write
-                    self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
-                                                             y_label=label_y, label=label_line,
-                                                             line_style=line_style, marker=marker,
-                                                             color=color)
-                else:
-                    # wipe out previous plot new
-                    self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
-                                                             y_label=label_y, label=label_line,
-                                                             line_style=line_style, marker=marker,
-                                                             color=color)
-                # END-IF-ELSE (append)
+                # wipe out previous plot new
+                self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
+                                                                x_label=None,
+                                                                y_label=label_y, line_label=label_line,
+                                                                line_style=line_style, marker=marker,
+                                                                color=color)
+
+                # if append:
+                #     # update lines
+                #     # FIXME TODO VERY WRONG - Need to update lines but not re-write
+                #     print '[DB....BAT] Ought to update but not add!  Label-line = {0}'.format(label_line)
+                #     self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
+                #                                              y_label=label_y, label=label_line,
+                #                                              line_style=line_style, marker=marker,
+                #                                              color=color)
+                # else:
+                #     # wipe out previous plot new
+                #     self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_right=is_right,
+                #                                                     y_label=label_y, label=label_line,
+                #                                                     line_style=line_style, marker=marker,
+                #                                                     color=color)
+                # # END-IF-ELSE (append)
         # END-FOR
 
         return
@@ -1376,13 +1343,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     raise RuntimeError('Logical wrong to set up sampleX but not sampleY')
                 self.plot_log_live(self._currSampleLogX, self._currSampleLogY, self._minDPeakIntegration,
                                    self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
-
-            # if self._currSampleLogX is not None and self._currSampleLogY is not None:
-            #     # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
-            #     self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
-            # elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
-            #     # TODO/ISSUE/NOW - Find out whether it is to update the figure or new a figure
-            #     self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
         # END-FOR
 
         return

@@ -73,7 +73,8 @@ class LogSelectorTable(NTableWidget.NTableWidget):
         self._iColAxisName = self.TableSetup.index(('LogName', 'str'))
         self._iColSelected = self.TableSetup.index(('Select', 'checkbox'))
 
-        self.setColumnWidth(self._iColAxisName, 100)
+        self.setColumnWidth(self._iColAxisName, 200)
+        self.setColumnWidth(self._iColSelected, 100)
 
         return
 

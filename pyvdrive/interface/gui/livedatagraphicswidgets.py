@@ -17,10 +17,17 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         """
         super(GeneralPurpose1DView, self).__init__(parent, 1, 1)
 
+        self._currMainLineKey = None  # use label_y as key
+        self._currRightLineKey = None  # use label_y as key
+
+        self._mainLineIndex = None
+        self._rightLineIndex = None
+
         return
 
-    # TODO/NOW/89 - Implement!
-    def plot_sample_log(self, blabla):
+    # TODO/NOW/89 - Clean!
+    def plot_sample_log(self, time_vec, value_vec, is_main, x_label, y_label, line_label,
+                        line_style, marker, color):
         """
         Requirements
         1. compare with currently plotted sample to determine whether it is to remove current plot and plot a new
@@ -29,7 +36,46 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         :param blabla:
         :return:
         """
-        pass
+        update = False
+
+        if is_main:
+            if y_label == self._currMainLineKey:
+                update = True
+            elif self._mainLineIndex is not None:
+                # remove current plot
+                self.remove_line(0, 0, self._mainLineIndex)
+        else:
+            if y_label == self._currRightLineKey:
+                update = True
+            elif self._rightLineIndex is not None:
+                # remove current plot
+                self.remove_line(0, 0, self._rightLineIndex)
+
+        # plot
+        if update:
+            if is_main:
+                line_key = self._mainLineIndex
+            else:
+                line_key = self._rightLineIndex
+            self.update_line(row_index=0, col_index=0, ikey=line_key, vec_x=time_vec, vec_y=value_vec, is_main=is_main)
+        else:
+            line_key = self.add_plot(time_vec, value_vec, is_right=not is_main,
+                                                                y_label=y_label, label=line_label,
+                                                                line_style=line_style, marker=marker,
+                                                                color=color)
+
+            # update information
+            if is_main:
+                self._currMainLineKey = y_label
+                self._mainLineIndex = line_key
+            else:
+                self._currRightLineKey = y_label
+                self._rightLineIndex = line_key
+        # END-IF
+
+        print '[DB...BAT] Y-label vs Line-label: {0} vs {1}'.format(y_label, line_label)
+
+        return
 
     # TODO/NOW/89 - Implement!
     def plot_peak_parameters(self, blabla):
@@ -42,6 +88,19 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         :return:
         """
         pass
+
+    def remove_all_plots(self, include_main=True, include_right=True):
+        # TODO/WORK ON IT!
+
+        # reset
+        self._currRightLineKey = None
+        self._currMainLineKey = None
+        self._mainLineIndex = None
+        self._rightLineIndex = None
+
+        self.clear_all_lines()
+
+        return
 
 
 class Live2DView(MplGraphicsView2D):
