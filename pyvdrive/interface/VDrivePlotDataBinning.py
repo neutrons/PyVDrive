@@ -135,6 +135,15 @@ class VulcanGuiReduction(object):
         arg_dict.update(output_option_dict)
         arg_dict['output_directory'] = self.controller.get_working_dir()
 
+        # ASAP TODO NOW NOW
+        """
+        auto_reduce, output_directory, merge_banks,
+                        background=False, vanadium=False,
+                        record=False, logs=False, gsas=True, output_to_fullprof=False,
+                        standard_sample_tuple=None, binning_parameters=None,
+                        merge_runs=False
+        """
+
         if bin_by_pixel:
             # binning by pixel
             raise NotImplementedError('Binning by pixels is not implemented yet!')

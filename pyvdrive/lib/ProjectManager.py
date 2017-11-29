@@ -72,8 +72,6 @@ class ProjectManager(object):
         self._dataFileDict[run_number] = file_name, ipts_number
         self._baseDataFileNameList.append(os.path.basename(file_name))
 
-        print '[DB...BAT] Add run {0} with file {1}.'.format(run_number, file_name)
-
         return
 
     def add_reduced_workspace(self, ipts_number, run_number, workspace_name):
@@ -1188,28 +1186,6 @@ class ProjectManager(object):
             raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
 
         return
-
-    # def _generateFileName(self, runnumber, iptsstr):
-    #     """ Generate a NeXus file name with full path with essential information
-    #
-    #     Arguments:
-    #      - runnumber :: integer run number
-    #      - iptsstr   :: string for IPTS.  It can be either an integer or in format as IPTS-####.
-    #     """
-    #     # Parse run number and IPTS number
-    #     run = int(runnumber)
-    #     iptsstr = str(iptsstr).lower().split('ipts-')[-1]
-    #     ipts = int(iptsstr)
-    #
-    #     # Build file name with path
-    #     # FIXME : VULCAN only now!
-    #     nxsfname = os.path.join(self._baseDataPath, 'IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts, run, run))
-    #     if os.path.exists(nxsfname) is False:
-    #         print "[Warning] NeXus file %s does not exist.  Check run number and IPTS." % nxsfname
-    #     else:
-    #         print "[DB] Successfully generate an existing NeXus file with name %s." % nxsfname
-    #
-    #     return nxsfname
 
     @property
     def vanadium_processing_manager(self):
