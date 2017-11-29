@@ -1138,7 +1138,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     # label_y = peak_name
                     label_line = 'Bank {0}'.format(bank_id)
                     line_style = ':'
-                    color = [None, 'red', 'green'][bank_id]
+                    color = [None, 'red', 'orange'][bank_id]
 
                     # add to list
                     vec_x_list.append(vec_time)
