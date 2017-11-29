@@ -1088,10 +1088,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # END-IF
 
         # collect to plot
-        vec_x_list = list()
-        vec_y_list = list()
-        plot_setup_list = list()  # label Y, label-line, color, marker, line style
-        side_list = list()
+        # main_plots_list = list()   # tuple as: vec_x, vec_y, plot_setup
+        # right_plots_list = list()  # tuple as: vec_x, vec_y, plot_setup
+
+        # vec_x_list = list()
+        # vec_y_list = list()
+        # plot_setup_list = list()  # label Y, label-line, color, marker, line style
+        # side_list = list()
 
         for y_axis_name in y_axis_name_list:
             if y_axis_name.startswith('* Peak:'):
@@ -1114,6 +1117,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     append_peak = False
 
                 # re-check append
+                vec_x_list = list()
+                vec_y_list = list()
+                plot_setup_list = list()
                 for bank_id in [1, 2]:
                     if peak_name.lower().count('intensity') > 0:
                         # FIXME TODO ASAP - Need to consider update_peak as calculating peaks..
@@ -1129,17 +1135,28 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                         raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
 
                     # label
-                    label_y = peak_name
+                    # label_y = peak_name
                     label_line = 'Bank {0}'.format(bank_id)
                     line_style = ':'
-                    color = [None, 'red', 'blue'][bank_id]
+                    color = [None, 'red', 'green'][bank_id]
 
                     # add to list
                     vec_x_list.append(vec_time)
                     vec_y_list.append(vec_value)
-                    plot_setup_list.append((label_y, label_line, color, marker, line_style))
-                    side_list.append(plot_side)
+                    plot_setup_list.append((label_line, color, marker, line_style))
                 # END-BANK
+
+                # plot!
+                if plot_side == 'left':
+                    is_main = True
+                elif plot_side == 'right':
+                    is_main = False
+                else:
+                    raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
+
+                # wipe out previous plot new
+                self.ui.graphicsView_comparison.plot_multi_data_set(vec_x_list, vec_y_list, peak_name,
+                                                                    plot_setup_list, is_main=is_main)
 
                 # reset flags
                 if not append_peak:
@@ -1148,15 +1165,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     self._plotPeakVanadiumNorm = norm_by_van
                 # END-IF
 
-
-                # FIXME / PROTOTYPE - This section is for testing left/right plot
-                # label_1 = 'Bank 1 Intensity'
-                # self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params, is_right=True,
-                #                                          y_label='Intensity',
-                #                                          label=label_1, line_style='-.', marker='*', color='blue')
-
             else:
-                # plot log
+                # plot sample log
                 log_name, plot_side = y_axis_name.split()
                 y_label = log_name
 
@@ -1188,42 +1198,59 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 time_vec = self._currSampleLogTimeVector
                 value_vec = self._currSampleLogValueVector
 
-                # append
-                vec_x_list.append(time_vec)
-                vec_y_list.append(value_vec)
-                side_list.append(plot_side)
-                if plot_side == 'right':
-                    plot_setup_list.append((y_label, y_label, 'blue', '*', '--'))
-                else:
-                    plot_setup_list.append((y_label, y_label, 'green', '+', '--'))
-            # END-IF-ELSE (peak or sample)
-        # END-FOR (y-axis-name)
+                # # append FIXME - check and delete!
+                # vec_x_list.append(time_vec)
+                # vec_y_list.append(value_vec)
+                # side_list.append(plot_side)
 
-        # plot
-        if not append:
-            # clear all lines if new lines to plot
-            self.ui.graphicsView_comparison.remove_all_plots()
-
-        for i_line in range(len(vec_x_list)):
-                time_vec = vec_x_list[i_line]
-                value_vec = vec_y_list[i_line]
-
-                plot_side = side_list[i_line]
                 if plot_side == 'left':
+                    # plot_setup_list.append((y_label, y_label, 'blue', '*', '--'))
+                    label_y, label_line, color, marker, line_style = y_label, y_label, 'green', '*', ':'
                     is_main = True
                 elif plot_side == 'right':
+                    # plot_setup_list.append((y_label, y_label, 'green', '+', '--'))
+                    label_y, label_line, color, marker, line_style = y_label, y_label, 'blue', '+', ':'
                     is_main = False
                 else:
                     raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
 
-                label_y, label_line, color, marker, line_style = plot_setup_list[i_line]
-
-                # wipe out previous plot new
+                if not append:
+                    # clear all lines if new lines to plot
+                    self.ui.graphicsView_comparison.remove_all_plots()
+                # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
                 self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
                                                                 x_label=None,
                                                                 y_label=label_y, line_label=label_line,
                                                                 line_style=line_style, marker=marker,
                                                                 color=color)
+            # END-IF-ELSE (peak or sample)
+        # END-FOR (y-axis-name)
+
+        # # plot
+        # if not append:
+        #     # clear all lines if new lines to plot
+        #     self.ui.graphicsView_comparison.remove_all_plots()
+
+        # for i_line in range(len(vec_x_list)):
+        #     time_vec = vec_x_list[i_line]
+        #     value_vec = vec_y_list[i_line]
+        #
+        #     plot_side = side_list[i_line]
+        #     if plot_side == 'left':
+        #         is_main = True
+        #     elif plot_side == 'right':
+        #         is_main = False
+        #     else:
+        #         raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
+        #
+        #     label_y, label_line, color, marker, line_style = plot_setup_list[i_line]
+        #
+        #     # wipe out previous plot new
+        #     self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
+        #                                                     x_label=None,
+        #                                                     y_label=label_y, line_label=label_line,
+        #                                                     line_style=line_style, marker=marker,
+        #                                                     color=color)
         # END-FOR
 
         return

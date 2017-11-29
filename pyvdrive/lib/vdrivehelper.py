@@ -77,25 +77,23 @@ def convert_to_utc(local_time):
     :return:
     """
     # check whether it is a local time, i.e., with time zone information
+    # blabla
 
-    # conver to UTC time
+    # convert to UTC time
     utc_time = local_time.astimezone(pytz.utc)
-    print (utc_time, type(utc_time))
 
     return utc_time
 
 
-# TODO TEST/DEV : new method
 def convert_utc_to_local_time(utc_time):
     """
     convert UTC time to local time
     :param utc_time:
     :return:
     """
-    # convert UTC time to a certain string
-    utc_time_formatted = utc_time.toString()
-    utc_time = datetime.strptime('{0}-{1}-{2} {3}:{4}:{5}'.format(year, month, day, hour, minute, second),
-                                 '%Y-%m-%d %H:%M:%S')
+    # convert UTC time to a certain string in the format as 2017-11-29T13:51:42.787380666
+    utc_time_formatted = str(utc_time).split('.')[0]
+    utc_time = datetime.strptime(utc_time_formatted, '%Y-%m-%dT%H:%M:%S')
 
     # METHOD 1: Hardcode zones:
     from_zone = tz.gettz('UTC')

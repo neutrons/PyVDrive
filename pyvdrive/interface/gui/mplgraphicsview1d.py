@@ -73,12 +73,13 @@ class MplGraphicsView1D(QtGui.QWidget):
         # key = [row, col][line key], value = label, x-min, x-max, y-min and y-max
         self._myMainPlotDict = dict()
         self._myMainPlotDict[0, 0] = dict()  # init
+        self._statMainPlotDict = dict()
+        self._statMainPlotDict[0, 0] = None
 
         # for right plot
         self._myRightPlotDict = dict()
-        self._myRightPlotDict[0, 0] = dict()
-
-        self._statMainPlotDict = dict()
+        # self._myRightPlotDict[0, 0] = dict()
+        # FIXME - It is not clear how to use this dictionary
         self._statRightPlotDict = dict()
 
         # auto line's maker+color list
@@ -167,7 +168,7 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         # check
         if (row_index, col_index) not in plot_dict:
-            raise RuntimeError('Subplot ({0}, {1}) does not exist in main ({2}?). Existing subplots are {3}.'
+            raise RuntimeError('Subplot ({0}, {1}) does not exist in (main = {2}). Existing subplots are {3}.'
                                ''.format(row_index, col_index, is_main, plot_dict.keys()))
 
         # update
@@ -247,7 +248,9 @@ class MplGraphicsView1D(QtGui.QWidget):
                                                      x=vec_x, y=vec_y, y_label=y_label,
                                                      color=color, label=label,  marker=marker,
                                                      line_style=line_style, linewidth=line_width)
-            self._statRightPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
+            # initialize right axes
+            if (row_index, col_index) not in self._myRightPlotDict:
+                self._myRightPlotDict[row_index, col_index] = dict()
 
         else:
             # plot at the main axis
@@ -255,7 +258,7 @@ class MplGraphicsView1D(QtGui.QWidget):
                                                     y_label, marker, line_style,
                                                     line_width, show_legend)
             # record min/max
-            self._statMainPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
+            # self._statMainPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
         # END-IF
 
         # update line information
@@ -333,7 +336,6 @@ class MplGraphicsView1D(QtGui.QWidget):
         """
         return self._myCanvas
 
-    # TODO/NEXT - need to be more flexible to remove one side
     def clear_all_lines(self, row_number=None, col_number=None, include_main=True, include_right=True):
         """
         clear all the lines of all or not
@@ -343,22 +345,39 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param include_right:
         :return:
         """
-        # remove lines
+        # treat left and right separately
         for row_index, col_index in self._myCanvas.subplot_indexes:
-            if (row_number is None or col_number is None) or (row_index == row_number and col_number == col_number):
-                self._myCanvas.clear_subplot_lines(row_index, col_index)
+            # filter the condition to determine whether this subplot is to be cleared
+            if row_number is None or col_number is None:
+                # deal with all
+                pass
+            elif row_number is None and col_number == col_index:
+                # remove whole column
+                pass
+            elif row_number == row_index and col_number is None:
+                # remove whole row
+                pass
+            elif row_number == row_index and col_number == col_index:
+                # clear this subplot
+                pass
+            else:
+                # skip
+                continue
 
-        # clear records on main axis
-        for row_index, col_index in self._myMainPlotDict.keys():
-            if (row_number is None or col_number is None) or (row_index == row_number and col_number == col_number):
+            # remove line for main and right
+            if include_main:
+                # main axis
+                self._myCanvas.clear_subplot_lines(row_index, col_index, True)
                 self._myMainPlotDict[row_index, col_index].clear()
-                self._statMainPlotDict[row_index, col_index].clear()
+                # self._statMainPlotDict ???
 
-        # clear records for the right
-        for row_index, col_index in self._myRightPlotDict.keys():
-            if (row_number is None or col_number is None) or (row_index == row_number and col_number == col_number):
+            if include_right:
+                # right axis if it does exist. the caller shall check. no worry to raise exception
+                self._myCanvas.clear_subplot_lines(row_index, col_index, False)
                 self._myRightPlotDict[row_index, col_index].clear()
-                self._statRightPlotDict[row_index, col_index].clear()
+                # self._statRightPlotDict ???
+
+        # END-FOR
 
         # about zoom
         self._isZoomed = False
@@ -454,10 +473,10 @@ class MplGraphicsView1D(QtGui.QWidget):
         # remove the records
         self._update_plot_line_information(row_index, col_index, line_id=line_id, remove_line=True)
 
-        if line_id in self._statMainPlotDict:
-            del self._statMainPlotDict[line_id]
-        else:
-            del self._statRightPlotDict[line_id]
+        # if line_id in self._statMainPlotDict:
+        #     del self._statMainPlotDict[line_id]
+        # else:
+        #     del self._statRightPlotDict[line_id]
 
         return
 
@@ -531,16 +550,6 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
-    def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        """ Set X-Y limit automatically
-        """
-        self._myCanvas.axes.set_xlim([xmin, xmax])
-        self._myCanvas.axes.set_ylim([ymin, ymax])
-
-        self._myCanvas.draw()
-
-        return
-
     def setAutoLineMarkerColorCombo(self):
         """ Set the default/auto line marker/color combination list
         """
@@ -587,12 +596,12 @@ class MplGraphicsView1D(QtGui.QWidget):
         :return:
         """
         # delete all the lines on canvas now
-        self.clear_all_lines()
+        self.clear_all_lines(include_right=False)
 
         # set the subplots
         self._myCanvas.set_subplots(row_size, col_size)
 
-        # reset PlotDict
+        # reset PlotDict: make the right-axis open.
         subplot_indexes = self._myCanvas.subplot_indexes
         for index in subplot_indexes:
             self._myMainPlotDict[index] = dict()
@@ -921,45 +930,50 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return line_id
 
-    def clear_subplot_lines(self, row_index, col_index):
+    def clear_subplot_lines(self, row_index, col_index, is_main):
         """
         Remove all lines from a subplot
+        i.e., remove line and its record
         :param row_index:
         :param col_index:
+        :param is_main:
         :return:
         """
-        # remove line and its record
-        # check
-        self._check_subplot_index(row_index, col_index, is_main=True)
-        for line_key in self._mainLineDict[row_index, col_index].keys():
-            mpl_line = self._mainLineDict[row_index, col_index][line_key]
-            if mpl_line is None:
-                # removed
-                continue
-            elif isinstance(mpl_line, tuple):
-                # with error bar and etc
-                mpl_line[0].remove()
-                for line in mpl_line[1]:
-                    line.remove()
-                for line in mpl_line[2]:
-                    line.remove()
-            else:
-                # with single line
-                try:
-                    self.axes_main[row_index, col_index].lines.remove(mpl_line)
-                except ValueError as e:
-                    print "[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s" % (
-                        str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
-            # END-IF-ELSE
-
-            # remove record
-            del self._mainLineDict[row_index, col_index][line_key]
-        # END-FOR
-
-        # remove line and its record from right axis
-        if (row_index, col_index) in self._rightLineDict:
+        if is_main:
             # check
-            self._check_subplot_index(row_index, col_index, is_main=False)
+            self._check_subplot_index(row_index, col_index, is_main=is_main)
+
+            for line_key in self._mainLineDict[row_index, col_index].keys():
+                mpl_line = self._mainLineDict[row_index, col_index][line_key]
+                if mpl_line is None:
+                    # removed
+                    continue
+                elif isinstance(mpl_line, tuple):
+                    # with error bar and etc
+                    mpl_line[0].remove()
+                    for line in mpl_line[1]:
+                        line.remove()
+                    for line in mpl_line[2]:
+                        line.remove()
+                else:
+                    # with single line
+                    try:
+                        self.axes_main[row_index, col_index].lines.remove(mpl_line)
+                    except ValueError as e:
+                        print "[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s" % (
+                            str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                # END-IF-ELSE
+
+                # remove record
+                del self._mainLineDict[row_index, col_index][line_key]
+            # END-FOR
+
+            # set up legend
+            self._setup_legend(row_index, col_index, is_main=True)
+
+        elif (row_index, col_index) in self._rightLineDict:
+            # remove line and its record from right axis
+            # no need to check!
             for line_key in self._rightLineDict[row_index, col_index].keys():
                 mpl_line = self._rightLineDict[row_index, col_index][line_key]
                 if mpl_line is None:
@@ -978,17 +992,16 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
                         self.axes_right[row_index, col_index].lines.remove(mpl_line)
                     except ValueError as e:
                         print "[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
-                            str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
                 # END-IF-ELSE
 
                 # remove record
                 del self._rightLineDict[row_index, col_index][line_key]
             # END-FOR
-        # END-IF
 
-        self._setup_legend(row_index, col_index, is_main=True)
-        if (row_index, col_index) in self._rightLineDict:
+            # set up legend
             self._setup_legend(row_index, col_index, is_main=False)
+        # END-IF-ELSE
 
         # draw
         self.draw()
@@ -1007,26 +1020,15 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # clear all lines
         for row_index, col_index in self.axes_main.keys():
-            self.clear_subplot_lines(row_index, col_index)
+            # main
+            self.clear_subplot_lines(row_index, col_index, True)
             self.axes_main[row_index, col_index].cla()
 
-
-        # self.axes.hold(False)
-        #
-        # # Clear all lines
-        # self.clear_all_1d_plots()
-        #
-        # # clear image
-        # self.axes.cla()
-        # Try to clear the color bar
-        # if len(self.fig.axes) > 1:
-        #     self.fig.delaxes(self.fig.axes[1])
-        #     self._colorBar = None
-        #     # This clears the space claimed by color bar but destroys sub_plot too.
-        #     self.fig.clear()
-        #     # Re-create subplot
-        #     self.axes = self.fig.add_subplot(111)
-        #     self.fig.subplots_adjust(bottom=0.15)
+            # right if it does exist
+            if (row_index, col_index) in self.axes_right:
+                self.clear_subplot_lines(row_index, col_index, False)
+                self.axes_right[row_index, col_index].cla()
+            # END-IF
 
         # flush/commit
         self._flush()
@@ -1121,12 +1123,14 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def set_x_limits(self, row_index, col_index, xmin, xmax, apply_change=True):
+    def set_x_limits(self, row_index, col_index, xmin, xmax, is_main=True, is_right=True, apply_change=True):
         """set limit on X-axis
         :param row_index:
         :param col_index:
         :param xmin:
         :param xmax:
+        :param is_main:
+        :param is_right:
         :param apply_change:
         :return:
         """
@@ -1139,7 +1143,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             x_limits[0] = xmin
         if xmax is not None:
             x_limits[1] = xmax
-        self.axes_main[row_index, col_index].set_xlim(x_limits)
+
+        # set
+        if is_main:
+            self.axes_main[row_index, col_index].set_xlim(x_limits)
+        if is_main and (row_index, col_index) in self.axes_right:
+            self.axes_right[row_index, col_index].set_xlim(x_limits)
 
         # try draw
         if apply_change:
@@ -1147,10 +1156,11 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def set_y_limits(self, row_index, col_index, ymin, ymax, apply_change=True):
+    def set_y_limits(self, row_index, col_index, is_main, ymin, ymax, apply_change=True):
         """set limit on y-axis
         :param row_index:
         :param col_index:
+        :param is_main
         :param ymin:
         :param ymax:
         :param apply_change:
@@ -1165,7 +1175,11 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             y_limits[0] = ymin
         if ymax is not None:
             y_limits[1] = ymax
-        self.axes_main[row_index, col_index].set_ylim(y_limits)
+
+        if is_main:
+            self.axes_main[row_index, col_index].set_ylim(y_limits)
+        else:
+            self.axes_right[row_index, col_index].set_ylim(y_limits)
 
         # try draw
         if apply_change:

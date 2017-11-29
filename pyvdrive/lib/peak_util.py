@@ -322,7 +322,7 @@ def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
     # END-FOR
     for index in range(-1, 2):
         x_index = max_x_index + index
-        if x_index < len(vec_d):
+        if x_index < len(vec_d)-1:
             list_x.append(vec_d[x_index])
             list_y.append(vec_y[x_index])
     # END-FOR

@@ -489,9 +489,9 @@ class LiveDataDriver(QtCore.QThread):
             # END-IF-ELSE
 
             # DEBUG OUTPUT
-            print '[DB...SEVERE] Workspace {0} Entry 0: {0} ({1}); Entry -1: {2} ({3})' \
-                  ''.format(time_vec_i[0], time_vec_i[-1].totalNanoseconds(),
-                            time_vec_i[-1], time_vec_i[-1].totalNanoseconds())
+            print '[DB...SEVERE] Workspace {0} Entry 0: {1} ({2}); Entry -1: {3} ({4}); Number of Entries: {5}' \
+                  ''.format(ws_name, time_vec_i[0], time_vec_i[0].totalNanoseconds(),
+                            time_vec_i[-1], time_vec_i[-1].totalNanoseconds(), len(time_vec_i))
 
             last_time = temp_workspace.run().getProperty('proton_charge').lastTime()
         # END-FOR (workspaces)

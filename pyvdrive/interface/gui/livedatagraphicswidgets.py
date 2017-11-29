@@ -27,6 +27,86 @@ class GeneralPurpose1DView(MplGraphicsView1D):
 
         return
 
+    def plot_multi_data_set(self, vec_x_list, vec_y_list, y_label, plot_setup_list, is_main):
+        """
+        plot multiple data set on one axis
+        :param vec_x_list:
+        :param vec_y_list:
+        :param y_label:
+        :param plot_setup_list:
+        :param is_main:
+        :return:
+        """
+        # it shall be straightforward to remove the lines
+        # FIXME - this is a brute force solution!  Need to be more smart for efficiency
+        if is_main:
+            include_main = True
+            include_right = False
+        else:
+            include_main = False
+            include_right = True
+
+        self.remove_all_plots(include_main=include_main, include_right=include_right)
+
+        num_plots = len(vec_x_list)
+        min_y = max_y = None
+
+        # plot individual
+        axis_color = None
+        last_time = None
+        for i_plot in range(num_plots):
+            time_vec = vec_x_list[i_plot]
+            vec_y = vec_y_list[i_plot]
+            label_line, color, marker, line_style = plot_setup_list[i_plot]
+
+            # do some statistic
+            if min_y is None or min_y > numpy.min(vec_y):
+                min_y = numpy.min(vec_y)
+            if max_y is None or max_y < numpy.max(vec_y):
+                max_y = numpy.max(vec_y)
+            # END-IF
+
+            # plot
+            line_key = self.add_plot(time_vec, vec_y, is_right=not is_main,
+                                     y_label=y_label, label=label_line,
+                                     line_style=line_style, marker=marker,
+                                     color=color)
+            axis_color = color
+            last_time = time_vec[-1]
+
+            # update information
+            # FIXME - how to REMEMBER! line_key
+            # if is_main:
+            #     self._currMainLineKey = y_label
+            #     self._mainLineIndex = line_key
+            # else:
+            #     self._currRightLineKey = y_label
+            #     self._rightLineIndex = line_key
+            # # END-IF
+
+            print '[DB...BAT] Multi-Plot  Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}. ' \
+                  'Y-range: {4}, {5}' \
+                  ''.format(y_label, label_line, time_vec[0], is_main, numpy.min(vec_y), numpy.max(vec_y))
+        # END-FOR
+
+        # set the Y-axis color
+        self.set_axis_color(row_index=0, col_index=0, is_main=is_main, color=axis_color)
+
+        # set the X-axis range
+        self.canvas().set_x_limits(row_index=0, col_index=0, xmin=-1, xmax=last_time+6, is_main=True,
+                                   is_right=True, apply_change=True)
+        # scale Y
+        y_range = max_y - min_y
+        if y_range < 1.E-5:
+            y_range = abs(min_y)
+        self.canvas().set_y_limits(row_index=0, col_index=0, is_main=is_main, ymin=min_y - 0.02 * y_range,
+                                   ymax=max_y + 0.02 * y_range, apply_change=True)
+
+        # set legend
+        self.canvas()._setup_legend(0, 0, location='"upper left"', is_main=is_main)
+
+        return
+
     def plot_sample_log(self, time_vec, value_vec, is_main, x_label, y_label, line_label,
                         line_style, marker, color):
         """ Requirements
@@ -92,7 +172,24 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         # set the Y-axis color
         self.set_axis_color(row_index=0, col_index=0, is_main=is_main, color=color)
 
-        print '[DB...BAT] Y-label vs Line-label: {0} vs {1}'.format(y_label, line_label)
+        # set the X-axis range
+        last_time = time_vec[-1]
+        self.canvas().set_x_limits(row_index=0, col_index=0, xmin=-1, xmax=last_time+6, is_main=True,
+                                   is_right=True, apply_change=True)
+        # scale Y
+        min_y = numpy.min(value_vec)
+        max_y = numpy.max(value_vec)
+        y_range = max_y - min_y
+        if y_range < 1.E-5:
+            y_range = abs(min_y)
+        self.canvas().set_y_limits(row_index=0, col_index=0, is_main=is_main, ymin=min_y - 0.02 * y_range,
+                                   ymax=max_y + 0.02 * y_range, apply_change=True)
+
+        print '[DB...BAT] Y-label vs Line-label: {0} vs {1}.  Time 0 = {2}.  Side = {3}' \
+              ''.format(y_label, line_label, time_vec[0], is_main)
+
+        # set legend
+        self.canvas()._setup_legend(0, 0, location='"lower left"', is_main=is_main)
 
         return
 
@@ -104,13 +201,21 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         :return:
         """
         # reset the records
-        self._currRightLineKey = None
-        self._currMainLineKey = None
-        self._mainLineIndex = None
-        self._rightLineIndex = None
+        if include_main:
+            self._currMainLineKey = None
+            self._mainLineIndex = None
+
+        if include_right:
+            if (0, 0) in self.canvas().axes_right:
+                # it does exist
+                self._currRightLineKey = None
+                self._rightLineIndex = None
+            else:
+                # it is not initialized yet
+                include_right = False
 
         # clear the line
-        self.clear_all_lines(row_number=0, col_number=0)
+        self.clear_all_lines(row_number=0, col_number=0, include_main=include_main, include_right=include_right)
 
         return
 
