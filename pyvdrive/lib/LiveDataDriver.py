@@ -450,7 +450,7 @@ class LiveDataDriver(QtCore.QThread):
         :except RuntimeError:
         :param ws_name_list:
         :param sample_log_name:
-        :return:
+        :return: date time vector, sample value vector, last time (kernel.DateAndTime)
         """
         # check inputs
         assert isinstance(ws_name_list, list), 'Workspace names {0} must be given as a list but not a {1}.' \
@@ -488,23 +488,15 @@ class LiveDataDriver(QtCore.QThread):
                 numpy.append(sample_value_vec, value_vec_i)
             # END-IF-ELSE
 
+            # DEBUG OUTPUT
+            print '[DB...SEVERE] Workspace {0} Entry 0: {0} ({1}); Entry -1: {2} ({3})' \
+                  ''.format(time_vec_i[0], time_vec_i[-1].totalNanoseconds(),
+                            time_vec_i[-1], time_vec_i[-1].totalNanoseconds())
+
             last_time = temp_workspace.run().getProperty('proton_charge').lastTime()
         # END-FOR (workspaces)
 
-        if len(date_time_vec) == 1:
-            # blabla ... TODO add why!
-            print '[WARNING] One entry log {0}! last time = {1}'.format(sample_log_name, date_time_vec[0])
-            list_time = list(date_time_vec)
-            list_value = list(sample_value_vec)
-
-            list_time.append(last_time)
-            list_value.append(list_value[0])
-
-            date_time_vec = numpy.array(list_time)
-            sample_value_vec = numpy.array(list_value)
-        # END
-
-        return date_time_vec, sample_value_vec
+        return date_time_vec, sample_value_vec, last_time
 
     @staticmethod
     def sum_workspaces(workspace_name_list, target_workspace_name):

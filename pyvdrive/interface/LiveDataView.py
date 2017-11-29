@@ -11,7 +11,7 @@ import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-
+import pyvdrive.lib.vdrivehelper as vdrivehelper
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -658,12 +658,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                    ''.format(ws_list_index, len(self._myIncrementalWorkspaceList),
                                              index_err))
             if ws_name_i is None:
-                # print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace
-                # names are {3}' \
-                #       ''.format(ws_list_index, self._myListIndex, last_i, self._myWorkspaceList)
                 break
             elif helper.workspace_does_exist(ws_name_i) is False:
-                # print '[DB...BAT] workspace {0} does not exist.'.format(ws_name_i)
                 break
             else:
                 ws_name_list.append(ws_name_i)
@@ -718,9 +714,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber - 1 - inverse_index
             try:
                 ws_name_i = self._myAccumulationWorkspaceList[list_index]
-                # print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
-                #       ''.format(inverse_index, list_index, self._myAccumulationListIndex,
-                #                 self._inAccumulationWorkspaceName)
             except IndexError as index_err:
                 raise RuntimeError('Inverted workspace index {0} is converted to workspace index {1} '
                                    'and out of range [0, {2}) due to {3}.'
@@ -962,10 +955,25 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if last_n_intervals <= 0:
             raise RuntimeError('Last {0} intervals cannot be negative.'.format(last_n_intervals))
 
-        # get the workspace name list
+        # get the workspace name list: get the last N round of workspace from the beginning of live data
         ws_name_list, index_list = self.get_last_n_round_workspaces(last_n_intervals)
 
-        time_vec, log_value_vec = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+        time_vec, log_value_vec, last_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+
+        if len(time_vec) == 1:
+            # need to add another entry if there is only 1 entry in the whole series
+            print '[WARNING] One entry log {0}! last time = {1}'.format(y_axis_name, time_vec[0])
+
+            # convert to list and back to numpy 1D array
+            list_time = list(time_vec)
+            list_value = list(log_value_vec)
+
+            list_time.append(last_time)
+            list_value.append(list_value[0])
+
+            time_vec = numpy.array(list_time)
+            log_value_vec = numpy.array(list_value)
+        # END
 
         return time_vec, log_value_vec
 
@@ -1175,32 +1183,25 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
                     self._currSampleLogTimeVector = time_vec
                     self._currSampleLogValueVector = value_vec
-                    # print '[DB...BAT] New mode... Not Append'
                 # END-IF-ELSE
 
                 time_vec = self._currSampleLogTimeVector
                 value_vec = self._currSampleLogValueVector
 
-                # print '[DB...BAT] Sample Log: {0} ... {1}'.format(time_vec, value_vec)
-
                 # append
                 vec_x_list.append(time_vec)
                 vec_y_list.append(value_vec)
                 side_list.append(plot_side)
-                plot_setup_list.append((y_label, y_label, 'black', '*', '--'))
+                if plot_side == 'right':
+                    plot_setup_list.append((y_label, y_label, 'blue', '*', '--'))
+                else:
+                    plot_setup_list.append((y_label, y_label, 'green', '+', '--'))
             # END-IF-ELSE (peak or sample)
         # END-FOR (y-axis-name)
 
         # plot
-        if append:
-                # update lines
-                pass
-                # # FIXME TODO VERY WRONG - Need to update lines but not re-write
-                # # clear all lines
-                # # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
-                # self.ui.graphicsView_comparison.clear_all_lines()
-        else:
-            # clear all lines
+        if not append:
+            # clear all lines if new lines to plot
             self.ui.graphicsView_comparison.remove_all_plots()
 
         for i_line in range(len(vec_x_list)):
@@ -1223,22 +1224,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                                 y_label=label_y, line_label=label_line,
                                                                 line_style=line_style, marker=marker,
                                                                 color=color)
-
-                # if append:
-                #     # update lines
-                #     # FIXME TODO VERY WRONG - Need to update lines but not re-write
-                #     print '[DB....BAT] Ought to update but not add!  Label-line = {0}'.format(label_line)
-                #     self.ui.graphicsView_comparison.add_plot(time_vec, value_vec, is_right=is_right,
-                #                                              y_label=label_y, label=label_line,
-                #                                              line_style=line_style, marker=marker,
-                #                                              color=color)
-                # else:
-                #     # wipe out previous plot new
-                #     self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_right=is_right,
-                #                                                     y_label=label_y, label=label_line,
-                #                                                     line_style=line_style, marker=marker,
-                #                                                     color=color)
-                # # END-IF-ELSE (append)
         # END-FOR
 
         return
@@ -1310,8 +1295,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # live data start time
             if self._liveStartTimeStamp is None:
+                # get from the proton charge for T0
                 self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').firstTime()
-                self.ui.lineEdit_logStarTime.setText(str(self._liveStartTimeStamp))
+                # convert to local time for better communication
+                east_time = vdrivehelper.convert_utc_to_local_time(self._liveStartTimeStamp)
+                # set time
+                self.ui.lineEdit_logStarTime.setText(str(east_time))
 
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
@@ -1432,8 +1421,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.write_log('information', 'Delete old workspace {0}'.format(old_ws_name))
                 self._controller.delete_workspace(old_ws_name)
             self._myAccumulationWorkspaceList[list_index] = accumulate_name
-            # print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
-            #       ''.format(list_index, self._myAccumulationWorkspaceList[list_index])
 
             # restart timer
             self._accStartTime = datetime.now()
@@ -1550,7 +1537,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # some counter += 1
 
-        # message = '{0}\nNew Workspace: {1}'.format(ws_name_list, new_ws_name_list)
         message = ''
         for ws_name in new_ws_name_list:
             ws_i = helper.retrieve_workspace(ws_name)
@@ -1561,6 +1547,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # END-FOR
         if len(message) > 0:
             self.write_log('information', message)
+
+        # update time display
+        time_now = datetime.now()
+        self.ui.lineEdit_currentTime.setText(str(time_now))
+        # NOTE: time difference is left to lineEdit_elapsedTime as log
 
         return
 

@@ -2,6 +2,8 @@ import os
 import time
 import pytz
 from dateutil.parser import parse
+from datetime import datetime
+from dateutil import tz
 
 __author__ = 'wzz'
 
@@ -70,6 +72,9 @@ def convert_to_strtime_from_epoch(epoch_time):
 
 def convert_to_utc(local_time):
     """
+    convert local time to UTC time
+    :param local_time:
+    :return:
     """
     # check whether it is a local time, i.e., with time zone information
 
@@ -79,9 +84,35 @@ def convert_to_utc(local_time):
 
     return utc_time
 
+
+# TODO TEST/DEV : new method
 def convert_utc_to_local_time(utc_time):
-    # TODO/NOW!
-    return
+    """
+    convert UTC time to local time
+    :param utc_time:
+    :return:
+    """
+    # convert UTC time to a certain string
+    utc_time_formatted = utc_time.toString()
+    utc_time = datetime.strptime('{0}-{1}-{2} {3}:{4}:{5}'.format(year, month, day, hour, minute, second),
+                                 '%Y-%m-%d %H:%M:%S')
+
+    # METHOD 1: Hardcode zones:
+    from_zone = tz.gettz('UTC')
+    to_zone = tz.gettz('America/New_York')  # VULCAN will never been moved to other time zone!
+
+    # METHOD 2: Auto-detect zones:
+    # from_zone = tz.tzutc()
+    # to_zone = tz.tzlocal()
+
+    # Tell the datetime object that it's in UTC time zone since
+    # datetime objects are 'naive' by default
+    utc_time = utc_time.replace(tzinfo=from_zone)
+
+    # Convert time zone
+    east_time = utc_time.astimezone(to_zone)
+
+    return east_time
 
 
 def parse_time(date_time_str, local_est=True):

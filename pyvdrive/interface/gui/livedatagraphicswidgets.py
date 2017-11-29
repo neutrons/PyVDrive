@@ -96,18 +96,6 @@ class GeneralPurpose1DView(MplGraphicsView1D):
 
         return
 
-    # TODO/NOW/89 - Implement!
-    def plot_peak_parameters(self, blabla):
-        """
-        Requirements
-        1. compare with currently plotted sample to determine whether it is to remove current plot and plot a new
-           line or update current line
-        2. determine color style and etc.
-        :param blabla:
-        :return:
-        """
-        pass
-
     def remove_all_plots(self, include_main=True, include_right=True):
         """
         remove all the plots on the line
