@@ -374,7 +374,7 @@ class SingleBankView(MplGraphicsView):
         y_max = None
         for line_id in [self._currentRunID, self._previousRunID]:
             # get data
-            vec_x, vec_y = self.get_data(line_id)
+            vec_x, vec_y = self.canvas().get_data(line_id)
             # search indexes
             i_min, i_max = numpy.searchsorted(vec_x, [x_min, x_max])
             # find Y range

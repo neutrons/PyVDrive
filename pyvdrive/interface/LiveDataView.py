@@ -522,10 +522,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
 
         # reset the automatic Y range
-        self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
-        self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
-        self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
-
+        if left_x_bound is not None and right_x_bound is not None:
+            self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
+            self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
+            self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
 
         return
 
@@ -1339,7 +1339,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.plot_data_previous_cycle()
 
             # re-set the ROI if the unit is d-spacing
-            db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(), self._bankViewDMin, self._bankViewDMax)
+            db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(),
+                                                          self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
                 self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
