@@ -495,9 +495,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         try:
             left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
-            # self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound)
-            # self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound)
-            # self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound)
             self._bankViewDMin = left_x_bound
         except ValueError:
             # keep as before
@@ -505,9 +502,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         try:
             right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
-            # self.ui.graphicsView_currentViewB1.setXYLimit(xmax=right_x_bound)
-            # self.ui.graphicsView_currentViewB2.setXYLimit(xmax=right_x_bound)
-            # self.ui.graphicsView_currentViewB3.setXYLimit(xmax=right_x_bound)
             self._bankViewDMax = right_x_bound
         except ValueError:
             # keep as before
@@ -526,6 +520,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
         self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
         self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+
+        # reset the automatic Y range
+        self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
+        self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
+        self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
+
 
         return
 
@@ -1087,15 +1087,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                              norm_by_vanadium=norm_by_van)
         # END-IF
 
-        # collect to plot
-        # main_plots_list = list()   # tuple as: vec_x, vec_y, plot_setup
-        # right_plots_list = list()  # tuple as: vec_x, vec_y, plot_setup
-
-        # vec_x_list = list()
-        # vec_y_list = list()
-        # plot_setup_list = list()  # label Y, label-line, color, marker, line style
-        # side_list = list()
-
         for y_axis_name in y_axis_name_list:
             if y_axis_name.startswith('* Peak:'):
                 # this is a peak
@@ -1121,12 +1112,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_y_list = list()
                 plot_setup_list = list()
                 for bank_id in [1, 2]:
-                    if peak_name.lower().count('intensity') > 0:
+                    if peak_name.lower().count('center') > 0:
                         # FIXME TODO ASAP - Need to consider update_peak as calculating peaks..
                         vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
                                                                                   time0=self._liveStartTimeStamp)
                         marker = 'o'
-                    elif peak_name.lower().count('center') > 0:
+                    elif peak_name.lower().count('intensity') > 0:
                         vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
                                                                                     time0=self._liveStartTimeStamp)
                         marker = 'D'
@@ -1416,6 +1407,39 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=self._myAccumulationTime,
                                     update_time=update_period)
+
+        return
+
+    def set_vanadium_norm(self, turn_on, van_file_name=None):
+        """
+        set the state to normalize vanadium or not
+        :param turn_on:
+        :param van_file_name:
+        :return:
+        """
+        self.ui.checkBox_normByVanadium.setChecked(turn_on)
+
+        # add vanadium file name to list
+        if turn_on:
+            # do it only when it is turned on
+            # get the current vanadium files and check
+            num_items = self.ui.comboBox_loadedVanRuns.count()
+            exist_item_index = -1
+            for p_index in range(num_items):
+                van_name_i = str(self.ui.comboBox_loadedVanRuns.itemText(p_index))
+                if van_file_name == van_name_i:
+                    exist_item_index = p_index
+                    break
+            # END-IF
+
+            # add new item if it has not been loaded
+            if exist_item_index < 0:
+                self.ui.comboBox_loadedVanRuns.addItem(van_file_name)
+                exist_item_index = num_items  # currently count() - 1
+
+            # set current index
+            self.ui.comboBox_loadedVanRuns.setCurrentIndex(exist_item_index)
+        # END-IF
 
         return
 

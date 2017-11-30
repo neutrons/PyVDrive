@@ -131,18 +131,24 @@ class VulcanGuiReduction(object):
             return False, error_message
             # GuiUtility.pop_dialog_error(self, error_message)
 
-        arg_dict = {'binning_parameters': bin_par}
-        arg_dict.update(output_option_dict)
+        # set up argument dictionary
+        arg_dict = dict()
+        arg_dict['auto_reduce'] = False
         arg_dict['output_directory'] = self.controller.get_working_dir()
+        arg_dict['merge_banks'] = False   # TODO - could be an user option
+        arg_dict['background'] = False
+        arg_dict['vanadium'] = False
+        arg_dict['record'] = False
+        arg_dict['logs'] = False
+        arg_dict['gsas'] = False
+        arg_dict['output_to_fullprof'] = False
+        arg_dict['standard_sample_tuple'] = None
+        arg_dict['binning_parameters'] = bin_par
+        arg_dict['merge_runs'] = False
 
-        # ASAP TODO NOW NOW
-        """
-        auto_reduce, output_directory, merge_banks,
-                        background=False, vanadium=False,
-                        record=False, logs=False, gsas=True, output_to_fullprof=False,
-                        standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False
-        """
+        if False:
+            #  TODO FIXME ASAP Disabled temporarily for debugging
+            arg_dict.update(output_option_dict)
 
         if bin_by_pixel:
             # binning by pixel
@@ -150,7 +156,7 @@ class VulcanGuiReduction(object):
         else:
             # regular binning
             print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
-            # TODO/TODO/ISSUE/ERROR: TypeError: reduce_data_set() takes at least 4 arguments (8 given)
+            # TEST TODO
             status, ret_obj = self.controller.reduce_data_set(**arg_dict)
 
         if status is False:

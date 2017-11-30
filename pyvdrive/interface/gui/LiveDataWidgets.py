@@ -6,6 +6,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
     """
     # Table set up
     TableSetup = [('LogName', 'str'),
+                  ('Left/Right', 'checkbox'),
                   ('Select', 'checkbox')]
 
     def __init__(self, parent):
@@ -20,6 +21,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
         # column index of k-index
         self._iColAxisName = None
+        self._iColLeft = None
         self._iColSelected = None
 
         return
@@ -71,6 +73,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
         self.init_setup(self.TableSetup)
 
         self._iColAxisName = self.TableSetup.index(('LogName', 'str'))
+        self._iColLeft = self.TableSetup.index(('Left/Right', 'checkbox'))
         self._iColSelected = self.TableSetup.index(('Select', 'checkbox'))
 
         self.setColumnWidth(self._iColAxisName, 200)

@@ -74,6 +74,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         # append the new message to main window
         info = 'Vanadium: {0}'.format(file_name)
         self._myParent.set_info(info, append=True, insert_at_beginning=False)
+        self._myParent.set_vanadium_norm(True, van_file_name=file_name)
 
         return
 
@@ -180,10 +181,19 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_add_sample_log)
 
+        # other parameters
+        self.connect(self.ui.pushButton_remove, QtCore.SIGNAL('clicked()'),
+                     self.do_remove_item)
+        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+                     self.do_clear_selected_items)
+
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
         if parent is not None:
             self.PlotSignal.connect(self._myControlWindow.plot_log_live)
+
+        # a record for being selected
+        self._selectedParameters = list()
 
         return
 
@@ -240,7 +250,6 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # add...
         self.ui.tableWidget_plotYAxis.append_row([log_info, True])
 
-
     # TEST TODO - Just implemented
     def do_apply(self):
         """Apply setup
@@ -285,11 +294,31 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
+    def do_clear_selected_items(self):
+        """
+        clear all the selected items from table
+        :return:
+        """
+        self.ui.tableWidget_plotYAxis.remove_all_rows()
+
+        return
+
     def do_quit(self):
         """Quit without doing any operation
         :return:
         """
         self.close()
+
+        return
+
+    def do_remove_item(self):
+        """
+        remove selected items from the table
+        :return:
+        """
+        row_index_list = self.ui.tableWidget_plotYAxis.get_selected_rows(True)
+
+        self.ui.tableWidget_plotYAxis.remove_rows(row_number_list=row_index_list)
 
         return
 
