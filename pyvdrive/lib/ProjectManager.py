@@ -1049,6 +1049,7 @@ class ProjectManager(object):
                 # END-IF (vanadium)
 
                 # reduce
+                print '[DB....BAT....BAT] Reduce {0}, {1}'.format(ipts_number, run_number)
                 status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
                                                                         output_directory, vanadium=vanadium,
                                                                         vanadium_tuple=vanadium_tuple, gsas=gsas,

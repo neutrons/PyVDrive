@@ -1612,6 +1612,7 @@ class ReduceVulcanData(object):
 
         # reduce and write to GSAS file ... it is reduced HERE!
         if not self._reductionSetup._autoReduceLogOnly:
+            print '[DB...BAT...BAT] Reduce data here!'
             return_list = self.reduce_powder_diffraction_data()
             reduction_is_successful = return_list[0]
             msg_gsas = return_list[1]
@@ -1639,7 +1640,7 @@ class ReduceVulcanData(object):
             # END-IF
         else:
             # no reduction
-            pass
+            print '[INFO] Auto reduction only: {0}.'.format(self._reductionSetup._autoReduceLogOnly)
         # END-IF
 
         # load the sample run as an option
@@ -2178,8 +2179,9 @@ class ReduceVulcanData(object):
         :return: 3-tuples, status, message, output workspace name
         """
         # check whether it is required to reduce GSAS
+        # TODO/FIXME/ASAP - How to specify GSAS dir from GUI
         if self._reductionSetup.get_gsas_dir() is None:
-            return True, 'No reduction as it is not required because GSAS directory is not specified.', None
+            return False, 'No reduction as it is not required because GSAS directory is not specified.', None
 
         message = ''
         # get the event file name
