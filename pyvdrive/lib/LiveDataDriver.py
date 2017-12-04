@@ -309,14 +309,21 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, vec_center
 
-    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium):
+    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium,
+                        append_mode):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
         :param d_min:
         :param d_max:
         :param norm_by_vanadium
+        :param append_mode
         :return: 
         """
+        if append_mode:
+            #
+            raise RuntimeError('Need to check whether the peaks have been integrated and'
+                               ' recorded')
+
         # the last workspace might be partially accumulated
         calculated_ws_list = sorted(self._peakIntensityDict.keys())[:-1]
 

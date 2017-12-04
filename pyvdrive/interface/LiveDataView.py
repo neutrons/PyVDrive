@@ -11,6 +11,7 @@ import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
+from gui import GuiUtility as GuiUtil
 import pyvdrive.lib.vdrivehelper as vdrivehelper
 
 # include this try/except block to remap QString needed when using IPython
@@ -100,14 +101,20 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._bankViewDMax = None
 
         # Live sample log related
+        # name for X-axis
         self._currSampleLogX = None
-        self._currSampleLogY = None
+        # name for Y-axis
+        self._currLogNameMainY = None
+        self._currLogNameRightY = None
+        # time vector
         self._currSampleLogTimeVector = None
-        self._currSampleLogValueVector = None
+        # vector for main Y values
+        self._currMainYLogValueVector = None
+        self._currRightYLogValueVector = None
+        # log start time
         self._logStartTime = None
 
         # peak integration
-        self._integratePeakFlag = False
         self._minDPeakIntegration = None
         self._maxDPeakIntegration = None
         self._plotPeakParameterIndex = 0
@@ -919,7 +926,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                          norm_by_vanadium=norm_by_van)
 
         # set the status flags
-        self._integratePeakFlag = True
         self._minDPeakIntegration = d_min
         self._maxDPeakIntegration = d_max
         self._currSampleLogX = 'Time'
@@ -1020,82 +1026,162 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # trace back to previously accumulated runs until run number changed to non-zero
         blabla
 
-    def plot_log_live(self, x_axis_name, y_axis_name_list, d_min, d_max, norm_by_van):
+    def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, d_min, d_max, norm_by_van):
         """
-        Plot a sample log in live time
+        plot log value/peak parameters in a live data
         Note: this model works in most case except a new sample log is chosen to
         Required class variables
           - self._currSampleLog = None
           - self._currSampleLogTimeVector = None
           - self._currSampleLogValueVector = None
         :param x_axis_name:
-        :param y_axis_name:
+        :param y_axis_name_list:
+        :param side_list: list of boolean. True = left/main axis; False = right axis
+        :param d_min:
+        :param d_max:
+        :param norm_by_van:
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
         # check and etc
         assert isinstance(y_axis_name_list, list), '{0} shall be list but not {1}' \
                                                    ''.format(y_axis_name_list, type(y_axis_name_list))
+        assert isinstance(side_list, list), 'Axis-side {0} shall be given in a list but not a {1}.' \
+                                            ''.format(side_list, type(side_list))
+        if len(y_axis_name_list) != len(side_list):
+            raise RuntimeError('Number of Y-axis names ({0}) must be same as number of sides ({1}).'
+                               ''.format(len(y_axis_name_list), len(side_list)))
 
-        x_axis_name = str(x_axis_name).split('(')[0].strip()
-        y_axis_name_list.sort()
+        # check y axis: side
+        num_right = 0
+        num_left = 0
+        main_y_name = None
+        right_y_name = None
+        for index, side in enumerate(side_list):
+            if side:
+                num_left += 1
+                main_y_name = y_axis_name_list[index]
+            else:
+                num_right += 1
+                right_y_name = y_axis_name_list[index]
+            # END-IF
+        # END-FOR
+
+        # check: the following user-error shall be handled in the caller
+        if num_right > 1:
+            raise RuntimeError('At most 1 (now {0}) log/peak parameter can be assigned to right axis.'
+                               ''.format(num_right))
+        elif num_left > 1:
+            raise RuntimeError('At most 1 (now {0}) log/peak parameter can be assigned to main axis.'
+                               ''.format(num_left))
+        elif num_left + num_right == 0:
+            raise RuntimeError('At least one log/peak parameter must be assigned either main or right axis.')
 
         # determine to append or start from new
-        if self._currSampleLogX == x_axis_name and self._currSampleLogY == y_axis_name_list:
-            append = True
+        if self._currSampleLogX == x_axis_name and self._currLogNameMainY == main_y_name:
+            append_main = True
         else:
-            append = False
+            append_main = False
+        if self._currSampleLogX == x_axis_name and self._currLogNameRightY == right_y_name:
+            append_right = True
+        else:
+            append_right = False
 
+        # plot
         if x_axis_name == 'Time':
-            # blabla
-            self.plot_time_arb_live(y_axis_name_list, d_min, d_max, norm_by_van, append=append)
+            # plot live data
+            self.plot_time_arb_live(main_y_name, d_min, d_max, norm_by_van, append=append_main, is_main=True)
+            self.plot_time_arb_live(right_y_name, d_min, d_max, norm_by_van, append=append_right, is_main=False)
         else:
-            # blabla
-            raise RuntimeError('blabla')
+            # non-supported case so far
+            raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
+                                      ''.format(x_axis_name))
 
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
-        self._currSampleLogY = y_axis_name_list
-        # turn off the flag to plot integrated peaks
-        self._integratePeakFlag = False
+        self._currLogNameMainY = main_y_name
+        self._currLogNameRightY = right_y_name
 
         return
 
-    def plot_time_arb_live(self, y_axis_name_list, d_min, d_max, norm_by_van, append):
+    def plot_time_arb_live(self, y_axis_name, d_min, d_max, norm_by_van, append, is_main):
         """
-        blabla
-        :param y_axis_name_list:
+        plot arbitrary live data against with time
+        :param y_axis_name:
         :param d_min:
         :param d_max:
         :param norm_by_van:
-        :param append: append mode
+        :param append: append mode/update mode
+        :param is_main:
         :return:
         """
-        # check inputs
-        if len(y_axis_name_list) > 2:
-            raise RuntimeError('not supported')
-
         # pre-screen for peak integration
-        integrate_peak = False
-        for y_axis_name in y_axis_name_list:
-            if y_axis_name.startswith('* Peak:'):
-                integrate_peak = True
-                break
-        if integrate_peak:
+        if y_axis_name.startswith('* Peak:'):
             # integrate peak for all the accumulated runs
             self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
                                              norm_by_vanadium=norm_by_van)
-        # END-IF
+            # get peak name
+            peak_name = y_axis_name.split('* Peak:')[1].strip()
 
-        for y_axis_name in y_axis_name_list:
+            # gather the data in banks
+            # TODO/FUTURE - shall allow bank 3
+            BANK_LIST = [1, 2]
+            if peak_name.lower().count('center') > 0:
+                vec_time, peak_value_bank_dict = self._controller.get_peak_positions(bank_id=BANK_LIST,
+                                                                                     time0=self._liveStartTimeStamp)
+            elif peak_name.lower().count('intensity') > 0:
+                vec_time, peak_value_bank_dict = self._controller.get_peak_intensities(bank_id=BANK_LIST,
+                                                                                       time0=self._liveStartTimeStamp)
+            else:
+                raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+            self.ui.graphicsView_comparison.plot_peak_parameters(vec_time, peak_value_bank_dict, peak_name,
+                                                                 is_main=is_main)
+            """ Deleted codes for reference
+            for bank_id in BANK_LIST:
+                # get value
+                    vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
+                                                                                time0=self._liveStartTimeStamp)
+                    marker = 'D'
+
+                else:
+                    raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+            # END-IF
+
             if y_axis_name.startswith('* Peak:'):
                 # this is a peak
                 assert isinstance(y_axis_name, str), '{0} shall be string'.format(y_axis_name)
-                peak_name, plot_side = y_axis_name.split('* Peak:')[1].strip().split()
 
                 # integrate a single peak across all the accumulated workspaces
                 self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
                                                  norm_by_van)
+
+                vec_x_list = list()
+                vec_y_list = list()
+                marker_list = list()
+
+                for bank_id in BANK_LIST:
+                    # get value
+                    if peak_name.lower().count('center') > 0:
+                        vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
+                                                                                  time0=self._liveStartTimeStamp)
+
+                    elif peak_name.lower().count('intensity') > 0:
+                        vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
+                                                                                    time0=self._liveStartTimeStamp)
+                        marker = 'D'
+
+                    else:
+                        raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+                # END-IF
+
+                # plot
+                # bank1:                         marker = 'o'
+                # bank2:
+                self.ui.graphicsView_comparison.plot_multi_data_set(vec_x_list, vec_y_list, peak_name,
+                                                                    plot_setup_list, is_main=is_main,
+                                                                    update_mode=append)
+
+
 
                 # check again with d_min, d_max and norm by vanadium
                 if append:
@@ -1155,94 +1241,61 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                     self._maxDPeakIntegration = d_max
                     self._plotPeakVanadiumNorm = norm_by_van
                 # END-IF
+            """
+
+        else:
+            # plot sample log
+            log_name = y_axis_name
+            y_label = log_name
+
+            if append:
+                # append mode
+                date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=1)
+                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
+                self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
+                if is_main:
+                    self._currMainYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
+                else:
+                    self._currRightYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
+
+                debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
+                                ''.format(time_vec[0], self._liveStartTimeStamp)
+                self.write_log('debug', debug_message)
 
             else:
-                # plot sample log
-                log_name, plot_side = y_axis_name.split()
-                y_label = log_name
+                # New mode
+                # TODO/ISSUE - Implement LastNLog!
+                LastNLog = 1
+                date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=LastNLog)
+                # set log start time
+                # TODO/ISSUE/ - shall give users with more choice
+                self._logStartTime = date_time_vec[0]
 
-                if append:
-                    # append mode
-                    date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=1)
-                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
-                    self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
-                    self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
+                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
+                self._currSampleLogTimeVector = time_vec
+                self._currMainYLogValueVector = value_vec
+            # END-IF-ELSE
 
-                    debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
-                                    ''.format(time_vec[0], self._liveStartTimeStamp)
-                    self.write_log('debug', debug_message)
+            time_vec = self._currSampleLogTimeVector
+            if is_main:
+                value_vec = self._currMainYLogValueVector
+                label_y, label_line, color, marker, line_style = y_label, y_label, 'green', '*', ':'
+            else:
+                value_vec = self._currRightYLogValueVector
+                label_y, label_line, color, marker, line_style = y_label, y_label, 'blue', '+', ':'
 
-                else:
-                    # New mode
-                    # TODO/ISSUE - Implement LastNLog!
-                    LastNLog = 1
-                    date_time_vec, value_vec = self.load_sample_log(log_name, last_n_intervals=LastNLog)
-                    # set log start time
-                    # TODO/ISSUE/ - shall give users with more choice
-                    self._logStartTime = date_time_vec[0]
+            if not append:
+                # clear all lines if new lines to plot
+                self.ui.graphicsView_comparison.remove_all_plots()
 
-                    time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._liveStartTimeStamp)
-                    self._currSampleLogTimeVector = time_vec
-                    self._currSampleLogValueVector = value_vec
-                # END-IF-ELSE
-
-                time_vec = self._currSampleLogTimeVector
-                value_vec = self._currSampleLogValueVector
-
-                # # append FIXME - check and delete!
-                # vec_x_list.append(time_vec)
-                # vec_y_list.append(value_vec)
-                # side_list.append(plot_side)
-
-                if plot_side == 'left':
-                    # plot_setup_list.append((y_label, y_label, 'blue', '*', '--'))
-                    label_y, label_line, color, marker, line_style = y_label, y_label, 'green', '*', ':'
-                    is_main = True
-                elif plot_side == 'right':
-                    # plot_setup_list.append((y_label, y_label, 'green', '+', '--'))
-                    label_y, label_line, color, marker, line_style = y_label, y_label, 'blue', '+', ':'
-                    is_main = False
-                else:
-                    raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
-
-                if not append:
-                    # clear all lines if new lines to plot
-                    self.ui.graphicsView_comparison.remove_all_plots()
-                # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
-                self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
-                                                                x_label=None,
-                                                                y_label=label_y, line_label=label_line,
-                                                                line_style=line_style, marker=marker,
-                                                                color=color)
+            # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
+            self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
+                                                            x_label=None,
+                                                            y_label=label_y, line_label=label_line,
+                                                            line_style=line_style, marker=marker,
+                                                            color=color)
             # END-IF-ELSE (peak or sample)
         # END-FOR (y-axis-name)
-
-        # # plot
-        # if not append:
-        #     # clear all lines if new lines to plot
-        #     self.ui.graphicsView_comparison.remove_all_plots()
-
-        # for i_line in range(len(vec_x_list)):
-        #     time_vec = vec_x_list[i_line]
-        #     value_vec = vec_y_list[i_line]
-        #
-        #     plot_side = side_list[i_line]
-        #     if plot_side == 'left':
-        #         is_main = True
-        #     elif plot_side == 'right':
-        #         is_main = False
-        #     else:
-        #         raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
-        #
-        #     label_y, label_line, color, marker, line_style = plot_setup_list[i_line]
-        #
-        #     # wipe out previous plot new
-        #     self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
-        #                                                     x_label=None,
-        #                                                     y_label=label_y, line_label=label_line,
-        #                                                     line_style=line_style, marker=marker,
-        #                                                     color=color)
-        # END-FOR
 
         return
 
@@ -1347,9 +1400,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # update log
             if self._currSampleLogX is not None:
-                if self._currSampleLogY is None:
+                if self._currLogNameMainY is None:
                     raise RuntimeError('Logical wrong to set up sampleX but not sampleY')
-                self.plot_log_live(self._currSampleLogX, self._currSampleLogY, self._minDPeakIntegration,
+                self.plot_log_live(self._currSampleLogX, self._currLogNameMainY, self._minDPeakIntegration,
                                    self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
         # END-FOR
 

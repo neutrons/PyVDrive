@@ -220,7 +220,6 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     def do_add_peak_param(self):
         # blabla
         peak_type = str(self.ui.comboBox_peakY.currentText()).lower()
-        side = str(self.ui.comboBox_plotPeak.currentText()).lower()
 
         if peak_type.count('intensity'):
             peak_type = 'intensity'
@@ -229,28 +228,30 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         else:
             raise RuntimeError('Who knows')
 
-        peak_info_str = '* Peak: {0} {1}'.format(peak_type, side)
+        peak_info_str = '* Peak: {0}'.format(peak_type)
 
-        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True])
+        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True, True])
 
     def do_add_sample_log(self):
-        # blabla
+        """
+        add sample log that is selected to the sample-log table
+        :return:
+        """
+        # get log name
         try:
             sample_log_name = self.ui.tableWidget_sampleLogs.get_selected_item()
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return
-
+        # strip some information from input
         sample_log_name = sample_log_name.split('(')[0].strip()
 
-        side = str(self.ui.comboBox_plotLog.currentText()).lower()
+        log_info = '{0}'.format(sample_log_name)
 
-        log_info = '{0} {1}'.format(sample_log_name, side)
+        # add to the table.  default to right axis
+        self.ui.tableWidget_plotYAxis.append_row([log_info, False, True])
 
-        # add...
-        self.ui.tableWidget_plotYAxis.append_row([log_info, True])
-
-    # TEST TODO - Just implemented
+    # TEST TODO - Modified
     def do_apply(self):
         """Apply setup
         :return:
@@ -258,7 +259,8 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # get x-axis name and y-axis name
         x_axis_name = str(self.ui.comboBox_X.currentText())
 
-        y_axis_name_list = self.ui.tableWidget_plotYAxis.get_all_items()
+        FROM HERE! 
+        y_axis_name_list, is_main_list = self.ui.tableWidget_plotYAxis.get_selected_logs()
         if len(y_axis_name_list) == 0:
             GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
             return
@@ -290,7 +292,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # END-IF-ELSE
 
         # now it is the time to send message
-        self.PlotSignal.emit(x_axis_name, y_axis_name_list, min_d, max_d, norm_by_van)
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, side_list, min_d, max_d, norm_by_van)
 
         return
 
