@@ -374,8 +374,14 @@ class WindowLogPicker(QtGui.QMainWindow):
             # return if operation is cancelled
             return
 
-        # import slicers from a file
-        slicer_list = self.get_controller().import_data_slicers(slicer_file_name)
+        # import slicers from a file: True, (ref_run, run_start, segment_list)
+        status, ret_obj = self.get_controller().import_data_slicers(slicer_file_name)
+        if status:
+            ref_run, run_start, slicer_list = reb_obj
+        else:
+            err_msg = str(ret_obj)
+            GuiUtility.pop_dialog_error(self, err_msg)
+            return
 
         # parse file
         # if True:

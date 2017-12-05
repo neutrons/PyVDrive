@@ -1032,10 +1032,10 @@ class VDriveAPI(object):
     def import_data_slicers(file_name):
         """ import slicers from a text file
         :param file_name:
-        :return:
+        :return: True, (ref_run, run_start, segment_list)
         """
         try:
-            slicers = chop_utility.parse_time_segments(file_name)
+            status, ret_obj = chop_utility.parse_time_segments(file_name)
         except AssertionError as assert_err:
             raise AssertionError('VDriveAPI unable to parse data slicers/time segements. {0}'.format(assert_err))
 

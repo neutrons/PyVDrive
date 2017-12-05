@@ -524,6 +524,17 @@ class ReductionSetup(object):
         """
         if main_gsas:
             return self._mainGSASName
+    
+    def set_gsas_file(self, gsas_file_name, main_gsas):
+        """
+        get GSAS file
+        :param main_gsas:
+        :return:
+        """
+        if main_gsas:
+            self._mainGSASName = gsas_file_name
+        else:
+            self._2ndGSASName = gsas_file_name
 
     def get_ipts_number(self):
         """
@@ -2171,7 +2182,7 @@ class ReduceVulcanData(object):
 
         return van_ws_name
 
-    def reduce_powder_diffraction_data(self, event_file_name=None):
+    def reduce_powder_diffraction_data(self, event_file_name=None, user_gsas_file_name=None):
         """
         Reduce powder diffraction data.
         required parameters:  ipts, run number, output dir
@@ -2213,7 +2224,12 @@ class ReduceVulcanData(object):
         # END-IF
 
         # get the output directory for GSAS file
-        gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+        if user_gsas_file_name is None:
+            gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
+        else:
+            gsas_file_name = user_gsas_file_name
+            self._reductionSetup.set_gsas_file(gsas_file_name, main_gsas=True)
+
         orig_gsas_name = gsas_file_name
         gsas_file_name, gsas_message, output_access_error, del_exist = self.pre_process_output_gsas(gsas_file_name)
         if output_access_error:
@@ -2223,6 +2239,7 @@ class ReduceVulcanData(object):
 
         # reduce data
         try:
+            print ('[INFO] SNSPowderReduction On File {0} to {1}'.format(raw_event_file, gsas_file_name))
             mantidsimple.SNSPowderReduction(Filename=raw_event_file,
                                             PreserveEvents=True,
                                             CalibrationFile=self._reductionSetup.get_focus_file(),
