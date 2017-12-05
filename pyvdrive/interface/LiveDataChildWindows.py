@@ -155,7 +155,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
     # define signal
-    PlotSignal = QtCore.pyqtSignal(str, list, float, float, bool)  # x, y-list, dmin, dmax, norm-van
+    PlotSignal = QtCore.pyqtSignal(str, list, list, float, float, bool)  # x, y-list, y_side_list, dmin, dmax, norm-van
 
     def __init__(self, parent=None):
         """ Initialization
@@ -239,17 +239,17 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         """
         # get log name
         try:
-            sample_log_name = self.ui.tableWidget_sampleLogs.get_selected_item()
+            sample_log_name_list, plot_side_list = self.ui.tableWidget_sampleLogs.get_selected_items()
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return
         # strip some information from input
-        sample_log_name = sample_log_name.split('(')[0].strip()
+        for index, log_name in enumerate(sample_log_name_list):
+            # add to the table.  default to right axis
+            self.ui.tableWidget_plotYAxis.append_row([log_name, plot_side_list[index], True])
+        # END-FOR
 
-        log_info = '{0}'.format(sample_log_name)
-
-        # add to the table.  default to right axis
-        self.ui.tableWidget_plotYAxis.append_row([log_info, False, True])
+        return
 
     # TEST TODO - Modified
     def do_apply(self):
@@ -259,10 +259,16 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # get x-axis name and y-axis name
         x_axis_name = str(self.ui.comboBox_X.currentText())
 
-        FROM HERE! 
-        y_axis_name_list, is_main_list = self.ui.tableWidget_plotYAxis.get_selected_logs()
+        # get the Y axis and check
+        y_axis_name_list, is_main_list = self.ui.tableWidget_plotYAxis.get_selected_items()
         if len(y_axis_name_list) == 0:
             GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
+            return
+        elif len(y_axis_name_list) > 2:
+            GuiUtility.pop_dialog_error(self, 'More than 2 items are selected to plot.  It is NOT OK.')
+            return
+        elif len(y_axis_name_list) == 2 and is_main_list[0] == is_main_list[1]:
+            GuiUtility.pop_dialog_error(self, 'Two items cannot be on the same side of axis.')
             return
 
         # check whether there is any item related to peak integration
@@ -292,7 +298,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # END-IF-ELSE
 
         # now it is the time to send message
-        self.PlotSignal.emit(x_axis_name, y_axis_name_list, side_list, min_d, max_d, norm_by_van)
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, min_d, max_d, norm_by_van)
 
         return
 

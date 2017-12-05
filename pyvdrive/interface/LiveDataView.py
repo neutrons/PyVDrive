@@ -1118,8 +1118,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # pre-screen for peak integration
         if y_axis_name.startswith('* Peak:'):
             # integrate peak for all the accumulated runs
+            # FIXME/TODO/NOW/ASAP - How to determine whether it shall be an append-mode or not!
             self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
-                                             norm_by_vanadium=norm_by_van)
+                                             norm_by_vanadium=norm_by_van, append_mode=False)
             # get peak name
             peak_name = y_axis_name.split('* Peak:')[1].strip()
 

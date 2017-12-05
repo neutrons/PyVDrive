@@ -37,7 +37,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
         # add
         for item_name in items:
-            self.append_row([item_name, False])
+            self.append_row([item_name, False, False])
 
         return
 
@@ -54,17 +54,25 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
         return item_list
 
-    def get_selected_item(self):
+    def get_selected_items(self):
         """
         check all the rows to get the selected row
         :except: RuntimeError if there is zero or more than 1 rows are selected
-        :return: item name of the row selected
+        :return: 2-tuple.  (1) list of item name. (2) list of main/right axis (True/False)
         """
         row_numbers = self.get_selected_rows()
-        if len(row_numbers) != 1:
-            raise RuntimeError('{0}'.format(len(row_numbers)))
+        if len(row_numbers) == 0:
+            raise RuntimeError('There is not row selected')
 
-        return self.get_cell_value(row_numbers[0], self._iColAxisName)
+        item_name_list = list()
+        axis_side_list = list()
+        for row_index in row_numbers:
+            item_name = self.get_cell_value(row_index, self._iColAxisName)
+            axis_side = self.get_cell_value(row_index, self._iColLeft)
+            item_name_list.append(item_name)
+            axis_side_list.append(axis_side)
+
+        return item_name_list, axis_side_list
 
     def setup(self):
         """ Set up the table
