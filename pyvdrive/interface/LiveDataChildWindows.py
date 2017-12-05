@@ -204,10 +204,10 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         """
         # set up the Axes
         self.ui.tableWidget_sampleLogs.setup()
-        self.ui.tableWidget_sampleLogs.setColumnWidth(0, 400)
+        self.ui.tableWidget_sampleLogs.setColumnWidth(0, 300)
 
         self.ui.tableWidget_plotYAxis.setup()
-        self.ui.tableWidget_plotYAxis.setColumnWidth(0, 400)
+        self.ui.tableWidget_plotYAxis.setColumnWidth(0, 200)
 
         # peak calculation special
         self.ui.checkBox_normByVan.setChecked(True)

@@ -196,7 +196,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # random seed
         random.seed(1)
 
+        #
+        self.show_refresh_info()
+
         return
+
+    def show_refresh_info(self):
+        """
+        blabla
+        :return:
+        """
+        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
+        self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
 
     def _init_widgets(self):
         """
@@ -1128,7 +1139,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # TODO/FUTURE - shall allow bank 3
             BANK_LIST = [1, 2]
             if peak_name.lower().count('center') > 0:
-                vec_time, peak_value_bank_dict = self._controller.get_peak_positions(bank_id=BANK_LIST,
+                vec_time, peak_value_bank_dict = self._controller.get_peak_positions(bank_id_list=BANK_LIST,
                                                                                      time0=self._liveStartTimeStamp)
             elif peak_name.lower().count('intensity') > 0:
                 vec_time, peak_value_bank_dict = self._controller.get_peak_intensities(bank_id=BANK_LIST,

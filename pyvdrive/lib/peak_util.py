@@ -216,11 +216,11 @@ def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, b
     if len(vec_d) - len(vec_y) > 1 or len(vec_d) - len(vec_y) < 0:
         raise RuntimeError('Vector of D and vector of Y have different size.')
     if left_x_index >= right_x_index:
-        raise RuntimeError('Left X index cannot be equal or larger than right X index')
+        raise ValueError('Left X index cannot be equal or larger than right X index')
     if left_x_index < 0:
-        raise RuntimeError('Left X index cannot be negative')
+        raise ValueError('Left X index cannot be negative')
     if right_x_index >= len(vec_d):
-        raise RuntimeError('Right X index cannot be over limit of vector of D')
+        raise ValueError('Right X index cannot be over limit of vector of D')
 
     # calculate peak integral and average d-spacing
     peak_integral, average_d_space = calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index,
