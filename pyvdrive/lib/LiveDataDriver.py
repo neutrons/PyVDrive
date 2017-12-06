@@ -71,7 +71,7 @@ class LiveDataDriver(QtCore.QThread):
         assert isinstance(ws_name, str), 'Input workspace name {0} must be a string but not a {1}' \
                                          ''.format(ws_name, type(ws_name))
 
-        # TODO/NOW - check
+        # TODO/NOW - check input babla ASAP
 
         # check bank ID
         if bank_id < 1 or bank_id > 3:
@@ -98,8 +98,13 @@ class LiveDataDriver(QtCore.QThread):
         bkgd_a, bkgd_b = peak_util.estimate_background(vec_d, vec_y, min_x_index, max_x_index)
 
         # calculate peak intensity parameters
-        peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
-                                                                               max_x_index, bkgd_a, bkgd_b)
+        try:
+            peak_integral, average_d, variance = peak_util.calculate_peak_variance(vec_d, vec_y, min_x_index,
+                                                                                   max_x_index, bkgd_a, bkgd_b)
+        except ValueError:
+            peak_integral = -1.E-20
+            average_d = 0.5 * (d_max + d_min)
+            variance = 0
 
         return peak_integral, average_d, variance
 
@@ -271,24 +276,26 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, vec_intensity
 
-    def get_peak_positions(self, bank_id, time0):
+    def get_peak_positions(self, bank_id_list, time0):
         """ get the peaks' positions (calculated) along with time
-        :param bank_id: bank ID
+        :param bank_id_list: bank IDs
         :param time0: time zero for time stamps
         :return:
         """
         # check whether inputs are valid
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id, type(bank_id))
-        if bank_id < 1 or bank_id > 3:
-            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
+        # FIXME/ASAP/ASAP
+        NOT WORKING
+        assert isinstance(bank_id_list, list), 'Bank ID list {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id_list, type(bank_id_list))
+        if bank_id_list < 1 or bank_id_list > 3:
+            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id_list))
 
         try:
             time0_ns = time0.totalNanoseconds()
         except AttributeError as att_err:
             raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
                                ''.format(att_err))
-        ws_index = bank_id - 1
+        ws_index = bank_id_list - 1
 
         time_value_list = list()
         for tup_value in self._peakIntensityDict.values():
@@ -309,14 +316,21 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, vec_center
 
-    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium):
+    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium,
+                        append_mode):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
         :param d_min:
         :param d_max:
         :param norm_by_vanadium
+        :param append_mode
         :return: 
         """
+        if append_mode:
+            #
+            raise RuntimeError('Need to check whether the peaks have been integrated and'
+                               ' recorded')
+
         # the last workspace might be partially accumulated
         calculated_ws_list = sorted(self._peakIntensityDict.keys())[:-1]
 
@@ -335,23 +349,14 @@ class LiveDataDriver(QtCore.QThread):
             intensity_list = list()
             # calculate peak intensity
             for iws in range(workspace_i.getNumberHistograms()):
-                value_tup = self.calculate_live_peak_parameters(ws_name=ws_name, bank_id=iws+1, norm_by_van=norm_by_vanadium,
+                value_tup = self.calculate_live_peak_parameters(ws_name=ws_name, bank_id=iws+1,
+                                                                norm_by_van=norm_by_vanadium,
                                                                 d_min=d_min, d_max=d_max)
                 intensity_i = value_tup[0]
                 intensity_list.append(intensity_i)
 
                 position_i = value_tup[1]
                 position_list.append(position_i)
-
-                # peak_integral, average_d, variance
-                # vec_x = workspace_i.readX(iws)
-                # vec_y = workspace_i.readY(iws)
-                #
-                # index_min = numpy.searchsorted(vec_x, d_min)
-                # index_max = numpy.searchsorted(vec_x, d_max)
-                # delta_d = vec_x[index_min+1:index_max] - vec_x[index_min:index_max-1]
-                # peak_intensity_i = numpy.sum(delta_d * vec_y[index_min:index_max-1])
-                # value_list.append(peak_intensity_i)
             # END-FOR (iws)
 
             # get average time

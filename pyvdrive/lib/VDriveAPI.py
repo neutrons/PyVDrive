@@ -1370,6 +1370,7 @@ class VDriveAPI(object):
             reduce_setup.set_run_number(run_number)
             # set and check input file
             nxs_file_name = '/SNS/VULCAN/IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_number, run_number, run_number)
+            raise NotImplementedError('ASAP {0} is old file path.'.format(nxs_file_name))
             assert os.path.exists(nxs_file_name), 'NeXus file %s does not exist.' % nxs_file_name
             reduce_setup.set_event_file(nxs_file_name)
             # set and check output directory

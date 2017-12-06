@@ -74,6 +74,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         # append the new message to main window
         info = 'Vanadium: {0}'.format(file_name)
         self._myParent.set_info(info, append=True, insert_at_beginning=False)
+        self._myParent.set_vanadium_norm(True, van_file_name=file_name)
 
         return
 
@@ -154,7 +155,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
     # define signal
-    PlotSignal = QtCore.pyqtSignal(str, list, float, float, bool)  # x, y-list, dmin, dmax, norm-van
+    PlotSignal = QtCore.pyqtSignal(str, list, list, float, float, bool)  # x, y-list, y_side_list, dmin, dmax, norm-van
 
     def __init__(self, parent=None):
         """ Initialization
@@ -180,10 +181,19 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_add_sample_log)
 
+        # other parameters
+        self.connect(self.ui.pushButton_remove, QtCore.SIGNAL('clicked()'),
+                     self.do_remove_item)
+        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+                     self.do_clear_selected_items)
+
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
         if parent is not None:
             self.PlotSignal.connect(self._myControlWindow.plot_log_live)
+
+        # a record for being selected
+        self._selectedParameters = list()
 
         return
 
@@ -194,10 +204,10 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         """
         # set up the Axes
         self.ui.tableWidget_sampleLogs.setup()
-        self.ui.tableWidget_sampleLogs.setColumnWidth(0, 400)
+        self.ui.tableWidget_sampleLogs.setColumnWidth(0, 300)
 
         self.ui.tableWidget_plotYAxis.setup()
-        self.ui.tableWidget_plotYAxis.setColumnWidth(0, 400)
+        self.ui.tableWidget_plotYAxis.setColumnWidth(0, 200)
 
         # peak calculation special
         self.ui.checkBox_normByVan.setChecked(True)
@@ -210,7 +220,6 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
     def do_add_peak_param(self):
         # blabla
         peak_type = str(self.ui.comboBox_peakY.currentText()).lower()
-        side = str(self.ui.comboBox_plotPeak.currentText()).lower()
 
         if peak_type.count('intensity'):
             peak_type = 'intensity'
@@ -219,29 +228,30 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         else:
             raise RuntimeError('Who knows')
 
-        peak_info_str = '* Peak: {0} {1}'.format(peak_type, side)
+        peak_info_str = '* Peak: {0}'.format(peak_type)
 
-        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True])
+        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True, True])
 
     def do_add_sample_log(self):
-        # blabla
+        """
+        add sample log that is selected to the sample-log table
+        :return:
+        """
+        # get log name
         try:
-            sample_log_name = self.ui.tableWidget_sampleLogs.get_selected_item()
+            sample_log_name_list, plot_side_list = self.ui.tableWidget_sampleLogs.get_selected_items()
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return
+        # strip some information from input
+        for index, log_name in enumerate(sample_log_name_list):
+            # add to the table.  default to right axis
+            self.ui.tableWidget_plotYAxis.append_row([log_name, plot_side_list[index], True])
+        # END-FOR
 
-        sample_log_name = sample_log_name.split('(')[0].strip()
+        return
 
-        side = str(self.ui.comboBox_plotLog.currentText()).lower()
-
-        log_info = '{0} {1}'.format(sample_log_name, side)
-
-        # add...
-        self.ui.tableWidget_plotYAxis.append_row([log_info, True])
-
-
-    # TEST TODO - Just implemented
+    # TEST TODO - Modified
     def do_apply(self):
         """Apply setup
         :return:
@@ -249,9 +259,16 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # get x-axis name and y-axis name
         x_axis_name = str(self.ui.comboBox_X.currentText())
 
-        y_axis_name_list = self.ui.tableWidget_plotYAxis.get_all_items()
+        # get the Y axis and check
+        y_axis_name_list, is_main_list = self.ui.tableWidget_plotYAxis.get_selected_items()
         if len(y_axis_name_list) == 0:
             GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
+            return
+        elif len(y_axis_name_list) > 2:
+            GuiUtility.pop_dialog_error(self, 'More than 2 items are selected to plot.  It is NOT OK.')
+            return
+        elif len(y_axis_name_list) == 2 and is_main_list[0] == is_main_list[1]:
+            GuiUtility.pop_dialog_error(self, 'Two items cannot be on the same side of axis.')
             return
 
         # check whether there is any item related to peak integration
@@ -281,7 +298,16 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         # END-IF-ELSE
 
         # now it is the time to send message
-        self.PlotSignal.emit(x_axis_name, y_axis_name_list, min_d, max_d, norm_by_van)
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, min_d, max_d, norm_by_van)
+
+        return
+
+    def do_clear_selected_items(self):
+        """
+        clear all the selected items from table
+        :return:
+        """
+        self.ui.tableWidget_plotYAxis.remove_all_rows()
 
         return
 
@@ -290,6 +316,17 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         :return:
         """
         self.close()
+
+        return
+
+    def do_remove_item(self):
+        """
+        remove selected items from the table
+        :return:
+        """
+        row_index_list = self.ui.tableWidget_plotYAxis.get_selected_rows(True)
+
+        self.ui.tableWidget_plotYAxis.remove_rows(row_number_list=row_index_list)
 
         return
 

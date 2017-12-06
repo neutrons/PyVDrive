@@ -249,6 +249,8 @@ def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
     # build the name according to the convention
     run = int(runnumber)
     relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run, run)
+    # FIXME - ASAP
+    raise NotImplementedError('ASAP {0} is an old file path.'.format(relpathname))
     nxsfilename = os.path.join(basepath, relpathname)
 
     # check existence of file

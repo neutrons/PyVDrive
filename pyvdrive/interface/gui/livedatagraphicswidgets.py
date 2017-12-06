@@ -289,6 +289,9 @@ class SingleBankView(MplGraphicsView):
         self._previousRunID = None
         self._previousRunKey = None  # can use workspace name
 
+        self._minX = None
+        self._maxX = None
+
         return
 
     def delete_previous_run(self):
@@ -346,5 +349,48 @@ class SingleBankView(MplGraphicsView):
         if self._previousRunID is None:
             max_y = max(vec_y) * 1.05
             self.setXYLimit(ymin=0, ymax=max_y)
+
+        return
+
+    def rescale_y_axis(self, x_min=None, x_max=None):
+        """
+        rescale Y axis range automatically and considering showing range of X-axis too!
+        :return:
+        """
+        if x_min is None:
+            if self._minX is None:
+                raise RuntimeError('Rescale Y Axis requires x-min shall be given!')
+            else:
+                x_min = self._minX
+
+        if x_max is None:
+            if self._maxX is None:
+                raise RuntimeError('Rescale Y axis requires x-max shall be given!')
+            else:
+                x_max = self._maxX
+
+        # retrieve vec X and vec Y from plot and find min and max on subset of Y
+        y_min = None
+        y_max = None
+        for line_id in [self._currentRunID, self._previousRunID]:
+            # get data
+            vec_x, vec_y = self.canvas().get_data(line_id)
+            # search indexes
+            i_min, i_max = numpy.searchsorted(vec_x, [x_min, x_max])
+            # find Y range
+            y_min_i = numpy.min(vec_y[i_min:i_max])
+            y_max_i = numpy.max(vec_y[i_min:i_max])
+            # compare
+            if y_min is None or y_min_i < y_min:
+                y_min = y_min_i
+            if y_max is None or y_max_i > y_max:
+                y_max = y_max_i
+        # END-FOR
+
+        # set Y limit
+        y_range = y_max - y_min
+        upper_y = y_max + 0.05 * y_range
+        lower_y = 0   # intensity cannot be zero but shall always from zero
+        self.setXYLimit(ymin=lower_y, ymax=upper_y)
 
         return
