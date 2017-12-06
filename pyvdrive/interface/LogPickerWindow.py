@@ -245,6 +245,18 @@ class WindowLogPicker(QtGui.QMainWindow):
         Set the main slicer method, manual or auto
         :return:
         """
+        # check for a possible error condition
+        if self.ui.radioButton_timeSlicer.isChecked() is False:
+            try:
+                self.ui.graphicsView_main.get_data_range()
+            except RuntimeError:
+                # data range is not set up yet
+                self._mutexLockSwitchSliceMethod = True   # lock slicer
+                self.ui.radioButton_timeSlicer.setChecked(True)
+                self._mutexLockSwitchSliceMethod = True   # un-lock slicer
+                return
+        # END-IF
+
         # enable to disable
         if self.ui.radioButton_timeSlicer.isChecked():
             # time slicer
