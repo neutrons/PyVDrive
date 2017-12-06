@@ -22,8 +22,114 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         self._currMainLineKey = None  # use label_y as key
         self._currRightLineKey = None  # use label_y as key
 
-        self._mainLineIndex = None
-        self._rightLineIndex = None
+        self._mainAxisLogLineKey = None
+        self._rightAxisLogLineKey = None
+
+        # peak parameters
+        self._mainAxisPeakParamLineKey = {1: None, 2: None, 3: None}
+        self._rightAxisPeakParamLineKey = {1: None, 2: None, 3: None}
+
+        # color
+        self._peakParamColor = {1: 'red', 2: 'green', 3: 'black'}
+
+        return
+
+    def clear_axis(self, is_main):
+        """
+        blabla
+        :param is_main:
+        :return:
+        """
+        # check whether need to remove previous plot
+        if is_main:
+            if self._mainAxisLogLineKey is not None:
+                # log
+                self.remove_line(0, 0, self._mainAxisLogLineKey)
+                self._mainAxisLogLineKey = None
+            else:
+                # peak parameters
+                for bank_id in self._mainAxisPeakParamLineKey.keys():
+                    if self._mainAxisPeakParamLineKey[bank_id] is not None:
+                        self.remove_line(0, 0, self._mainAxisPeakParamLineKey[bank_id])
+                        self._mainAxisPeakParamLineKey[bank_id] = None
+
+        else:
+            if self._rightAxisLogLineKey is not None:
+                # log
+                self.remove_line(0, 0, self._rightAxisLogLineKey)
+                self._rightAxisLogLineKey = None
+            else:
+                # peak parameters
+                for bank_id in self._rightAxisPeakParamLineKey.keys():
+                    if self._rightAxisPeakParamLineKey[bank_id] is not None:
+                        self.remove_line(0, 0, self._rightAxisPeakParamLineKey[bank_id])
+                        self._rightAxisPeakParamLineKey[bank_id] = None
+        # END-IF-ELSE
+
+        return
+
+    def plot_peak_parameters(self, vec_time, peak_value_bank_dict, param_name, is_main):
+        """
+        blabla
+        :param vec_time:
+        :param peak_value_bank_dict:
+        :param param_name:
+        :param is_main:
+        :return:
+        """
+        # check ... blabla TODO/ASAP check
+        # ... ...
+
+        # marker
+        if param_name.lower().count('intensity'):
+            marker = 'D'
+            line_style = ':'
+        else:
+            marker = '*'
+            line_style = '--'
+
+        # check whether need to remove previous plot
+        if is_main and self._mainAxisLogLineKey is not None:
+            self.remove_line(0, 0, self._mainAxisLogLineKey)
+            self._mainAxisLogLineKey = None
+        elif is_main is False and self._rightAxisLogLineKey is not None:
+            self.remove_line(0, 0, self._rightAxisLogLineKey)
+            self._rightAxisLogLineKey = None
+
+        # get banks
+        bank_id_list = sorted(peak_value_bank_dict.keys())
+
+        for bank_id in bank_id_list:
+            y_label = '{0} Bank {1}'.format(param_name, bank_id)
+
+            # update or new line
+            if is_main:
+                line_key = self._mainAxisPeakParamLineKey[bank_id]
+            else:
+                line_key = self._rightAxisPeakParamLineKey[bank_id]
+            if line_key is None:
+                update = False
+            else:
+                update = True
+
+            if update:
+                self.update_line(0, 0, ikey=line_key, is_main=is_main,
+                                 vec_x=vec_time, vec_y=peak_value_bank_dict[bank_id],
+                                 line_style=line_style, line_color=self._peakParamColor[bank_id],
+                                 marker=marker, marker_color=self._peakParamColor[bank_id])
+
+            else:
+                line_key = self.add_plot(vec_time, peak_value_bank_dict[bank_id],
+                                         is_right=not is_main,
+                                         y_label=y_label, label=y_label,
+                                         line_style=line_style, marker=marker,
+                                         color=self._peakParamColor[bank_id])
+                if is_main:
+                    self._mainAxisPeakParamLineKey[bank_id] = line_key
+                else:
+                    self._rightAxisPeakParamLineKey[bank_id] = line_key
+            # END-IF
+        # END-FOR
 
         return
 
@@ -132,15 +238,15 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         if is_main:
             if y_label == self._currMainLineKey:
                 update = True
-            elif self._mainLineIndex is not None:
+            elif self._mainAxisLogLineKey is not None:
                 # remove current plot
-                self.remove_line(0, 0, self._mainLineIndex)
+                self.remove_line(0, 0, self._mainAxisLogLineKey)
         else:
             if y_label == self._currRightLineKey:
                 update = True
-            elif self._rightLineIndex is not None:
+            elif self._rightAxisLogLineKey is not None:
                 # remove current plot
-                self.remove_line(0, 0, self._rightLineIndex)
+                self.remove_line(0, 0, self._rightAxisLogLineKey)
 
         # set default color
         if color is None:
@@ -149,9 +255,9 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         # plot (new or update)
         if update:
             if is_main:
-                line_key = self._mainLineIndex
+                line_key = self._mainAxisLogLineKey
             else:
-                line_key = self._rightLineIndex
+                line_key = self._rightAxisLogLineKey
             self.update_line(row_index=0, col_index=0, ikey=line_key, vec_x=time_vec, vec_y=value_vec, is_main=is_main)
 
         else:
@@ -163,10 +269,10 @@ class GeneralPurpose1DView(MplGraphicsView1D):
             # update information
             if is_main:
                 self._currMainLineKey = y_label
-                self._mainLineIndex = line_key
+                self._mainAxisLogLineKey = line_key
             else:
                 self._currRightLineKey = y_label
-                self._rightLineIndex = line_key
+                self._rightAxisLogLineKey = line_key
         # END-IF
 
         # set the Y-axis color
@@ -203,13 +309,13 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         # reset the records
         if include_main:
             self._currMainLineKey = None
-            self._mainLineIndex = None
+            self._mainAxisLogLineKey = None
 
         if include_right:
             if (0, 0) in self.canvas().axes_right:
                 # it does exist
                 self._currRightLineKey = None
-                self._rightLineIndex = None
+                self._rightAxisLogLineKey = None
             else:
                 # it is not initialized yet
                 include_right = False

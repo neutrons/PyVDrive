@@ -238,83 +238,72 @@ class LiveDataDriver(QtCore.QThread):
         
         return ws_names
 
-    def get_peak_intensities(self, bank_id, time0):
-        """ get the peaks' intensities along with time
-        :param bank_id: bank ID
-        :param time0: time zero for time stamps
-        :return:
-        """
-        # check whether inputs are valid
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id, type(bank_id))
-        if bank_id < 1 or bank_id > 3:
-            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
-
-        try:
-            time0_ns = time0.totalNanoseconds()
-        except AttributeError as att_err:
-            raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
-                               ''.format(att_err))
-        ws_index = bank_id - 1
-
-        time_value_list = list()
-        for tup_value in self._peakIntensityDict.values():
-            time_i, intensities, positions = tup_value
-            time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
-            time_value_list.append((time_i_rel, intensities[ws_index]))
-        # END-FOR
-
-        time_value_list.sort()
-
-        # convert to vector
-        vec_time = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
-        vec_intensity = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
-        for index, tup_value in enumerate(time_value_list):
-            time_i, int_i = tup_value
-            vec_time[index] = time_i
-            vec_intensity[index] = int_i
-
-        return vec_time, vec_intensity
-
-    def get_peak_positions(self, bank_id_list, time0):
+    def get_peaks_parameters(self, param_type, bank_id_list, time0):
         """ get the peaks' positions (calculated) along with time
+        :param param_type:
         :param bank_id_list: bank IDs
         :param time0: time zero for time stamps
         :return:
         """
         # check whether inputs are valid
-        # FIXME/ASAP/ASAP
-        NOT WORKING
         assert isinstance(bank_id_list, list), 'Bank ID list {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id_list, type(bank_id_list))
-        if bank_id_list < 1 or bank_id_list > 3:
-            raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id_list))
+                                               ''.format(bank_id_list, type(bank_id_list))
+        assert isinstance(param_type, str), 'Peak parameter type {0} must be a string but not a {1}.' \
+                                            ''.format(param_type, type(param_type))
 
+        # time 0
         try:
             time0_ns = time0.totalNanoseconds()
         except AttributeError as att_err:
             raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
                                ''.format(att_err))
-        ws_index = bank_id_list - 1
 
-        time_value_list = list()
+        # get peak type
+        if param_type == 'center':
+            type_index = 2
+        elif param_type == 'intensity':
+            type_index = 1
+        else:
+            raise RuntimeError('Peak parameter type {0} is not recognized. Supported are "center" and "intensity"'
+                               ''.format(param_type))
+
+        # parse data
+        param_table_list = list()
         for tup_value in self._peakIntensityDict.values():
+            # each time stamp
+            # get values of all banks
             time_i, intensities, positions = tup_value
+            # get time
             time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
-            time_value_list.append((time_i_rel, positions[ws_index]))
+
+            list_i = [time_i_rel]
+            # peak parameter value
+            for bank_id in bank_id_list:
+                ws_index = bank_id - 1
+                if type_index == 1:
+                    value_i = intensities[ws_index]
+                elif type_index == 2:
+                    value_i = positions[ws_index]
+                else:
+                    raise NotImplementedError('Impossible')
+                list_i.append(value_i)
+            # END-FOR (bank)
+            param_table_list.append(list_i)
         # END-FOR
 
-        time_value_list.sort()
+        # convert 2D list to array
+        param_array = numpy.array(param_table_list)
+        # sort by time
+        param_array.view('float, float, float').sort(order=['f0'], axis=0)
+        # get returned value
+        vec_time = param_array[:, 0]
 
-        # convert to vector
-        vec_time = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
-        vec_center = numpy.ndarray(shape=(len(time_value_list), ), dtype='float')
-        for index, tup_value in enumerate(time_value_list):
-            time_i, center_i = tup_value
-            vec_time[index] = time_i
-            vec_center[index] = center_i
+        # define return data structure
+        peak_value_bank_dict = dict()
+        for index, bank_id in enumerate(bank_id_list):
+            peak_value_bank_dict[bank_id] = param_array[:, index+1]
 
-        return vec_time, vec_center
+        return vec_time, peak_value_bank_dict
 
     def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium,
                         append_mode):

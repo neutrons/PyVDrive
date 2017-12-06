@@ -1127,7 +1127,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # pre-screen for peak integration
-        if y_axis_name.startswith('* Peak:'):
+        # FIXME / NEXT - need to find out a way to determine with Y-name is None, it shall clear the axis or ..
+        if y_axis_name is None:
+            self.ui.graphicsView_comparison.clear_axis(is_main)
+
+        elif y_axis_name.startswith('* Peak:'):
             # integrate peak for all the accumulated runs
             # FIXME/TODO/NOW/ASAP - How to determine whether it shall be an append-mode or not!
             self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
@@ -1139,13 +1143,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             # TODO/FUTURE - shall allow bank 3
             BANK_LIST = [1, 2]
             if peak_name.lower().count('center') > 0:
-                vec_time, peak_value_bank_dict = self._controller.get_peak_positions(bank_id_list=BANK_LIST,
-                                                                                     time0=self._liveStartTimeStamp)
+                vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type='center',
+                                                                                       bank_id_list=BANK_LIST,
+                                                                                       time0=self._liveStartTimeStamp)
             elif peak_name.lower().count('intensity') > 0:
-                vec_time, peak_value_bank_dict = self._controller.get_peak_intensities(bank_id=BANK_LIST,
+                vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type='intensity',
+                                                                                       bank_id_list=BANK_LIST,
                                                                                        time0=self._liveStartTimeStamp)
             else:
                 raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+
             self.ui.graphicsView_comparison.plot_peak_parameters(vec_time, peak_value_bank_dict, peak_name,
                                                                  is_main=is_main)
             """ Deleted codes for reference
@@ -1258,6 +1265,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         else:
             # plot sample log
             log_name = y_axis_name
+            # process log name in order to get rid of appended information
+            if log_name.count('('):
+                log_name = log_name.split('(')[0].strip()
             y_label = log_name
 
             if append:
