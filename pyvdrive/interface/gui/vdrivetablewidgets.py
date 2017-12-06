@@ -185,9 +185,7 @@ class DataSlicerSegmentTable(NdavTable.NTableWidget):
         :return:
         """
         # check inputs
-        assert isinstance(time_slicer_list, list) and len(time_slicer_list) > 0, \
-            'Input time slicers {0} must be a non-empty list but not a {1}.' \
-            ''.format(time_slicer_list, type(time_slicer_list))
+        assert isinstance(time_slicer_list, list), 'Input time slicers {0} must be a list but not a {1}.'.format(time_slicer_list, type(time_slicer_list))
 
         # clear the current table
         self.remove_all_rows()

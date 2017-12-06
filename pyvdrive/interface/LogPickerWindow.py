@@ -248,6 +248,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # enable to disable
         if self.ui.radioButton_timeSlicer.isChecked():
             # time slicer
+            print '[DB...BAT] Turn on 1; Turn off 2 and 3'
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
 
@@ -271,6 +272,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         elif self.ui.radioButton_logValueSlicer.isChecked():
             # log value slicer
+            print '[DB...BAT] Turn on 2; Turn off 1 and 3'
             self.ui.groupBox_sliceSetupAuto.setEnabled(True)
             self.ui.groupBox_slicerSetupManual.setEnabled(False)
 
@@ -299,6 +301,7 @@ class WindowLogPicker(QtGui.QMainWindow):
 
         else:
             # manual slicer
+            print '[DB...BAT] Turn on 3; Turn off 1 and 2'
             self.ui.groupBox_sliceSetupAuto.setEnabled(False)
             self.ui.groupBox_slicerSetupManual.setEnabled(True)
 
@@ -565,6 +568,10 @@ class WindowLogPicker(QtGui.QMainWindow):
             GuiUtility.pop_dialog_error(self,
                                         'Unable to load sample logs from run %d due to %s.' % (run_number, str(err)))
             return
+        finally:
+            # self.ui.graphicsView_main.remove_slicers()
+            # TODO ASAP Need to find out which is better remove_slicers or clear_picker
+            self.ui.graphicsView_main.clear_picker()
 
         # set the type of file
         self._currLogType = 'nexus'
@@ -582,6 +589,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         # TODO/ISSUE/NEXT - make this work!
         # run_start_epoch = self.get_controller().get_run_start(run_number, epoch_time=True)
         # self.ui.label_runStartEpoch.setText('{0}'.format(run_start_epoch))
+
 
         return
 
@@ -807,7 +815,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # print '[DB...BAT] Input slicers', slicers_list
 
-        self._manualSlicerDialog.write_table(slicers_list)
+        if self._manualSlicerDialog is not None:
+            self._manualSlicerDialog.write_table(slicers_list)
 
         return
 
@@ -824,6 +833,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._mutexLockSwitchSliceMethod = True
 
         # Only 1 situation requires
+        print '[DB...BAT] called!'
         self._set_main_slice_method()
 
         # Unlock
