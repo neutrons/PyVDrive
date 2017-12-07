@@ -19,8 +19,9 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         super(GeneralPurpose1DView, self).__init__(parent, 1, 1)
 
         # register for the class variables
-        self._currMainLineKey = None  # use label_y as key
-        self._currRightLineKey = None  # use label_y as key
+        # for sample logs
+        self._currMainAxisName = None  # use label_y as key
+        self._currRightAxisName = None  # use label_y as key
 
         self._mainAxisLogLineKey = None
         self._rightAxisLogLineKey = None
@@ -67,6 +68,21 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         # END-IF-ELSE
 
         return
+
+    def is_same(self, is_main, plot_param_name):
+        """
+
+        :param is_main:
+        :param plot_param_name:
+        :return:
+        """
+        # check ...
+        # TODO ASAP
+        # blabla
+        if is_main:
+            return plot_param_name == self._currMainAxisName
+
+        return plot_param_name == self._currRightAxisName
 
     def plot_peak_parameters(self, vec_time, peak_value_bank_dict, param_name, is_main):
         """
@@ -236,13 +252,13 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         update = False
 
         if is_main:
-            if y_label == self._currMainLineKey:
+            if y_label == self._currMainAxisName:
                 update = True
             elif self._mainAxisLogLineKey is not None:
                 # remove current plot
                 self.remove_line(0, 0, self._mainAxisLogLineKey)
         else:
-            if y_label == self._currRightLineKey:
+            if y_label == self._currRightAxisName:
                 update = True
             elif self._rightAxisLogLineKey is not None:
                 # remove current plot
@@ -268,10 +284,10 @@ class GeneralPurpose1DView(MplGraphicsView1D):
 
             # update information
             if is_main:
-                self._currMainLineKey = y_label
+                self._currMainAxisName = y_label
                 self._mainAxisLogLineKey = line_key
             else:
-                self._currRightLineKey = y_label
+                self._currRightAxisName = y_label
                 self._rightAxisLogLineKey = line_key
         # END-IF
 
@@ -308,13 +324,13 @@ class GeneralPurpose1DView(MplGraphicsView1D):
         """
         # reset the records
         if include_main:
-            self._currMainLineKey = None
+            self._currMainAxisName = None
             self._mainAxisLogLineKey = None
 
         if include_right:
             if (0, 0) in self.canvas().axes_right:
                 # it does exist
-                self._currRightLineKey = None
+                self._currRightAxisName = None
                 self._rightAxisLogLineKey = None
             else:
                 # it is not initialized yet

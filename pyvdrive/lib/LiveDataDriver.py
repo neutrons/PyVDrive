@@ -473,9 +473,17 @@ class LiveDataDriver(QtCore.QThread):
             else:
                 # in append mode
                 # check
-                if date_time_vec[-1] >= time_vec_i[0]:
-                    raise RuntimeError('Previous workspace {0} is later than the current one {1}.'
-                                       ''.format(ws_name_list[seq_index-1], ws_name))
+                if date_time_vec[-1] > time_vec_i[0]:
+                    diff_ns = date_time_vec[-1].totalNanoseconds() - time_vec_i[0].totalNanoseconds()
+                    raise RuntimeError('Previous workspace {0} is later than the current one {1} on sample log {2}'
+                                       ': {3} vs {4} by {5}'
+                                       ''.format(ws_name_list[seq_index-1], ws_name, sample_log_name,
+                                                 date_time_vec[-1], time_vec_i[0], diff_ns))
+                elif date_time_vec[-1] == time_vec_i[0]:
+                    print 'Previous workspace {0} has one entry overlapped with current one {1} on sample log {2}: ' \
+                          '{3} vs {4}. Values are {5} and {6}.' \
+                          ''.format(ws_name_list[seq_index-1], ws_name, sample_log_name,
+                                    date_time_vec[-1], time_vec_i[0], sample_value_vec[-1], value_vec_i[0])
 
                 # append
                 numpy.append(date_time_vec, time_vec_i)
