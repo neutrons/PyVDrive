@@ -207,7 +207,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # widgets to show/high previous reduced date
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
-        self.ui.checkBox_normByVanadium.setChecked(True)
+        self.ui.checkBox_normByVanadium.setChecked(False)
 
         self._bankSelectMutex = True
         self._set_bank_checkbox()
