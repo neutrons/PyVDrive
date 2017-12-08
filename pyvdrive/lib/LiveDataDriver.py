@@ -54,10 +54,28 @@ class LiveDataDriver(QtCore.QThread):
         self._peakMinD = None
         self._peakMaxD = None
         self._peakNormByVan = False
-        self._peakParamDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
+        # _peakParamDict: key = %.5f %.5f %d % (min-d, max-d, norm-by-van):  value: dictionary
+        #   level-2 dict: key: workspace name, value: dictionary for bank 1, bank 2, bank 3, time
+        #   level-3 dict: key: bank ID, value: 3-tuple as peak intensity, peak center, variance
+        self._peakParamDict = dict()
+        self._currPeakParamKey = None
+
         self._vanadiumWorkspaceDict = dict()  # key: bank ID.  value: workspace name
 
         return
+
+    @staticmethod
+    def _get_peak_key(d_min, d_max, norm_by_vanadium):
+        """
+        a standard method to generate key for _peakParamDict
+        :param d_min:
+        :param d_max:
+        :param norm_by_vanadium:
+        :return:
+        """
+        key = '%.5f %.5f %d' % (d_min, d_max, norm_by_vanadium)
+
+        return key
 
     def calculate_live_peak_parameters(self, ws_name, bank_id, norm_by_van, d_min, d_max):
         """ calculate the peak parameters in live data
@@ -238,7 +256,7 @@ class LiveDataDriver(QtCore.QThread):
         
         return ws_names
 
-    def get_peaks_parameters(self, param_type, bank_id_list, time0):
+    def get_peaks_parameters(self, param_type, bank_id_list, time0, d_min=None, d_max=None, norm_by_vanadium=None):
         """ get the peaks' positions (calculated) along with time
         :param param_type:
         :param bank_id_list: bank IDs
@@ -260,48 +278,69 @@ class LiveDataDriver(QtCore.QThread):
 
         # get peak type
         if param_type == 'center':
-            type_index = 2
-        elif param_type == 'intensity':
             type_index = 1
+        elif param_type == 'intensity':
+            type_index = 0
         else:
             raise RuntimeError('Peak parameter type {0} is not recognized. Supported are "center" and "intensity"'
                                ''.format(param_type))
 
-        # parse data
-        param_table_list = list()
-        for tup_value in self._peakParamDict.values():
-            # each time stamp
-            # get values of all banks
-            time_i, intensities, positions = tup_value
-            # get time
+        # get key:
+        if d_min is not None and d_max is not None and norm_by_vanadium is not None:
+            peak_key = self._get_peak_key(d_min, d_max, norm_by_vanadium)
+        else:
+            peak_key = self._currPeakParamKey
+
+        # parse data to numpy array
+        # assuming that there are 3 banks  FIXME - make it general for more than 3 banks
+        num_pts = len(self._peakParamDict[peak_key])
+        dim = 1 + len(bank_id_list)
+        param_matrix = numpy.ndarray(shape=(num_pts, dim), dtype='float')  # time, b1, b2, b3
+        for index, value_dict in enumerate(self._peakParamDict[peak_key].values()):
+            time_i = value_dict['time']
             time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
-
-            list_i = [time_i_rel]
-            # peak parameter value
-            for bank_id in bank_id_list:
-                ws_index = bank_id - 1
-                if type_index == 1:
-                    value_i = intensities[ws_index]
-                elif type_index == 2:
-                    value_i = positions[ws_index]
-                else:
-                    raise NotImplementedError('Impossible')
-                list_i.append(value_i)
-            # END-FOR (bank)
-            param_table_list.append(list_i)
+            param_matrix[index][0] = time_i_rel
+            for col_index, bank_id in enumerate(bank_id_list):
+                value_i = value_dict[bank_id][type_index]
+                param_matrix[index][col_index+1] = value_i
+            # END-FOR
         # END-FOR
+        #
+        # Temporarily kept for reference till test is passed
+        # for tup_value in self._peakParamDict.values():
+        #     # each time stamp
+        #     # get values of all banks
+        #     time_i, intensities, positions = tup_value
+        #     # get time
+        #
+        #
+        #     list_i = [time_i_rel]
+        #     # peak parameter value
+        #     for bank_id in bank_id_list:
+        #         ws_index = bank_id - 1
+        #         if type_index == 1:
+        #             value_i = intensities[ws_index]
+        #         elif type_index == 2:
+        #             value_i = positions[ws_index]
+        #         else:
+        #             raise NotImplementedError('Impossible')
+        #         list_i.append(value_i)
+        #     # END-FOR (bank)
+        #     param_table_list.append(list_i)
+        # # END-FOR
+        #
+        # # convert 2D list to array
+        # param_array = numpy.array(param_table_list)
 
-        # convert 2D list to array
-        param_array = numpy.array(param_table_list)
         # sort by time
-        param_array.view('float, float, float').sort(order=['f0'], axis=0)
+        param_matrix.view('float, float, float, float').sort(order=['f0'], axis=0)
         # get returned value
-        vec_time = param_array[:, 0]
+        vec_time = param_matrix[:, 0]
 
         # define return data structure
         peak_value_bank_dict = dict()
         for index, bank_id in enumerate(bank_id_list):
-            peak_value_bank_dict[bank_id] = param_array[:, index+1]
+            peak_value_bank_dict[bank_id] = param_matrix[:, index+1]
 
         return vec_time, peak_value_bank_dict
 
@@ -314,46 +353,62 @@ class LiveDataDriver(QtCore.QThread):
         :return:
         """
         # check inputs
-        assert isinstance(accumulated_workspace_list, list)
+        assert isinstance(accumulated_workspace_list, list), 'Accumulated workspace {0} must be given in a list but ' \
+                                                             'not by a {1}.'.format(accumulated_workspace_list,
+                                                                                    type(accumulated_workspace_list))
+        assert isinstance(d_min, float), 'Min dSpacing {0} must be a float but not a {1}'.format(d_min, type(d_min))
+        assert isinstance(d_max, float), 'Max dSpacing {0} must be a float but not a {1}'.format(d_max, type(d_max))
+        assert isinstance(norm_by_vanadium, bool), 'Flag to normalize by vanadium shall be a boolean'
 
-
-        if append_mode:
-            #
-            raise RuntimeError('Need to check whether the peaks have been integrated and'
-                               ' recorded')
+        # determine whether it shall be in appending mode or new calculation mode
+        peak_key = self._get_peak_key(d_min, d_max, norm_by_vanadium)
+        if peak_key not in self._peakParamDict:
+            self._peakParamDict[peak_key] = dict()
+            # key: workspace name, value: dictionary for bank 1, bank 2, bank 3 and time
+        # update for the current peak parameter dictionary key
+        self._currPeakParamKey = peak_key
 
         # the last workspace might be partially accumulated
-        calculated_ws_list = sorted(self._peakParamDict.keys())[:-1]
+        last_workspace_name = sorted(accumulated_workspace_list)[-1]
 
-        # loop round all the input workspaces
         for ws_name in accumulated_workspace_list:
-            # do not touch the workspaces that already have peak integrated
-            if ws_name in calculated_ws_list:
-                continue
             if ws_name is None:
+                # workspace name is None or not exist?
+                print '[WARNING] Found workspace None in given accumulated workspaces {0}' \
+                      ''.format(accumulated_workspace_list)
+                continue
+
+            # integrate peak for the non-integrated workspace and LAST workspace only
+            if ws_name in self._peakParamDict[peak_key] and ws_name != last_workspace_name:
+                # integrated + not the last one
+                continue
+
+            # too old to be in ADS
+            if mantid_helper.workspace_does_exist(ws_name) is False:
+                print '[WARNING] Workspace {0} does not exist in ADS.'.format(ws_name)
                 continue
 
             # get workspace
             workspace_i = mantid_helper.retrieve_workspace(ws_name, True)
 
-            position_list = list()
-            intensity_list = list()
             # calculate peak intensity
+            self._peakParamDict[peak_key][ws_name] = dict()
             for iws in range(workspace_i.getNumberHistograms()):
                 value_tup = self.calculate_live_peak_parameters(ws_name=ws_name, bank_id=iws+1,
                                                                 norm_by_van=norm_by_vanadium,
                                                                 d_min=d_min, d_max=d_max)
-                intensity_i = value_tup[0]
-                intensity_list.append(intensity_i)
-
-                position_i = value_tup[1]
-                position_list.append(position_i)
+                bank_id = iws + 1
+                self._peakParamDict[peak_key][ws_name][bank_id] = value_tup
+                # intensity_i = value_tup[0]
+                # intensity_list.append(intensity_i)
+                #
+                # position_i = value_tup[1]
+                # position_list.append(position_i)
             # END-FOR (iws)
 
-            # get average time
+            # get latest time
             time_stamp = workspace_i.run().getProperty('proton_charge').lastTime()
-
-            self._peakParamDict[ws_name] = (time_stamp, intensity_list, position_list)
+            self._peakParamDict[peak_key][ws_name]['time'] = time_stamp
         # END-FOR
 
         return
