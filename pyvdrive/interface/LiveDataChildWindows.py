@@ -154,8 +154,8 @@ class LiveViewSetupDialog(QtGui.QDialog):
 class SampleLogPlotSetupDialog(QtGui.QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
-    # define signal
-    PlotSignal = QtCore.pyqtSignal(str, list, list, float, float, bool)  # x, y-list, y_side_list, dmin, dmax, norm-van
+    # define signal # x, y-list, y_side_list, (dmin, dmax) list, norm-van-list
+    PlotSignal = QtCore.pyqtSignal(str, list, list, list, list)
 
     def __init__(self, parent=None):
         """ Initialization
@@ -186,6 +186,8 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
                      self.do_remove_item)
         self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
                      self.do_clear_selected_items)
+        self.connect(self.ui.pushButton_filterLog, QtCore.SIGNAL('clicked()'),
+                     self.do_filter_sample_logs)
 
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
@@ -194,6 +196,9 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         # a record for being selected
         self._selectedParameters = list()
+
+        # keep a copy of sample logs added
+        self._sampleLogsList = list()
 
         return
 
@@ -207,7 +212,7 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.ui.tableWidget_sampleLogs.setColumnWidth(0, 300)
 
         self.ui.tableWidget_plotYAxis.setup()
-        self.ui.tableWidget_plotYAxis.setColumnWidth(0, 200)
+        # self.ui.tableWidget_plotYAxis.setColumnWidth(0, 200)
 
         # peak calculation special
         self.ui.checkBox_normByVan.setChecked(True)
@@ -218,6 +223,10 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         return
 
     def do_add_peak_param(self):
+        """
+
+        :return:
+        """
         # blabla
         peak_type = str(self.ui.comboBox_peakY.currentText()).lower()
 
@@ -228,9 +237,32 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         else:
             raise RuntimeError('Who knows')
 
+        # side
+        side_str = self.ui.comboBox_plotPeak.currentText()
+        if side_str == 'Left':
+            is_main = True
+        else:
+            is_main = False
+
+        # check whether there is any item related to peak integration
+        min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
+        max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
+        try:
+            min_d = float(min_d_str)
+            max_d = float(max_d_str)
+        except ValueError as value_err:
+            err_msg = 'Min-D "{0}" or/and Max-D "{1}" cannot be parsed as a float due to {2}' \
+                      ''.format(min_d_str, max_d_str, value_err)
+            GuiUtility.pop_dialog_error(self, err_msg)
+            return
+
+        norm_by_van = self.ui.checkBox_normByVan.isChecked()
+
         peak_info_str = '* Peak: {0}'.format(peak_type)
 
-        self.ui.tableWidget_plotYAxis.append_row([peak_info_str, True, True])
+        self.ui.tableWidget_plotYAxis.add_peak_parameter(peak_info_str, is_main, min_d, max_d, norm_by_van)
+
+        return
 
     def do_add_sample_log(self):
         """
@@ -243,15 +275,18 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, str(run_err))
             return
+        finally:
+            # reset the chosen ones
+            self.ui.tableWidget_sampleLogs.deselect_all_rows()
+
         # strip some information from input
         for index, log_name in enumerate(sample_log_name_list):
             # add to the table.  default to right axis
-            self.ui.tableWidget_plotYAxis.append_row([log_name, plot_side_list[index], True])
+            self.ui.tableWidget_plotYAxis.add_log_item(log_name, plot_side_list[index])
         # END-FOR
 
         return
 
-    # TEST TODO - Modified
     def do_apply(self):
         """Apply setup
         :return:
@@ -260,7 +295,8 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         x_axis_name = str(self.ui.comboBox_X.currentText())
 
         # get the Y axis and check
-        y_axis_name_list, is_main_list = self.ui.tableWidget_plotYAxis.get_selected_items()
+        y_axis_name_list, is_main_list, peak_range_list, norm_by_van_list = \
+            self.ui.tableWidget_plotYAxis.get_selected_items()
         if len(y_axis_name_list) == 0:
             GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
             return
@@ -271,34 +307,8 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
             GuiUtility.pop_dialog_error(self, 'Two items cannot be on the same side of axis.')
             return
 
-        # check whether there is any item related to peak integration
-        mess_peak = False
-        for y_axis_name in y_axis_name_list:
-            if y_axis_name.startswith('* Peak:'):
-                mess_peak = True
-
-        # send signal to process peaks
-        if mess_peak:
-            # set up peak integration
-            min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
-            max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
-            try:
-                min_d = float(min_d_str)
-                max_d = float(max_d_str)
-            except ValueError as value_err:
-                err_msg = 'Min-D "{0}" or/and Max-D "{1}" cannot be parsed as a float due to {2}' \
-                          ''.format(min_d_str, max_d_str, value_err)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
-
-            norm_by_van = self.ui.checkBox_normByVan.isChecked()
-        else:
-            min_d = max_d = 0
-            norm_by_van = False
-        # END-IF-ELSE
-
         # now it is the time to send message
-        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, min_d, max_d, norm_by_van)
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, peak_range_list, norm_by_van_list)
 
         return
 
@@ -316,6 +326,42 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         :return:
         """
         self.close()
+
+        return
+
+    def do_filter_sample_logs(self):
+        """
+        blabla
+        :return:
+        """
+        # get filter
+        filter_string = str(self.ui.lineEdit_logFilter.text())
+        case_sensitive = self.ui.checkBox_caseSensitive.isChecked()
+        if not case_sensitive:
+            filter_string = filter_string.lower()
+
+        # clear the table
+        self.ui.tableWidget_sampleLogs.remove_all_rows()
+
+        # filter
+        if len(filter_string) == 0:
+            # reset sample log table to original state
+            self.ui.tableWidget_sampleLogs.add_axis_items(self._sampleLogsList)
+        else:
+            # do filter
+            filtered_list = list()
+            for log_name in self._sampleLogsList:
+                if case_sensitive:
+                    log_name_proc = log_name
+                else:
+                    log_name_proc = log_name.lower()
+                if filter_string in log_name_proc:
+                    filtered_list.append(log_name)
+            # END-FOR
+
+            # set
+            self.ui.tableWidget_sampleLogs.add_axis_items(filtered_list)
+        # END-IF
 
         return
 
@@ -355,9 +401,13 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
                                               'a {1}.'.format(y_axis_list, type(y_axis_list))
 
         if reset:
+            # remove all rows
             self.ui.tableWidget_sampleLogs.remove_all_rows()
-            self.ui.tableWidget_plotYAxis.remove_all_rows()
+            # clear the recorded list
+            self._sampleLogsList = list()
 
+        # add/append
         self.ui.tableWidget_sampleLogs.add_axis_items(y_axis_list)
+        self._sampleLogsList.extend(y_axis_list)
 
         return

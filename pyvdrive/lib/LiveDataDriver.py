@@ -305,35 +305,11 @@ class LiveDataDriver(QtCore.QThread):
                 param_matrix[index][col_index+1] = value_i
             # END-FOR
         # END-FOR
-        #
-        # Temporarily kept for reference till test is passed
-        # for tup_value in self._peakParamDict.values():
-        #     # each time stamp
-        #     # get values of all banks
-        #     time_i, intensities, positions = tup_value
-        #     # get time
-        #
-        #
-        #     list_i = [time_i_rel]
-        #     # peak parameter value
-        #     for bank_id in bank_id_list:
-        #         ws_index = bank_id - 1
-        #         if type_index == 1:
-        #             value_i = intensities[ws_index]
-        #         elif type_index == 2:
-        #             value_i = positions[ws_index]
-        #         else:
-        #             raise NotImplementedError('Impossible')
-        #         list_i.append(value_i)
-        #     # END-FOR (bank)
-        #     param_table_list.append(list_i)
-        # # END-FOR
-        #
-        # # convert 2D list to array
-        # param_array = numpy.array(param_table_list)
 
         # sort by time
-        param_matrix.view('float, float, float, float').sort(order=['f0'], axis=0)
+        view_format =  str(['float'] * (1 + len(bank_id_list))).replace('[', '').replace(']', '').replace('\'', '')
+        # example: 'float, float, float, float'
+        param_matrix.view(view_format).sort(order=['f0'], axis=0)
         # get returned value
         vec_time = param_matrix[:, 0]
 

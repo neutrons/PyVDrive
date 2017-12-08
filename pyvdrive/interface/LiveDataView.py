@@ -113,11 +113,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._currMainYLogValueVector = None
         self._currRightYLogValueVector = None
 
-        # peak integration
-        self._minDPeakIntegration = None
-        self._maxDPeakIntegration = None
-        self._plotPeakParameterIndex = 0
-        self._plotPeakVanadiumNorm = True
+        # peak integration: recorded for peak upgrading
+        self._minDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
+        self._maxDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
+        self._plotPeakVanadiumNorm = {1: False, 0: False}  # 1 for True/main axis, 0 for False/right axis
 
         # other time
         self._liveStartTimeStamp = None
@@ -208,6 +207,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # widgets to show/high previous reduced date
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
+        self.ui.checkBox_normByVanadium.setChecked(True)
 
         self._bankSelectMutex = True
         self._set_bank_checkbox()
@@ -947,40 +947,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def integrate_peak_live(self, d_min, d_max, peak_param_type, norm_by_van):
-        """
-        set up to integrate peak with live data
-        :param d_min:
-        :param d_max:
-        :param peak_param_type:
-        :param norm_by_van
-        :return:
-        """
-        # integrate peak for all the accumulated runs
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
-                                         norm_by_vanadium=norm_by_van)
-
-        # set the status flags
-        self._minDPeakIntegration = d_min
-        self._maxDPeakIntegration = d_max
-        self._currSampleLogX = 'Time'
-
-        # peak type
-        peak_param_type = str(peak_param_type).lower()
-        if peak_param_type.count('intensity') > 0:
-            self._plotPeakParameterIndex = 1
-        elif peak_param_type.count('center') > 0:
-            self._plotPeakParameterIndex = 0
-        else:
-            raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_param_type))
-
-        # normalize by vanadium
-        assert isinstance(norm_by_van, bool), 'Flag to normalize by vanadium {0} must be a boolean but not a {1}' \
-                                              ''.format(norm_by_van, type(norm_by_van))
-        self._plotPeakVanadiumNorm = norm_by_van
-
-        return
-
     def load_sample_log(self, y_axis_name, last_n_accumulation, relative_time=None):
         """
         load a sample log from last N time intervals
@@ -1069,7 +1035,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # trace back to previously accumulated runs until run number changed to non-zero
         blabla
 
-    def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, d_min, d_max, norm_by_van):
+    def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, peak_range_list, norm_by_van_list):
         """
         plot log value/peak parameters in a live data
         Note: this model works in most case except a new sample log is chosen to
@@ -1121,41 +1087,56 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         elif num_left + num_right == 0:
             raise RuntimeError('At least one log/peak parameter must be assigned either main or right axis.')
 
-        # determine to append or start from new
-        if self._currSampleLogX == x_axis_name and self._currLogNameMainY == main_y_name:
-            append_main = True
-        else:
-            append_main = False
-        if self._currSampleLogX == x_axis_name and self._currLogNameRightY == right_y_name:
-            append_right = True
-        else:
-            append_right = False
-
         # plot
-        if x_axis_name == 'Time':
-            # plot live data
-            self.plot_time_arb_live(main_y_name, d_min, d_max, norm_by_van, append=append_main, is_main=True)
-            self.plot_time_arb_live(right_y_name, d_min, d_max, norm_by_van, append=append_right, is_main=False)
-        else:
-            # non-supported case so far
-            raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
-                                      ''.format(x_axis_name))
+        for index, y_axis_name in enumerate(y_axis_name_list):
+            is_main = side_list[index]
+            min_d, max_d = peak_range_list[index]
+            norm_by_van = norm_by_van_list[index]
+
+            if x_axis_name == 'Time':
+                self.plot_time_arb_live(y_axis_name, min_d, max_d, norm_by_van, is_main=is_main)
+            else:
+                raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
+                                          ''.format(x_axis_name))
+
+            if is_main:
+                self._currLogNameMainY = y_axis_name
+            else:
+                self._currLogNameRightY = y_axis_name
+        # END-FOR
 
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
-        self._currLogNameMainY = main_y_name
-        self._currLogNameRightY = right_y_name
+
+        # # determine to append or start from new
+        # if self._currSampleLogX == x_axis_name and self._currLogNameMainY == main_y_name:
+        #     append_main = True
+        # else:
+        #     append_main = False
+        # if self._currSampleLogX == x_axis_name and self._currLogNameRightY == right_y_name:
+        #     append_right = True
+        # else:
+        #     append_right = False
+        #
+        # # plot
+        # if x_axis_name == 'Time':
+        #     # plot live data
+        #     self.plot_time_arb_live(main_y_name, d_min, d_max, norm_by_van, append=append_main, is_main=True)
+        #     self.plot_time_arb_live(right_y_name, d_min, d_max, norm_by_van, append=append_right, is_main=False)
+        # else:
+        #     # non-supported case so far
+        #     raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
+        #                               ''.format(x_axis_name))
 
         return
 
-    def plot_time_arb_live(self, y_axis_name, d_min, d_max, norm_by_van, append, is_main):
+    def plot_time_arb_live(self, y_axis_name, d_min, d_max, norm_by_van, is_main):
         """
         plot arbitrary live data against with time
         :param y_axis_name:
         :param d_min:
         :param d_max:
         :param norm_by_van:
-        :param append: append mode/update mode
         :param is_main:
         :return:
         """
@@ -1166,133 +1147,33 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         elif y_axis_name.startswith('* Peak:'):
             # integrate peak for all the accumulated runs
-            self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
+            accumulation_ws_list, index_list = self.get_accumulation_workspaces(last_n_round=-1)
+            self._controller.integrate_peaks(accumulated_workspace_list=accumulation_ws_list,
+                                             d_min=d_min, d_max=d_max,
                                              norm_by_vanadium=norm_by_van)
+
+            # record for future update
+            self._minDPeakIntegration[int(is_main)] = d_min
+            self._maxDPeakIntegration[int(is_main)] = d_max
+            self._plotPeakVanadiumNorm[int(is_main)] = norm_by_van
+
             # get peak name
             peak_name = y_axis_name.split('* Peak:')[1].strip()
 
             # gather the data in banks
-            # TODO/FUTURE - shall allow bank 3
-            BANK_LIST = [1, 2]
+            BANK_LIST = [1, 2]              # TODO/FUTURE - shall allow bank 3
             if peak_name.lower().count('center') > 0:
-                vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type='center',
-                                                                                       bank_id_list=BANK_LIST,
-                                                                                       time0=self._liveStartTimeStamp)
+                param_type = 'center'
             elif peak_name.lower().count('intensity') > 0:
-                vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type='intensity',
-                                                                                       bank_id_list=BANK_LIST,
-                                                                                       time0=self._liveStartTimeStamp)
+                param_type = 'intensity'
             else:
                 raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+            vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type=param_type,
+                                                                                   bank_id_list=BANK_LIST,
+                                                                                   time0=self._liveStartTimeStamp)
 
             self.ui.graphicsView_comparison.plot_peak_parameters(vec_time, peak_value_bank_dict, peak_name,
                                                                  is_main=is_main)
-            """ Deleted codes for reference
-            for bank_id in BANK_LIST:
-                # get value
-                    vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
-                                                                                time0=self._liveStartTimeStamp)
-                    marker = 'D'
-
-                else:
-                    raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
-            # END-IF
-
-            if y_axis_name.startswith('* Peak:'):
-                # this is a peak
-                assert isinstance(y_axis_name, str), '{0} shall be string'.format(y_axis_name)
-
-                # integrate a single peak across all the accumulated workspaces
-                self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
-                                                 norm_by_van)
-
-                vec_x_list = list()
-                vec_y_list = list()
-                marker_list = list()
-
-                for bank_id in BANK_LIST:
-                    # get value
-                    if peak_name.lower().count('center') > 0:
-                        vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
-                                                                                  time0=self._liveStartTimeStamp)
-
-                    elif peak_name.lower().count('intensity') > 0:
-                        vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
-                                                                                    time0=self._liveStartTimeStamp)
-                        marker = 'D'
-
-                    else:
-                        raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
-                # END-IF
-
-                # plot
-                # bank1:                         marker = 'o'
-                # bank2:
-                self.ui.graphicsView_comparison.plot_multi_data_set(vec_x_list, vec_y_list, peak_name,
-                                                                    plot_setup_list, is_main=is_main,
-                                                                    update_mode=append)
-
-
-
-                # check again with d_min, d_max and norm by vanadium
-                if append:
-                    if d_min != self._minDPeakIntegration or \
-                                    d_max != self._maxDPeakIntegration or norm_by_van != self._plotPeakVanadiumNorm:
-                        append_peak = False
-                    else:
-                        append_peak = True
-                else:
-                    append_peak = False
-
-                # re-check append
-                vec_x_list = list()
-                vec_y_list = list()
-                plot_setup_list = list()
-                for bank_id in [1, 2]:
-                    if peak_name.lower().count('center') > 0:
-                        # FIXME TODO ASAP - Need to consider update_peak as calculating peaks..
-                        vec_time, vec_value = self._controller.get_peak_positions(bank_id=bank_id,
-                                                                                  time0=self._liveStartTimeStamp)
-                        marker = 'o'
-                    elif peak_name.lower().count('intensity') > 0:
-                        vec_time, vec_value = self._controller.get_peak_intensities(bank_id=bank_id,
-                                                                                    time0=self._liveStartTimeStamp)
-                        marker = 'D'
-
-                    else:
-                        raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
-
-                    # label
-                    # label_y = peak_name
-                    label_line = 'Bank {0}'.format(bank_id)
-                    line_style = ':'
-                    color = [None, 'red', 'orange'][bank_id]
-
-                    # add to list
-                    vec_x_list.append(vec_time)
-                    vec_y_list.append(vec_value)
-                    plot_setup_list.append((label_line, color, marker, line_style))
-                # END-BANK
-
-                # plot!
-                if plot_side == 'left':
-                    is_main = True
-                elif plot_side == 'right':
-                    is_main = False
-                else:
-                    raise RuntimeError('Plot-side {0} is not supported.'.format(plot_side))
-
-                # wipe out previous plot new
-                self.ui.graphicsView_comparison.plot_multi_data_set(vec_x_list, vec_y_list, peak_name,
-                                                                    plot_setup_list, is_main=is_main)
-
-                # reset flags
-                if not append_peak:
-                    self._minDPeakIntegration = d_min
-                    self._maxDPeakIntegration = d_max
-                    self._plotPeakVanadiumNorm = norm_by_van
-                # END-IF
-            """
 
         else:
             # plot sample log
@@ -1469,8 +1350,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if self._currSampleLogX is not None:
                 y_axis_list = [self._currLogNameMainY, self._currLogNameRightY]
                 side_list = [True, False]
-                self.plot_log_live(self._currSampleLogX, y_axis_list, side_list, self._minDPeakIntegration,
-                                   self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
+                peak_range_list = [(self._minDPeakIntegration[1], self._maxDPeakIntegration[1]),
+                                   (self._minDPeakIntegration[0], self._maxDPeakIntegration[0])]
+                norm_by_van_list = [self._plotPeakVanadiumNorm[1], self._plotPeakVanadiumNorm[0]]
+                self.plot_log_live(self._currSampleLogX, y_axis_list, side_list, peak_range_list, norm_by_van_list)
         # END-FOR
 
         return
