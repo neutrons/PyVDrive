@@ -838,7 +838,10 @@ class MplGraphicsView(QtGui.QWidget):
         """
         #
         plot_id = self._myIndicatorsManager.get_canvas_line_index(indicator_key)
-        self._myCanvas.remove_plot_1d(plot_id)
+        try:
+            self._myCanvas.remove_plot_1d(plot_id)
+        except RuntimeError as run_err:
+            raise RuntimeError('Failed to remove indicator ID = {0} with plot ID = {1} due to {2}'.format(indicator_id, plot_id, run_err))
         self._myIndicatorsManager.delete(indicator_key)
 
         return

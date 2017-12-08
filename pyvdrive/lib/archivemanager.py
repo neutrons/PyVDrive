@@ -630,7 +630,13 @@ class DataArchiveManager(object):
             run_number = int(record_file_set['RUN'][i_run])
             ipts_str = str(record_file_set['IPTS'][i_run])
             ipts_number = int(ipts_str.split('-')[-1])
-            full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
+            
+            # try new way first: /SNS/VULCAN/IPTS-18721/nexus/VULCAN_160366.nxs.h5
+            full_file_path = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts_number, run_number)
+
+            # try old way if new-way file name does not work
+            if os.path.exists(full_file_path) is False:
+                full_file_path = '/SNS/VULCAN/%s/0/%d/NeXus/VULCAN_%d_event.nxs' % (ipts_str, run_number, run_number)
             exp_time_str = str(record_file_set['StartTime'][i_run])
             exp_time = vdrivehelper.parse_time(exp_time_str)
 

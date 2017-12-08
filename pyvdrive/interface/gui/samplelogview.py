@@ -140,6 +140,28 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         return
 
+    def clear_picker(self):
+        """
+        blabla  will trigger everything including rewrite table!
+        :return:
+        """
+        # remove the picker from the list
+        for p_index, picker in enumerate(self._currentLogPickerList):
+            # remove from dictionary
+            self._remove_picker_from_range_dictionary(picker)
+            # remove from canvas
+            self.remove_indicator(picker)
+
+        # reset
+        self._currentSelectedPicker = None
+        self._currentLogPickerList = list()
+
+        # update the new list to parent window
+        picker_pos_list = list()
+        self.mySlicerUpdatedSignal.emit(picker_pos_list)
+
+        return
+
     def deselect_picker(self):
         """
         de-select the picker by changing its color and reset the flat

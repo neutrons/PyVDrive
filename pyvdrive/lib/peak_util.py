@@ -156,7 +156,7 @@ def calculate_peak_integral_intensity(vec_d, vec_y, left_x_index, right_x_index,
 
     peak_integral = numpy.sum((sub_y - sub_b) * delta_d)
 
-    print '[DB...BAT] Integrated Peak Intensity = {0}'.format(peak_integral)
+    # print '[DB...BAT] Integrated Peak Intensity = {0}'.format(peak_integral)
 
     return peak_integral
 
@@ -194,7 +194,7 @@ def calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index, bk
 
     mu = numpy.sum(sub_d * (sub_y - vec_back) * vec_dx) / peak_integral
 
-    print '[DB...BAT] Peak average d = {0}'.format(mu)
+    # print '[DB...BAT] Peak average d = {0}'.format(mu)
 
     return peak_integral, mu
 
@@ -216,11 +216,11 @@ def calculate_peak_variance(vec_d, vec_y, left_x_index, right_x_index, bkgd_a, b
     if len(vec_d) - len(vec_y) > 1 or len(vec_d) - len(vec_y) < 0:
         raise RuntimeError('Vector of D and vector of Y have different size.')
     if left_x_index >= right_x_index:
-        raise RuntimeError('Left X index cannot be equal or larger than right X index')
+        raise ValueError('Left X index cannot be equal or larger than right X index')
     if left_x_index < 0:
-        raise RuntimeError('Left X index cannot be negative')
+        raise ValueError('Left X index cannot be negative')
     if right_x_index >= len(vec_d):
-        raise RuntimeError('Right X index cannot be over limit of vector of D')
+        raise ValueError('Right X index cannot be over limit of vector of D')
 
     # calculate peak integral and average d-spacing
     peak_integral, average_d_space = calculate_peak_average_d_space(vec_d, vec_y, left_x_index, right_x_index,
@@ -322,7 +322,7 @@ def estimate_background(vec_d, vec_y, min_x_index, max_x_index):
     # END-FOR
     for index in range(-1, 2):
         x_index = max_x_index + index
-        if x_index < len(vec_d):
+        if x_index < len(vec_d)-1:
             list_x.append(vec_d[x_index])
             list_y.append(vec_y[x_index])
     # END-FOR

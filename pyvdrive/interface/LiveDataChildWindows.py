@@ -47,21 +47,34 @@ class LiveViewSetupDialog(QtGui.QDialog):
         return
 
     def do_browse_van_gss(self):
-        # blabla
-        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN'))
-        self.ui.lineEdit_vanGSSName.setText(file_name)
-
-    def do_load_van_gss(self):
         """
-        blabla
+        launch a dialog to find smoothed Vanadium GSAS file
         :return:
         """
+        # get file name
+        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
+        # add the line information
+        self.ui.lineEdit_vanGSSName.setText(file_name)
+
+        return
+
+    def do_load_van_gss(self):
+        """Load smoothed vanadium from GSAS file
+        :return:
+        """
+        # get file name
         file_name = str(self.ui.lineEdit_vanGSSName.text())
 
-        self._myParent._controller.load_smoothed_vanadium(file_name)
+        # let parent window to load
+        self._myParent.controller.load_smoothed_vanadium(file_name)
 
+        # set message
         self.ui.textEdit_info.setText('{0} is loaded'.format(file_name))
-        self._myParent.ui.label_info.setText('Vanadium: {0}'.format(file_name))
+
+        # append the new message to main window
+        info = 'Vanadium: {0}'.format(file_name)
+        self._myParent.set_info(info, append=True, insert_at_beginning=False)
+        self._myParent.set_vanadium_norm(True, van_file_name=file_name)
 
         return
 
@@ -141,9 +154,8 @@ class LiveViewSetupDialog(QtGui.QDialog):
 class SampleLogPlotSetupDialog(QtGui.QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
-    # define signal
-    PlotSignal = QtCore.pyqtSignal(str, str)
-    PeakIntegrateSignal = QtCore.pyqtSignal(float, float, str, bool)
+    # define signal # x, y-list, y_side_list, (dmin, dmax) list, norm-van-list
+    PlotSignal = QtCore.pyqtSignal(str, list, list, list, list)
 
     def __init__(self, parent=None):
         """ Initialization
@@ -163,16 +175,30 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
                      self.do_apply)
 
-        self.connect(self.ui.radioButton_calculatePeak, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_select_groups)
-        self.connect(self.ui.radioButton_viewSampleLog, QtCore.SIGNAL('toggled(bool)'),
-                     self.do_select_groups)
+        # push buttons to set up
+        self.connect(self.ui.pushButton_addPeakParam, QtCore.SIGNAL('clicked()'),
+                     self.do_add_peak_param)
+        self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_add_sample_log)
+
+        # other parameters
+        self.connect(self.ui.pushButton_remove, QtCore.SIGNAL('clicked()'),
+                     self.do_remove_item)
+        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+                     self.do_clear_selected_items)
+        self.connect(self.ui.pushButton_filterLog, QtCore.SIGNAL('clicked()'),
+                     self.do_filter_sample_logs)
 
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog
         if parent is not None:
             self.PlotSignal.connect(self._myControlWindow.plot_log_live)
-            self.PeakIntegrateSignal.connect(self._myControlWindow.integrate_peak_live)
+
+        # a record for being selected
+        self._selectedParameters = list()
+
+        # keep a copy of sample logs added
+        self._sampleLogsList = list()
 
         return
 
@@ -182,16 +208,11 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         :return:
         """
         # set up the Axes
-        self.ui.tableWidget_AxisX.setup()
-        self.ui.tableWidget_AxisY.setup()
+        self.ui.tableWidget_sampleLogs.setup()
+        self.ui.tableWidget_sampleLogs.setColumnWidth(0, 300)
 
-        # radio buttons: default to calculate Peak
-        self.ui.radioButton_calculatePeak.setChecked(True)
-        self.ui.radioButton_viewSampleLog.setChecked(False)
-
-        # set the groups
-        self.ui.groupBox_livePeakView.setEnabled(True)
-        self.ui.groupBox_sampleLogView.setEnabled(False)
+        self.ui.tableWidget_plotYAxis.setup()
+        # self.ui.tableWidget_plotYAxis.setColumnWidth(0, 200)
 
         # peak calculation special
         self.ui.checkBox_normByVan.setChecked(True)
@@ -201,55 +222,102 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    # TODO/NOW - In-implementation
+    def do_add_peak_param(self):
+        """
+
+        :return:
+        """
+        # blabla
+        peak_type = str(self.ui.comboBox_peakY.currentText()).lower()
+
+        if peak_type.count('intensity'):
+            peak_type = 'intensity'
+        elif peak_type.count('center'):
+            peak_type = 'center'
+        else:
+            raise RuntimeError('Who knows')
+
+        # side
+        side_str = self.ui.comboBox_plotPeak.currentText()
+        if side_str == 'Left':
+            is_main = True
+        else:
+            is_main = False
+
+        # check whether there is any item related to peak integration
+        min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
+        max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
+        try:
+            min_d = float(min_d_str)
+            max_d = float(max_d_str)
+        except ValueError as value_err:
+            err_msg = 'Min-D "{0}" or/and Max-D "{1}" cannot be parsed as a float due to {2}' \
+                      ''.format(min_d_str, max_d_str, value_err)
+            GuiUtility.pop_dialog_error(self, err_msg)
+            return
+
+        norm_by_van = self.ui.checkBox_normByVan.isChecked()
+
+        peak_info_str = '* Peak: {0}'.format(peak_type)
+
+        self.ui.tableWidget_plotYAxis.add_peak_parameter(peak_info_str, is_main, min_d, max_d, norm_by_van)
+
+        return
+
+    def do_add_sample_log(self):
+        """
+        add sample log that is selected to the sample-log table
+        :return:
+        """
+        # get log name
+        try:
+            sample_log_name_list, plot_side_list = self.ui.tableWidget_sampleLogs.get_selected_items()
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, str(run_err))
+            return
+        finally:
+            # reset the chosen ones
+            self.ui.tableWidget_sampleLogs.deselect_all_rows()
+
+        # strip some information from input
+        for index, log_name in enumerate(sample_log_name_list):
+            # add to the table.  default to right axis
+            self.ui.tableWidget_plotYAxis.add_log_item(log_name, plot_side_list[index])
+        # END-FOR
+
+        return
+
     def do_apply(self):
         """Apply setup
         :return:
         """
-        if self.ui.radioButton_viewSampleLog.isChecked():
-            # apply sample log calculation
-            # get X-axis item
-            try:
-                x_axis_name = self.ui.tableWidget_AxisX.get_selected_item()
-            except RuntimeError as run_err:
-                err_msg = 'One and only one item can be selected for X-axis. Now {0} is selected.' \
-                          ''.format(run_err)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
+        # get x-axis name and y-axis name
+        x_axis_name = str(self.ui.comboBox_X.currentText())
 
-            # get Y-axis item
-            try:
-                y_axis_name = self.ui.tableWidget_AxisY.get_selected_item()
-            except RuntimeError as run_err:
-                err_msg = 'One and only one item can be selected for Y-axis. Now {0} is selected.' \
-                          ''.format(run_err)
-                GuiUtility.pop_dialog_error(self, err_msg)
-                return
+        # get the Y axis and check
+        y_axis_name_list, is_main_list, peak_range_list, norm_by_van_list = \
+            self.ui.tableWidget_plotYAxis.get_selected_items()
+        if len(y_axis_name_list) == 0:
+            GuiUtility.pop_dialog_error(self, 'Y-axis list is empty!')
+            return
+        elif len(y_axis_name_list) > 2:
+            GuiUtility.pop_dialog_error(self, 'More than 2 items are selected to plot.  It is NOT OK.')
+            return
+        elif len(y_axis_name_list) == 2 and is_main_list[0] == is_main_list[1]:
+            GuiUtility.pop_dialog_error(self, 'Two items cannot be on the same side of axis.')
+            return
 
-            # send signal to parent window to plot
-            self.PlotSignal.emit(x_axis_name, y_axis_name)
+        # now it is the time to send message
+        self.PlotSignal.emit(x_axis_name, y_axis_name_list, is_main_list, peak_range_list, norm_by_van_list)
 
-        elif self.ui.radioButton_calculatePeak.isChecked():
-            # apply peak calculation
-            # set up peak integration
-            min_d_str = str(self.ui.lineEdit_minDPeakIntegrate.text())
-            max_d_str = str(self.ui.lineEdit_dMaxPeakIntegrate.text())
-            peak_type = str(self.ui.comboBox_peakY.currentText())
-            try:
-                min_d = float(min_d_str)
-                max_d = float(max_d_str)
-            except ValueError as value_err:
-                raise RuntimeError('Min-D {0} or/and Max-D {1} cannot be parsed as a float due to {2}'
-                                   ''.format(min_d_str, max_d_str, value_err))
+        return
 
-            norm_by_van = self.ui.checkBox_normByVan.isChecked()
-            self.PeakIntegrateSignal.emit(min_d, max_d, peak_type, norm_by_van)
-
-        else:
-            # it is not a good choice
-            raise RuntimeError('Neither of two radio buttons is selected.  It is not an allowed '
-                               'case.')
-        # END-IF-ELSE
+    def do_clear_selected_items(self):
+        """
+        clear all the selected items from table
+        :return:
+        """
+        self.ui.tableWidget_plotYAxis.remove_all_rows()
 
         return
 
@@ -261,13 +329,50 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def do_select_groups(self):
+    def do_filter_sample_logs(self):
         """
-        event to select groups
+        blabla
         :return:
         """
-        self.ui.groupBox_livePeakView.setEnabled(self.ui.radioButton_calculatePeak.isChecked())
-        self.ui.groupBox_sampleLogView.setEnabled(self.ui.radioButton_viewSampleLog.isChecked())
+        # get filter
+        filter_string = str(self.ui.lineEdit_logFilter.text())
+        case_sensitive = self.ui.checkBox_caseSensitive.isChecked()
+        if not case_sensitive:
+            filter_string = filter_string.lower()
+
+        # clear the table
+        self.ui.tableWidget_sampleLogs.remove_all_rows()
+
+        # filter
+        if len(filter_string) == 0:
+            # reset sample log table to original state
+            self.ui.tableWidget_sampleLogs.add_axis_items(self._sampleLogsList)
+        else:
+            # do filter
+            filtered_list = list()
+            for log_name in self._sampleLogsList:
+                if case_sensitive:
+                    log_name_proc = log_name
+                else:
+                    log_name_proc = log_name.lower()
+                if filter_string in log_name_proc:
+                    filtered_list.append(log_name)
+            # END-FOR
+
+            # set
+            self.ui.tableWidget_sampleLogs.add_axis_items(filtered_list)
+        # END-IF
+
+        return
+
+    def do_remove_item(self):
+        """
+        remove selected items from the table
+        :return:
+        """
+        row_index_list = self.ui.tableWidget_plotYAxis.get_selected_rows(True)
+
+        self.ui.tableWidget_plotYAxis.remove_rows(row_number_list=row_index_list)
 
         return
 
@@ -285,22 +390,24 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
 
         return
 
-    def set_axis_options(self, x_axis_list, y_axis_list, reset):
+    def set_axis_options(self, y_axis_list, reset):
         """
         set the X-axis and Y-axis item list
-        :param x_axis_list:
         :param y_axis_list:
         :param reset:
         :return:
         """
-        assert isinstance(x_axis_list, list), 'blabla1'
-        assert isinstance(y_axis_list, list), 'blabla2'
+        assert isinstance(y_axis_list, list), 'Y-axis items {0} must be given as a list but not ' \
+                                              'a {1}.'.format(y_axis_list, type(y_axis_list))
 
         if reset:
-            self.ui.tableWidget_AxisX.remove_all_rows()
-            self.ui.tableWidget_AxisY.remove_all_rows()
+            # remove all rows
+            self.ui.tableWidget_sampleLogs.remove_all_rows()
+            # clear the recorded list
+            self._sampleLogsList = list()
 
-        self.ui.tableWidget_AxisX.add_axis_items(x_axis_list)
-        self.ui.tableWidget_AxisY.add_axis_items(y_axis_list)
+        # add/append
+        self.ui.tableWidget_sampleLogs.add_axis_items(y_axis_list)
+        self._sampleLogsList.extend(y_axis_list)
 
         return

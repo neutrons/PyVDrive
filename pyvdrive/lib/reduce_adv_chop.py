@@ -497,16 +497,18 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                 continue
 
             # reduce data
-            status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name)
+            gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
+            status, message, reduced_ws_name = self.reduce_powder_diffraction_data(event_nexus_name, user_gsas_file_name=gsas_new_name)
             chopped_tup_list.append((status, event_nexus_name, reduced_ws_name))
             gsas_file_name = self._reductionSetup.get_gsas_file(main_gsas=True)
             print '[INFO] Reduced chopped event file {0} successfully ({1}) to {2} with file {3}.' \
-                  ''.format(event_nexus_name, status, ret_obj, gsas_file_name)
+                  ''.format(event_nexus_name, status, reduced_ws_name, gsas_file_name)
 
             # rename to VULCAN VDrive compatible name
             if os.path.exists(gsas_file_name):
-                gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
-                os.rename(gsas_file_name, gsas_new_name)
+                # no need to rename
+                # gsas_new_name = os.path.join(self._reductionSetup.get_gsas_dir(), '{0}.gda'.format(gsas_index))
+                # os.rename(gsas_file_name, gsas_new_name)
                 lookup_list.append((gsas_new_name, event_nexus_name, reduced_ws_name))
                 gsas_index += 1
             # END-IF

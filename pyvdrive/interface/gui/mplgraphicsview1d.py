@@ -66,22 +66,31 @@ class MplGraphicsView1D(QtGui.QWidget):
         super(MplGraphicsView1D, self).__init__(parent)
 
         # set up other variables
-        # key = line ID, value = row, col
+        # key = line ID, value = row, col, bool (is main axes???)
         self._lineSubplotMap = dict()
 
         # records for all the lines that are plot on the canvas
         # key = [row, col][line key], value = label, x-min, x-max, y-min and y-max
-        self._my1DPlotDict = dict()
-        self._my1DPlotDict[0, 0] = dict()  # init
+        self._myMainPlotDict = dict()
+        self._myMainPlotDict[0, 0] = dict()  # init
+        self._statMainPlotDict = dict()
+        self._statMainPlotDict[0, 0] = None
+
+        # for right plot
+        self._myRightPlotDict = dict()
+        # self._myRightPlotDict[0, 0] = dict()
+        # FIXME - It is not clear how to use this dictionary
+        self._statRightPlotDict = dict()
+
+        # auto line's maker+color list
+        self._myLineMarkerColorList = []
+        self._myLineMarkerColorIndex = 0
+        self.setAutoLineMarkerColorCombo()
 
         # set up canvas
         self._myCanvas = Qt4MplCanvasMultiFigure(self, row_size, col_size)
         if row_size is not None and col_size is not None:
             self.set_subplots(row_size, col_size)
-            # self._myCanvas.set_subplots(row_size, col_size)
-            # subplot_indexes = self._myCanvas.subplot_indexes
-            # for index in subplot_indexes:
-            #     self._my1DPlotDict[index] = dict()
 
         if tool_bar:
             self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
@@ -98,24 +107,39 @@ class MplGraphicsView1D(QtGui.QWidget):
         self._vBox.addWidget(self._myCanvas)
         self._vBox.addWidget(self._myToolBar)
 
-        # auto line's maker+color list
-        self._myLineMarkerColorList = []
-        self._myLineMarkerColorIndex = 0
-        self.setAutoLineMarkerColorCombo()
-
-        # some x, y range recorder for convenient operation
-        # key =
-        self._statDict = dict()
-        self._statRightPlotDict = dict()
-
         return
 
-    def _update_plot_line_information(self, row_index, col_index, line_id, remove_line, vec_x=None,
+    def _get_plot_y_range(self, row_index, col_index, line_id, is_main):
+        """
+        get the Y range (index 3 and 4) of a recorded plot
+        :param row_index:
+        :param col_index:
+        :param line_id:
+        :param is_main:
+        :return:
+        """
+        if is_main:
+            # from main plot
+            if (row_index, col_index) not in self._myMainPlotDict:
+                raise RuntimeError('Main plot does not have subplot ({0}, {1})'.format(row_index, col_index))
+            y_min = self._myMainPlotDict[row_index, col_index][line_id][3]
+            y_max = self._myMainPlotDict[row_index, col_index][line_id][4]
+        else:
+            # from right plot
+            if (row_index, col_index) not in self._myRightPlotDict:
+                raise RuntimeError('Right plot does not have subplot ({0}, {1})'.format(row_index, col_index))
+            y_min = self._myRightPlotDict[row_index, col_index][line_id][3]
+            y_max = self._myRightPlotDict[row_index, col_index][line_id][4]
+
+        return y_min, y_max
+
+    def _update_plot_line_information(self, row_index, col_index, line_id, is_main, remove_line, vec_x=None,
                                       vec_y=None, label=None):
         """update the plot line information
         :param row_index:
         :param col_index:
         :param line_id:
+        :param is_main: flag whether this is for main axes. Other wise it is for right axes
         :param remove_line:
         :param vec_x:
         :param vec_y:
@@ -126,34 +150,44 @@ class MplGraphicsView1D(QtGui.QWidget):
         if row_index is None or col_index is None:
             if not (line_id in self._lineSubplotMap):
                 raise RuntimeError('Line ID {0} is not recorded in line-subplot map'.format(line_id))
-            row_index, col_index = self._lineSubplotMap[line_id]
+            row_index, col_index, is_main = self._lineSubplotMap[line_id]
 
         # check inputs and others
-        assert isinstance(line_id, int), 'Line ID {0} must be a string but not a {1}.' \
+        assert isinstance(line_id, int), 'Line ID {0} must be an integer but not a {1}.' \
                                          ''.format(line_id, type(line_id))
         assert isinstance(row_index, int), 'Row index {0} must be an integer but not a {1}.' \
                                            ''.format(row_index, type(row_index))
         assert isinstance(col_index, int), 'Column index {0} must be an integer but not a {1}.' \
                                            ''.format(col_index, type(col_index))
-        # check
-        if (row_index, col_index) not in self._my1DPlotDict:
-            raise RuntimeError('Subplot ({0}, {1}) does not exist. Existing subplots are {2}.'
-                               ''.format(row_index, col_index, self._my1DPlotDict.keys()))
+
+        # get the mai or right
+        if is_main:
+            plot_dict = self._myMainPlotDict
+        else:
+            plot_dict = self._myRightPlotDict
 
         # check
+        if (row_index, col_index) not in plot_dict:
+            raise RuntimeError('Subplot ({0}, {1}) does not exist in (main = {2}). Existing subplots are {3}.'
+                               ''.format(row_index, col_index, is_main, plot_dict.keys()))
+
+        # update
         if remove_line:
-            # remove a line
-            if line_id in self._my1DPlotDict[row_index, col_index]:
-                del self._my1DPlotDict[row_index, col_index][line_id]
+            # remove a line from record
+            if line_id in plot_dict[row_index, col_index]:
+                del plot_dict[row_index, col_index][line_id]
             else:
                 raise RuntimeError('Line ID does {0} is not registered.'.format(line_id))
         else:
-            # add a line
-            assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
-                                           ''.format(remove_line, label)
-
-            if line_id in self._my1DPlotDict[row_index, col_index]:
-                print '[WARNING] Line (ID = {0}) is already registered.'.format(line_id)
+            # add a NEW line or update an existing line
+            if line_id not in plot_dict[row_index, col_index]:
+                # mode for add a new line
+                assert isinstance(label, str), 'For adding a line (remove_line={0}), label {1} must be a string.' \
+                                               'Plot dict keys: {2}'.format(remove_line, label,
+                                                                            plot_dict[row_index, col_index].keys())
+            elif label is None:
+                # for update version, using current label if no new label is given
+                label = plot_dict[row_index, col_index][line_id][0]
 
             # get range of x and y
             min_x = max_x = min_y = max_y = None
@@ -164,12 +198,11 @@ class MplGraphicsView1D(QtGui.QWidget):
                 min_y = np.max(vec_y)
                 max_y = np.max(vec_y)
 
-            self._my1DPlotDict[row_index, col_index][line_id] = [label, min_x, max_x, min_y, max_y]
+            # set information to plot dictionary
+            plot_dict[row_index, col_index][line_id] = [label, min_x, max_x, min_y, max_y]
         # END-IF
 
         return
-
-    # TODO/ISSUE/NOWNOW/FIXME - write operation to _my1DPlotDict can only be through _update_plot_line_information()
 
     def add_arrow(self, start_x, start_y, stop_x, stop_y):
         """
@@ -180,17 +213,17 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param stop_y:
         :return:
         """
+        # FIXME - BROKEN! TODO/LATER
         self._myCanvas.add_arrow(start_x, start_y, stop_x, stop_y)
 
         return
 
-    # TODO/ISSUE/NOW - Make index to row index and col index!!!
     def add_plot(self, vec_x, vec_y, y_err=None, row_index=0, col_index=0, is_right=False, color=None, label='',
                  x_label=None, y_label=None, marker=None, line_style=None, line_width=1, show_legend=True):
         """Add a plot in 1D
         :param row_index:
         :param col_index:
-        :param is_right:
+        :param is_right: flag to show whether the line is added to the right axis
         :param vec_x:
         :param vec_y:
         :param y_err:
@@ -210,25 +243,30 @@ class MplGraphicsView1D(QtGui.QWidget):
             return False
 
         if is_right:
-            line_key = self._myCanvas.add_right_plot(vec_x, vec_y, label=label,
-                                                     color=color, marker=marker,
-                                                     linestyle=line_style, linewidth=line_width)
+            # plot to the right axis
+            line_key = self._myCanvas.add_right_plot(row_index=row_index, col_index=col_index,
+                                                     x=vec_x, y=vec_y, y_label=y_label,
+                                                     color=color, label=label,  marker=marker,
+                                                     line_style=line_style, linewidth=line_width)
+            # initialize right axes
+            if (row_index, col_index) not in self._myRightPlotDict:
+                self._myRightPlotDict[row_index, col_index] = dict()
 
-            self._statRightPlotDict[line_key] = (min(vec_x), max(vec_x), min(vec_y), max(vec_y))
         else:
+            # plot at the main axis
             line_key = self._myCanvas.add_main_plot(row_index, col_index, vec_x, vec_y, y_err, color, label, x_label,
                                                     y_label, marker, line_style,
                                                     line_width, show_legend)
-        # END-FOR
+            # record min/max
+            # self._statMainPlotDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
+        # END-IF
+
+        # update line information
+        self._update_plot_line_information(row_index, col_index, line_key, is_main=not is_right,
+                                           remove_line=False, label=label, vec_x=vec_x, vec_y=vec_y)
 
         # add line to dictionary
-        self._lineSubplotMap[line_key] = row_index, col_index
-
-        # record min/max
-        self._statDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
-        # update label
-        self._update_plot_line_information(row_index, col_index, line_key, remove_line=False, label=label,
-                                           vec_x=vec_x, vec_y=vec_y)
+        self._lineSubplotMap[line_key] = row_index, col_index, not is_right
 
         return line_key
 
@@ -243,19 +281,20 @@ class MplGraphicsView1D(QtGui.QWidget):
         :param upper_y_boundary:
         :return:
         """
-        # TODO/TEST/NOW - Complete the application
-
         if row_index is not None and col_index is not None:
             # check
-            assert isinstance(row_index, int), 'blabla'
-            assert isinstance(col_index, int), 'blabla'
+            assert isinstance(row_index, int), 'row index {0} must be an integer but not a {1}' \
+                                               ''.format(row_index, type(row_index))
+            assert isinstance(col_index, int), 'column index {0}  must be an integer but not a {1}' \
+                                               ''.format(col_index, type(col_index))
             # set
             index_tup_list = [row_index, col_index]
         else:
             index_tup_list = self.get_subplots_indexes()
 
         # re-set limits
-        assert isinstance(percent_room, float), 'blabla'
+        assert isinstance(percent_room, float), 'Blank room percentage {0} must be a float but not a {1}' \
+                                                ''.format(percent_room, type(percent_room))
 
         for row_index, col_index in index_tup_list:
             # collect all min and max of Y
@@ -266,8 +305,7 @@ class MplGraphicsView1D(QtGui.QWidget):
             subplot_line_indexes = self._myCanvas.get_line_keys(row_index, col_index)
 
             for line_key in subplot_line_indexes:
-                min_i = self._my1DPlotDict[line_key][3]
-                max_i = self._my1DPlotDict[line_key][4]
+                min_i, max_i = self._get_plot_y_range(row_index, col_index, line_key, is_main=True)
                 min_y_list.append(min_i)
                 max_y_list.append(max_i)
             # END-FOR
@@ -298,19 +336,48 @@ class MplGraphicsView1D(QtGui.QWidget):
         """
         return self._myCanvas
 
-    def clear_all_lines(self):
+    def clear_all_lines(self, row_number=None, col_number=None, include_main=True, include_right=True):
         """
-        clear all lines on the canvas
+        clear all the lines of all or not
+        :param row_number:
+        :param col_number:
+        :param include_main:
+        :param include_right:
         :return:
         """
+        # treat left and right separately
         for row_index, col_index in self._myCanvas.subplot_indexes:
-            self._myCanvas.clear_subplot_lines(row_index, col_index)
+            # filter the condition to determine whether this subplot is to be cleared
+            if row_number is None or col_number is None:
+                # deal with all
+                pass
+            elif row_number is None and col_number == col_index:
+                # remove whole column
+                pass
+            elif row_number == row_index and col_number is None:
+                # remove whole row
+                pass
+            elif row_number == row_index and col_number == col_index:
+                # clear this subplot
+                pass
+            else:
+                # skip
+                continue
 
-        # TODO/CHECK/NOW - Only clear the 2-level entries.. (row, col) shall be kept
-        self._statRightPlotDict.clear()
-        self._statDict.clear()
-        for row_index, col_index in self._my1DPlotDict.keys():
-            self._my1DPlotDict[row_index, col_index].clear()
+            # remove line for main and right
+            if include_main:
+                # main axis
+                self._myCanvas.clear_subplot_lines(row_index, col_index, True)
+                self._myMainPlotDict[row_index, col_index].clear()
+                # self._statMainPlotDict ???
+
+            if include_right:
+                # right axis if it does exist. the caller shall check. no worry to raise exception
+                self._myCanvas.clear_subplot_lines(row_index, col_index, False)
+                self._myRightPlotDict[row_index, col_index].clear()
+                # self._statRightPlotDict ???
+
+        # END-FOR
 
         # about zoom
         self._isZoomed = False
@@ -350,16 +417,15 @@ class MplGraphicsView1D(QtGui.QWidget):
         """ Event handling as canvas size updated
         :return:
         """
-        # update the indicator
-        new_x_range = self.getXLimit()
-        new_y_range = self.get_y_limit()
-
-        self._myIndicatorsManager.update_indicators_range(new_x_range, new_y_range)
-        for indicator_key in self._myIndicatorsManager.get_live_indicator_ids():
-            canvas_line_id = self._myIndicatorsManager.get_canvas_line_index(indicator_key)
-            data_x, data_y = self._myIndicatorsManager.get_data(indicator_key)
-            self.update_line(canvas_line_id, data_x, data_y)
-        # END-FOR
+        # # update the indicator
+        # new_x_range = self.getXLimit()
+        # new_y_range = self.get_y_limit()
+        #
+        # for indicator_key in self._myIndicatorsManager.get_live_indicator_ids():
+        #     canvas_line_id = self._myIndicatorsManager.get_canvas_line_index(indicator_key)
+        #     data_x, data_y = self._myIndicatorsManager.get_data(indicator_key)
+        #     self.update_line(canvas_line_id, data_x, data_y)
+        # # END-FOR
 
         return
 
@@ -396,38 +462,6 @@ class MplGraphicsView1D(QtGui.QWidget):
         """
         return self._myCanvas.getYLimit()
 
-    def get_y_min(self):
-        """
-        Get the minimum Y value of the plots on canvas
-        :return:
-        """
-        if len(self._statDict) == 0:
-            return 1E10
-
-        line_id_list = self._statDict.keys()
-        min_y = self._statDict[line_id_list[0]][2]
-        for i_plot in range(1, len(line_id_list)):
-            if self._statDict[line_id_list[i_plot]][2] < min_y:
-                min_y = self._statDict[line_id_list[i_plot]][2]
-
-        return min_y
-
-    def get_y_max(self):
-        """
-        Get the maximum Y value of the plots on canvas
-        :return:
-        """
-        if len(self._statDict) == 0:
-            return -1E10
-
-        line_id_list = self._statDict.keys()
-        max_y = self._statDict[line_id_list[0]][3]
-        for i_plot in range(1, len(line_id_list)):
-            if self._statDict[line_id_list[i_plot]][3] > max_y:
-                max_y = self._statDict[line_id_list[i_plot]][3]
-
-        return max_y
-
     def remove_line(self, row_index, col_index, line_id):
         """ Remove a line
         :param line_id:
@@ -439,10 +473,10 @@ class MplGraphicsView1D(QtGui.QWidget):
         # remove the records
         self._update_plot_line_information(row_index, col_index, line_id=line_id, remove_line=True)
 
-        if line_id in self._statDict:
-            del self._statDict[line_id]
-        else:
-            del self._statRightPlotDict[line_id]
+        # if line_id in self._statMainPlotDict:
+        #     del self._statMainPlotDict[line_id]
+        # else:
+        #     del self._statRightPlotDict[line_id]
 
         return
 
@@ -516,16 +550,6 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
-    def setXYLimit(self, xmin=None, xmax=None, ymin=None, ymax=None):
-        """ Set X-Y limit automatically
-        """
-        self._myCanvas.axes.set_xlim([xmin, xmax])
-        self._myCanvas.axes.set_ylim([ymin, ymax])
-
-        self._myCanvas.draw()
-
-        return
-
     def setAutoLineMarkerColorCombo(self):
         """ Set the default/auto line marker/color combination list
         """
@@ -543,30 +567,57 @@ class MplGraphicsView1D(QtGui.QWidget):
 
         return
 
+    def set_axis_color(self, row_index, col_index, is_main, color):
+        """
+        set the color of axis
+        :param row_index:
+        :param col_index:
+        :param is_main:
+        :param color:
+        :return:
+        """
+        axis = self._myCanvas.get_axis(row_index, col_index, is_main)
+
+        if is_main:
+            side = 'left'  # ax.spines['left'].set_color('red')
+        else:
+            side = 'right'
+
+        # set color
+        axis.spines[side].set_color(color)
+
+        return
+
     def set_subplots(self, row_size, col_size):
         """
-        set up the subplots.  This is the only  method that allows users to change the subplots
+        re-set up the subplots.  This is the only  method that allows users to change the subplots
         :param row_size:
         :param col_size:
         :return:
         """
+        # delete all the lines on canvas now
+        self.clear_all_lines(include_right=False)
+
+        # set the subplots
         self._myCanvas.set_subplots(row_size, col_size)
 
-        # reset PlotDict
-        self._my1DPlotDict.clear()
-
+        # reset PlotDict: make the right-axis open.
         subplot_indexes = self._myCanvas.subplot_indexes
         for index in subplot_indexes:
-            self._my1DPlotDict[index] = dict()
+            self._myMainPlotDict[index] = dict()
 
         return
 
-    def update_line(self, ikey, vec_x=None, vec_y=None, line_style=None, line_color=None,
+    # TODO/NOW - How to deal with label!!!
+    def update_line(self, row_index, col_index, ikey, is_main, vec_x=None, vec_y=None, line_style=None, line_color=None,
                     marker=None, marker_color=None):
-        """
+        """ Update a line, including value, line style, color, marker and etc.
         Update a line, including value, line style, color, marker and etc.
         The line is indicated by its key
+        :param row_index:
+        :param col_index:
         :param ikey:
+        :param is_main: flag whether this line is on main axis or right axis
         :param vec_x:
         :param vec_y:
         :param line_style:
@@ -579,19 +630,24 @@ class MplGraphicsView1D(QtGui.QWidget):
         assert isinstance(ikey, int), 'Line key {0} must be an integer but not a {1}.'.format(ikey, type(ikey))
 
         # get the row and column index
-        if ikey in self._lineSubplotMap:
-            row_index, col_index = self._lineSubplotMap[ikey]
-        else:
-            raise RuntimeError('Line with ID {0} is not recorded as a plot on canvas.'.format(ikey))
+        if row_index is None or col_index is None:
+            if ikey in self._lineSubplotMap:
+                row_index, col_index, is_main = self._lineSubplotMap[ikey]
+            else:
+                raise RuntimeError('Line with ID {0} is not recorded as a plot on canvas.'.format(ikey))
+        # END-IF
 
         # update information
-        self._update_plot_line_information(row_index=row_index, col_index=col_index, line_id=ikey, remove_line=False,
-                                           vec_y=vec_y)
+        self._update_plot_line_information(row_index=row_index, col_index=col_index, is_main=is_main,
+                                           line_id=ikey, remove_line=False,
+                                           vec_y=vec_y, label=None)  # let callee to determine label
 
-        return self._myCanvas.updateLine(ikey, vec_x, vec_y, line_style, line_color, marker, marker_color)
+        self._myCanvas.update_plot_line(row_index, col_index, ikey, is_main, vec_x, vec_y, line_style, line_color, marker,
+                                               marker_color)
+
+        return
 
 
-# TODO/TODO/FIXE/ASAP - Check all _lineDict to [row, col][line_key]
 class Qt4MplCanvasMultiFigure(FigureCanvas):
     """  A customized Qt widget for matplotlib figure.
     It can be used to replace GraphicsView of QtGui
@@ -610,15 +666,20 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         super(Qt4MplCanvasMultiFigure, self).__init__(self.fig)
         self.setParent(parent)
 
-        # Variables to manage all lines/subplot
+        # Variables to manage all lines/subplot:  key = integer line ID, value = reference to line
         # default to 1 subplot at (0, 0)
-        self._lineDict = dict()
-        self._lineDict[0, 0] = dict()
+        self._mainLineDict = dict()
+        self._mainLineDict[0, 0] = dict()
 
+        # right axes
+        self._rightLineDict = dict()
+
+        # line index: single index for both main and right plot
         self._lineIndex = 0
 
         # legend and color bar
         self._legendStatusDict = dict()
+        self._legendRightStatusDict = dict()
         self._legendFontSize = 8
 
         # data structure for sub plots
@@ -662,30 +723,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if col_size < 1:
             raise RuntimeError('Column size {0} must be larger than 0.'.format(row_size))
 
-        # add sub plot]
-        # self.axes_main = list()
-        # self.axes_right = list()
-        # for i_row in range(row_size):
-        #     for i_col in range(col_size):
-        #         sub_index = row_size * 100 + col_size * 100 + ???
-        #         self.axes = self.fig.add_subplot(111)  # return: matplotlib.axes.AxesSubplot
-        #         self.fig.subplots_adjust(bottom=0.15)
-        #         self.axes2 = None
-        #     # END-FOR
-        # # END-FOR
-        #
-        #
-        # # initialize base class
-        #
-        #
-        # set up subplots
         for row_index in range(row_size):
             for col_index in range(col_size):
                 sub_plot_index = row_index * col_size + col_index + 1
                 subplot_ref = self.fig.add_subplot(row_size, col_size, sub_plot_index)
-                print '[DB...BAT] Subplot index = ', sub_plot_index, ' Return = ', subplot_ref, ' of type ', type(subplot_ref)
                 self.axes_main[row_index, col_index] = subplot_ref
-                self._lineDict[row_index, col_index] = dict()
+                self._mainLineDict[row_index, col_index] = dict()
                 self._legendStatusDict[row_index, col_index] = False
             # END-FOR
         # END-FOR
@@ -720,7 +763,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def add_main_plot(self, row_index, col_index, vec_x, vec_y, y_err=None, color=None, label="", x_label=None, y_label=None,
+    def add_main_plot(self, row_index, col_index, vec_x, vec_y, y_err=None, color=None, label='',
+                      x_label=None, y_label=None,
                       marker=None, line_style=None, line_width=1, show_legend=True):
         """Add 1D plot on the main side (left)
         :param row_index: numpy array X
@@ -738,8 +782,10 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param show_legend:
         :return: line ID (i.e., new key)
         """
+        print '[DB...BAT] Add Main Y-label : {0}; Line-label : {1}'.format(y_label, label)
+
         # Check input
-        self._check_subplot_index(row_index, col_index)
+        self._check_subplot_index(row_index, col_index, is_main=True)
 
         if isinstance(vec_x, np.ndarray) is False or isinstance(vec_y, np.ndarray) is False:
             raise NotImplementedError('Input vec_x or vec_y for addPlot() must be numpy.array.')
@@ -753,15 +799,11 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if plot_error is True and len(y_err) != len(vec_x):
             raise NotImplementedError('Input vec_x, vec_y and y_error must have same size.')
 
-        # Hold previous data
-        # self.axes.hold(True)
-        self.axes_main[row_index, col_index].hold(True)
-
         # set x-axis and y-axis label
         if x_label is not None:
             self.axes_main[row_index, col_index].set_xlabel(x_label, fontsize=16)  # or 20?
         if y_label is not None:
-            self.axes_main[row_index, col_index].set_ylabel(y_label, fontsize=16)
+            self.axes_main[row_index, col_index].set_ylabel(y_label, fontsize=10)
 
         # process inputs and defaults
         if color is None:
@@ -786,12 +828,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         # set/update legend
         if show_legend:
-            self._setup_legend(row_index, col_index)
+            self._setup_legend(row_index, col_index, is_main=True)
 
         # Register
         line_key = self._lineIndex
         if len(r) == 1:
-            self._lineDict[row_index, col_index][line_key] = r[0]
+            self._mainLineDict[row_index, col_index][line_key] = r[0]
             self._lineIndex += 1
         else:
             msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(r), r)
@@ -804,8 +846,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return line_key
 
-    def add_right_plot(self, row_index, col_index, x, y, color=None, label="", x_label=None, ylabel=None, marker=None,
-                       linestyle=None, linewidth=1):
+    def add_right_plot(self, row_index, col_index, x, y, color=None, label="", x_label=None, y_label=None,
+                       marker=None, line_style=None, linewidth=1):
         """
         add a 1-D line at the right axis
         :param row_index:
@@ -815,107 +857,146 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :param color:
         :param label:
         :param x_label:
-        :param ylabel:
+        :param y_label:
         :param marker:
-        :param linestyle:
+        :param line_style:
         :param linewidth:
         :return:
         """
+        print '[DB...BAT] Add Right Y-label : {0}; Line-label : {1}'.format(y_label, label)
+
         # check
-        self._check_subplot_index(row_index, col_index)
+        try:
+            self._check_subplot_index(row_index, col_index, is_main=False)
+        except RuntimeError:
+            # initialize twinx
+            self.axes_right[row_index, col_index] = self.axes_main[row_index, col_index].twinx()   # self.axes.twinx()
+            self._rightLineDict[row_index, col_index] = dict()
 
-        # initialize twinx
-        if (row_index, col_index) not in self.axes_right or self.axes_right[row_index, col_index] is None:
-            self.axes_right[row_index, col_index] = self.axes.twinx()
+            # turn on the right side ticks
+            self.axes_right[row_index, col_index].yaxis.tick_right()
 
-        # if self.axes2 is None:
-        #     self.axes2 =
-
-        # Hold previous data
-        self.axes_right[row_index, col_index].hold(True)
-
-        # Default
+        # Default for line's color, marker and line style
         if color is None:
+            # color must be RGBA (4-tuple)
             color = (0, 1, 0, 1)
         if marker is None:
             marker = 'o'
-        if linestyle is None:
-            linestyle = '-'
+        if line_style is None:
+            line_style = '-'
 
         # Special default
         if len(label) == 0:
             label = 'right'
             color = 'red'
 
-        # color must be RGBA (4-tuple)
-        r = self.axes2.plot(x, y, color=color, marker=marker, linestyle=linestyle,
-                            label=label, linewidth=linewidth)
         # return: list of matplotlib.lines.Line2D object
-
-        self.axes2.set_aspect('auto')
+        plot_info = self.axes_right[row_index, col_index].plot(x, y, color=color, marker=marker, markersize=4,
+                                                               label=label,
+                                                               linestyle=line_style, linewidth=linewidth)
+        #
+        self.axes_right[row_index, col_index].set_aspect('auto')
 
         # set x-axis and y-axis label
         if x_label is not None:
-            self.axes2.set_xlabel(x_label, fontsize=20)
-        if ylabel is not None:
-            self.axes2.set_ylabel(ylabel, fontsize=20)
+            raise NotImplementedError('ASAP! Use upper X-axis???')
+
+        if y_label is not None:
+            self.axes_right[row_index, col_index].set_ylabel(y_label, fontsize=10)
 
         # set/update legend
-        self._setup_legend()
+        self._setup_legend(row_index, col_index, is_main=False)
 
         # Register
-        line_key = -1
-        if len(r) == 1:
-            line_key = self._lineIndex
-            self._lineDict[line_key] = r[0]
+        line_id = self._lineIndex  # share the line ID counter with main axis
+        if len(plot_info) == 1:
+            self._rightLineDict[row_index, col_index][line_id] = plot_info[0]
             self._lineIndex += 1
         else:
-            print "Impoooooooooooooooosible!"
+            msg = 'Return from plot is a %d-tuple: %s.. \n' % (len(plot_info), plot_info)
+            for i_r in range(len(plot_info)):
+                msg += 'r[%d] = %s\n' % (i_r, str(r[i_r]))
+            raise NotImplementedError(msg)
 
         # Flush/commit
         self.draw()
 
-        return line_key
+        return line_id
 
-    # TODO/TEST - Remove line from left and right axes
-    def clear_subplot_lines(self, row_index, col_index):
+    def clear_subplot_lines(self, row_index, col_index, is_main):
         """
         Remove all lines from a subplot
+        i.e., remove line and its record
         :param row_index:
         :param col_index:
+        :param is_main:
         :return:
         """
-        # check
-        self._check_subplot_index(row_index, col_index)
+        if is_main:
+            # check
+            self._check_subplot_index(row_index, col_index, is_main=is_main)
 
-        # remove line and its record
-        for line_key in self._lineDict[row_index, col_index].keys():
-            mpl_line = self._lineDict[row_index, col_index][line_key]
-            if mpl_line is None:
-                # removed
-                continue
-            elif isinstance(mpl_line, tuple):
-                # with error bar and etc
-                mpl_line[0].remove()
-                for line in mpl_line[1]:
-                    line.remove()
-                for line in mpl_line[2]:
-                    line.remove()
-            else:
-                # with single line
-                try:
-                    self.axes_main[row_index, col_index].lines.remove(mpl_line)
-                except ValueError as e:
-                    print "[Error] Plot %s is not in axes.lines which has %d lines. Error mesage: %s" % (
-                        str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
-            # END-IF-ELSE
+            for line_key in self._mainLineDict[row_index, col_index].keys():
+                mpl_line = self._mainLineDict[row_index, col_index][line_key]
+                if mpl_line is None:
+                    # removed
+                    continue
+                elif isinstance(mpl_line, tuple):
+                    # with error bar and etc
+                    mpl_line[0].remove()
+                    for line in mpl_line[1]:
+                        line.remove()
+                    for line in mpl_line[2]:
+                        line.remove()
+                else:
+                    # with single line
+                    try:
+                        self.axes_main[row_index, col_index].lines.remove(mpl_line)
+                    except ValueError as e:
+                        print "[Error] Plot %s is not in axes_main.lines which has %d lines. Error message: %s" % (
+                            str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                # END-IF-ELSE
 
-            # remove record
-            del self._lineDict[row_index, col_index][line_key]
-        # END-FOR
+                # remove record
+                del self._mainLineDict[row_index, col_index][line_key]
+            # END-FOR
 
-        self._setup_legend(row_index, col_index)
+            # set up legend
+            self._setup_legend(row_index, col_index, is_main=True)
 
+        elif (row_index, col_index) in self._rightLineDict:
+            # remove line and its record from right axis
+            # no need to check!
+            for line_key in self._rightLineDict[row_index, col_index].keys():
+                mpl_line = self._rightLineDict[row_index, col_index][line_key]
+                if mpl_line is None:
+                    # removed
+                    continue
+                elif isinstance(mpl_line, tuple):
+                    # with error bar and etc
+                    mpl_line[0].remove()
+                    for line in mpl_line[1]:
+                        line.remove()
+                    for line in mpl_line[2]:
+                        line.remove()
+                else:
+                    # with single line
+                    try:
+                        self.axes_right[row_index, col_index].lines.remove(mpl_line)
+                    except ValueError as e:
+                        print "[Error] Plot %s is not in axes_right.lines which has %d lines. Error message: %s" % (
+                                str(line_key), len(self.axes_main[row_index, col_index].lines), str(e))
+                # END-IF-ELSE
+
+                # remove record
+                del self._rightLineDict[row_index, col_index][line_key]
+            # END-FOR
+
+            # set up legend
+            self._setup_legend(row_index, col_index, is_main=False)
+        # END-IF-ELSE
+
+        # draw
         self.draw()
 
         return
@@ -923,35 +1004,24 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
     def clear_canvas(self):
         """ Clear data including lines and image from canvas
         """
-        # clear the image for next operation
-        for subplot in self.axes_main.values():
-            subplot.hold(False)
-        for subplot in self.axes_right.values():
-            if subplot is not None:
-                subplot.hold(False)
+        # # clear the image for next operation
+        # for subplot in self.axes_main.values():
+        #     subplot.hold(False)
+        # for subplot in self.axes_right.values():
+        #     if subplot is not None:
+        #         subplot.hold(False)
 
         # clear all lines
         for row_index, col_index in self.axes_main.keys():
-            self.clear_subplot_lines(row_index, col_index)
+            # main
+            self.clear_subplot_lines(row_index, col_index, True)
             self.axes_main[row_index, col_index].cla()
 
-
-        # self.axes.hold(False)
-        #
-        # # Clear all lines
-        # self.clear_all_1d_plots()
-        #
-        # # clear image
-        # self.axes.cla()
-        # Try to clear the color bar
-        # if len(self.fig.axes) > 1:
-        #     self.fig.delaxes(self.fig.axes[1])
-        #     self._colorBar = None
-        #     # This clears the space claimed by color bar but destroys sub_plot too.
-        #     self.fig.clear()
-        #     # Re-create subplot
-        #     self.axes = self.fig.add_subplot(111)
-        #     self.fig.subplots_adjust(bottom=0.15)
+            # right if it does exist
+            if (row_index, col_index) in self.axes_right:
+                self.clear_subplot_lines(row_index, col_index, False)
+                self.axes_right[row_index, col_index].cla()
+            # END-IF
 
         # flush/commit
         self._flush()
@@ -995,18 +1065,37 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         """
         return self.axes.get_ylim()
 
-    def hide_legend(self):
+    def hide_legend(self, row_number, col_number, is_main, is_right):
+        """ Hide the legend if it is not None
+        :param row_number:
+        :param col_number:
+        :param is_main:
+        :param is_right:
+        :return:
         """
-        hide the legend if it is not None
-        Returns:
+        # work on the main first
+        if is_main:
+            # check input
+            self._check_subplot_index(row_number, col_number, is_main=True)
 
-        """
-        if self.axes.legend() is not None:
-            # set visible to be False and re-draw
-            self.axes.legend().set_visible(False)
-            self.draw()
+            if self._legendStatusDict[row_number, col_number]:
+                # set visible to be False and re-draw
+                self.axes_main[row_number, col_number].legend().set_visible(False)
+                self.draw()
+                self._legendStatusDict[row_number, col_number] = False
 
-        self._legendStatusDict = False
+        # work on the main first
+        if is_right:
+            # check input
+            self._check_subplot_index(row_number, col_number, is_main=False)
+
+            if self._legendRightStatusDict[row_number, col_number]:
+                # set visible to be False and re-draw
+                self.axes_right[row_number, col_number].legend().set_visible(False)
+                self.draw()
+                self._legendRightStatusDict[row_number, col_number] = False
+
+        # END-IF
 
         return
 
@@ -1016,25 +1105,30 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         Returns:
 
         """
+        # FIXME/NOW - Change API
         self._legendFontSize += 1
 
         self._setup_legend(font_size=self._legendFontSize)
 
         self.draw()
 
+        raise NotImplementedError('ASAP')
+
         return
 
-    def set_x_limits(self, row_index, col_index, xmin, xmax, apply_change=True):
+    def set_x_limits(self, row_index, col_index, xmin, xmax, is_main=True, is_right=True, apply_change=True):
         """set limit on X-axis
         :param row_index:
         :param col_index:
         :param xmin:
         :param xmax:
+        :param is_main:
+        :param is_right:
         :param apply_change:
         :return:
         """
         # check
-        self._check_subplot_index(row_index, col_index)
+        self._check_subplot_index(row_index, col_index, is_main=True)
 
         # for X
         x_limits = list(self.axes_main[row_index, col_index].get_xlim())
@@ -1042,7 +1136,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             x_limits[0] = xmin
         if xmax is not None:
             x_limits[1] = xmax
-        self.axes_main[row_index, col_index].set_xlim(x_limits)
+
+        # set
+        if is_main:
+            self.axes_main[row_index, col_index].set_xlim(x_limits)
+        if is_main and (row_index, col_index) in self.axes_right:
+            self.axes_right[row_index, col_index].set_xlim(x_limits)
 
         # try draw
         if apply_change:
@@ -1050,17 +1149,18 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def set_y_limits(self, row_index, col_index, ymin, ymax, apply_change=True):
+    def set_y_limits(self, row_index, col_index, is_main, ymin, ymax, apply_change=True):
         """set limit on y-axis
         :param row_index:
         :param col_index:
+        :param is_main
         :param ymin:
         :param ymax:
         :param apply_change:
         :return:
         """
         # check
-        self._check_subplot_index(row_index, col_index)
+        self._check_subplot_index(row_index, col_index, is_main=True)
 
         # for Y
         y_limits = list(self.axes_main[row_index, col_index].get_ylim())
@@ -1068,7 +1168,11 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
             y_limits[0] = ymin
         if ymax is not None:
             y_limits[1] = ymax
-        self.axes_main[row_index, col_index].set_ylim(y_limits)
+
+        if is_main:
+            self.axes_main[row_index, col_index].set_ylim(y_limits)
+        else:
+            self.axes_right[row_index, col_index].set_ylim(y_limits)
 
         # try draw
         if apply_change:
@@ -1095,27 +1199,48 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         return
 
     def remove_plot_1d(self, row_index, col_index, plot_key, apply_change=True):
-        """ Remove the line with its index as key
+        """
+        remove a line from canvas
+        :param row_index:
+        :param col_index:
         :param plot_key:
+        :param apply_change: call the method draw() to guarantee the change is reflected
         :return:
         """
         # Get all lines in list
-        lines = self.axes.lines
-        assert isinstance(lines, list), 'Lines must be list'
+        # lines = self.axes.lines
+        # assert isinstance(lines, list), 'Lines must be list'
 
-        if plot_key in self._lineDict:
+        if plot_key in self._mainLineDict[row_index, col_index]:
+            # plot key is on main axis
             try:
-                self.axes.lines.remove(self._lineDict[plot_key])
+                self.axes_main[row_index, col_index].lines.remove(self._mainLineDict[plot_key])
             except ValueError as r_error:
-                error_message = 'Unable to remove to 1D line %s (ID=%d) due to %s.' % (str(self._lineDict[plot_key]),
+                error_message = 'Unable to remove to 1D line %s (ID=%d) due to %s.' % (str(self._mainLineDict[plot_key]),
                                                                                        plot_key, str(r_error))
                 raise RuntimeError(error_message)
             # remove the plot key from dictionary
-            del self._lineDict[plot_key]
+            del self._mainLineDict[plot_key][row_index, col_index]
+
+            is_on_main = True
+
+        elif plot_key in self._rightLineDict[row_index, col_index]:
+            # plot key is on right axis
+            try:
+                self.axes_right[row_index, col_index].lines.remove(self._rightLineDict[plot_key])
+            except ValueError as r_error:
+                error_message = 'Unable to remove to 1D line {0} (ID={1}) due to {2}.' \
+                                ''.format(self._rightLineDict[plot_key], plot_key, str(r_error))
+                raise RuntimeError(error_message)
+
+            del self._rightLineDict[plot_key][row_index, col_index]
+
+            is_on_main = False
         else:
+            # unable to locate plot key
             raise RuntimeError('Line with ID %s is not recorded.' % plot_key)
 
-        self._setup_legend(location='best', font_size=self._legendFontSize)
+        self._setup_legend(row_index, col_index, location='best', font_size=self._legendFontSize, is_main=is_on_main)
 
         # Draw
         if apply_change:
@@ -1123,83 +1248,148 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def show_legend(self):
+    def show_legend(self, row_number, col_number, is_main=True, is_right=True):
+        """ show the legend if the legend is not None
+         default is to show legend for both of them
+        :param row_number:
+        :param col_number:
+        :param is_main:
+        :param is_right:
+        :return:
         """
-        show the legend if the legend is not None
-        Returns:
+        if is_main:
+            # check inputs
+            self._check_subplot_index(row_number, col_number, is_main=True)
+            if self.axes_main[row_number, col_number].legend() is not None:
+                # set visible to be True and re-draw
+                # self.axes.legend().set_visible(True)
+                self._setup_legend(row_number, col_number, font_size=self._legendFontSize,
+                                   is_main=True)
 
-        """
-        if self.axes.legend() is not None:
-            # set visible to be True and re-draw
-            # self.axes.legend().set_visible(True)
-            self._setup_legend(font_size=self._legendFontSize)
-            self.draw()
+                # set flag on
+                self._legendStatusDict[row_number, col_number] = True
+        # END-IF
 
-            # set flag on
-            self._legendStatusDict = True
+        if is_right:
+            # check inputs
+            self._check_subplot_index(row_number, col_number, is_main=False)
+            if self.axes_right[row_number, col_number].legend() is not None:
+                # set visible to be True and re-draw
+                # self.axes.legend().set_visible(True)
+                self._setup_legend(row_number, col_number, font_size=self._legendFontSize,
+                                   is_main=False)
+
+                # set flag on
+                self._legendRightStatusDict[row_number, col_number] = True
+        # END-IF
+
+        self.draw()
 
         return
 
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
+    def update_plot_line(self, row_index, col_index, plot_key, is_on_main=None, vecx=None, vecy=None, linestyle=None,
+                         linecolor=None, marker=None, markercolor=None):
         """
-        Update a plot line or a series plot line
-        Args:
-            ikey:
-            vecx:
-            vecy:
-            linestyle:
-            linecolor:
-            marker:
-            markercolor:
-
-        Returns:
-
+        update a plotted 1D line
+        :param row_index:
+        :param col_index:
+        :param plot_key:
+        :param vecx:
+        :param vecy:
+        :param linestyle:
+        :param linecolor:
+        :param marker:
+        :param markercolor:
+        :return: None
         """
-        line = self._lineDict[ikey]
-        if line is None:
-            print '[ERROR] Line (key = %d) is None. Unable to update' % ikey
+        # get line
+        if is_on_main is None:
+            if plot_key in self._mainLineDict[row_index, col_index]:
+                plot_line = self._mainLineDict[row_index, col_index][plot_key]
+                is_on_main = True
+            elif plot_key in self._rightLineDict[row_index, col_index]:
+                plot_line = self._rightLineDict[row_index, col_index][plot_key]
+                is_on_main = False
+            else:
+                raise RuntimeError('Plot key {0} does not exist on either axis.'.format(plot_key))
+        elif is_on_main:
+            plot_line = self._mainLineDict[row_index, col_index][plot_key]
+        else:
+            plot_line = self._rightLineDict[row_index, col_index][plot_key]
+
+        # check
+        if plot_line is None:
+            print '[ERROR] Line (key = %d) is None. Unable to update' % plot_key
             return
 
+        # TODO/NOW - clean up
+
         if vecx is not None and vecy is not None:
-            line.set_xdata(vecx)
-            line.set_ydata(vecy)
+            plot_line.set_xdata(vecx)
+            plot_line.set_ydata(vecy)
 
         if linecolor is not None:
-            line.set_color(linecolor)
+            plot_line.set_color(linecolor)
 
         if linestyle is not None:
-            line.set_linestyle(linestyle)
+            plot_line.set_linestyle(linestyle)
 
         if marker is not None:
-            line.set_marker(marker)
+            plot_line.set_marker(marker)
 
         if markercolor is not None:
-            line.set_markerfacecolor(markercolor)
+            plot_line.set_markerfacecolor(markercolor)
 
-        oldlabel = line.get_label()
-        line.set_label(oldlabel)
+        oldlabel = plot_line.get_label()
+        plot_line.set_label(oldlabel)
 
-        self._setup_legend()
+        self._setup_legend(row_index, col_index, is_main=is_on_main)
 
         # commit
         self.draw()
 
         return
 
-    def get_data(self, line_id):
+    def get_axis(self, row_index, col_index, is_main):
+        """
+        return axis
+        :param row_index:
+        :param col_index:
+        :param is_main:
+        :return:
+        """
+        self._check_subplot_index(row_index, col_index, is_main)
+
+        if is_main:
+            axis = self.axes_main[row_index, col_index]
+        else:
+            axis = self.axes_right[row_index, col_index]
+
+        return axis
+
+    def get_data(self, row_index, col_index, line_id):
         """
         Get vecX and vecY from line object in matplotlib
-        :param line_id:
+        :param row_index:
+        :param col_index:
+        :param line_id: integer
         :return: 2-tuple as vector X and vector Y
         """
-        # check
-        if line_id not in self._lineDict:
-            raise KeyError('Line ID %s does not exist.' % str(line_id))
+        # get the reference to the line
+        if line_id in self._mainLineDict[row_index, col_index]:
+            # on main axis
+            line = self._mainLineDict[row_index, col_index][line_id]
+        elif (row_index, col_index) in self._rightLineDict and line_id in self._rightLineDict[row_index, col_index]:
+            # on right axis
+            line = self._rightLineDict[row_index, col_index][line_id]
+        else:
+            # not exist
+            raise KeyError('Line ID {0} of type {1} does not exist on sub plot ({2}, {3}).'
+                           ''.format(line_id, type(line_id), row_index, col_index))
 
-        # get line
-        line = self._lineDict[line_id]
+        # get data
         if line is None:
-            raise RuntimeError('Line ID %s has been removed.' % line_id)
+            raise RuntimeError('Line ID %s has been removed, but not properly recorded.' % line_id)
 
         return line.get_xdata(), line.get_ydata()
 
@@ -1245,7 +1435,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
         return
 
-    def _setup_legend(self, row_index, col_index, location='best', font_size=10):
+    def _setup_legend(self, row_index, col_index, location='best', is_main=True, font_size=10):
         """Set up legend
         self.axes.legend(): Handler is a Line2D object. Lable maps to the line object
         :param row_index:
@@ -1255,7 +1445,7 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :return:
         """
         # check input
-        self._check_subplot_index(row_index, col_index)
+        self._check_subplot_index(row_index, col_index, is_main=is_main)
 
         allowed_location_list = [
             "best",
@@ -1274,14 +1464,23 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if location not in allowed_location_list:
             location = 'best'
 
-        handles, labels = self.axes_main[row_index, col_index].get_legend_handles_labels()
-        self.axes_main[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
+        if is_main:
+            # main axes on subplot
+            handles, labels = self.axes_main[row_index, col_index].get_legend_handles_labels()
+            self.axes_main[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
+            self._legendStatusDict[row_index, col_index] = True
 
-        self._legendStatusDict = True
+        else:
+            # right axes on subplot
+            handles, labels = self.axes_right[row_index, col_index].get_legend_handles_labels()
+            self.axes_right[row_index, col_index].legend(handles, labels, loc=location, fontsize=font_size)
+            self._legendRightStatusDict[row_index, col_index] = True
+
+        # END-IF
 
         return
 
-    def _check_subplot_index(self, row_index, col_index):
+    def _check_subplot_index(self, row_index, col_index, is_main):
         """check whether the subplot indexes are valid
         :param row_index:
         :param col_index:
@@ -1293,7 +1492,10 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         assert isinstance(col_index, int), 'Subplot column index {0} must be an integer but not a {1}' \
                                            ''.format(col_index, type(col_index))
 
-        if (row_index, col_index) not in self.axes_main:
+        if is_main and (row_index, col_index) not in self.axes_main:
+            raise RuntimeError('Subplot index {0}, {1} does not exist. Keys are {2}'
+                               ''.format(row_index, col_index, self.axes_main.keys()))
+        elif is_main is False and (row_index, col_index) not in self.axes_right:
             raise RuntimeError('Subplot index {0}, {1} does not exist. Keys are {2}'
                                ''.format(row_index, col_index, self.axes_main.keys()))
 

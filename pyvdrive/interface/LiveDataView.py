@@ -11,7 +11,8 @@ import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-
+from gui import GuiUtility as GuiUtil
+import pyvdrive.lib.vdrivehelper as vdrivehelper
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -38,12 +39,18 @@ class VulcanLiveDataView(QtGui.QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
+    IN_COLLECTION_MESSAGE = 'In Live Reduction   '
+
     def __init__(self, parent, live_driver):
-        """initialization
+        """ initialization
         :param parent:
+        :param live_driver:
         """
         # call parent
         super(VulcanLiveDataView, self).__init__(parent)
+
+        # configuration
+        self._myConfiguration = parent.configuration
 
         # get hold of controller/driver
         if live_driver is None:
@@ -94,18 +101,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._bankViewDMax = None
 
         # Live sample log related
+        # name for X-axis
         self._currSampleLogX = None
-        self._currSampleLogY = None
-        self._currSampleLogTimeVector = None
-        self._currSampleLogValueVector = None
-        self._logStartTime = None
+        # name for Y-axis
+        self._currLogNameMainY = None
+        self._currLogNameRightY = None
+        # time vector
+        self._currMainYLogTimeVector = None
+        self._currRightYLogTimeVector = None
+        # vector for main Y values
+        self._currMainYLogValueVector = None
+        self._currRightYLogValueVector = None
 
-        # peak integration
-        self._integratePeakFlag = False
-        self._minDPeakIntegration = None
-        self._maxDPeakIntegration = None
-        self._plotPeakParameterIndex = 0
-        self._plotPeakVanadiumNorm = True
+        # peak integration: recorded for peak upgrading
+        self._minDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
+        self._maxDPeakIntegration = {1: None, 0: None}  # 1 for True/main axis, 0 for False/right axis
+        self._plotPeakVanadiumNorm = {1: False, 0: False}  # 1 for True/main axis, 0 for False/right axis
 
         # other time
         self._liveStartTimeStamp = None
@@ -183,6 +194,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # random seed
         random.seed(1)
 
+        #
+        self.show_refresh_info()
+
         return
 
     def _init_widgets(self):
@@ -193,15 +207,17 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # widgets to show/high previous reduced date
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
+        self.ui.checkBox_normByVanadium.setChecked(True)
 
         self._bankSelectMutex = True
         self._set_bank_checkbox()
         self.ui.checkBox_2dBank1.setChecked(True)
         self._bankSelectMutex = False
 
+        self.ui.label_info.setText('')
+
         return
 
-    # TEST TODO/NOW - recently implemented
     def _set_workspace_manager(self, max_acc_ws_number, accumulation_time, update_time):
         """
         set the workspace numbers, indicators and etc.
@@ -215,8 +231,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         assert isinstance(max_acc_ws_number, int), 'Maximum accumulation workspace number {0} must be' \
                                                    'an integer but not a {1}'.format(max_acc_ws_number,
                                                                                      type(max_acc_ws_number))
-        assert isinstance(accumulation_time, int), 'blabla 2'
-        assert isinstance(update_time, int), 'blabla 3'
+        assert isinstance(accumulation_time, int), 'Data accumulation time {0} ({1}) must be an integer but not other' \
+                                                   'type.'.format(accumulation_time, type(accumulation_time))
+        assert isinstance(update_time, int), 'Update/refresh time {0} ({1}) must be an integer but not any other ' \
+                                             'type.'.format(update_time, type(update_time))
 
         # logic check
         if max_acc_ws_number < 2:
@@ -391,9 +409,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # replace previous one
-        if self._myIncrementalWorkspaceList[self._myIncrementalListIndex] is not None:
-            prev_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex]
-            self._controller.delete_workspace(prev_ws_name)
+        try:
+            if self._myIncrementalWorkspaceList[self._myIncrementalListIndex] is not None:
+                prev_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex]
+                self._controller.delete_workspace(prev_ws_name)
+        except IndexError as index_err:
+            msg = 'Cyclic incremental index {0} is out of range {1}.  It is not possible.' \
+                  ''.format(self._myIncrementalListIndex, len(self._myIncrementalWorkspaceList))
+            raise RuntimeError('{0}: {1}'.format(msg, index_err))
 
         # set the new one
         self._myIncrementalWorkspaceList[self._myIncrementalListIndex] = ws_name
@@ -406,6 +429,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             raise RuntimeError("Impossible for myListIndex")
 
         return
+
+    @property
+    def controller(self):
+        """
+        get the reference to the controller instance of this window
+        :return:
+        """
+        return self._controller
 
     def do_clear_log(self):
         """ clear the live data processing log
@@ -462,10 +493,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # get axis
         curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
         logs = helper.get_sample_log_names(curr_ws_name, smart=True)
-        x_axis_logs = ['Time']
-        # TODO/LATER: x_axis_logs.extend(logs)
 
-        self._gpPlotSetupDialog.set_axis_options(x_axis_logs, logs, reset=True)
+        self._gpPlotSetupDialog.set_axis_options(logs, reset=True)
         self._gpPlotSetupDialog.show()
 
         return
@@ -477,9 +506,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         try:
             left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
-            # self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound)
-            # self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound)
-            # self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound)
             self._bankViewDMin = left_x_bound
         except ValueError:
             # keep as before
@@ -487,9 +513,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         try:
             right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
-            # self.ui.graphicsView_currentViewB1.setXYLimit(xmax=right_x_bound)
-            # self.ui.graphicsView_currentViewB2.setXYLimit(xmax=right_x_bound)
-            # self.ui.graphicsView_currentViewB3.setXYLimit(xmax=right_x_bound)
             self._bankViewDMax = right_x_bound
         except ValueError:
             # keep as before
@@ -509,6 +532,34 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
         self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
 
+        # reset the automatic Y range
+        if left_x_bound is not None and right_x_bound is not None:
+            self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
+            self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
+            self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
+
+        return
+
+    def set_info(self, message, append=True, insert_at_beginning=False):
+        """
+
+        :param message:
+        :param append:
+        :param insert_at_beginning:
+        :return:
+        """
+        if append:
+            original_message = str(self.ui.label_info.text())
+
+            if insert_at_beginning:
+                message = '{0} | {1}'.format(message, original_message)
+            else:
+                message = '{0} | {1}'.format(original_message, message)
+
+        self.ui.label_info.setText(message)
+
+        return
+
     def do_start_live(self):
         """
         start live data reduction and view
@@ -520,6 +571,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # start start listener
         self._controller.run()
+
+        # edit the states
+        self.set_info(VulcanLiveDataView.IN_COLLECTION_MESSAGE, append=True,
+                      insert_at_beginning=True)
+
+        # disable the start-live-data button
+        self.ui.pushButton_startLiveReduction.setEnabled(False)
 
         return
 
@@ -533,6 +591,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if self._controller is not None:
             self._controller.stop()
+
+        # remove the message
+        curr_message = str(self.ui.label_info.text())
+        if curr_message.count(VulcanLiveDataView.IN_COLLECTION_MESSAGE) > 0:
+            new_msg = curr_message.replace(VulcanLiveDataView.IN_COLLECTION_MESSAGE + ' | ', '')
+            self.set_info(new_msg, append=False)
+
+        # enable the start-live-data button
+        self.ui.pushButton_startLiveReduction.setEnabled(True)
 
         return
 
@@ -573,45 +640,56 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return list()
 
     # TEST TODO/Newly Implemented Method
-    def get_last_n_round_workspaces(self, last):
-        """
-        get the last round of workspaces
-        :param last:
+    def get_accumulation_workspaces(self, last_n_round):
+        """ get the last N round of accumulation workspaces
+        Note of application:
+        (1) get sample logs:  the latest incremental workspace has been added to current/last accumulated workspace
+        :param last_n_round:
         :return: 2-tuple: list as workspace names and list as indexes of workspaces
         """
-        assert isinstance(last, int), 'Last N intervals {0} must be given by an integer,' \
-                                      'but not a {1}.'.format(last, type(last))
-        if last <= 0:
-            raise RuntimeError('Last N intervals must be a positive number.')
+        # check inputs
+        assert isinstance(last_n_round, int), 'Last N ({0}) round for accumulated workspaces must be given by ' \
+                                              'an integer, but not a {1}.'.format(last_n_round, type(last_n_round))
+
+        # if less than 0, then it means that all the available workspace shall be contained
+        if last_n_round <= 0:
+            last_n_round = self._myAccumulationWorkspaceNumber
 
         # get list of workspace to plot
         ws_name_list = list()
         ws_index_list = list()
-        for last_i in range(1, last+1):
-            # get current workspace's position in the list
-            ws_list_index = self._myIncrementalListIndex - last_i
-            if ws_list_index < 0:
-                # loop back to the end of the list
-                ws_list_index += len(self._myIncrementalWorkspaceList)
+        print '[DB...BAT...BAT] Index = {0} ' \
+              'Workspace Name = {1}'.format(self._myAccumulationListIndex,
+                                            self._myAccumulationWorkspaceList[self._myAccumulationListIndex])
+
+        for ws_count in range(last_n_round):
+            # get accumulation workspace list index
+            acc_list_index = self._myAccumulationListIndex - 1 - ws_count
+            if acc_list_index < 0:
+                acc_list_index += self._myAccumulationWorkspaceNumber
+                if acc_list_index < 0:
+                    raise RuntimeError('Accumulation list index {0} is still less than 0 after add {1}.'
+                                       ''.format(acc_list_index, self._myAccumulationWorkspaceNumber))
+            # END-IF
 
             # get workspace name
             try:
-                ws_name_i = self._myIncrementalWorkspaceList[ws_list_index]
+                ws_name_i = self._myAccumulationWorkspaceList[acc_list_index]
             except IndexError as index_err:
                 raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
-                                   ''.format(ws_list_index, len(self._myIncrementalWorkspaceList),
+                                   ''.format(acc_list_index, len(self._myAccumulationWorkspaceList),
                                              index_err))
-            if ws_name_i is None:
-                # print '[DB...BAT] workspace {0} name is None. CurrWSIndex = {1}. Last_i = {2} Workspace
-                # names are {3}' \
-                #       ''.format(ws_list_index, self._myListIndex, last_i, self._myWorkspaceList)
-                break
-            elif helper.workspace_does_exist(ws_name_i) is False:
-                # print '[DB...BAT] workspace {0} does not exist.'.format(ws_name_i)
-                break
-            else:
-                ws_name_list.append(ws_name_i)
-                ws_index_list.append(last_i)
+            finally:
+                # check
+                if ws_name_i is None:
+                    # no more workspace (range is too big)
+                    break
+                elif helper.workspace_does_exist(ws_name_i) is False:
+                    # this is weird!  shouldn't be removed
+                    break
+                else:
+                    ws_name_list.append(ws_name_i)
+                    ws_index_list.append(acc_list_index)
         # END-FOR
 
         # reverse the order
@@ -619,6 +697,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         ws_index_list.reverse()
 
         return ws_name_list, ws_index_list
+
+    def get_incremental_workspaces(self, last_n_round):
+        """
+        just get the last round now!
+        :param last_n_round:
+        :return:
+        """
+        # TODO ASAP FIXME case for last_n_round > 0
+        # print '[DB...BAT...BAT] Current index: {0}'.format()
+        # print '[DB...BAT...BAT] Current workspaces: {0}'.format(self._myIncrementalWorkspaceList)
+        # #last_workspace_name = self._myIncrementalWorkspaceList[]
+
+        index = (self._myIncrementalListIndex - 1) % self._myIncrementalWorkspaceNumber
+        ws_name = self._myIncrementalWorkspaceList[index]
+
+        return [ws_name]
 
     def menu_launch_setup(self):
         """
@@ -662,9 +756,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             list_index = self._myAccumulationListIndex % self._myAccumulationWorkspaceNumber - 1 - inverse_index
             try:
                 ws_name_i = self._myAccumulationWorkspaceList[list_index]
-                print '[DB...BAT] Last {0}-th accumulated index = {1}, Others {2} and {3}' \
-                      ''.format(inverse_index, list_index, self._myAccumulationListIndex,
-                                self._inAccumulationWorkspaceName)
             except IndexError as index_err:
                 raise RuntimeError('Inverted workspace index {0} is converted to workspace index {1} '
                                    'and out of range [0, {2}) due to {3}.'
@@ -711,7 +802,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             raise RuntimeError('Bank ID {0} is out of range.'.format(bank_id))
 
         # get the last N workspaces
-        ws_name_list, ws_index_list = self.get_last_n_round_workspaces(last)
+        ws_name_list, ws_index_list = self.get_accumulation_workspaces(last)
 
         # get data
         data_set = dict()
@@ -772,7 +863,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 # TODO/ISSUE/NOW - Use update line other than delete and re-plot
                 self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
             except RuntimeError as run_err:
-                print '[ERROR] Unable to get data from workspace {0} due to {1}'.format(in_sum_ws_name, run_err)
+                self.write_log('error', 'Unable to get data from workspace {0} due to {1}'
+                                        ''.format(in_sum_ws_name, run_err))
                 return
 
             if target_unit == 'TOF':
@@ -855,100 +947,50 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def integrate_peak_live(self, d_min, d_max, peak_param_type, norm_by_van):
-        """
-        set up to integrate peak with live data
-        :param d_min:
-        :param d_max:
-        :param peak_param_type:
-        :param norm_by_van
-        :return:
-        """
-        # integrate peak for all the accumulated runs
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
-                                         norm_by_vanadium=norm_by_van)
-
-        # set the status flags
-        self._integratePeakFlag = True
-        self._minDPeakIntegration = d_min
-        self._maxDPeakIntegration = d_max
-        self._currSampleLogX = 'Time'
-
-        # peak type
-        peak_param_type = str(peak_param_type).lower()
-        if peak_param_type.count('intensity') > 0:
-            self._plotPeakParameterIndex = 1
-        elif peak_param_type.count('center') > 0:
-            self._plotPeakParameterIndex = 0
-        else:
-            raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_param_type))
-
-        # normalize by vanadium
-        assert isinstance(norm_by_van, bool), 'Flag to normalize by vanadium {0} must be a boolean but not a {1}' \
-                                              ''.format(norm_by_van, type(norm_by_van))
-        self._plotPeakVanadiumNorm = norm_by_van
-
-        return
-
-    def load_sample_log(self, y_axis_name, last_n_intervals):
+    def load_sample_log(self, y_axis_name, last_n_accumulation, relative_time=None):
         """
         load a sample log from last N time intervals
         :param y_axis_name:
-        :param last_n_intervals: starting from 1 because there is NO 'current' intervals as a workspace in ADS
+        :param last_n_accumulation: (1) >= 0.  get specified number (2) < 0: get all (3) None: append mode
+        :param relative_time
         :return:
         """
         # check input
         assert isinstance(y_axis_name, str), 'Y-axis (sample log) name {0} must be a string but not a {1}.' \
                                              ''.format(y_axis_name, type(y_axis_name))
-        assert isinstance(last_n_intervals, int), 'Last {0} interval must be an integer but not a {1}.' \
-                                                  ''.format(last_n_intervals, type(last_n_intervals))
-        if last_n_intervals <= 0:
-            raise RuntimeError('Last {0} intervals cannot be negative.'.format(last_n_intervals))
 
-        # get the workspace name list
-        ws_name_list, index_list = self.get_last_n_round_workspaces(last_n_intervals)
-        print '[DB...BAT] Last {0} intervals: {1}'.format(last_n_intervals, ws_name_list)
+        if last_n_accumulation is None:
+            # append mode implicitly
+            ws_name_list = self.get_incremental_workspaces(last_n_round=0)
+        else:
+            # new log mode implicitly
+            # get the workspace name list: get the last N round of workspace from the beginning of live data
+            ws_name_list, index_list = self.get_accumulation_workspaces(last_n_accumulation)
 
-        time_vec, log_value_vec = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+        # get log values
+        time_vec, log_value_vec, last_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
+
+        # TODO REMOVE! Let the caller to worry about this
+        # if len(time_vec) == 1:
+        #     # need to add another entry if there is only 1 entry in the whole series
+        #     print '[WARNING] One entry log {0}! last time = {1}'.format(y_axis_name, time_vec[0])
+        #
+        #     # convert to list and back to numpy 1D array
+        #     list_time = list(time_vec)
+        #     list_value = list(log_value_vec)
+        #
+        #     list_time.append(last_time)
+        #     list_value.append(list_value[0])
+        #
+        #     time_vec = numpy.array(list_time)
+        #     log_value_vec = numpy.array(list_value)
+        # # END
+
+        # convert the vector of time
+        if relative_time is not None:
+            time_vec = self._controller.convert_time_stamps(time_vec, relative_time)
 
         return time_vec, log_value_vec
-
-    def plot_integrate_peak(self, d_min, d_max):
-        """
-        integrate peaks in live and plot
-        :param d_min:
-        :param d_max:
-        :return:
-        """
-        # integrate a single peak across all the accumulated workspaces
-        self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max, self._plotPeakVanadiumNorm)
-
-        # TODO/ISSUE/NOW Better to use update
-        self.ui.graphicsView_comparison.clear_all_lines()
-
-        # plot bank 1
-        if self._plotPeakParameterIndex == 0:
-            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=1, time0=self._liveStartTimeStamp)
-            label_1 = 'Bank 1 Position'
-        else:
-            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=1,
-                                                                              time0=self._liveStartTimeStamp)
-            label_1 = 'Bank 1 Intensity'
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
-                                                 label=label_1, line_style='--', marker='o', color='blue')
-
-        # plot bank 2
-        if self._plotPeakParameterIndex == 0:
-            vec_time, vec_peak_params = self._controller.get_peak_positions(bank_id=2, time0=self._liveStartTimeStamp)
-            label_2= 'Bank 2 Position'
-        else:
-            vec_time, vec_peak_params = self._controller.get_peak_intensities(bank_id=2,
-                                                                              time0=self._liveStartTimeStamp)
-            label_2 = 'Bank 2 Intensity'
-        self.ui.graphicsView_comparison.add_plot(vec_time, vec_peak_params,
-                                                 label=label_2, line_style='--', marker='D', color='red')
-
-        return
 
     def plot_log_with_reduced(self, x_axis_name, y_axis_name):
         """
@@ -993,72 +1035,215 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # trace back to previously accumulated runs until run number changed to non-zero
         blabla
 
-    def plot_log_live(self, x_axis_name, y_axis_name):
+    def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, peak_range_list, norm_by_van_list):
         """
-        Plot a sample log in live time
+        plot log value/peak parameters in a live data
         Note: this model works in most case except a new sample log is chosen to
         Required class variables
           - self._currSampleLog = None
           - self._currSampleLogTimeVector = None
           - self._currSampleLogValueVector = None
         :param x_axis_name:
-        :param y_axis_name:
+        :param y_axis_name_list:
+        :param side_list: list of boolean. True = left/main axis; False = right axis
+        :param d_min:
+        :param d_max:
+        :param norm_by_van:
         :return:
         """
         # parse the user-specified X and Y axis name and process name in case of 'name (#)'
-        x_axis_name = str(x_axis_name).split('(')[0].strip()
-        y_axis_name = str(y_axis_name).split('(')[0].strip()
+        # check and etc
+        assert isinstance(y_axis_name_list, list), '{0} shall be list but not {1}' \
+                                                   ''.format(y_axis_name_list, type(y_axis_name_list))
+        assert isinstance(side_list, list), 'Axis-side {0} shall be given in a list but not a {1}.' \
+                                            ''.format(side_list, type(side_list))
+        if len(y_axis_name_list) != len(side_list):
+            raise RuntimeError('Number of Y-axis names ({0}) must be same as number of sides ({1}).'
+                               ''.format(len(y_axis_name_list), len(side_list)))
 
-        # determine to append or start from new
-        if self._currSampleLogX != x_axis_name or self._currSampleLogY != y_axis_name \
-                or self._currSampleLogTimeVector is None:
-            append_log = False
-            # print '[DB] Log View X-axis: {0} vs {1}'.format(self._currSampleLogX, x_axis_name)
-            # print '[DB] Log View Y-axis: {0} vs {1}'.format(self._currSampleLogY, y_axis_name)
-            # print '[DB] Sample log time vector: {0}'.format(self._currSampleLogTimeVector)
-
-        else:
-            append_log = True
-
-        # get the data
-        if x_axis_name == 'Time':
-            # regular time-value plot
-            if append_log:
-                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=1)
-                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
-                self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
-                self._currSampleLogValueVector = numpy.append(self._currSampleLogValueVector, value_vec)
-                debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
-                                ''.format(time_vec[0], self._logStartTime)
-                self.write_log('debug', debug_message)
+        # check y axis: side
+        num_right = 0
+        num_left = 0
+        main_y_name = None
+        right_y_name = None
+        for index, side in enumerate(side_list):
+            if side:
+                num_left += 1
+                main_y_name = y_axis_name_list[index]
             else:
-                # New mode
-                # TODO/ISSUE - Implement LastNLog!
-                LastNLog = 1
-                date_time_vec, value_vec = self.load_sample_log(y_axis_name, last_n_intervals=LastNLog)
-                # set log start time
-                # TODO/ISSUE/ - shall give users with more choice
-                self._logStartTime = date_time_vec[0]
+                num_right += 1
+                right_y_name = y_axis_name_list[index]
+            # END-IF
+        # END-FOR
+        self.write_log('debug', 'Plot main Y: {0}; right Y: {1}'.format(main_y_name, right_y_name))
 
-                time_vec = self._controller.convert_time_stamps(date_time_vec, relative=self._logStartTime)
-                self._currSampleLogTimeVector = time_vec
-                self._currSampleLogValueVector = value_vec
-            # END-IF-ELSE
-        else:
-            # relation between two sample logs: not implemented
-            raise RuntimeError('Develop ASAP')
+        # check: the following user-error shall be handled in the caller
+        if num_right > 1:
+            raise RuntimeError('At most 1 (now {0}) log/peak parameter can be assigned to right axis.'
+                               ''.format(num_right))
+        elif num_left > 1:
+            raise RuntimeError('At most 1 (now {0}) log/peak parameter can be assigned to main axis.'
+                               ''.format(num_left))
+        elif num_left + num_right == 0:
+            raise RuntimeError('At least one log/peak parameter must be assigned either main or right axis.')
 
-        # clear all lines
-        # TODO/ISSUE/NOW: need to consider to use a flag to determine whether to update or plot a new line
-        self.ui.graphicsView_comparison.clear_all_lines()
-        self.ui.graphicsView_comparison.add_plot(self._currSampleLogTimeVector, self._currSampleLogValueVector,
-                                                 label=y_axis_name)
+        # plot
+        for index, y_axis_name in enumerate(y_axis_name_list):
+            is_main = side_list[index]
+            min_d, max_d = peak_range_list[index]
+            norm_by_van = norm_by_van_list[index]
+
+            if x_axis_name == 'Time':
+                self.plot_time_arb_live(y_axis_name, min_d, max_d, norm_by_van, is_main=is_main)
+            else:
+                raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
+                                          ''.format(x_axis_name))
+
+            if is_main:
+                self._currLogNameMainY = y_axis_name
+            else:
+                self._currLogNameRightY = y_axis_name
+        # END-FOR
 
         # all success: keep it in record for auto update
         self._currSampleLogX = x_axis_name
-        self._currSampleLogY = y_axis_name
-        # turn off the flag to plot integrated peaks
-        self._integratePeakFlag = False
+
+        # # determine to append or start from new
+        # if self._currSampleLogX == x_axis_name and self._currLogNameMainY == main_y_name:
+        #     append_main = True
+        # else:
+        #     append_main = False
+        # if self._currSampleLogX == x_axis_name and self._currLogNameRightY == right_y_name:
+        #     append_right = True
+        # else:
+        #     append_right = False
+        #
+        # # plot
+        # if x_axis_name == 'Time':
+        #     # plot live data
+        #     self.plot_time_arb_live(main_y_name, d_min, d_max, norm_by_van, append=append_main, is_main=True)
+        #     self.plot_time_arb_live(right_y_name, d_min, d_max, norm_by_van, append=append_right, is_main=False)
+        # else:
+        #     # non-supported case so far
+        #     raise NotImplementedError('Contact PyVDrive develop to implement non-time X-axis ({0}) case.'
+        #                               ''.format(x_axis_name))
+
+        return
+
+    def plot_time_arb_live(self, y_axis_name, d_min, d_max, norm_by_van, is_main):
+        """
+        plot arbitrary live data against with time
+        :param y_axis_name:
+        :param d_min:
+        :param d_max:
+        :param norm_by_van:
+        :param is_main:
+        :return:
+        """
+        # pre-screen for peak integration
+        if y_axis_name is None:
+            # nothing to plot
+            self.ui.graphicsView_comparison.clear_axis(is_main)
+
+        elif y_axis_name.startswith('* Peak:'):
+            # integrate peak for all the accumulated runs
+            accumulation_ws_list, index_list = self.get_accumulation_workspaces(last_n_round=-1)
+            self._controller.integrate_peaks(accumulated_workspace_list=accumulation_ws_list,
+                                             d_min=d_min, d_max=d_max,
+                                             norm_by_vanadium=norm_by_van)
+
+            # record for future update
+            self._minDPeakIntegration[int(is_main)] = d_min
+            self._maxDPeakIntegration[int(is_main)] = d_max
+            self._plotPeakVanadiumNorm[int(is_main)] = norm_by_van
+
+            # get peak name
+            peak_name = y_axis_name.split('* Peak:')[1].strip()
+
+            # gather the data in banks
+            BANK_LIST = [1, 2]              # TODO/FUTURE - shall allow bank 3
+            if peak_name.lower().count('center') > 0:
+                param_type = 'center'
+            elif peak_name.lower().count('intensity') > 0:
+                param_type = 'intensity'
+            else:
+                raise RuntimeError('Peak parameter type {0} is not supported.'.format(peak_name))
+            vec_time, peak_value_bank_dict = self._controller.get_peaks_parameters(param_type=param_type,
+                                                                                   bank_id_list=BANK_LIST,
+                                                                                   time0=self._liveStartTimeStamp)
+
+            self.ui.graphicsView_comparison.plot_peak_parameters(vec_time, peak_value_bank_dict, peak_name,
+                                                                 is_main=is_main)
+
+        else:
+            # plot sample log
+            # process log name in order to get rid of appended information
+            log_name = y_axis_name.strip().split('(')[0].strip()
+
+            # find out whether it shall be in append mode or new mode
+            if self.ui.graphicsView_comparison.is_same(is_main=is_main, plot_param_name=log_name):
+                # append mode
+                time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=None,
+                                                           relative_time=self._liveStartTimeStamp)
+                # append
+                if is_main:
+                    if len(time_vec) == 1 and time_vec[0] <= self._currMainYLogTimeVector[-1]:
+                        print '[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
+                                                                              self._currMainYLogTimeVector[-1])
+                    self._currMainYLogTimeVector = numpy.append(self._currMainYLogTimeVector, time_vec)
+                    self._currMainYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
+                else:
+                    if len(time_vec) == 1 and time_vec[0] <= self._currRightYLogTimeVector[-1]:
+                        print '[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
+                                                                               self._currRightYLogTimeVector[-1])
+                    self._currRightYLogTimeVector = numpy.append(self._currRightYLogTimeVector, time_vec)
+                    self._currRightYLogValueVector = numpy.append(self._currRightYLogValueVector, value_vec)
+                # END-IF-ELSE
+
+                debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
+                                ''.format(time_vec[0], self._liveStartTimeStamp)
+                self.write_log('debug', debug_message)
+
+                append = True
+
+            else:
+                # New mode
+                time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
+                                                           relative_time=self._liveStartTimeStamp)
+                if is_main:
+                    self._currMainYLogTimeVector = time_vec
+                    self._currMainYLogValueVector = value_vec
+                else:
+                    self._currRightYLogTimeVector = time_vec
+                    self._currRightYLogValueVector = value_vec
+
+                append = False
+            # END-IF-ELSE
+
+            # set the label... TODO ASAP shall leave for the graphicsView to do it
+            y_label = log_name
+            if is_main:
+                value_vec = self._currMainYLogValueVector
+                label_y, label_line, color, marker, line_style = y_label, y_label, 'green', '*', ':'
+                time_vec = self._currMainYLogTimeVector
+            else:
+                value_vec = self._currRightYLogValueVector
+                label_y, label_line, color, marker, line_style = y_label, y_label, 'blue', '+', ':'
+                time_vec = self._currRightYLogTimeVector
+
+            if not append:
+                # clear all lines if new lines to plot
+                self.ui.graphicsView_comparison.remove_all_plots(include_main=is_main,
+                                                                 include_right=not is_main)
+
+            # plot!  FIXME - why APPEND is not passed to plot_sample_log!??
+            self.ui.graphicsView_comparison.plot_sample_log(time_vec, value_vec, is_main=is_main,
+                                                            x_label=None,
+                                                            y_label=label_y, line_label=label_line,
+                                                            line_style=line_style, marker=marker,
+                                                            color=color)
+            # END-IF-ELSE (peak or sample)
+        # END-FOR (y-axis-name)
 
         return
 
@@ -1129,7 +1314,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # live data start time
             if self._liveStartTimeStamp is None:
+                # get from the proton charge for T0
                 self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').firstTime()
+                # convert to local time for better communication
+                east_time = vdrivehelper.convert_utc_to_local_time(self._liveStartTimeStamp)
+                # set time
+                self.ui.lineEdit_logStarTime.setText(str(east_time))
 
             # skip non-matrix workspace or workspace sounds not right
             if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
@@ -1150,16 +1340,20 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 self.plot_data_previous_cycle()
 
             # re-set the ROI if the unit is d-spacing
-            db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(), self._bankViewDMin, self._bankViewDMax)
+            db_msg = 'Unit = {0} Range = {1}, {2}'.format(self.ui.comboBox_currUnits.currentText(),
+                                                          self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
                 self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
 
             # update log
-            if self._currSampleLogX is not None and self._currSampleLogY is not None:
-                self.plot_log_live(self._currSampleLogX, self._currSampleLogY)
-            elif self._currSampleLogX == 'Time' and self._integratePeakFlag is True:
-                self.plot_integrate_peak(self._minDPeakIntegration, self._maxDPeakIntegration)
+            if self._currSampleLogX is not None:
+                y_axis_list = [self._currLogNameMainY, self._currLogNameRightY]
+                side_list = [True, False]
+                peak_range_list = [(self._minDPeakIntegration[1], self._maxDPeakIntegration[1]),
+                                   (self._minDPeakIntegration[0], self._maxDPeakIntegration[0])]
+                norm_by_van_list = [self._plotPeakVanadiumNorm[1], self._plotPeakVanadiumNorm[0]]
+                self.plot_log_live(self._currSampleLogX, y_axis_list, side_list, peak_range_list, norm_by_van_list)
         # END-FOR
 
         return
@@ -1171,7 +1365,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check
-        assert isinstance(accumulation_time, int), 'blabla2'
+        assert isinstance(accumulation_time, int), 'Accumulation time {0} to set must be an integer but not a {1}.' \
+                                                   ''.format(accumulation_time, type(accumulation_time))
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=accumulation_time,
@@ -1187,13 +1382,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check inputs
-        assert isinstance(plot_runs, bool), 'blabla5'
+        assert isinstance(plot_runs, bool), 'Flag to plot runs{0} must be a boolean but not a {1}.' \
+                                            ''.format(plot_runs, type(plot_runs))
 
         # set!
         if plot_runs:
             # plot reduced runs in 2D view
             self._2dMode = 'runs'
-            assert isinstance(start_run, int), 'blabla8'
+            assert isinstance(start_run, int), 'Start run number {0} to plot must be an integer but not a {1}.' \
+                                               ''.format(start_run, int(start_run))
 
             if start_run <= 0:
                 raise RuntimeError('Starting run number {0} cannot be less than 1.'.format(start_run))
@@ -1212,13 +1409,54 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check
-        assert isinstance(update_period, int), 'blabla3'
+        assert isinstance(update_period, int), 'Update/refresh rate {0} must be an integer but not a {1}.' \
+                                               ''.format(update_period, type(update_period))
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=self._myAccumulationTime,
                                     update_time=update_period)
 
         return
+
+    def set_vanadium_norm(self, turn_on, van_file_name=None):
+        """
+        set the state to normalize vanadium or not
+        :param turn_on:
+        :param van_file_name:
+        :return:
+        """
+        self.ui.checkBox_normByVanadium.setChecked(turn_on)
+
+        # add vanadium file name to list
+        if turn_on:
+            # do it only when it is turned on
+            # get the current vanadium files and check
+            num_items = self.ui.comboBox_loadedVanRuns.count()
+            exist_item_index = -1
+            for p_index in range(num_items):
+                van_name_i = str(self.ui.comboBox_loadedVanRuns.itemText(p_index))
+                if van_file_name == van_name_i:
+                    exist_item_index = p_index
+                    break
+            # END-IF
+
+            # add new item if it has not been loaded
+            if exist_item_index < 0:
+                self.ui.comboBox_loadedVanRuns.addItem(van_file_name)
+                exist_item_index = num_items  # currently count() - 1
+
+            # set current index
+            self.ui.comboBox_loadedVanRuns.setCurrentIndex(exist_item_index)
+        # END-IF
+
+        return
+
+    def show_refresh_info(self):
+        """ Show the accumulation/refresh/update rate information
+        :return:
+        """
+        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
+        self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
 
     def sum_incremental_workspaces(self, workspace_i):
         """sum up the incremental workspace to an accumulated workspace
@@ -1246,11 +1484,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             if self._myAccumulationWorkspaceList[list_index] is not None:
                 old_ws_name = self._myAccumulationWorkspaceList[list_index]
-                print '[INFO] Delete old workspace {0}'.format(old_ws_name)
+                self.write_log('information', 'Delete old workspace {0}'.format(old_ws_name))
                 self._controller.delete_workspace(old_ws_name)
             self._myAccumulationWorkspaceList[list_index] = accumulate_name
-            print '[DB...BAT] Acc workspace list {0} has workspace {1}' \
-                  ''.format(list_index, self._myAccumulationWorkspaceList[list_index])
 
             # restart timer
             self._accStartTime = datetime.now()
@@ -1367,7 +1603,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # some counter += 1
 
-        # message = '{0}\nNew Workspace: {1}'.format(ws_name_list, new_ws_name_list)
         message = ''
         for ws_name in new_ws_name_list:
             ws_i = helper.retrieve_workspace(ws_name)
@@ -1378,6 +1613,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # END-FOR
         if len(message) > 0:
             self.write_log('information', message)
+
+        # update time display
+        time_now = datetime.now()
+        self.ui.lineEdit_currentTime.setText(str(time_now))
+        # NOTE: time difference is left to lineEdit_elapsedTime as log
 
         return
 

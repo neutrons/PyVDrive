@@ -53,6 +53,11 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
                      self.do_set_target)
 
+        # FIXME / FUTURE : it is not well defined to remove a slicer from table and reflected to pickers on plotting
+        # self.connect(self.ui.pushButton_deleteSlicer, QtCore.SIGNAL('clicked()'),
+        #              self.do_delete_slicer)
+        self.ui.pushButton_deleteSlicer.setEnabled(False)
+
         # define handler to signals
         # TODO/ISSUE/NEXT - Implement this
 
@@ -106,6 +111,14 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         if self._myParent is not None:
             self._myParent.generate_manual_slicer(split_tup_list, slicer_name=slicer_name)
         # END-IF
+
+        return
+
+    def do_delete_slicer(self):
+        """ blabla
+        """
+        selected_rows = self.ui.tableWidget_segments.get_selected_rows(True)
+        self.ui.tableWidget_segments.delete_rows(selected_rows)
 
         return
 

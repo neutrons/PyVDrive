@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1462</width>
+    <width>1539</width>
     <height>1160</height>
    </rect>
   </property>
@@ -81,6 +81,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="label_15">
+        <property name="text">
+         <string>Vanadium</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_loadedVanRuns"/>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_8">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -101,11 +111,17 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Information including&lt;/p&gt;&lt;p&gt;1. in collection or stopped&lt;/p&gt;&lt;p&gt;2. ...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>TextLabel</string>
+         <string>[Live Info]</string>
         </property>
        </widget>
       </item>
@@ -142,18 +158,8 @@
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout_5">
-      <item row="0" column="12">
-       <widget class="QLineEdit" name="lineEdit_collectionTime">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="17">
-       <widget class="QPushButton" name="pushButton_startLiveReduction">
+       <widget class="QLineEdit" name="lineEdit_showPrevNCycles">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -162,68 +168,20 @@
         </property>
         <property name="maximumSize">
          <size>
-          <width>200</width>
+          <width>60</width>
           <height>16777215</height>
          </size>
         </property>
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Start</string>
-        </property>
        </widget>
-      </item>
-      <item row="0" column="18">
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Preferred</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
       </item>
       <item row="0" column="16">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="label_5">
+       <widget class="QCheckBox" name="checkBox_showPrevReduced">
         <property name="text">
-         <string>Unit</string>
+         <string>Show Prevous</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="8">
-       <widget class="QPushButton" name="pushButton_setROI">
-        <property name="text">
-         <string>Set ROI</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="19">
+      <item row="0" column="22">
        <widget class="QPushButton" name="pushButton_stopLiveReduction">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -248,7 +206,46 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
+      <item row="0" column="5">
+       <widget class="QLineEdit" name="lineEdit_roiStart">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="8">
+       <widget class="QCheckBox" name="checkBox_normByVanadium">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Normalized By Vanadium</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="18">
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>Cycles</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLineEdit" name="lineEdit_roiEnd">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
        <widget class="QComboBox" name="comboBox_currUnits">
         <item>
          <property name="text">
@@ -262,8 +259,70 @@
         </item>
        </widget>
       </item>
-      <item row="0" column="7">
-       <widget class="QLineEdit" name="lineEdit_roiEnd">
+      <item row="0" column="4">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>ROI</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer_9">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="10">
+       <widget class="QLabel" name="label_20">
+        <property name="text">
+         <string>Accumulate Time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="21">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Preferred</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="19">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Expanding</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="11">
+       <widget class="QLineEdit" name="lineEdit_accPeriod"/>
+      </item>
+      <item row="0" column="13">
+       <widget class="QLineEdit" name="lineEdit_collectionTime">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -272,14 +331,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="11">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Elapsed Time</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="10">
+      <item row="0" column="9">
        <spacer name="horizontalSpacer_6">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -295,25 +347,15 @@
         </property>
        </spacer>
       </item>
-      <item row="0" column="13">
-       <widget class="QCheckBox" name="checkBox_showPrevReduced">
+      <item row="0" column="12">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>Show Prevous</string>
+         <string>Elapsed Time</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="6">
-       <widget class="QLineEdit" name="lineEdit_roiStart">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="14">
-       <widget class="QLineEdit" name="lineEdit_showPrevNCycles">
+      <item row="0" column="20">
+       <widget class="QPushButton" name="pushButton_startLiveReduction">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -322,45 +364,27 @@
         </property>
         <property name="maximumSize">
          <size>
-          <width>60</width>
+          <width>200</width>
           <height>16777215</height>
          </size>
         </property>
-       </widget>
-      </item>
-      <item row="0" column="15">
-       <widget class="QLabel" name="label_12">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
-         <string>Cycles</string>
+         <string>Start</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="9">
-       <widget class="QCheckBox" name="checkBox_normByVanadium">
+      <item row="0" column="7">
+       <widget class="QPushButton" name="pushButton_setROI">
         <property name="text">
-         <string>Normalized By Vanadium</string>
+         <string>Set ROI</string>
         </property>
        </widget>
-      </item>
-      <item row="0" column="5">
-       <widget class="QLabel" name="label_7">
-        <property name="text">
-         <string>ROI</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="4">
-       <spacer name="horizontalSpacer_9">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
       </item>
      </layout>
     </item>
@@ -498,7 +522,7 @@
              <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeType">
-             <enum>QSizePolicy::Preferred</enum>
+             <enum>QSizePolicy::Expanding</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -507,22 +531,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_16">
-            <property name="text">
-             <string>Starting Time</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEdit_logStarTime">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-           </widget>
           </item>
           <item>
            <widget class="QLabel" name="label_4">
@@ -553,7 +561,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1462</width>
+     <width>1539</width>
      <height>25</height>
     </rect>
    </property>
@@ -605,7 +613,90 @@
      </item>
      <item row="0" column="1">
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="3" column="1">
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEdit_logStarTime">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>Elapsed Time</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>Current Time</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name of the newest reduced workspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>Latest Refreshed</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QSpinBox" name="spinBox_totalIndex">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="maximum">
+          <number>9999999</number>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Accum Index</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
         <widget class="QLineEdit" name="lineEdit_numberEventsNewsReduced">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -627,7 +718,7 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
+       <item row="4" column="1">
         <widget class="QLineEdit" name="lineEdit_newestReducedWorkspace">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -661,87 +752,53 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of workspaces that are in memory (i.e., Mantid's ADS)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Workspaces #</string>
+          <string>Live Start Time</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="maximumSize">
-          <size>
-           <width>200</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name of the newest reduced workspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Latest Refreshed</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QSpinBox" name="spinBox_totalIndex">
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lineEdit_elapsedTime">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize">
-          <size>
-           <width>200</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>400</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="maximum">
-          <number>9999999</number>
-         </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="lineEdit_numberWorkspaces">
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEdit_currentTime">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize">
-          <size>
-           <width>200</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>400</width>
-           <height>16777215</height>
-          </size>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
         </widget>
        </item>
        <item row="5" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="maximumSize">
-          <size>
-           <width>200</width>
-           <height>16777215</height>
-          </size>
-         </property>
+        <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>Accum Index</string>
+          <string>In Accumulation</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEdit_inAccWsName">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
         <widget class="QLabel" name="label_2">
          <property name="maximumSize">
           <size>
@@ -754,7 +811,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="6" column="0">
         <widget class="QLabel" name="label_11">
          <property name="maximumSize">
           <size>
@@ -770,7 +827,7 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="8" column="1">
         <widget class="QSpinBox" name="spinBox_currentIndex">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -795,7 +852,7 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="3" column="1">
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -810,23 +867,6 @@
           </size>
          </property>
         </spacer>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>In Accumulation</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="lineEdit_inAccWsName">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
        </item>
       </layout>
      </item>

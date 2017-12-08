@@ -335,11 +335,12 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
     def mouseDoubleClickEvent(self, e):
         """ Override event handling method
         """
-        status, current_run = self.get_current_run()
+        self.do_add_runs()
 
-        if self._mainWindow is not None:
-            # TODO/FIXME - 'VdriveMainWindow' object has no attribute 'set_run'
-            self._mainWindow.set_run(current_run)
+        # status, current_run = self.get_current_run()
+        # if self._mainWindow is not None:
+        #     # TODO/FIXME - 'VdriveMainWindow' object has no attribute 'set_run'
+        #     self._mainWindow.set_run(current_run)
 
         return
 

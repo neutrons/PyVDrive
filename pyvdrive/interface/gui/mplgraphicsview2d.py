@@ -1161,9 +1161,6 @@ class Qt4MplCanvas(FigureCanvas):
         if plot_error is True and len(y_err) != len(vec_x):
             raise NotImplementedError('Input vec_x, vec_y and y_error must have same size.')
 
-        # Hold previous data
-        self.axes.hold(True)
-
         # set x-axis and y-axis label
         if x_label is not None:
             self.axes.set_xlabel(x_label, fontsize=16)
@@ -1226,9 +1223,6 @@ class Qt4MplCanvas(FigureCanvas):
         :param yticklabels:  list of string for y ticks
         :return:
         """
-        # Release the current image
-        self.axes.hold(holdprev)
-
         # Do plot
         # y ticks will be shown on line 1, 4, 23, 24 and 30
         # yticks = [1, 4, 23, 24, 30]
@@ -1281,14 +1275,10 @@ class Qt4MplCanvas(FigureCanvas):
         assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
                                                '' % (len(vec_x), len(vec_y), matrix_z.shape)
 
-        # # Release the current image
-        # self.axes.hold(False)
-
         # Do plot: resolution on Z axis (color bar is set to 100)
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]
-        print '[DB...BAT] Number of Y labels = ', len(labels), ', Number of Y = ', len(vec_y)
 
         # TODO/ISSUE/NOW: how to make this part more flexible
         if len(labels) == 2*len(vec_y) - 1:
@@ -1371,9 +1361,6 @@ class Qt4MplCanvas(FigureCanvas):
     def clear_canvas(self):
         """ Clear data including lines and image from canvas
         """
-        # clear the image for next operation
-        self.axes.hold(False)
-
         # Clear all lines
         self.clear_all_1d_plots()
 
