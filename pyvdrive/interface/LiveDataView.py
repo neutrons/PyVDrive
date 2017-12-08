@@ -107,7 +107,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._currLogNameMainY = None
         self._currLogNameRightY = None
         # time vector
-        self._currSampleLogTimeVector = None
+        self._currMainYLogTimeVector = None
+        self._currRightYLogTimeVector = None
         # vector for main Y values
         self._currMainYLogValueVector = None
         self._currRightYLogValueVector = None
@@ -199,14 +200,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def show_refresh_info(self):
-        """
-        blabla
-        :return:
-        """
-        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
-        self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
-
     def _init_widgets(self):
         """
         initialize some widgets
@@ -238,8 +231,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         assert isinstance(max_acc_ws_number, int), 'Maximum accumulation workspace number {0} must be' \
                                                    'an integer but not a {1}'.format(max_acc_ws_number,
                                                                                      type(max_acc_ws_number))
-        assert isinstance(accumulation_time, int), 'blabla 2'
-        assert isinstance(update_time, int), 'blabla 3'
+        assert isinstance(accumulation_time, int), 'Data accumulation time {0} ({1}) must be an integer but not other' \
+                                                   'type.'.format(accumulation_time, type(accumulation_time))
+        assert isinstance(update_time, int), 'Update/refresh time {0} ({1}) must be an integer but not any other ' \
+                                             'type.'.format(update_time, type(update_time))
 
         # logic check
         if max_acc_ws_number < 2:
@@ -1114,6 +1109,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 right_y_name = y_axis_name_list[index]
             # END-IF
         # END-FOR
+        self.write_log('debug', 'Plot main Y: {0}; right Y: {1}'.format(main_y_name, right_y_name))
 
         # check: the following user-error shall be handled in the caller
         if num_right > 1:
@@ -1170,9 +1166,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         elif y_axis_name.startswith('* Peak:'):
             # integrate peak for all the accumulated runs
-            # FIXME/TODO/NOW/ASAP - How to determine whether it shall be an append-mode or not!
             self._controller.integrate_peaks(self._myAccumulationWorkspaceList, d_min, d_max,
-                                             norm_by_vanadium=norm_by_van, append_mode=False)
+                                             norm_by_vanadium=norm_by_van)
             # get peak name
             peak_name = y_axis_name.split('* Peak:')[1].strip()
 
@@ -1309,16 +1304,20 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 # append mode
                 time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=None,
                                                            relative_time=self._liveStartTimeStamp)
-                if len(time_vec) == 1 and time_vec[0] <= self._currSampleLogTimeVector[-1]:
-                    print '[DEBUG] CRAP: {0} comes after {1}'.format(time_vec[0],
-                                                                     self._currSampleLogTimeVector[-1])
-                # TODO SHALL SUPPORT SAMPLE LOG AT BOTH AXIS
                 # append
-                self._currSampleLogTimeVector = numpy.append(self._currSampleLogTimeVector, time_vec)
                 if is_main:
+                    if len(time_vec) == 1 and time_vec[0] <= self._currMainYLogTimeVector[-1]:
+                        print '[DEBUG] CRAP Main: {0} comes after {1}'.format(time_vec[0],
+                                                                              self._currMainYLogTimeVector[-1])
+                    self._currMainYLogTimeVector = numpy.append(self._currMainYLogTimeVector, time_vec)
                     self._currMainYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
                 else:
-                    self._currRightYLogValueVector = numpy.append(self._currMainYLogValueVector, value_vec)
+                    if len(time_vec) == 1 and time_vec[0] <= self._currRightYLogTimeVector[-1]:
+                        print '[DEBUG] CRAP Right: {0} comes after {1}'.format(time_vec[0],
+                                                                               self._currRightYLogTimeVector[-1])
+                    self._currRightYLogTimeVector = numpy.append(self._currRightYLogTimeVector, time_vec)
+                    self._currRightYLogValueVector = numpy.append(self._currRightYLogValueVector, value_vec)
+                # END-IF-ELSE
 
                 debug_message = '[Append Mode] New time stamps: {0}... Log T0 = {1}' \
                                 ''.format(time_vec[0], self._liveStartTimeStamp)
@@ -1331,10 +1330,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 time_vec, value_vec = self.load_sample_log(log_name, last_n_accumulation=-1,
                                                            relative_time=self._liveStartTimeStamp)
                 if is_main:
-                    self._currSampleLogTimeVector = time_vec
+                    self._currMainYLogTimeVector = time_vec
                     self._currMainYLogValueVector = value_vec
                 else:
-                    self._currSampleLogTimeVector = time_vec
+                    self._currRightYLogTimeVector = time_vec
                     self._currRightYLogValueVector = value_vec
 
                 append = False
@@ -1342,13 +1341,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             # set the label... TODO ASAP shall leave for the graphicsView to do it
             y_label = log_name
-            time_vec = self._currSampleLogTimeVector
             if is_main:
                 value_vec = self._currMainYLogValueVector
                 label_y, label_line, color, marker, line_style = y_label, y_label, 'green', '*', ':'
+                time_vec = self._currMainYLogTimeVector
             else:
                 value_vec = self._currRightYLogValueVector
                 label_y, label_line, color, marker, line_style = y_label, y_label, 'blue', '+', ':'
+                time_vec = self._currRightYLogTimeVector
 
             if not append:
                 # clear all lines if new lines to plot
@@ -1469,8 +1469,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             if self._currSampleLogX is not None:
                 y_axis_list = [self._currLogNameMainY, self._currLogNameRightY]
                 side_list = [True, False]
-                if self._currLogNameMainY is None:
-                    raise RuntimeError('Logical wrong to set up sampleX but not sampleY')
                 self.plot_log_live(self._currSampleLogX, y_axis_list, side_list, self._minDPeakIntegration,
                                    self._maxDPeakIntegration, self._plotPeakVanadiumNorm)
         # END-FOR
@@ -1484,7 +1482,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check
-        assert isinstance(accumulation_time, int), 'blabla2'
+        assert isinstance(accumulation_time, int), 'Accumulation time {0} to set must be an integer but not a {1}.' \
+                                                   ''.format(accumulation_time, type(accumulation_time))
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=accumulation_time,
@@ -1500,13 +1499,15 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check inputs
-        assert isinstance(plot_runs, bool), 'blabla5'
+        assert isinstance(plot_runs, bool), 'Flag to plot runs{0} must be a boolean but not a {1}.' \
+                                            ''.format(plot_runs, type(plot_runs))
 
         # set!
         if plot_runs:
             # plot reduced runs in 2D view
             self._2dMode = 'runs'
-            assert isinstance(start_run, int), 'blabla8'
+            assert isinstance(start_run, int), 'Start run number {0} to plot must be an integer but not a {1}.' \
+                                               ''.format(start_run, int(start_run))
 
             if start_run <= 0:
                 raise RuntimeError('Starting run number {0} cannot be less than 1.'.format(start_run))
@@ -1525,7 +1526,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         # check
-        assert isinstance(update_period, int), 'blabla3'
+        assert isinstance(update_period, int), 'Update/refresh rate {0} must be an integer but not a {1}.' \
+                                               ''.format(update_period, type(update_period))
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=self._myAccumulationTime,
@@ -1565,6 +1567,13 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # END-IF
 
         return
+
+    def show_refresh_info(self):
+        """ Show the accumulation/refresh/update rate information
+        :return:
+        """
+        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
+        self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
 
     def sum_incremental_workspaces(self, workspace_i):
         """sum up the incremental workspace to an accumulated workspace

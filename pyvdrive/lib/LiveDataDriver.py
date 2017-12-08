@@ -51,15 +51,16 @@ class LiveDataDriver(QtCore.QThread):
         self._thread_continue = True
 
         # more containers
-        self._peakIntensityDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
-
+        self._peakMinD = None
+        self._peakMaxD = None
+        self._peakNormByVan = False
+        self._peakParamDict = dict()  # key: workspace name. value: 2-tuple (avg time (epoch/second, peak intensity)
         self._vanadiumWorkspaceDict = dict()  # key: bank ID.  value: workspace name
 
         return
 
     def calculate_live_peak_parameters(self, ws_name, bank_id, norm_by_van, d_min, d_max):
-        """
-        blabla
+        """ calculate the peak parameters in live data
         :param ws_name:
         :param bank_id
         :param norm_by_van:
@@ -70,8 +71,7 @@ class LiveDataDriver(QtCore.QThread):
         # check inputs
         assert isinstance(ws_name, str), 'Input workspace name {0} must be a string but not a {1}' \
                                          ''.format(ws_name, type(ws_name))
-
-        # TODO/NOW - check input babla ASAP
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.'.format(bank_id, type(bank_id))
 
         # check bank ID
         if bank_id < 1 or bank_id > 3:
@@ -269,7 +269,7 @@ class LiveDataDriver(QtCore.QThread):
 
         # parse data
         param_table_list = list()
-        for tup_value in self._peakIntensityDict.values():
+        for tup_value in self._peakParamDict.values():
             # each time stamp
             # get values of all banks
             time_i, intensities, positions = tup_value
@@ -305,23 +305,25 @@ class LiveDataDriver(QtCore.QThread):
 
         return vec_time, peak_value_bank_dict
 
-    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium,
-                        append_mode):
+    def integrate_peaks(self, accumulated_workspace_list, d_min, d_max, norm_by_vanadium):
         """ integrate peaks for a list of
         :param accumulated_workspace_list: 
         :param d_min:
         :param d_max:
         :param norm_by_vanadium
-        :param append_mode
-        :return: 
+        :return:
         """
+        # check inputs
+        assert isinstance(accumulated_workspace_list, list)
+
+
         if append_mode:
             #
             raise RuntimeError('Need to check whether the peaks have been integrated and'
                                ' recorded')
 
         # the last workspace might be partially accumulated
-        calculated_ws_list = sorted(self._peakIntensityDict.keys())[:-1]
+        calculated_ws_list = sorted(self._peakParamDict.keys())[:-1]
 
         # loop round all the input workspaces
         for ws_name in accumulated_workspace_list:
@@ -351,7 +353,7 @@ class LiveDataDriver(QtCore.QThread):
             # get average time
             time_stamp = workspace_i.run().getProperty('proton_charge').lastTime()
 
-            self._peakIntensityDict[ws_name] = (time_stamp, intensity_list, position_list)
+            self._peakParamDict[ws_name] = (time_stamp, intensity_list, position_list)
         # END-FOR
 
         return

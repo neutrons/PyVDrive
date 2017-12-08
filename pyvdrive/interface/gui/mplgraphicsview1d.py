@@ -799,10 +799,6 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         if plot_error is True and len(y_err) != len(vec_x):
             raise NotImplementedError('Input vec_x, vec_y and y_error must have same size.')
 
-        # Hold previous data
-        # self.axes.hold(True)
-        self.axes_main[row_index, col_index].hold(True)
-
         # set x-axis and y-axis label
         if x_label is not None:
             self.axes_main[row_index, col_index].set_xlabel(x_label, fontsize=16)  # or 20?
@@ -879,9 +875,6 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
 
             # turn on the right side ticks
             self.axes_right[row_index, col_index].yaxis.tick_right()
-
-        # Hold previous data
-        # self.axes_right[row_index, col_index].hold(True)
 
         # Default for line's color, marker and line style
         if color is None:
@@ -1011,12 +1004,12 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
     def clear_canvas(self):
         """ Clear data including lines and image from canvas
         """
-        # clear the image for next operation
-        for subplot in self.axes_main.values():
-            subplot.hold(False)
-        for subplot in self.axes_right.values():
-            if subplot is not None:
-                subplot.hold(False)
+        # # clear the image for next operation
+        # for subplot in self.axes_main.values():
+        #     subplot.hold(False)
+        # for subplot in self.axes_right.values():
+        #     if subplot is not None:
+        #         subplot.hold(False)
 
         # clear all lines
         for row_index, col_index in self.axes_main.keys():
@@ -1215,8 +1208,8 @@ class Qt4MplCanvasMultiFigure(FigureCanvas):
         :return:
         """
         # Get all lines in list
-        lines = self.axes.lines
-        assert isinstance(lines, list), 'Lines must be list'
+        # lines = self.axes.lines
+        # assert isinstance(lines, list), 'Lines must be list'
 
         if plot_key in self._mainLineDict[row_index, col_index]:
             # plot key is on main axis

@@ -274,7 +274,13 @@ class GeneralPurpose1DView(MplGraphicsView1D):
                 line_key = self._mainAxisLogLineKey
             else:
                 line_key = self._rightAxisLogLineKey
-            self.update_line(row_index=0, col_index=0, ikey=line_key, vec_x=time_vec, vec_y=value_vec, is_main=is_main)
+            try:
+                self.update_line(row_index=0, col_index=0, ikey=line_key, vec_x=time_vec, vec_y=value_vec,
+                                 is_main=is_main)
+            except ValueError as val_err:
+                print 'Failed to update {0} with time {1} and value {2} due to {3}.' \
+                      ''.format(y_label, time_vec, value_vec, val_err)
+                raise val_err
 
         else:
             line_key = self.add_plot(time_vec, value_vec, is_right=not is_main,
