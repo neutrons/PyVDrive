@@ -528,10 +528,16 @@ class LiveDataDriver(QtCore.QThread):
                 # check
                 if date_time_vec[-1] > time_vec_i[0]:
                     diff_ns = date_time_vec[-1].totalNanoseconds() - time_vec_i[0].totalNanoseconds()
-                    raise RuntimeError('Previous workspace {0} is later than the current one {1} on sample log {2}'
-                                       ': {3} vs {4} by {5}'
-                                       ''.format(ws_name_list[seq_index-1], ws_name, sample_log_name,
-                                                 date_time_vec[-1], time_vec_i[0], diff_ns))
+                    error_message = 'Previous workspace {0} is later than the current one {1} on sample log {2}:' \
+                                    ' {3} vs {4} by {5}' \
+                                    ''.format(ws_name_list[seq_index - 1], ws_name, sample_log_name,
+                                              date_time_vec[-1], time_vec_i[0], diff_ns)
+                    if ws_name == 'Accumulated_00001':
+                        # if it happens with first.. just skip!
+                        print '[ERROR] {0}'.format(error_message)
+                        continue
+                    else:
+                        raise RuntimeError(error_message)
                 elif date_time_vec[-1] == time_vec_i[0]:
                     print 'Previous workspace {0} has one entry overlapped with current one {1} on sample log {2}: ' \
                           '{3} vs {4}. Values are {5} and {6}.' \

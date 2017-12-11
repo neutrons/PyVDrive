@@ -187,7 +187,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # random seed
         random.seed(1)
-
+        # GUI update control
+        self._update2DCounter = 0
         #
         self.show_refresh_info()
 
@@ -353,7 +354,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         refresh 2D contour view
         :return:
         """
-        self.update_2d_plot()
+        self.update_2d_plot(self._update2DCounter % 3 + 1)
 
         return
 
@@ -753,9 +754,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if is_new_ws:
             self._controller.delete_workspace(in_sum_name)
-
-        # Plot 2D
-        self.update_2d_plot()
 
         return
 
@@ -1384,7 +1382,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def update_2d_plot(self):
+    def update_2d_plot(self, bank_id=None):
         """
         update 2D contour plot for the reduced data in the last N time-intervals
         :return:
@@ -1405,7 +1403,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             return last_n
 
-        for bank_id in [1, 2, 3]:
+        if bank_id is None:
+            bank_id_list = [1, 2, 3]
+        else:
+            bank_id_list = [bank_id]
+
+        for bank_id in bank_id_list:
             # get bank ID
 
             # get the last N time-intervals and create the meshdata
@@ -1427,8 +1430,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
 
             # plot
-            if len(data_set_dict) > 1:
+            if len(data_set_dict) > 1:  # and bank_id == 1:
                 self._contourFigureDict[bank_id].plot_contour(data_set_dict)
+            # else:
+            #     self._contourFigureDict[bank_id].plot_image(data_set_dict)
         # END-FOR
 
         return
@@ -1457,6 +1462,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # process new workspace
         self.process_new_workspaces(new_ws_name_list)
+        if len(new_ws_name_list) > 0:
+            # update 2D
+            self._update2DCounter += 1
+            self.update_2d_plot(self._update2DCounter % 3 + 1)
 
         # update GUI
         total_index = self._controller.get_live_counter()
