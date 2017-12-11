@@ -392,6 +392,8 @@ class Live2DView(MplGraphicsView2D):
             matrix_index += 1
         # END-FOR
 
+        print '[DB........BAT........BAT] vec_y = {0}; size of matrix = {1}.'.format(vec_y, matrix_y.shape)
+
         self.canvas().add_contour_plot(vec_x, vec_y, matrix_y)
 
         return

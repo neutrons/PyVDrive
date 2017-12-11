@@ -555,6 +555,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # self.axes.hold(False)
 
         # Do plot: resolution on Z axis (color bar is set to 100)
+        self.axes.clear()
         contour_plot = self.axes.contourf(grid_x, grid_y, matrix_z, 100)
 
         labels = [item.get_text() for item in self.axes.get_yticklabels()]

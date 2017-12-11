@@ -162,6 +162,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # multiple thread pool
         self._checkStateTimer = None
+        self._2dUpdater = None
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
@@ -448,6 +449,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._checkStateTimer = TimerThread(self._myRefreshTimeStep, self)
         self._checkStateTimer.start()
 
+        self._2dUpdater = TwoDimPlotUpdateThread()
+        self._2dUpdater.start()
+
         # start start listener
         self._controller.run()
 
@@ -467,6 +471,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         if self._checkStateTimer is not None:
             self._checkStateTimer.stop()
+
+        if self._2dUpdater is not None:
+            self._2dUpdater.stop()
 
         if self._controller is not None:
             self._controller.stop()
@@ -1430,10 +1437,14 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
 
             # plot
-            if len(data_set_dict) > 1:  # and bank_id == 1:
-                self._contourFigureDict[bank_id].plot_contour(data_set_dict)
-            # else:
-            #     self._contourFigureDict[bank_id].plot_image(data_set_dict)
+            if len(data_set_dict) > 1:
+                if bank_id in bank_id_list:
+                    # self._2dUpdater.set_new_plot(self._contourFigureDict[bank_id], data_set_dict)
+                    self._contourFigureDict[bank_id].plot_contour(data_set_dict)
+                else:
+                    pass
+                    # self._contourFigureDict[bank_id].plot_image(data_set_dict)
+            # END-IF
         # END-FOR
 
         return
@@ -1517,6 +1528,70 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         return
 
 
+class TwoDimPlotUpdateThread(QtCore.QThread):
+    """
+    blabla
+    """
+    def __init__(self):
+        """
+
+        """
+        # call base class's constructor
+        super(TwoDimPlotUpdateThread, self).__init__()
+
+        self._mutex = False
+
+        self._update = False
+        self._currFigure = None
+        self.data_set_dict = None
+
+        self._continueTimerLoop = True
+
+        return
+
+    def run(self):
+        """
+        run the thread!
+        :return:
+        """
+        while self._continueTimerLoop:
+            # sleep
+            time.sleep(5)
+
+            # check whether it is time to plot
+            if self._mutex:
+                continue
+            else:
+                self._mutex = True
+
+            # update
+            if self._update:
+                self._currFigure.plot_contour(self.data_set_dict)
+                self._update = False
+
+            # release
+            self._mutex = False
+        # END-WHILE
+
+        return
+
+    def set_new_plot(self, figure, data_set_dict):
+        """
+
+        :return:
+        """
+        self._update = True
+        self._currFigure = figure
+        self.data_set_dict = data_set_dict
+
+    def stop(self):
+        """ stop the timer by turn off _continueTimeLoop (flag)            :return:
+        """
+        self._continueTimerLoop = False
+
+        return
+
+
 class SampleLoadingThread(QtCore.QThread):
     """
     Thread function to load sample logs from Nexus files
@@ -1569,7 +1644,6 @@ class SampleLoadingThread(QtCore.QThread):
             self.stop_run_number = None
         archive_manager.load_nexus_files(self._iptsNumber, self.first_run_number, self.stop_run_number,
                                          meta_data_only=True)
-
 
 
 class TimerThread(QtCore.QThread):
