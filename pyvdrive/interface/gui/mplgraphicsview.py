@@ -370,7 +370,7 @@ class MplGraphicsView(QtGui.QWidget):
 
         # set up canvas
         self._myCanvas = Qt4MplCanvas(self)
-        self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
+        # self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
 
         # state of operation
         self._isZoomed = False
@@ -380,7 +380,7 @@ class MplGraphicsView(QtGui.QWidget):
         # set up layout
         self._vBox = QtGui.QVBoxLayout(self)
         self._vBox.addWidget(self._myCanvas)
-        self._vBox.addWidget(self._myToolBar)
+        # self._vBox.addWidget(self._myToolBar)
 
         # auto line's maker+color list
         self._myLineMarkerColorList = []
@@ -1177,9 +1177,9 @@ class Qt4MplCanvas(FigureCanvas):
 
         # set x-axis and y-axis label
         if x_label is not None:
-            self.axes.set_xlabel(x_label, fontsize=16)
+            self.axes.set_xlabel(x_label, fontsize=8)
         if y_label is not None:
-            self.axes.set_ylabel(y_label, fontsize=16)
+            self.axes.set_ylabel(y_label, fontsize=8)
 
         # process inputs and defaults
         if color is None:

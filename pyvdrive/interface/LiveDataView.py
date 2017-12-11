@@ -11,7 +11,6 @@ import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-from gui import GuiUtility as GuiUtil
 import pyvdrive.lib.vdrivehelper as vdrivehelper
 
 # include this try/except block to remap QString needed when using IPython
@@ -23,7 +22,6 @@ except AttributeError:
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
 # TODO - NEW TO TEST
-# 1. Test live plot with improved data structure
 # 2. 2D contour plot for reduced runs and in-accumulation run
 
 # Note: Atomic workspace: output_xxxx
@@ -93,8 +91,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # about previous round pot
         self._plotPrevCycleName = None
-        # Bank ID (current): shall be updated with event to handle change of bank ID selection
-        self._currentBankID = 1
 
         # plotting setup
         self._bankViewDMin = None
@@ -150,6 +146,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_launch_ipython)
         self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
                      self.menu_launch_setup)
+        self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
+                     self.menu_show_multi_purpose_dock)
 
         # other widgets
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -157,13 +155,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_show_high_prev_data)
-
-        self.connect(self.ui.checkBox_2dBank1, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank1_changed)
-        self.connect(self.ui.checkBox_2dBank2, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank2_changed)
-        self.connect(self.ui.checkBox_2dBank3, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank3_changed)
 
         # general purpose
         self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
@@ -174,8 +165,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
-                                 2: self.              ui.graphicsView_currentViewB2,
+                                 2: self.ui.graphicsView_currentViewB2,
                                  3: self.ui.graphicsView_currentViewB3}
+
+        self._contourFigureDict = {1: self.ui.graphicsView_2DBank1,
+                                   2: self.ui.graphicsView_2DBank2,
+                                   3: self.ui.graphicsView_2DBank3}
 
         # timer for accumulation start time
         self._accStartTime = datetime.now()
@@ -189,7 +184,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._2dStartRunNumber = None
 
         # mutexes
-        self._bankSelectMutex = False
 
         # random seed
         random.seed(1)
@@ -198,6 +192,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.show_refresh_info()
 
         return
+
+    def menu_show_multi_purpose_dock(self):
+        """
+        show multiple-purpose docker widget if it is closed
+        :return:
+        """
+        action = self.ui.dockWidget_multiPurposeView.toggleViewAction()
+        print '[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action))
+        action.setVisible(True)
+        self.ui.dockWidget_multiPurposeView.show()
 
     def _init_widgets(self):
         """
@@ -208,11 +212,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
         self.ui.checkBox_normByVanadium.setChecked(False)
-
-        self._bankSelectMutex = True
-        self._set_bank_checkbox()
-        self.ui.checkBox_2dBank1.setChecked(True)
-        self._bankSelectMutex = False
 
         self.ui.label_info.setText('')
 
@@ -266,19 +265,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def _set_bank_checkbox(self):
-        """
-        uncheck all the checkboxes for bank ID
-        :return:
-        """
-        self._bankSelectMutex = True
-        self.ui.checkBox_2dBank1.setChecked(False)
-        self.ui.checkBox_2dBank2.setChecked(False)
-        self.ui.checkBox_2dBank3.setChecked(False)
-        self._bankSelectMutex = False
-
-        return
-
     @property
     def plotrun(self):
         return self._plotRun
@@ -291,114 +277,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         self._plotRun = state
-
-        return
-
-    def evt_bank1_changed(self):
-        """
-        handling event as any of the bank checkbox is checked or uncheced
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank1.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank1.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank1.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 1
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
-
-        return
-
-    def evt_bank2_changed(self):
-        """
-        handling event as any of
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank2.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank2.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank2.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 2
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
-
-        return
-
-    def evt_bank3_changed(self):
-        """
-        handling event as any of
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank3.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank3.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank3.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 3
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
 
         return
 
@@ -994,7 +872,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def plot_log_with_reduced(self, x_axis_name, y_axis_name):
         """
-        plot sample logs with previously reduced data
+        plot sample logs with previously reduced data that will be retrieved from GSAS
         :param x_axis_name:
         :param y_axis_name:
         :return:
@@ -1016,24 +894,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
 
-        # TODO/NOW/ASAP
-        whatever()
-
-    def plot_new_log_live(self, x_axis_name, y_axis_name):
-        """
-        plot the log in live data by loading the previously accumulated runs
-        :param x_axis_name:
-        :param y_axis_name:
-        :return:
-        """
-
-        # TODO/NOW/TODO/IMPLEMENT
-
-        # start from the current in-accumulation run
-        blabla
-
-        # trace back to previously accumulated runs until run number changed to non-zero
-        blabla
+        # TODO/NOW/ASAP - ...
+        raise NotImplementedError('ASAP')
 
     def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, peak_range_list, norm_by_van_list):
         """
@@ -1543,30 +1405,31 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             return last_n
 
-        # get bank ID
-        bank_id = self._currentBankID
+        for bank_id in [1, 2, 3]:
+            # get bank ID
 
-        # get the last N time-intervals and create the meshdata
-        last_n_run = parse_set_last_n()
-        # retrieve data
+            # get the last N time-intervals and create the meshdata
+            last_n_run = parse_set_last_n()
+            # retrieve data
 
-        # TODO/ISSUE/NOW/FIXME - It is in a debug mode
-        self._2dMode = 'acc'                        #
-        # --------------------------------------------
+            # TODO/ISSUE/NOW/FIXME - It is in a debug mode
+            self._2dMode = 'acc'  #
+            # --------------------------------------------
 
-        if self._2dMode == 'unit':
-            data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
-        elif self._2dMode == 'acc':
-            # plot accumulations
-            data_set_dict = self.get_last_n_acc_data(last_n_run, bank_id=bank_id)
-        elif self._2dMode == 'runs':
-            data_set_dict = self.get_last_n_runs_data(last_n_run, bank_id=bank_id)
-        else:
-            raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
+            if self._2dMode == 'unit':
+                data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
+            elif self._2dMode == 'acc':
+                # plot accumulations
+                data_set_dict = self.get_last_n_acc_data(last_n_run, bank_id=bank_id)
+            elif self._2dMode == 'runs':
+                data_set_dict = self.get_last_n_runs_data(last_n_run, bank_id=bank_id)
+            else:
+                raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
 
-        # plot
-        if len(data_set_dict) > 1:
-            self.ui.graphicsView_2D.plot_contour(data_set_dict)
+            # plot
+            if len(data_set_dict) > 1:
+                self._contourFigureDict[bank_id].plot_contour(data_set_dict)
+        # END-FOR
 
         return
 
