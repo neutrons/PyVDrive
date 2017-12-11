@@ -129,8 +129,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_start_live)
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
-        self.connect(self.ui.pushButton_setROI, QtCore.SIGNAL('clicked()'),
-                     self.do_set_roi)
+
+        # TODO ASAP ASAP
+        self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
+                     self.do_set_b1_roi)
+        self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
+                     self.do_set_b2_roi)
+        self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
+                     self.do_set_b3_roi)
+        self.ui.checkBox_roiSyncB1B2
+        self.ui.pushButton_fitB1
 
         # 2D contour
 

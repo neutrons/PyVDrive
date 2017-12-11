@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1443</width>
+    <width>1628</width>
     <height>1259</height>
    </rect>
   </property>
@@ -211,56 +211,8 @@
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="4" column="2">
-       <widget class="QCheckBox" name="checkBox_normByVanadium">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Normalized By Vanadium</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="SingleBankView" name="graphicsView_currentViewB3"/>
-      </item>
-      <item row="0" column="1">
-       <widget class="SingleBankView" name="graphicsView_currentViewB2"/>
-      </item>
-      <item row="2" column="1">
-       <widget class="Live2DView" name="graphicsView_2DBank2"/>
-      </item>
-      <item row="2" column="2">
-       <widget class="Live2DView" name="graphicsView_2DBank3"/>
-      </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="Live2DView" name="graphicsView_2DBank1"/>
-      </item>
-      <item row="0" column="0">
-       <widget class="SingleBankView" name="graphicsView_currentViewB1"/>
-      </item>
-      <item row="4" column="1">
-       <widget class="QComboBox" name="comboBox_currUnits">
-        <item>
-         <property name="text">
-          <string>dSpacing</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>TOF</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QCheckBox" name="checkBox">
-        <property name="text">
-         <string>ROI Sync Bank 1 and Bank 2</string>
-        </property>
-       </widget>
       </item>
       <item row="1" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -271,13 +223,45 @@
          <widget class="QLineEdit" name="lineEdit_2"/>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pushButton_setROIb1">
           <property name="text">
            <string>Set ROI</string>
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_fitB1">
+          <property name="text">
+           <string>Fit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
+      </item>
+      <item row="0" column="2">
+       <widget class="SingleBankView" name="graphicsView_currentViewB3"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="SingleBankView" name="graphicsView_currentViewB1"/>
+      </item>
+      <item row="3" column="2">
+       <widget class="Live2DView" name="graphicsView_2DBank3"/>
+      </item>
+      <item row="0" column="1">
+       <widget class="SingleBankView" name="graphicsView_currentViewB2"/>
       </item>
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout">
@@ -302,13 +286,36 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_setROI">
+         <widget class="QPushButton" name="pushButton_setROIb2">
           <property name="text">
            <string>Set ROI</string>
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_fitB2">
+          <property name="text">
+           <string>Fit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
+      </item>
+      <item row="3" column="1">
+       <widget class="Live2DView" name="graphicsView_2DBank2"/>
       </item>
       <item row="1" column="2">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -319,13 +326,66 @@
          <widget class="QLineEdit" name="lineEdit_4"/>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pushButton_setROIb3">
           <property name="text">
            <string>Set ROI</string>
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_fitB3">
+          <property name="text">
+           <string>Fit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_6">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
+      </item>
+      <item row="2" column="2">
+       <widget class="QCheckBox" name="checkBox_normByVanadium">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Normalized By Vanadium</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QComboBox" name="comboBox_currUnits">
+        <item>
+         <property name="text">
+          <string>dSpacing</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>TOF</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="checkBox_roiSyncB1B2">
+        <property name="text">
+         <string>ROI Sync Bank 1 and Bank 2</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -336,8 +396,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1443</width>
-     <height>22</height>
+     <width>1628</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
