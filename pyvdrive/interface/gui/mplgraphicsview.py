@@ -1510,6 +1510,21 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
+    def set_label(self, side, text, font_size=16):
+        """
+        set X or Y label
+        :param side:
+        :param text:
+        :return:
+        """
+        if side == 'x':
+            # set x-axis and y-axis label
+            self.axes.set_xlabel(text, fontsize=font_size)
+        elif side == 'y':
+            self.axes.set_ylabel(text, fontsize=font_size)
+
+        return
+
     def setXYLimit(self, xmin, xmax, ymin, ymax):
         """
         """

@@ -457,8 +457,13 @@ class SingleBankView(MplGraphicsView):
         self._previousRunID = None
         self._previousRunKey = None  # can use workspace name
 
-        self._minX = None
-        self._maxX = None
+        # original X range
+        self._dataXMin = None
+        self._dataXMax = None
+
+        # region of interest
+        self._roiMin = None
+        self._roiMax = None
 
         return
 
@@ -499,24 +504,38 @@ class SingleBankView(MplGraphicsView):
 
         return
 
-    def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit):
-        """
-        update/plot current accumulated
+    def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit, auto_scale_y):
+        """ update/plot current one that is being accumulated
+        :param vec_x:
+        :param vec_y:
+        :param line_color:
+        :param line_label:
+        :param unit:
+        :param auto_scale_y:
         :return:
         """
-        # TODO/ISSUE/NOW - Use update instead of delete and move
+        # reset X
+        self._dataXMin = vec_x[0]
+        self._dataXMax = vec_x[-1]
 
-        # remove existing line
-        if self._currentRunID is not None:
-            self.remove_line(self._currentRunID)
+        if self._currentRunID is None:
+            # new line
+            self._currentRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
+                                                  label=line_label, x_label=unit)
+        else:
+            # update line
+            self.canvas().updateLine(ikey=self._currentRunID, vecx=vec_x, vecy=vec_y,
+                                     linecolor=line_color)
+            if unit is not None:
+                self.canvas().set_label(side='x', text=unit)
+            if line_label is not None:
+                self.canvas().set_label(side='y', text=line_label)
 
-        # plot
-        self._currentRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
-                                              label=line_label, x_label=unit)
+        # END-IF-ELSE
 
-        if self._previousRunID is None:
-            max_y = max(vec_y) * 1.05
-            self.setXYLimit(ymin=0, ymax=max_y)
+        # scale Y
+        if auto_scale_y:
+            self.rescale_y_axis(x_min=None, x_max=None)
 
         return
 
@@ -526,16 +545,21 @@ class SingleBankView(MplGraphicsView):
         :return:
         """
         if x_min is None:
-            if self._minX is None:
-                raise RuntimeError('Rescale Y Axis requires x-min shall be given!')
+            if self._roiMin is not None:
+                x_min = self._roiMin
+            elif self._dataXMin is not None:
+                x_min = self._dataXMin
             else:
-                x_min = self._minX
+                raise RuntimeError('Rescale Y Axis requires x-min shall be given!')
+        # END-IF
 
         if x_max is None:
-            if self._maxX is None:
-                raise RuntimeError('Rescale Y axis requires x-max shall be given!')
+            if self._roiMax is not None:
+                x_max = self._roiMax
+            elif self._dataXMax is not None:
+                x_max = self._dataXMax
             else:
-                x_max = self._maxX
+                raise RuntimeError('Rescale Y axis requires x-max shall be given!')
 
         # retrieve vec X and vec Y from plot and find min and max on subset of Y
         y_min = None
@@ -562,3 +586,11 @@ class SingleBankView(MplGraphicsView):
         self.setXYLimit(ymin=lower_y, ymax=upper_y)
 
         return
+
+    def set_roi(self, x_min, x_max):
+        """
+
+        :param x_min:
+        :param x_max:
+        :return:
+        """

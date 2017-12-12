@@ -124,6 +124,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # initialize widgets
         self._init_widgets()
 
+        # banks
+        self._bankViewDict = {1: self.ui.graphicsView_currentViewB1,
+                              2: self.ui.graphicsView_currentViewB2,
+                              3: self.ui.graphicsView_currentViewB3}
+
         # set up the event handlers
         self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_start_live)
@@ -132,11 +137,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # TODO ASAP ASAP
         self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
-                     self.do_set_b1_roi)
+                     self.do_set_bank1_roi)
         self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
-                     self.do_set_b2_roi)
+                     self.do_set_bank2_roi)
         self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
-                     self.do_set_b3_roi)
+                     self.do_set_bank3_roi)
         self.ui.checkBox_roiSyncB1B2
         self.ui.pushButton_fitB1
 
@@ -387,44 +392,86 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    # TEST TODO - newly implemented
-    def do_set_roi(self):
+    def do_set_bank1_roi(self):
         """ set the region of interest by set the X limits on the canvas
         :return:
         """
-        try:
-            left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
-            self._bankViewDMin = left_x_bound
-        except ValueError:
-            # keep as before
-            left_x_bound = None
+        self.set_bank_view_roi(bank_id=1, left_x_bound=self.ui.lineEdit_bank1RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank1RoiEnd)
 
-        try:
-            right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
-            self._bankViewDMax = right_x_bound
-        except ValueError:
-            # keep as before
-            right_x_bound = None
-
-        # set limit
-        self.set_bank_view_roi(left_x_bound, right_x_bound)
+        if self.ui.checkBox_roiSyncB1B2.isChecked():
+            self.ui.lineEdit_bank2RoiStart.setText(self.ui.lineEdit_bank1RoiStart.text())
+            self.ui.lineEdit_bank2RoiEnd.setText(self.ui.lineEdit_bank1RoiEnd.text())
+            self.do_set_bank2_roi()
 
         return
 
-    def set_bank_view_roi(self, left_x_bound, right_x_bound):
-        """
-        set region of interest on the 3 bank viewer
+    def do_set_bank2_roi(self):
+        """ set the region of interest by set the X limits on the canvas
         :return:
         """
-        self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self.set_bank_view_roi(bank_id=2, left_x_bound=self.ui.lineEdit_bank2RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank2RoiEnd)
 
-        # reset the automatic Y range
-        if left_x_bound is not None and right_x_bound is not None:
-            self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
-            self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
-            self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
+        if self.ui.checkBox_roiSyncB1B2.isChecked():
+            self.ui.lineEdit_bank1RoiStart.setText(self.ui.lineEdit_bank2RoiStart.text())
+            self.ui.lineEdit_bank1RoiEnd.setText(self.ui.lineEdit_bank2RoiEnd.text())
+            self.do_set_bank1_roi()
+
+        return
+
+    def do_set_bank3_roi(self):
+        """ set the region of interest by set the X limits on the canvas
+        :return:
+        """
+        self.set_bank_view_roi(bank_id=3, left_x_bound=self.ui.lineEdit_bank3RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank3RoiEnd)
+
+        return
+
+    def set_bank_view_roi(self, bank_id, left_x_bound, right_x_bound):
+        """
+        set and apply region of interest on the 3 bank viewer
+        :param bank_id:
+        :param left_x_bound:
+        :param right_x_bound:
+        :return:
+        """
+        # allow multiple format of inputs
+        if left_x_bound is not None:
+            if isinstance(left_x_bound, QtGui.QLineEdit):
+                try:
+                    left_x_bound = float(str(left_x_bound.text()).strip())
+                except ValueError:
+                    # keep as before
+                    left_x_bound = None
+            else:
+                assert isinstance(left_x_bound, float), 'Left boundary {0} must be either QLineEdit, None or float, ' \
+                                                        'but not of {1}'.format(left_x_bound, type(left_x_bound))
+        if right_x_bound is not None:
+            if isinstance(right_x_bound, QtGui.QLineEdit):
+                try:
+                    right_x_bound = float(str(right_x_bound.text()).strip())
+                except ValueError:
+                    right_x_bound = None
+            else:
+                assert isinstance(right_x_bound, float), 'Right boundary {0} must be either QLineEdit, None or ' \
+                                                         'float, but not of {1}'.format(right_x_bound,
+                                                                                        type(right_x_bound))
+
+        # set
+        self._bankViewDict[bank_id].setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self._bankViewDict[bank_id].rescale_y_axis(left_x_bound, right_x_bound)
+
+        # # self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        # # self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        # # self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        #
+        # # reset the automatic Y range
+        # if left_x_bound is not None and right_x_bound is not None:
+        #     self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
+        #     self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
+        #     self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
 
         return
 
@@ -754,8 +801,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
                 color_i = self._bankColorDict[bank_id]
                 label_i = 'in accumulation bank {0}'.format(bank_id)
-                # TODO/ISSUE/NOW - Use update line other than delete and re-plot
-                self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
+                self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit,
+                                                                 auto_scale_y=False)
             except RuntimeError as run_err:
                 self.write_log('error', 'Unable to get data from workspace {0} due to {1}'
                                         ''.format(in_sum_ws_name, run_err))
