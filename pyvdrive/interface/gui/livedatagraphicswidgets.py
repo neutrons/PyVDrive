@@ -482,6 +482,15 @@ class SingleBankView(MplGraphicsView):
 
         return
 
+    def get_data(self, x_min, x_max):
+        """
+
+        :param x_min:
+        :param x_max:
+        :return:
+        """
+        self.canvas().get_data(self._currentRunID)
+
     def plot_previous_run(self, vec_x, vec_y, line_color, line_label, unit):
         """
 
@@ -562,9 +571,17 @@ class SingleBankView(MplGraphicsView):
                 raise RuntimeError('Rescale Y axis requires x-max shall be given!')
 
         # retrieve vec X and vec Y from plot and find min and max on subset of Y
+        # check line ID
+        if self._currentRunID is None:
+            raise RuntimeError('It is not possible to have current run ID as None.')
+        else:
+            line_id_list = [self._currentRunID]
+        if self._previousRunID is not None:
+            line_id_list.append(self._previousRunID)
+
         y_min = None
         y_max = None
-        for line_id in [self._currentRunID, self._previousRunID]:
+        for line_id in line_id_list:
             # get data
             vec_x, vec_y = self.canvas().get_data(line_id)
             # search indexes

@@ -9,6 +9,7 @@ from LiveDataChildWindows import SampleLogPlotSetupDialog
 from LiveDataChildWindows import LiveViewSetupDialog
 import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
+import pyvdrive.lib.optimize_utilities as optimize_utilities
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
 import pyvdrive.lib.vdrivehelper as vdrivehelper
@@ -142,13 +143,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_set_bank2_roi)
         self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
                      self.do_set_bank3_roi)
-        self.ui.checkBox_roiSyncB1B2
-        self.ui.pushButton_fitB1
+        self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
+                     self.do_fit_bank1_peak)
 
         # 2D contour
-
-        self.connect(self.ui.pushButton_refresh2D, QtCore.SIGNAL('clicked()'),
-                     self.do_refresh_2d)
 
         # menu bar
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
@@ -229,6 +227,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.ui.checkBox_normByVanadium.setChecked(False)
 
         self.ui.label_info.setText('')
+
+        self.ui.checkBox_roiSyncB1B2.setChecked(True)
 
         return
 
@@ -339,6 +339,43 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def do_fit_bank1_peak(self):
+        """
+
+        :return:
+        """
+        bank_id = 1
+        self.fit_single_peak(bank_id, self.ui.graphicsView_currentViewB1, self.ui.lineEdit_bank1RoiStart,
+                             self.ui.lineEdit_bank1RoiEnd)
+
+        if self.ui.checkBox_peakFitSyncB1B2.isChecked():
+            pass
+
+        self.ui.pushButton_fitB1.setText('Stop Fit')
+        if self.ui.checkBox_peakFitSyncB1B2.isChecked():
+            self.ui.pushButton_fitB2.setText('Stop Fit')
+
+    def fit_single_peak(self, bank_id, graphics_view, x_min_widget, x_max_widget):
+        """
+        start to fit single peak of certain bank
+        :param bank_id:
+        :param graphics_view:
+        :param run_start:
+        :return:
+        """
+        # check inputs blabla
+        # TODO ASAP
+        x_min = float(str(x_min_widget.text()))
+        x_max = float(str(x_max_widget.text()))
+
+        # current or previous?
+        vec_x, vec_y = graphics_view.get_data(x_min, x_max)
+        model_x, model_y, params = optimize_utilities.fit_gaussian(vec_x, vec_y)
+
+        # blabla
+
+        return
+
     def do_launch_ipython(self):
         """ launch IPython console
         :return:
@@ -360,15 +397,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.do_stop_live()
 
         self.close()
-
-        return
-
-    def do_refresh_2d(self):
-        """
-        refresh 2D contour view
-        :return:
-        """
-        self.update_2d_plot(self._update2DCounter % 3 + 1)
 
         return
 
@@ -402,7 +430,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         if self.ui.checkBox_roiSyncB1B2.isChecked():
             self.ui.lineEdit_bank2RoiStart.setText(self.ui.lineEdit_bank1RoiStart.text())
             self.ui.lineEdit_bank2RoiEnd.setText(self.ui.lineEdit_bank1RoiEnd.text())
-            self.do_set_bank2_roi()
+            self.set_bank_view_roi(bank_id=2, left_x_bound=self.ui.lineEdit_bank2RoiStart,
+                                   right_x_bound=self.ui.lineEdit_bank2RoiEnd)
 
         return
 
@@ -417,6 +446,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self.ui.lineEdit_bank1RoiStart.setText(self.ui.lineEdit_bank2RoiStart.text())
             self.ui.lineEdit_bank1RoiEnd.setText(self.ui.lineEdit_bank2RoiEnd.text())
             self.do_set_bank1_roi()
+            self.set_bank_view_roi(bank_id=1, left_x_bound=self.ui.lineEdit_bank1RoiStart,
+                                   right_x_bound=self.ui.lineEdit_bank1RoiEnd)
 
         return
 
@@ -1266,7 +1297,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                           self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
-                self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
+                for bank_id in [1, 2, 3]:
+                    self.set_bank_view_roi(bank_id=bank_id, left_x_bound=None, right_x_bound=None)
 
             # update log
             if self._currSampleLogX is not None:
