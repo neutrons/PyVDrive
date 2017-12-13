@@ -369,6 +369,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         x_max = float(str(x_max_widget.text()))
 
         # current or previous?
+        # TODO ASAP
         vec_x, vec_y = graphics_view.get_data(x_min, x_max)
         model_x, model_y, params = optimize_utilities.fit_gaussian(vec_x, vec_y)
 
@@ -479,6 +480,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             else:
                 assert isinstance(left_x_bound, float), 'Left boundary {0} must be either QLineEdit, None or float, ' \
                                                         'but not of {1}'.format(left_x_bound, type(left_x_bound))
+        else:
+            pass
+            # TODO ASAP How??? use current one???  It is not what is recorded in canvas as data is refreshed!
+
         if right_x_bound is not None:
             if isinstance(right_x_bound, QtGui.QLineEdit):
                 try:
@@ -489,8 +494,12 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 assert isinstance(right_x_bound, float), 'Right boundary {0} must be either QLineEdit, None or ' \
                                                          'float, but not of {1}'.format(right_x_bound,
                                                                                         type(right_x_bound))
-
+        else:
+            #  TODO ASAP same left x bound
+            pass
+    
         # set
+        print '[DB...BAT...BAT...BAT...BAT] X-min = {0}, X-max = {1}'.format(left_x_bound, right_x_bound)
         self._bankViewDict[bank_id].setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
         self._bankViewDict[bank_id].rescale_y_axis(left_x_bound, right_x_bound)
 
@@ -1297,8 +1306,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                           self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
+                print '[DB...BAT...BAT...BAT] Set bank View of ROI'
                 for bank_id in [1, 2, 3]:
                     self.set_bank_view_roi(bank_id=bank_id, left_x_bound=None, right_x_bound=None)
+            else:
+                print '[DB...BAT...BAT...BAT] Set bank View to original'
 
             # update log
             if self._currSampleLogX is not None:
