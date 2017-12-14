@@ -229,6 +229,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         self.ui.checkBox_roiSyncB1B2.setChecked(True)
 
+        # disable some features temporarily
+        self.ui.pushButton_fitB1.setEnabled(False)
+        self.ui.pushButton_fitB2.setEnabled(False)
+        self.ui.pushButton_fitB3.setEnabled(False)
+
         return
 
     def _set_workspace_manager(self, max_acc_ws_number, accumulation_time, update_time):
