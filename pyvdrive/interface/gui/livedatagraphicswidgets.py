@@ -482,34 +482,45 @@ class SingleBankView(MplGraphicsView):
 
         return
 
-    def get_data(self, x_min, x_max):
+    def get_data(self, x_min, x_max, is_currents=True):
         """
 
         :param x_min:
         :param x_max:
         :return:
         """
-        self.canvas().get_data(self._currentRunID)
+        if is_currents:
+            result = self.canvas().get_data(self._currentRunID)
+        else:
+            result = self.canvas().get_data(self._previousRunID)
 
-    def plot_previous_run(self, vec_x, vec_y, line_color, line_label, unit):
+        # get vector X and vector Y
+        vec_x, vec_y = result
+        assert len(vec_x) == len(vec_y), 'Vector X and Y\'s sizes shall be same.'
+
+        i_min = numpy.searchsorted(vec_x, x_min, side='left', sorter=None)
+        i_max = numpy.searchsorted(vec_x, x_max, side='left', sorter=None)
+
+        return vec_x[i_min:i_max], vec_y[i_min:i_max]
+
+    def plot_previous_run(self, vec_x, vec_y, line_color, line_label):
         """
-
+        Plot previous run
+        :param vec_x:
+        :param vec_y:
+        :param line_color:
+        :param line_label:
         :return:
         """
-        # TODO/ISSUE/NOW - Use update instead of delete and move
-
         # delete previous one (if they are different)
-        if self._previousRunID is not None:
-            self.remove_line(self._previousRunID)
-            self._previousRunKey = None
-
-        # update
-        self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
-                                               label=line_label, x_label=unit)
-
-        # set Y label
-        max_y = max(vec_y) * 1.05
-        self.setXYLimit(ymin=0, ymax=max_y)
+        if self._previousRunID is None:
+            # add a new plot
+            self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
+                                                   label=line_label)
+        else:
+            # update the previous plot
+            self.updateLine(ikey=self._previousRunID, vecx=vec_x, vecy=vec_y, label=line_label)
+        # END-IF-ELSE
 
         return
 
@@ -534,11 +545,9 @@ class SingleBankView(MplGraphicsView):
         else:
             # update line
             self.canvas().updateLine(ikey=self._currentRunID, vecx=vec_x, vecy=vec_y,
-                                     linecolor=line_color)
+                                     linecolor=line_color, label=line_label)
             if unit is not None:
-                self.canvas().set_label(side='x', text=unit)
-            if line_label is not None:
-                self.canvas().set_label(side='y', text=line_label)
+                self.canvas().set_xy_label(side='x', text=unit)
 
         # END-IF-ELSE
 
@@ -604,10 +613,43 @@ class SingleBankView(MplGraphicsView):
 
         return
 
+    def reset_roi(self):
+        """
+        reset region of interest to range of data.  And apply to figure
+        :return:
+        """
+        self._roiMin = None
+        self._roiMax = None
+
+        self.setXYLimit(xmin=self._dataXMin, xmax=self._dataXMax)
+
+        return
+
     def set_roi(self, x_min, x_max):
         """
-
+        set ROI and apply to the figure
         :param x_min:
         :param x_max:
         :return:
         """
+        # X-MIN
+        if x_min is not None:
+            # set region of interest if x_min is specified
+            self._roiMin = x_min
+        else:
+            # use the previously defined region of interest's x_min.
+            # or None if never been defined
+            x_min = self._roiMin
+
+        # X-Max
+        if x_max is not None:
+            # set region of interest if x_min is specified
+            self._roiMax = x_max
+        else:
+            # use the previously defined region of interest's x_min.
+            # or None if never been defined
+            x_max = self._roiMax
+
+        self.setXYLimit(xmin=x_min, xmax=x_max)
+
+        return

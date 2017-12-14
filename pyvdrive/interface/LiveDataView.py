@@ -136,7 +136,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
 
-        # TODO ASAP ASAP
         self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
                      self.do_set_bank1_roi)
         self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
@@ -363,15 +362,30 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :param run_start:
         :return:
         """
-        # check inputs blabla
-        # TODO ASAP
-        x_min = float(str(x_min_widget.text()))
-        x_max = float(str(x_max_widget.text()))
+        # check inputs
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        assert graphics_view.__class__.__name__.count('SingleBankView') > 0,\
+            'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
+            ''.format(graphics_view, type(graphics_view))
+        assert isinstance(x_min_widget, QtGui.QLineEdit), 'Min X widget {0} must be a QLineEdit but not a ' \
+                                                          '{1}'.format(x_min_widget, type(x_min_widget))
+        assert isinstance(x_max_widget, QtGui.QLineEdit), 'Max X widget {0} must be a QLineEdit but not a ' \
+                                                          '{1}'.format(x_max_widget, type(x_max_widget))
+
+        try:
+            x_min = float(str(x_min_widget.text()))
+            x_max = float(str(x_max_widget.text()))
+        except ValueError as value_err:
+            err_msg = 'Unable to parse x-min {0} or x-max {1} due to {2}.' \
+                      ''.format(x_min_widget.text(), x_max_widget.text(), value_err)
+            self.write_log('error', err_msg)
+            return
 
         # current or previous?
-        # TODO ASAP
         vec_x, vec_y = graphics_view.get_data(x_min, x_max)
-        model_x, model_y, params = optimize_utilities.fit_gaussian(vec_x, vec_y)
+        # TODO ASAP
+        coeff, model_y = optimize_utilities.fit_gaussian(vec_x, vec_y)
 
         # blabla
 
@@ -480,9 +494,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             else:
                 assert isinstance(left_x_bound, float), 'Left boundary {0} must be either QLineEdit, None or float, ' \
                                                         'but not of {1}'.format(left_x_bound, type(left_x_bound))
-        else:
-            pass
-            # TODO ASAP How??? use current one???  It is not what is recorded in canvas as data is refreshed!
+        # END-IF
 
         if right_x_bound is not None:
             if isinstance(right_x_bound, QtGui.QLineEdit):
@@ -494,24 +506,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 assert isinstance(right_x_bound, float), 'Right boundary {0} must be either QLineEdit, None or ' \
                                                          'float, but not of {1}'.format(right_x_bound,
                                                                                         type(right_x_bound))
-        else:
-            #  TODO ASAP same left x bound
-            pass
+        # END-IF
     
         # set
-        print '[DB...BAT...BAT...BAT...BAT] X-min = {0}, X-max = {1}'.format(left_x_bound, right_x_bound)
-        self._bankViewDict[bank_id].setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self._bankViewDict[bank_id].set_roi(left_x_bound, right_x_bound)
         self._bankViewDict[bank_id].rescale_y_axis(left_x_bound, right_x_bound)
-
-        # # self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        # # self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        # # self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        #
-        # # reset the automatic Y range
-        # if left_x_bound is not None and right_x_bound is not None:
-        #     self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
-        #     self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
-        #     self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
 
         return
 
@@ -892,7 +891,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # skip if the previous plotted is sam
         if prev_ws_name == self._plotPrevCycleName:
-            # minor/TODO/NOW - refactor to method
             debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
                             ''.format(prev_ws_name)
             self.write_log('debug', debug_message)
@@ -916,8 +914,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_y_van = self._controller.get_vanadium(bank_id)
                 vec_y = vec_y / vec_y_van
             vec_x = prev_ws.readX(bank_id-1)[:len(vec_y)]
-            # TODO/NOW - Use update or new line?
-            self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label, target_unit)
+            self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label)
 
         # clean
         if is_new_ws:

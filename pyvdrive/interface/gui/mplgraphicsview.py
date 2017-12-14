@@ -894,28 +894,25 @@ class MplGraphicsView(QtGui.QWidget):
         """
         return self._myCanvas.remove_plot_1d(ikey)
 
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
+    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None,
+                   label=None):
         """
-        update a line's set up
-        Parameters
-        ----------
-        ikey
-        vecx
-        vecy
-        linestyle
-        linecolor
-        marker
-        markercolor
-
-        Returns
-        -------
-
+        update a line including its value, style, color, marker and etc.
+        :param ikey:
+        :param vecx:
+        :param vecy:
+        :param linestyle:
+        :param linecolor:
+        :param marker:
+        :param markercolor:
+        :param label:
+        :return:
         """
         # check
         assert isinstance(ikey, int), 'Line key must be an integer.'
         assert ikey in self._my1DPlotDict, 'Line with ID %d is not on canvas. ' % ikey
 
-        return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor)
+        return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor, label)
 
     def update_indicator(self, i_key, color):
         """
@@ -1510,7 +1507,7 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
-    def set_label(self, side, text, font_size=16):
+    def set_xy_label(self, side, text, font_size=16):
         """
         set X or Y label
         :param side:
@@ -1614,20 +1611,19 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
+    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None,
+                   label=None):
         """
         Update a plot line or a series plot line
-        Args:
-            ikey:
-            vecx:
-            vecy:
-            linestyle:
-            linecolor:
-            marker:
-            markercolor:
-
-        Returns:
-
+        :param ikey:
+        :param vecx:
+        :param vecy:
+        :param linestyle:
+        :param linecolor:
+        :param marker:
+        :param markercolor:
+        :param label:
+        :return:
         """
         line = self._lineDict[ikey]
         if line is None:
@@ -1650,8 +1646,9 @@ class Qt4MplCanvas(FigureCanvas):
         if markercolor is not None:
             line.set_markerfacecolor(markercolor)
 
-        oldlabel = line.get_label()
-        line.set_label(oldlabel)
+        if label is None:
+            label = line.get_label()
+        line.set_label(label)
 
         self._setup_legend()
 
