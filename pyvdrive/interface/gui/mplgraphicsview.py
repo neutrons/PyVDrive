@@ -370,7 +370,7 @@ class MplGraphicsView(QtGui.QWidget):
 
         # set up canvas
         self._myCanvas = Qt4MplCanvas(self)
-        self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
+        # self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
 
         # state of operation
         self._isZoomed = False
@@ -380,7 +380,7 @@ class MplGraphicsView(QtGui.QWidget):
         # set up layout
         self._vBox = QtGui.QVBoxLayout(self)
         self._vBox.addWidget(self._myCanvas)
-        self._vBox.addWidget(self._myToolBar)
+        # self._vBox.addWidget(self._myToolBar)
 
         # auto line's maker+color list
         self._myLineMarkerColorList = []
@@ -894,28 +894,25 @@ class MplGraphicsView(QtGui.QWidget):
         """
         return self._myCanvas.remove_plot_1d(ikey)
 
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
+    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None,
+                   label=None):
         """
-        update a line's set up
-        Parameters
-        ----------
-        ikey
-        vecx
-        vecy
-        linestyle
-        linecolor
-        marker
-        markercolor
-
-        Returns
-        -------
-
+        update a line including its value, style, color, marker and etc.
+        :param ikey:
+        :param vecx:
+        :param vecy:
+        :param linestyle:
+        :param linecolor:
+        :param marker:
+        :param markercolor:
+        :param label:
+        :return:
         """
         # check
         assert isinstance(ikey, int), 'Line key must be an integer.'
         assert ikey in self._my1DPlotDict, 'Line with ID %d is not on canvas. ' % ikey
 
-        return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor)
+        return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor, label)
 
     def update_indicator(self, i_key, color):
         """
@@ -1177,9 +1174,9 @@ class Qt4MplCanvas(FigureCanvas):
 
         # set x-axis and y-axis label
         if x_label is not None:
-            self.axes.set_xlabel(x_label, fontsize=16)
+            self.axes.set_xlabel(x_label, fontsize=8)
         if y_label is not None:
-            self.axes.set_ylabel(y_label, fontsize=16)
+            self.axes.set_ylabel(y_label, fontsize=8)
 
         # process inputs and defaults
         if color is None:
@@ -1510,6 +1507,21 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
+    def set_xy_label(self, side, text, font_size=16):
+        """
+        set X or Y label
+        :param side:
+        :param text:
+        :return:
+        """
+        if side == 'x':
+            # set x-axis and y-axis label
+            self.axes.set_xlabel(text, fontsize=font_size)
+        elif side == 'y':
+            self.axes.set_ylabel(text, fontsize=font_size)
+
+        return
+
     def setXYLimit(self, xmin, xmax, ymin, ymax):
         """
         """
@@ -1599,20 +1611,19 @@ class Qt4MplCanvas(FigureCanvas):
 
         return
 
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
+    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None,
+                   label=None):
         """
         Update a plot line or a series plot line
-        Args:
-            ikey:
-            vecx:
-            vecy:
-            linestyle:
-            linecolor:
-            marker:
-            markercolor:
-
-        Returns:
-
+        :param ikey:
+        :param vecx:
+        :param vecy:
+        :param linestyle:
+        :param linecolor:
+        :param marker:
+        :param markercolor:
+        :param label:
+        :return:
         """
         line = self._lineDict[ikey]
         if line is None:
@@ -1635,8 +1646,9 @@ class Qt4MplCanvas(FigureCanvas):
         if markercolor is not None:
             line.set_markerfacecolor(markercolor)
 
-        oldlabel = line.get_label()
-        line.set_label(oldlabel)
+        if label is None:
+            label = line.get_label()
+        line.set_label(label)
 
         self._setup_legend()
 

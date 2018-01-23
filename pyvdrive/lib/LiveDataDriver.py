@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
@@ -390,10 +391,20 @@ class LiveDataDriver(QtCore.QThread):
         return
 
     def get_vanadium(self, bank_id):
-        # blabla
+        """
+        get vanadium spectrum of a bank ID
+        :param bank_id:
+        :return:
+        """
+        # check input
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        if bank_id not in self._vanadiumWorkspaceDict:
+            raise RuntimeError('Bank ID {0} does not exist in vanadium workspaces. Current supported are {1}'
+                               ''.format(bank_id, self._vanadiumWorkspaceDict.keys()))
+
         return ADS.retrieve(self._vanadiumWorkspaceDict[bank_id]).readY(0)
 
-    # TODO/NOW/ - In-Implementation
     def load_reduced_runs(self, ipts_number, run_number, output_ws_name):
         """
 
@@ -401,8 +412,12 @@ class LiveDataDriver(QtCore.QThread):
         :param run_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'blabla2'
-        assert isinstance(run_number, int), 'blbbla3'
+        assert isinstance(ipts_number, int), 'IPTS number {0} ({1}) must be an integer.' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number, int), 'Run number {0} ({1}) must be an integer.' \
+                                            ''.format(run_number, type(run_number))
+
+        # TODO/ASAP/ - In-Implementation
 
         gsas_file_name = self._archiveManager.get_data_archive_gsas(ipts_number, run_number)
 
@@ -410,38 +425,42 @@ class LiveDataDriver(QtCore.QThread):
 
         return
 
-    # TEST TODO/NOW - Method-in-implementation
     def load_smoothed_vanadium(self, van_gsas_file):
-        """
-
+        """ Load smoothed vanadium spectra from GSAS file
         :param van_gsas_file:
         :return:
         """
-        # TODO/TODO/NOW/NOW - Clean the code
+        # check
+        assert isinstance(van_gsas_file, str), 'Vanadium GSAS file name {0} must be a string.'.format(van_gsas_file)
+        if os.path.exists(van_gsas_file) is False:
+            raise RuntimeError('Vanadium GSAS file {0} cannot be found.'.format(van_gsas_file))
 
-        # import os
-        # gsas_path = os.path.join(os.path.expanduser('~/Downloads/'), '158559-s.gda')
-        # general
+        # load file and edit instrument for dSpacing
         mantidsimple.LoadGSS(Filename=van_gsas_file, OutputWorkspace='vanadium')
-        mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998, SpectrumIDs='1-3',
-                               L2='2,2,2', Polar='90,270,150')
+        mantidsimple.EditInstrumentGeometry(Workspace='vanadium', PrimaryFlightPath=43.753999999999998,
+                                            SpectrumIDs='1-3',
+                                            L2='2,2,2', Polar='90,270,150')
         mantidsimple.ConvertUnits(InputWorkspace='vanadium', OutputWorkspace='vanadium', Target='dSpacing')
 
-        # bank 1 and 2
+        # bank 1 and 2: extract, rebin and smooth
         for bank in [1, 2]:
             ws_name = 'van_bank_{0}'.format(bank)
-            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='van2banks', WorkspaceIndexList=bank-1)
-            mantidsimple.Rebin(InputWorkspace='van2banks', OutputWorkspace='van2banks', Params='0.3,-0.001, 3.5')
-            mantidsimple.FFTSmooth(InputWorkspace='van2banks', OutputWorkspace=ws_name, Filter='Butterworth', Params='20,2',
-                  IgnoreXBins=True, AllSpectra=True)
+            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='van2banks',
+                                        WorkspaceIndexList=bank-1)
+            mantidsimple.Rebin(InputWorkspace='van2banks', OutputWorkspace='van2banks',
+                               Params='0.3,-0.001, 3.5')
+            mantidsimple.FFTSmooth(InputWorkspace='van2banks', OutputWorkspace=ws_name,
+                                   Filter='Butterworth', Params='20,2',
+                                   IgnoreXBins=True, AllSpectra=True)
             self._vanadiumWorkspaceDict[bank] = ws_name
 
-        # bank3
+        # bank3: different algorithm because it has more bins than bank 1 and 2 but has some issue with Mantid
         for bank in [3]:
             # special processing for bank 3
-            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='vanhighbank', WorkspaceIndexList=bank-1)
+            mantidsimple.ExtractSpectra(InputWorkspace='vanadium', OutputWorkspace='vanhighbank',
+                                        WorkspaceIndexList=bank-1)
 
-            # sort the bins
+            # sort the bins: FIXME might be better to use numpy array
             bank3ws = ADS.retrieve('vanhighbank')
             vecx = bank3ws.readX(0)
             vecy = bank3ws.readY(0)
@@ -449,6 +468,7 @@ class LiveDataDriver(QtCore.QThread):
             for i in range(len(vecy)):
                 xy_list.append((vecx[i], vecy[i]))
 
+            # X might be out of order
             xy_list.sort()
 
             vec_x = numpy.ndarray(shape=(len(vecx),), dtype='float')
@@ -459,12 +479,12 @@ class LiveDataDriver(QtCore.QThread):
                 vec_y[i] = xy[1]
             vec_x[-1] = vecx[-1]
 
-            mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1, UnitX='dSpacing', OutputWorkspace='vanbank3')
-
+            mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, NSpec=1,
+                                         UnitX='dSpacing', OutputWorkspace='vanbank3')
             mantidsimple.Rebin(InputWorkspace='vanbank3', OutputWorkspace='vanbank3', Params='0.3,-0.001, 3.5')
             ws_name = 'van_bank_{0}'.format(bank)
-            mantidsimple.FFTSmooth(InputWorkspace='vanbank3', OutputWorkspace=ws_name, WorkspaceIndex=0, Filter='Butterworth',
-                  Params='20,2', IgnoreXBins=True, AllSpectra=True)
+            mantidsimple.FFTSmooth(InputWorkspace='vanbank3', OutputWorkspace=ws_name, WorkspaceIndex=0,
+                                   Filter='Butterworth', Params='20,2', IgnoreXBins=True, AllSpectra=True)
 
             self._vanadiumWorkspaceDict[bank] = ws_name
         # END-FOR
@@ -508,10 +528,16 @@ class LiveDataDriver(QtCore.QThread):
                 # check
                 if date_time_vec[-1] > time_vec_i[0]:
                     diff_ns = date_time_vec[-1].totalNanoseconds() - time_vec_i[0].totalNanoseconds()
-                    raise RuntimeError('Previous workspace {0} is later than the current one {1} on sample log {2}'
-                                       ': {3} vs {4} by {5}'
-                                       ''.format(ws_name_list[seq_index-1], ws_name, sample_log_name,
-                                                 date_time_vec[-1], time_vec_i[0], diff_ns))
+                    error_message = 'Previous workspace {0} is later than the current one {1} on sample log {2}:' \
+                                    ' {3} vs {4} by {5}' \
+                                    ''.format(ws_name_list[seq_index - 1], ws_name, sample_log_name,
+                                              date_time_vec[-1], time_vec_i[0], diff_ns)
+                    if ws_name == 'Accumulated_00001':
+                        # if it happens with first.. just skip!
+                        print '[ERROR] {0}'.format(error_message)
+                        continue
+                    else:
+                        raise RuntimeError(error_message)
                 elif date_time_vec[-1] == time_vec_i[0]:
                     print 'Previous workspace {0} has one entry overlapped with current one {1} on sample log {2}: ' \
                           '{3} vs {4}. Values are {5} and {6}.' \

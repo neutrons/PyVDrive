@@ -59,6 +59,7 @@ import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
+import h5py
 
 
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal',
@@ -2273,14 +2274,38 @@ class ReduceVulcanData(object):
             return False, str(ass_err), None
         # END-IF-ELSE
 
+        # check the binning parameters
+        # NOTE: no constant binning step is allowed here to avoid confusion from users
+        bin_param_str_list = binning_parameter.split(',')
+        if len(bin_param_str_list) == 1:
+            bin_size = abs(float(bin_param_str_list[0]))
+        elif len(bin_param_str_list) == 3:
+            bin_size = abs(float(bin_param_str_list[1]))
+        else:
+            bin_size = -0.001
+
+        if abs(bin_size - 0.001) > 1.E-6:
+            # different from IDL binning
+            not_align_idl = True
+        else:
+            # same as IDL binning
+            not_align_idl = False
+
+        # reconstruct
+        if not_align_idl:
+            ew_params = '5000, {0}, 70000'.format(-1*abs(bin_size))
+        else:
+            ew_params = '5000.,-0.001,70000.'
+
         # Save to GSAS file
         # TODO/NEXT - vulcan.prm should be input as an argument
         self.export_to_gsas(reduced_workspace=reduced_ws_name,
                             gsas_file_name=gsas_file_name,
                             gsas_iparm_file_name='vulcan.prm',
                             delete_exist_gsas_file=del_exist,
-                            east_west_binning_parameters='5000.,-0.001,70000.',
-                            high_angle_binning_parameters='5000.,-0.0003,70000.')
+                            east_west_binning_parameters=ew_params,
+                            high_angle_binning_parameters='5000.,-0.0003,70000.',
+                            not_align_idl=not_align_idl)
 
         if output_access_error:
             error_message = 'Code001: Unable to write GSAS file to {0}. Write to {1} instead.\n' \
@@ -2290,7 +2315,7 @@ class ReduceVulcanData(object):
         return True, self._myLogInfo, reduced_ws_name
 
     def export_to_gsas(self, reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
-                       east_west_binning_parameters, high_angle_binning_parameters):
+                       east_west_binning_parameters, high_angle_binning_parameters, not_align_idl):
         """
         export reduced workspace to GSAS file
         :param gsas_iparm_file_name: default '"Vulcan.prm"'
@@ -2320,9 +2345,10 @@ class ReduceVulcanData(object):
             vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_workspace)
 
             # save to Vuclan GSAS
+            bin_file_name = self._reductionSetup.get_vulcan_bin_file()
             try:
                 mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
-                                           BinFilename=self._reductionSetup.get_vulcan_bin_file(),
+                                           BinFilename=bin_file_name,
                                            OutputWorkspace=vdrive_bin_ws_name,
                                            GSSFilename=gsas_file_name,
                                            IPTS=self._reductionSetup.get_ipts_number(),
@@ -2340,17 +2366,22 @@ class ReduceVulcanData(object):
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # NOTE: The bank ID (from 1) is required here
 
-            # import h5 file
-            h5_bin_file_name = self._reductionSetup.get_vulcan_bin_file()
-            import h5py
-            bin_file = h5py.File(h5_bin_file_name, 'r')
-            low_bins = bin_file['west_east_bank'][:]
-            high_bins = bin_file['high_angle_bank'][:]
-            bin_file.close()
+            if not_align_idl:
+                bin_param_list = [([1, 2], east_west_binning_parameters),
+                                  ([3], high_angle_binning_parameters)]
+            else:
+                # import h5 file
+                h5_bin_file_name = self._reductionSetup.get_vulcan_bin_file()
+                bin_file = h5py.File(h5_bin_file_name, 'r')
+                low_bins = bin_file['west_east_bank'][:]
+                high_bins = bin_file['high_angle_bank'][:]
+                bin_file.close()
 
-            bin_param_list = [([1, 2], low_bins),
-                              ([3], high_bins)]
+                bin_param_list = [([1, 2], low_bins),
+                                  ([3], high_bins)]
+            # END-IF
 
+            # save. it is an option to use IDL bin provided from VDRIVE
             save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
                                              binning_parameter_list=bin_param_list,
                                              output_file_name=gsas_file_name,
@@ -2358,6 +2389,7 @@ class ReduceVulcanData(object):
                                              gsas_param_file=gsas_iparm_file_name)
 
             vdrive_bin_ws_name = reduced_workspace
+
         else:
             # write to GSAS file with Mantid bins
             mantidsimple.SaveGSS(InputWorkspace=reduced_workspace,

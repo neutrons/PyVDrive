@@ -392,9 +392,49 @@ class Live2DView(MplGraphicsView2D):
             matrix_index += 1
         # END-FOR
 
-        # clear canvas and add contour plot
-        self.clear_canvas()
+        print '[DB........BAT........BAT] vec_y = {0}; size of matrix = {1}.'.format(vec_y, matrix_y.shape)
+
         self.canvas().add_contour_plot(vec_x, vec_y, matrix_y)
+
+        return
+
+    def plot_image(self, data_set_dict):
+        """ Plot 2D data as a contour plot
+        :param data_set_dict: dictionary such that
+        :return:
+        """
+        # Check inputs
+        assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
+                                                ''.format(type(data_set_dict))
+
+        # construct
+        x_list = sorted(data_set_dict.keys())
+        vec_x = data_set_dict[x_list[0]][0]
+        vec_y = numpy.array(x_list)
+        size_x = len(vec_x)
+
+        # create matrix on mesh
+        grid_shape = len(vec_y), len(vec_x)
+        matrix_y = numpy.ndarray(grid_shape, dtype='float')
+        matrix_index = 0
+        for index in vec_y:
+            # vector X
+            vec_x_i = data_set_dict[index][0]
+            if len(vec_x_i) != size_x:
+                raise RuntimeError('Unable to form a contour plot because {0}-th vector has a different size {1} '
+                                   'than first size {2}'.format(index, len(vec_x_i), size_x))
+
+            # vector Y: each row will have the value of a pattern
+            matrix_y[matrix_index:] = data_set_dict[index][1]  #
+            matrix_index += 1
+        # END-FOR
+
+        # clear canvas and add contour plot
+        if self.canvas().has_plot('image'):
+            self.canvas().update_image(matrix_y)
+        else:
+            self.add_2d_plot(array2d=matrix_y, x_min=min(vec_x), x_max=max(vec_x),
+                             y_min=0, y_max=10, plot_type='image')
 
         return
 
@@ -417,8 +457,13 @@ class SingleBankView(MplGraphicsView):
         self._previousRunID = None
         self._previousRunKey = None  # can use workspace name
 
-        self._minX = None
-        self._maxX = None
+        # original X range
+        self._dataXMin = None
+        self._dataXMax = None
+
+        # region of interest
+        self._roiMin = None
+        self._roiMax = None
 
         return
 
@@ -437,46 +482,78 @@ class SingleBankView(MplGraphicsView):
 
         return
 
-    def plot_previous_run(self, vec_x, vec_y, line_color, line_label, unit):
+    def get_data(self, x_min, x_max, is_currents=True):
         """
 
+        :param x_min:
+        :param x_max:
         :return:
         """
-        # TODO/ISSUE/NOW - Use update instead of delete and move
+        if is_currents:
+            result = self.canvas().get_data(self._currentRunID)
+        else:
+            result = self.canvas().get_data(self._previousRunID)
 
+        # get vector X and vector Y
+        vec_x, vec_y = result
+        assert len(vec_x) == len(vec_y), 'Vector X and Y\'s sizes shall be same.'
+
+        i_min = numpy.searchsorted(vec_x, x_min, side='left', sorter=None)
+        i_max = numpy.searchsorted(vec_x, x_max, side='left', sorter=None)
+
+        return vec_x[i_min:i_max], vec_y[i_min:i_max]
+
+    def plot_previous_run(self, vec_x, vec_y, line_color, line_label):
+        """
+        Plot previous run
+        :param vec_x:
+        :param vec_y:
+        :param line_color:
+        :param line_label:
+        :return:
+        """
         # delete previous one (if they are different)
-        if self._previousRunID is not None:
-            self.remove_line(self._previousRunID)
-            self._previousRunKey = None
-
-        # update
-        self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
-                                               label=line_label, x_label=unit)
-
-        # set Y label
-        max_y = max(vec_y) * 1.05
-        self.setXYLimit(ymin=0, ymax=max_y)
+        if self._previousRunID is None:
+            # add a new plot
+            self._previousRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
+                                                   label=line_label)
+        else:
+            # update the previous plot
+            self.updateLine(ikey=self._previousRunID, vecx=vec_x, vecy=vec_y, label=line_label)
+        # END-IF-ELSE
 
         return
 
-    def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit):
-        """
-        update/plot current accumulated
+    def plot_current_plot(self, vec_x, vec_y, line_color, line_label, unit, auto_scale_y):
+        """ update/plot current one that is being accumulated
+        :param vec_x:
+        :param vec_y:
+        :param line_color:
+        :param line_label:
+        :param unit:
+        :param auto_scale_y:
         :return:
         """
-        # TODO/ISSUE/NOW - Use update instead of delete and move
+        # reset X
+        self._dataXMin = vec_x[0]
+        self._dataXMax = vec_x[-1]
 
-        # remove existing line
-        if self._currentRunID is not None:
-            self.remove_line(self._currentRunID)
+        if self._currentRunID is None:
+            # new line
+            self._currentRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
+                                                  label=line_label, x_label=unit)
+        else:
+            # update line
+            self.canvas().updateLine(ikey=self._currentRunID, vecx=vec_x, vecy=vec_y,
+                                     linecolor=line_color, label=line_label)
+            if unit is not None:
+                self.canvas().set_xy_label(side='x', text=unit)
 
-        # plot
-        self._currentRunID = self.add_plot_1d(vec_x, vec_y, color=line_color,
-                                              label=line_label, x_label=unit)
+        # END-IF-ELSE
 
-        if self._previousRunID is None:
-            max_y = max(vec_y) * 1.05
-            self.setXYLimit(ymin=0, ymax=max_y)
+        # scale Y
+        if auto_scale_y:
+            self.rescale_y_axis(x_min=None, x_max=None)
 
         return
 
@@ -486,21 +563,34 @@ class SingleBankView(MplGraphicsView):
         :return:
         """
         if x_min is None:
-            if self._minX is None:
-                raise RuntimeError('Rescale Y Axis requires x-min shall be given!')
+            if self._roiMin is not None:
+                x_min = self._roiMin
+            elif self._dataXMin is not None:
+                x_min = self._dataXMin
             else:
-                x_min = self._minX
+                raise RuntimeError('Rescale Y Axis requires x-min shall be given!')
+        # END-IF
 
         if x_max is None:
-            if self._maxX is None:
-                raise RuntimeError('Rescale Y axis requires x-max shall be given!')
+            if self._roiMax is not None:
+                x_max = self._roiMax
+            elif self._dataXMax is not None:
+                x_max = self._dataXMax
             else:
-                x_max = self._maxX
+                raise RuntimeError('Rescale Y axis requires x-max shall be given!')
 
         # retrieve vec X and vec Y from plot and find min and max on subset of Y
+        # check line ID
+        if self._currentRunID is None:
+            raise RuntimeError('It is not possible to have current run ID as None.')
+        else:
+            line_id_list = [self._currentRunID]
+        if self._previousRunID is not None:
+            line_id_list.append(self._previousRunID)
+
         y_min = None
         y_max = None
-        for line_id in [self._currentRunID, self._previousRunID]:
+        for line_id in line_id_list:
             # get data
             vec_x, vec_y = self.canvas().get_data(line_id)
             # search indexes
@@ -520,5 +610,46 @@ class SingleBankView(MplGraphicsView):
         upper_y = y_max + 0.05 * y_range
         lower_y = 0   # intensity cannot be zero but shall always from zero
         self.setXYLimit(ymin=lower_y, ymax=upper_y)
+
+        return
+
+    def reset_roi(self):
+        """
+        reset region of interest to range of data.  And apply to figure
+        :return:
+        """
+        self._roiMin = None
+        self._roiMax = None
+
+        self.setXYLimit(xmin=self._dataXMin, xmax=self._dataXMax)
+
+        return
+
+    def set_roi(self, x_min, x_max):
+        """
+        set ROI and apply to the figure
+        :param x_min:
+        :param x_max:
+        :return:
+        """
+        # X-MIN
+        if x_min is not None:
+            # set region of interest if x_min is specified
+            self._roiMin = x_min
+        else:
+            # use the previously defined region of interest's x_min.
+            # or None if never been defined
+            x_min = self._roiMin
+
+        # X-Max
+        if x_max is not None:
+            # set region of interest if x_min is specified
+            self._roiMax = x_max
+        else:
+            # use the previously defined region of interest's x_min.
+            # or None if never been defined
+            x_max = self._roiMax
+
+        self.setXYLimit(xmin=x_min, xmax=x_max)
 
         return

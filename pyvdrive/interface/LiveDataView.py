@@ -9,9 +9,9 @@ from LiveDataChildWindows import SampleLogPlotSetupDialog
 from LiveDataChildWindows import LiveViewSetupDialog
 import gui.ui_LiveDataView_ui as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
+import pyvdrive.lib.optimize_utilities as optimize_utilities
 import pyvdrive.lib.mantid_helper as helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-from gui import GuiUtility as GuiUtil
 import pyvdrive.lib.vdrivehelper as vdrivehelper
 
 # include this try/except block to remap QString needed when using IPython
@@ -23,7 +23,6 @@ except AttributeError:
 # TODO/ISSUE/FUTURE - Consider https://www.tutorialspoint.com/pyqt/pyqt_qsplitter_widget.htm
 #
 # TODO - NEW TO TEST
-# 1. Test live plot with improved data structure
 # 2. 2D contour plot for reduced runs and in-accumulation run
 
 # Note: Atomic workspace: output_xxxx
@@ -93,8 +92,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # about previous round pot
         self._plotPrevCycleName = None
-        # Bank ID (current): shall be updated with event to handle change of bank ID selection
-        self._currentBankID = 1
 
         # plotting setup
         self._bankViewDMin = None
@@ -128,18 +125,27 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # initialize widgets
         self._init_widgets()
 
+        # banks
+        self._bankViewDict = {1: self.ui.graphicsView_currentViewB1,
+                              2: self.ui.graphicsView_currentViewB2,
+                              3: self.ui.graphicsView_currentViewB3}
+
         # set up the event handlers
         self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_start_live)
         self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
                      self.do_stop_live)
-        self.connect(self.ui.pushButton_setROI, QtCore.SIGNAL('clicked()'),
-                     self.do_set_roi)
+
+        self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
+                     self.do_set_bank1_roi)
+        self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
+                     self.do_set_bank2_roi)
+        self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
+                     self.do_set_bank3_roi)
+        self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
+                     self.do_fit_bank1_peak)
 
         # 2D contour
-
-        self.connect(self.ui.pushButton_refresh2D, QtCore.SIGNAL('clicked()'),
-                     self.do_refresh_2d)
 
         # menu bar
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
@@ -150,6 +156,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                      self.do_launch_ipython)
         self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
                      self.menu_launch_setup)
+        self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
+                     self.menu_show_multi_purpose_dock)
 
         # other widgets
         self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -158,24 +166,22 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
                      self.evt_show_high_prev_data)
 
-        self.connect(self.ui.checkBox_2dBank1, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank1_changed)
-        self.connect(self.ui.checkBox_2dBank2, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank2_changed)
-        self.connect(self.ui.checkBox_2dBank3, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_bank3_changed)
-
         # general purpose
         self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
                      self.do_setup_gpplot)
 
         # multiple thread pool
         self._checkStateTimer = None
+        self._2dUpdater = None
 
         self._bankColorDict = {1: 'red', 2: 'blue', 3: 'green'}
         self._mainGraphicDict = {1: self.ui.graphicsView_currentViewB1,
-                                 2: self.              ui.graphicsView_currentViewB2,
+                                 2: self.ui.graphicsView_currentViewB2,
                                  3: self.ui.graphicsView_currentViewB3}
+
+        self._contourFigureDict = {1: self.ui.graphicsView_2DBank1,
+                                   2: self.ui.graphicsView_2DBank2,
+                                   3: self.ui.graphicsView_2DBank3}
 
         # timer for accumulation start time
         self._accStartTime = datetime.now()
@@ -189,15 +195,25 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._2dStartRunNumber = None
 
         # mutexes
-        self._bankSelectMutex = False
 
         # random seed
         random.seed(1)
-
+        # GUI update control
+        self._update2DCounter = 0
         #
         self.show_refresh_info()
 
         return
+
+    def menu_show_multi_purpose_dock(self):
+        """
+        show multiple-purpose docker widget if it is closed
+        :return:
+        """
+        action = self.ui.dockWidget_multiPurposeView.toggleViewAction()
+        print '[DB...PROTOTYPE] action : {0} of type {1}'.format(action, type(action))
+        action.setVisible(True)
+        self.ui.dockWidget_multiPurposeView.show()
 
     def _init_widgets(self):
         """
@@ -207,14 +223,16 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # widgets to show/high previous reduced date
         self.ui.checkBox_showPrevReduced.setChecked(True)
         self.ui.lineEdit_showPrevNCycles.setText('1')
-        self.ui.checkBox_normByVanadium.setChecked(True)
-
-        self._bankSelectMutex = True
-        self._set_bank_checkbox()
-        self.ui.checkBox_2dBank1.setChecked(True)
-        self._bankSelectMutex = False
+        self.ui.checkBox_normByVanadium.setChecked(False)
 
         self.ui.label_info.setText('')
+
+        self.ui.checkBox_roiSyncB1B2.setChecked(True)
+
+        # disable some features temporarily
+        self.ui.pushButton_fitB1.setEnabled(False)
+        self.ui.pushButton_fitB2.setEnabled(False)
+        self.ui.pushButton_fitB3.setEnabled(False)
 
         return
 
@@ -266,19 +284,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def _set_bank_checkbox(self):
-        """
-        uncheck all the checkboxes for bank ID
-        :return:
-        """
-        self._bankSelectMutex = True
-        self.ui.checkBox_2dBank1.setChecked(False)
-        self.ui.checkBox_2dBank2.setChecked(False)
-        self.ui.checkBox_2dBank3.setChecked(False)
-        self._bankSelectMutex = False
-
-        return
-
     @property
     def plotrun(self):
         return self._plotRun
@@ -291,114 +296,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         :return:
         """
         self._plotRun = state
-
-        return
-
-    def evt_bank1_changed(self):
-        """
-        handling event as any of the bank checkbox is checked or uncheced
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank1.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank1.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank1.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 1
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
-
-        return
-
-    def evt_bank2_changed(self):
-        """
-        handling event as any of
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank2.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank2.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank2.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 2
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
-
-        return
-
-    def evt_bank3_changed(self):
-        """
-        handling event as any of
-        :return:
-        """
-        # return if mutex is on and no operation is required
-        if self._bankSelectMutex:
-            return
-
-        # get the selected status
-        checked = self.ui.checkBox_2dBank3.isChecked()
-
-        # turn on mutex
-        self._bankSelectMutex = True
-
-        if not checked:
-            # cannot be unchecked by itself
-            self.ui.checkBox_2dBank3.setChecked(True)
-            re_plot = False
-        else:
-            # disable others
-            self._set_bank_checkbox()
-            self.ui.checkBox_2dBank3.setChecked(True)
-            # set flat to update 2D plot and re-set the current bank ID
-            re_plot = True
-            self._currentBankID = 3
-
-        # turn off mutex
-        self._bankSelectMutex = False
-
-        # plot if it is True
-        if re_plot:
-            self.update_2d_plot()
 
         return
 
@@ -446,6 +343,59 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
+    def do_fit_bank1_peak(self):
+        """
+
+        :return:
+        """
+        bank_id = 1
+        self.fit_single_peak(bank_id, self.ui.graphicsView_currentViewB1, self.ui.lineEdit_bank1RoiStart,
+                             self.ui.lineEdit_bank1RoiEnd)
+
+        if self.ui.checkBox_peakFitSyncB1B2.isChecked():
+            pass
+
+        self.ui.pushButton_fitB1.setText('Stop Fit')
+        if self.ui.checkBox_peakFitSyncB1B2.isChecked():
+            self.ui.pushButton_fitB2.setText('Stop Fit')
+
+    def fit_single_peak(self, bank_id, graphics_view, x_min_widget, x_max_widget):
+        """
+        start to fit single peak of certain bank
+        :param bank_id:
+        :param graphics_view:
+        :param run_start:
+        :return:
+        """
+        # check inputs
+        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
+                                         ''.format(bank_id, type(bank_id))
+        assert graphics_view.__class__.__name__.count('SingleBankView') > 0,\
+            'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
+            ''.format(graphics_view, type(graphics_view))
+        assert isinstance(x_min_widget, QtGui.QLineEdit), 'Min X widget {0} must be a QLineEdit but not a ' \
+                                                          '{1}'.format(x_min_widget, type(x_min_widget))
+        assert isinstance(x_max_widget, QtGui.QLineEdit), 'Max X widget {0} must be a QLineEdit but not a ' \
+                                                          '{1}'.format(x_max_widget, type(x_max_widget))
+
+        try:
+            x_min = float(str(x_min_widget.text()))
+            x_max = float(str(x_max_widget.text()))
+        except ValueError as value_err:
+            err_msg = 'Unable to parse x-min {0} or x-max {1} due to {2}.' \
+                      ''.format(x_min_widget.text(), x_max_widget.text(), value_err)
+            self.write_log('error', err_msg)
+            return
+
+        # current or previous?
+        vec_x, vec_y = graphics_view.get_data(x_min, x_max)
+        # TODO ASAP
+        coeff, model_y = optimize_utilities.fit_gaussian(vec_x, vec_y)
+
+        # blabla
+
+        return
+
     def do_launch_ipython(self):
         """ launch IPython console
         :return:
@@ -470,15 +420,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def do_refresh_2d(self):
-        """
-        refresh 2D contour view
-        :return:
-        """
-        self.update_2d_plot()
-
-        return
-
     def do_setup_gpplot(self):
         """ set up general-purpose view by ...
         :return:
@@ -499,44 +440,82 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    # TEST TODO - newly implemented
-    def do_set_roi(self):
+    def do_set_bank1_roi(self):
         """ set the region of interest by set the X limits on the canvas
         :return:
         """
-        try:
-            left_x_bound = float(str(self.ui.lineEdit_roiStart.text()).strip())
-            self._bankViewDMin = left_x_bound
-        except ValueError:
-            # keep as before
-            left_x_bound = None
+        self.set_bank_view_roi(bank_id=1, left_x_bound=self.ui.lineEdit_bank1RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank1RoiEnd)
 
-        try:
-            right_x_bound = float(str(self.ui.lineEdit_roiEnd.text()).strip())
-            self._bankViewDMax = right_x_bound
-        except ValueError:
-            # keep as before
-            right_x_bound = None
-
-        # set limit
-        self.set_bank_view_roi(left_x_bound, right_x_bound)
+        if self.ui.checkBox_roiSyncB1B2.isChecked():
+            self.ui.lineEdit_bank2RoiStart.setText(self.ui.lineEdit_bank1RoiStart.text())
+            self.ui.lineEdit_bank2RoiEnd.setText(self.ui.lineEdit_bank1RoiEnd.text())
+            self.set_bank_view_roi(bank_id=2, left_x_bound=self.ui.lineEdit_bank2RoiStart,
+                                   right_x_bound=self.ui.lineEdit_bank2RoiEnd)
 
         return
 
-    def set_bank_view_roi(self, left_x_bound, right_x_bound):
-        """
-        set region of interest on the 3 bank viewer
+    def do_set_bank2_roi(self):
+        """ set the region of interest by set the X limits on the canvas
         :return:
         """
-        self.ui.graphicsView_currentViewB1.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        self.ui.graphicsView_currentViewB2.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
-        self.ui.graphicsView_currentViewB3.setXYLimit(xmin=left_x_bound, xmax=right_x_bound)
+        self.set_bank_view_roi(bank_id=2, left_x_bound=self.ui.lineEdit_bank2RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank2RoiEnd)
 
-        # reset the automatic Y range
-        if left_x_bound is not None and right_x_bound is not None:
-            self.ui.graphicsView_currentViewB1.rescale_y_axis(left_x_bound, right_x_bound)
-            self.ui.graphicsView_currentViewB2.rescale_y_axis(left_x_bound, right_x_bound)
-            self.ui.graphicsView_currentViewB3.rescale_y_axis(left_x_bound, right_x_bound)
+        if self.ui.checkBox_roiSyncB1B2.isChecked():
+            self.ui.lineEdit_bank1RoiStart.setText(self.ui.lineEdit_bank2RoiStart.text())
+            self.ui.lineEdit_bank1RoiEnd.setText(self.ui.lineEdit_bank2RoiEnd.text())
+            self.do_set_bank1_roi()
+            self.set_bank_view_roi(bank_id=1, left_x_bound=self.ui.lineEdit_bank1RoiStart,
+                                   right_x_bound=self.ui.lineEdit_bank1RoiEnd)
+
+        return
+
+    def do_set_bank3_roi(self):
+        """ set the region of interest by set the X limits on the canvas
+        :return:
+        """
+        self.set_bank_view_roi(bank_id=3, left_x_bound=self.ui.lineEdit_bank3RoiStart,
+                               right_x_bound=self.ui.lineEdit_bank3RoiEnd)
+
+        return
+
+    def set_bank_view_roi(self, bank_id, left_x_bound, right_x_bound):
+        """
+        set and apply region of interest on the 3 bank viewer
+        :param bank_id:
+        :param left_x_bound:
+        :param right_x_bound:
+        :return:
+        """
+        # allow multiple format of inputs
+        if left_x_bound is not None:
+            if isinstance(left_x_bound, QtGui.QLineEdit):
+                try:
+                    left_x_bound = float(str(left_x_bound.text()).strip())
+                except ValueError:
+                    # keep as before
+                    left_x_bound = None
+            else:
+                assert isinstance(left_x_bound, float), 'Left boundary {0} must be either QLineEdit, None or float, ' \
+                                                        'but not of {1}'.format(left_x_bound, type(left_x_bound))
+        # END-IF
+
+        if right_x_bound is not None:
+            if isinstance(right_x_bound, QtGui.QLineEdit):
+                try:
+                    right_x_bound = float(str(right_x_bound.text()).strip())
+                except ValueError:
+                    right_x_bound = None
+            else:
+                assert isinstance(right_x_bound, float), 'Right boundary {0} must be either QLineEdit, None or ' \
+                                                         'float, but not of {1}'.format(right_x_bound,
+                                                                                        type(right_x_bound))
+        # END-IF
+    
+        # set
+        self._bankViewDict[bank_id].set_roi(left_x_bound, right_x_bound)
+        self._bankViewDict[bank_id].rescale_y_axis(left_x_bound, right_x_bound)
 
         return
 
@@ -569,6 +548,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         self._checkStateTimer = TimerThread(self._myRefreshTimeStep, self)
         self._checkStateTimer.start()
 
+        self._2dUpdater = TwoDimPlotUpdateThread()
+        self._2dUpdater.start()
+
         # start start listener
         self._controller.run()
 
@@ -588,6 +570,9 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         """
         if self._checkStateTimer is not None:
             self._checkStateTimer.stop()
+
+        if self._2dUpdater is not None:
+            self._2dUpdater.stop()
 
         if self._controller is not None:
             self._controller.stop()
@@ -860,8 +845,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_x_i = in_sum_ws.readX(bank_id-1)[:len(vec_y_i)]
                 color_i = self._bankColorDict[bank_id]
                 label_i = 'in accumulation bank {0}'.format(bank_id)
-                # TODO/ISSUE/NOW - Use update line other than delete and re-plot
-                self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit)
+                self._mainGraphicDict[bank_id].plot_current_plot(vec_x_i, vec_y_i, color_i, label_i, target_unit,
+                                                                 auto_scale_y=False)
             except RuntimeError as run_err:
                 self.write_log('error', 'Unable to get data from workspace {0} due to {1}'
                                         ''.format(in_sum_ws_name, run_err))
@@ -875,9 +860,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         if is_new_ws:
             self._controller.delete_workspace(in_sum_name)
-
-        # Plot 2D
-        self.update_2d_plot()
 
         return
 
@@ -914,7 +896,6 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # skip if the previous plotted is sam
         if prev_ws_name == self._plotPrevCycleName:
-            # minor/TODO/NOW - refactor to method
             debug_message = 'Previous cycle data {0} is same as currently plotted. No need to plot again.' \
                             ''.format(prev_ws_name)
             self.write_log('debug', debug_message)
@@ -938,8 +919,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                 vec_y_van = self._controller.get_vanadium(bank_id)
                 vec_y = vec_y / vec_y_van
             vec_x = prev_ws.readX(bank_id-1)[:len(vec_y)]
-            # TODO/NOW - Use update or new line?
-            self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label, target_unit)
+            self._mainGraphicDict[bank_id].plot_previous_run(vec_x, vec_y, 'black', line_label)
 
         # clean
         if is_new_ws:
@@ -994,7 +974,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
     def plot_log_with_reduced(self, x_axis_name, y_axis_name):
         """
-        plot sample logs with previously reduced data
+        plot sample logs with previously reduced data that will be retrieved from GSAS
         :param x_axis_name:
         :param y_axis_name:
         :return:
@@ -1016,24 +996,8 @@ class VulcanLiveDataView(QtGui.QMainWindow):
             self._controller.load_nexus_sample_logs(ipts_number, self._2dStartRunNumber, curr_run_number,
                                                     run_on_thread=True)
 
-        # TODO/NOW/ASAP
-        whatever()
-
-    def plot_new_log_live(self, x_axis_name, y_axis_name):
-        """
-        plot the log in live data by loading the previously accumulated runs
-        :param x_axis_name:
-        :param y_axis_name:
-        :return:
-        """
-
-        # TODO/NOW/TODO/IMPLEMENT
-
-        # start from the current in-accumulation run
-        blabla
-
-        # trace back to previously accumulated runs until run number changed to non-zero
-        blabla
+        # TODO/NOW/ASAP - ...
+        raise NotImplementedError('ASAP')
 
     def plot_log_live(self, x_axis_name, y_axis_name_list, side_list, peak_range_list, norm_by_van_list):
         """
@@ -1344,7 +1308,11 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                                                           self._bankViewDMin, self._bankViewDMax)
             self.write_log('debug', db_msg)
             if str(self.ui.comboBox_currUnits.currentText()) == 'dSpacing':
-                self.set_bank_view_roi(self._bankViewDMin, self._bankViewDMax)
+                print '[DB...BAT...BAT...BAT] Set bank View of ROI'
+                for bank_id in [1, 2, 3]:
+                    self.set_bank_view_roi(bank_id=bank_id, left_x_bound=None, right_x_bound=None)
+            else:
+                print '[DB...BAT...BAT...BAT] Set bank View to original'
 
             # update log
             if self._currSampleLogX is not None:
@@ -1522,7 +1490,7 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         return
 
-    def update_2d_plot(self):
+    def update_2d_plot(self, bank_id=None):
         """
         update 2D contour plot for the reduced data in the last N time-intervals
         :return:
@@ -1543,30 +1511,42 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
             return last_n
 
-        # get bank ID
-        bank_id = self._currentBankID
-
-        # get the last N time-intervals and create the meshdata
-        last_n_run = parse_set_last_n()
-        # retrieve data
-
-        # TODO/ISSUE/NOW/FIXME - It is in a debug mode
-        self._2dMode = 'acc'                        #
-        # --------------------------------------------
-
-        if self._2dMode == 'unit':
-            data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
-        elif self._2dMode == 'acc':
-            # plot accumulations
-            data_set_dict = self.get_last_n_acc_data(last_n_run, bank_id=bank_id)
-        elif self._2dMode == 'runs':
-            data_set_dict = self.get_last_n_runs_data(last_n_run, bank_id=bank_id)
+        if bank_id is None:
+            bank_id_list = [1, 2, 3]
         else:
-            raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
+            bank_id_list = [bank_id]
 
-        # plot
-        if len(data_set_dict) > 1:
-            self.ui.graphicsView_2D.plot_contour(data_set_dict)
+        for bank_id in bank_id_list:
+            # get bank ID
+
+            # get the last N time-intervals and create the meshdata
+            last_n_run = parse_set_last_n()
+            # retrieve data
+
+            # TODO/ISSUE/NOW/FIXME - It is in a debug mode
+            self._2dMode = 'acc'  #
+            # --------------------------------------------
+
+            if self._2dMode == 'unit':
+                data_set_dict = self.get_last_n_round_data(last=last_n_run, bank_id=bank_id)
+            elif self._2dMode == 'acc':
+                # plot accumulations
+                data_set_dict = self.get_last_n_acc_data(last_n_run, bank_id=bank_id)
+            elif self._2dMode == 'runs':
+                data_set_dict = self.get_last_n_runs_data(last_n_run, bank_id=bank_id)
+            else:
+                raise RuntimeError('2D plot mode {0} is not supported.'.format(self._2dMode))
+
+            # plot
+            if len(data_set_dict) > 1:
+                if bank_id in bank_id_list:
+                    # self._2dUpdater.set_new_plot(self._contourFigureDict[bank_id], data_set_dict)
+                    self._contourFigureDict[bank_id].plot_contour(data_set_dict)
+                else:
+                    pass
+                    # self._contourFigureDict[bank_id].plot_image(data_set_dict)
+            # END-IF
+        # END-FOR
 
         return
 
@@ -1594,6 +1574,10 @@ class VulcanLiveDataView(QtGui.QMainWindow):
 
         # process new workspace
         self.process_new_workspaces(new_ws_name_list)
+        if len(new_ws_name_list) > 0:
+            # update 2D
+            self._update2DCounter += 1
+            self.update_2d_plot(self._update2DCounter % 3 + 1)
 
         # update GUI
         total_index = self._controller.get_live_counter()
@@ -1641,6 +1625,70 @@ class VulcanLiveDataView(QtGui.QMainWindow):
         # write
         message = '[{0}]\t {1}'.format(message_prefix, message)
         self.ui.plainTextEdit_Log.appendPlainText(message)
+
+        return
+
+
+class TwoDimPlotUpdateThread(QtCore.QThread):
+    """
+    blabla
+    """
+    def __init__(self):
+        """
+
+        """
+        # call base class's constructor
+        super(TwoDimPlotUpdateThread, self).__init__()
+
+        self._mutex = False
+
+        self._update = False
+        self._currFigure = None
+        self.data_set_dict = None
+
+        self._continueTimerLoop = True
+
+        return
+
+    def run(self):
+        """
+        run the thread!
+        :return:
+        """
+        while self._continueTimerLoop:
+            # sleep
+            time.sleep(5)
+
+            # check whether it is time to plot
+            if self._mutex:
+                continue
+            else:
+                self._mutex = True
+
+            # update
+            if self._update:
+                self._currFigure.plot_contour(self.data_set_dict)
+                self._update = False
+
+            # release
+            self._mutex = False
+        # END-WHILE
+
+        return
+
+    def set_new_plot(self, figure, data_set_dict):
+        """
+
+        :return:
+        """
+        self._update = True
+        self._currFigure = figure
+        self.data_set_dict = data_set_dict
+
+    def stop(self):
+        """ stop the timer by turn off _continueTimeLoop (flag)            :return:
+        """
+        self._continueTimerLoop = False
 
         return
 
@@ -1697,7 +1745,6 @@ class SampleLoadingThread(QtCore.QThread):
             self.stop_run_number = None
         archive_manager.load_nexus_files(self._iptsNumber, self.first_run_number, self.stop_run_number,
                                          meta_data_only=True)
-
 
 
 class TimerThread(QtCore.QThread):
