@@ -75,102 +75,155 @@
         <item>
          <widget class="QPushButton" name="pushButton_loadCalFile">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select vanadium calibration runs/files;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;if it is selected without aborting, then the line edit to its right will be disabled;&lt;/p&gt;&lt;p&gt;Default is the instrument folder belonged to IPTS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="text">
-           <string>Calibration files</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_showCalDetails">
-          <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Detailed calibration file mapping information. &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda&lt;/p&gt;&lt;p&gt;-rw-rwxr-- 1 13489 49133   3240 Jun 16 16:43 Vulcan-70487-s.prm&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
-           <string>Show Details</string>
+           <string>Choose Calibration Files</string>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit_calibBriefView"/>
+       <widget class="QLineEdit" name="lineEdit_userLogFileName">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox">
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;Is 'sample environment' resposible for vanadium calibration?&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; font-style:italic; color:#ff0000;&quot;&gt;Required for chopping data&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
         <property name="title">
-         <string>Sample environments</string>
+         <string>Add Runs To Reduce</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_11">
-         <item>
-          <widget class="QRadioButton" name="radioButton_useLoadFrame">
-           <property name="enabled">
-            <bool>false</bool>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="2" column="0">
+          <widget class="QRadioButton" name="radioButton_runsAddPartial">
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
            </property>
            <property name="text">
-            <string>VULCAN loadframe</string>
+            <string/>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QRadioButton" name="radioButton_useGenericDaq">
-           <property name="enabled">
-            <bool>false</bool>
+         <item row="0" column="0">
+          <widget class="QRadioButton" name="radioButton_runsAddAll">
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
            </property>
            <property name="text">
-            <string>Generic DAQ</string>
+            <string/>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QRadioButton" name="radioButton_useLogFiles">
-           <property name="enabled">
-            <bool>false</bool>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
            </property>
            <property name="text">
-            <string>User Log files</string>
+            <string>All Runs In IPTS</string>
            </property>
           </widget>
          </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="lineEdit_runs">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QPushButton" name="pushButton_addRunsToReduce">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Add</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QRadioButton" name="radioButton_runsAllInTree">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="label_12">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>All Runs In IPTS-Run Tree (Left)</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_7">
+        <property name="title">
+         <string>Selected Runs</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_9">
          <item>
-          <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="1">
-            <widget class="QPushButton" name="pushButton_5">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item>
+            <widget class="QLabel" name="label_5">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select user specified log file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in or add from left folder tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Select file</string>
+              <string>Select individual runs </string>
+             </property>
+             <property name="textFormat">
+              <enum>Qt::AutoText</enum>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="lineEdit_userLogFileName">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <spacer name="horizontalSpacer_4">
+           <item>
+            <spacer name="horizontalSpacer_10">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Preferred</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -180,267 +233,65 @@
              </property>
             </spacer>
            </item>
+           <item>
+            <widget class="QCheckBox" name="checkBox_selectRuns">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select or deselect all runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="gridLayout_25">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButton_sortSelectedRuns">
+             <property name="text">
+              <string>Sort Runs</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_runsToDelete">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QCheckBox" name="checkBox_runsOrderDescend">
+             <property name="text">
+              <string>Decending</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="pushButton_deleteRuns">
+             <property name="text">
+              <string>Delete Runs</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_chopRun">
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Chopped Run</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QGroupBox" name="groupBox_6">
         <property name="title">
-         <string>Select your data</string>
+         <string>Select Runs For Reduction</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_7">
-         <item>
-          <widget class="QTabWidget" name="tabWidget">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>280</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>360</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="currentIndex">
-            <number>1</number>
-           </property>
-           <widget class="QWidget" name="tab">
-            <attribute name="title">
-             <string>Sequential</string>
-            </attribute>
-            <layout class="QVBoxLayout" name="verticalLayout_16">
-             <item>
-              <widget class="QRadioButton" name="radioButton_runsAddAll">
-               <property name="text">
-                <string>Add All Runs</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_runsAddPartial">
-               <property name="text">
-                <string>Add a Subset of Runs Between ... </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <layout class="QGridLayout" name="gridLayout_10">
-               <item row="1" column="2">
-                <widget class="QLineEdit" name="lineEdit_runLast">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <spacer name="horizontalSpacer_6">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Preferred</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLineEdit" name="lineEdit_runFirst">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_5">
-                 <property name="text">
-                  <string>First</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLabel" name="label_17">
-                 <property name="text">
-                  <string>Last</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <spacer name="horizontalSpacer_7">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <spacer name="verticalSpacer_5">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeType">
-                <enum>QSizePolicy::Preferred</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_addRunsToReduce">
-               <property name="text">
-                <string>Add Runs</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="verticalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </widget>
-           <widget class="QWidget" name="tab_2">
-            <attribute name="title">
-             <string>Individual</string>
-            </attribute>
-            <layout class="QVBoxLayout" name="verticalLayout_14">
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_4">
-               <item>
-                <widget class="QLabel" name="label_2">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in or add from left folder tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Select individual runs </string>
-                 </property>
-                 <property name="textFormat">
-                  <enum>Qt::AutoText</enum>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_10">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="checkBox_selectRuns">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select or deselect all runs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
-             </item>
-             <item>
-              <layout class="QGridLayout" name="gridLayout_25">
-               <item row="0" column="0">
-                <widget class="QPushButton" name="pushButton_sortSelectedRuns">
-                 <property name="text">
-                  <string>Sort Runs</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLineEdit" name="lineEdit_runsToDelete">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QCheckBox" name="checkBox_runsOrderDescend">
-                 <property name="text">
-                  <string>Decending</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QPushButton" name="pushButton_deleteRuns">
-                 <property name="text">
-                  <string>Delete Runs</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </widget>
-         </item>
          <item>
           <widget class="QPushButton" name="pushButton_reduceRuns">
            <property name="font">
@@ -450,7 +301,20 @@
             </font>
            </property>
            <property name="text">
-            <string>Prepare for Reduction</string>
+            <string>Set up Data Chopping</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_chopRun">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Chopped Run</string>
            </property>
           </widget>
          </item>
@@ -1403,33 +1267,20 @@
         <item row="2" column="0">
          <widget class="QGroupBox" name="groupBox_outputOptions">
           <property name="title">
-           <string>Output Options</string>
+           <string>Setup for Binned Data</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_8">
-           <item>
-            <widget class="QPushButton" name="pushButton_binData">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>BIN DATA</string>
-             </property>
-            </widget>
-           </item>
            <item>
             <layout class="QGridLayout" name="gridLayout_27">
              <item row="0" column="1">
               <widget class="QPushButton" name="pushButton_browseOutputDir">
                <property name="font">
                 <font>
-                 <pointsize>9</pointsize>
+                 <pointsize>8</pointsize>
                 </font>
                </property>
                <property name="text">
-                <string>Browse</string>
+                <string>Browse Dir</string>
                </property>
               </widget>
              </item>
@@ -1497,7 +1348,38 @@
                </property>
               </widget>
              </item>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="checkBox">
+               <property name="font">
+                <font>
+                 <pointsize>9</pointsize>
+                 <weight>75</weight>
+                 <italic>false</italic>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="toolTip">
+                <string>Output reduced data in unit of dSpacing</string>
+               </property>
+               <property name="text">
+                <string>dSpacing</string>
+               </property>
+              </widget>
+             </item>
             </layout>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_binData">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>BIN DATA</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -2165,7 +2047,7 @@
      <x>0</x>
      <y>0</y>
      <width>1467</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

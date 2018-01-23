@@ -147,6 +147,7 @@ def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
     """
     parse a QLineEdit whose text can be converted to a list of integers;
     the optional operation can be used to check size, and order
+    Example: 110898,110912,110997,110872,110802, 110829, 110932-110936,110830-110834
     :param line_edit:
     :param size:
     :param check_order:
@@ -158,18 +159,25 @@ def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
 
     # get the text and split
     line_text = str(line_edit.text())
-    line_text.replace(',', ' ')
+    line_text = line_text.replace(',', ' ')
     terms = line_text.split()
 
-    # check size
+    # check with user specified size
+    return [int(terms[0])]
+
+    # TODO FIXME ASAP ASAP
+    # case 1: 110898,110912,110997,110872,110802, 110829, 110932-110936,110830-110834
+    # case 2: 1, 3, 4  to match size == 3
+
     if size is not None and len(terms) != size:
         raise RuntimeError('Number of integers must be 2 but not {0}. FYI: {1}'
                            ''.format(len(terms), terms))
 
     # parse to integers
-    int_list = list()
+    int_set = set()
     for idx, term in enumerate(terms):
         try:
+            int_set.add(int(term))
             int_list.append(int(term))
         except ValueError:
             raise RuntimeError('{0}-th term {1} is not an integer.'.format(idx, term))

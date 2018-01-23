@@ -327,6 +327,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             return
         self._iptsNumber = ipts_number
 
+        # set IPTS number to parent
+        self._myParent.set_ipts_number(self._iptsNumber)
+
         # Get and check IPTS directory
         if self._dataDir is None:
             gutil.pop_dialog_error(self, 'Data directory is not set up!')
@@ -494,6 +497,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         :return:
         """
         # Show the status of processing...Just change the background color...
+        raise RefactorError # TODO ASAP ASAP - Set the scanned values to myProject.
 
         # scan file
         status, ret_obj = self._myParent.get_controller().scan_ipts_archive(self._iptsDir)
@@ -520,6 +524,8 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         Scan record log file
         :return: boolean
         """
+        raise RefactorError  # TODO ASAP ASAP - Set the scanned values to myProject._scannedRuns
+
         # get log file: the higher priority is the log file name that is browsed
         log_file_path = str(self.ui.lineEdit_logFilePath.text())
         if len(log_file_path.strip()) == 0:

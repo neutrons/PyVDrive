@@ -748,6 +748,7 @@ class VDriveAPI(object):
 
         try:
             archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
+            # TODO ASAP ASAP - Add to myProject._scannedRuns  different from myDataFiles
             status = True
             ret_obj = archive_key
         except AssertionError as ass_err:
@@ -898,6 +899,16 @@ class VDriveAPI(object):
         :return:
         """
         return self._myProject.get_number_data_files()
+
+    def check_runs(self, ipts_number, run_list):
+        """
+
+        :param run_list:
+        :return:
+        """
+        status, error_message, available_runs = self._myProject.check_runs(ipts_number, run_list)
+
+        return status, error_message, available_runs
 
     def get_runs(self, start_run=None, end_run=None):
         """

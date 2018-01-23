@@ -66,8 +66,11 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # configuration
         self._myConfiguration = config.PyVDriveConfiguration()
-
         self._myWorkflow = VdriveAPI.VDriveAPI('VULCAN', template_data_dir)
+
+        # IPTS number (shortcut)
+        self._currIptsNumber = None
+
         self._numSnapViews = 6
 
         # Initialize widgets
@@ -83,8 +86,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # about vanadium calibration
         self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
                      self.do_load_vanadium_calibration)
-        self.connect(self.ui.pushButton_showCalDetails, QtCore.SIGNAL('clicked()'),
-                     self.do_show_calibration_map)
 
         # select and set runs from run-info-tree
         self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
@@ -769,32 +770,29 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         elif self.ui.radioButton_runsAddPartial.isChecked():
             # case to add a subset of runs
-            start_run = GuiUtility.parse_integer(self.ui.lineEdit_runFirst)
-            end_run = GuiUtility.parse_integer(self.ui.lineEdit_runLast)
-
-            # switch start run and end run if user specifies in wrong order
-            if start_run > end_run:
-                temp = start_run
-                start_run = end_run
-                end_run = temp
-                self.ui.lineEdit_runFirst.setText(str(start_run))
-                self.ui.lineEdit_runLast.setText(str(end_run))
-
-            # get subset of runs
-            status, ret_obj = self._myWorkflow.get_runs(start_run, end_run)
-            if status is True:
-                run_list = ret_obj
-                self.ui.tableWidget_selectedRuns.append_runs(run_list)
-            else:
-                # Error and return
-                error_message = ret_obj
-                GuiUtility.pop_dialog_error(error_message)
+            run_list = GuiUtility.parse_integer_list(self.ui.lineEdit_runs)
+            print ('[DB...BAT] Parsed run list: {0}'.format(run_list))
+            if len(run_list) == 0:
+                GuiUtility.pop_dialog_error(self, 'No run is input by user.')
                 return
 
-            if len(run_list) == 0:
-                error_message = 'No available run can be found between %d and %d ' \
-                                'for this project.' % (start_run, end_run)
+            # check runs with
+            status, exist_run_list, error_message = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
+
+            if status is False:
+                # Error and return
                 GuiUtility.pop_dialog_error(self, error_message)
+                if len(exist_run_list) == 0:
+                    return
+                else:
+                    run_list = exist_run_list
+            # END-IF
+
+        elif self.ui.radioButton_runsAllInTree.isChecked():
+            # case to add all the runs in the IPTS-Run tree
+            GuiUtility.pop_dialog_error(self, 'Not Implemented Yet! ASAP Flag 1155B')
+            return
+
         else:
             GuiUtility.pop_dialog_error(self, 'Neither of 2 radio buttons is selected.')
             return
@@ -979,22 +977,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return:
         """
         GuiUtility.pop_dialog_error('ASAP')
-
-    def do_show_calibration_map(self):
-        """
-        Purpose:
-            Show detailed calibration file mapping information.
-        Example:
-            -rw-rwxr-- 1 13489 49133 403704 Jun 16 16:43 70487-s.gda
-            -rw-rwxr-- 1 13489 49133 3240 Jun 16 16:43 Vulcan-70487-s.prm
-        Requirements:
-            ???
-        Guarantees:
-            ???
-        :return:
-        """
-        # TODO/NOW/FIXME
-        raise NotImplementedError('ASAP')
 
     def evt_chop_run_state_change(self):
         """
@@ -1414,6 +1396,18 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
+    def set_ipts_number(self, ipts_number):
+        """
+        set IPTS number
+        :param ipts_number:
+        :return:
+        """
+        assert isinstance(ipts_number, int), 'blabla'
+
+        self._currIptsNumber = ipts_number
+
+        return
+
     def set_selected_runs(self, run_list):
         """ Set selected runs from a list..
         :param run_list:
@@ -1426,19 +1420,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         return
 
-    """
-    def _apply_slicer_snap_view(self):
-        Apply Slicers to all 6 view
-        :return:
-        vec_time, vec_y = self._myWorkflow.get_event_slicer_active(relative_time=True)
 
-        for snap_view_suite in self._groupedSnapViewList:
-            snap_view_suite.update_event_slicer(vec_time)
-
-        return
-    """
-
-if __name__=="__main__":
+if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     my_app = VdriveMainWindow()
     my_app.show()

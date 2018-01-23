@@ -206,6 +206,26 @@ class ProjectManager(object):
 
         return output_dict
 
+    def check_runs(self, itps_number, run_number_list, check_archive):
+        """
+
+        :param itps_number:
+        :param run_number_list:
+        :return:
+        """
+        # TODO ASAP ASAP - Implement this
+
+        status = False
+        error_message = 'blabla'
+        available_runs = run_number_list[:]
+
+        if check_archive:
+            pass  # go to /SNS/.
+        else:
+            self._dataFileDict   # check this
+
+        return status, error_message, available_runs
+
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
