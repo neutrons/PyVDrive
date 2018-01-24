@@ -36,6 +36,8 @@ class ProjectManager(object):
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
         self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+        # a cache of archived file scanned
+        self._scannedRunDict = dict()  # key = run number, value = 'unknown'
 
         # dictionary for loaded data referenced by IPTS and run number. value is the data key
         self._loadedDataDict = dict()
@@ -93,6 +95,25 @@ class ProjectManager(object):
             raise RuntimeError('Workspace {0} does not exist in Mantid ADS.'.format(workspace_name))
 
         self._loadedDataDict[ipts_number, run_number] = workspace_name
+
+        return
+
+    def add_scanned_information(self, run_info_dict_list):
+        """
+        add scanned information to a dictionary for caching information
+        :param run_info_dict_list:
+        :return:
+        """
+        # check input
+        assert isinstance(run_info_dict_list, list),\
+            'Input run number information {0} must be given in a list but not a {1}' \
+            ''.format(run_info_dict_list, type(run_info_dict_list))
+
+        # add
+        for run_info in run_info_dict_list:
+            run_number = run_info['run']
+            self._scannedRunDict[run_number] = run_info
+        # END-FOR
 
         return
 
@@ -206,23 +227,49 @@ class ProjectManager(object):
 
         return output_dict
 
-    def check_runs(self, itps_number, run_number_list, check_archive):
-        """
-
-        :param itps_number:
+    def check_runs(self, ipts_number, run_number_list, check_archive):
+        """ check whether a series of run numbers exist
+        :param ipts_number:
         :param run_number_list:
+        :param check_archive: flag to check archive if run number cannot be found in project
         :return:
         """
-        # TODO ASAP ASAP - Implement this
+        # check input
+        assert isinstance(ipts_number, int), 'IPTS number {0}  must be an integer but not a {1}' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be given in a list but not a {1}' \
+                                                  ''.format(run_number_list, type(run_number_list))
 
-        status = False
-        error_message = 'blabla'
+        # initialize inputs
+        status = True
+        error_message = ''
         available_runs = run_number_list[:]
 
-        if check_archive:
-            pass  # go to /SNS/.
-        else:
-            self._dataFileDict   # check this
+        remove_index_list = list()
+        for index, run_number in enumerate(run_number_list):
+            if run_number in self._dataFileDict or run_number in self._scannedRunDict:
+                # run has been scanned
+                continue
+            elif check_archive:
+                # not scanned.  then check input
+                file_name_0 = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{0}_events.nxs.h5'.format(ipts_number, run_number)
+                file_name_1 = '/SNS/VULCAN/IPTS-{1}/data/VULCAN_{0}_events.nxs'.format(ipts_number, run_number)
+                if os.path.exists(file_name_0) or os.path.exists(file_name_1):
+                    # found
+                    continue
+
+            # not found
+            status = False
+            error_message += 'Run {0} cannot be located in IPTS {1}. Removed from input.\n' \
+                             ''.format(run_number, ipts_number)
+            remove_index_list.append(index)
+        # END-FOR
+
+        # remove
+        if not status:
+            remove_index_list.sort(reverse=True)
+            for index in remove_index_list:
+                available_runs.pop(index)
 
         return status, error_message, available_runs
 

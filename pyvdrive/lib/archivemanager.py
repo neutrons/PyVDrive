@@ -414,6 +414,13 @@ class DataArchiveManager(object):
 
         return partial_list
 
+    def get_run_info(self, archive_key):
+        """
+        get all run information
+        :param archive_key:
+        :return:
+        """
+
     @staticmethod
     def get_proton_charge(ipts_number, run_number, chop_sequence):
         """ get proton charge (single value) from a run

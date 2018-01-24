@@ -748,7 +748,8 @@ class VDriveAPI(object):
 
         try:
             archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
-            # TODO ASAP ASAP - Add to myProject._scannedRuns  different from myDataFiles
+            scanned_runs_information = self._myArchiveManager.get_experiment_run_info(archive_key=archive_key)
+            self._myProject.add_scanned_information(scanned_runs_information)
             status = True
             ret_obj = archive_key
         except AssertionError as ass_err:
@@ -768,6 +769,7 @@ class VDriveAPI(object):
         assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
                                              '' % (str(archive_key), type(archive_key))
         run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, range(begin_run, end_run+1))
+        self._myProject.add_scanned_information(run_info_dict_list)
 
         if len(run_info_dict_list) > 0:
             status = True
