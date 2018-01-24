@@ -800,6 +800,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Add all runs to table
         self.ui.tableWidget_selectedRuns.append_runs(run_list)
 
+        # Add all runs to my project
+        self._myWorkflow.add_runs_to_project(run_list)
+
         return
 
     def event_change_log_snap_view(self):

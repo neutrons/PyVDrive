@@ -1349,7 +1349,7 @@
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QCheckBox" name="checkBox">
+              <widget class="QCheckBox" name="checkBox_outputDSpace">
                <property name="font">
                 <font>
                  <pointsize>9</pointsize>

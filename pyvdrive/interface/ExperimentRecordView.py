@@ -22,7 +22,6 @@ class VulcanExperimentRecordView(QtGui.QMainWindow):
 
         return
 
-
     def live_monitor(self):
         """
 

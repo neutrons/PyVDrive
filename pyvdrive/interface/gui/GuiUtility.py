@@ -168,7 +168,7 @@ def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate
     integer_list = list()
     for idx, term in enumerate(terms):
         term = term.strip()
-        if term.count('-') > 1 and term.startswith('-') is False:
+        if term.count('-') >= 1 and term.startswith('-') is False:
             # contain a '-' but not start with '-'
             sub_terms = term.split('-')
             if len(sub_terms) != 2:
