@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1467</width>
-    <height>799</height>
+    <width>1401</width>
+    <height>832</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -206,6 +206,11 @@
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
             <widget class="QLabel" name="label_5">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in or add from left folder tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
@@ -1894,7 +1899,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QDockWidget" name="dockWidget">
+     <widget class="QDockWidget" name="dockWidget_simpleLogViewers">
       <property name="floating">
        <bool>false</bool>
       </property>
@@ -2046,7 +2051,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1467</width>
+     <width>1401</width>
      <height>25</height>
     </rect>
    </property>
@@ -2067,6 +2072,8 @@
     <addaction name="separator"/>
     <addaction name="menuRecent_Projects"/>
     <addaction name="separator"/>
+    <addaction name="actionResume_Last_Session"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -2075,12 +2082,23 @@
     </property>
     <widget class="QMenu" name="menuLog">
      <property name="title">
-      <string>Log</string>
+      <string>Application Log</string>
      </property>
      <addaction name="actionOpen_Log_Window"/>
      <addaction name="actionPop_Diaglog_For_Error"/>
     </widget>
+    <widget class="QMenu" name="menuToolBars">
+     <property name="title">
+      <string>Tools</string>
+     </property>
+     <addaction name="actionDiffraction_Data_View"/>
+     <addaction name="actionChopping_Helper"/>
+     <addaction name="actionPeak_Fitting_Helper"/>
+     <addaction name="actionWorkspaces"/>
+    </widget>
+    <addaction name="menuToolBars"/>
     <addaction name="menuLog"/>
+    <addaction name="actionSample_Log_Dock"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -2091,7 +2109,6 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionWorkspaces"/>
    </widget>
    <widget class="QMenu" name="menuRuns">
     <property name="title">
@@ -2207,10 +2224,43 @@
   </action>
   <action name="actionWorkspaces">
    <property name="text">
-    <string>Workspaces</string>
+    <string>IPython Console</string>
    </property>
    <property name="shortcut">
     <string>Shift+W</string>
+   </property>
+  </action>
+  <action name="actionSample_Log_Dock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sample Log Dock</string>
+   </property>
+  </action>
+  <action name="actionDiffraction_Data_View">
+   <property name="text">
+    <string>Data Visualization</string>
+   </property>
+  </action>
+  <action name="actionChopping_Helper">
+   <property name="text">
+    <string>Chopping Utility</string>
+   </property>
+  </action>
+  <action name="actionPeak_Fitting_Helper">
+   <property name="text">
+    <string>Peak Fitting Utility</string>
+   </property>
+  </action>
+  <action name="actionResume_Last_Session">
+   <property name="text">
+    <string>Resume Last Session</string>
+   </property>
+  </action>
+  <action name="actionDomting">
+   <property name="text">
+    <string>Domting</string>
    </property>
   </action>
  </widget>

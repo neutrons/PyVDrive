@@ -43,7 +43,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._init_widgets()
 
         # Set event handler
-        # group 1
+        # group to add archive IPTS
         self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
                      self.evt_change_data_access_mode)
         self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
@@ -51,16 +51,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
                                self.do_browse_data_directory)
-        QtCore.QObject.connect(self.ui.pushButton_verify, QtCore.SIGNAL('clicked()'),
-                               self.do_set_ipts_number)
+        QtCore.QObject.connect(self.ui.pushButton_addArchiveIPTS, QtCore.SIGNAL('clicked()'),
+                               self.do_add_archive_ipts)
 
-        # group 2: get IPTS information
-        self.connect(self.ui.pushButton_proceedInfo, QtCore.SIGNAL('clicked()'),
-                     self.do_retrieve_information)
+        # group to add local HDD data
+        self.connect(self.ui.pushButton_addLocalHDDDir, QtCore.SIGNAL('clicked()'),
+                     self.do_add_hdd_data)
         self.connect(self.ui.pushButton_browseLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_browse_record_file)
 
-        # group 3: add runs
+        # group to add runs
         QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
                                self.do_add_runs)
         self.connect(self.ui.radioButton_filterByRun, QtCore.SIGNAL('toggled(bool)'),
@@ -100,27 +100,23 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
     def _init_widgets(self):
         """ Initialize the values of some widgets
         """
-
-        # Init set up group 1
+        # group box set up (SNS archive or local HDD)
         self.ui.radioButton_useNumber.setChecked(True)
+        self.ui.groupBox_snsArchive.setEnabled(True)
+
         self.ui.lineEdit_iptsDir.setDisabled(True)
-        self.ui.pushButton_browse.setDisabled(True)
+        self.ui.groupBox_localHDD.setDisabled(True)
 
-        # init set up group information
-        self.ui.groupBox_scanIptsInfo.setEnabled(False)
-        self.ui.radioButton_scanLogFile.setChecked(True)
-        self.ui.radioButton_scanHD.setChecked(False)
-        self.ui.radioButton_noScan.setChecked(False)
+        # SNS archive options
+        self.ui.radioButton_scanArchiveRecord.setEnabled(True)
 
-        # init set up group add runs
-        self.ui.groupBox_selectRuns.setEnabled(False)
-        self.ui.radioButton_useNumber.setChecked(True)
+        # local HDD options
+        self.ui.radioButton_scanHD.setEnabled(True)
 
-        # self.ui.dateEdit_begin.setDisabled(True)
-        # self.ui.dateEdit_end.setDisabled(True)
-        # self.ui.lineEdit_begin.setDisabled(True)
-        # self.ui.lineEdit_end.setDisabled(True)
-        # self.ui.pushButton_AddRuns.setDisabled(True)
+        # add runs
+        self.ui.radioButton_filterByRun.setEnabled(True)
+
+        return
 
     def _search_logs(self):
         """
@@ -286,7 +282,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-    def do_retrieve_information(self):
+    def do_add_hdd_data(self):
         """
         List runs including run numbers, creation time and full path file names
         of one IPTS directory
@@ -315,9 +311,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-    def do_set_ipts_number(self):
+    def do_add_archive_ipts(self):
         """
-        Create the IPTS directory from an IPTS number
+        add from archive
         :return:
         """
         # Get IPTS number
@@ -335,7 +331,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             gutil.pop_dialog_error(self, 'Data directory is not set up!')
             return
 
-        # build IPTS directory and check
+        # build IPTS directory and check existence of data
         ipts_dir_1 = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
         ipts_dir_2 = os.path.join(self._dataDir, 'IPTS-%d/nexus/' % ipts_number)
         if not os.path.exists(ipts_dir_1) and not os.path.exists(ipts_dir_2):
@@ -354,18 +350,17 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             self._iptsDirFromNumber = ipts_dir_2
 
         # browse log files
-        self.ui.comboBox_existingIPTS.clear()
-        self._search_logs()
+        self.ui.comboBox_existingIPTS.addItem('{0}'.format(ipts_number))
 
-        # enable next step
-        self.ui.groupBox_scanIptsInfo.setEnabled(True)
+        # scan files
+        if self.ui.radioButton_scanArchiveRecord.isChecked():
+            self.scan_record_file(data_run_only)
+        else:
+            # scan the HD
+            status = self.scan_archive()
 
-        # # Enable widgets for next step
-        # self.ui.radioButton_filterByRun.setEnabled(True)
-        # self.ui.radioButton_filterByDate.setEnabled(True)
-        # self.ui.pushButton_iptsInfo.setEnabled(True)
-        # self.ui.pushButton_AddRuns.setEnabled(True)
-        # self.set_filter_mode(by_run_number=self.ui.checkBox_skipScan.isChecked())
+        # signal parent TODO ASAP2 - (1) add IPTS to tree without runs  (2) set IPTS to parent
+        # blabla
 
         return
 
@@ -451,18 +446,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
         :return:
         """
-        if self.ui.radioButton_useNumber.isChecked() is True:
-            self.ui.lineEdit_iptsNumber.setEnabled(True)
-            self.ui.pushButton_verify.setEnabled(True)
-            self.ui.lineEdit_iptsDir.setDisabled(True)
-            self.ui.pushButton_browse.setDisabled(True)
-            self._iptsDir = self._iptsDirFromNumber
+        if self.ui.radioButton_useNumber.isChecked():
+            self.ui.groupBox_snsArchive.setEnabled(True)
+
+        elif self.ui.radioButton_useDir.isChecked():
+            # TODO FIXME - Enable local HDD data access in future
+            # self.ui.groupBox_localHDD.setEnabled(True)
+            pass
+
         else:
-            self.ui.lineEdit_iptsNumber.setEnabled(False)
-            self.ui.pushButton_verify.setEnabled(False)
-            self.ui.lineEdit_iptsDir.setDisabled(False)
-            self.ui.pushButton_browse.setDisabled(False)
-            self._iptsDir = self._iptsDirFromDir
+            self.ui.groupBox_snsArchive.setEnabled(True)
 
         return
 
