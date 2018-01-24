@@ -112,7 +112,9 @@ class VDriveAPI(object):
     def add_runs_to_project(self, run_info_list):
         """
         Add runs under an IPTS dir to project
-        :param run_info_list: list of dictionaries. Each dictionary contains information for 1 run
+        :param run_info_list: list of dictionaries or integer.
+            (1) Each dictionary contains information for 1 run
+            (2) integer shall be a run number such that it will use the stored information in Project
         :return:
         """
         # check  input
@@ -120,16 +122,25 @@ class VDriveAPI(object):
                                                 '' % type(run_info_list)
         # add each run to project
         for index, run_info in enumerate(run_info_list):
-            # check type
-            assert isinstance(run_info, dict), 'Run information must be an instance of dictionary but not %s.' \
-                                          '' % type(run_info)
+            # treat differently according to type
+            if isinstance(run_info, dict):
+                # get information and add run
+                run_number = run_info['run']
+                file_name = run_info['file']
+                ipts_number = run_info['ipts']
+            elif isinstance(run_info, int):
+                # a run number is given
+                run_number = run_info
+                file_name = None
+                ipts_number = None
+            else:
+                # not supported type
+                raise RuntimeError('Run information must be an instance of dictionary but not %s.' % type(run_info))
+            # END-IF
 
-            # get information and add run
-            run_number = run_info['run']
-            file_name = run_info['file']
-            ipts_number = run_info['ipts']
-
+            # add
             self._myProject.add_run(run_number, file_name, ipts_number)
+        # END-FOR
 
         return True, ''
 
@@ -748,6 +759,8 @@ class VDriveAPI(object):
 
         try:
             archive_key = self._myArchiveManager.scan_vulcan_record(log_file_path)
+            scanned_runs_information = self._myArchiveManager.get_experiment_run_info(archive_key=archive_key)
+            self._myProject.add_scanned_information(scanned_runs_information)
             status = True
             ret_obj = archive_key
         except AssertionError as ass_err:
@@ -767,6 +780,7 @@ class VDriveAPI(object):
         assert isinstance(archive_key, str), 'Archive key %s must be a string but not of type %s.' \
                                              '' % (str(archive_key), type(archive_key))
         run_info_dict_list = self._myArchiveManager.get_experiment_run_info(archive_key, range(begin_run, end_run+1))
+        self._myProject.add_scanned_information(run_info_dict_list)
 
         if len(run_info_dict_list) > 0:
             status = True
@@ -898,6 +912,16 @@ class VDriveAPI(object):
         :return:
         """
         return self._myProject.get_number_data_files()
+
+    def check_runs(self, ipts_number, run_list):
+        """
+
+        :param run_list:
+        :return:
+        """
+        status, error_message, available_runs = self._myProject.check_runs(ipts_number, run_list, check_archive=True)
+
+        return status, error_message, available_runs
 
     def get_runs(self, start_run=None, end_run=None):
         """
@@ -1255,7 +1279,7 @@ class VDriveAPI(object):
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False):
+                        merge_runs=False, dspace=False):
         """
         Reduce a set of data
         Purpose:
@@ -1279,6 +1303,7 @@ class VDriveAPI(object):
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
+        :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1307,6 +1332,13 @@ class VDriveAPI(object):
                                                       output_dir=output_directory,
                                                       is_dry_run=False)
             message = message
+
+        elif dspace:
+            # reduce to d-space only
+            status, message = self._myProject.simple_reduce_runs(run_number_list=runs_to_reduce,
+                                                                 output_directory=output_directory,
+                                                                 dspace=True,
+                                                                 binning_parameters=binning_parameters)
 
         else:
             # manual reduction: Reduce runs

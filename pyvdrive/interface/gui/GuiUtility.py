@@ -143,50 +143,76 @@ def parse_integer(line_edit, allow_blank=True):
     return int_value
 
 
-def parse_integer_list(line_edit, size=None, check_order=False, increase=False):
+def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate=False, increase=False):
     """
-    parse a QLineEdit whose text can be converted to a list of integers;
+    parse a QLineEdit whose text can be converted to a list of positive integers;
     the optional operation can be used to check size, and order
+    Example: 110898,110912,110997,110872,110802, 110829, 110932-110936,110830-110834
     :param line_edit:
     :param size:
-    :param check_order:
+    :param check_order: flag to check whether the input is ordered
     :param increase:
     :return:
     """
     # check inputs
-    assert isinstance(line_edit, QtGui.QLineEdit), 'Input must be a QLineEdit instance.'
+    assert isinstance(line_edit, QtGui.QLineEdit), 'Input {0} of type {1} must be a QLineEdit instance.' \
+                                                   ''.format(line_edit, type(line_edit))
 
     # get the text and split
     line_text = str(line_edit.text())
-    line_text.replace(',', ' ')
+    line_text = line_text.replace(',', ' ')
     terms = line_text.split()
 
+    # convert terms to list of integers
+    # parse to integers
+    integer_list = list()
+    for idx, term in enumerate(terms):
+        term = term.strip()
+        if term.count('-') >= 1 and term.startswith('-') is False:
+            # contain a '-' but not start with '-'
+            sub_terms = term.split('-')
+            if len(sub_terms) != 2:
+                raise RuntimeError('Only positive integers are supported here. {0} is not a supported form.'
+                                   ''.format(term))
+            try:
+                start_value = int(sub_terms[0])
+                end_value = int(sub_terms[1])
+            except ValueError:
+                raise RuntimeError('Unable to convert {0} and {1} to integers.'.format(sub_terms[0], sub_terms[1]))
+            if start_value > end_value:
+                raise RuntimeError('Range {0} - {1} is not in ascending order.'.format(start_value, end_value))
+            series = range(start_value, end_value)
+            integer_list.extend(series)
+        else:
+            try:
+                integer_list.append(int(term))
+            except ValueError:
+                raise RuntimeError('{0}-th term {1} is not an integer.'.format(idx, term))
+        # END-IF-ELSE
+    # END-FOR
+
     # check size
-    if size is not None and len(terms) != size:
+    if size is not None and len(integer_list) != size:
         raise RuntimeError('Number of integers must be 2 but not {0}. FYI: {1}'
                            ''.format(len(terms), terms))
 
-    # parse to integers
-    int_list = list()
-    for idx, term in enumerate(terms):
-        try:
-            int_list.append(int(term))
-        except ValueError:
-            raise RuntimeError('{0}-th term {1} is not an integer.'.format(idx, term))
-    # END-FOR
-
     # check order
     if check_order:
-        if increase:
-            factor = 1
-        else:
-            factor = -1
-        for idx in range(len(int_list)-1):
-            if int_list[idx] * factor > int_list[idx+1] * factor:
-                raise RuntimeError('The order is wrong.')
+        for index in range(1, len(integer_list)):
+            if increase and integer_list[index] < integer_list[index-1]:
+                raise RuntimeError('Input integer list {0} is not in ascending order'.format(integer_list))
+            elif not increase and integer_list[index] > integer_list[index-1]:
+                raise RuntimeError('Input integer list {0} is not in in descending order.'.format(integer_list))
+        # END-FOR
     # END-IF
 
-    return int_list
+    # convert to list
+    if remove_duplicate:
+        int_set = set(integer_list)
+        integer_list = list(int_set)
+        integer_list.sort(reverse=not increase)
+
+    return integer_list
 
 
 def parse_float(line_edit, allow_blank=True):

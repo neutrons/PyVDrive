@@ -21,6 +21,27 @@ class VulcanGuiReduction(object):
 
         return
 
+    def _init_arg_dict(self):
+        """ blabla
+        :return:
+        """
+        arg_dict = dict()
+        arg_dict['auto_reduce'] = False
+        arg_dict['output_directory'] = self.controller.get_working_dir()
+        arg_dict['merge_banks'] = False   # TODO - could be an user option
+        arg_dict['background'] = False
+        arg_dict['vanadium'] = False
+        arg_dict['record'] = False
+        arg_dict['logs'] = False
+        arg_dict['gsas'] = False
+        arg_dict['dspace'] = False
+        arg_dict['output_to_fullprof'] = False
+        arg_dict['standard_sample_tuple'] = None
+        arg_dict['binning_parameters'] = [-0.001]
+        arg_dict['merge_runs'] = False
+
+        return arg_dict
+
     def read_binning_parameters(self):
         """
         parse and check binning parameters.
@@ -92,6 +113,7 @@ class VulcanGuiReduction(object):
         option_dict['record'] = self.user_interface.checkBox_outputAutoRecords.isChecked()
         option_dict['logs'] = self.user_interface.checkBox_outputSampleLogs.isChecked()
         option_dict['output_directory'] = str(self.user_interface.lineEdit_outputDir.text())
+        option_dict['dspace'] = self.user_interface.checkBox_outputDSpace.isChecked()
 
         return option_dict
 
@@ -113,8 +135,17 @@ class VulcanGuiReduction(object):
         main method to reduce data by gathering reduction options and parameters from GUI.
         :return:
         """
+        # initiaize up argument dictionary
+        arg_dict = self._init_arg_dict()
+
         # get the binning parameter
         bin_par = self.read_binning_parameters()
+        if bin_par is not None:
+            arg_dict['binning_parameters'] = bin_par
+
+        # get output selection
+        output_option_dict = self.read_output_options()
+        arg_dict.update(output_option_dict)
 
         # get run numbers to reduce
         run_number_list = self.read_run_number_list()
@@ -122,42 +153,26 @@ class VulcanGuiReduction(object):
         # binning by pixel
         bin_by_pixel, pixel_option_dict = self.read_pixel_binning_parameters()
 
-        # get output selection
-        output_option_dict = self.read_output_options()
-
         # add runs to reduce
         status, error_message = self.controller.set_runs_to_reduce(run_numbers=run_number_list)
         if status is False:
             return False, error_message
-            # GuiUtility.pop_dialog_error(self, error_message)
 
-        # set up argument dictionary
-        arg_dict = dict()
-        arg_dict['auto_reduce'] = False
-        arg_dict['output_directory'] = self.controller.get_working_dir()
-        arg_dict['merge_banks'] = False   # TODO - could be an user option
-        arg_dict['background'] = False
-        arg_dict['vanadium'] = False
-        arg_dict['record'] = False
-        arg_dict['logs'] = False
-        arg_dict['gsas'] = False
-        arg_dict['output_to_fullprof'] = False
-        arg_dict['standard_sample_tuple'] = None
-        arg_dict['binning_parameters'] = bin_par
-        arg_dict['merge_runs'] = False
-
-        if False:
-            #  TODO FIXME ASAP Disabled temporarily for debugging
-            arg_dict.update(output_option_dict)
-
+        # reduce
         if bin_by_pixel:
             # binning by pixel
             raise NotImplementedError('Binning by pixels is not implemented yet!')
         else:
             # regular binning
             print '[DB] GUI reducer setup: {0}.'.format(arg_dict)
-            # TEST TODO
+
+            # check something:
+            if arg_dict['auto_reduce'] and arg_dict['dspace']:
+                return False, 'Auto reduction and reducing to dSpacing cannot be selected together'
+
+            # reduce
             status, ret_obj = self.controller.reduce_data_set(**arg_dict)
+        # END-IF
 
         if status is False:
             error_msg = ret_obj

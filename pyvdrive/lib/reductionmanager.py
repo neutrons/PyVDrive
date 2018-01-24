@@ -461,6 +461,23 @@ class ReductionManager(object):
         # reduction tracker: key = run number (integer), value = DataReductionTracker
         self._reductionTrackDict = dict()
 
+        # simplified reduced workspace manager.  key = run number, value = workspace name
+        self._runFocusedWorkspaceDict = dict()
+
+        return
+
+    def add_reduced_workspace(self, run_number, out_ws_name):
+        """
+        add a reduced workspace
+        :param run_number:
+        :param out_ws_name:
+        :return:
+        """
+        # check input ... blabla
+
+        # add
+        self._runFocusedWorkspaceDict[run_number] = out_ws_name
+
         return
 
     # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
@@ -635,6 +652,8 @@ class ReductionManager(object):
         :return:  a list of run numbers
         """
         return_list = list()
+
+        # from tracker
         for run_number in self._reductionTrackDict.keys():
             tracker = self._reductionTrackDict[run_number]
             if tracker.is_reduced is True:
@@ -646,6 +665,12 @@ class ReductionManager(object):
                 return_list.append(new_item)
             # END-IF
         # END-FOR
+
+        # from simple reduced runs manager
+        run_number_list = self._runFocusedWorkspaceDict.keys()
+
+        # combine
+        return_list = list(set(return_list).union(set(run_number_list)))
 
         return return_list
 
@@ -775,12 +800,17 @@ class ReductionManager(object):
         reduction_setup.set_banks_to_merge(merge_banks)
         reduction_setup.set_default_calibration_files()
 
+        # parse binning parameters
         if binning_parameters is not None:
-            try:
+            if len(binning_parameters) == 3:
                 tof_min, bin_size, tof_max = binning_parameters
-            except IndexError as index_err:
-                raise RuntimeError('Binning parameters {0} must have 3 parameters. FYI: {1}.'
-                                   ''.format(binning_parameters, index_err))
+            elif len(binning_parameters) == 1:
+                bin_size = binning_parameters
+                tof_min = 3000.
+                tof_max = 70000.
+            else:
+                raise RuntimeError('Binning parameters {0} must have 3 parameters.'
+                                   ''.format(binning_parameters))
             reduction_setup.set_binning_parameters(tof_min, bin_size, tof_max)
             reduction_setup.set_align_vdrive_bin(False)
         else:

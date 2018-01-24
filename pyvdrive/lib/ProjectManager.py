@@ -3,6 +3,7 @@ import os.path
 import random
 
 from chop_utility import DataChopper
+import mantid_reduction
 import mantid_helper
 import reductionmanager as prl
 import archivemanager
@@ -14,6 +15,8 @@ import numpy
 
 class ProjectManager(object):
     """ VDrive Project
+    Note:
+        (1) run_info dictionary from archive manager:  'run', 'ipts', 'file', 'time'
     """
     def __init__(self, project_name, instrument='VULCAN'):
         """ Init
@@ -36,6 +39,8 @@ class ProjectManager(object):
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
         self._dataFileDict = dict()  # key: run number, value: 2-tuple (file name, IPTS)
+        # a cache of archived file scanned
+        self._scannedRunDict = dict()  # key = run number, value = archive manager's run_info dictionary
 
         # dictionary for loaded data referenced by IPTS and run number. value is the data key
         self._loadedDataDict = dict()
@@ -66,9 +71,26 @@ class ProjectManager(object):
         """
         # Check input
         assert isinstance(run_number, int), 'run number blabla'
-        assert isinstance(ipts_number, int), 'ipts number, blabla'
-        assert isinstance(file_name, str), 'file name blabla'
 
+        # no need to add again
+        if run_number in self._dataFileDict:
+            return
+
+        if file_name is None or ipts_number is None:
+            # incomplete information.  shall be retrieved from cached
+            if run_number not in self._scannedRunDict:
+                raise RuntimeError('Run {0} is not previously scanned. Complete information is required.'
+                                   ''.format(run_number))
+            run_info = self._scannedRunDict[run_number]
+            file_name = run_info['file']
+            ipts_number = run_info['ipts']
+
+        else:
+            # check types
+            assert isinstance(ipts_number, int), 'ipts number, blabla'
+            assert isinstance(file_name, str), 'file name blabla'
+
+        # add
         self._dataFileDict[run_number] = file_name, ipts_number
         self._baseDataFileNameList.append(os.path.basename(file_name))
 
@@ -93,6 +115,25 @@ class ProjectManager(object):
             raise RuntimeError('Workspace {0} does not exist in Mantid ADS.'.format(workspace_name))
 
         self._loadedDataDict[ipts_number, run_number] = workspace_name
+
+        return
+
+    def add_scanned_information(self, run_info_dict_list):
+        """
+        add scanned information to a dictionary for caching information
+        :param run_info_dict_list:
+        :return:
+        """
+        # check input
+        assert isinstance(run_info_dict_list, list),\
+            'Input run number information {0} must be given in a list but not a {1}' \
+            ''.format(run_info_dict_list, type(run_info_dict_list))
+
+        # add
+        for run_info in run_info_dict_list:
+            run_number = run_info['run']
+            self._scannedRunDict[run_number] = run_info
+        # END-FOR
 
         return
 
@@ -205,6 +246,52 @@ class ProjectManager(object):
         # END-IF
 
         return output_dict
+
+    def check_runs(self, ipts_number, run_number_list, check_archive):
+        """ check whether a series of run numbers exist
+        :param ipts_number:
+        :param run_number_list:
+        :param check_archive: flag to check archive if run number cannot be found in project
+        :return:
+        """
+        # check input
+        assert isinstance(ipts_number, int), 'IPTS number {0}  must be an integer but not a {1}' \
+                                             ''.format(ipts_number, type(ipts_number))
+        assert isinstance(run_number_list, list), 'Run numbers {0} must be given in a list but not a {1}' \
+                                                  ''.format(run_number_list, type(run_number_list))
+
+        # initialize inputs
+        status = True
+        error_message = ''
+        available_runs = run_number_list[:]
+
+        remove_index_list = list()
+        for index, run_number in enumerate(run_number_list):
+            if run_number in self._dataFileDict or run_number in self._scannedRunDict:
+                # run has been scanned
+                continue
+            elif check_archive:
+                # not scanned.  then check input
+                file_name_0 = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{0}_events.nxs.h5'.format(ipts_number, run_number)
+                file_name_1 = '/SNS/VULCAN/IPTS-{1}/data/VULCAN_{0}_events.nxs'.format(ipts_number, run_number)
+                if os.path.exists(file_name_0) or os.path.exists(file_name_1):
+                    # found
+                    continue
+
+            # not found
+            status = False
+            error_message += 'Run {0} cannot be located in IPTS {1}. Removed from input.\n' \
+                             ''.format(run_number, ipts_number)
+            remove_index_list.append(index)
+        # END-FOR
+
+        # remove
+        if not status:
+            remove_index_list.sort(reverse=True)
+            for index in remove_index_list:
+                available_runs.pop(index)
+
+        return status, error_message, available_runs
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
         """
@@ -1187,6 +1274,43 @@ class ProjectManager(object):
             raise OSError("Unable to set base data path with unsupported format %s." % str(type(data_dir)))
 
         return
+
+    def simple_reduce_runs(self, run_number_list,  output_directory, dspace, binning_parameters):
+        """
+
+        :param run_number_list:
+        :param output_directory:
+        :param dspace:
+        :param binning_parameters:
+        :return:
+        """
+        # check inputs ... blabla
+
+        # check binning parameters
+        if dspace:
+            print '[DB...BAT] Input binning: {0}'.format(binning_parameters)
+            if len(binning_parameters) == 1:
+                bin_size = binning_parameters[0]
+            else:
+                bin_size = binning_parameters[1]
+            binning_parameters = [0.3, '{0}'.format(bin_size), 5.0]
+        # END-IF
+
+        # reduce one by one
+        for run_number in run_number_list:
+            raw_file_name, ipts_number = self._dataFileDict[run_number]
+            print '[DB...BAT] Reduce run {0} from {1}'.format(run_number, raw_file_name)
+            print '[DB...BAT] Binned to {0}'.format(binning_parameters)
+
+            # reduce
+            out_ws_name = mantid_reduction.align_and_focus(run_number, raw_file_name, 'dSpacing', binning_parameters)
+            # output
+            mantid_reduction.save_ws_ascii(out_ws_name, output_directory, out_ws_name+'.dat')
+            # manage
+            self._reductionManager.add_reduced_workspace(run_number, out_ws_name)
+        # END-FOR
+
+        return True, ''
 
     @property
     def vanadium_processing_manager(self):
