@@ -34,6 +34,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._myParent = parent
         self._myController = None
 
+        # list of loaded runs (single and chopped)
+        self._loadedSingleRunList = list()
+        self._loadedChoppedRunList = list()
+
         self._bankIDList = [1, 2]
 
         # workspace management dictionary
@@ -91,64 +95,67 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._init_widgets()
 
         # Event handling
-        # push buttons 
-        self.connect(self.ui.pushButton_prevView, QtCore.SIGNAL('clicked()'),
+        # section: load data
+        self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_load_archived_gsas)
+        self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
+                     self.do_load_local_gsas)
+        self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
+                     self.do_browse_local_gsas)
+        self.connect(self.ui.pushButton_refreshList, QtCore.SIGNAL('clicked()'),
+                     self.do_refresh_existing_runs)
+        self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
+        self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
+                     self.event_load_options)
+
+        # section: choose to plot
+        self.connect(self.ui.pushButton_prevRun, QtCore.SIGNAL('clicked()'),
                      self.do_plot_prev_run)
-        self.connect(self.ui.pushButton_nextView, QtCore.SIGNAL('clicked()'),
+        self.connect(self.ui.pushButton_nextRun, QtCore.SIGNAL('clicked()'),
                      self.do_plot_next_run)
+        self.connect(self.ui.pushButton_prevChopped, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_prev_chopped)
+        self.connect(self.ui.pushButton_nextChopped, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_next_chopped)
+
+        # section: plot
         self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
                      self.do_plot_diffraction_data)
-        self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_sample_logs)
-        self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_canvas)
-
         self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
                      self.do_plot_contour)
+        self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
+                     self.do_plot_sample_logs)
+        self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_select_new_run_number)
+        self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
+                     self.evt_select_new_chopped_child)
 
-        self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
-                     self.do_normalise_by_current)
-
-        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_new_range)
-
+        # other
+        self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
+                     self.do_clear_canvas)
         self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
                      self.do_close)
 
+        # data processing
+        self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
+                     self.do_normalise_by_current)
+        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
+                     self.do_apply_new_range)
+
+
         # combo boxes
-        # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_select_new_run_number)
-        self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_select_new_chopped_child)
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_bank_id_changed)
         self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
                      self.evt_unit_changed)
-
-        # check boxes
-        self.connect(self.ui.checkBox_choppedDataMem, QtCore.SIGNAL(''),
-                     self.evt_toggle_load_logs)
 
         # vanadium
         self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
                      self.do_launch_vanadium_dialog)
 
         # widgets to load reduced data
-        self.connect(self.ui.pushButton_setReducedRunMem, QtCore.SIGNAL('clicked()'),
-                     self.do_set_current_run)
-        self.connect(self.ui.pushButton_loadArchivedGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_load_archived_gsas)
-        self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_local_gsas)
-        self.connect(self.ui.pushButton_loadAnyGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_load_local_gsas)
-        self.connect(self.ui.pushButton_loadSampleLogs, QtCore.SIGNAL('clicked()'),
-                     self.do_load_sample_logs)
 
-        self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
-                     self.event_load_options)
-        self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
-                     self.event_load_options)
 
         # sub window
         self._vanadiumProcessDialog = None
@@ -160,14 +167,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         Initialize some widgets
         :return:
         """
-        # default to load data from memory
+        # load data: default to load data from memory
         self.ui.radioButton_fromArchive.setChecked(True)
-        self.ui.radioButton_anyGSAS.setChecked(False)
-        self.ui.pushButton_loadSampleLogs.setEnabled(False)
+        self._set_load_from_archive_enabled(True)
+        self._set_load_from_hdd_enabled(False)
 
-        self.set_group1_enabled(True)
-        self.set_group2_enabled(True)
-        self.set_group3_enabled(False)
+        # select single run or chopped run
+        self.ui.radioButton_chooseSingleRun.setChecked(True)
+        self.ui.groupBox_plotSingleRun.setEnabled(True)
+        self.ui.groupBox_plotChoppedRun.setEnabled(False)
+
+        # select plot data or log
+        self.ui.radioButton_chooseDiffraction.setChecked(True)
+        self.ui.groupBox_plotREducedData.setEnabled(True)
+        self.ui.groupBox_plotLog.setEnabled(False)
+
+        return
+
+    def _set_load_from_archive_enabled(self, enabled):
+        """
+        set the widgets to load data from archive to be enabled or disabled
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_iptsNumber.setEnabled(enabled)
+        self.ui.lineEdit_run.setEnabled(enabled)
+
+        return
+
+    def _set_load_from_hdd_enabled(self, enabled):
+        """
+        blabla
+        :param enabled:
+        :return:
+        """
+        self.ui.lineEdit_gsasFileName.setEnabled(enabled)
 
         return
 
@@ -178,8 +212,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         self.ui.comboBox_runs.setEnabled(enabled)
-        self.ui.pushButton_setReducedRunMem.setEnabled(enabled)
-        self.ui.checkBox_choppedDataMem.setEnabled(enabled)
+        # self.ui.pushButton_setReducedRunMem.setEnabled(enabled)
+        # self.ui.checkBox_choppedDataMem.setEnabled(enabled)
 
         return
 
@@ -192,7 +226,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.lineEdit_iptsNumber.setEnabled(enabled)
         self.ui.pushButton_loadArchivedGSAS.setEnabled(enabled)
         self.ui.lineEdit_run.setEnabled(enabled)
-        self.ui.checkBox_loadChoppedArchive.setEnabled(enabled)
+        # self.ui.checkBox_loadChoppedArchive.setEnabled(enabled)
 
         return
 
@@ -205,7 +239,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.lineEdit_gsasFileName.setEnabled(enabled)
         self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
         self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
-        self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
+        # self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
 
         return
 
@@ -326,20 +360,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # activate it!
         # self.do_set_reduced_from_memory(data_key=data_key)
-
-        return
-
-    def do_load_sample_logs(self):
-        """
-        If the diffraction data is loaded from GSAS files, then you need to load the sample logs explicitly
-        from associated NeXus files
-        :return:
-        """
-        # TODO/NOWNOW - Implement!  What is the difference between this and do_plot_sample_logs() ???
-        print '[IMPLEMENT] pushButton_loadSampleLogs'
-
-        for gsas_ws_name in self._choppedSequenceList:
-            self._choppedSampleDict
 
         return
 
@@ -656,6 +676,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def do_plot_prev_chopped(self):
+        # TODO ASAP ASAP2  Implement
+        return
+
+    def do_plot_next_chopped(self):
+        # TODO ASAP ASAP2  Implement
+        return
+
     def do_plot_prev_run(self):
         """
         Purpose: plot the previous run in the list and update the run list
@@ -733,6 +761,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
+    def do_refresh_existing_runs(self):
+        """
+        refresh existing runs
+        :return:
+        """
+        # single runs
+        single_runs_list = self._myController.get_loaded_runs()
+        current_single_run = str(self.ui.comboBox_runs.currentText())
+        single_runs_list.sort()
+
+        # set single runs
+        self._mutexRunNumberList = True
+        self.ui.comboBox_runs.clear()
+
+        # reset all items
+        curr_index = None
+        for combo_index, run_number in enumerate(single_runs_list):
+            self.ui.comboBox_runs.addItem(run_number)
+            if run_number == current_single_run:
+                curr_index = combo_index
+        # END-FOR
+
+        # set current runs
+        if curr_index is not None:
+            self.ui.comboBox_runs.setCurrentIndex(curr_index)
+        self._mutexRunNumberList = False
+
+        # chopped runs
+        # TODO ASAP ASAP2 Implement
+        # blabla
+
+        return
+
+    # TODO ASAP ASAP2 : need to separate to different methods for the new UI
+    # TODO --- Verify!
     def do_set_current_run(self, data_key=None):
         """
         select the run (data key) in comboBox_runs's current text as the current run to plot
@@ -827,12 +890,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         if self.ui.radioButton_fromArchive.isChecked():
             # enable group 2 widgets
-            self.set_group2_enabled(True)
-            self.set_group3_enabled(False)
+            self._set_load_from_archive_enabled(True)
+            self._set_load_from_hdd_enabled(False)
         elif self.ui.radioButton_anyGSAS.isChecked():
             # enable group 3 widgets
-            self.set_group2_enabled(False)
-            self.set_group3_enabled(True)
+            self._set_load_from_archive_enabled(False)
+            self._set_load_from_hdd_enabled(True)
         else:
             # impossible situation
             raise RuntimeError('One of these 3 radio buttons must be selected!')
@@ -864,14 +927,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.do_plot_diffraction_data()
 
         return
-
-    def evt_toggle_load_logs(self):
-        """
-
-        :return:
-        """
-        # TODO/ISSUE/NOWNOW
-        print self.ui.pushButton_loadSampleLogs
 
     def evt_unit_changed(self):
         """
@@ -1037,6 +1092,21 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             return status, error_message
 
         return True, None
+
+    def load_sample_logs(self):
+        """
+        If the diffraction data is loaded from GSAS files, then you need to load the sample logs explicitly
+        from associated NeXus files
+        :return:
+        """
+        # TODO/ASAP ASAP2 - Implement!  What is the difference between this and do_plot_sample_logs() ???
+        print '[IMPLEMENT] pushButton_loadSampleLogs'
+
+        for gsas_ws_name in self._choppedSequenceList:
+            self._choppedSampleDict
+
+        return
+
 
     def set_sample_log_names(self, log_name_list):
         """

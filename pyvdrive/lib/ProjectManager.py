@@ -727,6 +727,13 @@ class ProjectManager(object):
 
         return ipts_dict
 
+    def get_loaded_reduced_runs(self):
+        """
+        get the runs that are loaded as reduced data from SNS archive or HDD (for example as GSAS)
+        :return:
+        """
+        self._loadedDataManager.get_
+
     def get_number_data_files(self):
         """
         Get the number/amount of the data files that have been set to the project.
@@ -794,6 +801,13 @@ class ProjectManager(object):
         assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
 
         return data_set
+
+    def get_reduced_runs(self):
+        """
+        find out the runs that have been reduced and are still in memory
+        :return: list of run numbers of the runs
+        """
+        return self._reductionManager.get_reduced_runs()
 
     def get_reduced_workspace(self, ipts_number, run_number):
         """

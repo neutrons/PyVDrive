@@ -104,36 +104,48 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.radioButton_useNumber.setChecked(True)
         self.ui.groupBox_snsArchive.setEnabled(True)
 
-        self.ui.lineEdit_iptsDir.setDisabled(True)
         self.ui.groupBox_localHDD.setDisabled(True)
 
         # SNS archive options
-        self.ui.radioButton_scanArchiveRecord.setEnabled(True)
+        self.ui.radioButton_scanAutoRecord.setChecked(True)
 
         # local HDD options
-        self.ui.radioButton_scanHD.setEnabled(True)
+        self.ui.radioButton_scanHD.setChecked(True)
 
         # add runs
-        self.ui.radioButton_filterByRun.setEnabled(True)
+        self.ui.radioButton_filterByRun.setChecked(True)
 
         return
 
-    def _search_logs(self):
+    def _search_logs(self, auto_record_data):
         """
         Search log files such as AutoRecord.txt
-        :return:
+        :param auto_record_data: flag to return AutoRecordData.txt
+        :return: (bool, str): (1) True, auto record file path; (2) False, error message
         """
-        # get shared
+        # get shared folder
         shared_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
-        assert os.path.exists(shared_dir), 'Directory %s does not exist!' % self._iptsNumber
+        if not os.path.exists(shared_dir):
+            return False, 'Directory {0} does not exist!'.format(shared_dir)
 
-        for file_name in ['AutoRecord.txt', 'AutoRecordData.txt', 'AutoRecordAlign.txt']:
+        # get file name
+        log_path = None
+        if auto_record_data:
+            file_name = 'AutoRecordData.txt'
             log_path = os.path.join(shared_dir, file_name)
-            if os.path.exists(log_path):
-                self.ui.comboBox_logFilesNames.addItem(file_name)
-        # END-FOR
+        # END-IF
 
-        return
+        if log_path is None or os.path.exists(log_path) is False:
+            # unable to locate AutoRecordData or AutoRecord is required
+            file_name = 'AutoRecord.txt'
+            log_path = os.path.join(shared_dir, file_name)
+        # END-IF
+
+        # last check
+        if not os.path.exists(log_path):
+            return False, 'Unable to locate record file {0}'.format(log_path)
+
+        return True, log_path
 
     def add_runs_by_date(self):
         """
@@ -353,13 +365,14 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self.ui.comboBox_existingIPTS.addItem('{0}'.format(ipts_number))
 
         # scan files
-        if self.ui.radioButton_scanArchiveRecord.isChecked():
-            self.scan_record_file(data_run_only)
+        if self.ui.radioButton_scanAutoRecord.isChecked():
+            record_data_only = self.ui.checkBox_autoRecordDataOnly.isChecked()
+            self.scan_record_file(record_data_only, True)
         else:
             # scan the HD
-            status = self.scan_archive()
+            self.scan_archive()
 
-        # signal parent TODO ASAP2 - (1) add IPTS to tree without runs  (2) set IPTS to parent
+        # signal parent TODO ASAP ASAP2 - (1) add IPTS to tree without runs  (2) set IPTS to parent
         # blabla
 
         return
@@ -509,46 +522,52 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return True
 
-    def scan_record_file(self):
+    def scan_record_file(self, record_data_only, is_archive=True):
         """
         Scan record log file
+        :param record_data_only: flag to read AutoRecordData
+        :param is_archive: locate file in archive
         :return: boolean
         """
-        # get log file: the higher priority is the log file name that is browsed
-        log_file_path = str(self.ui.lineEdit_logFilePath.text())
-        if len(log_file_path.strip()) == 0:
-            # second priority to load from combo box
-            log_base_name = str(self.ui.comboBox_logFilesNames.currentText())
-            if len(log_base_name) == 0:
-                gutil.pop_dialog_error(self, 'No log file is found!')
-                return False
+        if is_archive:
+            # in archive
+            status, ret_str = self._search_logs(record_data_only)
+        else:
+            # get log file: the higher priority is the log file name that is browsed
+            log_file_path = str(self.ui.lineEdit_logFilePath.text())
+            if len(log_file_path.strip()) == 0:
+                status = False
+                ret_str = 'User must specify path to "Auto Record" file.'
+            elif os.path.exists(log_file_path):
+                status = True
+                ret_str = log_file_path
             else:
-                log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
-
-        # scan record file
-        try:
-            status, ret_obj = self._myParent.get_controller().scan_vulcan_record(log_file_path)
-        except AssertionError as ass_err:
-            gutil.pop_dialog_error(self, 'Unable to load record file %s due to %s.'
-                                         '' % (log_file_path, str(ass_err)))
-            return False
+                status = False
+                ret_str = 'User specified "Auto Record" file {0} does not exist.'.format(log_file_path)
+        # END-IF-ELSE
 
         if status:
-            # set record key as current archive key and get the range of the run
-            record_key = ret_obj
-            self._archiveKey = record_key
-            start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
-            run_info_list = [start_run, end_run]
-        else:
-            # error in retrieving
-            error_message = ret_obj
-            gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
-                log_file_path, error_message))
-            self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
-            return False
+            # scan record file
+            log_file_path = ret_str
+            scan_status, ret_obj = self._myParent.get_controller().scan_vulcan_record(log_file_path)
+            if scan_status:
+                # set record key as current archive key and get the range of the run
+                record_key = ret_obj
+                self._archiveKey = record_key
+                start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
+                run_info_list = [start_run, end_run]
+                self.set_retrieved_information(run_info_list)
+            else:
+                # error in retrieving
+                error_message = ret_obj
+                gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
+                    log_file_path, error_message))
+                self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
+                return False
 
-        # set up information to GUI
-        self.set_retrieved_information(run_info_list)
+        else:
+            error_message = ret_str
+            gutil.pop_dialog_error(self, error_message)
 
         return True
 

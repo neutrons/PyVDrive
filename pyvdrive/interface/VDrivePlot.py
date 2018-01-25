@@ -777,7 +777,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 return
 
             # check runs with
-            status, exist_run_list, error_message = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
+            status, error_message, exist_run_list = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
 
             if status is False:
                 # Error and return

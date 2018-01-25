@@ -805,7 +805,7 @@ class ReductionManager(object):
             if len(binning_parameters) == 3:
                 tof_min, bin_size, tof_max = binning_parameters
             elif len(binning_parameters) == 1:
-                bin_size = binning_parameters
+                bin_size = binning_parameters[0]
                 tof_min = 3000.
                 tof_max = 70000.
             else:

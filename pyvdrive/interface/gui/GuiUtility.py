@@ -242,9 +242,12 @@ def parse_float(line_edit, allow_blank=True):
 
 def pop_dialog_error(parent, message):
     """ Pop up a one-button dialog for error message
+    :param parent:
     :param message:
     :return:
     """
+    assert isinstance(message, str), 'Input message "{0}" must be a string but not a {1}' \
+                                     ''.format(message, type(message))
     QtGui.QMessageBox.warning(parent, 'Error', message)
 
     return

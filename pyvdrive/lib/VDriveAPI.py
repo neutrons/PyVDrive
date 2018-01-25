@@ -809,6 +809,23 @@ class VDriveAPI(object):
 
         return sns_dir
 
+    def get_loaded_runs(self):
+        """
+        get the run number (or data key) to the loaded or reduced data in memory
+        :return:
+        """
+        # from archive
+        loaded_runs_list = self._myProject.get_loaded_runs()
+
+        # from project
+        reduced_runs_list = self._myProject.get_reduced_runs()
+
+        # combine
+        run_in_mem = loaded_runs_list[:]
+        run_in_mem.extend(reduced_runs_list)
+
+        return run_in_mem
+
     def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
         """
         Get the local runs (data file)

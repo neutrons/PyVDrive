@@ -477,6 +477,12 @@ class DataArchiveManager(object):
 
         return proton_charge
 
+    def get_loaded_runs(self):
+        """
+        get loaded GSAS file
+        :return:
+        """
+
     @staticmethod
     def get_smoothed_vanadium(ipts_number, van_run_number, check_exist=True):
         """
