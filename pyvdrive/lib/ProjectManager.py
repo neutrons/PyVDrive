@@ -732,7 +732,7 @@ class ProjectManager(object):
         get the runs that are loaded as reduced data from SNS archive or HDD (for example as GSAS)
         :return:
         """
-        self._loadedDataManager.get_
+        return  self._loadedDataManager.get_loaded_runs()
 
     def get_number_data_files(self):
         """

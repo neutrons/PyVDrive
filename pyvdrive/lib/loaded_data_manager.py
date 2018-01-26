@@ -19,6 +19,10 @@ class LoadedDataManager(object):
         # workspace management dictionary
         self._workspaceDict = dict()  # key: data key, value: workspace name
 
+        # more detailed information: key = run number (GSAS) / data key
+        self._singleGSASDict = dict()
+        self._choppedGSASSetDict = dict()
+
         return
 
     def get_bank_list(self, data_key):
@@ -68,6 +72,14 @@ class LoadedDataManager(object):
                                                                     point_data=True, start_bank_id=1)
 
         return data_set_dict
+
+    def get_loaded_runs(self):
+        """
+        get the run numbers or data keys of the loaded data
+        :return:
+        """
+        # TODO ASAP ASAP3 In impelmentation
+        return
 
     def get_workspace_name(self, data_key):
         """
@@ -127,17 +139,22 @@ class LoadedDataManager(object):
         if data_file_type == 'gsas':
             # load as GSAS
             # get the output workspace name
+            case = -1
             if prefix is None or prefix == '':
                 # no prefix is specified
                 data_ws_name = '{0}_gsas'.format(base_ws_name)
+                case = 1
             elif base_ws_name.isdigit():
                 # base workspace name is an integer and prefix is given.
                 num_zeros = int(math.log(max_int) / math.log(10)) + 1
                 data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
+                case = 2
             else:
                 # prefix_basename
                 data_ws_name = '{0}_{1}'.format(prefix, os.path.basename(file_name))
+                case = 3
             # END-IF
+            print ('Loaded GSAS file workspace name: {0} from case {1}'.format(data_ws_name, case))
 
             # load data
             data_key = mantid_helper.load_gsas_file(data_file_name, data_ws_name,

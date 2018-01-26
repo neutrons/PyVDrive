@@ -276,37 +276,53 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         return
 
     def do_load_archived_gsas(self):
-        """
-        blabla
+        """ Load archived GSAS for a single run
         :return:
         """
         # read from input
         ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
         run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
-        is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
 
-        # import GSAS in SNS archive: data key is workspace name
+        is_chopped_data = False
         try:
             data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+
         except RuntimeError as run_error:
             GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
                                               ''.format(run_number, run_error))
             return
 
-        # set sequence list
-        if is_chopped_data:
-            seq_list = data_key['chopped sequence']
-        else:
-            seq_list = None
-
-        # add data
-        if is_chopped_data:
-            raise NotImplementedError('It is not implemented to plot chopped data from GSAS.')
-        else:
-            self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+        # add data set to repository
+        self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
 
         # set the label
+        seq_list = None
         self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+
+        # TODO ASAP ASAP2 Register
+
+        # # TODO - ASAP ASAP2 The commented out part shall be moved to load archived chopped data
+        #
+        # is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
+        # data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+        #
+        # # import GSAS in SNS archive: data key is workspace name
+        #
+        #
+        # # set sequence list
+        # if is_chopped_data:
+        #     seq_list = data_key['chopped sequence']
+        # else:
+        #     seq_list = None
+        #
+        # # add data
+        # if is_chopped_data:
+        #     raise NotImplementedError('It is not implemented to plot chopped data from GSAS.')
+        # else:
+        #     self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+        #
+        # # set the label
+        # self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
 
         return
 

@@ -815,7 +815,7 @@ class VDriveAPI(object):
         :return:
         """
         # from archive
-        loaded_runs_list = self._myProject.get_loaded_runs()
+        loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
         # from project
         reduced_runs_list = self._myProject.get_reduced_runs()
