@@ -520,7 +520,8 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False, is_workspace=False):
+    def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
+                         is_workspace=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
@@ -534,9 +535,14 @@ class VDriveAPI(object):
         """
         # check whether run ID is a data key
         workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
-        data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
-        assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
-                                            ''.format(target_unit, current_unit)
+
+        # get data
+        data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
+                                                                            bank_id=bank_id)
+        # check
+        if current_unit != target_unit:
+            raise NotImplementedError('Target unit {0} does not match reduced unit {1}.'
+                                      ''.format(target_unit, current_unit))
 
         # if is_workspace:
         #     # get data from project as the first priority

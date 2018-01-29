@@ -45,7 +45,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
         # Controlling data structure on lines that are plotted on graph
-        self._currentPlotDataKeyDict = dict()  # key: data key, bank ID, value: value = vec x, vec y, unit
+        self._currentPlotDataKeyDict = dict()  # key: data key, bank ID, unit; value: value = vec x, vec y
         self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
 
         # A status flag to show whether the current plot is for sample log or diffraction data
@@ -1212,41 +1212,41 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param bank_id_from_1:
         :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
         """
-        raise NotImplementedError('Who is using me .. get_reduced_data(...)???')
-
-        # run number to integer
-        if isinstance(run_number, str) and run_number.isdigit():
-            run_number = int(run_number)
-
-        # load data if necessary
-        status, error_message = self.retrieve_loaded_reduced_data(run_number, unit)
-        if not status:
-            return False, 'Unable to load {0} due to {1}'.format(run_number, error_message)
-
-        # TODO/ISSUE/NEXT - bank ID and spec ID from 1 is very confusing
-        reduced_data_dict = self._currentPlotDataKeyDict[run_number]
-        bank_id_list = reduced_data_dict.keys()
-        if 0 in bank_id_list:
-            spec_id_from_0 = True
-        else:
-            spec_id_from_0 = False
-
-        # determine the spectrum ID from controller
-        if bank_id_from_1 and spec_id_from_0:
-            spec_id = bank_id - 1
-        else:
-            spec_id = bank_id
-
-        # check again
-        if spec_id not in reduced_data_dict:
-            raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
-                               '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
-
-        # get data
-        vec_x = self._currentPlotDataKeyDict[run_number][spec_id][0]
-        vec_y = self._currentPlotDataKeyDict[run_number][spec_id][1]
-
-        return True, (vec_x, vec_y)
+        raise NotImplementedError('Who is using me .. get_reduced_data(...)???  Only used by 2D plotting now')
+        #
+        # # run number to integer
+        # if isinstance(run_number, str) and run_number.isdigit():
+        #     run_number = int(run_number)
+        #
+        # # load data if necessary
+        # status, error_message = self.retrieve_loaded_reduced_data(run_number, unit)
+        # if not status:
+        #     return False, 'Unable to load {0} due to {1}'.format(run_number, error_message)
+        #
+        # # TODO/ISSUE/NEXT - bank ID and spec ID from 1 is very confusing
+        # reduced_data_dict = self._currentPlotDataKeyDict[run_number]
+        # bank_id_list = reduced_data_dict.keys()
+        # if 0 in bank_id_list:
+        #     spec_id_from_0 = True
+        # else:
+        #     spec_id_from_0 = False
+        #
+        # # determine the spectrum ID from controller
+        # if bank_id_from_1 and spec_id_from_0:
+        #     spec_id = bank_id - 1
+        # else:
+        #     spec_id = bank_id
+        #
+        # # check again
+        # if spec_id not in reduced_data_dict:
+        #     raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
+        #                        '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
+        #
+        # # get data
+        # vec_x = self._currentPlotDataKeyDict[run_number][spec_id][0]
+        # vec_y = self._currentPlotDataKeyDict[run_number][spec_id][1]
+        #
+        # return True, (vec_x, vec_y)
 
     @staticmethod
     def guess_run_number(gsas_path):
@@ -1332,10 +1332,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(data_key, unit,
         #                                                                     self._iptsNumber, is_workspace)
 
-        status, ret_obj = self._myController.get_reduced_data(data_key, unit,
-                                                              ipts_number=self._iptsNumber,
-                                                              search_archive=False,
-                                                              is_workspace=False)
+        status, ret_obj = self._myController.get_reduced_data(data_key, unit, bank_id=bank_id)
+        if status:
+            # re-format return
+            vec_x = ret_obj[0]
+            vec_y = ret_obj[1]
+            ret_obj = vec_x, vec_y
+
         #
         # # if not in memory, try to load from archive
         # if not status and not is_workspace:
@@ -1369,7 +1372,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             self._choppedSampleDict
 
         return
-
 
     def set_sample_log_names(self, log_name_list):
         """
@@ -1432,52 +1434,58 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                                 unit=self._currUnit)
             if status:
                 vec_x, vec_y = ret_obj
+                # TODO FIXME NEXT : use a stack to manage the data stored
+                self._currentPlotDataKeyDict[entry_key] = ret_obj
             else:
-                raise RuntimeError('Unable to load bank {0} of run with data key {1} in unit {2}'
-                                   ''.format(bank_id, data_key, self._currUnit))
+                raise RuntimeError('Unable to load bank {0} of run with data key {1} in unit {2} due to {3}'
+                                   ''.format(bank_id, data_key, self._currUnit, ret_obj))
+        else:
+            # data already been loaded before
+            vec_x, vec_y = self._currentPlotDataKeyDict[entry_key]
+        # END-IF
 
-        REFACTOR HERE
-
-        if data_key not in self._currentPlotDataKeyDict:
-            # check again whether the input data key is an integer but converted to string
-            raise_key = True
-            if isinstance(data_key, str) and data_key.isdigit():
-                data_key = int(data_key)
-                if data_key in self._currentPlotDataKeyDict:
-                    raise_key = False
-
-            if raise_key: 
-                raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
-                               ''.format(self._currentPlotDataKeyDict.keys(), data_key))
-
-        if bank_id not in self._currentPlotDataKeyDict[data_key]:
-            raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
-                               ''.format(bank_id, type(bank_id), data_key, self._currentPlotDataKeyDict[data_key].keys()))
-        # get data and unit
-        self._currUnit = str(self.ui.comboBox_unit.currentText())
-        status, error_message = self.retrieve_loaded_reduced_data(data_key=data_key, unit=self._currUnit)
-        if not status:
-            GuiUtility.pop_dialog_error(self, error_message)
-            return
-        vec_x = self._currentPlotDataKeyDict[data_key][bank_id][0]
-        vec_y = self._currentPlotDataKeyDict[data_key][bank_id][1]
-
-        # plot
-        print '[DB...BAT] Check Unit = {0}, X Range = {1}, {2}'.format(self._currUnit, self._minX,
-                                                                       self._maxX)
+        #
+        # if data_key not in self._currentPlotDataKeyDict:
+        #     # check again whether the input data key is an integer but converted to string
+        #     raise_key = True
+        #     if isinstance(data_key, str) and data_key.isdigit():
+        #         data_key = int(data_key)
+        #         if data_key in self._currentPlotDataKeyDict:
+        #             raise_key = False
+        #
+        #     if raise_key:
+        #         raise KeyError('ReducedDataView\'s reduced data dictionary (keys are {0}) does not have data key {1}.'
+        #                        ''.format(self._currentPlotDataKeyDict.keys(), data_key))
+        #
+        # if bank_id not in self._currentPlotDataKeyDict[data_key]:
+        #     raise RuntimeError('Bank ID {0} of type {1} does not exist in reduced data key {2} (banks are {3}.'
+        #                        ''.format(bank_id, type(bank_id), data_key, self._currentPlotDataKeyDict[data_key].keys()))
+        # # get data and unit
+        # self._currUnit = str(self.ui.comboBox_unit.currentText())
+        # status, error_message = self.retrieve_loaded_reduced_data(data_key=data_key, unit=self._currUnit)
+        # if not status:
+        #     GuiUtility.pop_dialog_error(self, error_message)
+        #     return
+        # vec_x = self._currentPlotDataKeyDict[data_key][bank_id][0]
+        # vec_y = self._currentPlotDataKeyDict[data_key][bank_id][1]
+        #
+        # # plot
+        # print '[DB...BAT] Check Unit = {0}, X Range = {1}, {2}'.format(self._currUnit, self._minX,
+        #                                                                self._maxX)
 
         line_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y), unit=self._currUnit,
                                                                       over_plot=not clear_previous,
                                                                       run_id=data_key, bank_id=bank_id,
                                                                       chop_tag=None)
 
+        # deal with Y axis
         self.ui.graphicsView_mainPlot.auto_rescale()
-        self.ui.graphicsView_mainPlot.setXYLimit(self._minX, self._maxX)
+        # self.ui.graphicsView_mainPlot.setXYLimit(self._minX, self._maxX)
 
         # check the bank ID list
-        if self.ui.comboBox_spectraList.count() != len(self._currentPlotDataKeyDict):
-            bank_id_list = sorted(self._currentPlotDataKeyDict[data_key].keys())
-            self.set_bank_ids(bank_id_list, bank_id)
+        # if self.ui.comboBox_spectraList.count() != len(self._currentPlotDataKeyDict):
+        #     bank_id_list = sorted(self._currentPlotDataKeyDict[data_key].keys())
+        #     self.set_bank_ids(bank_id_list, bank_id)
 
         return line_id
 
