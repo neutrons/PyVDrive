@@ -464,7 +464,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self._reducedDataViewWindow is None:
             # initialize a window instance it has not been
             self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
-            self._reducedDataViewWindow.setup(self._myWorkflow)
+            self._reducedDataViewWindow.init_setup(self._myWorkflow)
             self._myChildWindows.append(self._reducedDataViewWindow)
         # END-IF
 

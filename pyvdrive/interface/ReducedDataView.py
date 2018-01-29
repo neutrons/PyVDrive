@@ -504,6 +504,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param unit:
         :return:
         """
+        # TODO ASAP -- merge with add_run_numbers
         raise RuntimeError('Refactor ASAP')
 
         # return if the controller data key exist
@@ -533,6 +534,12 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param run_tup_list: a list of 2-tuples as (run number, IPTS number) or just a list of integers (run number)
         :param clear_previous:
         :return:
+        """
+        """
+        used by:  pyvdrive/interface/VDrivePlot.py  483:
+                  pyvdrive/interface/vcommand_processor.py
+                  self.do_load_single_gsas
+
         """
         raise RuntimeError('Refactor ASAP')
 
@@ -1799,12 +1806,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def setup(self, controller):
+    def init_setup(self, controller):
         """ Set up the GUI from controller
         :param controller:
         :return:
         """
-        raise RuntimeError('Who is using me?')
         # Check
         # assert isinstance(controller, VDriveAPI)
         self._myController = controller
