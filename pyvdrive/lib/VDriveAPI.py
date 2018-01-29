@@ -532,33 +532,39 @@ class VDriveAPI(object):
         :param is_workspace:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        if is_workspace:
-            # get data from project as the first priority
-            workspace_name = run_id
-            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
-            assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
-                                                ''.format(target_unit, current_unit)
+        # check whether run ID is a data key
+        workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+        data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
+        assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
+                                            ''.format(target_unit, current_unit)
 
-        else:
-            # search for archive with GSAS file
-            # get GSAS file name
-            if self._myProject.reduction_manager.has_run(run_number=run_id):
-                # reduced data that is still in memory
-                data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
-
-            elif search_archive and isinstance(run_id, int):
-                # search /SNS/VULCAN/
-                try:
-                    gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
-                    data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
-                except RuntimeError as run_err:
-                    return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
-                                  ''.format(run_id, gsas_file, run_err)
-
-            else:
-                return False, 'Unable to locate run {0} in archive'.format(run_id)
-            # END-IF
-        # END-IF-ELSE
+        # if is_workspace:
+        #     # get data from project as the first priority
+        #     workspace_name = run_id
+        #     data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
+        #     assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
+        #                                         ''.format(target_unit, current_unit)
+        #
+        # else:
+        #     # search for archive with GSAS file
+        #     # get GSAS file name
+        #     if self._myProject.reduction_manager.has_run(run_number=run_id):
+        #         # reduced data that is still in memory
+        #         data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
+        #
+        #     elif search_archive and isinstance(run_id, int):
+        #         # search /SNS/VULCAN/
+        #         try:
+        #             gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+        #             data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+        #         except RuntimeError as run_err:
+        #             return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
+        #                           ''.format(run_id, gsas_file, run_err)
+        #
+        #     else:
+        #         return False, 'Unable to locate run {0} in archive'.format(run_id)
+        #     # END-IF
+        # # END-IF-ELSE
 
         return True, data_set_dict
 

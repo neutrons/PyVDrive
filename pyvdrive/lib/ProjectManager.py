@@ -12,6 +12,7 @@ import vanadium_utility
 import peak_util
 import numpy
 
+# TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ...
 
 class ProjectManager(object):
     """ VDrive Project
@@ -246,6 +247,25 @@ class ProjectManager(object):
         # END-IF
 
         return output_dict
+
+    def get_workspace_name_by_data_key(self, data_key):
+        """
+
+        :param data_key:
+        :return:
+        """
+        assert isinstance(data_key, str), 'blabla'
+
+        # Check what it shall be
+        print ('[DB...BAT] data key: {0}'.format(data_key))
+        if data_key.endswith('G'):
+            ws_name = self._loadedDataManager.get_workspace_name(data_key)
+            print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
+        else:
+            found_it = self._reductionManager.has_run(data_key)
+            print ('[DB...BAT] Found it from reduced data? {0}'.format(found_it))
+
+        return ws_name
 
     def check_runs(self, ipts_number, run_number_list, check_archive):
         """ check whether a series of run numbers exist

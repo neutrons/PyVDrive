@@ -499,10 +499,16 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # add run number of combo-box and dictionary
         for run_tup in run_tup_list:
-            assert isinstance(run_tup, tuple) and len(run_tup) == 2,\
-                'Run tuple must contain just run number and ipts number but not {0}'.format(run_tup)
-            run_number, ipts_number = run_tup
-            self.ui.comboBox_runs.addItem(str(run_number))
+            if isinstance(run_tup, tuple) and len(run_tup) == 2:
+                run_number, ipts_number = run_tup
+                entry_name = str(run_number)
+            elif isinstance(run_tup, str):
+                entry_name = run_tup
+            else:
+                raise RuntimeError('Run information {0} of type {1} is not supported.'
+                                   ''.format(entry_name, type(entry_name)))
+            # TODO ASAP3 BIG BAD BOY... SHALL CLEAN THE APPROACH TO UPDATE IN COMBOBOX_RUNS
+            self.ui.comboBox_runs.addItem()
             self._dataIptsRunDict[run_number] = ipts_number, run_number
             self._runNumberList.append(run_number)
 
