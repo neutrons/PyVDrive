@@ -97,9 +97,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # Event handling
         # section: load data
         self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_load_archived_gsas)
+                     self.do_load_single_gsas)
         self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
-                     self.do_load_local_gsas)
+                     self.do_load_chopped_gsas)
         self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
                      self.do_browse_local_gsas)
         self.connect(self.ui.pushButton_refreshList, QtCore.SIGNAL('clicked()'),
@@ -197,7 +197,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def _set_load_from_hdd_enabled(self, enabled):
         """
-        blabla
+        enable or disable widgets for loading GSAs from HDD
         :param enabled:
         :return:
         """
@@ -275,72 +275,101 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def do_load_archived_gsas(self):
+    def do_load_single_gsas(self):
         """ Load archived GSAS for a single run
         :return:
         """
-        # read from input
-        ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
-        run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
-
         is_chopped_data = False
-        try:
-            data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
 
-        except RuntimeError as run_error:
-            GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
-                                              ''.format(run_number, run_error))
-            return
+        if self.ui.radioButton_fromArchive.isChecked():
+            # load from archive
+            # read from input for IPTS and run number
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
 
-        # add data set to repository
-        self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+            try:
+                data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data,
+                                                                 data_key='{0}_G'.format(run_number))
+
+            except RuntimeError as run_error:
+                GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+                                                  ''.format(run_number, run_error))
+                return
+
+            # add data set to repository
+            self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+
+        elif self.ui.radioButton_anyGSAS.isChecked():
+            # load from HDD
+            # input is a file: load a single GSAS file, get GSAS file path
+            gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+            if len(gsas_path) == 0:
+                # check
+                GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
+                return
+
+            # check whether it is a directory for a file
+            if os.path.isdir(gsas_path):
+                raise RuntimeError('User given GSAS file name {0} is a directory.'.format(gsas_path))
+            else:
+                data_key = os.path.basename(gsas_path).split('.')[0] + '_H'  # H stands for HDD
+
+            # load the data file and returned as data key
+            data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas',
+                                                                data_key=data_key)
+        else:
+            raise RuntimeError('Neither from archive nor from HDD is selected.')
+
+        # END-IF-ELSE
+
+        # add run number to run number list
+        self.add_run_numbers([data_key], clear_previous=False)
+        # 
+        # # # set up the data file to this data viewer and
+        # # status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
+        # # if not status:
+        # #     GuiUtility.pop_dialog_error(self, error_message)
+        # #     return
+        #
+        # # clear some quick references, including GUI widgets its associated chopped data dictionary
+        # # self._mutexChopSeqList = True
+        # self._mutexRunNumberList = True
+        # # self.ui.comboBox_chopSeq.clear()
+        #
+        # self._mutexRunNumberList = False
+        # # self._mutexChopSeqList = False
+        # # self._mutexChopSeqList = False
 
         # set the label
         seq_list = None
         self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
 
-        # TODO ASAP ASAP2 Register
-
-        # # TODO - ASAP ASAP2 The commented out part shall be moved to load archived chopped data
-        #
-        # is_chopped_data = self.ui.checkBox_loadChoppedArchive.isChecked()
-        # data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
-        #
-        # # import GSAS in SNS archive: data key is workspace name
-        #
-        #
-        # # set sequence list
-        # if is_chopped_data:
-        #     seq_list = data_key['chopped sequence']
-        # else:
-        #     seq_list = None
-        #
-        # # add data
-        # if is_chopped_data:
-        #     raise NotImplementedError('It is not implemented to plot chopped data from GSAS.')
-        # else:
-        #     self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
-        #
-        # # set the label
-        # self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
-
         return
 
-    def do_load_local_gsas(self):
-        """
-        load gsas or sequence of GSAS files
-        If given a directory, then it is to load a series of GSAS files from chopping a run;
-        If given a single file, then it is to
+    def do_load_chopped_gsas(self):
+        """ load chopped GSAS data
         :return:
         """
-        # get GSAS file path
-        gsas_path = str(self.ui.lineEdit_gsasFileName.text())
-        if len(gsas_path) == 0:
-            # check
-            GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
-            return
+        if self.ui.radioButton_fromArchive.isChecked():
+            # load from archive
+            # read from input for IPTS and run number
+            ipts_number = GuiUtility.parse_integer(self.ui.lineEdit_iptsNumber, False)
+            run_number = GuiUtility.parse_integer(self.ui.lineEdit_run, False)
 
-        if os.path.isdir(gsas_path):
+            try:
+                is_chopped_data = True
+                data_key = self._myController.load_archived_gsas(ipts_number, run_number, is_chopped_data)
+            except RuntimeError as run_error:
+                GuiUtility.pop_dialog_error(self, 'Unable to load run {0} from archive due to\n{1}.'
+                                                  ''.format(run_number, run_error))
+                return
+
+            # process chopped data sequence
+            seq_list = data_key['chopped sequence']
+            self.add_chopped_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+
+        elif self.ui.radioButton_anyGSAS.isChecked():
+            # load from HDD
             # input is a directory: load chopped data series
             data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
 
@@ -354,30 +383,65 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
             data_key = None
 
+
         else:
-            # input is a file: load a single GSAS file
-            # load the data file and returned as data key
-            data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
-
-            # set up the data file to this data viewer and
-            status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
-            if not status:
-                GuiUtility.pop_dialog_error(self, error_message)
-                return
-
-            # clear some quick references, including GUI widgets its associated chopped data dictionary
-            self._mutexChopSeqList = True
-            self._mutexRunNumberList = True
-            self.ui.comboBox_chopSeq.clear()
-            self.ui.comboBox_runs.addItem(data_key)
-            self._mutexChopSeqList = False
-            self._mutexChopSeqList = False
-        # END-IF-ELSE
-
-        # activate it!
-        # self.do_set_reduced_from_memory(data_key=data_key)
+            # unsupported case
+            raise RuntimeError('Neither from archive nor from HDD is selected.')
 
         return
+    #
+    # def do_load_local_gsas(self):
+    #     """
+    #     load gsas or sequence of GSAS files
+    #     If given a directory, then it is to load a series of GSAS files from chopping a run;
+    #     If given a single file, then it is to
+    #     :return:
+    #     """
+    #     # get GSAS file path
+    #     gsas_path = str(self.ui.lineEdit_gsasFileName.text())
+    #     if len(gsas_path) == 0:
+    #         # check
+    #         GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
+    #         return
+    #
+    #     if os.path.isdir(gsas_path):
+    #         # input is a directory: load chopped data series
+    #         data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
+    #
+    #         # a key as run number
+    #         if run_number is None:
+    #             run_number = gsas_path
+    #
+    #         # get workspaces from data key dictionary and add to data management
+    #         diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
+    #         self.add_chopped_workspaces(run_number, diff_ws_list, True)
+    #
+    #         data_key = None
+    #
+    #     else:
+    #         # input is a file: load a single GSAS file
+    #         # load the data file and returned as data key
+    #         data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
+    #
+    #         # set up the data file to this data viewer and
+    #         status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
+    #         if not status:
+    #             GuiUtility.pop_dialog_error(self, error_message)
+    #             return
+    #
+    #         # clear some quick references, including GUI widgets its associated chopped data dictionary
+    #         self._mutexChopSeqList = True
+    #         self._mutexRunNumberList = True
+    #         self.ui.comboBox_chopSeq.clear()
+    #         self.ui.comboBox_runs.addItem(data_key)
+    #         self._mutexChopSeqList = False
+    #         self._mutexChopSeqList = False
+    #     # END-IF-ELSE
+    #
+    #     # activate it!
+    #     # self.do_set_reduced_from_memory(data_key=data_key)
+    #
+    #     return
 
     def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
@@ -648,7 +712,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         else:
             # non-chopped data set
-
             if data_str.isdigit():
                 # run number
                 run_number = data_str
@@ -660,6 +723,19 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                       over_plot=self.ui.checkBox_overPlot.isChecked())
             # END-IF-ELSE (data_str)
         # END-IF-ELSE
+
+        # check current min/max for data
+        min_x_str = str(self.ui.lineEdit_minX.text()).strip()
+        try:
+            min_x = float(min_x_str)
+        except ValueError:
+            min_x = None
+        max_x_str = str(self.ui.lineEdit_maxX.text()).strip()
+        try:
+            max_x = float(max_x_str)
+        except ValueError:
+            max_x = None
+        self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
 
         return
 
@@ -783,7 +859,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # single runs
-        single_runs_list = self._myController.get_loaded_runs()
+        single_runs_list = self._myController.get_loaded_runs(chopped=False)
         current_single_run = str(self.ui.comboBox_runs.currentText())
         single_runs_list.sort()
 
@@ -805,8 +881,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._mutexRunNumberList = False
 
         # chopped runs
-        # TODO ASAP ASAP2 Implement
-        # blabla
+        chopped_run_list = self._myController.get_loaded_runs(chopped=True)
 
         return
 
@@ -1296,7 +1371,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # process loaded data
         if vanadium_run_number is not None:
-            assert isinstance(vanadium_run_number, int), 'blabla'
+            assert isinstance(vanadium_run_number, int), 'vanadium run number {0} must be an integer but not a {1}' \
+                                                         ''.format(vanadium_run_number, type(vanadium_run_number))
             status, ret_obj = self._myController.load_vanadium_run(self._iptsNumber, vanadium_run_number,
                                                                    use_reduced_file=True, smoothed=True)
             if status:
@@ -1328,7 +1404,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.checkBox_plotallChoppedLog.setChecked(True)
 
         # plot
-        # TODO/ISSUE/NOWNOW - Check whether min_x and max_x are applied!
+
+
         if len(data_key_dict) == 1:
             # only 1 data: plot 1D
             self.do_plot_diffraction_data()

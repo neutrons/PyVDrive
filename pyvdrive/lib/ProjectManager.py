@@ -727,12 +727,19 @@ class ProjectManager(object):
 
         return ipts_dict
 
+    def get_loaded_chopped_reduced_runs(self):
+        """
+        get the runs that are loaded as chopped data from SNS archive or HDD
+        :return: list of run numbers (string with special tag)
+        """
+        return self._loadedDataManager.get_loaded_chopped_runs()
+
     def get_loaded_reduced_runs(self):
         """
         get the runs that are loaded as reduced data from SNS archive or HDD (for example as GSAS)
         :return:
         """
-        return  self._loadedDataManager.get_loaded_runs()
+        return self._loadedDataManager.get_loaded_runs()
 
     def get_number_data_files(self):
         """

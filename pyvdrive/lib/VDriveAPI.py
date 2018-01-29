@@ -809,16 +809,28 @@ class VDriveAPI(object):
 
         return sns_dir
 
-    def get_loaded_runs(self):
+    def get_loaded_runs(self, chopped):
         """
         get the run number (or data key) to the loaded or reduced data in memory
-        :return:
+        :param chopped: if flag is True, then get chopped (reduced data); otherwise, get the single run
+        :return: (1) list of integers (for single runs); (2) list of integers (for chopped runs)
         """
-        # from archive
-        loaded_runs_list = self._myProject.get_loaded_reduced_runs()
+        if chopped:
+            # chopped runs
+            # from archive
+            loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
 
-        # from project
-        reduced_runs_list = self._myProject.get_reduced_runs()
+            # from memory
+            reduced_runs_list = self._myProject.get_reduced_chopped_runs()
+
+        else:
+            # from archive
+            loaded_runs_list = self._myProject.get_loaded_reduced_runs()
+
+            # from project
+            reduced_runs_list = self._myProject.get_reduced_runs()
+
+        # END-IF-ELSE
 
         # combine
         run_in_mem = loaded_runs_list[:]
@@ -1082,12 +1094,13 @@ class VDriveAPI(object):
 
         return slicers
 
-    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data):
+    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
         """
         Load GSAS file from SNS archive
         :param ipts_number:
         :param run_number:
         :param is_chopped_data:
+        :param data_key: user given data key
         :return:
         """
         # check
@@ -1103,7 +1116,7 @@ class VDriveAPI(object):
             gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
 
             # load data
-            data_key = self.load_diffraction_file(gsas_file_name, 'gsas')
+            data_key = self.load_diffraction_file(gsas_file_name, 'gsas', data_key=data_key)
         # END-IF-ELSE
 
         return data_key
@@ -1121,16 +1134,17 @@ class VDriveAPI(object):
 
         return chopped_key_dict, run_number
 
-    def load_diffraction_file(self, file_name, file_type):
+    def load_diffraction_file(self, file_name, file_type, data_key):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
         a.k.a. load_gsas_data
         :param file_name
         :param file_type:
+        :param data_key:
         :return:
         """
         data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
-                                                                         max_int=100)
+                                                                         max_int=100, data_key=data_key)
 
         return data_key
 
