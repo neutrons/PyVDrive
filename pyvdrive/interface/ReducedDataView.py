@@ -443,6 +443,56 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     #
     #     return
 
+    def update_single_run_combo_box(self, item_name, remove_item, focus_to_new):
+        """
+
+        :param item_name:
+        :param remove_item: flag for adding or removing item
+        :param focus_to_new: flag to set the current index to newly added term
+        :return:
+        """
+        # check inputs ... TODO blabla
+
+        if remove_item:
+            # remove item
+            try:
+                item_index = self._runNumberList.index(item_name)
+            except ValueError as value_err:
+                raise RuntimeError('Unable to locate {0} in single run list.'.format(item_name))
+            # check again
+            assert str(self.ui.comboBox_runs.itemText(item_index)) == item_name, 'blabla342'
+
+            self._mutexRunNumberList = True
+            self.ui.comboBox_runs.removeItem(item_index)
+            self._mutexRunNumberList = False
+            self._runNumberList.pop(item_index)
+
+            # TODO LATER - how to focus the current index if current item is removed???
+
+        else:
+            # add the new item
+            # check existing?
+            if item_name in self._runNumberList:
+                raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
+
+            # insert and find position
+            self._runNumberList.append(item_name)
+            self._runNumberList.sort()
+            index_to_be = self._runNumberList.index(item_name)
+
+            # add to combo box
+            self._mutexRunNumberList = True
+            self.ui.comboBox_runs.insertItem(index_to_be, item_name)
+            self._mutexRunNumberList = False
+
+            # optionally set current index to the new item
+            if focus_to_new:
+                self.ui.comboBox_runs.setCurrentIndex(index_to_be)
+
+        # END-IF-ELSE
+
+        return
+
     def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
         """
         add a new data set to this data viewer window BUT without plotting including
@@ -454,6 +504,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param unit:
         :return:
         """
+        raise RuntimeError('Refactor ASAP')
+
         # return if the controller data key exist
         if controller_data_key in self._reducedDataDict:
             return
@@ -482,6 +534,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param clear_previous:
         :return:
         """
+        raise RuntimeError('Refactor ASAP')
+
         # check inputs
         assert isinstance(run_tup_list, list), 'Input %s must be a list of run numbers but not of type %s.' \
                                                '' % (str(run_tup_list), type(run_tup_list))
@@ -529,6 +583,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param clear_previous:
         :return:
         """
+        raise RuntimeError('Refactor ASAP')
+
         # turn on the mutex
         self._mutexRunNumberList = True
         self._mutexChopSeqList = True
@@ -707,6 +763,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # possible chop sequence
         curr_index = self.ui.comboBox_runs.currentIndex()
         if curr_index < 0 or curr_index >= self.ui.comboBox_runs.count():
+            raise RuntimeError('Refactor ASAP')
             self.ui.comboBox_runs.setCurrentIndex(0)
         data_str = str(self.ui.comboBox_runs.currentText())
 
@@ -1747,6 +1804,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param controller:
         :return:
         """
+        raise RuntimeError('Who is using me?')
         # Check
         # assert isinstance(controller, VDriveAPI)
         self._myController = controller
