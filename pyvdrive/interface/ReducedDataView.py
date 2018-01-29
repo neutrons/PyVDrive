@@ -315,10 +315,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                                                   ''.format(run_number, run_error))
                 return
 
-            # add data set to repository
-            self.add_run_numbers([(run_number, ipts_number)])
-
-            self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
+            # X self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
 
         elif self.ui.radioButton_anyGSAS.isChecked():
             # load from HDD
@@ -473,6 +470,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :param focus_to_new: flag to set the current index to newly added term
         :return:
         """
+        print ('[DB...BAT...Update Combo: item name: {0} type {1}'.format(item_name, type(item_name)))
         # check inputs ... TODO blabla
 
         if remove_item:
@@ -831,9 +829,15 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             raise RuntimeError('Neither ... nor ... blabla')
 
         # check bank information: assumption is that all data keys are related to data with workspace
-        data_bank_list = self._myController.get_reduced_data_info(data_key=curr_run_key, info_type='bank')
+        if False:
+            # TODO FIXME ASAP ASAP2 - make this work!
+            data_bank_list = self._myController.get_reduced_data_info(data_key=curr_run_key, info_type='bank')
+        else:
+            data_bank_list = [1, 2]
+
         if data_bank_list != self._bankIDList:
             # data banks and current banks do not match
+            # TODO FIXME ASAP3
             self.reset_bank_combo_box(data_bank_list)   # update _bankIDList and combobox to make them consistent
 
         # get selected bank
@@ -846,7 +850,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # over plot existing and unit
         unit = str(self.ui.comboBox_unit.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
+        # FIXME TODO ASAP3
+        if False:
+            over_plot = self.ui.checkBox_overPlot.isChecked()
+        else:
+            over_plot = False
 
         # plot
         # get range of data
@@ -854,8 +862,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # plot
         self.plot_by_data_key(curr_run_key, bank_id_list=bank_id_list,
-                              over_plot=self.ui.checkBox_overPlot.isChecked(),
-                              unit=unit, x_limits=(min_x, max_x))
+                              over_plot=over_plot, x_limit=(min_x, max_x))
 
 
         # # possible chop sequence
@@ -1420,7 +1427,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # check existence of data
         entry_key = data_key, bank_id, self._currUnit
 
-
         if entry_key not in self._currentPlotDataKeyDict:
             status, ret_obj = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                                 unit=self._currUnit)
@@ -1428,7 +1434,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 vec_x, vec_y = ret_obj
             else:
                 raise RuntimeError('Unable to load bank {0} of run with data key {1} in unit {2}'
-                                   ''.format(bank_id, data_key, elf._currUnit))
+                                   ''.format(bank_id, data_key, self._currUnit))
+
+        REFACTOR HERE
 
         if data_key not in self._currentPlotDataKeyDict:
             # check again whether the input data key is an integer but converted to string
