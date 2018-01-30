@@ -1549,7 +1549,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.set_data_dir(self._myController.get_working_dir())
 
         # Get reduced data
-        reduced_run_number_list = self._myController.get_reduced_runs()
+        reduced_run_number_list = self._myController.get_loaded_runs()
         ipts = 1
 
         # Set

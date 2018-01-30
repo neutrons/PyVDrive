@@ -606,12 +606,12 @@ class VDriveAPI(object):
 
         return True, info
 
-    def get_reduced_runs(self, with_ipts=True):
-        """ Get the runs (run numbers) that have been reduced successfully
-        :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
-        :return: list of strings?
-        """
-        return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
+    # def get_reduced_runs(self, with_ipts=True):
+    #     """ Get the runs (run numbers) that have been reduced successfully
+    #     :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
+    #     :return: list of strings?
+    #     """
+    #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
     def get_slicer(self, run_number, slicer_id):
         """

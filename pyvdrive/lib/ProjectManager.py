@@ -14,6 +14,7 @@ import numpy
 
 # TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ...
 
+
 class ProjectManager(object):
     """ VDrive Project
     Note:
@@ -258,12 +259,18 @@ class ProjectManager(object):
 
         # Check what it shall be
         print ('[DB...BAT] data key: {0}'.format(data_key))
-        if data_key.endswith('G'):
+        if data_key.endswith('G') or data_key.endswith('H'):
             ws_name = self._loadedDataManager.get_workspace_name(data_key)
             print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
         else:
-            found_it = self._reductionManager.has_run(data_key)
-            print ('[DB...BAT] Found it from reduced data? {0}'.format(found_it))
+            # reduced runs.  data key is the string version of integer run number
+            run_number = int(data_key)
+            found_it = self._reductionManager.has_run(run_number)
+            if found_it:
+                ws_name = self._reductionManager.get_reduced_workspace(run_number=int(data_key), is_vdrive_bin=False)
+            else:
+                raise RuntimeError('Run number {0} cannot be found in reduction manager.'.format(run_number))
+        # END-FOR
 
         return ws_name
 

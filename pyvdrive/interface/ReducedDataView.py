@@ -38,7 +38,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._loadedSingleRunList = list()
         self._loadedChoppedRunList = list()
 
-        self._bankIDList = [1, 2]
+        self._bankIDList = list()
 
         # workspace management dictionary
         self._choppedRunDict = dict()  # key: run number (key/ID), value: list of workspaces' names
@@ -73,6 +73,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         # mutexes to control the event handling for changes in widgets
         self._mutexRunNumberList = False
+        self._mutexChopRunList = False
         self._mutexChopSeqList = False
         self._mutexBankIDList = False
 
@@ -182,6 +183,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.groupBox_plotREducedData.setEnabled(True)
         self.ui.groupBox_plotLog.setEnabled(False)
 
+        # set bank ID combobox
+        self._bankIDList = [1, 2]
+        self.ui.comboBox_spectraList.clear()
+        for bank_id in self._bankIDList:
+            self.ui.comboBox_spectraList.addItem('{0}'.format(bank_id))
+        self.ui.comboBox_spectraList.addItem('All Banks')
+
         return
 
     def _get_plot_x_range_(self):
@@ -221,6 +229,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         self.ui.lineEdit_gsasFileName.setEnabled(enabled)
+        self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
 
         return
 
@@ -268,20 +277,22 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # get setup
-        is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
+        # is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
         default_dir = self._myController.get_working_dir()
 
-        # get GSAS file or gsas files
-        if is_chopped_data:
-            # get the directory of chopped data
-            chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
-                                                                          default_dir))
-            self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
-        else:
+        gsas_filter = 'GSAS(*.gda);;GSAS (*.gsa);;All Files(*.*)'
+        gsas_file_name = QtGui.QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
+        self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
+
+        # # get GSAS file or gsas files
+        # if is_chopped_data:
+        #     # get the directory of chopped data
+        #     chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
+        #                                                                   default_dir))
+        #     self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
+        # else:
             # get the data file
-            gsas_filter = 'GSAS(*.gda);;GSAS (*.gsa);;All Files(*.*)'
-            gsas_file_name = QtGui.QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
-            self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
+
 
         return
 
@@ -462,6 +473,45 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
     #
     #     return
 
+    def update_chopped_run_combo_box(self, item_name, remove_item):
+        """
+        TODO ASAP blabla
+        :param item_name:
+        :param remove_item:
+        :return:
+        """
+        # check
+        assert isinstance(item_name, str), 'blabla... {0}'.format(item_name)
+
+        if remove_item:
+            # TODO ASAP2 blabla
+            blabla()
+
+        else:
+            # add item
+            if item_name in self._loadedChoppedRunList:
+                raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
+
+            # insert and keep current position
+            current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
+
+            # add new item to list
+            self._loadedChoppedRunList.append(item_name)
+            self._loadedChoppedRunList.sort()
+
+            # get position to insert and position to set
+            insert_pos = self._loadedChoppedRunList.index(item_name)
+            curr_pos = self._loadedChoppedRunList.index(current_item)
+
+            # insert and set
+            self._mutexChopRunList = True
+            self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
+            self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
+            self._mutexRunNumberList = False
+        # END-IF
+
+        return insert_pos
+
     def update_single_run_combo_box(self, item_name, remove_item, focus_to_new):
         """
 
@@ -637,67 +687,120 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def add_chopped_workspaces(self, workspace_key, workspace_name_list, clear_previous=True):
+    def set_current_chopped_run(self, pos=None, name=None, chopped_children=None):
+        """
+        set current chopped run in the combo-box;
+        plotting is required
+        :param pos:
+        :param name:
+        :return:
+        """
+        if pos is None and name is None:
+            raise RuntimeError('Both pos and name are None')
+        elif pos is None:
+            pos = self._loadedChoppedRunList.index(name)
+        elif name is None:
+            pos = pos
+        else:
+            raise RuntimeError('Neither pos nor name is None')
+
+        # lock!
+        self._mutexChopRunList = True
+        self._mutexChopSeqList = True
+
+        self.ui.comboBox_choppedRunNumber.setCurrentIndex(pos)
+
+        self.ui.comboBox_chopSeq.clear()
+        chopped_children.sort()
+        for child_name in chopped_children:
+            self.ui.comboBox_chopSeq.addItem(child_name)
+        self.ui.comboBox_chopSeq.setCurrentIndex(0)
+
+        # unlock
+        self._mutexChopRunList = False
+        self._mutexChopSeqList = False
+
+        return
+
+    def add_chopped_workspaces(self, workspace_key, workspace_name_list, focus_to_it):
         """
         add (CHOPPED) workspaces' names to the data viewer
         Note: It shall not trigger the event to plot any chopped data
         :param workspace_key:
         :param workspace_name_list:
-        :param clear_previous:
+        :param focus_to_it:
         :return:
         """
-        raise RuntimeError('Refactor ASAP')
+        # check inputs... TODO ASAP blabla
+        print ('[DB...BAT] Add chopped run... key = {0} ({1}); workspace list = {2}'
+               ''.format(workspace_key, type(workspace_key), workspace_name_list))
 
-        # turn on the mutex
-        self._mutexRunNumberList = True
-        self._mutexChopSeqList = True
+        # register to current chopped runs
+        new_item_pos = self.update_chopped_run_combo_box(workspace_key, remove_item=False)
 
-        # check input
-        assert workspace_key is not None, 'Workspace key (run number mostly) cannot be None'
-        # force work key to be string
-        workspace_key = '{0}'.format(workspace_key)
+        # focus on this one and plot
+        self.ui.radioButton_chooseChopped.setChecked(True)
+        self.ui.groupBox_plotSingleRun.setEnabled(False)
+        self.ui.groupBox_plotChoppedRun.setEnabled(True)
 
-        # two cases to get list of chopped workspaces' names
-        if workspace_name_list is None:
-            # the workspace key must have been loaded before
-            assert workspace_key in self._choppedRunDict, 'Workspace key {0} cannot be found in chopped run ' \
-                                                          'dictionary whose keys are {1}.' \
-                                                          ''.format(workspace_key, self._choppedRunDict.keys())
-            workspace_name_list = self._choppedRunDict[workspace_key]
-        else:
-            # this sequence is set to this viewer first time
-            assert isinstance(workspace_name_list, list), 'Workspaces names {0} must be given by list but not a ' \
-                                                          '{1}.'.format(workspace_name_list,
-                                                                        type(workspace_name_list))
-            assert len(workspace_name_list) > 0, 'Workspaces name list cannot be empty'
+        # set to plot
+        if focus_to_it:
+            self.set_current_chopped_run(pos=new_item_pos, name=None, chopped_children=workspace_name_list)
+            self.do_plot_diffraction_data()
 
-            # add to widgets and data managing dictionary
-            self._choppedRunDict[workspace_key] = list()
-            for workspace_name in workspace_name_list:
-                self._choppedRunDict[workspace_key].append(workspace_name)
-
-            self.ui.comboBox_runs.addItem('{0}'.format(workspace_key))
-        # END-IF-ELSE
-
-        # set check box
-        self.ui.checkBox_choppedDataMem.setChecked(True)
-
-        # sort workspace names
-        workspace_name_list.sort()
-
-        # add chopped workspaces to (1) _choppedSequenceList (current) and ui.comboBox_chopSeq
-        if clear_previous:
-            self.ui.comboBox_chopSeq.clear()
-            self._choppedSequenceList = list()
-        for workspace_name in workspace_name_list:
-            self.ui.comboBox_chopSeq.addItem(workspace_name)
-            self._choppedSequenceList.append(workspace_name)
-
-        # release mutex lock
-        self._mutexRunNumberList = False
-        self._mutexChopSeqList = False
-
-        return range(len(workspace_name_list))
+        return
+        #
+        #
+        # # turn on the mutex
+        # self._mutexRunNumberList = True
+        # self._mutexChopSeqList = True
+        #
+        # # check input
+        # assert workspace_key is not None, 'Workspace key (run number mostly) cannot be None'
+        # # force work key to be string
+        # workspace_key = '{0}'.format(workspace_key)
+        #
+        # # two cases to get list of chopped workspaces' names
+        # if workspace_name_list is None:
+        #     # the workspace key must have been loaded before
+        #     assert workspace_key in self._choppedRunDict, 'Workspace key {0} cannot be found in chopped run ' \
+        #                                                   'dictionary whose keys are {1}.' \
+        #                                                   ''.format(workspace_key, self._choppedRunDict.keys())
+        #     workspace_name_list = self._choppedRunDict[workspace_key]
+        # else:
+        #     # this sequence is set to this viewer first time
+        #     assert isinstance(workspace_name_list, list), 'Workspaces names {0} must be given by list but not a ' \
+        #                                                   '{1}.'.format(workspace_name_list,
+        #                                                                 type(workspace_name_list))
+        #     assert len(workspace_name_list) > 0, 'Workspaces name list cannot be empty'
+        #
+        #     # add to widgets and data managing dictionary
+        #     self._choppedRunDict[workspace_key] = list()
+        #     for workspace_name in workspace_name_list:
+        #         self._choppedRunDict[workspace_key].append(workspace_name)
+        #
+        #     self.ui.comboBox_runs.addItem('{0}'.format(workspace_key))
+        # # END-IF-ELSE
+        #
+        # # set check box
+        # self.ui.checkBox_choppedDataMem.setChecked(True)
+        #
+        # # sort workspace names
+        # workspace_name_list.sort()
+        #
+        # # add chopped workspaces to (1) _choppedSequenceList (current) and ui.comboBox_chopSeq
+        # if clear_previous:
+        #     self.ui.comboBox_chopSeq.clear()
+        #     self._choppedSequenceList = list()
+        # for workspace_name in workspace_name_list:
+        #     self.ui.comboBox_chopSeq.addItem(workspace_name)
+        #     self._choppedSequenceList.append(workspace_name)
+        #
+        # # release mutex lock
+        # self._mutexRunNumberList = False
+        # self._mutexChopSeqList = False
+        #
+        # return range(len(workspace_name_list))
 
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
@@ -1026,30 +1129,31 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         refresh existing runs
         :return:
         """
+        # current selection
+        current_single_run = str(self.ui.comboBox_runs.currentText())
+
         # single runs
         single_runs_list = self._myController.get_loaded_runs(chopped=False)
-        current_single_run = str(self.ui.comboBox_runs.currentText())
         single_runs_list.sort()
 
-        # set single runs
+        # update
+        for run_number in single_runs_list:
+            if isinstance(run_number, int):
+                print ('[DB...INFO] run number {0} is an integer.'.format(run_number))
+                run_number = '{0}'.format(run_number)
+            if run_number not in self._runNumberList:
+                self.update_single_run_combo_box(run_number, False, False)
+            # END-IF
+        # END-IF
+
+        # re-focus back to original one
+        new_pos = self._runNumberList.index(current_single_run)
         self._mutexRunNumberList = True
-        self.ui.comboBox_runs.clear()
-
-        # reset all items
-        curr_index = None
-        for combo_index, run_number in enumerate(single_runs_list):
-            self.ui.comboBox_runs.addItem(run_number)
-            if run_number == current_single_run:
-                curr_index = combo_index
-        # END-FOR
-
-        # set current runs
-        if curr_index is not None:
-            self.ui.comboBox_runs.setCurrentIndex(curr_index)
+        self.ui.comboBox_runs.setCurrentIndex(new_pos)
         self._mutexRunNumberList = False
 
         # chopped runs
-        chopped_run_list = self._myController.get_loaded_runs(chopped=True)
+        #  NEXT: chopped_run_list = self._myController.get_loaded_runs(chopped=True)
 
         return
 
@@ -1335,8 +1439,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         status, ret_obj = self._myController.get_reduced_data(data_key, unit, bank_id=bank_id)
         if status:
             # re-format return
-            vec_x = ret_obj[0]
-            vec_y = ret_obj[1]
+            print ('[DB....BAT] Returned reduced data: type = {0}.  Data = {1}'.format(type(ret_obj), ret_obj))
+            vec_x = ret_obj[bank_id][0]
+            vec_y = ret_obj[bank_id][1]
             ret_obj = vec_x, vec_y
 
         #
@@ -1634,7 +1739,6 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
 
         self._currentPlotSampleLogs = False
-
 
         return
 
@@ -1945,12 +2049,23 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self._myController = controller
 
         # Set the reduced runs
-        reduced_run_number_list = self._myController.get_reduced_runs()
+        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
+        print ('[DB...BAT] loaded runs (type: {0}): {1}'
+               ''.format(type(reduced_run_number_list), reduced_run_number_list))
         reduced_run_number_list.sort()
         self.ui.comboBox_runs.clear()
-        for run_number, ipts_number in reduced_run_number_list:
-            self.ui.comboBox_runs.addItem(str(run_number))
-            self._dataIptsRunDict[run_number] = ipts_number, run_number
+        for index, run_number in enumerate(reduced_run_number_list):
+            print ('[DB...BAT] Added run: {0}'.format(run_number))
+            self.update_single_run_combo_box('{0}'.format(run_number), remove_item=False,
+                                             focus_to_new=(index == 0))
+        # END-FOR
+
+        # plot
+        if len(reduced_run_number_list) > 0:
+            self.do_plot_diffraction_data()
+
+        # also load reduced chopped runs
+        # ... blabla
 
         return
 
