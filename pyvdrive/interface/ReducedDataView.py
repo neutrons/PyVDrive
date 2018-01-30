@@ -487,27 +487,43 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
             # TODO ASAP2 blabla
             blabla()
 
+
+            insert_pos = 0
         else:
             # add item
             if item_name in self._loadedChoppedRunList:
                 raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
 
             # insert and keep current position
-            current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
+            if self.ui.comboBox_choppedRunNumber.count() == 0:
+                # first item, simply add
+                self._loadedChoppedRunList.append(item_name)
+                self._mutexChopRunList = True
+                self.ui.comboBox_choppedRunNumber.addItem(item_name)
+                self._mutexRunNumberList = False
+                insert_pos = 0
+            else:
+                # other item
+                current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
+                print ('[DB..BAT] Current count = {0}, index = {1}, text = {2}'
+                       ''.format(self.ui.comboBox_choppedRunNumber.count(),
+                                 self.ui.comboBox_choppedRunNumber.currentIndex(),
+                                 self.ui.comboBox_choppedRunNumber.currentText()))
 
-            # add new item to list
-            self._loadedChoppedRunList.append(item_name)
-            self._loadedChoppedRunList.sort()
+                # add new item to list
+                self._loadedChoppedRunList.append(item_name)
+                self._loadedChoppedRunList.sort()
 
-            # get position to insert and position to set
-            insert_pos = self._loadedChoppedRunList.index(item_name)
-            curr_pos = self._loadedChoppedRunList.index(current_item)
+                # get position to insert and position to set
+                insert_pos = self._loadedChoppedRunList.index(item_name)
+                curr_pos = self._loadedChoppedRunList.index(current_item)
 
-            # insert and set
-            self._mutexChopRunList = True
-            self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
-            self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
-            self._mutexRunNumberList = False
+                # insert and set
+                self._mutexChopRunList = True
+                self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
+                self._mutexRunNumberList = False
+            # END-IF-ELSE
         # END-IF
 
         return insert_pos
@@ -629,6 +645,9 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                 focus = True
             else:
                 focus = False
+            if isinstance(data_key, int):
+                # in case it is a run number (int)
+                data_key = '{0}'.format(data_key)
             self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=focus)
 
             # register?
@@ -726,7 +745,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         add (CHOPPED) workspaces' names to the data viewer
         Note: It shall not trigger the event to plot any chopped data
-        :param workspace_key:
+        :param workspace_key: string or integer (run number)
         :param workspace_name_list:
         :param focus_to_it:
         :return:
@@ -734,6 +753,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         # check inputs... TODO ASAP blabla
         print ('[DB...BAT] Add chopped run... key = {0} ({1}); workspace list = {2}'
                ''.format(workspace_key, type(workspace_key), workspace_name_list))
+
+        if isinstance(workspace_key, int):
+            # in case workspace key is a run number
+            workspace_key = '{0}'.format(workspace_key)
 
         # register to current chopped runs
         new_item_pos = self.update_chopped_run_combo_box(workspace_key, remove_item=False)
@@ -894,21 +917,32 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
     def do_plot_contour(self):
         """
-        plot all the chopped data as contour
+        plot all the chopped data as contour or single reduced data
         :return:
         """
-        # get chopped workspace keys
-        num_items = self.ui.comboBox_chopSeq.count()
-        ws_keys = list()
-        for p in range(num_items):
-            key_i = str(self.ui.comboBox_chopSeq.itemText(p))
-            ws_keys.append(key_i)
-        # END-FOR
-        print '[DB...BAT] chopped workspace keys: {0}'.format(ws_keys)
+        data_key_list = list()
 
-        #
+        if self.ui.radioButton_chooseChopped.isChecked():
+            # plot chopped data
+            run_number = str(self.ui.comboBox_choppedRunNumber.currentText())
+            for p_int in range(self.ui.comboBox_chopSeq.count()):
+                child_key = str(self.ui.comboBox_chopSeq.itemText(p_int))
+                data_key_list.append((run_number, child_key))
+            # END-FOR
+        elif self.ui.radioButton_chooseSingleRun.isChecked():
+            # plot all single runs
+            for p_int in range(self.ui.comboBox_runs.count()):
+                data_key = str(self.ui.comboBox_runs.itemText(p_int))
+                data_key_list.append(data_key)
+        else:
+            # unsupported
+            raise RuntimeError('balbla todo')
+
+        # bank information
         curr_bank = int(self.ui.comboBox_spectraList.currentText())
-        self.plot_multiple_runs_2d(bank_id=curr_bank, bank_id_from_1=True, ws_key_list=ws_keys)
+
+        # plot
+        self.plot_multiple_runs_2d(bank_id=curr_bank, ws_key_list=data_key_list)
 
         return
 
@@ -926,8 +960,11 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         elif self.ui.radioButton_chooseChopped.isChecked():
             # chopped run
             main_run_key = str(self.ui.comboBox_choppedRunNumber.currentText())
+            # TODO/FIXME/ASAP - a lookup table is required if the workspace name is not preferred in chopped list
+            # THIS IS A HACK
             child_run_key = str(self.ui.comboBox_chopSeq.currentText())
             curr_run_key = main_run_key, child_run_key
+
         else:
             raise RuntimeError('Neither ... nor ... blabla')
 
@@ -1307,50 +1344,50 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def get_reduced_data(self, run_number, bank_id, unit, bank_id_from_1=True):
-        """
-        get reduced data (load from HDD if necessary) in the form vectors of X and Y
-        :param run_number: data key or run number
-        :param bank_id:
-        :param unit:
-        :param bank_id_from_1:
-        :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
-        """
-        raise NotImplementedError('Who is using me .. get_reduced_data(...)???  Only used by 2D plotting now')
-        #
-        # # run number to integer
-        # if isinstance(run_number, str) and run_number.isdigit():
-        #     run_number = int(run_number)
-        #
-        # # load data if necessary
-        # status, error_message = self.retrieve_loaded_reduced_data(run_number, unit)
-        # if not status:
-        #     return False, 'Unable to load {0} due to {1}'.format(run_number, error_message)
-        #
-        # # TODO/ISSUE/NEXT - bank ID and spec ID from 1 is very confusing
-        # reduced_data_dict = self._currentPlotDataKeyDict[run_number]
-        # bank_id_list = reduced_data_dict.keys()
-        # if 0 in bank_id_list:
-        #     spec_id_from_0 = True
-        # else:
-        #     spec_id_from_0 = False
-        #
-        # # determine the spectrum ID from controller
-        # if bank_id_from_1 and spec_id_from_0:
-        #     spec_id = bank_id - 1
-        # else:
-        #     spec_id = bank_id
-        #
-        # # check again
-        # if spec_id not in reduced_data_dict:
-        #     raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
-        #                        '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
-        #
-        # # get data
-        # vec_x = self._currentPlotDataKeyDict[run_number][spec_id][0]
-        # vec_y = self._currentPlotDataKeyDict[run_number][spec_id][1]
-        #
-        # return True, (vec_x, vec_y)
+    # def get_reduced_data(self, run_number, bank_id, unit, bank_id_from_1=True):
+    #     """
+    #     get reduced data (load from HDD if necessary) in the form vectors of X and Y
+    #     :param run_number: data key or run number
+    #     :param bank_id:
+    #     :param unit:
+    #     :param bank_id_from_1:
+    #     :return: 2-tuple [1] True, (vec_x, vec_y); [2] False, error_message
+    #     """
+    #     raise NotImplementedError('Who is using me .. get_reduced_data(...)???  Only used by 2D plotting now')
+    #
+    #     # run number to integer
+    #     if isinstance(run_number, str) and run_number.isdigit():
+    #         run_number = int(run_number)
+    #
+    #     # load data if necessary
+    #     status, error_message = self.retrieve_loaded_reduced_data(run_number, unit)
+    #     if not status:
+    #         return False, 'Unable to load {0} due to {1}'.format(run_number, error_message)
+    #
+    #     # TODO/ISSUE/NEXT - bank ID and spec ID from 1 is very confusing
+    #     reduced_data_dict = self._currentPlotDataKeyDict[run_number]
+    #     bank_id_list = reduced_data_dict.keys()
+    #     if 0 in bank_id_list:
+    #         spec_id_from_0 = True
+    #     else:
+    #         spec_id_from_0 = False
+    #
+    #     # determine the spectrum ID from controller
+    #     if bank_id_from_1 and spec_id_from_0:
+    #         spec_id = bank_id - 1
+    #     else:
+    #         spec_id = bank_id
+    #
+    #     # check again
+    #     if spec_id not in reduced_data_dict:
+    #         raise RuntimeError('Bank ID %d (spec ID %d) does not exist in reduced data dictionary with spectra '
+    #                            '%s.' % (bank_id, spec_id, str(reduced_data_dict.keys())))
+    #
+    #     # get data
+    #     vec_x = self._currentPlotDataKeyDict[run_number][spec_id][0]
+    #     vec_y = self._currentPlotDataKeyDict[run_number][spec_id][1]
+    #
+    #     return True, (vec_x, vec_y)
 
     @staticmethod
     def guess_run_number(gsas_path):
@@ -1403,7 +1440,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
         Note: this method is used to talk with myController
-        :param data_key: a run number (int or string) or data key (i..e, workspace name)
+        :param data_key: a run number (int or string) or data key (i..e, workspace name) or a tuple for chopped run
         :param bank_id:
         :param unit:
         :return:
@@ -1722,7 +1759,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         :return:
         """
         # check input
-        assert isinstance(data_key, str), 'Data key {0} must be a string but not a {1}.'.format(data_key, str(data_key))
+        assert isinstance(data_key, str) or isinstance(data_key, tuple),\
+            'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
 
         # plot
         for index, bank_id in enumerate(bank_id_list):
@@ -1742,48 +1780,51 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
 
         return
 
-    def plot_multiple_runs_2d(self, bank_id, bank_id_from_1=False, ws_key_list=None):
+    def plot_multiple_runs_2d(self, bank_id, ws_key_list=None):
         """
         Plot multiple runs (reduced data) to contour plot. 2D
         :return:
         """
         assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negative integer.' \
                                                           '' % str(bank_id)
-
-        if ws_key_list is None and len(self._runNumberList) == 0:
-            GuiUtility.pop_dialog_information(self, 'No workspace list or run number list for contour plot.')
-            return
+        assert isinstance(ws_key_list, list), 'blabla 928pp'
 
         # get the list of runs
         error_msg = ''
         run_number_list = list()
         data_set_list = list()
 
-        # get unit
+        # get unit TODO - this shall be an input
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        if ws_key_list is None:
-            for run_number in self._runNumberList:
-                status, ret_obj = self.get_reduced_data(run_number, bank_id, unit=self._currUnit,
-                                                        bank_id_from_1=bank_id_from_1)
-                if status:
-                    run_number_list.append(run_number)
-                    data_set_list.append(ret_obj)
+        # construct input for contour plot
+        for index, data_key in enumerate(ws_key_list):
+            # get index number
+            if isinstance(data_key, str):
+                if data_key.isdigit():
+                    index_number = int(data_key)
                 else:
-                    error_msg += 'Unable to get reduced data for run %d due to %s;\n' % (run_number, str(ret_obj))
-                    continue
-            # END-FOR
-        else:
-            for chop_index, ws_key in enumerate(ws_key_list):
-                status, ret_obj = self.get_reduced_data(ws_key, bank_id, unit=self._currUnit,
-                                                        bank_id_from_1=bank_id_from_1)
-                if status:
-                    run_number_list.append(chop_index+1)
-                    data_set_list.append(ret_obj)
-                else:
-                    error_msg += 'Unable to get reduced data for run {0} due to {1};\n'.format(ws_key, str(ret_obj))
-                    continue
-            # END-FOR
+                    index_number = index
+            elif isinstance(data_key, tuple):
+                # TODO FIXME ASAP: this is not a robust way to get index number
+                index_number = int(data_key[1].split('_')[-1])
+            else:
+                raise NotImplementedError('dl99')
+
+            # get data
+            print ('[DB...BAT] Index {1} Run Index {2} Get data from {0}'.format(data_key, index, index_number))
+            status, ret_obj = self._myController.get_reduced_data(data_key, self._currUnit, bank_id=bank_id)
+            if not status:
+                print ('[ERROR] Unable to get data via {0}'.format(data_key))
+                continue
+
+            # re-format return
+            vec_x = ret_obj[bank_id][0]
+            vec_y = ret_obj[bank_id][1]
+
+            # add to list
+            run_number_list.append(index_number)
+            data_set_list.append((vec_x, vec_y))
         # END-FOR
 
         print '[DB...BAT] Run number list: {0} Data set list size: {1}'.format(run_number_list, len(data_set_list))
@@ -1799,13 +1840,14 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         self.ui.graphicsView_mainPlot.plot_2d_contour(run_number_list, data_set_list)
 
         # remove the runs that cannot be found
-        if len(run_number_list) != self._runNumberList:
-            self._mutexRunNumberList = True
-            self.ui.comboBox_runs.clear()
-            for run_number in sorted(run_number_list):
-                self.ui.comboBox_runs.addItem('{0}'.format(run_number))
-            self._mutexRunNumberList = False
-        # END-IF
+        # TODO FIXME ASAP --> make this work!
+        # if len(run_number_list) != self._runNumberList:
+        #     self._mutexRunNumberList = True
+        #     self.ui.comboBox_runs.clear()
+        #     for run_number in sorted(run_number_list):
+        #         self.ui.comboBox_runs.addItem('{0}'.format(run_number))
+        #     self._mutexRunNumberList = False
+        # # END-IF
 
         return
 

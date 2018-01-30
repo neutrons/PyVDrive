@@ -526,7 +526,7 @@ class VDriveAPI(object):
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: it is a run number or data key
+        :param run_id: it is a run number or data key or a tuple
         :param target_unit:
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
