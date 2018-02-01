@@ -464,24 +464,25 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if self._reducedDataViewWindow is None:
             # initialize a window instance it has not been
             self._reducedDataViewWindow = DataView.GeneralPurposedDataViewWindow(self)
-            self._reducedDataViewWindow.setup(self._myWorkflow)
+            self._reducedDataViewWindow.init_setup(self._myWorkflow)
             self._myChildWindows.append(self._reducedDataViewWindow)
         # END-IF
 
         # show the window if it exists and return
         self._reducedDataViewWindow.show()
 
-        # update to current reduction status
-        runs_tuples = self._myWorkflow.get_reduced_runs(with_ipts=True)
-        if len(runs_tuples) == 0:
-            print '[INFO] No reduced run is found. '
-            return self._reducedDataViewWindow
-
-        self._reducedDataViewWindow.set_ipts_number(runs_tuples[0][1])
-        # 1-D image
-        self._reducedDataViewWindow.set_canvas_type(dimension=1)
-        self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
-                                                    clear_previous=True)
+        # I think the following section is redundant
+        # # update to current reduction status
+        # runs_tuples = self._myWorkflow.get_reduced_runs(with_ipts=True)
+        # if len(runs_tuples) == 0:
+        #     print '[INFO] No reduced run is found. '
+        #     return self._reducedDataViewWindow
+        #
+        # self._reducedDataViewWindow.set_ipts_number(runs_tuples[0][1])
+        # # 1-D image
+        # self._reducedDataViewWindow.set_canvas_type(dimension=1)
+        # self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
+        #                                             clear_previous=True)
 
         return self._reducedDataViewWindow
 
@@ -777,7 +778,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 return
 
             # check runs with
-            status, exist_run_list, error_message = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
+            status, error_message, exist_run_list = self._myWorkflow.check_runs(self._currIptsNumber, run_list)
 
             if status is False:
                 # Error and return

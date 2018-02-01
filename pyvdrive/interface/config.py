@@ -19,6 +19,13 @@ class PyVDriveConfiguration(object):
         config_dir = os.path.expanduser('~/.pyvdrive')
         self._configFileName = os.path.join(config_dir, 'PyVDriveConfig.config')
 
+        # session record
+        self._sessionFileName = os.path.join(config_dir, 'Session.config')
+        if os.path.exists(self._sessionFileName):
+            self._sessionDict = self.import_session(self._sessionFileName)
+        else:
+            self._sessionDict = dict()
+
         # create the configuration file
         if os.path.exists(config_dir) is False:
             os.mkdir(config_dir)
@@ -68,6 +75,25 @@ class PyVDriveConfiguration(object):
             self._infoDict[items[0]] = items[1]
 
         return
+
+    @staticmethod
+    def import_session(session_file_name):
+        """
+        import session file's content to a dictionary
+        :param session_file_name:
+        :return:
+        """
+        # TODO FIXME ASAP ASAP - Implement
+
+        return dict()
+
+    def set_session(self, key, value):
+        """
+        set a configuration to
+        :param key:
+        :param value:
+        :return:
+        """
 
     def write_config(self):
         """

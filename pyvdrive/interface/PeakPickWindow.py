@@ -1201,7 +1201,8 @@ class PeakPickerWindow(QtGui.QMainWindow):
         for gsas_file_name in gsas_file_list:
             # Load data via parent
             try:
-                data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas')
+                data_key = os.path.basename(gsas_file_name).split('_')[0] + 'H'
+                data_key = self._myController.load_diffraction_file(gsas_file_name, 'gsas', data_key)
                 self._dataKeyList.append(data_key)
                 # add to tree
                 self.ui.treeView_iptsRun.add_child_current_item(data_key)
@@ -1549,7 +1550,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self.set_data_dir(self._myController.get_working_dir())
 
         # Get reduced data
-        reduced_run_number_list = self._myController.get_reduced_runs()
+        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
         ipts = 1
 
         # Set

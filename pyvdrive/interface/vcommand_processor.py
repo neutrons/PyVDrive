@@ -253,8 +253,15 @@ class VdriveCommandProcessor(object):
                 for run_number in processor.get_run_number():
                     vanadium_dict[run_number] = processor.get_vanadium_number(run_number)
 
-            view_window.add_run_numbers(processor.get_run_tuple_list(), vanadium_dict)
-            view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
+            # view_window.add_reduced_runs(processor.get_run_tuple_list(), vanadium_dict)
+            # TODO ASAP Need to find out how to set vanadium information... but now
+            # ipts_run_list = processor.get_run_tuple_list()
+            # run_list = list()
+            # for run, ipts in ipts_run_list:
+            #     run_list.append(run)
+            # view_window.add_reduced_runs(run_list, True)
+
+            # view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
 
         elif processor.is_chopped_run:
             # chopped run... can be 1D (only 1 chopped data) or 2D (more than 1 chopped data)
@@ -275,7 +282,7 @@ class VdriveCommandProcessor(object):
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
-            view_window.add_run_numbers(processor.get_run_tuple_list())
+            view_window.add_reduced_runs(processor.get_run_tuple_list())
             view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
         # END-FOR
 

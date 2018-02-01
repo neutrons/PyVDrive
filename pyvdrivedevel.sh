@@ -6,4 +6,4 @@
 python setup.py build_py --inplace
 PYTHONPATH=$(dirname $0):$PYTHONPATH
 echo $PYTHONPATH
-python scripts/Lava
+python scripts/Lava.py

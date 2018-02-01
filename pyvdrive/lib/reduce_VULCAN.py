@@ -826,8 +826,7 @@ class ReductionSetup(object):
         return
 
     def set_binning_parameters(self, min_tof, bin_size, max_tof):
-        """
-
+        """ set binning parameters
         :param min_tof:
         :param max_tof:
         :param bin_size:
@@ -2389,11 +2388,11 @@ class ReduceVulcanData(object):
                                              gsas_param_file=gsas_iparm_file_name)
 
             vdrive_bin_ws_name = reduced_workspace
-
         else:
             # write to GSAS file with Mantid bins
             mantidsimple.SaveGSS(InputWorkspace=reduced_workspace,
-                                 Filename=gsas_file_name)
+                                 Filename=gsas_file_name,
+                                 SplitFiles=False)
             vdrive_bin_ws_name = reduced_workspace
         # END-IF-ELSE
 

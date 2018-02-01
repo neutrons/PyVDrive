@@ -474,6 +474,7 @@ class ReductionManager(object):
         :return:
         """
         # check input ... blabla
+        assert isinstance(run_number, int), 'blabla 213dd'
 
         # add
         self._runFocusedWorkspaceDict[run_number] = out_ws_name
@@ -691,23 +692,33 @@ class ReductionManager(object):
         """
         # Check requirements
         assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
-        # get tracker
-        assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
-        tracker = self._reductionTrackDict[run_number]
-        assert isinstance(tracker, DataReductionTracker), 'Stored tracker must be an instance of DataReductioTracker.'
 
-        if is_vdrive_bin and unit != 'TOF':
-            raise RuntimeError('It is possible to get a VDrive-binned workspace in unit {0} other than TOF.'
-                               ''.format(unit))
-        elif unit != 'TOF' and unit.lower() != 'dspace':
-            raise RuntimeError('Unit {0} is not supported.'.format(unit))
-
-        if is_vdrive_bin:
-            return_ws_name = tracker.vdrive_workspace
-        elif unit == 'TOF':
-            return_ws_name = tracker.tof_workspace
+        # where is this run?
+        if run_number in self._runFocusedWorkspaceDict:
+            # simple reduce
+            return_ws_name = self._runFocusedWorkspaceDict[run_number]
         else:
-            return_ws_name = tracker.dpsace_worksapce
+            # full reduction
+            # get tracker
+            assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
+            tracker = self._reductionTrackDict[run_number]
+            assert isinstance(tracker, DataReductionTracker), \
+                'Stored tracker must be an instance of DataReductioTracker.'
+
+            if is_vdrive_bin and unit != 'TOF':
+                raise RuntimeError('It is possible to get a VDrive-binned workspace in unit {0} other than TOF.'
+                                   ''.format(unit))
+            elif unit != 'TOF' and unit.lower() != 'dspace':
+                raise RuntimeError('Unit {0} is not supported.'.format(unit))
+
+            if is_vdrive_bin:
+                return_ws_name = tracker.vdrive_workspace
+            elif unit == 'TOF':
+                return_ws_name = tracker.tof_workspace
+            else:
+                return_ws_name = tracker.dpsace_worksapce
+            # END-IF-ELSE
+        # END-IF-ELSE
 
         return return_ws_name
 
@@ -734,7 +745,15 @@ class ReductionManager(object):
         :param run_number:
         :return:
         """
-        return run_number in self._reductionTrackDict
+        assert isinstance(run_number, int), 'blabla'
+
+        has = False
+        if run_number in self._runFocusedWorkspaceDict:
+            has = True
+        elif run_number in self._reductionTrackDict:
+            has = True
+
+        return has
 
     def init_tracker(self, ipts_number, run_number, slicer_key=None):
         """ Initialize tracker
@@ -805,7 +824,7 @@ class ReductionManager(object):
             if len(binning_parameters) == 3:
                 tof_min, bin_size, tof_max = binning_parameters
             elif len(binning_parameters) == 1:
-                bin_size = binning_parameters
+                bin_size = binning_parameters[0]
                 tof_min = 3000.
                 tof_max = 70000.
             else:

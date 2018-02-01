@@ -12,6 +12,8 @@ import vanadium_utility
 import peak_util
 import numpy
 
+# TODO... NEED A DOC FOR HOW TO STORE DATA KEY (WORKSPACE NAME) ...
+
 
 class ProjectManager(object):
     """ VDrive Project
@@ -246,6 +248,40 @@ class ProjectManager(object):
         # END-IF
 
         return output_dict
+
+    def get_workspace_name_by_data_key(self, data_key):
+        """
+
+        :param data_key:
+        :return:
+        """
+        if isinstance(data_key, str):
+            # Check what it shall be
+            print ('[DB...BAT] data key: {0}'.format(data_key))
+            if data_key.endswith('G') or data_key.endswith('H'):
+                ws_name = self._loadedDataManager.get_workspace_name(data_key)
+                print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
+            else:
+                # reduced runs.  data key is the string version of integer run number
+                run_number = int(data_key)
+                found_it = self._reductionManager.has_run(run_number)
+                if found_it:
+                    ws_name = self._reductionManager.get_reduced_workspace(run_number=int(data_key),
+                                                                           is_vdrive_bin=False)
+                else:
+                    raise RuntimeError('Run number {0} cannot be found in reduction manager.'.format(run_number))
+                    # END-FOR
+        elif isinstance(data_key, tuple):
+            # case for chopped series
+            if len(data_key) != 2:
+                raise RuntimeError('If data key is a tuple, it must have 2 items but not {0}.'.format(data_key))
+            # TODO FIXME ASAP ASAP3 - this is a hack!
+            ws_name = data_key[1]
+        else:
+            # non-supported
+            raise AssertionError('Data key {0} of type {1} is not supported.'.format(data_key, type(data_key)))
+
+        return ws_name
 
     def check_runs(self, ipts_number, run_number_list, check_archive):
         """ check whether a series of run numbers exist
@@ -727,6 +763,20 @@ class ProjectManager(object):
 
         return ipts_dict
 
+    def get_loaded_chopped_reduced_runs(self):
+        """
+        get the runs that are loaded as chopped data from SNS archive or HDD
+        :return: list of run numbers (string with special tag)
+        """
+        return self._loadedDataManager.get_loaded_chopped_runs()
+
+    def get_loaded_reduced_runs(self):
+        """
+        get the runs that are loaded as reduced data from SNS archive or HDD (for example as GSAS)
+        :return:
+        """
+        return self._loadedDataManager.get_loaded_runs()
+
     def get_number_data_files(self):
         """
         Get the number/amount of the data files that have been set to the project.
@@ -794,6 +844,21 @@ class ProjectManager(object):
         assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
 
         return data_set
+
+    def get_reduced_chopped_runs(self):
+        """
+        get run numbers of chopped and reduced runs
+        :return:
+        """
+        # FIXME ASAP ASAP2 TODO - Find which manager is for reduced chopped data
+        return list()
+
+    def get_reduced_runs(self):
+        """
+        find out the runs that have been reduced and are still in memory
+        :return: list of run numbers of the runs
+        """
+        return self._reductionManager.get_reduced_runs()
 
     def get_reduced_workspace(self, ipts_number, run_number):
         """

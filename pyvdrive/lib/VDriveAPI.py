@@ -520,45 +520,57 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    def get_reduced_data(self, run_id, target_unit, ipts_number=None, search_archive=False, is_workspace=False):
+    def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
+                         is_workspace=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: it is a run number or data key
+        :param run_id: it is a run number or data key or a tuple
         :param target_unit:
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
         :param is_workspace:
         :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
         """
-        if is_workspace:
-            # get data from project as the first priority
-            workspace_name = run_id
-            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
-            assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
-                                                ''.format(target_unit, current_unit)
+        # check whether run ID is a data key
+        workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
 
-        else:
-            # search for archive with GSAS file
-            # get GSAS file name
-            if self._myProject.reduction_manager.has_run(run_number=run_id):
-                # reduced data that is still in memory
-                data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
+        # get data
+        data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
+                                                                            bank_id=bank_id)
+        # check
+        if current_unit != target_unit:
+            raise NotImplementedError('Target unit {0} does not match reduced unit {1}.'
+                                      ''.format(target_unit, current_unit))
 
-            elif search_archive and isinstance(run_id, int):
-                # search /SNS/VULCAN/
-                try:
-                    gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
-                    data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
-                except RuntimeError as run_err:
-                    return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
-                                  ''.format(run_id, gsas_file, run_err)
-
-            else:
-                return False, 'Unable to locate run {0} in archive'.format(run_id)
-            # END-IF
-        # END-IF-ELSE
+        # if is_workspace:
+        #     # get data from project as the first priority
+        #     workspace_name = run_id
+        #     data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
+        #     assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
+        #                                         ''.format(target_unit, current_unit)
+        #
+        # else:
+        #     # search for archive with GSAS file
+        #     # get GSAS file name
+        #     if self._myProject.reduction_manager.has_run(run_number=run_id):
+        #         # reduced data that is still in memory
+        #         data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
+        #
+        #     elif search_archive and isinstance(run_id, int):
+        #         # search /SNS/VULCAN/
+        #         try:
+        #             gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
+        #             data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
+        #         except RuntimeError as run_err:
+        #             return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
+        #                           ''.format(run_id, gsas_file, run_err)
+        #
+        #     else:
+        #         return False, 'Unable to locate run {0} in archive'.format(run_id)
+        #     # END-IF
+        # # END-IF-ELSE
 
         return True, data_set_dict
 
@@ -594,12 +606,12 @@ class VDriveAPI(object):
 
         return True, info
 
-    def get_reduced_runs(self, with_ipts=True):
-        """ Get the runs (run numbers) that have been reduced successfully
-        :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
-        :return: list of strings?
-        """
-        return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
+    # def get_reduced_runs(self, with_ipts=True):
+    #     """ Get the runs (run numbers) that have been reduced successfully
+    #     :param with_ipts: if true, then return 2-tuple as (run number, IPTS)
+    #     :return: list of strings?
+    #     """
+    #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
     def get_slicer(self, run_number, slicer_id):
         """
@@ -808,6 +820,35 @@ class VDriveAPI(object):
             sns_dir = self.archive_manager.get_vulcan_gsas_dir(ipts_number)
 
         return sns_dir
+
+    def get_loaded_runs(self, chopped):
+        """
+        get the run number (or data key) to the loaded or reduced data in memory
+        :param chopped: if flag is True, then get chopped (reduced data); otherwise, get the single run
+        :return: (1) list of integers (for single runs); (2) list of integers (for chopped runs)
+        """
+        if chopped:
+            # chopped runs
+            # from archive
+            loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
+
+            # from memory
+            reduced_runs_list = self._myProject.get_reduced_chopped_runs()
+
+        else:
+            # from archive
+            loaded_runs_list = self._myProject.get_loaded_reduced_runs()
+
+            # from project
+            reduced_runs_list = self._myProject.get_reduced_runs()
+
+        # END-IF-ELSE
+
+        # combine
+        run_in_mem = loaded_runs_list[:]
+        run_in_mem.extend(reduced_runs_list)
+
+        return run_in_mem
 
     def get_local_runs(self, archive_key, local_dir, begin_run, end_run, standard_sns_file):
         """
@@ -1065,12 +1106,13 @@ class VDriveAPI(object):
 
         return slicers
 
-    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data):
+    def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
         """
         Load GSAS file from SNS archive
         :param ipts_number:
         :param run_number:
         :param is_chopped_data:
+        :param data_key: user given data key
         :return:
         """
         # check
@@ -1086,7 +1128,7 @@ class VDriveAPI(object):
             gsas_file_name = self._myArchiveManager.get_gsas_file(ipts_number, run_number, check_exist=True)
 
             # load data
-            data_key = self.load_diffraction_file(gsas_file_name, 'gsas')
+            data_key = self.load_diffraction_file(gsas_file_name, 'gsas', data_key=data_key)
         # END-IF-ELSE
 
         return data_key
@@ -1104,16 +1146,17 @@ class VDriveAPI(object):
 
         return chopped_key_dict, run_number
 
-    def load_diffraction_file(self, file_name, file_type):
+    def load_diffraction_file(self, file_name, file_type, data_key):
         """ Load reduced diffraction file to analysis project
         Requirements: file name is a valid string, file type must be a string as 'gsas' or 'fullprof'
         a.k.a. load_gsas_data
         :param file_name
         :param file_type:
+        :param data_key:
         :return:
         """
         data_key = self._myProject.data_loading_manager.load_binned_data(file_name, file_type, prefix=None,
-                                                                         max_int=100)
+                                                                         max_int=100, data_key=data_key)
 
         return data_key
 

@@ -697,8 +697,11 @@ class WindowLogPicker(QtGui.QMainWindow):
                                                                     slice_key=self._currSlicerKey,
                                                                     reduced=True)
             chopped_workspace_list = info_dict['workspaces']
-            view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, clear_previous=True)
-            view_window.do_set_current_run()
+            view_window.add_chopped_workspaces(self._currRunNumber, chopped_workspace_list, focus_to_it=True)
+            view_window.ui.groupBox_plotChoppedRun.setEnabled(True)
+            view_window.ui.groupBox_plotSingleRun.setEnabled(False)
+            view_window.do_plot_diffraction_data()
+
             # set up the run time
             view_window.label_loaded_data(run_number=self._currRunNumber,
                                           is_chopped=True,

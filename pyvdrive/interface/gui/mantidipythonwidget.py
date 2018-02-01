@@ -21,11 +21,10 @@ from pygments.lexer import RegexLexer
 # Monkeypatch!
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
-from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
-#from qtconsole.rich_ipython_widget import RichIPythonWidget
-from IPython.qt.inprocess import QtInProcessKernelManager
-#import qtconsole.inprocess
-#from qtconsole.inprocess import QtInProcessKernelManager
+#from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
+#from IPython.qt.inprocess import QtInProcessKernelManager
+from qtconsole.rich_ipython_widget import RichIPythonWidget
+from qtconsole.inprocess import QtInProcessKernelManager
 
 from mantid.api import AnalysisDataService as mtd
 

@@ -19,6 +19,10 @@ class LoadedDataManager(object):
         # workspace management dictionary
         self._workspaceDict = dict()  # key: data key, value: workspace name
 
+        # more detailed information: key = run number (GSAS) / data key
+        self._singleGSASDict = dict()
+        self._choppedGSASSetDict = dict()
+
         return
 
     def get_bank_list(self, data_key):
@@ -69,6 +73,26 @@ class LoadedDataManager(object):
 
         return data_set_dict
 
+    def get_loaded_chopped_runs(self):
+        """
+        get the run numbers or data keys of the loaded chopped data
+        :return:
+        """
+        loaded_chopped_runs = self._choppedGSASSetDict.keys()
+        loaded_chopped_runs.sort()
+
+        return loaded_chopped_runs
+
+    def get_loaded_runs(self):
+        """
+        get the run numbers or data keys of the loaded data
+        :return:
+        """
+        loaded_single_runs = self._singleGSASDict.keys()
+        loaded_single_runs.sort()
+
+        return loaded_single_runs
+
     def get_workspace_name(self, data_key):
         """
         get workspace's name
@@ -94,13 +118,14 @@ class LoadedDataManager(object):
 
         return True
 
-    def load_binned_data(self, data_file_name, data_file_type, prefix, max_int):
+    def load_binned_data(self, data_file_name, data_file_type, prefix, max_int, data_key):
         """
         load binned data
         :param data_file_name:
         :param data_file_type:
         :param prefix: prefix of the GSAS workspace name. It can be None, an integer, or a string
         :param max_int: maximum integer for sequence such as 999 for 001, 002, ... 999
+        :param data_key:
         :return: string as data key (aka. workspace name)
         """
         # check inputs
@@ -109,6 +134,7 @@ class LoadedDataManager(object):
             ''.format(data_file_type, type(data_file_type))
         assert isinstance(data_file_name, str), 'Data file name {0} must be a string but not a {1}.' \
                                                 ''.format(data_file_name, type(data_file_name))
+        assert isinstance(data_key, str), 'Data key {0} must be a string.'.format(data_key)
 
         # find out the type of the data file
         file_name, file_extension = os.path.splitext(data_file_name)
@@ -127,26 +153,32 @@ class LoadedDataManager(object):
         if data_file_type == 'gsas':
             # load as GSAS
             # get the output workspace name
+            case = -1
             if prefix is None or prefix == '':
                 # no prefix is specified
                 data_ws_name = '{0}_gsas'.format(base_ws_name)
+                case = 1
             elif base_ws_name.isdigit():
                 # base workspace name is an integer and prefix is given.
                 num_zeros = int(math.log(max_int) / math.log(10)) + 1
                 data_ws_name = '{0}_{1:0{2}}'.format(prefix, int(base_ws_name), num_zeros)
+                case = 2
             else:
                 # prefix_basename
                 data_ws_name = '{0}_{1}'.format(prefix, os.path.basename(file_name))
+                case = 3
             # END-IF
+            print ('Loaded GSAS file workspace name: {0} from case {1}'.format(data_ws_name, case))
 
             # load data
-            data_key = mantid_helper.load_gsas_file(data_file_name, data_ws_name,
-                                                    standard_bin_workspace=self._myParent.vdrive_bin_template)
+            gsas_ws_name = mantid_helper.load_gsas_file(data_file_name, data_ws_name,
+                                                        standard_bin_workspace=self._myParent.vdrive_bin_template)
         else:
             raise RuntimeError('Unable to support %s file.' % data_file_type)
 
         # add to data management dictionary
         self._workspaceDict[data_key] = data_ws_name
+        self._singleGSASDict[data_key] = data_file_name
 
         return data_key
 
@@ -227,6 +259,10 @@ class LoadedDataManager(object):
             # form output
             data_key_dict[data_ws_name] = (ws_name, file_name)
         # END-FOR
+
+        # register for chopped data dictionary
+        key = '{0}_gsas'.format(run_number)
+        self._choppedGSASSetDict[key] = data_key_dict.keys()
 
         return data_key_dict, run_number
 

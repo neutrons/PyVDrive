@@ -43,7 +43,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         self._init_widgets()
 
         # Set event handler
-        # group 1
+        # group to add archive IPTS
         self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
                      self.evt_change_data_access_mode)
         self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
@@ -51,16 +51,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
                                self.do_browse_data_directory)
-        QtCore.QObject.connect(self.ui.pushButton_verify, QtCore.SIGNAL('clicked()'),
-                               self.do_set_ipts_number)
+        QtCore.QObject.connect(self.ui.pushButton_addArchiveIPTS, QtCore.SIGNAL('clicked()'),
+                               self.do_add_archive_ipts)
 
-        # group 2: get IPTS information
-        self.connect(self.ui.pushButton_proceedInfo, QtCore.SIGNAL('clicked()'),
-                     self.do_retrieve_information)
+        # group to add local HDD data
+        self.connect(self.ui.pushButton_addLocalHDDDir, QtCore.SIGNAL('clicked()'),
+                     self.do_add_hdd_data)
         self.connect(self.ui.pushButton_browseLogFile, QtCore.SIGNAL('clicked()'),
                      self.do_browse_record_file)
 
-        # group 3: add runs
+        # group to add runs
         QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
                                self.do_add_runs)
         self.connect(self.ui.radioButton_filterByRun, QtCore.SIGNAL('toggled(bool)'),
@@ -100,44 +100,52 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
     def _init_widgets(self):
         """ Initialize the values of some widgets
         """
-
-        # Init set up group 1
+        # group box set up (SNS archive or local HDD)
         self.ui.radioButton_useNumber.setChecked(True)
-        self.ui.lineEdit_iptsDir.setDisabled(True)
-        self.ui.pushButton_browse.setDisabled(True)
+        self.ui.groupBox_snsArchive.setEnabled(True)
 
-        # init set up group information
-        self.ui.groupBox_scanIptsInfo.setEnabled(False)
-        self.ui.radioButton_scanLogFile.setChecked(True)
-        self.ui.radioButton_scanHD.setChecked(False)
-        self.ui.radioButton_noScan.setChecked(False)
+        self.ui.groupBox_localHDD.setDisabled(True)
 
-        # init set up group add runs
-        self.ui.groupBox_selectRuns.setEnabled(False)
-        self.ui.radioButton_useNumber.setChecked(True)
+        # SNS archive options
+        self.ui.radioButton_scanAutoRecord.setChecked(True)
 
-        # self.ui.dateEdit_begin.setDisabled(True)
-        # self.ui.dateEdit_end.setDisabled(True)
-        # self.ui.lineEdit_begin.setDisabled(True)
-        # self.ui.lineEdit_end.setDisabled(True)
-        # self.ui.pushButton_AddRuns.setDisabled(True)
+        # local HDD options
+        self.ui.radioButton_scanHD.setChecked(True)
 
-    def _search_logs(self):
-        """
-        Search log files such as AutoRecord.txt
-        :return:
-        """
-        # get shared
-        shared_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
-        assert os.path.exists(shared_dir), 'Directory %s does not exist!' % self._iptsNumber
-
-        for file_name in ['AutoRecord.txt', 'AutoRecordData.txt', 'AutoRecordAlign.txt']:
-            log_path = os.path.join(shared_dir, file_name)
-            if os.path.exists(log_path):
-                self.ui.comboBox_logFilesNames.addItem(file_name)
-        # END-FOR
+        # add runs
+        self.ui.radioButton_filterByRun.setChecked(True)
 
         return
+
+    def _search_logs(self, auto_record_data):
+        """
+        Search log files such as AutoRecord.txt
+        :param auto_record_data: flag to return AutoRecordData.txt
+        :return: (bool, str): (1) True, auto record file path; (2) False, error message
+        """
+        # get shared folder
+        shared_dir = '/SNS/VULCAN/IPTS-%d/shared/' % self._iptsNumber
+        if not os.path.exists(shared_dir):
+            return False, 'Directory {0} does not exist!'.format(shared_dir)
+
+        # get file name
+        log_path = None
+        if auto_record_data:
+            file_name = 'AutoRecordData.txt'
+            log_path = os.path.join(shared_dir, file_name)
+        # END-IF
+
+        if log_path is None or os.path.exists(log_path) is False:
+            # unable to locate AutoRecordData or AutoRecord is required
+            file_name = 'AutoRecord.txt'
+            log_path = os.path.join(shared_dir, file_name)
+        # END-IF
+
+        # last check
+        if not os.path.exists(log_path):
+            return False, 'Unable to locate record file {0}'.format(log_path)
+
+        return True, log_path
 
     def add_runs_by_date(self):
         """
@@ -286,7 +294,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-    def do_retrieve_information(self):
+    def do_add_hdd_data(self):
         """
         List runs including run numbers, creation time and full path file names
         of one IPTS directory
@@ -315,9 +323,9 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-    def do_set_ipts_number(self):
+    def do_add_archive_ipts(self):
         """
-        Create the IPTS directory from an IPTS number
+        add from archive
         :return:
         """
         # Get IPTS number
@@ -335,7 +343,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             gutil.pop_dialog_error(self, 'Data directory is not set up!')
             return
 
-        # build IPTS directory and check
+        # build IPTS directory and check existence of data
         ipts_dir_1 = os.path.join(self._dataDir, 'IPTS-%d/data/' % ipts_number)
         ipts_dir_2 = os.path.join(self._dataDir, 'IPTS-%d/nexus/' % ipts_number)
         if not os.path.exists(ipts_dir_1) and not os.path.exists(ipts_dir_2):
@@ -354,18 +362,18 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             self._iptsDirFromNumber = ipts_dir_2
 
         # browse log files
-        self.ui.comboBox_existingIPTS.clear()
-        self._search_logs()
+        self.ui.comboBox_existingIPTS.addItem('{0}'.format(ipts_number))
 
-        # enable next step
-        self.ui.groupBox_scanIptsInfo.setEnabled(True)
+        # scan files
+        if self.ui.radioButton_scanAutoRecord.isChecked():
+            record_data_only = self.ui.checkBox_autoRecordDataOnly.isChecked()
+            self.scan_record_file(record_data_only, True)
+        else:
+            # scan the HD
+            self.scan_archive()
 
-        # # Enable widgets for next step
-        # self.ui.radioButton_filterByRun.setEnabled(True)
-        # self.ui.radioButton_filterByDate.setEnabled(True)
-        # self.ui.pushButton_iptsInfo.setEnabled(True)
-        # self.ui.pushButton_AddRuns.setEnabled(True)
-        # self.set_filter_mode(by_run_number=self.ui.checkBox_skipScan.isChecked())
+        # signal parent TODO ASAP ASAP2 - (1) add IPTS to tree without runs  (2) set IPTS to parent
+        # blabla
 
         return
 
@@ -451,18 +459,16 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         Toggle between 2 approaches to get IPTS directory: from IPTS number of directory
         :return:
         """
-        if self.ui.radioButton_useNumber.isChecked() is True:
-            self.ui.lineEdit_iptsNumber.setEnabled(True)
-            self.ui.pushButton_verify.setEnabled(True)
-            self.ui.lineEdit_iptsDir.setDisabled(True)
-            self.ui.pushButton_browse.setDisabled(True)
-            self._iptsDir = self._iptsDirFromNumber
+        if self.ui.radioButton_useNumber.isChecked():
+            self.ui.groupBox_snsArchive.setEnabled(True)
+
+        elif self.ui.radioButton_useDir.isChecked():
+            # TODO FIXME - Enable local HDD data access in future
+            # self.ui.groupBox_localHDD.setEnabled(True)
+            pass
+
         else:
-            self.ui.lineEdit_iptsNumber.setEnabled(False)
-            self.ui.pushButton_verify.setEnabled(False)
-            self.ui.lineEdit_iptsDir.setDisabled(False)
-            self.ui.pushButton_browse.setDisabled(False)
-            self._iptsDir = self._iptsDirFromDir
+            self.ui.groupBox_snsArchive.setEnabled(True)
 
         return
 
@@ -516,46 +522,52 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return True
 
-    def scan_record_file(self):
+    def scan_record_file(self, record_data_only, is_archive=True):
         """
         Scan record log file
+        :param record_data_only: flag to read AutoRecordData
+        :param is_archive: locate file in archive
         :return: boolean
         """
-        # get log file: the higher priority is the log file name that is browsed
-        log_file_path = str(self.ui.lineEdit_logFilePath.text())
-        if len(log_file_path.strip()) == 0:
-            # second priority to load from combo box
-            log_base_name = str(self.ui.comboBox_logFilesNames.currentText())
-            if len(log_base_name) == 0:
-                gutil.pop_dialog_error(self, 'No log file is found!')
-                return False
+        if is_archive:
+            # in archive
+            status, ret_str = self._search_logs(record_data_only)
+        else:
+            # get log file: the higher priority is the log file name that is browsed
+            log_file_path = str(self.ui.lineEdit_logFilePath.text())
+            if len(log_file_path.strip()) == 0:
+                status = False
+                ret_str = 'User must specify path to "Auto Record" file.'
+            elif os.path.exists(log_file_path):
+                status = True
+                ret_str = log_file_path
             else:
-                log_file_path = os.path.join('/SNS/VULCAN/IPTS-%d/shared' % self._iptsNumber, log_base_name)
-
-        # scan record file
-        try:
-            status, ret_obj = self._myParent.get_controller().scan_vulcan_record(log_file_path)
-        except AssertionError as ass_err:
-            gutil.pop_dialog_error(self, 'Unable to load record file %s due to %s.'
-                                         '' % (log_file_path, str(ass_err)))
-            return False
+                status = False
+                ret_str = 'User specified "Auto Record" file {0} does not exist.'.format(log_file_path)
+        # END-IF-ELSE
 
         if status:
-            # set record key as current archive key and get the range of the run
-            record_key = ret_obj
-            self._archiveKey = record_key
-            start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
-            run_info_list = [start_run, end_run]
-        else:
-            # error in retrieving
-            error_message = ret_obj
-            gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
-                log_file_path, error_message))
-            self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
-            return False
+            # scan record file
+            log_file_path = ret_str
+            scan_status, ret_obj = self._myParent.get_controller().scan_vulcan_record(log_file_path)
+            if scan_status:
+                # set record key as current archive key and get the range of the run
+                record_key = ret_obj
+                self._archiveKey = record_key
+                start_run, end_run = self._myParent.get_controller().get_ipts_run_range(record_key)
+                run_info_list = [start_run, end_run]
+                self.set_retrieved_information(run_info_list)
+            else:
+                # error in retrieving
+                error_message = ret_obj
+                gutil.pop_dialog_error(self, 'Unable to get IPTS information from log file %s due to %s.' % (
+                    log_file_path, error_message))
+                self.ui.label_loadingStatus.setText('Failed to access %s.' % log_file_path)
+                return False
 
-        # set up information to GUI
-        self.set_retrieved_information(run_info_list)
+        else:
+            error_message = ret_str
+            gutil.pop_dialog_error(self, error_message)
 
         return True
 
