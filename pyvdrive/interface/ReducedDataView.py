@@ -6,8 +6,12 @@
 #
 ########################################################################
 import os
-from PyQt4 import QtCore, QtGui
-
+try:
+    from PyQt5.QtWidgets import QMainWindow, QFileDialog
+    from PyQt5 import QtCore
+except ImportError:
+    from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
 
 try:
@@ -20,7 +24,7 @@ import gui.ui_ReducedDataView_ui
 import vanadium_controller_dialog
 
 
-class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
+class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
     # class
@@ -107,8 +111,10 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                      self.do_refresh_existing_runs)
         self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
                      self.event_load_options)
-        self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
-                     self.event_load_options)
+        # TEST : whether the handling method is triggered?
+        self.ui.radioButton_anyGSAS.toggled.connect(self.event_load_options)
+        # self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
+        #              self.event_load_options)
 
         # section: choose to plot
         self.connect(self.ui.pushButton_prevRun, QtCore.SIGNAL('clicked()'),
@@ -127,10 +133,13 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
                      self.do_plot_contour)
         self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
                      self.do_plot_sample_logs)
-        self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_select_new_run_number)
-        self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_select_new_chopped_child)
+        # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_select_new_run_number)
+        # TEST : check whether the signal can trigger calling method
+        self.ui.comboBox_run.currentIndexChanged.connect(self.evt_select_new_run_number)
+        self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
+        # self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_select_new_chopped_child)
 
         # other
         self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
@@ -281,7 +290,7 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         default_dir = self._myController.get_working_dir()
 
         gsas_filter = 'GSAS(*.gda);;GSAS (*.gsa);;All Files(*.*)'
-        gsas_file_name = QtGui.QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
+        gsas_file_name = QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
         self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
 
         # # get GSAS file or gsas files
@@ -292,6 +301,8 @@ class GeneralPurposedDataViewWindow(QtGui.QMainWindow):
         #     self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
         # else:
             # get the data file
+
+
 
 
         return

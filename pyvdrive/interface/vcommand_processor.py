@@ -1,9 +1,12 @@
 """
 This module contains a class to handle standard VDRIVE commands
 """
-# from PyQt4 import QtCore
-from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSignal
+try:
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtCore import pyqtSignal
+except ImportError:
+    from PyQt4.QtGui import QMainWindow
+    from PyQt4.QtCore import pyqtSignal
 
 import vdrive_commands.chop
 import vdrive_commands.vbin
@@ -25,7 +28,7 @@ class VdriveCommandProcessor(object):
         Initialization
         """
         # check input requirement
-        assert isinstance(main_window, QtGui.QMainWindow), 'Main window must be a QtGui.QMainWindow'
+        assert isinstance(main_window, QMainWindow), 'Main window must be a QtGui.QMainWindow'
         assert controller is not None, 'controller cannot be None'
         if controller.__class__.__name__ != 'VDriveAPI':
             raise AssertionError('Controller is of wrong type %s.' % str(type(controller)))

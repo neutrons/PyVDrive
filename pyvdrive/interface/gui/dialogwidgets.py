@@ -1,5 +1,9 @@
-from PyQt4.QtGui import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
-from PyQt4.QtCore import Qt, QDateTime
+try:
+    from PyQt5.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
+    from PyQt5.QtCore import Qt, QDateTime
+except ImportError:
+    from PyQt4.QtGui import QDialog, QVBoxLayout, QDialogButtonBox, QDateTimeEdit, QApplication
+    from PyQt4.QtCore import Qt, QDateTime
 
 # Customized dialog widgets
 __author__ = 'wzz'
@@ -29,6 +33,7 @@ class DateDialog(QDialog):
     # get current date and time from the dialog
     def dateTime(self):
         return self.datetime.dateTime()
+
 
 # static method to create the dialog and return (date, time, accepted)
 def getDateTime(parent = None):
