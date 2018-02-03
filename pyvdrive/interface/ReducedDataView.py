@@ -136,7 +136,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
         #              self.evt_select_new_run_number)
         # TEST : check whether the signal can trigger calling method
-        self.ui.comboBox_run.currentIndexChanged.connect(self.evt_select_new_run_number)
+        self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
         # self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
         #              self.evt_select_new_chopped_child)
@@ -152,7 +152,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                      self.do_normalise_by_current)
         self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
                      self.do_apply_new_range)
-
 
         # combo boxes
         self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -1322,7 +1321,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             return
 
         # plot diffraction data same as
-        print '[DB...BAT] Event Select new run number! {0}'.format(self._mutexRunNumberList)
         self.do_plot_diffraction_data()
 
         return
