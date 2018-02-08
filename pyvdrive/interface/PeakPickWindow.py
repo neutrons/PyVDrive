@@ -5,7 +5,14 @@
 ########################################################################
 import sys
 import os
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt4.QtWidgets import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt4.QtWidgets import QFileDialog
+except ImportError:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt4.QtGui import QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -38,7 +45,7 @@ UnitCellList = [('BCC', 'I m -3 m'),
                 ('Primitive', 'P m m m')]
 
 
-class PeakWidthSetupDialog(QtGui.QDialog):
+class PeakWidthSetupDialog(QDialog):
     """
     Class for set up dialog
     """
@@ -49,16 +56,19 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         """
 
         # Initialize
-        QtGui.QDialog.__init__(self, parent)
+        QDialog.__init__(self, parent)
 
         self.ui = widthSetupWindow.Ui_Dialog()
         self.ui.setupUi(self)
 
         # Define event handlers
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
-                     self.do_set_width)
+        self.ui.pushButton_cancel.clicked.connect(self.do_quit)
+        self.ui.pushButton_set.clicked.connect(self.do_set_width)
+
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        # self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_width)
 
         # Class variables
         self._peakWidth = None
@@ -115,13 +125,13 @@ class PhaseWidgets(object):
         :return:
         """
         # Check requirements
-        assert isinstance(parent, QtGui.QMainWindow)
-        assert isinstance(edit_a, QtGui.QLineEdit)
-        assert isinstance(edit_b, QtGui.QLineEdit)
-        assert isinstance(edit_c, QtGui.QLineEdit)
-        assert isinstance(edit_name, QtGui.QLineEdit)
-        assert isinstance(combo_box_type, QtGui.QComboBox)
-        assert isinstance(check_box_select, QtGui.QCheckBox)
+        assert isinstance(parent, QMainWindow)
+        assert isinstance(edit_a, QLineEdit)
+        assert isinstance(edit_b, QLineEdit)
+        assert isinstance(edit_c, QLineEdit)
+        assert isinstance(edit_name, QLineEdit)
+        assert isinstance(combo_box_type, QComboBox)
+        assert isinstance(check_box_select, QCheckBox)
 
         # Lattice parameters
         self._lineEdit_a = edit_a
@@ -350,7 +360,7 @@ class PeakPickerMode(object):
     AutoMode = 3
 
 
-class PeakPickerWindow(QtGui.QMainWindow):
+class PeakPickerWindow(QMainWindow):
     """ Class for general-purposed plot window
     """
     # class
@@ -358,7 +368,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         # parent
         self._myParent = parent
@@ -530,7 +540,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._phaseWidgetsGroupDict[3] = phase_widgets3
 
         # Peak pick mode
-        self.ui.peak_picker_mode_group = QtGui.QButtonGroup(self)
+        self.ui.peak_picker_mode_group = QButtonGroup(self)
         self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModePower)
         self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModeQuick)
         self.ui.radioButton_pickModeQuick.setChecked(True)
@@ -954,7 +964,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get working directory for peak files
         work_dir = self._myController.get_working_dir()
         filters = "Text files (*.txt);; All files (*.*)"
-        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', work_dir, filters))
+        peak_file = str(QFileDialog.getOpenFileName(self, 'Peak File', work_dir, filters))
         try:
             peak_list = self._myController.import_gsas_peak_file(peak_file)
         except RuntimeError as err:
@@ -1135,7 +1145,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Launch dialog box for calibration file name
         file_filter = 'Calibration (*.cal);;Text (*.txt);;All files (*.*)'
-        cal_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
+        cal_file_name = QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
 
         # Load
         self._myController.load_calibration_file(cal_file_name)
@@ -1170,7 +1180,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                                                       start_run_number)
             # get directory containing GSAS files
             default_dir = self._myController.get_binned_data_dir(range(start_run_number, end_run_number))
-            gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
+            gsas_dir = str(QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
 
             # form file names: standard VULCAN style
             error_message = ''
@@ -1192,7 +1202,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             default_dir = self._myController.get_binned_data_directory()
             # TODO/NOW - consider self._myController.get_ipts_config()
 
-            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Load GSAS File',
+            gsas_file_name = str(QFileDialog.getOpenFileName(self, 'Load GSAS File',
                                                                    default_dir, filters))
             gsas_file_list.append(gsas_file_name)
         # END-IF-ELSE
@@ -1363,7 +1373,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
-        out_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
+        out_file_name = str(QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
                                                               self._dataDirectory, file_filter))
 
         # Get the peaks from buffer
@@ -1640,7 +1650,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Get the file name
         file_filter = 'Text (*.txt);;All files (*.*)'
-        phase_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Import phase information', self._dataDirectory,
+        phase_file_name = QFileDialog.getOpenFileName(self, 'Import phase information', self._dataDirectory,
                                                             file_filter)
 
         # return if action is cancelled

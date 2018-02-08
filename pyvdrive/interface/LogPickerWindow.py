@@ -5,8 +5,12 @@
 ########################################################################
 import os
 import numpy
-
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt4.QtWidgets import QMainWindow, QButtonGroup, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -28,7 +32,7 @@ IN_PICKER_SELECTION = 3
 # TODO/ISSUE/NOWNOW - label_runStartEpoch never been written
 
 
-class WindowLogPicker(QtGui.QMainWindow):
+class WindowLogPicker(QMainWindow):
     """ Class for general-puposed plot window
     """
     # class
@@ -36,7 +40,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         # child windows
         self._manualSlicerDialog = None
@@ -53,88 +57,145 @@ class WindowLogPicker(QtGui.QMainWindow):
         self._init_widgets_setup()
 
         # Defining widget handling methods
-        # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_time_segments)
-        self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_run)
-        self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_prev_log)
-        self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_next_log)
-        self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_scan_log_file)
-        self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_mts_log)
-        self.connect(self.ui.comboBox_blockList, QtCore.SIGNAL('indexChanged(int)'),
-                     self.do_load_mts_log)
-        self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
-                     self.evt_re_plot_mts_log)
+        self.ui.pushButton_loadRunSampleLog.clicked.connect(self.do_load_run)
+        self.ui.pushButton_prevLog.clicked.connect(self.do_load_prev_log)
+        self.ui.pushButton_nextLog.clicked.connect(self.do_load_next_log)
+        self.ui.pushButton_readLogFile.clicked.connect(self.do_scan_log_file)
+        self.ui.pushButton_loadMTSLog.clicked.connect(self.do_load_mts_log)
+        self.ui.comboBox_blockList.indexChanged.connect(self.do_load_mts_log)
+        self.ui.comboBox_logFrameUnit.indexChanged.connect(self.evt_re_plot_mts_log)
 
-        self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
-                     self.load_log_names)
+        self.ui.checkBox_hideSingleValueLog.stateChanged.connect(self.load_log_names)
 
         # chopping setup
-        self.connect(self.ui.radioButton_timeSlicer, QtCore.SIGNAL('toggled (bool)'),
-                     self.evt_switch_slicer_method)
-        self.connect(self.ui.radioButton_logValueSlicer, QtCore.SIGNAL('toggled (bool)'),
-                     self.evt_switch_slicer_method)
-        self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
-                     self.evt_switch_slicer_method)
-        self.connect(self.ui.pushButton_slicer, QtCore.SIGNAL('clicked()'),
-                     self.do_chop)
-        self.connect(self.ui.pushButton_viewReduced, QtCore.SIGNAL('clicked()'),
-                     self.do_view_reduced_data)
+        self.ui.radioButton_timeSlicer.toggled.connect(self.evt_switch_slicer_method)
+        self.ui.radioButton_logValueSlicer.toggled.connect(self.evt_switch_slicer_method)
+        self.ui.radioButton_manualSlicer.toggled.connect(self.evt_switch_slicer_method)
+        self.ui.pushButton_slicer.clicked.connect(self.do_chop)
+        self.ui.pushButton_viewReduced.clicked.connect(self.do_view_reduced_data)
 
         # Further operation
-        # self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
-        #              self.do_highlight_selected)
+        # self.ui.pushButton_highlight.clicked.connect()
+        # #              self.do_highlight_selected)
 
         # automatic slicer setup
-        self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
-                     self.do_setup_uniform_slicer)
-        self.connect(self.ui.checkBox_showSlicer, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_show_slicer)
+        self.ui.pushButton_setupAutoSlicer.clicked.connect(self.do_setup_uniform_slicer)
+        self.ui.checkBox_showSlicer.stateChanged.connect(self.evt_show_slicer)
 
         # manual slicer picker
-        # self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
-        #              self.do_picker_add)
-        # self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
-        #              self.do_picker_abort)
-        # self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
-        #              self.do_picker_set)
-        # self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
-        #              self.do_enter_select_picker_mode)
-        self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
-                     self.do_show_manual_slicer_table)
-        self.connect(self.ui.pushButton_loadSlicerFile, QtCore.SIGNAL('clicked()'),
-                     self.do_import_slicer_file)
+        # self.ui.pushButton_addPicker.clicked.connect()
+        # #              self.do_picker_add)
+        # self.ui.pushButton_abortPicker.clicked.connect()
+        # #              self.do_picker_abort)
+        # self.ui.pushButton_setPicker.clicked.connect()
+        # #              self.do_picker_set)
+        # self.ui.pushButton_selectPicker.clicked.connect()
+        # #              self.do_enter_select_picker_mode)
+        self.ui.pushButton_showManualSlicerTable.clicked.connect(self.do_show_manual_slicer_table)
+        self.ui.pushButton_loadSlicerFile.clicked.connect(self.do_import_slicer_file)
 
         # Slicer table
-        # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-        #              self.do_select_time_segments)
-        # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
-        #              self.do_deselect_time_segments)
+        # self.ui.pushButton_selectAll.clicked.connect()
+        # #              self.do_select_time_segments)
+        # self.ui.pushButton_deselectAll.clicked.connect()
+        # #              self.do_deselect_time_segments)
 
         # Canvas
-        self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
-                     self.evt_plot_sample_log)
-        self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
-                     self.do_resize_canvas)
-        self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_plot_sample_log)
+        self.ui.pushButton_doPlotSample.clicked.connect(self.evt_plot_sample_log)
+        self.ui.pushButton_resizeCanvas.clicked.connect(self.do_resize_canvas)
+        self.ui.comboBox_logNames.currentIndexChanged.connect(self.evt_plot_sample_log)
 
         self.ui.radioButton_useMaxPointResolution.toggled.connect(self.evt_change_resolution_type)
-        self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_change_resolution_type)
 
-        self.connect(self.ui.pushButton_prevPartialLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_prev_log_frame)
-        self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
-                     self.do_load_next_log_frame)
+        self.ui.radioButton_useTimeResolution.toggled.connect(self.evt_change_resolution_type)
+
+        self.ui.pushButton_prevPartialLog.clicked.connect(self.do_load_prev_log_frame)
+        self.ui.pushButton_nextPartialLog.clicked.connect(self.do_load_next_log_frame)
 
         # menu actions
-        self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
-                     self.evt_quit_no_save)
+        self.ui.actionExit.triggered.connect(self.evt_quit_no_save)
+
+        # # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
+        # #              self.do_save_time_segments)
+        # self.connect(self.ui.pushButton_loadRunSampleLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_run)
+        # self.connect(self.ui.pushButton_prevLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_prev_log)
+        # self.connect(self.ui.pushButton_nextLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_next_log)
+        # self.connect(self.ui.pushButton_readLogFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_scan_log_file)
+        # self.connect(self.ui.pushButton_loadMTSLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_mts_log)
+        # self.connect(self.ui.comboBox_blockList, QtCore.SIGNAL('indexChanged(int)'),
+        #              self.do_load_mts_log)
+        # self.connect(self.ui.comboBox_logFrameUnit, QtCore.SIGNAL('indexChanged(int)'),
+        #              self.evt_re_plot_mts_log)
+        #
+        # self.connect(self.ui.checkBox_hideSingleValueLog, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.load_log_names)
+        #
+        # # chopping setup
+        # self.connect(self.ui.radioButton_timeSlicer, QtCore.SIGNAL('toggled (bool)'),
+        #              self.evt_switch_slicer_method)
+        # self.connect(self.ui.radioButton_logValueSlicer, QtCore.SIGNAL('toggled (bool)'),
+        #              self.evt_switch_slicer_method)
+        # self.connect(self.ui.radioButton_manualSlicer, QtCore.SIGNAL('toggled (bool)'),
+        #              self.evt_switch_slicer_method)
+        # self.connect(self.ui.pushButton_slicer, QtCore.SIGNAL('clicked()'),
+        #              self.do_chop)
+        # self.connect(self.ui.pushButton_viewReduced, QtCore.SIGNAL('clicked()'),
+        #              self.do_view_reduced_data)
+        #
+        # # Further operation
+        # # self.connect(self.ui.pushButton_highlight, QtCore.SIGNAL('clicked()'),
+        # #              self.do_highlight_selected)
+        #
+        # # automatic slicer setup
+        # self.connect(self.ui.pushButton_setupAutoSlicer, QtCore.SIGNAL('clicked()'),
+        #              self.do_setup_uniform_slicer)
+        # self.connect(self.ui.checkBox_showSlicer, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.evt_show_slicer)
+        #
+        # # manual slicer picker
+        # # self.connect(self.ui.pushButton_addPicker, QtCore.SIGNAL('clicked()'),
+        # #              self.do_picker_add)
+        # # self.connect(self.ui.pushButton_abortPicker, QtCore.SIGNAL('clicked()'),
+        # #              self.do_picker_abort)
+        # # self.connect(self.ui.pushButton_setPicker, QtCore.SIGNAL('clicked()'),
+        # #              self.do_picker_set)
+        # # self.connect(self.ui.pushButton_selectPicker, QtCore.SIGNAL('clicked()'),
+        # #              self.do_enter_select_picker_mode)
+        # self.connect(self.ui.pushButton_showManualSlicerTable, QtCore.SIGNAL('clicked()'),
+        #              self.do_show_manual_slicer_table)
+        # self.connect(self.ui.pushButton_loadSlicerFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_import_slicer_file)
+        #
+        # # Slicer table
+        # # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+        # #              self.do_select_time_segments)
+        # # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+        # #              self.do_deselect_time_segments)
+        #
+        # # Canvas
+        # self.connect(self.ui.pushButton_doPlotSample, QtCore.SIGNAL('clicked()'),
+        #              self.evt_plot_sample_log)
+        # self.connect(self.ui.pushButton_resizeCanvas, QtCore.SIGNAL('clicked()'),
+        #              self.do_resize_canvas)
+        # self.connect(self.ui.comboBox_logNames, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_plot_sample_log)
+        #
+        # self.connect(self.ui.radioButton_useTimeResolution, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_change_resolution_type)
+        #
+        # self.connect(self.ui.pushButton_prevPartialLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_prev_log_frame)
+        # self.connect(self.ui.pushButton_nextPartialLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_next_log_frame)
+        #
+        # # menu actions
+        # self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
+        #              self.evt_quit_no_save)
 
         # # Event handling for pickers
         self._mtsFileLoaderWindow = None
@@ -224,7 +285,7 @@ class WindowLogPicker(QtGui.QMainWindow):
         self.ui.lineEdit_timeResolution.setEnabled(False)
 
         # group radio buttons
-        self.ui.resolution_group = QtGui.QButtonGroup(self)
+        self.ui.resolution_group = QButtonGroup(self)
         self.ui.resolution_group.addButton(self.ui.radioButton_useMaxPointResolution, 0)
         self.ui.resolution_group.addButton(self.ui.radioButton_useTimeResolution, 1)
 
@@ -383,8 +444,8 @@ class WindowLogPicker(QtGui.QMainWindow):
         """
         # get file
         default_dir = os.getcwd()
-        slicer_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
-                                                                 'All Files (*.*)'))
+        slicer_file_name = str(QFileDialog.getOpenFileName(self, 'Read Slicer File', default_dir,
+                                                           'All Files (*.*)'))
         if len(slicer_file_name) == 0:
             # return if operation is cancelled
             return

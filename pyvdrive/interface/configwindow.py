@@ -1,8 +1,9 @@
-import os
-import datetime
-import time
-
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QMainWindow
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QMainWindow
 
 import gui.ui_ConfigWindow_ui as ui_ConfigWindow
 
@@ -12,10 +13,8 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.GuiUtility as gutil
 
-
-class ConfigWindow(QtGui.QMainWindow):
+class ConfigWindow(QMainWindow):
     """ Pop up dialog window to add runs by IPTS
     """
     def __init__(self, parent):
@@ -23,7 +22,7 @@ class ConfigWindow(QtGui.QMainWindow):
         Initialization
         :param parent:
         """
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         self.ui = ui_ConfigWindow.Ui_MainWindow()
         self.ui.setupUi(self)

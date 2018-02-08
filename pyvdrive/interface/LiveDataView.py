@@ -1,6 +1,9 @@
 from datetime import datetime
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+try:
+    from PyQt5 import QtCore as Qtcore
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QMainWindow
 import random
 import time
 import numpy
@@ -34,7 +37,7 @@ Note:
 """
 
 
-class VulcanLiveDataView(QtGui.QMainWindow):
+class VulcanLiveDataView(QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """
@@ -131,44 +134,70 @@ class VulcanLiveDataView(QtGui.QMainWindow):
                               3: self.ui.graphicsView_currentViewB3}
 
         # set up the event handlers
-        self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
-                     self.do_start_live)
-        self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
-                     self.do_stop_live)
+        self.ui.pushButton_startLiveReduction.clicked.connect(self.do_start_live)
+        self.ui.pushButton_stopLiveReduction.clicked.connect(self.do_stop_live)
 
-        self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
-                     self.do_set_bank1_roi)
-        self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
-                     self.do_set_bank2_roi)
-        self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
-                     self.do_set_bank3_roi)
-        self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
-                     self.do_fit_bank1_peak)
+        self.ui.pushButton_setROIb1.clicked.connect(self.do_set_bank1_roi)
+        self.ui.pushButton_setROIb2.clicked.connect(self.do_set_bank2_roi)
+        self.ui.pushButton_setROIb3.clicked.connect(self.do_set_bank3_roi)
+        self.ui.pushButton_fitB1.clicked.connect(self.do_fit_bank1_peak)
 
         # 2D contour
 
         # menu bar
-        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-                     self.do_quit)
-        self.connect(self.ui.actionClear_Logs, QtCore.SIGNAL('triggered()'),
-                     self.do_clear_log)
-        self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
-                     self.do_launch_ipython)
-        self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
-                     self.menu_launch_setup)
-        self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
-                     self.menu_show_multi_purpose_dock)
+        self.ui.actionQuit.triggered.connect(self.do_quit)
+        self.ui.actionClear_Logs.triggered.connect(self.do_clear_log)
+        self.ui.actionIPython_Console.triggered.connect(self.do_launch_ipython)
+        self.ui.actionControl_Panel.triggered.connect(self.menu_launch_setup)
+        self.ui.actionMulti_Purpose_Plot.triggered.connect(self.menu_show_multi_purpose_dock)
 
         # other widgets
-        self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_bank_view_change_unit)
+        self.ui.comboBox_currUnits.currentIndexChanged.connect(self.evt_bank_view_change_unit)
 
-        self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_show_high_prev_data)
+        self.ui.checkBox_showPrevReduced.stateChanged.connect(self.evt_show_high_prev_data)
 
         # general purpose
-        self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
-                     self.do_setup_gpplot)
+        self.ui.pushButton_setupGeneralPurposePlot.clicked.connect(self.do_setup_gpplot)
+
+        # # set up the event handlers
+        # self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
+        #              self.do_start_live)
+        # self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
+        #              self.do_stop_live)
+        #
+        # self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_bank1_roi)
+        # self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_bank2_roi)
+        # self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_bank3_roi)
+        # self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
+        #              self.do_fit_bank1_peak)
+        #
+        # # 2D contour
+        #
+        # # menu bar
+        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+        #              self.do_quit)
+        # self.connect(self.ui.actionClear_Logs, QtCore.SIGNAL('triggered()'),
+        #              self.do_clear_log)
+        # self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
+        #              self.do_launch_ipython)
+        # self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
+        #              self.menu_launch_setup)
+        # self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
+        #              self.menu_show_multi_purpose_dock)
+        #
+        # # other widgets
+        # self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_bank_view_change_unit)
+        #
+        # self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
+        #              self.evt_show_high_prev_data)
+        #
+        # # general purpose
+        # self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
+        #              self.do_setup_gpplot)
 
         # multiple thread pool
         self._checkStateTimer = None

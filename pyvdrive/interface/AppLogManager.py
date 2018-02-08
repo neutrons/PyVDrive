@@ -2,9 +2,13 @@
 # (Dialog) window for logs
 ####
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QMessageBox
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QMessageBox
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -73,21 +77,31 @@ class MyAppLogDialog(QWidget):
         self.close()
 
     def confirmExit(self):
-        reply = QtGui.QMessageBox.question(self, 'Message',
-        "Are you sure to quit?", QtGui.QMessageBox.Yes | 
-        QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+        """
+        pop out the dialog to confirm existing
+        :return:
+        """
+        reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
         
-        if reply == QtGui.QMessageBox.Yes:
-        #close application
+        if reply == QMessageBox.Yes:
+            # close application
             self.close()
         else:
-        #do nothing and return
+            # do nothing and return
             pass     
 
-    def closeEvent(self,event):
-        #Here using an event handler to handle the case when the application is closed where the main app is informed that the child app has closed
-        #Description for events can be found here: http://pyqt.sourceforge.net/Docs/PyQt4/qevent.html
-        #The method name 'closeEvent' is formatted precisely as required in order to handle the application close event
-        #See the QEvent Class Detailed Description for more information
+    def closeEvent(self, event):
+        """
+        handling an event calling to close widnow
+        :param event:
+        :return:
+        """
+        # Here using an event handler to handle the case when the application is closed
+        # where the main app is informed that the child app has closed
+        # Description for events can be found here: http://pyqt.sourceforge.net/Docs/PyQt4/qevent.html
+        # The method name 'closeEvent' is formatted precisely as required in order
+        # to handle the application close event
+        # See the QEvent Class Detailed Description for more information
 
         return

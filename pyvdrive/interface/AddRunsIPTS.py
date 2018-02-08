@@ -3,9 +3,13 @@
 ########################################################
 import os
 import datetime
-import time
 
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -17,7 +21,7 @@ import gui.GuiUtility as gutil
 import gui.ui_DialogAddRunsIPTS_ui as dlgrun
 
 
-class AddRunsByIPTSDialog(QtGui.QDialog):
+class AddRunsByIPTSDialog(QDialog):
     """ Pop up dialog window to add runs by IPTS
     """
     def __init__(self, parent):
@@ -25,7 +29,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         Initialization
         :param parent: main GUI window for controller
         """
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
 
         # Parent
         assert getattr(parent, 'get_controller', None) is not None, 'Parent method' \
@@ -229,7 +233,6 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
                                                                         end_run)
             else:
                 # add local data files
-                print '[DB...BAT] data directory:', self._dataDir, 'IPTS dir:', self._iptsDir
                 status, ret_obj = workflow_controller.get_local_runs(self._archiveKey, self._iptsDir,
                                                                      begin_run, end_run, standard_sns_file=True)
             # get the complete list of run (tuples) as it is filtered by date
@@ -256,7 +259,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
             default_dir = self._homeDir
 
         # user-specified data directory
-        data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Get Directory',
+        data_dir = str(QFileDialog.getExistingDirectory(self, 'Get Directory',
                                                               default_dir))
         self.ui.lineEdit_iptsDir.setText(data_dir)
         self._iptsDir = data_dir
@@ -283,7 +286,7 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         file_filter = 'Text Files (*.txt);;Data Files (*.dat);;All Files (*.*)'
 
-        record_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'VULCAN record file', default_dir,
+        record_file_name = str(QFileDialog.getOpenFileName(self, 'VULCAN record file', default_dir,
                                                                  file_filter))
         if record_file_name is None or len(record_file_name) == 0:
             # user cancels operation
@@ -586,8 +589,6 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
         first_run = run_tup_list[0][0]
         last_run = run_tup_list[-1][0]
 
-        print '[DB...BAT] First run = ', first_run, 'Last run = ', last_run
-
         self.ui.lineEdit_begin.setText(str(first_run))
         self.ui.lineEdit_end.setText(str(last_run))
 
@@ -649,12 +650,3 @@ class AddRunsByIPTSDialog(QtGui.QDialog):
 
         return
 
-""" Test Main """
-if __name__ == "__main__":
-    import sys
-    app = QtGui.QApplication(sys.argv)
-    myapp = AddRunsByIPTSDialog(None)
-    myapp.show()
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)

@@ -1,35 +1,36 @@
 #!/usr/bin/python
+# TODO TODO FIXME FIXME - Evaluate to remove!
 
-#import utility modules
 import sys
+try:
+    from PyQt5 import QtGui, QtCore
+    from PyQt5.QtWidgets import QMainWindow
+except ImportError:
+    from PyQt4 import QtGui, QtCore
+    from PyQt4.QtGui import QMainWindow
 
-#import PyQt modules
-from PyQt4 import QtGui, QtCore, Qt
-
-#include this try/except block to remap QString needed when using IPython
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     _fromUtf8 = lambda s: s
 
-import GuiUtility as gutil
-#import GUI components generated from Qt Designer .ui file
-from ui_FinalSelectRunToReduce_ui import *
+import gui.GuiUtility as gutil
+import gui.ui_FinalSelectRunToReduce_ui as gui
 
 
-class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
+class FinalSelectRunToReduceDialog(QMainWindow):
     """ GUI (sub) for select run to reduce as final decision before reduction
     """
     # Define signal
-    mySelectSignal = QtCore.pyqtSignal(str, list) # list of int 
+    mySelectSignal = QtCore.pyqtSignal(str, list) # list of int
     myCancelSignal = QtCore.pyqtSignal(int)
 
     def __init__(self, parent):
-        """ Set up main window 
+        """ Set up main window
         """
         # Init & set up GUI
-        QtGui.QMainWindow.__init__(self, parent)
-        self.ui = Ui_MainWindow()
+        QMainWindow.__init__(self, parent)
+        self.ui = gui.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # Set up class variable
@@ -41,15 +42,15 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
         self._numRows = 0
 
         # Widget handers
-        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'), 
+        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
                 self.doSelectAll)
-                
-        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'), 
+
+        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
                 self.doClearAllSelection)
-                
-        self.connect(self.ui.pushButton_exitToReduce, QtCore.SIGNAL('clicked()'), 
+
+        self.connect(self.ui.pushButton_exitToReduce, QtCore.SIGNAL('clicked()'),
                 self.doQuitContinueReduce)
-                
+
         # Signal handlers
         if self._myParent is not None:
             self.mySelectSignal.connect(self._myParent.evtReduceData)
@@ -106,7 +107,7 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
     #--------------------------------------------------------------------------
     def appendRow(self, ipts, run, vanrun, select):
         """ Append a row to the project table
-        
+
         Arguments:
         - ipts :: ITPS number
         - run  :: run number
@@ -125,7 +126,7 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
                 raise ValueError("Select should be a boolean")
         except ValueError as e:
             raise e
-        
+
         # Format to strings
         ipts = str(ipts)
         run = str(run)
@@ -151,12 +152,11 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
 
         return
 
-
     def setRunInfo(self, projectname, ipts):
         """ Set ITPS project information to this window
         and set the title line
 
-        Arguments: 
+        Arguments:
          - projectname
          - ipts
         """
@@ -169,19 +169,3 @@ class FinalSelectRunToReduceDialog(QtGui.QMainWindow):
 
         return
 
-
-if __name__=="__main__":
-    """ Test Main """
-    # Start application
-    app = QtGui.QApplication(sys.argv)
-    myapp = FinalSelectRunToReduceDialog(None)
-    myapp.show()
-
-    myapp.setRunInfo("GUI Unit Test", 10023)
-
-    myapp.appendRow(10023, 54321, None, True)
-    myapp.appendRow(10023, 54323, None, True)
-    myapp.appendRow(10023, 54333, None, False)
-
-    exit_code=app.exec_()
-    sys.exit(exit_code)
