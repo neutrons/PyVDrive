@@ -5,7 +5,12 @@ sys.path.append('/SNS/users/wzz/.local//lib/python2.7/site-packages')
 import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QDialog, QApplication
+except ImportError:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QDialog, QApplication
 
 from pyvdrive.interface.gui import ui_LaunchManager_ui
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
@@ -25,7 +30,7 @@ if home_dir.startswith('/home/wzz') is False:
     sys.path.append('/opt/mantidnightly/bin')
 
 
-class LauncherManager(QtGui.QDialog):
+class LauncherManager(QDialog):
     """
     Launcher manager
     """
@@ -165,10 +170,10 @@ class LauncherManager(QtGui.QDialog):
 
 # Main application
 def lava_app():
-    if QtGui.QApplication.instance():
-        _app = QtGui.QApplication.instance()
+    if QApplication.instance():
+        _app = QApplication.instance()
     else:
-        _app = QtGui.QApplication(sys.argv)
+        _app = QApplication(sys.argv)
     return _app
 
 # get arguments
