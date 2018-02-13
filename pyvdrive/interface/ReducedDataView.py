@@ -101,70 +101,109 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Event handling
         # section: load data
-        self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_load_single_gsas)
-        self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
-                     self.do_load_chopped_gsas)
-        self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_local_gsas)
-        self.connect(self.ui.pushButton_refreshList, QtCore.SIGNAL('clicked()'),
-                     self.do_refresh_existing_runs)
-        self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
-                     self.event_load_options)
+
+        self.ui.pushButton_loadSingleGSAS.clicked.connect(self.do_load_single_gsas)
+        self.ui.pushButton_loadChoppedGSASSet.clicked.connect(self.do_load_chopped_gsas)
+        self.ui.pushButton_browseAnyGSAS.clicked.connect(self.do_browse_local_gsas)
+        self.ui.pushButton_refreshList.clicked.connect(self.do_refresh_existing_runs)
+        self.ui.radioButton_fromArchive.toggled.connect(self.event_load_options)
         # TEST : whether the handling method is triggered?
         self.ui.radioButton_anyGSAS.toggled.connect(self.event_load_options)
-        # self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
-        #              self.event_load_options)
 
         # section: choose to plot
-        self.connect(self.ui.pushButton_prevRun, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_prev_run)
-        self.connect(self.ui.pushButton_nextRun, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_next_run)
-        self.connect(self.ui.pushButton_prevChopped, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_prev_chopped)
-        self.connect(self.ui.pushButton_nextChopped, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_next_chopped)
+        self.ui.pushButton_prevRun.clicked.connect(self.do_plot_prev_run)
+        self.ui.pushButton_nextRun.clicked.connect(self.do_plot_next_run)
+        self.ui.pushButton_prevChopped.clicked.connect(self.do_plot_prev_chopped)
+        self.ui.pushButton_nextChopped.clicked.connect(self.do_plot_next_chopped)
 
         # section: plot
-        self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_diffraction_data)
-        self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_contour)
-        self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_sample_logs)
-        # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+        self.ui.pushButton_plot.clicked.connect(self.do_plot_diffraction_data)
+        self.ui.pushButton_allFillPlot.clicked.connect(self.do_plot_contour)
+        self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_logs)
+        self.ui.comboBox_runs.currentIndexChanged.connect()
         #              self.evt_select_new_run_number)
         # TEST : check whether the signal can trigger calling method
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
-        # self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_select_new_chopped_child)
 
         # other
-        self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_canvas)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_close)
+        self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
+        self.ui.pushButton_cancel.clicked.connect(self.do_close)
 
         # data processing
-        self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
-                     self.do_normalise_by_current)
-        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_new_range)
+        self.ui.pushButton_normByCurrent.clicked.connect(self.do_normalise_by_current)
+        self.ui.pushButton_apply.clicked.connect(self.do_apply_new_range)
 
         # combo boxes
-        self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_bank_id_changed)
-        self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_unit_changed)
+        self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_bank_id_changed)
+        self.ui.comboBox_unit.currentIndexChanged.connect(self.evt_unit_changed)
 
         # vanadium
-        self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_vanadium_dialog)
+        self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
+
+        # self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_single_gsas)
+        # self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_chopped_gsas)
+        # self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_local_gsas)
+        # self.connect(self.ui.pushButton_refreshList, QtCore.SIGNAL('clicked()'),
+        #              self.do_refresh_existing_runs)
+        # self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
+        #              self.event_load_options)
+        # # TEST : whether the handling method is triggered?
+        # self.ui.radioButton_anyGSAS.toggled.connect(self.event_load_options)
+        # # self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
+        # #              self.event_load_options)
+        #
+        # # section: choose to plot
+        # self.connect(self.ui.pushButton_prevRun, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_prev_run)
+        # self.connect(self.ui.pushButton_nextRun, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_next_run)
+        # self.connect(self.ui.pushButton_prevChopped, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_prev_chopped)
+        # self.connect(self.ui.pushButton_nextChopped, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_next_chopped)
+        #
+        # # section: plot
+        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_diffraction_data)
+        # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_contour)
+        # self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_sample_logs)
+        # # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
+        # #              self.evt_select_new_run_number)
+        # # TEST : check whether the signal can trigger calling method
+        # self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
+        # self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
+        # # self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
+        # #              self.evt_select_new_chopped_child)
+        #
+        # # other
+        # self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
+        #              self.do_clear_canvas)
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_close)
+        #
+        # # data processing
+        # self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
+        #              self.do_normalise_by_current)
+        # self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
+        #              self.do_apply_new_range)
+        #
+        # # combo boxes
+        # self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_bank_id_changed)
+        # self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_unit_changed)
+        #
+        # # vanadium
+        # self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_vanadium_dialog)
 
         # widgets to load reduced data
-
 
         # sub window
         self._vanadiumProcessDialog = None

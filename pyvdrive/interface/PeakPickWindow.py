@@ -382,81 +382,127 @@ class PeakPickerWindow(QMainWindow):
 
         # Define event handling methods
         # phase set up
-        self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
-                     self.do_set_phases)
+        self.ui.pushButton_setPhases.clicked.connect(self.do_set_phases)
 
-        self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_phases)
+        self.ui.pushButton_clearPhase.clicked.connect(self.do_clear_phases)
 
-        self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
-                     self.do_undo_phase_changes)
+        self.ui.pushButton_cancelPhaseChange.clicked.connect(self.do_undo_phase_changes)
 
         # peak processing
-        self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_switch_peak_pick_mode)
-        self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_switch_peak_pick_mode)
+        self.ui.radioButton_pickModeQuick.toggled.connect(self.evt_switch_peak_pick_mode)
+        self.ui.checkBox_pickPeak.stateChanged.connect(self.evt_switch_peak_pick_mode)
 
-        # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_add_picked_peaks)
-        self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_find_peaks)
-        self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_group_auto_peaks)
-        self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
-                     self.do_import_peaks_from_file)
+        self.ui.pushButton_findPeaks.clicked.connect(self.do_find_peaks)
+        self.ui.pushButton_groupAutoPickPeaks.clicked.connect(self.do_group_auto_peaks)
+        self.ui.pushButton_readPeakFile.clicked.connect(self.do_import_peaks_from_file)
 
-        self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_claim_overlapped_peaks)
+        self.ui.pushButton_claimOverlappedPeaks.clicked.connect(self.do_claim_overlapped_peaks)
 
-        self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
-                     self.do_show_peaks)
+        self.ui.pushButton_showPeaksInTable.clicked.connect(self.do_show_peaks)
 
-        self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_hide_peaks)
+        self.ui.pushButton_hidePeaks.clicked.connect(self.do_hide_peaks)
 
-        self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
-                     self.do_set_peaks_width)
+        self.ui.pushButton_setPeakWidth.clicked.connect(self.do_set_peaks_width)
 
-        self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_sort_peaks)
+        self.ui.pushButton_sortPeaks.clicked.connect(self.do_sort_peaks)
 
-        self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
-                     self.do_select_all_peaks)
+        self.ui.checkBox_selectPeaks.stateChanged.connect(self.do_select_all_peaks)
 
-        self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
-                     self.do_switch_table_editable)
+        self.ui.pushButton_editTableContents.clicked.connect(self.do_switch_table_editable)
 
-        self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_delete_peaks)
+        self.ui.pushButton_deletePeaks.clicked.connect(self.do_delete_peaks)
 
-        self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
-                     self.do_set_pick_mode)
+        self.ui.pushButton_peakPickerMode.clicked.connect(self.do_set_pick_mode)
 
         # load files
-        self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration_file)
-        self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
-                     self.do_load_data)
-        self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_switch_bank)
-        self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_switch_run)
+        self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
+        self.ui.pushButton_readData.clicked.connect(self.do_load_data)
+        self.ui.comboBox_bankNumbers.currentIndexChanged.connect(self.evt_switch_bank)
+        self.ui.comboBox_runNumber.currentIndexChanged.connect(self.evt_switch_run)
 
         # save_to_buffer
-        self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
-                     self.do_save_peaks)
+        self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
-        self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
-                     self.evt_table_selection_changed)
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
+        # self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_phases)
+        #
+        # self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
+        #              self.do_clear_phases)
+        #
+        # self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
+        #              self.do_undo_phase_changes)
+        #
+        # # peak processing
+        # self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_switch_peak_pick_mode)
+        # self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.evt_switch_peak_pick_mode)
+        #
+        # # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
+        # #              self.do_add_picked_peaks)
+        # self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_find_peaks)
+        # self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_group_auto_peaks)
+        # self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_import_peaks_from_file)
+        #
+        # self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_claim_overlapped_peaks)
+        #
+        # self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
+        #              self.do_show_peaks)
+        #
+        # self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_hide_peaks)
+        #
+        # self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_peaks_width)
+        #
+        # self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_sort_peaks)
+        #
+        # self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.do_select_all_peaks)
+        #
+        # self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
+        #              self.do_switch_table_editable)
+        #
+        # self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_delete_peaks)
+        #
+        # self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_pick_mode)
+        #
+        # # load files
+        # self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_calibration_file)
+        # self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_data)
+        # self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_switch_bank)
+        # self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_switch_run)
+        #
+        # # save_to_buffer
+        # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_peaks)
+        #
+        # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
+        #              self.evt_table_selection_changed)
 
         # Define canvas event handlers
 
         # Menu
-        self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_phase)
-        self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
-                     self.menu_exit)
+        self.ui.actionLoad.triggered.connect(self.menu_load_phase)
+        self.ui.actionExit.triggered.connect(self.menu_exit)
+
+        # self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
+        #              self.menu_load_phase)
+        # self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
+        #              self.menu_exit)
 
         # Set up widgets
         self._phaseWidgetsGroupDict = dict()

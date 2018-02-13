@@ -35,12 +35,9 @@ class DialogLogSnapView(QtGui.QDialog):
         self.ui.setupUi(self)
 
         # Event handling
-        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_change)
-        self.connect(self.ui.pushButton_saveQuit, QtCore.SIGNAL('clicked()'),
-                     self.do_save_quit)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit_no_save)
+        self.ui.pushButton_apply.clicked.connect(self.do_apply_change)
+        self.ui.pushButton_saveQuit.clicked.connect(self.do_save_quit)
+        self.ui.pushButton_cancel.clicked.connect(self.do_quit_no_save)
 
         # Class state variables
         self._slicerIsSaved = False
