@@ -62,8 +62,8 @@ class WindowLogPicker(QMainWindow):
         self.ui.pushButton_nextLog.clicked.connect(self.do_load_next_log)
         self.ui.pushButton_readLogFile.clicked.connect(self.do_scan_log_file)
         self.ui.pushButton_loadMTSLog.clicked.connect(self.do_load_mts_log)
-        self.ui.comboBox_blockList.indexChanged.connect(self.do_load_mts_log)
-        self.ui.comboBox_logFrameUnit.indexChanged.connect(self.evt_re_plot_mts_log)
+        self.ui.comboBox_blockList.currentIndexChanged.connect(self.do_load_mts_log)
+        self.ui.comboBox_logFrameUnit.currentIndexChanged.connect(self.evt_re_plot_mts_log)
 
         self.ui.checkBox_hideSingleValueLog.stateChanged.connect(self.load_log_names)
 

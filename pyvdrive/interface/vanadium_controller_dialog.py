@@ -5,7 +5,7 @@ try:
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4 import QDialog, QFileDialog
+    from PyQt4.QtGui import QDialog, QFileDialog
 
 # include this try/except block to remap QString needed when using IPython
 try:

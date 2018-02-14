@@ -10,7 +10,7 @@ try:
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4 import QtGui
+    from PyQt4.QtGui import QTreeView, QAbstractItemView, QStandardItemModel, QStandardItem
 
 
 class CustomizedTreeView(QTreeView):
