@@ -3,7 +3,8 @@ import datetime
 import numpy
 try:
     from PyQt5 import QtCore
-    from PyQt5.QtWidgets import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
+    from PyQt5.QtWidgets import QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
+    from PyQt5.QtGui import QStandardItemModel, QStandardItem
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout

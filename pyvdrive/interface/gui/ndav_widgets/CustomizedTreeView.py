@@ -4,10 +4,16 @@
 #       But QModelIndex.data() and QStandardItem.data() are different!
 #       The variable set to QStandardItem can be only retrieved by QModelIndex.data()
 
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QTreeView, QAbstractItemView
+    from PyQt5.QtGui import QStandardItemModel, QStandardItem
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4 import QtGui
 
 
-class CustomizedTreeView(QtGui.QTreeView):
+class CustomizedTreeView(QTreeView):
     """
     """
     def __init__(self, parent=None):
@@ -16,11 +22,11 @@ class CustomizedTreeView(QtGui.QTreeView):
         :param parent:
         :return:
         """
-        QtGui.QTreeView.__init__(self, parent)
+        QTreeView.__init__(self, parent)
         self._myParent = parent
 
         # Enabled to select multiple items with shift key
-        self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         # Set up model
         """
@@ -63,7 +69,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         :return:
         """
         self._myNumCols = len(header_list)
-        model = QtGui.QStandardItemModel()
+        model = QStandardItemModel()
         model.setColumnCount(self._myNumCols)
         self.setModel(model)
 
@@ -87,7 +93,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         current_index = self.currentIndex()
         assert(isinstance(current_index, QtCore.QModelIndex))
         current_item = self.model().itemFromIndex(current_index)
-        assert(isinstance(current_item, QtGui.QStandardItem))
+        assert(isinstance(current_item, QStandardItem))
         row_number = current_index.row()
         current_value = str(current_item.text())
 
@@ -131,7 +137,7 @@ class CustomizedTreeView(QtGui.QTreeView):
             print 'with a value other than integer %s' % str(current_data.toString())
 
         current_item = self.model().itemFromIndex(current_index)
-        assert(isinstance(current_item, QtGui.QStandardItem))
+        assert(isinstance(current_item, QStandardItem))
         print 'Current item has %d rows; ' % current_item.rowCount(),
         print 'Current item has child = %s; ' % str(current_item.hasChildren()),
         print 'Current item has parent = %s; ' % str(current_item.parent()),
@@ -155,12 +161,12 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         # Create QStandardItem and add to data manager
         # new_item = QtGui.QStandardItem(QtCore.QString(item_value))
-        new_item = QtGui.QStandardItem(str(item_value))
+        new_item = QStandardItem(str(item_value))
         self._leafDict[item_value] = []
 
         # Get current number of row
         model = self.model()
-        assert(isinstance(model, QtGui.QStandardItemModel))
+        assert(isinstance(model, QStandardItemModel))
         if append is True:
             # append
             num_rows = self.model().rowCount()
@@ -189,7 +195,7 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         # Get model
         my_model = self.model()
-        assert(isinstance(my_model, QtGui.QStandardItemModel))
+        assert(isinstance(my_model, QStandardItemModel))
         current_item = my_model.itemFromIndex(current_index)
         if current_item is None:
             print '[INFO] Current item has not been set up.'
@@ -204,7 +210,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         :return:
         """
         my_model = self.model()
-        assert(isinstance(my_model, QtGui.QStandardItemModel))
+        assert(isinstance(my_model, QStandardItemModel))
 
         leaf_found = False
         num_rows = my_model.rowCount()
@@ -214,7 +220,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         for i_row in xrange(num_rows):
             # Get item per line:
             temp_item = my_model.item(i_row)
-            assert(isinstance(temp_item, QtGui.QStandardItem))
+            assert(isinstance(temp_item, QStandardItem))
 
             # Use text() to match the target value
             temp_value = str(temp_item.text())
@@ -240,14 +246,14 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         # Get model
         my_model = self.model()
-        assert(isinstance(my_model, QtGui.QStandardItemModel))
+        assert(isinstance(my_model, QStandardItemModel))
         current_item = my_model.itemFromIndex(current_index)
 
-        assert(isinstance(current_item, QtGui.QStandardItem))
+        assert(isinstance(current_item, QStandardItem))
 
         print 'Add Child Value ', child_value
         # child_item = QtGui.QStandardItem(QtCore.QString(child_value))
-        child_item = QtGui.QStandardItem(str(child_value))
+        child_item = QStandardItem(str(child_value))
         current_item.insertRow(0, [child_item])
 
         return
@@ -273,7 +279,7 @@ class CustomizedTreeView(QtGui.QTreeView):
         :return:
         """
         # Check
-        assert(isinstance(parent_item, QtGui.QStandardItem))
+        assert(isinstance(parent_item, QStandardItem))
         assert(isinstance(child_item_value, str))
         assert(child_item_value != '')
         assert(isinstance(append, bool))
@@ -287,7 +293,7 @@ class CustomizedTreeView(QtGui.QTreeView):
 
         # New item
         # child_item = QtGui.QStandardItem(QtCore.QString(child_item_value))
-        child_item = QtGui.QStandardItem(str(child_item_value))
+        child_item = QStandardItem(str(child_item_value))
         self._leafDict[parent_value].append(child_item_value)
         if append is False:
             self._leafDict[parent_value].sort()
@@ -318,8 +324,8 @@ class CustomizedTreeView(QtGui.QTreeView):
             if isinstance(qindex, QtCore.QModelIndex) is True:
                 # get item and check
                 qitem = self.model().itemFromIndex(qindex)
-                if isinstance(qitem, QtGui.QStandardItem) is True:
-                    assert isinstance(qitem, QtGui.QStandardItem)
+                if isinstance(qitem, QStandardItem) is True:
+                    assert isinstance(qitem, QStandardItem)
                     item_list.append(qitem)
                 else:
                     error_message += 'Found index %s is not a QModelIndex instance, ' \

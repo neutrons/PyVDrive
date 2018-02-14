@@ -2,8 +2,9 @@ import bisect
 import operator
 
 try:
-    from PyQt5.QtWidgets import QApplication, QMenu, QAction, QCursor, QMainWindow
+    from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
     from PyQt5 import QtCore
+    from PyQt5.QtGui import QCursor
 except ImportError:
     from PyQt4.QtGui import QApplication, QMenu, QAction, QCursor, QMainWindow
     from PyQt4 import QtCore

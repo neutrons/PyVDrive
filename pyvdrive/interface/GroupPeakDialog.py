@@ -1,8 +1,12 @@
-from PyQt4 import QtCore, QtGui
+try:
+
+    from PyQt5.QtWidgets import QMainWindow
+except ImportError:
+    from PyQt4.QtGui import QMainWindow
 import gui.ui_GroupPeakDialog_ui
 
 
-class GroupPeakDialog(QtGui.QMainWindow):
+class GroupPeakDialog(QMainWindow):
     """
     Main window class to group peak with user interaction
     """

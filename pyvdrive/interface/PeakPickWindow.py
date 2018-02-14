@@ -7,8 +7,8 @@ import sys
 import os
 try:
     from PyQt5 import QtCore as QtCore
-    from PyQt4.QtWidgets import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
-    from PyQt4.QtWidgets import QFileDialog
+    from PyQt5.QtWidgets import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt5.QtWidgets import QFileDialog
 except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
