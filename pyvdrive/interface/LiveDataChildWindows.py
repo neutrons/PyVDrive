@@ -1,10 +1,15 @@
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 import gui.GuiUtility as GuiUtility
 import gui.ui_LiveDataGPPlotSetup_ui as dialog_ui
 import gui.ui_LiveDataViewSetup_ui as SetupDialogUi
 
 
-class LiveViewSetupDialog(QtGui.QDialog):
+class LiveViewSetupDialog(QDialog):
     """
     A dialog to set up the Live data viewing parameters
     """
@@ -61,7 +66,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         :return:
         """
         # get file name
-        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
+        file_name = str(QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
         # add the line information
         self.ui.lineEdit_vanGSSName.setText(file_name)
 
@@ -160,7 +165,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         return
 
 
-class SampleLogPlotSetupDialog(QtGui.QDialog):
+class SampleLogPlotSetupDialog(QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
     # define signal # x, y-list, y_side_list, (dmin, dmax) list, norm-van-list

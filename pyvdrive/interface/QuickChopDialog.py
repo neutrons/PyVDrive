@@ -1,7 +1,12 @@
 # Dialog (main window) for quick-chopping
 import os
 
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -13,7 +18,7 @@ import gui.ui_ChopDialog_ui
 import gui.GuiUtility as GuiUtility
 
 
-class QuickChopDialog(QtGui.QDialog):
+class QuickChopDialog(QDialog):
     """
     A dialog box to do quick chopping
     """
@@ -71,7 +76,7 @@ class QuickChopDialog(QtGui.QDialog):
         Browse output
         :return:
         """
-        out_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Output Directory', os.getcwd()))
+        out_dir = str(QFileDialog.getExistingDirectory(self, 'Output Directory', os.getcwd()))
         self.ui.lineEdit_outputDir.setText(out_dir)
 
         return

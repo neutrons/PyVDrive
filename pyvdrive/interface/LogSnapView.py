@@ -5,7 +5,12 @@
 ########################################################################
 import sys
 
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QApplication
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QApplication
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -17,7 +22,7 @@ import gui.GuiUtility as gutil
 import gui.ui_LogSnapView_ui as ui_LogSnapView
 
 
-class DialogLogSnapView(QtGui.QDialog):
+class DialogLogSnapView(QDialog):
     """ Class for general-puposed plot window
     """
     # class
@@ -25,7 +30,7 @@ class DialogLogSnapView(QtGui.QDialog):
         """ Init
         """
         # call base
-        QtGui.QDialog.__init__(self)
+        QDialog.__init__(self)
 
         # parent
         self._myParent = parent
@@ -220,7 +225,7 @@ def testmain(argv):
     """
     parent = None
 
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
 
     # my plot window app
     myapp = DialogLogSnapView(parent)

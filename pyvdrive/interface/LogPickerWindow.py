@@ -7,7 +7,7 @@ import os
 import numpy
 try:
     from PyQt5 import QtCore as QtCore
-    from PyQt4.QtWidgets import QMainWindow, QButtonGroup, QFileDialog
+    from PyQt5.QtWidgets import QMainWindow, QButtonGroup, QFileDialog
 except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog

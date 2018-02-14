@@ -1,10 +1,13 @@
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+try:
+    from PyQt5.QtWidgets import QMainWindow
+except ImportError:
+    from PyQt4.QtGui import QMainWindow
+
 
 import gui.ui_ExperimentRecord_ui as ui_ExperimentRecord
 
 
-class VulcanExperimentRecordView(QtGui.QMainWindow):
+class VulcanExperimentRecordView(QMainWindow):
     """
     Reduced live data viewer for VULCAN
     """

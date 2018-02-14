@@ -6,14 +6,16 @@ import os
 import numpy as np
 
 try:
-    from PyQt5.QtWidget import QWidget, QSizePolicy, QVBoxLayout
+    from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
     from PyQt5.QtCore import pyqtSignal
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar2
 except ImportError:
     from PyQt4.QtGui import QWidget, QSizePolicy, QVBoxLayout
     from PyQt4.QtCore import pyqtSignal
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar2
 from matplotlib.figure import Figure
 import matplotlib.image
 

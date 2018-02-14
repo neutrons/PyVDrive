@@ -1,9 +1,10 @@
 from datetime import datetime
 try:
-    from PyQt5 import QtCore as Qtcore
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QMainWindow, QLineEdit
 except ImportError:
     from PyQt4 import QtCore
-    from PyQt4.QtGui import QMainWindow
+    from PyQt4.QtGui import QMainWindow, QLineEdit
 import random
 import time
 import numpy
@@ -402,9 +403,9 @@ class VulcanLiveDataView(QMainWindow):
         assert graphics_view.__class__.__name__.count('SingleBankView') > 0,\
             'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
             ''.format(graphics_view, type(graphics_view))
-        assert isinstance(x_min_widget, QtGui.QLineEdit), 'Min X widget {0} must be a QLineEdit but not a ' \
+        assert isinstance(x_min_widget, QLineEdit), 'Min X widget {0} must be a QLineEdit but not a ' \
                                                           '{1}'.format(x_min_widget, type(x_min_widget))
-        assert isinstance(x_max_widget, QtGui.QLineEdit), 'Max X widget {0} must be a QLineEdit but not a ' \
+        assert isinstance(x_max_widget, QLineEdit), 'Max X widget {0} must be a QLineEdit but not a ' \
                                                           '{1}'.format(x_max_widget, type(x_max_widget))
 
         try:
@@ -519,7 +520,7 @@ class VulcanLiveDataView(QMainWindow):
         """
         # allow multiple format of inputs
         if left_x_bound is not None:
-            if isinstance(left_x_bound, QtGui.QLineEdit):
+            if isinstance(left_x_bound, QLineEdit):
                 try:
                     left_x_bound = float(str(left_x_bound.text()).strip())
                 except ValueError:
@@ -531,7 +532,7 @@ class VulcanLiveDataView(QMainWindow):
         # END-IF
 
         if right_x_bound is not None:
-            if isinstance(right_x_bound, QtGui.QLineEdit):
+            if isinstance(right_x_bound, QLineEdit):
                 try:
                     right_x_bound = float(str(right_x_bound.text()).strip())
                 except ValueError:

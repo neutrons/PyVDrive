@@ -1,5 +1,10 @@
 import os
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QFileDialog, QMainWindow
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QFileDialog, QMainWindow
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -12,7 +17,7 @@ import gui.GuiUtility as GUtil
 __author__ = 'wzz'
 
 
-class LoadMTSLogFileWindow(QtGui.QMainWindow):
+class LoadMTSLogFileWindow(QMainWindow):
     """
     Pop-up dialog (window) to load an MTS log file with customized format and csv file alike.
     """
@@ -25,7 +30,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         # GUI window
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         # check input
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
@@ -190,7 +195,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             raise RuntimeError('Programming error for neither radio buttons is selected.')
 
         # get file name
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File', working_dir))
+        log_file_name = str(QFileDialog.getOpenFileName(self, 'Get Log File', working_dir))
         if log_file_name is None or len(log_file_name) == 0:
             return
         else:
@@ -229,7 +234,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # app = QtGui.QApplication([])
         date, time, ok = cdw.DateDialog.getDateTime()
-        print("{} {} {}".format(date, time, ok))
+        print("{0} {1} {2}".format(date, time, ok))
         # app.exec_()
 
         return

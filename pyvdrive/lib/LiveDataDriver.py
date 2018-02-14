@@ -10,7 +10,10 @@ from mantid.api import AnalysisDataService as ADS
 import mantid_helper
 import peak_util
 import archivemanager
-from PyQt4 import QtCore
+try:
+    from PyQt5 import QtCore
+except ImportError:
+    from PyQt4 import QtCore
 
 # TODO/ISSUE/NEXT - Find out how to use log files
 # .. LOG_NAME = 'livereduce'  # constant for logging

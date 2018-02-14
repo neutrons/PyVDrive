@@ -2,7 +2,8 @@ import numpy as np
 import bisect
 try:
     from PyQt5 import QtCore
-    from PyQt5.QtGui import QMenu, QAction, QCursor
+    from PyQt5.QtWidgets import QMenu, QAction
+    from PyQt5.QtGui import QCursor
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QMenu, QAction, QCursor
