@@ -3,11 +3,18 @@
 #
 import os
 
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
+    from PyQt5.QtGui import QAction
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QTreeView, QAbstractItemView, QFileSystemModel, QStandardItem
+    from PyQt4.QtGui import QAction
 import ndav_widgets.CustomizedTreeView as treeView
 
 
-class FileSystemTreeView(QtGui.QTreeView):
+class FileSystemTreeView(QTreeView):
     """
 
     """
@@ -17,14 +24,14 @@ class FileSystemTreeView(QtGui.QTreeView):
         :param parent:
         :return:
         """
-        QtGui.QTreeView.__init__(self, parent)
+        QTreeView.__init__(self, parent)
 
         # Selection mode
-        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Model
         cur_dir = os.path.expanduser('~')
-        file_model = QtGui.QFileSystemModel()
+        file_model = QFileSystemModel()
         #file_model.setRootPath(QtCore.QString(cur_dir))
         file_model.setRootPath(str(cur_dir))
 
@@ -78,7 +85,7 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         self.init_setup(['IPTS-Run'])
 
         # Add actions
-        action_add = QtGui.QAction('Load', self)
+        action_add = QAction('Load', self)
         action_add.triggered.connect(self.do_load_run)
         self.addAction(action_add)
 
@@ -167,9 +174,9 @@ class SinglePeakFitManageTree(treeView.CustomizedTreeView):
         assert(isinstance(current_index, QtCore.QModelIndex))
 
         current_item = self.model().itemFromIndex(current_index)
-        if isinstance(current_item, QtGui.QStandardItem) is False:
+        if isinstance(current_item, QStandardItem) is False:
             return False, 'Current item is not QStandardItem instance, but %s.' % str(type(current_item))
-        assert(isinstance(current_item, QtGui.QStandardItem))
+        assert(isinstance(current_item, QStandardItem))
 
         if current_item.parent() is None:
             # Top-level leaf, IPTS number
@@ -225,7 +232,7 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         self.init_setup(['IPTS-Run'])
 
         # Add actions
-        action_add = QtGui.QAction('Add To Reduce', self)
+        action_add = QAction('Add To Reduce', self)
         action_add.triggered.connect(self.do_add_runs)
         self.addAction(action_add)
 
@@ -316,9 +323,9 @@ class VdriveRunManagerTree(treeView.CustomizedTreeView):
         assert(isinstance(current_index, QtCore.QModelIndex))
 
         current_item = self.model().itemFromIndex(current_index)
-        if isinstance(current_item, QtGui.QStandardItem) is False:
+        if isinstance(current_item, QStandardItem) is False:
             return False, 'Current item is not QStandardItem instance, but %s.' % str(type(current_item))
-        assert(isinstance(current_item, QtGui.QStandardItem))
+        assert(isinstance(current_item, QStandardItem))
 
         if current_item.parent() is None:
             # Top-level leaf, IPTS number

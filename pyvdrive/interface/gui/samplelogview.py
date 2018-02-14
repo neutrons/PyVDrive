@@ -1,6 +1,13 @@
 import numpy as np
 import bisect
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtGui import QMenu, QAction, QCursor
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QMenu, QAction, QCursor
+    
+    
 import mplgraphicsview
 
 COLOR_LIST = ['red', 'green', 'black', 'cyan', 'magenta', 'yellow']
@@ -301,22 +308,22 @@ class LogGraphicsView(mplgraphicsview.MplGraphicsView):
 
         elif button == 3:
             # right button: pop-out menu
-            self.menu = QtGui.QMenu(self)
+            self.menu = QMenu(self)
 
             if self._currentSelectedPicker is None:
                 # no picker is selected
-                action1 = QtGui.QAction('Add Picker', self)
+                action1 = QAction('Add Picker', self)
                 action1.triggered.connect(self.menu_add_picker)
                 self.menu.addAction(action1)
 
             else:
                 # some picker is selected
-                action2 = QtGui.QAction('Delete Picker', self)
+                action2 = QAction('Delete Picker', self)
                 action2.triggered.connect(self.menu_delete_picker)
                 self.menu.addAction(action2)
 
             # add other required actions
-            self.menu.popup(QtGui.QCursor.pos())
+            self.menu.popup(QCursor.pos())
         # END-IF-ELSE
 
         return

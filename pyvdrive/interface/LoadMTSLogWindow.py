@@ -44,27 +44,40 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._init_widgets()
 
         # set up event handling for widgets
-        self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
-                     self.do_peek_log_file)
-        self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
-                     self.do_set_init_format)
-        self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
-                     self.do_correct_blocks)
-        self.connect(self.ui.pushButton_setExpTime, QtCore.SIGNAL('clicked()'),
-                     self.do_set_exp_time)
+        self.ui.pushButton_browseLoadFile.clicked.connect(self.do_peek_log_file)
+        self.ui.pushButton_formatSet.clicked.connect(self.do_set_init_format)
+        self.ui.pushButton_setBlocks.clicked.connect(self.do_correct_blocks)
+        self.ui.pushButton_setExpTime.clicked.connect(self.do_set_exp_time)
 
-        self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
-                     self.do_check_time)
+        self.ui.pushButton_checkTime.clicked.connect(self.do_check_time)
 
-        self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_accept_return)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
+        self.ui.pushButton_loadReturn.clicked.connect(self.do_accept_return)
+        self.ui.pushButton_cancel.clicked.connect(self.do_quit)
 
-        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-                     self.do_quit)
-        self.connect(self.ui.actionReset, QtCore.SIGNAL('triggered()'),
-                     self.do_reset_gui)
+        self.ui.actionQuit.triggered.connect(self.do_quit)
+        self.ui.actionReset.triggered.connect(self.do_reset_gui)
+
+        # self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_peek_log_file)
+        # self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_init_format)
+        # self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
+        #              self.do_correct_blocks)
+        # self.connect(self.ui.pushButton_setExpTime, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_exp_time)
+        #
+        # self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
+        #              self.do_check_time)
+        #
+        # self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
+        #              self.do_accept_return)
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        #
+        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+        #              self.do_quit)
+        # self.connect(self.ui.actionReset, QtCore.SIGNAL('triggered()'),
+        #              self.do_reset_gui)
 
         # class variables
         self._logFileName = None

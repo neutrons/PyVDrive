@@ -45,17 +45,24 @@ class QuickChopDialog(QtGui.QDialog):
         self.ui.lineEdit_outputDir.setText(os.getcwd())
 
         # set up event handlers
-        self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
-                     self.do_chop)
-        self.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_output)
-        self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
-                     self.do_quit)
+        self.ui.pushButton_browse.clicked.connect(self.do_browse_output)
+        self.ui.radioButton_saveToArbitrary.toggled.connect(self.event_save_to_changed)
+        self.ui.radioButton_saveToArchive.toggled.connect(self.event_save_to_changed)
 
-        self.connect(self.ui.radioButton_saveToArbitrary, QtCore.SIGNAL('toggled(bool)'),
-                     self.event_save_to_changed)
-        self.connect(self.ui.radioButton_saveToArchive, QtCore.SIGNAL('toggled(bool)'),
-                     self.event_save_to_changed)
+        self.ui.buttonBox.accepted.connect(self.do_chop)
+        self.ui.buttonBox.rejected.connect(self.do_quit)
+
+        # self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
+        #              self.do_chop)
+        # self.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_output)
+        # self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
+        #              self.do_quit)
+        #
+        # self.connect(self.ui.radioButton_saveToArbitrary, QtCore.SIGNAL('toggled(bool)'),
+        #              self.event_save_to_changed)
+        # self.connect(self.ui.radioButton_saveToArchive, QtCore.SIGNAL('toggled(bool)'),
+        #              self.event_save_to_changed)
 
         return
 

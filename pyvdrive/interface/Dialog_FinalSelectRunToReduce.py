@@ -41,15 +41,21 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         self._currRowIndex = -1
         self._numRows = 0
 
-        # Widget handers
-        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-                self.doSelectAll)
+        # Widget handlers
+        self.ui.pushButton_selectAll.clicked.connect(self.doSelectAll)
 
-        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
-                self.doClearAllSelection)
+        self.ui.pushButton_clear.clicked.connect(self.doClearAllSelection)
 
-        self.connect(self.ui.pushButton_exitToReduce, QtCore.SIGNAL('clicked()'),
-                self.doQuitContinueReduce)
+        self.ui.pushButton_exitToReduce.clicked.connect(self.doQuitContinueReduce)
+
+        # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+        #         self.doSelectAll)
+        #
+        # self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+        #         self.doClearAllSelection)
+        #
+        # self.connect(self.ui.pushButton_exitToReduce, QtCore.SIGNAL('clicked()'),
+        #         self.doQuitContinueReduce)
 
         # Signal handlers
         if self._myParent is not None:

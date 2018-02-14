@@ -1,7 +1,12 @@
 import time
 import datetime
 import numpy
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QStandardItemModel, QStandardItem, QLineEdit, QMessageBox, QTableWidgetItem, QCheckBox, QWidget, QHBoxLayout
 
 #include this try/except block to remap QString needed when using IPython
 try:
@@ -21,20 +26,20 @@ def add_runs_to_tree(treewidget, ipts, runlist):
     :return:
     """
     if False:
-        model = QtGui.QStandardItemModel()
+        model = QStandardItemModel()
         model.setColumnCount(2)
         model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
 
-    #treewidget = QtGui.QTreeView(treewidget)
+    #treewidget = QTreeView(treewidget)
     model = treewidget.model()
 
     numrows = model.rowCount()
-    itemmain = QtGui.QStandardItem(QtCore.QString(str(ipts)))
+    itemmain = QStandardItem(QtCore.QString(str(ipts)))
     itemmain.setCheckable(False)
     model.setItem(numrows, 0, itemmain)
     for i in xrange(len(runlist)):
         runnumber = runlist[i]
-        item = QtGui.QStandardItem(QtCore.QString(str(runnumber)))
+        item = QStandardItem(QtCore.QString(str(runnumber)))
         model.setItem(numrows+i+1, 1, item)
         # itemmain.setChild(i, item) : this will add value under column 0
 
@@ -126,7 +131,7 @@ def parse_integer(line_edit, allow_blank=True):
     :return: integer or None
     """
     # Check input
-    assert(isinstance(line_edit, QtGui.QLineEdit))
+    assert(isinstance(line_edit, QLineEdit))
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
@@ -155,7 +160,7 @@ def parse_integer_list(line_edit, size=None, check_order=False, remove_duplicate
     :return:
     """
     # check inputs
-    assert isinstance(line_edit, QtGui.QLineEdit), 'Input {0} of type {1} must be a QLineEdit instance.' \
+    assert isinstance(line_edit, QLineEdit), 'Input {0} of type {1} must be a QLineEdit instance.' \
                                                    ''.format(line_edit, type(line_edit))
 
     # get the text and split
@@ -223,7 +228,7 @@ def parse_float(line_edit, allow_blank=True):
     :return: float or None
     """
     # Check input
-    assert(isinstance(line_edit, QtGui.QLineEdit))
+    assert(isinstance(line_edit, QLineEdit))
 
     str_value = str(line_edit.text()).strip()
     if len(str_value) == 0:
@@ -248,7 +253,7 @@ def pop_dialog_error(parent, message):
     """
     assert isinstance(message, str), 'Input message "{0}" must be a string but not a {1}' \
                                      ''.format(message, type(message))
-    QtGui.QMessageBox.warning(parent, 'Error', message)
+    QMessageBox.warning(parent, 'Error', message)
 
     return
 
@@ -260,7 +265,7 @@ def pop_dialog_information(parent, message):
     :param message:
     :return:
     """
-    QtGui.QMessageBox.information(parent, 'Information!', message)
+    QMessageBox.information(parent, 'Information!', message)
 
     return
 
@@ -346,7 +351,7 @@ def setTextToQTableCell(table, irow, icol, text):
     icol = int(icol)
 
     # Set up
-    cellitem = QtGui.QTableWidgetItem()
+    cellitem = QTableWidgetItem()
     cellitem.setFlags(cellitem.flags() & ~QtCore.Qt.ItemIsEditable)
     cellitem.setText(_fromUtf8(str(text)))
     table.setItem(irow, icol, cellitem)
@@ -383,15 +388,15 @@ def addCheckboxToWSTCell(table, row, col, state):
         table.cellWidget(row,col).setChecked(state)
     else:
         #case to add checkbox
-        checkbox = QtGui.QCheckBox()
+        checkbox = QCheckBox()
         checkbox.setText('')
         checkbox.setChecked(state)
         
         #adding a widget which will be inserted into the table cell
         #then centering the checkbox within this widget which in turn,
         #centers it within the table column :-)
-        QW=QtGui.QWidget()
-        cbLayout=QtGui.QHBoxLayout(QW)
+        QW=QWidget()
+        cbLayout=QHBoxLayout(QW)
         cbLayout.addWidget(checkbox)
         cbLayout.setAlignment(QtCore.Qt.AlignCenter)
         cbLayout.setContentsMargins(0,0,0,0)
@@ -427,14 +432,14 @@ def addComboboxToWSTCell(table, row, col, itemlist, curindex):
         qlist = []
         for item in itemlist:
             qlist.append(str(item))
-        combobox = QtGui.QComboBox()
+        combobox = QComboBox()
         combobox.addItems(qlist)
         
         #adding a widget which will be inserted into the table cell
         #then centering the checkbox within this widget which in turn,
         #centers it within the table column :-)
-        QW=QtGui.QWidget()
-        cbLayout=QtGui.QHBoxLayout(QW)
+        QW=QWidget()
+        cbLayout=QHBoxLayout(QW)
         cbLayout.addWidget(combobox)
         cbLayout.setAlignment(QtCore.Qt.AlignCenter)
         cbLayout.setContentsMargins(0,0,0,0)

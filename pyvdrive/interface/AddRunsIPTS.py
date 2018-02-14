@@ -48,33 +48,48 @@ class AddRunsByIPTSDialog(QDialog):
 
         # Set event handler
         # group to add archive IPTS
-        self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_change_data_access_mode)
-        self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_change_data_access_mode)
+        self.ui.radioButton_useNumber.toggled.connect(self.evt_change_data_access_mode)
+        self.ui.radioButton_useDir.toggled.connect(self.evt_change_data_access_mode)
+        self.ui.pushButton_browse.clicked.connect(self.do_browse_data_directory)
+        self.ui.pushButton_addArchiveIPTS.clicked.connect(self.do_add_archive_ipts)
 
-        QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
-                               self.do_browse_data_directory)
-        QtCore.QObject.connect(self.ui.pushButton_addArchiveIPTS, QtCore.SIGNAL('clicked()'),
-                               self.do_add_archive_ipts)
+        # self.connect(self.ui.radioButton_useNumber, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_change_data_access_mode)
+        # self.connect(self.ui.radioButton_useDir, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_change_data_access_mode)
+        # QtCore.QObject.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
+        #                        self.do_browse_data_directory)
+        # QtCore.QObject.connect(self.ui.pushButton_addArchiveIPTS, QtCore.SIGNAL('clicked()'),
+        #                        self.do_add_archive_ipts)
 
         # group to add local HDD data
-        self.connect(self.ui.pushButton_addLocalHDDDir, QtCore.SIGNAL('clicked()'),
-                     self.do_add_hdd_data)
-        self.connect(self.ui.pushButton_browseLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_record_file)
+        self.ui.pushButton_addLocalHDDDir.clicked.connect(self.do_add_hdd_data)
+        self.ui.pushButton_browseLogFile.clicked.connect(self.do_browse_record_file)
 
         # group to add runs
-        QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
-                               self.do_add_runs)
-        self.connect(self.ui.radioButton_filterByRun, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_change_filter_mode)
-        self.connect(self.ui.radioButton_filterByDate, QtCore.SIGNAL('toggled(bool'),
-                     self.evt_change_filter_mode)
+        self.ui.pushButton_AddRuns.clicked.connect(self.do_add_runs)
+        self.ui.radioButton_filterByRun.toggled.connect(self.evt_change_filter_mode)
+        self.ui.radioButton_filterByDate.toggled.connect(self.evt_change_filter_mode)
 
         # controllers
-        QtCore.QObject.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
-                               self.do_quit_app)
+        self.ui.pushButton_return.clicked.connect(self.do_quit_app)
+
+        # self.connect(self.ui.pushButton_addLocalHDDDir, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_hdd_data)
+        # self.connect(self.ui.pushButton_browseLogFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_record_file)
+        #
+        # # group to add runs
+        # QtCore.QObject.connect(self.ui.pushButton_AddRuns, QtCore.SIGNAL('clicked()'),
+        #                        self.do_add_runs)
+        # self.connect(self.ui.radioButton_filterByRun, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_change_filter_mode)
+        # self.connect(self.ui.radioButton_filterByDate, QtCore.SIGNAL('toggled(bool'),
+        #              self.evt_change_filter_mode)
+        #
+        # # controllers
+        # QtCore.QObject.connect(self.ui.pushButton_return, QtCore.SIGNAL('clicked()'),
+        #                        self.do_quit_app)
 
         # Init setup for starting date and run
         self._beginDate = '01/01/2000'
