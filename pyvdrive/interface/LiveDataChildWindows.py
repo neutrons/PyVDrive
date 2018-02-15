@@ -1,10 +1,15 @@
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 import gui.GuiUtility as GuiUtility
 import gui.ui_LiveDataGPPlotSetup_ui as dialog_ui
 import gui.ui_LiveDataViewSetup_ui as SetupDialogUi
 
 
-class LiveViewSetupDialog(QtGui.QDialog):
+class LiveViewSetupDialog(QDialog):
     """
     A dialog to set up the Live data viewing parameters
     """
@@ -24,21 +29,30 @@ class LiveViewSetupDialog(QtGui.QDialog):
         self.ui.setupUi(self)
 
         # define the event handlers
-        self.connect(self.ui.pushButton_setRefreshRate, QtCore.SIGNAL('clicked()'),
-                     self.do_set_refresh_rate)
-        self.connect(self.ui.pushButton_setLiveUpdate, QtCore.SIGNAL('clicked()'),
-                     self.do_set_acc_plot)
-        self.connect(self.ui.pushButton_setupMix2D, QtCore.SIGNAL('clicked()'),
-                     self.do_set_run_view)
-        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_browseGSS, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_van_gss)
-        self.connect(self.ui.pushButton_loadGSS, QtCore.SIGNAL('clicked()'),
-                     self.do_load_van_gss)
+        self.ui.pushButton_setRefreshRate.clicked.connect(self.do_set_refresh_rate)
+        self.ui.pushButton_setLiveUpdate.clicked.connect(self.do_set_acc_plot)
+        self.ui.pushButton_setupMix2D.clicked.connect(self.do_set_run_view)
+        self.ui.pushButton_quit.clicked.connect(self.do_quit)
+        self.ui.pushButton_browseGSS.clicked.connect(self.do_browse_van_gss)
+        self.ui.pushButton_loadGSS.clicked.connect(self.do_load_van_gss)
 
-        self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
-                     self.toggle_options)
+        self.ui.radioButton_plotRun.toggled.connect(self.toggle_options)
+
+        # self.connect(self.ui.pushButton_setRefreshRate, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_refresh_rate)
+        # self.connect(self.ui.pushButton_setLiveUpdate, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_acc_plot)
+        # self.connect(self.ui.pushButton_setupMix2D, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_run_view)
+        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        # self.connect(self.ui.pushButton_browseGSS, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_van_gss)
+        # self.connect(self.ui.pushButton_loadGSS, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_van_gss)
+        #
+        # self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
+        #              self.toggle_options)
 
         # initialize some widget
         self.ui.radioButton_plotAcc.setChecked(True)
@@ -52,7 +66,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         :return:
         """
         # get file name
-        file_name = str(QtGui.QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
+        file_name = str(QFileDialog.getOpenFileName(self, '/SNS/VULCAN', 'GSAS (*.gda'))
         # add the line information
         self.ui.lineEdit_vanGSSName.setText(file_name)
 
@@ -151,7 +165,7 @@ class LiveViewSetupDialog(QtGui.QDialog):
         return
 
 
-class SampleLogPlotSetupDialog(QtGui.QDialog):
+class SampleLogPlotSetupDialog(QDialog):
     """ A dialog for user to choose the X-axis and Y-axis to plot
     """
     # define signal # x, y-list, y_side_list, (dmin, dmax) list, norm-van-list
@@ -170,24 +184,36 @@ class SampleLogPlotSetupDialog(QtGui.QDialog):
         self._init_widgets()
 
         # link
-        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
-                     self.do_apply)
+        self.ui.pushButton_quit.clicked.connect(self.do_quit)
+        self.ui.pushButton_apply.clicked.connect(self.do_apply)
 
         # push buttons to set up
-        self.connect(self.ui.pushButton_addPeakParam, QtCore.SIGNAL('clicked()'),
-                     self.do_add_peak_param)
-        self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
-                     self.do_add_sample_log)
+        self.ui.pushButton_addPeakParam.clicked.connect(self.do_add_peak_param)
+        self.ui.pushButton_addSampleLog.clicked.connect(self.do_add_sample_log)
 
         # other parameters
-        self.connect(self.ui.pushButton_remove, QtCore.SIGNAL('clicked()'),
-                     self.do_remove_item)
-        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_selected_items)
-        self.connect(self.ui.pushButton_filterLog, QtCore.SIGNAL('clicked()'),
-                     self.do_filter_sample_logs)
+        self.ui.pushButton_remove.clicked.connect(self.do_remove_item)
+        self.ui.pushButton_clear.clicked.connect(self.do_clear_selected_items)
+        self.ui.pushButton_filterLog.clicked.connect(self.do_filter_sample_logs)
+
+        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        # self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
+        #              self.do_apply)
+        #
+        # # push buttons to set up
+        # self.connect(self.ui.pushButton_addPeakParam, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_peak_param)
+        # self.connect(self.ui.pushButton_addSampleLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_sample_log)
+        #
+        # # other parameters
+        # self.connect(self.ui.pushButton_remove, QtCore.SIGNAL('clicked()'),
+        #              self.do_remove_item)
+        # self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+        #              self.do_clear_selected_items)
+        # self.connect(self.ui.pushButton_filterLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_filter_sample_logs)
 
         # other class variable
         self._myControlWindow = parent  # real parent window launch this dialog

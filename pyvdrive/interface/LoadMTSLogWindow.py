@@ -1,5 +1,10 @@
 import os
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QFileDialog, QMainWindow
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QFileDialog, QMainWindow
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -12,7 +17,7 @@ import gui.GuiUtility as GUtil
 __author__ = 'wzz'
 
 
-class LoadMTSLogFileWindow(QtGui.QMainWindow):
+class LoadMTSLogFileWindow(QMainWindow):
     """
     Pop-up dialog (window) to load an MTS log file with customized format and csv file alike.
     """
@@ -25,7 +30,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         :return:
         """
         # GUI window
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         # check input
         assert ipts_number is None or (isinstance(ipts_number, int) and ipts_number > 0)
@@ -44,27 +49,40 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
         self._init_widgets()
 
         # set up event handling for widgets
-        self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
-                     self.do_peek_log_file)
-        self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
-                     self.do_set_init_format)
-        self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
-                     self.do_correct_blocks)
-        self.connect(self.ui.pushButton_setExpTime, QtCore.SIGNAL('clicked()'),
-                     self.do_set_exp_time)
+        self.ui.pushButton_browseLoadFile.clicked.connect(self.do_peek_log_file)
+        self.ui.pushButton_formatSet.clicked.connect(self.do_set_init_format)
+        self.ui.pushButton_setBlocks.clicked.connect(self.do_correct_blocks)
+        self.ui.pushButton_setExpTime.clicked.connect(self.do_set_exp_time)
 
-        self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
-                     self.do_check_time)
+        self.ui.pushButton_checkTime.clicked.connect(self.do_check_time)
 
-        self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_accept_return)
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
+        self.ui.pushButton_loadReturn.clicked.connect(self.do_accept_return)
+        self.ui.pushButton_cancel.clicked.connect(self.do_quit)
 
-        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-                     self.do_quit)
-        self.connect(self.ui.actionReset, QtCore.SIGNAL('triggered()'),
-                     self.do_reset_gui)
+        self.ui.actionQuit.triggered.connect(self.do_quit)
+        self.ui.actionReset.triggered.connect(self.do_reset_gui)
+
+        # self.connect(self.ui.pushButton_browseLoadFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_peek_log_file)
+        # self.connect(self.ui.pushButton_formatSet, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_init_format)
+        # self.connect(self.ui.pushButton_setBlocks, QtCore.SIGNAL('clicked()'),
+        #              self.do_correct_blocks)
+        # self.connect(self.ui.pushButton_setExpTime, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_exp_time)
+        #
+        # self.connect(self.ui.pushButton_checkTime, QtCore.SIGNAL('clicked()'),
+        #              self.do_check_time)
+        #
+        # self.connect(self.ui.pushButton_loadReturn, QtCore.SIGNAL('clicked()'),
+        #              self.do_accept_return)
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        #
+        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+        #              self.do_quit)
+        # self.connect(self.ui.actionReset, QtCore.SIGNAL('triggered()'),
+        #              self.do_reset_gui)
 
         # class variables
         self._logFileName = None
@@ -177,7 +195,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
             raise RuntimeError('Programming error for neither radio buttons is selected.')
 
         # get file name
-        log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Get Log File', working_dir))
+        log_file_name = str(QFileDialog.getOpenFileName(self, 'Get Log File', working_dir))
         if log_file_name is None or len(log_file_name) == 0:
             return
         else:
@@ -216,7 +234,7 @@ class LoadMTSLogFileWindow(QtGui.QMainWindow):
 
         # app = QtGui.QApplication([])
         date, time, ok = cdw.DateDialog.getDateTime()
-        print("{} {} {}".format(date, time, ok))
+        print("{0} {1} {2}".format(date, time, ok))
         # app.exec_()
 
         return

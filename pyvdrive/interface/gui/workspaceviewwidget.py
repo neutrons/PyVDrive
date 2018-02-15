@@ -5,7 +5,12 @@
 ########################################################################
 from mantidipythonwidget import MantidIPythonWidget
 
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QWidget
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QWidget
 
 from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
@@ -21,7 +26,7 @@ except AttributeError:
         return s
 
 
-class WorkspaceViewWidget(QtGui.QWidget):
+class WorkspaceViewWidget(QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
@@ -33,7 +38,7 @@ class WorkspaceViewWidget(QtGui.QWidget):
         import ui_WorkspacesView_ui as ui_WorkspacesView
 
         # call base
-        QtGui.QWidget.__init__(self)
+        QWidget.__init__(self)
 
         # Parent & others
         self._myMainWindow = None
@@ -47,14 +52,18 @@ class WorkspaceViewWidget(QtGui.QWidget):
         self.ui.widget_ipython.set_main_application(self)
 
         # define event handling methods
-        self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-                     self.do_plot_workspace)
-        self.connect(self.ui.pushButton_toIPython, QtCore.SIGNAL('clicked()'),
-                     self.do_write_to_console)
-        self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_canvas)
-        self.connect(self.ui.pushButton_fitCanvas, QtCore.SIGNAL('clicked()'),
-                     self.do_fit_canvas)
+        self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
+        self.ui.pushButton_toIPython.clicked.connect(self.do_write_to_console)
+        self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
+        self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
+        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
+        #              self.do_plot_workspace)
+        # self.connect(self.ui.pushButton_toIPython, QtCore.SIGNAL('clicked()'),
+        #              self.do_write_to_console)
+        # self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
+        #              self.do_clear_canvas)
+        # self.connect(self.ui.pushButton_fitCanvas, QtCore.SIGNAL('clicked()'),
+        #              self.do_fit_canvas)
 
         return
 

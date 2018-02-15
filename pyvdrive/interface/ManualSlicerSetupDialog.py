@@ -32,26 +32,40 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         self._init_widgets()
 
         # define widgets' event handling
-        self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
-                     self.do_select_all_rows)
+        self.ui.pushButton_selectAll.clicked.connect(self.do_select_all_rows)
 
-        self.connect(self.ui.pushButton_expand2ndLevelChop, QtCore.SIGNAL('clicked()'),
-                     self.do_expand_slicers)
+        self.ui.pushButton_expand2ndLevelChop.clicked.connect(self.do_expand_slicers)
 
-        self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_slicers)
+        self.ui.pushButton_applyTimeSegs.clicked.connect(self.do_apply_slicers)
 
-        self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
-                     self.do_save_slicers_to_file)
+        self.ui.pushButton_saveTimeSegs.clicked.connect(self.do_save_slicers_to_file)
 
-        self.connect(self.ui.pushButton_loadSlicerFromFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_slicers_from_file)
+        self.ui.pushButton_loadSlicerFromFile.clicked.connect(self.do_load_slicers_from_file)
 
-        self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
-                     self.do_hide_window)
+        self.ui.pushButton_hide.clicked.connect(self.do_hide_window)
 
-        self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
-                     self.do_set_target)
+        self.ui.pushButton_deselectAll.clicked.connect(self.do_set_target)
+
+        # self.connect(self.ui.pushButton_selectAll, QtCore.SIGNAL('clicked()'),
+        #              self.do_select_all_rows)
+        #
+        # self.connect(self.ui.pushButton_expand2ndLevelChop, QtCore.SIGNAL('clicked()'),
+        #              self.do_expand_slicers)
+        #
+        # self.connect(self.ui.pushButton_applyTimeSegs, QtCore.SIGNAL('clicked()'),
+        #              self.do_apply_slicers)
+        #
+        # self.connect(self.ui.pushButton_saveTimeSegs, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_slicers_to_file)
+        #
+        # self.connect(self.ui.pushButton_loadSlicerFromFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_slicers_from_file)
+        #
+        # self.connect(self.ui.pushButton_hide, QtCore.SIGNAL('clicked()'),
+        #              self.do_hide_window)
+        #
+        # self.connect(self.ui.pushButton_deselectAll, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_target)
 
         # FIXME / FUTURE : it is not well defined to remove a slicer from table and reflected to pickers on plotting
         # self.connect(self.ui.pushButton_deleteSlicer, QtCore.SIGNAL('clicked()'),

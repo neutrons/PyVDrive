@@ -15,6 +15,12 @@ import sys
 
 from pyvdrive import __project_url__, __version__
 
+try:
+    import PyQt5
+    use_pyqt5 = True
+except ImportError:
+    use_pyqt5 = False
+
 # ==============================================================================
 # Constants
 # ==============================================================================
@@ -129,7 +135,10 @@ class build_py(_build_py):
 
     @staticmethod
     def compile_ui(ui_file, py_file):
-        from PyQt4 import uic
+        if use_pyqt5:
+            from PyQt5 import uic
+        else:
+            from PyQt4 import uic
 
         with open(py_file, 'w') as fp:
             uic.compileUi(ui_file, fp)

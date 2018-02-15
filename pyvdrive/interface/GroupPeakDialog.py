@@ -1,8 +1,12 @@
-from PyQt4 import QtCore, QtGui
+try:
+
+    from PyQt5.QtWidgets import QMainWindow
+except ImportError:
+    from PyQt4.QtGui import QMainWindow
 import gui.ui_GroupPeakDialog_ui
 
 
-class GroupPeakDialog(QtGui.QMainWindow):
+class GroupPeakDialog(QMainWindow):
     """
     Main window class to group peak with user interaction
     """
@@ -27,14 +31,20 @@ class GroupPeakDialog(QtGui.QMainWindow):
         self.ui.lineEdit_numberFWHM.setText('6')
 
         # line event handlers
-        self.connect(self.ui.pushButton_groupPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_group_peaks)
+        self.ui.pushButton_groupPeaks.clicked.connect(self.do_group_peaks)
 
-        self.connect(self.ui.pushButton_addPeakReturn, QtCore.SIGNAL('clicked()'),
-                     self.do_add_peak_return)
+        self.ui.pushButton_addPeakReturn.clicked.connect(self.do_add_peak_return)
 
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_cancel_return)
+        self.ui.pushButton_cancel.clicked.connect(self.do_cancel_return)
+
+        # self.connect(self.ui.pushButton_groupPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_group_peaks)
+        #
+        # self.connect(self.ui.pushButton_addPeakReturn, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_peak_return)
+        #
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_cancel_return)
 
         return
 

@@ -44,7 +44,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
     def deselect_all_rows(self):
         """
-        blabla
+        de-select all rows
         :return:
         """
         selected_row_list = self.get_selected_rows(True)
@@ -55,7 +55,7 @@ class LogSelectorTable(NTableWidget.NTableWidget):
 
     def get_all_items(self):
         """
-        blabla
+        get axis name of all the rows
         :return:
         """
         item_list = list()
@@ -137,14 +137,17 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
         return
 
     def add_log_item(self, log_name, side):
-        """add sample log item
-        :param items:
+        """
+        add sample log item
+        :param log_name:
+        :param side:
         :return:
         """
         # check input
         assert isinstance(log_name, str), 'Log name {0} must be given in a string but not a {1}.' \
                                           ''.format(log_name, type(log_name))
-        assert isinstance(side, bool), 'blabla'
+        assert isinstance(side, bool), 'Side {0} to add log {1} must be a boolean but not a {1}' \
+                                       ''.format(side, log_name, type(side))
 
         # select/name/side/dmin/dmax/norm by van
         log_name = log_name.split('(')[0].strip()  # clean name
@@ -169,8 +172,8 @@ class LivePlotYAxisTable(NTableWidget.NTableWidget):
 
     def get_selected_items(self):
         """
-        blabla
-        :return:
+        get selected items
+        :return: 4-tuple (list, list, list, list)
         """
         item_name_list = list()
         side_list = list()

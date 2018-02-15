@@ -5,7 +5,12 @@ sys.path.append('/SNS/users/wzz/.local//lib/python2.7/site-packages')
 import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QDialog, QApplication
+except ImportError:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QDialog, QApplication
 
 from pyvdrive.interface.gui import ui_LaunchManager_ui
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
@@ -25,7 +30,7 @@ if home_dir.startswith('/home/wzz') is False:
     sys.path.append('/opt/mantidnightly/bin')
 
 
-class LauncherManager(QtGui.QDialog):
+class LauncherManager(QDialog):
     """
     Launcher manager
     """
@@ -43,18 +48,25 @@ class LauncherManager(QtGui.QDialog):
         self.ui.checkBox_keepOpen.setChecked(True)
 
         # define event handlers
-        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-                     self.do_exit)
-        self.connect(self.ui.pushButton_vdrivePlot, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_vdrive)
-        self.connect(self.ui.pushButton_choppingHelper, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_chopper)
-        self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_peak_picker)
-        self.connect(self.ui.pushButton_reducedDataViewer, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_viewer)
-        self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_terminal)
+        self.ui.pushButton_quit.clicked.connect(self.do_exit)
+        self.ui.pushButton_vdrivePlot.clicked.connect(self.do_launch_vdrive)
+        self.ui.pushButton_choppingHelper.clicked.connect(self.do_launch_chopper)
+        self.ui.pushButton_peakProcessing.clicked.connect(self.do_launch_peak_picker)
+        self.ui.pushButton_reducedDataViewer.clicked.connect(self.do_launch_viewer)
+        self.ui.pushButton_terminal.clicked.connect(self.do_launch_terminal)
+
+        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+        #              self.do_exit)
+        # self.connect(self.ui.pushButton_vdrivePlot, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_vdrive)
+        # self.connect(self.ui.pushButton_choppingHelper, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_chopper)
+        # self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_peak_picker)
+        # self.connect(self.ui.pushButton_reducedDataViewer, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_viewer)
+        # self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_terminal)
 
         # initialize main window (may not be shown though)
         self._mainReducerWindow = VdriveMainWindow()  # the main ui class in this file is called MainWindow
@@ -165,10 +177,10 @@ class LauncherManager(QtGui.QDialog):
 
 # Main application
 def lava_app():
-    if QtGui.QApplication.instance():
-        _app = QtGui.QApplication.instance()
+    if QApplication.instance():
+        _app = QApplication.instance()
     else:
-        _app = QtGui.QApplication(sys.argv)
+        _app = QApplication(sys.argv)
     return _app
 
 # get arguments

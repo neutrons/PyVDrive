@@ -1,6 +1,11 @@
 # import PyQt modules
 import os
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -12,7 +17,7 @@ import gui.GuiUtility as gutil
 import gui.ui_ProcessVanadiumDialog_ui as van_ui
 
 
-class VanadiumProcessControlDialog(QtGui.QDialog):
+class VanadiumProcessControlDialog(QDialog):
     """ GUI (dialog) for process vanadium data
     """
     # Define signals
@@ -47,43 +52,65 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
 
         # define event handling
         # tab for peak striping
-        self.connect(self.ui.pushButton_stripVanadiumPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_strip_vanadium_peaks)
-        self.connect(self.ui.pushButton_undoPeakStrip, QtCore.SIGNAL('clicked()'),
-                     self.do_undo_strip)
-        self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
-                     self.do_restore_peak_strip_parameters)
-        self.connect(self.ui.pushButton_savePeakStripParamAsDefaults, QtCore.SIGNAL('clicked()'),
-                     self.do_save_peak_strip_parameters)
+        self.ui.pushButton_stripVanadiumPeaks.clicked.connect(self.do_strip_vanadium_peaks)
+        self.ui.pushButton_undoPeakStrip.clicked.connect(self.do_undo_strip)
+        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
+        self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
 
         # tab for smoothing vanadium
-        self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
-                     self.do_smooth_vanadium)
-        self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
-                     self.do_undo_smooth_vanadium)
-        self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
-                     self.do_restore_smooth_vanadium_parameters)
-        self.connect(self.ui.pushButton_saveSmoothParamAsDefaults, QtCore.SIGNAL('clicked()'),
-                     self.do_save_vanadium_smooth_parameters)
-        self.connect(self.ui.pushButton_setSmoothNRange, QtCore.SIGNAL('clicked()'),
-                     self.do_set_smooth_n_range)
-        self.connect(self.ui.pushButton_setSmoothOrderRange, QtCore.SIGNAL('clicked()'),
-                     self.do_set_smooth_order_range)
+        self.ui.pushButton_smoothVanadium.clicked.connect(self.do_smooth_vanadium)
+        self.ui.pushButton_undoSmooth.clicked.connect(self.do_undo_smooth_vanadium)
+        self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_smooth_vanadium_parameters)
+        self.ui.pushButton_saveSmoothParamAsDefaults.clicked.connect(self.do_save_vanadium_smooth_parameters)
+        self.ui.pushButton_setSmoothNRange.clicked.connect(self.do_set_smooth_n_range)
+        self.ui.pushButton_setSmoothOrderRange.clicked.connect(self.do_set_smooth_order_range)
 
-        self.connect(self.ui.lineEdit_smoothParameterN, QtCore.SIGNAL('textChanged(QString)'),
-                     self.evt_smooth_vanadium)
-        self.connect(self.ui.lineEdit_smoothParameterOrder, QtCore.SIGNAL('textChanged(QString)'),
-                     self.evt_smooth_vanadium)
-        self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
-                     self.evt_smooth_param_changed)
-        self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
-                     self.evt_smooth_param_changed)
+        self.ui.lineEdit_smoothParameterN.textChanged.connect(self.evt_smooth_vanadium)
+        self.ui.lineEdit_smoothParameterOrder.textChanged.connect(self.evt_smooth_vanadium)
+        self.ui.horizontalSlider_smoothN.valueChanged.connect(self.evt_smooth_param_changed)
+        self.ui.horizontalSlider_smoothOrder.valueChanged.connect(self.evt_smooth_param_changed)
 
         # final
-        self.connect(self.ui.pushButton_applyVanProcessResult, QtCore.SIGNAL('clicked()'),
-                     self.do_save_result)
-        self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
+        self.ui.pushButton_applyVanProcessResult.clicked.connect(self.do_save_result)
+        self.ui.pushButton_quit.clicked.connect(self.do_quit)
+
+        # self.connect(self.ui.pushButton_stripVanadiumPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_strip_vanadium_peaks)
+        # self.connect(self.ui.pushButton_undoPeakStrip, QtCore.SIGNAL('clicked()'),
+        #              self.do_undo_strip)
+        # self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
+        #              self.do_restore_peak_strip_parameters)
+        # self.connect(self.ui.pushButton_savePeakStripParamAsDefaults, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_peak_strip_parameters)
+        #
+        # # tab for smoothing vanadium
+        # self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
+        #              self.do_smooth_vanadium)
+        # self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
+        #              self.do_undo_smooth_vanadium)
+        # self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
+        #              self.do_restore_smooth_vanadium_parameters)
+        # self.connect(self.ui.pushButton_saveSmoothParamAsDefaults, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_vanadium_smooth_parameters)
+        # self.connect(self.ui.pushButton_setSmoothNRange, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_smooth_n_range)
+        # self.connect(self.ui.pushButton_setSmoothOrderRange, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_smooth_order_range)
+        #
+        # self.connect(self.ui.lineEdit_smoothParameterN, QtCore.SIGNAL('textChanged(QString)'),
+        #              self.evt_smooth_vanadium)
+        # self.connect(self.ui.lineEdit_smoothParameterOrder, QtCore.SIGNAL('textChanged(QString)'),
+        #              self.evt_smooth_vanadium)
+        # self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
+        #              self.evt_smooth_param_changed)
+        # self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
+        #              self.evt_smooth_param_changed)
+        #
+        # # final
+        # self.connect(self.ui.pushButton_applyVanProcessResult, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_result)
+        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
 
         # define signal
         self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
@@ -197,7 +224,7 @@ class VanadiumProcessControlDialog(QtGui.QDialog):
             default_dir = os.getcwd()
 
         file_filter = 'GSAS (*.gda);;All (*.*)'
-        van_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Smoothed Vanadium File',
+        van_file_name = str(QFileDialog.getSaveFileName(self, 'Smoothed Vanadium File',
                                                               default_dir, file_filter))
         if len(van_file_name) == 0:
             return

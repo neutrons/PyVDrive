@@ -5,7 +5,14 @@
 ########################################################################
 import sys
 import os
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt5.QtWidgets import QFileDialog
+except ImportError:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QDialog, QMainWindow, QLineEdit, QComboBox, QCheckBox, QMainWindow, QButtonGroup
+    from PyQt4.QtGui import QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -38,7 +45,7 @@ UnitCellList = [('BCC', 'I m -3 m'),
                 ('Primitive', 'P m m m')]
 
 
-class PeakWidthSetupDialog(QtGui.QDialog):
+class PeakWidthSetupDialog(QDialog):
     """
     Class for set up dialog
     """
@@ -49,16 +56,19 @@ class PeakWidthSetupDialog(QtGui.QDialog):
         """
 
         # Initialize
-        QtGui.QDialog.__init__(self, parent)
+        QDialog.__init__(self, parent)
 
         self.ui = widthSetupWindow.Ui_Dialog()
         self.ui.setupUi(self)
 
         # Define event handlers
-        self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-                     self.do_quit)
-        self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
-                     self.do_set_width)
+        self.ui.pushButton_cancel.clicked.connect(self.do_quit)
+        self.ui.pushButton_set.clicked.connect(self.do_set_width)
+
+        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
+        #              self.do_quit)
+        # self.connect(self.ui.pushButton_set, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_width)
 
         # Class variables
         self._peakWidth = None
@@ -115,13 +125,13 @@ class PhaseWidgets(object):
         :return:
         """
         # Check requirements
-        assert isinstance(parent, QtGui.QMainWindow)
-        assert isinstance(edit_a, QtGui.QLineEdit)
-        assert isinstance(edit_b, QtGui.QLineEdit)
-        assert isinstance(edit_c, QtGui.QLineEdit)
-        assert isinstance(edit_name, QtGui.QLineEdit)
-        assert isinstance(combo_box_type, QtGui.QComboBox)
-        assert isinstance(check_box_select, QtGui.QCheckBox)
+        assert isinstance(parent, QMainWindow)
+        assert isinstance(edit_a, QLineEdit)
+        assert isinstance(edit_b, QLineEdit)
+        assert isinstance(edit_c, QLineEdit)
+        assert isinstance(edit_name, QLineEdit)
+        assert isinstance(combo_box_type, QComboBox)
+        assert isinstance(check_box_select, QCheckBox)
 
         # Lattice parameters
         self._lineEdit_a = edit_a
@@ -350,7 +360,7 @@ class PeakPickerMode(object):
     AutoMode = 3
 
 
-class PeakPickerWindow(QtGui.QMainWindow):
+class PeakPickerWindow(QMainWindow):
     """ Class for general-purposed plot window
     """
     # class
@@ -358,7 +368,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """ Init
         """
         # call base
-        QtGui.QMainWindow.__init__(self)
+        QMainWindow.__init__(self)
 
         # parent
         self._myParent = parent
@@ -372,81 +382,127 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Define event handling methods
         # phase set up
-        self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
-                     self.do_set_phases)
+        self.ui.pushButton_setPhases.clicked.connect(self.do_set_phases)
 
-        self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
-                     self.do_clear_phases)
+        self.ui.pushButton_clearPhase.clicked.connect(self.do_clear_phases)
 
-        self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
-                     self.do_undo_phase_changes)
+        self.ui.pushButton_cancelPhaseChange.clicked.connect(self.do_undo_phase_changes)
 
         # peak processing
-        self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
-                     self.evt_switch_peak_pick_mode)
-        self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_switch_peak_pick_mode)
+        self.ui.radioButton_pickModeQuick.toggled.connect(self.evt_switch_peak_pick_mode)
+        self.ui.checkBox_pickPeak.stateChanged.connect(self.evt_switch_peak_pick_mode)
 
-        # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_add_picked_peaks)
-        self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_find_peaks)
-        self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_group_auto_peaks)
-        self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
-                     self.do_import_peaks_from_file)
+        self.ui.pushButton_findPeaks.clicked.connect(self.do_find_peaks)
+        self.ui.pushButton_groupAutoPickPeaks.clicked.connect(self.do_group_auto_peaks)
+        self.ui.pushButton_readPeakFile.clicked.connect(self.do_import_peaks_from_file)
 
-        self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_claim_overlapped_peaks)
+        self.ui.pushButton_claimOverlappedPeaks.clicked.connect(self.do_claim_overlapped_peaks)
 
-        self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
-                     self.do_show_peaks)
+        self.ui.pushButton_showPeaksInTable.clicked.connect(self.do_show_peaks)
 
-        self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_hide_peaks)
+        self.ui.pushButton_hidePeaks.clicked.connect(self.do_hide_peaks)
 
-        self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
-                     self.do_set_peaks_width)
+        self.ui.pushButton_setPeakWidth.clicked.connect(self.do_set_peaks_width)
 
-        self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_sort_peaks)
+        self.ui.pushButton_sortPeaks.clicked.connect(self.do_sort_peaks)
 
-        self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
-                     self.do_select_all_peaks)
+        self.ui.checkBox_selectPeaks.stateChanged.connect(self.do_select_all_peaks)
 
-        self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
-                     self.do_switch_table_editable)
+        self.ui.pushButton_editTableContents.clicked.connect(self.do_switch_table_editable)
 
-        self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
-                     self.do_delete_peaks)
+        self.ui.pushButton_deletePeaks.clicked.connect(self.do_delete_peaks)
 
-        self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
-                     self.do_set_pick_mode)
+        self.ui.pushButton_peakPickerMode.clicked.connect(self.do_set_pick_mode)
 
         # load files
-        self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_calibration_file)
-        self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
-                     self.do_load_data)
-        self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_switch_bank)
-        self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
-                     self.evt_switch_run)
+        self.ui.pushButton_loadCalibFile.clicked.connect(self.do_load_calibration_file)
+        self.ui.pushButton_readData.clicked.connect(self.do_load_data)
+        self.ui.comboBox_bankNumbers.currentIndexChanged.connect(self.evt_switch_bank)
+        self.ui.comboBox_runNumber.currentIndexChanged.connect(self.evt_switch_run)
 
         # save_to_buffer
-        self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
-                     self.do_save_peaks)
+        self.ui.pushButton_save.clicked.connect(self.do_save_peaks)
 
-        self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
-                     self.evt_table_selection_changed)
+        self.ui.tableWidget_peakParameter.itemSelectionChanged.connect(self.evt_table_selection_changed)
+
+        # self.connect(self.ui.pushButton_setPhases, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_phases)
+        #
+        # self.connect(self.ui.pushButton_clearPhase, QtCore.SIGNAL('clicked()'),
+        #              self.do_clear_phases)
+        #
+        # self.connect(self.ui.pushButton_cancelPhaseChange, QtCore.SIGNAL('clicked()'),
+        #              self.do_undo_phase_changes)
+        #
+        # # peak processing
+        # self.connect(self.ui.radioButton_pickModeQuick, QtCore.SIGNAL('toggled(bool)'),
+        #              self.evt_switch_peak_pick_mode)
+        # self.connect(self.ui.checkBox_pickPeak, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.evt_switch_peak_pick_mode)
+        #
+        # # self.connect(self.ui.pushButton_addPeaks, QtCore.SIGNAL('clicked()'),
+        # #              self.do_add_picked_peaks)
+        # self.connect(self.ui.pushButton_findPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_find_peaks)
+        # self.connect(self.ui.pushButton_groupAutoPickPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_group_auto_peaks)
+        # self.connect(self.ui.pushButton_readPeakFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_import_peaks_from_file)
+        #
+        # self.connect(self.ui.pushButton_claimOverlappedPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_claim_overlapped_peaks)
+        #
+        # self.connect(self.ui.pushButton_showPeaksInTable, QtCore.SIGNAL('clicked()'),
+        #              self.do_show_peaks)
+        #
+        # self.connect(self.ui.pushButton_hidePeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_hide_peaks)
+        #
+        # self.connect(self.ui.pushButton_setPeakWidth, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_peaks_width)
+        #
+        # self.connect(self.ui.pushButton_sortPeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_sort_peaks)
+        #
+        # self.connect(self.ui.checkBox_selectPeaks, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.do_select_all_peaks)
+        #
+        # self.connect(self.ui.pushButton_editTableContents, QtCore.SIGNAL('clicked()'),
+        #              self.do_switch_table_editable)
+        #
+        # self.connect(self.ui.pushButton_deletePeaks, QtCore.SIGNAL('clicked()'),
+        #              self.do_delete_peaks)
+        #
+        # self.connect(self.ui.pushButton_peakPickerMode, QtCore.SIGNAL('clicked()'),
+        #              self.do_set_pick_mode)
+        #
+        # # load files
+        # self.connect(self.ui.pushButton_loadCalibFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_calibration_file)
+        # self.connect(self.ui.pushButton_readData, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_data)
+        # self.connect(self.ui.comboBox_bankNumbers, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_switch_bank)
+        # self.connect(self.ui.comboBox_runNumber, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #              self.evt_switch_run)
+        #
+        # # save_to_buffer
+        # self.connect(self.ui.pushButton_save, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_peaks)
+        #
+        # self.connect(self.ui.tableWidget_peakParameter, QtCore.SIGNAL('itemSelectionChanged()'),
+        #              self.evt_table_selection_changed)
 
         # Define canvas event handlers
 
         # Menu
-        self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_phase)
-        self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
-                     self.menu_exit)
+        self.ui.actionLoad.triggered.connect(self.menu_load_phase)
+        self.ui.actionExit.triggered.connect(self.menu_exit)
+
+        # self.connect(self.ui.actionLoad, QtCore.SIGNAL('triggered()'),
+        #              self.menu_load_phase)
+        # self.connect(self.ui.actionExit, QtCore.SIGNAL('triggered()'),
+        #              self.menu_exit)
 
         # Set up widgets
         self._phaseWidgetsGroupDict = dict()
@@ -530,7 +586,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         self._phaseWidgetsGroupDict[3] = phase_widgets3
 
         # Peak pick mode
-        self.ui.peak_picker_mode_group = QtGui.QButtonGroup(self)
+        self.ui.peak_picker_mode_group = QButtonGroup(self)
         self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModePower)
         self.ui.peak_picker_mode_group.addButton(self.ui.radioButton_pickModeQuick)
         self.ui.radioButton_pickModeQuick.setChecked(True)
@@ -954,7 +1010,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         # get working directory for peak files
         work_dir = self._myController.get_working_dir()
         filters = "Text files (*.txt);; All files (*.*)"
-        peak_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Peak File', work_dir, filters))
+        peak_file = str(QFileDialog.getOpenFileName(self, 'Peak File', work_dir, filters))
         try:
             peak_list = self._myController.import_gsas_peak_file(peak_file)
         except RuntimeError as err:
@@ -1135,7 +1191,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Launch dialog box for calibration file name
         file_filter = 'Calibration (*.cal);;Text (*.txt);;All files (*.*)'
-        cal_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
+        cal_file_name = QFileDialog.getOpenFileName(self, 'Calibration File', self._dataDirectory, file_filter)
 
         # Load
         self._myController.load_calibration_file(cal_file_name)
@@ -1170,7 +1226,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
                                                                                       start_run_number)
             # get directory containing GSAS files
             default_dir = self._myController.get_binned_data_dir(range(start_run_number, end_run_number))
-            gsas_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
+            gsas_dir = str(QFileDialog.getExistingDirectory(self, 'GSAS File Directory', default_dir))
 
             # form file names: standard VULCAN style
             error_message = ''
@@ -1192,7 +1248,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
             default_dir = self._myController.get_binned_data_directory()
             # TODO/NOW - consider self._myController.get_ipts_config()
 
-            gsas_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Load GSAS File',
+            gsas_file_name = str(QFileDialog.getOpenFileName(self, 'Load GSAS File',
                                                                    default_dir, filters))
             gsas_file_list.append(gsas_file_name)
         # END-IF-ELSE
@@ -1363,7 +1419,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
 
         # Get the output file
         file_filter = 'Text (*.txt);;All files (*.*)'
-        out_file_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
+        out_file_name = str(QFileDialog.getSaveFileName(self, 'Save peaks to GSAS peak file',
                                                               self._dataDirectory, file_filter))
 
         # Get the peaks from buffer
@@ -1640,7 +1696,7 @@ class PeakPickerWindow(QtGui.QMainWindow):
         """
         # Get the file name
         file_filter = 'Text (*.txt);;All files (*.*)'
-        phase_file_name = QtGui.QFileDialog.getOpenFileName(self, 'Import phase information', self._dataDirectory,
+        phase_file_name = QFileDialog.getOpenFileName(self, 'Import phase information', self._dataDirectory,
                                                             file_filter)
 
         # return if action is cancelled

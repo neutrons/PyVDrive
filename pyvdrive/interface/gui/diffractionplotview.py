@@ -1,9 +1,15 @@
 import bisect
 import operator
 
-from PyQt4 import QtGui, QtCore
-import mplgraphicsview
+try:
+    from PyQt5.QtWidgets import QApplication, QMenu, QAction, QMainWindow
+    from PyQt5 import QtCore
+    from PyQt5.QtGui import QCursor
+except ImportError:
+    from PyQt4.QtGui import QApplication, QMenu, QAction, QCursor, QMainWindow
+    from PyQt4 import QtCore
 
+import mplgraphicsview
 import peaksmanager
 
 __author__ = 'wzz'
@@ -658,7 +664,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # restore cursor if it is necessary
             # if self._cursorRestored is False:
             self._cursorRestored = True
-            QtGui.QApplication.restoreOverrideCursor()
+            QApplication.restoreOverrideCursor()
             self._cursorType = 0
             return
 
@@ -723,20 +729,20 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             elif indicator_type == 0 or indicator_type == 2:
                 # left or right boundary
                 new_cursor = QtCore.Qt.SplitHCursor
-                QtGui.QApplication.setOverrideCursor(new_cursor)
+                QApplication.setOverrideCursor(new_cursor)
                 self._cursorType = 2
 
             elif indicator_type == 1:
                 # peak
                 self._cursorType = 1
                 new_cursor = QtCore.Qt.DragMoveCursor
-                QtGui.QApplication.setOverrideCursor(new_cursor)
+                QApplication.setOverrideCursor(new_cursor)
 
             else:
                 # in the middle of nowhere
                 self._cursorType = 0
                 new_cursor = QtCore.Qt.ArrowCursor
-                QtGui.QApplication.setOverrideCursor(new_cursor)
+                QApplication.setOverrideCursor(new_cursor)
                 # QtGui.QApplication.restoreOverrideCursor()
             # END-IF-ELSE
 
@@ -1006,11 +1012,11 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         elif self._myPeakSelectionMode == PeakAdditionState.AutoMode:
             # automatic mode to support actions including delete, add boundaries, undo boundaries
             #  and reset group
-            self._menu = QtGui.QMenu(self)
+            self._menu = QMenu(self)
 
             # add actions to delete peak
             if self._highlightPeakID >= 0:
-                action_del_peak = QtGui.QAction('Delete Peak', self)
+                action_del_peak = QAction('Delete Peak', self)
                 action_del_peak.triggered.connect(self.menu_delete_peak_in_pick)
                 self._menu.addAction(action_del_peak)
 
@@ -1038,32 +1044,32 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
             # self._menu.addAction(action_reset)
 
             # pop
-            self._menu.popup(QtGui.QCursor.pos())
+            self._menu.popup(QCursor.pos())
 
         else:
             # power mode
             # create a menu in the edit mode
-            self._menu = QtGui.QMenu(self)
+            self._menu = QMenu(self)
 
             self._eventX = event.xdata
 
             # optionally add option to delete peak
             if self._myPeakSelectionMode == DiffractionPlotView.PeakAdditionMode.MultiMode:
-                action2 = QtGui.QAction('Delete Peak', self)
+                action2 = QAction('Delete Peak', self)
                 action2.triggered.connect(self.menu_delete_peak_in_pick)
                 self._menu.addAction(action2)
 
             # add item to delete peak group
-            action1 = QtGui.QAction('Delete Group', self)
+            action1 = QAction('Delete Group', self)
             action1.triggered.connect(self.menu_delete_group_in_pick)
             self._menu.addAction(action1)
 
-            action3 = QtGui.QAction('Show Info', self)
+            action3 = QAction('Show Info', self)
             action3.triggered.connect(self.menu_show_info)
             self._menu.addAction(action3)
 
             # add other required actions
-            self._menu.popup(QtGui.QCursor.pos())
+            self._menu.popup(QCursor.pos())
         # END-IF-ELSE
 
         return
@@ -1360,7 +1366,7 @@ class DiffractionPlotView(mplgraphicsview.MplGraphicsView):
         :param parent_window:
         :return:
         """
-        assert isinstance(parent_window, QtGui.QMainWindow), \
+        assert isinstance(parent_window, QMainWindow), \
             'Parent window must be a QMainWindow instance, but not an instance of %s.' \
             '' % parent_window.__class__.__name__
 

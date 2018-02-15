@@ -1,8 +1,12 @@
 #pylint: disable=C0103,R0904
 # N(DAV)TableWidget
 #
-
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QTableWidget, QTableWidgetItem, QCheckBox
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -10,7 +14,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 
-class NTableWidget(QtGui.QTableWidget):
+class NTableWidget(QTableWidget):
     """
     NdavTableWidget inherits from QTableWidget by extending the features
     for easy application.
@@ -21,7 +25,7 @@ class NTableWidget(QtGui.QTableWidget):
         :param parent:
         :return:
         """
-        QtGui.QTableWidget.__init__(self, parent)
+        QTableWidget.__init__(self, parent)
 
         self._myParent = parent
 
@@ -74,7 +78,7 @@ class NTableWidget(QtGui.QTableWidget):
                 else:
                     value_str = str(item_value)
 
-                item = QtGui.QTableWidgetItem()
+                item = QTableWidgetItem()
                 item.setText(_fromUtf8(value_str))
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
                 # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
@@ -123,7 +127,7 @@ class NTableWidget(QtGui.QTableWidget):
                 else:
                     value_str = str(item_value)
 
-                item = QtGui.QTableWidgetItem()
+                item = QTableWidgetItem()
                 item.setText(_fromUtf8(value_str))
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
                 # Set editable flag! item.setFlags(item.flags() | ~QtCore.Qt.ItemIsEditable)
@@ -168,13 +172,13 @@ class NTableWidget(QtGui.QTableWidget):
         if cell_data_type == 'checkbox':
             # Check box
             cell_i_j = self.cellWidget(row_index, col_index)
-            assert isinstance(cell_i_j, QtGui.QCheckBox)
+            assert isinstance(cell_i_j, QCheckBox)
 
             return_value = cell_i_j.isChecked()
         else:
             # Regular cell for int, float and string
             item_i_j = self.item(row_index, col_index)
-            assert isinstance(item_i_j, QtGui.QTableWidgetItem)
+            assert isinstance(item_i_j, QTableWidgetItem)
 
             return_value = str(item_i_j.text())
 
@@ -220,13 +224,13 @@ class NTableWidget(QtGui.QTableWidget):
             if c_type == 'checkbox':
                 # Check box
                 cell_i_j = self.cellWidget(row_index, i_col)
-                assert isinstance(cell_i_j, QtGui.QCheckBox)
+                assert isinstance(cell_i_j, QCheckBox)
                 is_checked = cell_i_j.isChecked()
                 ret_list.append(is_checked)
             else:
                 # Regular cell
                 item_i_j = self.item(row_index, i_col)
-                assert isinstance(item_i_j, QtGui.QTableWidgetItem)
+                assert isinstance(item_i_j, QTableWidgetItem)
                 value = str(item_i_j.text()).strip()
                 if len(value) > 0:
                     if c_type == 'int':
@@ -390,7 +394,7 @@ class NTableWidget(QtGui.QTableWidget):
             self.cellWidget(row, col).setChecked(state)
         else:
             # case to add checkbox
-            checkbox = QtGui.QCheckBox()
+            checkbox = QCheckBox()
             checkbox.setText('')
             checkbox.setChecked(state)
 
@@ -435,7 +439,7 @@ class NTableWidget(QtGui.QTableWidget):
             raise IndexError('Input row number or column number is out of range.')
 
         # Init cell
-        cell_item = QtGui.QTableWidgetItem()
+        cell_item = QTableWidgetItem()
         cell_item.setText(_fromUtf8(str(value)))
         cell_item.setFlags(cell_item.flags() & ~QtCore.Qt.ItemIsEditable)
 
@@ -508,7 +512,7 @@ class NTableWidget(QtGui.QTableWidget):
 
         if cell_item is not None and cell_widget is None:
             # TableWidgetItem
-            assert isinstance(cell_item, QtGui.QTableWidgetItem)
+            assert isinstance(cell_item, QTableWidgetItem)
             if isinstance(value, float):
                 # apply significant digit dynamically
                 # use 'g' for significant float_str = ('{0:.%dg}' % significant_digits).format(value)
@@ -520,7 +524,7 @@ class NTableWidget(QtGui.QTableWidget):
                 cell_item.setText(_fromUtf8(str(value)))
         elif cell_item is None and cell_widget is not None:
             # TableCellWidget
-            if isinstance(cell_widget, QtGui.QCheckBox) is True:
+            if isinstance(cell_widget, QCheckBox) is True:
                 cell_widget.setChecked(value)
             else:
                 raise TypeError('Cell of type %s is not supported.' % str(type(cell_item)))

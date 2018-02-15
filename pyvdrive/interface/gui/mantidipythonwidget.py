@@ -11,6 +11,7 @@ if home_dir.startswith('/home/wzz') is False:
     sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
     # Analysis cluster build
     sys.path.append('/opt/mantidnightly/bin/')
+    # Personal VULCAN build
     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 
@@ -21,14 +22,18 @@ from pygments.lexer import RegexLexer
 # Monkeypatch!
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
-#from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
-#from IPython.qt.inprocess import QtInProcessKernelManager
-from qtconsole.rich_ipython_widget import RichIPythonWidget
-from qtconsole.inprocess import QtInProcessKernelManager
-
+try:
+    from qtconsole.rich_ipython_widget import RichIPythonWidget
+    from qtconsole.inprocess import QtInProcessKernelManager
+except ImportError:
+    from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
+    from IPython.qt.inprocess import QtInProcessKernelManager
 from mantid.api import AnalysisDataService as mtd
 
-from PyQt4 import QtGui
+try:
+    from PyQt5.QtWidgets import QApplication
+except ImportError:
+    from PyQt4.QtGui import QApplication
 
 
 def our_run_code(self, code_obj, result=None):
@@ -55,7 +60,7 @@ def our_run_code(self, code_obj, result=None):
         t = threading.Thread(target=self.ipython_run_code, args=[code_obj])
     t.start()
     while t.is_alive():
-        QtGui.QApplication.processEvents()
+        QApplication.processEvents()
     # We don't capture the return value of the ipython_run_code method but as far as I can tell
     #   it doesn't make any difference what's returned
     return 0

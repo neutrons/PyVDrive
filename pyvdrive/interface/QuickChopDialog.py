@@ -1,7 +1,12 @@
 # Dialog (main window) for quick-chopping
 import os
 
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QDialog, QFileDialog
+except ImportError:
+    from PyQt4 import QtCore
+    from PyQt4.QtGui import QDialog, QFileDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -13,7 +18,7 @@ import gui.ui_ChopDialog_ui
 import gui.GuiUtility as GuiUtility
 
 
-class QuickChopDialog(QtGui.QDialog):
+class QuickChopDialog(QDialog):
     """
     A dialog box to do quick chopping
     """
@@ -45,17 +50,24 @@ class QuickChopDialog(QtGui.QDialog):
         self.ui.lineEdit_outputDir.setText(os.getcwd())
 
         # set up event handlers
-        self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
-                     self.do_chop)
-        self.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_output)
-        self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
-                     self.do_quit)
+        self.ui.pushButton_browse.clicked.connect(self.do_browse_output)
+        self.ui.radioButton_saveToArbitrary.toggled.connect(self.event_save_to_changed)
+        self.ui.radioButton_saveToArchive.toggled.connect(self.event_save_to_changed)
 
-        self.connect(self.ui.radioButton_saveToArbitrary, QtCore.SIGNAL('toggled(bool)'),
-                     self.event_save_to_changed)
-        self.connect(self.ui.radioButton_saveToArchive, QtCore.SIGNAL('toggled(bool)'),
-                     self.event_save_to_changed)
+        self.ui.buttonBox.accepted.connect(self.do_chop)
+        self.ui.buttonBox.rejected.connect(self.do_quit)
+
+        # self.connect(self.ui.buttonBox, QtCore.SIGNAL('accepted()'),
+        #              self.do_chop)
+        # self.connect(self.ui.pushButton_browse, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_output)
+        # self.connect(self.ui.buttonBox, QtCore.SIGNAL('rejected()'),
+        #              self.do_quit)
+        #
+        # self.connect(self.ui.radioButton_saveToArbitrary, QtCore.SIGNAL('toggled(bool)'),
+        #              self.event_save_to_changed)
+        # self.connect(self.ui.radioButton_saveToArchive, QtCore.SIGNAL('toggled(bool)'),
+        #              self.event_save_to_changed)
 
         return
 
@@ -64,7 +76,7 @@ class QuickChopDialog(QtGui.QDialog):
         Browse output
         :return:
         """
-        out_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Output Directory', os.getcwd()))
+        out_dir = str(QFileDialog.getExistingDirectory(self, 'Output Directory', os.getcwd()))
         self.ui.lineEdit_outputDir.setText(out_dir)
 
         return

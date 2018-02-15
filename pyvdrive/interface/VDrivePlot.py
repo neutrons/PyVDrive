@@ -4,7 +4,17 @@ import sys
 import os
 
 # import PyQt modules
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
+    from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
+    from PyQt5.QtGui import QCursor
+except ImportError as import_e:
+    from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
+    from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor
+
+
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -43,7 +53,7 @@ ACTIVE_SLICER_LOG = 1
 ACTIVE_SLICER_MANUAL = 2
 
 
-class VdriveMainWindow(QtGui.QMainWindow):
+class VdriveMainWindow(QMainWindow):
     """ Main GUI class for VDrive of the beta version
     """
     # Define signals to child windows as None(s)
@@ -55,7 +65,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         """ Init
         """
         # Setup main window
-        QtGui.QMainWindow.__init__(self, parent)
+        QMainWindow.__init__(self, parent)
         self.setWindowTitle('VDrivePlot (Beta)')
         self.ui = mainUi.Ui_MainWindow()
         self.ui.setupUi(self)
@@ -77,64 +87,104 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self._init_widgets()
 
         # Define event handling
-        self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
-                     self.do_add_runs_by_ipts)
-        self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_sample_log)
+        self.ui.pushButton_selectIPTS.clicked.connect(self.do_add_runs_by_ipts)
+        self.ui.pushButton_readSampleLogFile.clicked.connect(self.do_load_sample_log)
 
         # Column 2
         # about vanadium calibration
-        self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_vanadium_calibration)
+        self.ui.pushButton_loadCalFile.clicked.connect(self.do_load_vanadium_calibration)
 
         # select and set runs from run-info-tree
-        self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
-                     self.do_add_runs_to_reduce)
-        self.connect(self.ui.checkBox_selectRuns, QtCore.SIGNAL('stateChanged(int)'),
-                     self.do_update_selected_runs)
-        self.connect(self.ui.pushButton_deleteRuns, QtCore.SIGNAL('clicked()'),
-                     self.do_remove_runs_from_reduction)
-        self.connect(self.ui.pushButton_sortSelectedRuns, QtCore.SIGNAL('clicked()'),
-                     self.do_sort_selected_runs)
-        self.connect(self.ui.pushButton_reduceRuns, QtCore.SIGNAL('clicked()'),
-                     self.do_to_reduction_stage)
+        self.ui.pushButton_addRunsToReduce.clicked.connect(self.do_add_runs_to_reduce)
+        self.ui.checkBox_selectRuns.stateChanged.connect(self.do_update_selected_runs)
+        self.ui.pushButton_deleteRuns.clicked.connect(self.do_remove_runs_from_reduction)
+        self.ui.pushButton_sortSelectedRuns.clicked.connect(self.do_sort_selected_runs)
+        self.ui.pushButton_reduceRuns.clicked.connect(self.do_to_reduction_stage)
 
-        self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
-                     self.evt_chop_run_state_change)
+        self.ui.checkBox_chopRun.stateChanged.connect(self.evt_chop_run_state_change)
 
         # Column 3
         # Tab-1
         # sub-tab-1
-        self.connect(self.ui.pushButton_loadTimeSegmentsFile, QtCore.SIGNAL('clicked()'),
-                     self.do_load_time_seg_file)
-        self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
-                     self.do_slice_data_by_time)
-        self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_log_picker_window)
+        self.ui.pushButton_loadTimeSegmentsFile.clicked.connect(self.do_load_time_seg_file)
+        self.ui.pushButton_chopData.clicked.connect(self.do_slice_data_by_time)
+        self.ui.pushButton_manualPicker.clicked.connect(self.do_launch_log_picker_window)
 
         # sub-tab-2
-        self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_manual_slicer)
-        self.connect(self.ui.pushButton_applyLog, QtCore.SIGNAL('clicked()'),
-                     self.do_apply_log_slicer)
-        self.connect(self.ui.pushButton_saveSlicer, QtCore.SIGNAL('clicked()'),
-                     self.do_save_log_slicer)
+        self.ui.pushButton_applyManual.clicked.connect(self.do_apply_manual_slicer)
+        self.ui.pushButton_applyLog.clicked.connect(self.do_apply_log_slicer)
+        self.ui.pushButton_saveSlicer.clicked.connect(self.do_save_log_slicer)
 
         # Tab-2
-        self.connect(self.ui.pushButton_browseOutputDir, QtCore.SIGNAL('clicked()'),
-                     self.do_browse_output_dir)
-        self.connect(self.ui.checkBox_autoReduction, QtCore.SIGNAL('stateChanged(int)'),
-                     self.do_use_output_vulcan_shared)
-        self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
-                     self.do_bin_data)
+        self.ui.pushButton_browseOutputDir.clicked.connect(self.do_browse_output_dir)
+        self.ui.checkBox_autoReduction.stateChanged.connect(self.do_use_output_vulcan_shared)
+        self.ui.pushButton_binData.clicked.connect(self.do_bin_data)
 
         # Tab-3: view reduction result
-        self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
-                     self.do_launch_reduced_data_viewer)
+        self.ui.pushButton_viewReducedData.clicked.connect(self.do_launch_reduced_data_viewer)
 
         # Tab-4: fig single peak
-        self.connect(self.ui.pushButton_fitSinglePeak, QtCore.SIGNAL('clicked()'),
-                     self.do_fit_single_peak)
+        self.ui.pushButton_fitSinglePeak.clicked.connect(self.do_fit_single_peak)
+
+        # # Define event handling
+        # self.connect(self.ui.pushButton_selectIPTS, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_runs_by_ipts)
+        # self.connect(self.ui.pushButton_readSampleLogFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_sample_log)
+        #
+        # # Column 2
+        # # about vanadium calibration
+        # self.connect(self.ui.pushButton_loadCalFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_vanadium_calibration)
+        #
+        # # select and set runs from run-info-tree
+        # self.connect(self.ui.pushButton_addRunsToReduce, QtCore.SIGNAL('clicked()'),
+        #              self.do_add_runs_to_reduce)
+        # self.connect(self.ui.checkBox_selectRuns, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.do_update_selected_runs)
+        # self.connect(self.ui.pushButton_deleteRuns, QtCore.SIGNAL('clicked()'),
+        #              self.do_remove_runs_from_reduction)
+        # self.connect(self.ui.pushButton_sortSelectedRuns, QtCore.SIGNAL('clicked()'),
+        #              self.do_sort_selected_runs)
+        # self.connect(self.ui.pushButton_reduceRuns, QtCore.SIGNAL('clicked()'),
+        #              self.do_to_reduction_stage)
+        #
+        # self.connect(self.ui.checkBox_chopRun, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.evt_chop_run_state_change)
+        #
+        # # Column 3
+        # # Tab-1
+        # # sub-tab-1
+        # self.connect(self.ui.pushButton_loadTimeSegmentsFile, QtCore.SIGNAL('clicked()'),
+        #              self.do_load_time_seg_file)
+        # self.connect(self.ui.pushButton_chopData, QtCore.SIGNAL('clicked()'),
+        #              self.do_slice_data_by_time)
+        # self.connect(self.ui.pushButton_manualPicker, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_log_picker_window)
+        #
+        # # sub-tab-2
+        # self.connect(self.ui.pushButton_applyManual, QtCore.SIGNAL('clicked()'),
+        #              self.do_apply_manual_slicer)
+        # self.connect(self.ui.pushButton_applyLog, QtCore.SIGNAL('clicked()'),
+        #              self.do_apply_log_slicer)
+        # self.connect(self.ui.pushButton_saveSlicer, QtCore.SIGNAL('clicked()'),
+        #              self.do_save_log_slicer)
+        #
+        # # Tab-2
+        # self.connect(self.ui.pushButton_browseOutputDir, QtCore.SIGNAL('clicked()'),
+        #              self.do_browse_output_dir)
+        # self.connect(self.ui.checkBox_autoReduction, QtCore.SIGNAL('stateChanged(int)'),
+        #              self.do_use_output_vulcan_shared)
+        # self.connect(self.ui.pushButton_binData, QtCore.SIGNAL('clicked()'),
+        #              self.do_bin_data)
+        #
+        # # Tab-3: view reduction result
+        # self.connect(self.ui.pushButton_viewReducedData, QtCore.SIGNAL('clicked()'),
+        #              self.do_launch_reduced_data_viewer)
+        #
+        # # Tab-4: fig single peak
+        # self.connect(self.ui.pushButton_fitSinglePeak, QtCore.SIGNAL('clicked()'),
+        #              self.do_fit_single_peak)
 
         # Column 4
         self.ui.graphicsView_snapView1.canvas().mpl_connect('button_release_event', self.evt_snap1_mouse_press)
@@ -148,27 +198,36 @@ class VdriveMainWindow(QtGui.QMainWindow):
                                      self.ui.comboBox_g31, self.ui.comboBox_g41,
                                      self.ui.comboBox_g51, self.ui.comboBox_g61]
         for combo_box in self._group_left_box_list:
-            self.connect(combo_box, QtCore.SIGNAL('currentIndexChanged(int)'),
-                         self.event_change_log_snap_view)
+            combo_box.currentIndexChanged.connect(self.event_change_log_snap_view)
+            # self.connect(combo_box, QtCore.SIGNAL('currentIndexChanged(int)'),
+            #              self.event_change_log_snap_view)
         self._logSnapViewLock = False
 
         # Event handling for menu
-        self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_save_project)
-        self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
-                     self.menu_save_session_as)
-        self.connect(self.ui.actionOpen_Project, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_project)
-        self.connect(self.ui.actionAuto_Saved, QtCore.SIGNAL('triggered()'),
-                     self.menu_load_auto)
-        self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-                     self.evt_quit)
+        self.ui.actionSave_Project.triggered.connect(self.menu_save_project)
+        self.ui.actionSave_Project_As.triggered.connect(self.menu_save_session_as)
+        self.ui.actionOpen_Project.triggered.connect(self.menu_load_project)
+        self.ui.actionAuto_Saved.triggered.connect(self.menu_load_auto)
+        self.ui.actionQuit.triggered.connect(self.evt_quit)
+        self.ui.actionOpen_Configuration.triggered.connect(self.menu_config)
+        self.ui.actionWorkspaces.triggered.connect(self.menu_workspaces_view)
 
-        self.connect(self.ui.actionOpen_Configuration, QtCore.SIGNAL('triggered()'),
-                     self.menu_config)
-
-        self.connect(self.ui.actionWorkspaces, QtCore.SIGNAL('triggered()'),
-                     self.menu_workspaces_view)
+        # self.connect(self.ui.actionSave_Project, QtCore.SIGNAL('triggered()'),
+        #              self.menu_save_project)
+        # self.connect(self.ui.actionSave_Project_As, QtCore.SIGNAL('triggered()'),
+        #              self.menu_save_session_as)
+        # self.connect(self.ui.actionOpen_Project, QtCore.SIGNAL('triggered()'),
+        #              self.menu_load_project)
+        # self.connect(self.ui.actionAuto_Saved, QtCore.SIGNAL('triggered()'),
+        #              self.menu_load_auto)
+        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
+        #              self.evt_quit)
+        #
+        # self.connect(self.ui.actionOpen_Configuration, QtCore.SIGNAL('triggered()'),
+        #              self.menu_config)
+        #
+        # self.connect(self.ui.actionWorkspaces, QtCore.SIGNAL('triggered()'),
+        #              self.menu_workspaces_view)
 
         # Group widgets
         self._groupedSnapViewList = list()
@@ -222,7 +281,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Launch workspace viewer
         :return:
         """
-        class WorkspacesView(QtGui.QMainWindow):
+        class WorkspacesView(QMainWindow):
             """
             class
             """
@@ -233,35 +292,35 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 """
                 from gui.workspaceviewwidget import WorkspaceViewWidget
 
-                QtGui.QMainWindow.__init__(self)
+                QMainWindow.__init__(self)
 
                 # set up
                 self.setObjectName(_fromUtf8("MainWindow"))
                 self.resize(1600, 1200)
-                self.centralwidget = QtGui.QWidget(self)
+                self.centralwidget = QWidget(self)
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
-                self.gridLayout = QtGui.QGridLayout(self.centralwidget)
+                self.gridLayout = QGridLayout(self.centralwidget)
                 self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
                 self.widget = WorkspaceViewWidget(self)
-                sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+                sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
                 sizePolicy.setHorizontalStretch(0)
                 sizePolicy.setVerticalStretch(0)
                 sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
                 self.widget.setSizePolicy(sizePolicy)
                 self.widget.setObjectName(_fromUtf8("widget"))
                 self.gridLayout.addWidget(self.widget, 1, 0, 1, 1)
-                self.label = QtGui.QLabel(self.centralwidget)
+                self.label = QLabel(self.centralwidget)
                 self.label.setObjectName(_fromUtf8("label"))
                 self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
                 self.setCentralWidget(self.centralwidget)
-                self.menubar = QtGui.QMenuBar(self)
+                self.menubar = QMenuBar(self)
                 self.menubar.setGeometry(QtCore.QRect(0, 0, 1005, 25))
                 self.menubar.setObjectName(_fromUtf8("menubar"))
                 self.setMenuBar(self.menubar)
-                self.statusbar = QtGui.QStatusBar(self)
+                self.statusbar = QStatusBar(self)
                 self.statusbar.setObjectName(_fromUtf8("statusbar"))
                 self.setStatusBar(self.statusbar)
-                self.toolBar = QtGui.QToolBar(self)
+                self.toolBar = QToolBar(self)
                 self.toolBar.setObjectName(_fromUtf8("toolBar"))
                 self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
 
@@ -363,8 +422,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         browse output directory
         :return:
         """
-        output_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory for output files',
-                                                                self._myWorkflow.get_working_dir()))
+        output_dir = str(QFileDialog.getExistingDirectory(self, 'Directory for output files',
+                                                          self._myWorkflow.get_working_dir()))
         if len(output_dir) > 0:
             self.ui.lineEdit_outputDir.setText(output_dir)
 
@@ -584,8 +643,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return:
         """
         out_file_name = str(
-                QtGui.QFileDialog.getSaveFileName(self, 'Data Slice File',
-                                                  self._myWorkflow.get_working_dir()))
+                QFileDialog.getSaveFileName(self, 'Data Slice File',
+                                            self._myWorkflow.get_working_dir()))
 
         print '[DB] Save slicer for run ', self._currLogRunNumber, ' sample log ', self._currSlicerLogName,
         print 'to file', out_file_name
@@ -626,20 +685,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         (1) project runs view
         :return: None
         """
-        '''
-        # IPTS and run tree view
-        model = QtGui.QStandardItemModel()
-        model.setColumnCount(2)
-        model.setHeaderData(0, QtCore.Qt.Horizontal, 'IPTS')
-        model.setHeaderData(1, QtCore.Qt.Horizontal, 'Run')
-        self.ui.treeView_iptsRun.setModel(model)
-        self.ui.treeView_iptsRun.setColumnWidth(0, 90)
-        self.ui.treeView_iptsRun.setColumnWidth(1, 60)
-        self.ui.treeView_iptsRun.setDragEnabled(True)
-        '''
-
         # Selecting runs
-        # NEXT/TODO/FIXME
         self.ui.tableWidget_selectedRuns.setup()
         self.ui.tableWidget_timeSegment.setup()
 
@@ -676,7 +722,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
                 combo1 = getattr(self.ui, 'comboBox_g%d1'% i)
                 combo2 = getattr(self.ui, 'comboBox_g%d2'% i)
                 radio_button = getattr(self.ui, 'radioButton_plot%d' % i)
-                assert isinstance(radio_button, QtGui.QRadioButton)
+                assert isinstance(radio_button, QRadioButton)
             except AttributeError as e:
                 raise RuntimeError('GUI changed but python code is not changed accordingly: %s'%(str(e)))
             else:
@@ -869,8 +915,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
 
         # get calibration file
         file_types = 'GSAS (*.gsa);;All (*.*)'
-        smooth_van_file = str(QtGui.QFileDialog.getOpenFileName(self, 'Get smoothed vanadium GSAS',
-                                                                default_van_dir, file_types))
+        smooth_van_file = str(QFileDialog.getOpenFileName(self, 'Get smoothed vanadium GSAS',
+                                                          default_van_dir, file_types))
 
         # return if cancel
         if len(smooth_van_file) == 0:
@@ -895,9 +941,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
         # Get file name
         file_filter = "CSV (*.csv);;Text (*.txt);;All files (*.*)"
         log_path = self._myWorkflow.get_working_dir()
-        seg_file_name = str(QtGui.QFileDialog.getOpenFileName(
-            self, 'Open Time Segment File', log_path, file_filter))
-        print '[DB-BAR] Importing time segment file: %s' % seg_file_name
+        seg_file_name = str(QFileDialog.getOpenFileName(self, 'Open Time Segment File', log_path, file_filter))
 
         # Import file
         status, ret_obj = self._myWorkflow.parse_time_segment_file(seg_file_name)
@@ -945,8 +989,7 @@ class VdriveMainWindow(QtGui.QMainWindow):
             log_path = os.path.dirname('/SNS/VULCAN/IPTS-{0}/'.format(ipts_number))
             # Dialog to get the file name
             file_filter = "Event Nexus (*_event.nxs);;All files (*.*)"
-            log_file_name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open NeXus File',
-                                                                  log_path, file_filter))
+            log_file_name = str(QFileDialog.getOpenFileName(self, 'Open NeXus File', log_path, file_filter))
             run_number = 0  # parse_run_number(log_file_name)
         # END-IF
 
@@ -1055,14 +1098,14 @@ class VdriveMainWindow(QtGui.QMainWindow):
         if x is not None and y is not None:
             if button == 3:
                 # right click of mouse will pop up a context-menu
-                self.ui.menu = QtGui.QMenu(self)
+                self.ui.menu = QMenu(self)
 
-                pop_action = QtGui.QAction('Pop', self)
+                pop_action = QAction('Pop', self)
                 pop_action.triggered.connect(self.pop_snap_view)
                 self.ui.menu.addAction(pop_action)
 
                 # add other required actions
-                self.ui.menu.popup(QtGui.QCursor.pos())
+                self.ui.menu.popup(QCursor.pos())
         # END-IF
 
         return
@@ -1208,10 +1251,6 @@ class VdriveMainWindow(QtGui.QMainWindow):
             session_file_name = os.path.join(default_path, 'auto_save.xml')
             self._savedSessionFileName = session_file_name
 
-            #self._savedSessionFileName = str(
-            #    QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
-            #                                      'XML files (*.xml);; All files (*.*)'))
-
         self._myWorkflow.save_session(self._savedSessionFileName)
 
         return
@@ -1221,9 +1260,9 @@ class VdriveMainWindow(QtGui.QMainWindow):
         Save session as
         :return:
         """
-        saved_session_file_name = str(
-                QtGui.QFileDialog.getSaveFileName(self, 'Save Session', self._myWorkflow.get_working_dir(),
-                                                  'XML files (*.xml); All files (*.*)'))
+        saved_session_file_name = str(QFileDialog.getSaveFileName(self, 'Save Session',
+                                                                  self._myWorkflow.get_working_dir(),
+                                                                  'XML files (*.xml); All files (*.*)'))
 
         self._myWorkflow.save_session(saved_session_file_name)
 
@@ -1285,10 +1324,8 @@ class VdriveMainWindow(QtGui.QMainWindow):
         :return:
         """
         # Get file name
-        input_file_name = str(
-            QtGui.QFileDialog.getOpenFileName(self, 'Load Session', self._myWorkflow.get_working_dir(),
-                                              'XML files (*.xml);; All files (*.*)')
-        )
+        input_file_name = str(QFileDialog.getOpenFileName(self, 'Load Session', self._myWorkflow.get_working_dir(),
+                                                          'XML files (*.xml);; All files (*.*)'))
         if len(input_file_name) == 0:
             # aborted, quit
             return
@@ -1423,12 +1460,3 @@ class VdriveMainWindow(QtGui.QMainWindow):
         self.ui.tableWidget_selectedRuns.append_runs(run_list)
 
         return
-
-
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    my_app = VdriveMainWindow()
-    my_app.show()
-
-    #exit_code=app.exec_()
-    #sys.exit(exit_code)

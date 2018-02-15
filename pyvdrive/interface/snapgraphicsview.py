@@ -1,5 +1,8 @@
 import numpy as np
-from PyQt4 import QtGui
+try:
+    from PyQt5.QtWidgets import QComboBox, QRadioButton
+except ImportError:
+    from PyQt4.QtGui import QComboBox, QRadioButton
 from gui.mplgraphicsview import MplGraphicsView 
 
 
@@ -16,9 +19,9 @@ class SnapGraphicsView(object):
         # Check
         if isinstance(graphic_view_widget, MplGraphicsView) is False:
             raise NotImplementedError("Input is not a QGraphicsView instance, but %s" % str(type(graphic_view_widget)))
-        if isinstance(combo_box1, QtGui.QComboBox) is False:
+        if isinstance(combo_box1, QComboBox) is False:
             raise NotImplementedError("Input combo1 is not a QComboBox instance.")
-        if isinstance(combo_box2, QtGui.QComboBox) is False:
+        if isinstance(combo_box2, QComboBox) is False:
             raise NotImplementedError('Input combo2 is not a QComboBox instance.')
 
         self._graphicView = graphic_view_widget
@@ -46,7 +49,7 @@ class SnapGraphicsView(object):
     def is_selected(self):
         """
         """
-        assert isinstance(self._radioButton, QtGui.QRadioButton)
+        assert isinstance(self._radioButton, QRadioButton)
         return self._radioButton.isChecked()
 
     def plot_data(self, vec_times, vec_log_value):
@@ -88,7 +91,7 @@ class SnapGraphicsView(object):
         """
         """
         combo_box = getattr(self, '_comboBox%d' % combo_index)
-        assert isinstance(combo_box, QtGui.QComboBox)
+        assert isinstance(combo_box, QComboBox)
 
         combo_box.setCurrentIndex(item_index)
 
@@ -98,7 +101,7 @@ class SnapGraphicsView(object):
         """
         """
         combo_box = getattr(self, '_comboBox%d' % combo_index)
-        assert isinstance(combo_box, QtGui.QComboBox)
+        assert isinstance(combo_box, QComboBox)
 
         combo_box.clear()
         combo_box.addItems(item_list)
