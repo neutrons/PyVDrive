@@ -183,6 +183,16 @@ The order of loading configuration is
  * 
 
 
+Scripts
+-------
+
+Calibration scripts
+===================
+
+* cross\_correlation.py
+* calculate\_difc.py
+
+
 
 
 New Features

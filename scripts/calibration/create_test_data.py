@@ -1,0 +1,12 @@
+Load(Filename='/SNS/VULCAN/shared/PyVDrive-Dev/Calibration/VULCAN_150178.nxs.h5', OutputWorkspace='full_diamond', LoaderName='LoadEventNexus', LoaderVersion='1')
+ConvertUnits(InputWorkspace='full_diamond', OutputWorkspace='full_diamond', Target='dSpacing')
+Rebin(InputWorkspace='full_diamond', OutputWorkspace='full_diamond', Params='0.3,-0.0003,3')
+ConvertToMatrixWorkspace(InputWorkspace='full_diamond', OutputWorkspace='full_diamond')
+SaveNexusProcessed(InputWorkspace='full_diamond', Filename='/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/VULCAN_150178_HighResolution_Diamond.nxs')
+CropWorkspace(InputWorkspace='full_diamond', OutputWorkspace='west_bank', XMin='0.80000000000000004', XMax='1.5', EndWorkspaceIndex='3234')
+SaveNexusProcessed(InputWorkspace='west_bank', Filename='/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/VULCAN_150178_Diamond_WestBank.nxs', Title='Cropped High Resolution 31-Hour Diamond West Bank')
+Load(Filename='VULCAN_150178_Diamond_WestBank.nxs', OutputWorkspace='west')
+CropWorkspace(InputWorkspace='west', OutputWorkspace='west1', EndWorkspaceIndex=20)
+CropWorkspace(InputWorkspace='west', OutputWorkspace='west2', StartWorkspaceIndex=40, EndWorkspaceIndex=200)
+ConjoinWorkspaces(InputWorkspace1='west1', InputWorkspace2='west2')
+
