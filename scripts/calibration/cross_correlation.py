@@ -4,6 +4,7 @@ from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus
 import bisect
+import numpy
 
 
 def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, reference_ws_index, cc_number, max_offset,
@@ -53,7 +54,11 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                        Step=abs(binning),
                        DReference=peak_position,
                        XMin=-cc_number, XMax=cc_number,
-                       MaxOffset=max_offset)
+                       MaxOffset=max_offset,
+                       OutputFitResult=True,
+                       FitEachPeakTwice=True,
+                       PeakFunction='Gaussian'  # 'PseudoVoigt', # Gaussian
+                       )
 
     # check result and remove interval result
     if False and mtd.doesExist(ws_name+"cc"+index):
@@ -124,15 +129,15 @@ def cross_correlate_vulcan_data(wkspName, group_ws_name):
 
     ref_ws_index = 1613
     peak_width = 0.04   # modified from 0.005
-    cc_number = 80
+    cc_number_west = 80
     west_offset, west_mask = cc_calibrate(wkspName, peakpos1, peakpos1-peak_width, peakpos1+peak_width, [0, 3234-1],
-                                          ref_ws_index, cc_number, 1, -0.0003, 'west')
+                                          ref_ws_index, cc_number_west, 1, -0.0003, 'west')
 
     ref_ws_index = 4847
     peak_width = 0.04
-    cc_number = 80
+    cc_number_east = 80
     east_offset, east_mask = cc_calibrate(wkspName, peakpos2, peakpos2-peak_width, peakpos2+peak_width, [3234, 6468-1],
-                                          ref_ws_index, 80, 1, -0.0003, 'east')
+                                          ref_ws_index, cc_number_east, 1, -0.0003, 'east')
                                           
     ref_ws_index = 15555
     peak_width = 0.01
@@ -145,7 +150,42 @@ def cross_correlate_vulcan_data(wkspName, group_ws_name):
     return
 
 
-def peak_function(vec_x, function_type):
+def cross_correlate_vulcan_data_test(wkspName, group_ws_name):
+    """
+    cross correlation on vulcan data
+    :param wkspName:
+    :param group_ws_name:
+    :return:
+    """
+    # wkspName = 'full_diamond'
+    peakpos1 = 1.2614
+    peakpos2 = 1.2614
+    peakpos3 = 1.07577
+
+    ref_ws_index = 6
+    peak_width = 0.04   # modified from 0.005
+    cc_number = 80
+    west_offset, west_mask = cc_calibrate(wkspName, peakpos1, peakpos1-peak_width, peakpos1+peak_width, [0, 3234-1],
+                                          ref_ws_index, cc_number, 1, -0.0003, 'west')
+
+    ref_ws_index = 14
+    peak_width = 0.04
+    cc_number = 80
+    east_offset, east_mask = cc_calibrate(wkspName, peakpos2, peakpos2-peak_width, peakpos2+peak_width, [3234, 6468-1],
+                                          ref_ws_index, 80, 1, -0.0003, 'east')
+                                          
+    ref_ws_index = 58
+    peak_width = 0.01
+    cc_number = 20
+    ha_offset, ha_mask = cc_calibrate(wkspName, peakpos3, peakpos3-peak_width, peakpos3+peak_width, [6468, 24900-1],
+                                          ref_ws_index, cc_number, 1, -0.0003, 'high_angle')
+
+    save_calibration(wkspName, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)], group_ws_name, 'vulcan_vz_test')
+
+    return
+
+
+def peak_function(vec_x, peak_intensity, peak_center, peak_sigma, bkgd_a0, bkgd_a1, function_type):
     """
 
     :param vec_x:
@@ -153,7 +193,7 @@ def peak_function(vec_x, function_type):
     :return:
     """
     # gaussian:
-    vec_y = peak_inensity * numpy.exp(-(vec_x - peak_center)**2/peak_sigma**2) + bkgd_a0 + bkgd_a1 * vec_x
+    vec_y = peak_intensity * numpy.exp(-0.5*(vec_x - peak_center)**2/peak_sigma**2) + bkgd_a0 + bkgd_a1 * vec_x
 
     return vec_y
 
@@ -174,12 +214,12 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
 
         ws_index = param_table_ws.cell(row_index, 0)
         peak_pos = param_table_ws.cell(row_index, 1)
-        peak_height = param_table_ws.cell(row_index, 2)
-        peak_sigma = param_table_ws.cell(row_index, 3)
+        peak_height = param_table_ws.cell(row_index, 3)
+        peak_sigma = param_table_ws.cell(row_index, 2)
         bkgd_a0 = param_table_ws.cell(row_index, 4)
         bkgd_a1 = param_table_ws.cell(row_index, 5)
 
-        peak_fwhm = peak_sigma * whatever
+        peak_fwhm = peak_sigma * 2.355
 
         x_min = peak_pos - 0.5 * peak_fwhm
         x_max = peak_pos + 0.5 * peak_fwhm
@@ -190,13 +230,59 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
 
         vec_x = vec_x[i_min:i_max]
         obs_y = data_ws.readY(ws_index)[i_min:i_max]
-        model_y = peak_function(vec_x)
-        cost = numpy.sqrt(sumpy.sum((model_y - obs_y)**2))/len(obs_y)
+        model_y = peak_function(vec_x, peak_height, peak_pos, peak_sigma, bkgd_a0, bkgd_a1, 'guassian')
+        cost = numpy.sqrt(numpy.sum((model_y - obs_y)**2))/len(obs_y)
 
         cost_list.append([ws_index, cost])
     # END-FOR
 
     return cost_list
+
+
+def calculate_model(data_ws_name, ws_index, fit_param_table_name):
+    """
+
+    :param data_ws_name:
+    :param ws_index:
+    :param fit_param_table_name:
+    :return:
+    """
+    data_ws = AnalysisDataService.retrieve(data_ws_name)
+    param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
+
+    for row_index in range(param_table_ws.rowCount()):
+
+        ws_index_i = param_table_ws.cell(row_index, 0)
+        if ws_index != ws_index_i:
+            continue
+
+        peak_pos = param_table_ws.cell(row_index, 1)
+        peak_height = param_table_ws.cell(row_index, 3)
+        peak_sigma = param_table_ws.cell(row_index, 2)
+        bkgd_a0 = param_table_ws.cell(row_index, 4)
+        bkgd_a1 = param_table_ws.cell(row_index, 5)
+
+        peak_fwhm = peak_sigma * 2.355
+
+        x_min = peak_pos - 0.5 * peak_fwhm
+        x_max = peak_pos + 0.5 * peak_fwhm
+
+        vec_x = data_ws.readX(ws_index)
+        i_min = bisect.bisect(vec_x, x_min)
+        i_max = bisect.bisect(vec_x, x_max)
+
+        vec_x = vec_x[i_min:i_max]
+        obs_y = data_ws.readY(ws_index)[i_min:i_max]
+        model_y = peak_function(vec_x, peak_height, peak_pos, peak_sigma, bkgd_a0, bkgd_a1, 'guassian')
+        cost = numpy.sqrt(numpy.sum((model_y - obs_y)**2))/len(obs_y)
+
+        print ('Cost x = {0}'.format(cost))
+
+        CreateWorkspace(vec_x, model_y, NSpec=1, OutputWorkspace='modelx')
+
+    # END-FOR
+
+    return
 
 
 def main(argv):
@@ -216,4 +302,25 @@ def main(argv):
     if AnalysisDataService.doesExist('vulcan_diamond') is False:
         diamond_ws = Load(Filename=nxs_file_name, OutputWorkspace='vulcan_diamond')
         CreateGroupingWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_group')
-        cross_correlate_vulcan_data(diamond_ws.name(), 'vulcan_group')
+        ws_name = diamond_ws.name()
+        
+    cross_correlate_vulcan_data('vulcan_diamond', 'vulcan_group')
+
+
+main([])
+
+# WEST
+calculate_model('cc_vulcan_diamond_west', 1755, 'vulcan_diamondoffsetwest_FitResult')
+# plot cost list
+cost_list = evaluate_cc_quality('cc_vulcan_diamond_west', 'vulcan_diamondoffsetwest_FitResult')
+cost_array = numpy.array(cost_list).transpose()
+CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='West_Cost')
+
+# HIGH ANGLE
+calculate_model('cc_vulcan_diamond_high_angle', 12200, 'vulcan_diamondoffsethigh_angle_FitResult')
+# plot cost list
+cost_list = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'vulcan_diamondoffsethigh_angle_FitResult')
+cost_array = numpy.array(cost_list).transpose()
+CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
+
+

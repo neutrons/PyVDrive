@@ -11,7 +11,7 @@ def create_partial_diamond(src_nexus_name, target_nexus_name):
     :return:
     """
     # load file
-    LoadNexusProcessed(Filname=src_nexus_name, OutputWorkspace='full_diamond')
+    LoadNexusProcessed(Filename=src_nexus_name, OutputWorkspace='full_diamond')
 
     # create workspace index list
     ws_index_list = list()
