@@ -2,7 +2,7 @@
 import os
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
-from mantid.simpleapi import RenameWorkspace, Plus
+from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace
 import bisect
 import numpy
 
@@ -57,7 +57,8 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                        MaxOffset=max_offset,
                        OutputFitResult=True,
                        FitEachPeakTwice=True,
-                       PeakFunction='Gaussian'  # 'PseudoVoigt', # Gaussian
+                       PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
+                       MinimumPeakHeight=1.0  # any peak is lower than 1 shall be masked!
                        )
 
     # check result and remove interval result
@@ -143,7 +144,7 @@ def cross_correlate_vulcan_data(wkspName, group_ws_name):
     peak_width = 0.01
     cc_number = 20
     ha_offset, ha_mask = cc_calibrate(wkspName, peakpos3, peakpos3-peak_width, peakpos3+peak_width, [6468, 24900-1],
-                                          ref_ws_index, cc_number, 1, -0.0003, 'high_angle')
+                                      ref_ws_index, cc_number, 1, -0.0003, 'high_angle')
 
     save_calibration(wkspName, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)], group_ws_name, 'vulcan_vz_test')
 
@@ -283,6 +284,48 @@ def calculate_model(data_ws_name, ws_index, fit_param_table_name):
     # END-FOR
 
     return
+
+
+def analyze_outputs(cross_correlation_ws_dict, getdetoffset_result_ws_dict):
+    """
+    evaluate (by matching the fitted cross-correlation peaks to those calculated from
+    CrossCorrelation) the peak fitting result from GetDetectorOffsets in order to create
+    list of spectra to be masked.
+    :param cross_correlation_ws_dict:
+    :param getdetoffset_result_ws_dict:
+    :return:
+    """
+    cost_ws_dict = dict()
+    for bank_name in ['west', 'east', 'high angle']:
+        cc_diamond_ws_name = cross_correlation_ws_dict[bank_name]
+        fit_result_table_name = getdetoffset_result_ws_dict[bank_name]
+
+        # create the workspaces
+        cost_list = evaluate_cc_quality(cc_diamond_ws_name, fit_result_table_name)
+        cost_array = numpy.array(cost_list).transpose()
+        cost_ws_name_i = '{0}_cost'.format(bank_name)
+        CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1,
+                        OutputWorkspace=cost_ws_name_i)
+
+        cost_ws_dict[bank_name] = cost_ws_name_i
+    # END-FOR
+
+    return cost_ws_dict
+
+
+def select_detectors_to_mask(cost_ws_dict, cost_threshold):
+    """
+
+    :param cost_ws_dict:
+    :param cost_threshold:
+    :return:
+    """
+    for bank_name in ['west', 'east', 'high angle']:
+        cost_ws_name = cost_ws_dict[bank_name]
+        cost_matrix_ws = mtd[cost_ws_name]
+        vec_ws_index = cost_matrix_ws.readX(0)
+        vec_cost = cost_matrix_ws.readY(0)
+        raise RuntimeError('Use numpy operation to get the indexes of cost larger than threshold')
 
 
 def main(argv):
