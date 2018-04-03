@@ -791,7 +791,8 @@ class ReductionManager(object):
         return new_tracker
 
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
-                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None):
+                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
+                   num_banks=3):
         """
         Reduce run with selected options
         Purpose:
@@ -807,6 +808,8 @@ class ReductionManager(object):
         :param gsas:
         :param standard_sample_tuple:
         :param binning_parameters:
+        :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed.
+
         :return:
         """
         # set up reduction options
@@ -817,7 +820,7 @@ class ReductionManager(object):
         reduction_setup.set_event_file(event_file)
         reduction_setup.set_ipts_number(ipts_number)
         reduction_setup.set_banks_to_merge(merge_banks)
-        reduction_setup.set_default_calibration_files()
+        reduction_setup.set_default_calibration_files(num_focused_banks=num_banks)
 
         # parse binning parameters
         if binning_parameters is not None:

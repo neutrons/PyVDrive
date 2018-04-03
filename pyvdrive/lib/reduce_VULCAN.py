@@ -51,8 +51,8 @@ import xml.etree.ElementTree as ET
 import sys
 import numpy
 import bisect
-import pandas as pd
 import save_vulcan_gsas
+import vdrivehelper as helper
 
 sys.path.append("/opt/mantidnightly/bin")
 import mantid.simpleapi as mantidsimple
@@ -62,10 +62,14 @@ from mantid.kernel import DateAndTime
 import h5py
 
 
+
+
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
-                        ['/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',
+                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',
+                          7: '',
+                          27: ''},
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         ]
@@ -954,15 +958,18 @@ class ReductionSetup(object):
 
         return
 
-    def set_default_calibration_files(self):
+    def set_default_calibration_files(self, num_focused_banks):
         """
         set default calibration files
+        :param num_focused_banks:
         :return:
         """
+        helper.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, ))
+
         # get the reduction calibration and etc files from event data file
         file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
 
-        calibrate_file_name = file_list[0]
+        calibrate_file_name = file_list[0][num_focused_banks]
         character_file_name = file_list[1]
         binning_ref_file_name = file_list[2]
 

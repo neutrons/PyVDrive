@@ -85,7 +85,7 @@ class AutoReduce(procss_vcommand.VDriveCommand):
 class VBin(procss_vcommand.VDriveCommand):
     """
     """
-    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BINW', 'SKIPXML', 'FOCUS_EW',
+    SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
                      'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT']
 
@@ -93,6 +93,7 @@ class VBin(procss_vcommand.VDriveCommand):
         'IPTS': 'IPTS number',
         'RUNE': 'First run number',
         'RUNS': 'Last run number',
+        'BANKS': 'Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
         'OneBank': 'Add 2 bank data together (=1).',
         'Mytofbmin': 'User defined TOF min in binning parameter',
@@ -165,6 +166,15 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             merge_to_one_bank = False
 
+        if 'BANKS' in self._commandArgsDict:
+            bank_group = int(self._commandArgsDict['BANKS'])
+            if bank_group not in [3, 7, 27]:
+                raise RuntimeError('BANKS can only be 3 (east, west, high-angle), 7 (6+1)), or 27 (9+9+9).'
+                                   'So {0} is not allowed.'.format(bank_group))
+        else:
+            # default
+            bank_group = 3
+
         # scan the runs with data archive manager and add the runs to project
         if use_chop_data:
             # reducing chopped data
@@ -179,6 +189,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        vanadium=(van_run is not None),
                                                                        binning_parameters=binning_parameters,
                                                                        align_to_vdrive_bin=use_default_binning,
+                                                                       num_banks=bank_group,
                                                                        merge_banks=merge_to_one_bank)
 
         else:
@@ -209,7 +220,8 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
-                                                               merge_runs=False)
+                                                               merge_runs=False,
+                                                               num_banks=bank_group)
 
         # END-IF-ELSE
 
@@ -265,6 +277,7 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
+        help_str += '> VBIN,RUNS=152782, RUNE=153144, BANKS=7'
 
         return help_str
 

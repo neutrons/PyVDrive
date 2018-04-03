@@ -1265,7 +1265,7 @@ class VDriveAPI(object):
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
                                 binning_parameters, align_to_vdrive_bin,
-                                merge_banks, gsas=True):
+                                merge_banks, gsas=True, num_banks=3):
         """ reduce a set of chopped data
         :param ipts_number:
         :param run_number:
@@ -1275,11 +1275,10 @@ class VDriveAPI(object):
         :param binning_parameters:
         :param align_to_vdrive_bin:
         :param merge_banks:
-        :param gsas
+        :param gsas:
+        :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed.
         :return:
         """
-        # TODO/ISSUE/71/NOWNOW - new option merge bank
-
         # get list of files
         if raw_data_directory is None:
             # raw data is not given, then search the data in archive
@@ -1312,7 +1311,8 @@ class VDriveAPI(object):
                                                                        binning_parameters, merge_banks,
                                                                        align_to_vdrive_bin,
                                                                        vanadium_tuple=None,
-                                                                       standard_sample_tuple=None)
+                                                                       standard_sample_tuple=None,
+                                                                       num_banks=num_banks)
         except AssertionError as assert_err:
             raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
 
@@ -1322,7 +1322,7 @@ class VDriveAPI(object):
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False):
+                        merge_runs=False, dspace=False, num_banks=3):
         """
         Reduce a set of data
         Purpose:
@@ -1347,6 +1347,7 @@ class VDriveAPI(object):
         :param binning_parameters: None for default and otherwise using user specified
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
+        :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed.
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1381,7 +1382,8 @@ class VDriveAPI(object):
             status, message = self._myProject.simple_reduce_runs(run_number_list=runs_to_reduce,
                                                                  output_directory=output_directory,
                                                                  dspace=True,
-                                                                 binning_parameters=binning_parameters)
+                                                                 binning_parameters=binning_parameters,
+                                                                 num_banks=num_banks)
 
         else:
             # manual reduction: Reduce runs
@@ -1398,7 +1400,8 @@ class VDriveAPI(object):
                                                               standard_sample_tuple=standard_sample_tuple,
                                                               merge_banks=merge_banks,
                                                               merge_runs=merge_runs,
-                                                              binning_parameters=binning_parameters)
+                                                              binning_parameters=binning_parameters,
+                                                              num_banks=3)
 
             except AssertionError as re:
                 status = False
