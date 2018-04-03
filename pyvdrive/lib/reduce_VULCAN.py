@@ -969,7 +969,7 @@ class ReductionSetup(object):
         :param num_focused_banks:
         :return:
         """
-        helper.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, ))
+        helper.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, None))
 
         # get the reduction calibration and etc files from event data file
         file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
@@ -979,6 +979,7 @@ class ReductionSetup(object):
         binning_ref_file_name = file_list[2]
 
         self.set_focus_file(calibrate_file_name)
+        print ('[DB...BAT] calibration file: {0}.  number of focused banks = {1}'.format(calibrate_file_name, num_focused_banks))
         self.set_charact_file(character_file_name)
         if binning_ref_file_name is not None:
             self.set_vulcan_bin_file(binning_ref_file_name)
@@ -2392,12 +2393,19 @@ class ReduceVulcanData(object):
                                   ([3], high_bins)]
             # END-IF
 
+            # TODO ASAP NOW3 - Create a binning table!
             # save. it is an option to use IDL bin provided from VDRIVE
-            save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
-                                             binning_parameter_list=bin_param_list,
-                                             output_file_name=gsas_file_name,
-                                             ipts=self._reductionSetup.get_ipts_number(),
-                                             gsas_param_file=gsas_iparm_file_name)
+            SaveVulcanGSS(InputWorkspace=reduced_workspace,
+                          BinningTable=bin_table,
+                          OutputWorkspace=reduced_workspace,
+                          GSSFilename=gsas_iparm_file_name,
+                          IPTS=self._reductionSetup.get_ipts_number(),
+                          GSSParmFileName='vulcan.prm')
+            # save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
+            #                                  binning_parameter_list=bin_param_list,
+            #                                  output_file_name=gsas_file_name,
+            #                                  ipts=self._reductionSetup.get_ipts_number(),
+            #                                  gsas_param_file=gsas_iparm_file_name)
 
             vdrive_bin_ws_name = reduced_workspace
         else:
@@ -2437,6 +2445,8 @@ class ReduceVulcanData(object):
         self._reducedWorkspaceMtd = reduced_workspace
         self._reducedWorkspaceVDrive = vdrive_bin_ws_name
         self._reduceGood = True
+
+        # TODO FIXME ASAP NOW3 - Delete workspace (event or etc) as an option!
 
         return
 

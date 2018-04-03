@@ -29,7 +29,7 @@ def check_int_variable(var_name, variable, var_range):
         assert isinstance(var_range, list) or isinstance(var_range, tuple), 'Variable value range {0} must be given' \
                                                                             'as either list or tuple but not {1}.' \
                                                                             ''.format(var_range, type(var_range))
-        assert len(var_range) == 2, 'Variable range list/tuple must have 2 values'
+        assert len(var_range) == 2, 'Variable range list/tuple {0} must have 2 values'.format(var_range)
         if var_range[0] is not None and variable < var_range[0]:
             raise RuntimeError('Variable {0} is smaller than minimum value {1}'.format(variable, var_range[0]))
         elif var_range[1] is not None and variable >= var_range[1]:

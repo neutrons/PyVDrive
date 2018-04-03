@@ -1401,7 +1401,7 @@ class VDriveAPI(object):
                                                               merge_banks=merge_banks,
                                                               merge_runs=merge_runs,
                                                               binning_parameters=binning_parameters,
-                                                              num_banks=3)
+                                                              num_banks=num_banks)
 
             except AssertionError as re:
                 status = False
