@@ -61,17 +61,22 @@ from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 import h5py
 
+"""
+VULCAN_calibrate_2018_04_03_27bank.h5  VULCAN_calibrate_2018_04_03.h5  VULCAN_calibrate_2018_04_04_7bank.h5
 
+"""
 
 
 CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
-                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5',
-                          7: '',
-                          27: ''},
+                        # east/west bank
+                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03.h5',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03_7bank.h5',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03_27bank.h5'},
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
+                        # east/west and high angle bank
                         ]
 ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
 

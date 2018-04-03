@@ -4,8 +4,7 @@ from mantid.simpleapi import LoadDiffCal, SaveDiffCal, CloneWorkspace
 import argparse
 
 # default calibration and instrument file names
-INSTRUMENT_FILE= '/home/wzz/SNS-Home/Projects/VULCAN/nED_Calibration/high_resolution_2/' \
-                 'VULCAN_Definition_2017-05-20.xml'
+INSTRUMENT_FILE = '/home/wzz/Projects/VULCAN/nED/VULCAN_Definition_2017-05-20.xml'
 CALIBRATION_FILE = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5'
 
 # Load an up-to-date VULCAN calibration file
@@ -38,7 +37,7 @@ def make_7_bank_group_workspace():
     # high angle bank: bank 7
     group_id = 7
     high_angle_bank_start_det_id = 6468
-    for ws_index in range(high_angle_bank_start_det_id, len(new_group_ws.getNumberHistograms())):
+    for ws_index in range(high_angle_bank_start_det_id, new_group_ws.getNumberHistograms()):
         new_group_ws.dataY(ws_index)[0] = group_id
     # END-FOR
 
@@ -110,43 +109,49 @@ def main(argv):
     """
     # define arguments
     parser = argparse.ArgumentParser(description='Create VULCAN calibration file with various number of groups')
-    parser.add_argument('banks', metavar='B', type=int, help='Number of banks in the calibration file')
-    parser.add_argument('output', metavar='O', type=str, help='Name of output file')
+    # positional argument
+    parser.add_argument('banks', type=int, help='Number of banks in the calibration file')
+    # positional argument
+    parser.add_argument('output', type=str, help='Name of output file')
+    # optional argument
+    parser.add_argument('-c', '--calibrate', type=str, help='Source calibration file')
 
-    if len(argv) == 0:
-        print ('No argument is given.  Try --help')
-        return
-
+    # get args
     args = parser.parse_args()
-    # print ('[DB] Input argument: {0}'.format(argparse))
-    bank_number = args['banks']
-    output_file_name = args['output']
+
+    print (args.banks, args.output, args.calibrate)
+
+    # process source calibration file
+    if args.calibrate is None:
+        src_calib_file = CALIBRATION_FILE
+    else:
+        src_calib_file = args.calibrate
 
     # load a reference/source calibration file
     if os.path.exists(INSTRUMENT_FILE) is False:
         print ('Instrument file {0} cannot be found.'.format(INSTRUMENT_FILE))
         exit(1)
-    if not os.path.exists(CALIBRATION_FILE):
+    if not os.path.exists(src_calib_file):
         print ('Calibration file {0} cannot be found.'.format(CALIBRATION_FILE))
     LoadDiffCal(
         InstrumentFilename=INSTRUMENT_FILE,
-        Filename=CALIBRATION_FILE,
+        Filename=src_calib_file,
         WorkspaceName='vulcan_orig')
 
     # create banks
-    if bank_number == 27:
+    if args.banks == 27:
         new_group_ws_name = make_27_bank_group_workspace()
-    elif bank_number == 7:
-        new_group_ws_name = make_27_bank_group_workspace()
+    elif args.banks == 7:
+        new_group_ws_name = make_7_bank_group_workspace()
     else:
-        print ('{0}-bank grouping/calibration file is not supported.'.format(bank_number))
-        exit(1)
+        print ('{0}-bank grouping/calibration file is not supported.'.format(args.banks))
+        sys.exit(1)
 
     # Save calibration
     SaveDiffCal(CalibrationWorkspace='vulcan_orig_cal',
                 GroupingWorkspace=new_group_ws_name,
                 MaskWorkspace='vulcan_orig_mask',
-                Filename=output_file_name)
+                Filename=args.output)
 
     return
 

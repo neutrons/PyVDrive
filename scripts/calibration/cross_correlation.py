@@ -47,8 +47,8 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                    XMin=peak_min, XMax=peak_max)
 
     # Get offsets for pixels using interval around cross correlations center and peak at peakpos (d-Spacing)
-    offset_ws_name = ws_name+"offset"+index
-    mask_ws_name = ws_name+"mask"+index
+    offset_ws_name = 'offset_' + ws_name + '_' + index
+    mask_ws_name = 'mask_' + ws_name + '_' + index
     GetDetectorOffsets(InputWorkspace=cc_ws_name,
                        OutputWorkspace=offset_ws_name, MaskWorkspace=mask_ws_name,
                        Step=abs(binning),
@@ -165,15 +165,15 @@ def cross_correlate_vulcan_data_test(wkspName, group_ws_name):
 
     ref_ws_index = 6
     peak_width = 0.04   # modified from 0.005
-    cc_number = 80
+    cc_number_west = 80
     west_offset, west_mask = cc_calibrate(wkspName, peakpos1, peakpos1-peak_width, peakpos1+peak_width, [0, 3234-1],
-                                          ref_ws_index, cc_number, 1, -0.0003, 'west')
+                                          ref_ws_index, cc_number_west, 1, -0.0003, 'west')
 
     ref_ws_index = 14
     peak_width = 0.04
-    cc_number = 80
+    cc_number_east = 80
     east_offset, east_mask = cc_calibrate(wkspName, peakpos2, peakpos2-peak_width, peakpos2+peak_width, [3234, 6468-1],
-                                          ref_ws_index, 80, 1, -0.0003, 'east')
+                                          ref_ws_index, cc_number_east, 1, -0.0003, 'east')
                                           
     ref_ws_index = 58
     peak_width = 0.01
@@ -211,6 +211,7 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
 
     cost_list = list()
 
+    bad_ws_index_list = list()
     for row_index in range(param_table_ws.rowCount()):
 
         ws_index = param_table_ws.cell(row_index, 0)
@@ -219,6 +220,11 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
         peak_sigma = param_table_ws.cell(row_index, 2)
         bkgd_a0 = param_table_ws.cell(row_index, 4)
         bkgd_a1 = param_table_ws.cell(row_index, 5)
+
+        # avoid bad pixels
+        if peak_sigma < 1 or peak_sigma > 15 or peak_height < 1 or peak_height > 5:
+            bad_ws_index_list.append(ws_index)
+            continue
 
         peak_fwhm = peak_sigma * 2.355
 
@@ -237,7 +243,9 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
         cost_list.append([ws_index, cost])
     # END-FOR
 
-    return cost_list
+    print ('Bad pixels number: {0}\n\t... They are {1}'.format(len(bad_ws_index_list), bad_ws_index_list))
+
+    return cost_list, bad_ws_index_list
 
 
 def calculate_model(data_ws_name, ws_index, fit_param_table_name):
@@ -279,7 +287,7 @@ def calculate_model(data_ws_name, ws_index, fit_param_table_name):
 
         print ('Cost x = {0}'.format(cost))
 
-        CreateWorkspace(vec_x, model_y, NSpec=1, OutputWorkspace='modelx')
+        CreateWorkspace(vec_x, model_y, NSpec=1, OutputWorkspace='model_{0}'.format(ws_index))
 
     # END-FOR
 
@@ -353,17 +361,27 @@ def main(argv):
 main([])
 
 # WEST
-calculate_model('cc_vulcan_diamond_west', 1755, 'vulcan_diamondoffsetwest_FitResult')
+calculate_model('cc_vulcan_diamond_west', 1755, 'offset_vulcan_diamond_west_FitResult')
 # plot cost list
-cost_list = evaluate_cc_quality('cc_vulcan_diamond_west', 'vulcan_diamondoffsetwest_FitResult')
+cost_list, west_bad = evaluate_cc_quality('cc_vulcan_diamond_west', 'offset_vulcan_diamond_west_FitResult')
 cost_array = numpy.array(cost_list).transpose()
 CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='West_Cost')
 
-# HIGH ANGLE
-calculate_model('cc_vulcan_diamond_high_angle', 12200, 'vulcan_diamondoffsethigh_angle_FitResult')
+
+# East
 # plot cost list
-cost_list = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'vulcan_diamondoffsethigh_angle_FitResult')
+cost_list, east_bad = evaluate_cc_quality('cc_vulcan_diamond_east', 'offset_vulcan_diamond_east_FitResult')
+cost_array = numpy.array(cost_list).transpose()
+print (cost_array)
+CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='East_Cost')
+
+# HIGH ANGLE
+calculate_model('cc_vulcan_diamond_high_angle', 12200, 'offset_vulcan_diamond_high_angle_FitResult')
+# plot cost list
+cost_list, high_angle_bad = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
 cost_array = numpy.array(cost_list).transpose()
 CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
+
+
 
 
