@@ -54,7 +54,8 @@ import bisect
 import save_vulcan_gsas
 import vdrivehelper as helper
 
-sys.path.append("/opt/mantidnightly/bin")
+#sys.path.append("/opt/mantidnightly/bin")
+sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -2384,12 +2385,13 @@ class ReduceVulcanData(object):
 
             # TEST ASAP NOW3 - Create a binning table!
             # save. it is an option to use IDL bin provided from VDRIVE
-            SaveVulcanGSS(InputWorkspace=reduced_workspace,
-                          BinningTable=bin_table_name,
-                          OutputWorkspace=reduced_workspace,
-                          GSSFilename=gsas_iparm_file_name,
-                          IPTS=self._reductionSetup.get_ipts_number(),
-                          GSSParmFileName='vulcan.prm')
+            mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
+                                       BinningTable=bin_table_name,
+                                       OutputWorkspace=reduced_workspace,
+                                       GSSFilename=gsas_file_name,
+                                       IPTS=self._reductionSetup.get_ipts_number(),
+                                       GSSParmFileName=gsas_iparm_file_name)
+            print ('[DB...BAT] gsas iparm file: {0}, Output GSS: {1}'.format(gsas_iparm_file_name, gsas_file_name))
             # save_vulcan_gsas.save_vulcan_gss(reduced_workspace,
             #                                  binning_parameter_list=bin_param_list,
             #                                  output_file_name=gsas_file_name,
@@ -2410,7 +2412,6 @@ class ReduceVulcanData(object):
             raise RuntimeError('Output GSAS file {0} cannot be found.'.format(gsas_file_name))
 
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
-        bin_table_name = s
 
         # merge banks
         if self._reductionSetup.merge_banks:
@@ -2797,7 +2798,7 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
         :param table_name:
         :return:
         """
-        ref_bin_table = CreateEmptyTableWorkspace(OutputWorkspace=bin_table_name)
+        ref_bin_table = mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=bin_table_name)
         ref_bin_table.addColumn('str', 'indexes')
         ref_bin_table.addColumn('str', 'params')
 
@@ -2822,16 +2823,16 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
 
         if num_banks == 3:
             # west(1), east(1), high(1)
-            bin_table_ws.addRow(['1, 2', '{0}'.format(east_west_binning_parameters)])
-            bin_table_ws.addRow(['3', '{0}'.format(high_angle_binning_parameters)])
+            bin_table_ws.addRow(['0, 1', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['2', '{0}'.format(high_angle_binning_parameters)])
         elif num_banks == 7:
             # west (3), east (3), high (1)
-            bin_table_ws.addRow(['1-7', '{0}'.format(east_west_binning_parameters)])
-            bin_table_ws.addRow(['7', '{0}'.format(high_angle_binning_parameters)])
+            bin_table_ws.addRow(['0-5', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['6', '{0}'.format(high_angle_binning_parameters)])
         elif num_banks == 27:
             # west (3), east (3), high (1)
-            bin_table_ws.addRow(['1-19', '{0}'.format(east_west_binning_parameters)])
-            bin_table_ws.addRow(['19-28', '{0}'.format(high_angle_binning_parameters)])
+            bin_table_ws.addRow(['0-17', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['18-26', '{0}'.format(high_angle_binning_parameters)])
         else:
             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
 
@@ -2849,9 +2850,9 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
         low_bin_ws_name = '{0}_LowResBin'.format(base_table_name)
         high_bin_ws_name = '{0}_HighResBin'.format(base_table_name)
         if AnalysisDataService.doesExist(low_bin_ws_name) is False:
-            CreateWorkspace(low_bins, low_bins, NSpec=1, OutputWorkspace=low_bin_ws_name)
+            mantidsimple.CreateWorkspace(low_bins, low_bins, NSpec=1, OutputWorkspace=low_bin_ws_name)
         if AnalysisDataService.doesExist(high_bin_ws_name) is False:
-            CreateWorkspace(high_bins, high_bins, NSpec=1, OutputWorkspace=high_bin_ws_name)
+            mantidsimple.CreateWorkspace(high_bins, high_bins, NSpec=1, OutputWorkspace=high_bin_ws_name)
 
         # create binning table name
         bin_table_name = '{0}_{1}Bank'.format(base_table_name, num_banks)
@@ -2865,16 +2866,16 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
 
         if num_banks == 3:
             # west(1), east(1), high(1)
-            ref_bin_table.addRow(['1, 2', '{0}: {1}'.format(low_bin_ws_name, 0)])
-            ref_bin_table.addRow(['3', '{0}: {1}'.format(high_bin_ws_name, 0)])
+            ref_bin_table.addRow(['0, 1', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['2', '{0}: {1}'.format(high_bin_ws_name, 0)])
         elif num_banks == 7:
             # west (3), east (3), high (1)
-            ref_bin_table.addRow(['1-7', '{0}: {1}'.format(low_bin_ws_name, 0)])
-            ref_bin_table.addRow(['7', '{0}: {1}'.format(high_bin_ws_name, 0)])
+            ref_bin_table.addRow(['0-5', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['6', '{0}: {1}'.format(high_bin_ws_name, 0)])
         elif num_banks == 27:
             # west (3), east (3), high (1)
-            ref_bin_table.addRow(['1-19', '{0}: {1}'.format(low_bin_ws_name, 0)])
-            ref_bin_table.addRow(['19-28', '{0}: {1}'.format(high_bin_ws_name, 0)])
+            ref_bin_table.addRow(['0-17', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['18-26', '{0}: {1}'.format(high_bin_ws_name, 0)])
         else:
             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
     # END-IF-ELSE

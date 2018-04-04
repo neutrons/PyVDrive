@@ -1,0 +1,5 @@
+Debug installation
+
+
+Path to mantid: 
+  - determined by: pyvdrive/interface/gui/mantidipythonwidget.py
