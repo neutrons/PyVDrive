@@ -242,7 +242,8 @@ class VBin(procss_vcommand.VDriveCommand):
                     try:
                         os.remove(intensity_file_name)
                     except OSError as err:
-                        message += 'Unable to write vanadium intensity to file {0} due to {1}\n'.format(intensity_file_name)
+                        message += 'Unable to write vanadium intensity to file {0} due to {1}\n' \
+                                   ''.format(intensity_file_name, err)
                         status = False
                         write_intensity = False
                 

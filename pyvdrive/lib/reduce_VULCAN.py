@@ -2378,25 +2378,14 @@ class ReduceVulcanData(object):
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # NOTE: The bank ID (from 1) is required here
 
-            if not_align_idl:
-                bin_param_list = [([1, 2], east_west_binning_parameters),
-                                  ([3], high_angle_binning_parameters)]
-            else:
-                # import h5 file
-                h5_bin_file_name = self._reductionSetup.get_vulcan_bin_file()
-                bin_file = h5py.File(h5_bin_file_name, 'r')
-                low_bins = bin_file['west_east_bank'][:]
-                high_bins = bin_file['high_angle_bank'][:]
-                bin_file.close()
+            bin_table_name = create_bin_table(reduced_workspace, not_align_idl,
+                                              self._reductionSetup.get_vulcan_bin_file(),
+                                              (east_west_binning_parameters, high_angle_binning_parameters))
 
-                bin_param_list = [([1, 2], low_bins),
-                                  ([3], high_bins)]
-            # END-IF
-
-            # TODO ASAP NOW3 - Create a binning table!
+            # TEST ASAP NOW3 - Create a binning table!
             # save. it is an option to use IDL bin provided from VDRIVE
             SaveVulcanGSS(InputWorkspace=reduced_workspace,
-                          BinningTable=bin_table,
+                          BinningTable=bin_table_name,
                           OutputWorkspace=reduced_workspace,
                           GSSFilename=gsas_iparm_file_name,
                           IPTS=self._reductionSetup.get_ipts_number(),
@@ -2421,6 +2410,7 @@ class ReduceVulcanData(object):
             raise RuntimeError('Output GSAS file {0} cannot be found.'.format(gsas_file_name))
 
         self._reductionSetup.set_reduced_workspace(vdrive_bin_ws_name)
+        bin_table_name = s
 
         # merge banks
         if self._reductionSetup.merge_banks:
@@ -2791,6 +2781,105 @@ class MainUtility(object):
                 all_parts.insert(0, parts[1])
 
         return all_parts
+
+# END-CLASS
+
+
+def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_parameters=None):
+    """
+    create a TableWorkspace with binning information
+    :param data_ws:
+    :return:
+    """
+    def generate_binning_table(table_name):
+        """
+        generate a binning TableWorkspace
+        :param table_name:
+        :return:
+        """
+        ref_bin_table = CreateEmptyTableWorkspace(OutputWorkspace=bin_table_name)
+        ref_bin_table.addColumn('str', 'indexes')
+        ref_bin_table.addColumn('str', 'params')
+
+        return ref_bin_table
+
+    # get input workspace
+    if isinstance(data_ws, str):
+        data_ws = AnalysisDataService.retrieve(data_ws)
+    num_banks = data_ws.getNumberHistograms()
+
+    if not_align_idl:
+        # not aligned IDL
+        assert isinstance(binning_parameters, list) or isinstance(binning_parameters, tuple),\
+            'Binning parameters must be either tuple of list'
+        assert len(binning_parameters) == 2, 'Must have both low resolution and high resolution'
+
+        #
+        bin_table_name = 'VULCAN_Binning_Table_{0}Banks'.format(num_banks)
+        # if AnalysisDataService.doesExist(bin_table_name) is False:  FIXME how to avoid duplicate operation?
+        bin_table_ws = generate_binning_table(bin_table_name)
+        east_west_binning_parameters, high_angle_binning_parameters = binning_parameters
+
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            bin_table_ws.addRow(['1, 2', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['3', '{0}'.format(high_angle_binning_parameters)])
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            bin_table_ws.addRow(['1-7', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['7', '{0}'.format(high_angle_binning_parameters)])
+        elif num_banks == 27:
+            # west (3), east (3), high (1)
+            bin_table_ws.addRow(['1-19', '{0}'.format(east_west_binning_parameters)])
+            bin_table_ws.addRow(['19-28', '{0}'.format(high_angle_binning_parameters)])
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+
+    else:
+        # import h5 file
+
+        base_table_name = os.path.basename(h5_bin_file_name).split('.')[0]
+
+        # load vdrive bin file to 2 different workspaces
+        bin_file = h5py.File(h5_bin_file_name, 'r')
+        low_bins = bin_file['west_east_bank'][:]
+        high_bins = bin_file['high_angle_bank'][:]
+        bin_file.close()
+
+        low_bin_ws_name = '{0}_LowResBin'.format(base_table_name)
+        high_bin_ws_name = '{0}_HighResBin'.format(base_table_name)
+        if AnalysisDataService.doesExist(low_bin_ws_name) is False:
+            CreateWorkspace(low_bins, low_bins, NSpec=1, OutputWorkspace=low_bin_ws_name)
+        if AnalysisDataService.doesExist(high_bin_ws_name) is False:
+            CreateWorkspace(high_bins, high_bins, NSpec=1, OutputWorkspace=high_bin_ws_name)
+
+        # create binning table name
+        bin_table_name = '{0}_{1}Bank'.format(base_table_name, num_banks)
+
+        # no need to create this workspace again and again
+        if AnalysisDataService.doesExist(bin_table_name):
+            return bin_table_name
+
+        # create binning table
+        ref_bin_table = generate_binning_table(bin_table_name)
+
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            ref_bin_table.addRow(['1, 2', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['3', '{0}: {1}'.format(high_bin_ws_name, 0)])
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            ref_bin_table.addRow(['1-7', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['7', '{0}: {1}'.format(high_bin_ws_name, 0)])
+        elif num_banks == 27:
+            # west (3), east (3), high (1)
+            ref_bin_table.addRow(['1-19', '{0}: {1}'.format(low_bin_ws_name, 0)])
+            ref_bin_table.addRow(['19-28', '{0}: {1}'.format(high_bin_ws_name, 0)])
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+    # END-IF-ELSE
+
+    return bin_table_name
 
 
 def main(argv):
