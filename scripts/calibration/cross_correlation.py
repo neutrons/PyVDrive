@@ -2,13 +2,30 @@
 import os
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
-from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace
+from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
 import bisect
 import numpy
 
 
+def initialize_calibration(nxs_file_name, must_load=False):
+    """
+    initialize the cross-correlation calibration
+    :return:
+    """
+    # set workspace name
+    diamond_ws_name = 'vulcan_diamond'
+    group_ws_name = 'vulcan_group'
+
+    if mtd.doesExist(diamond_ws_name) is False or must_load:
+        Load(Filename=nxs_file_name, OutputWorkspace=diamond_ws_name)
+    if mtd.doesExist(group_ws_name) is False:
+        CreateGroupingWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace=group_ws_name)
+
+    return diamond_ws_name, group_ws_name
+
+
 def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, reference_ws_index, cc_number, max_offset,
-                 binning, index=''):
+                 binning, index='', peak_fit_time=1):
     """
     cross correlation calibration on a
     :param ws_name:
@@ -21,6 +38,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     :param max_offset:
     :param binning:
     :param index:
+    :param peak_fit_time:
     :return:
     """
     workspace = mtd[ws_name]
@@ -49,6 +67,12 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     # Get offsets for pixels using interval around cross correlations center and peak at peakpos (d-Spacing)
     offset_ws_name = 'offset_' + ws_name + '_' + index
     mask_ws_name = 'mask_' + ws_name + '_' + index
+
+    if peak_fit_time == 1:
+        fit_twice = False
+    else:
+        fit_twice = True
+
     GetDetectorOffsets(InputWorkspace=cc_ws_name,
                        OutputWorkspace=offset_ws_name, MaskWorkspace=mask_ws_name,
                        Step=abs(binning),
@@ -56,7 +80,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                        XMin=-cc_number, XMax=cc_number,
                        MaxOffset=max_offset,
                        OutputFitResult=True,
-                       FitEachPeakTwice=True,
+                       FitEachPeakTwice=fit_twice,
                        PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
                        MinimumPeakHeight=1.0  # any peak is lower than 1 shall be masked!
                        )
@@ -116,37 +140,48 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
     return calib_ws_name, offset_ws_name, mask_ws_name
 
 
-def cross_correlate_vulcan_data(wkspName, group_ws_name):
+def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
     """
-    cross correlation on vulcan data
-    :param wkspName:
+    main cross-correlation (for VULCAN west/east/high angle)
+    :param diamond_ws_name:
     :param group_ws_name:
+    :param fit_time:
+    :param flag:
     :return:
     """
-    # wkspName = 'full_diamond'
     peakpos1 = 1.2614
     peakpos2 = 1.2614
     peakpos3 = 1.07577
 
+    # West bank
     ref_ws_index = 1613
     peak_width = 0.04   # modified from 0.005
     cc_number_west = 80
-    west_offset, west_mask = cc_calibrate(wkspName, peakpos1, peakpos1-peak_width, peakpos1+peak_width, [0, 3234-1],
-                                          ref_ws_index, cc_number_west, 1, -0.0003, 'west')
+    west_offset, west_mask = cc_calibrate(diamond_ws_name, peakpos1, peakpos1 - peak_width, peakpos1 + peak_width,
+                                          [0, 3234 - 1],
+                                          ref_ws_index, cc_number_west, 1, -0.0003, 'west_{0}'.format(flag),
+                                          peak_fit_time=fit_time)
 
+    # East bank
     ref_ws_index = 4847
     peak_width = 0.04
     cc_number_east = 80
-    east_offset, east_mask = cc_calibrate(wkspName, peakpos2, peakpos2-peak_width, peakpos2+peak_width, [3234, 6468-1],
-                                          ref_ws_index, cc_number_east, 1, -0.0003, 'east')
+    east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
+                                          [3234, 6468 - 1],
+                                          ref_ws_index, cc_number_east, 1, -0.0003, 'east_{0}'.format(flag),
+                                          peak_fit_time=fit_time)
                                           
+    # High angle bank
     ref_ws_index = 15555
     peak_width = 0.01
     cc_number = 20
-    ha_offset, ha_mask = cc_calibrate(wkspName, peakpos3, peakpos3-peak_width, peakpos3+peak_width, [6468, 24900-1],
-                                      ref_ws_index, cc_number, 1, -0.0003, 'high_angle')
+    ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
+                                      [6468, 24900 - 1],
+                                      ref_ws_index, cc_number, 1, -0.0003, 'high_angle_{0}'.format(flag),
+                                      peak_fit_time=fit_time)
 
-    save_calibration(wkspName, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)], group_ws_name, 'vulcan_vz_test')
+    save_calibration(diamond_ws_name, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
+                     group_ws_name, 'vulcan_vz_test')
 
     return
 
@@ -336,6 +371,23 @@ def select_detectors_to_mask(cost_ws_dict, cost_threshold):
         raise RuntimeError('Use numpy operation to get the indexes of cost larger than threshold')
 
 
+def get_masked_ws_indexes(mask_ws):
+    """
+    get the workspace indexes that are masked
+    :param mask_ws:
+    :return:
+    """
+    if isinstance(mask_ws, str):
+        mask_ws = mtd[mask_ws]
+
+    masked_list = list()
+    for iws in range(mask_ws.getNumberHistograms()):
+        if mask_ws.readY(iws)[0] > 0.5:
+            masked_list.append(iws)
+
+    return masked_list
+
+
 def main(argv):
     """
 
@@ -350,12 +402,9 @@ def main(argv):
         nxs_file_name = argv[0]
 
     # decide to load or not and thus group workspace
-    if AnalysisDataService.doesExist('vulcan_diamond') is False:
-        diamond_ws = Load(Filename=nxs_file_name, OutputWorkspace='vulcan_diamond')
-        CreateGroupingWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_group')
-        ws_name = diamond_ws.name()
+    diamond_ws_name, group_ws_name = initialize_calibration(nxs_file_name, False)
         
-    cross_correlate_vulcan_data('vulcan_diamond', 'vulcan_group')
+    cross_correlate_vulcan_data(diamond_ws_name, group_ws_name)
 
 
 main([])
