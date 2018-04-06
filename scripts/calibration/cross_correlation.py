@@ -3,6 +3,7 @@ import os
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
+from mantid.simpleapi import CloneWorkspace
 import bisect
 import numpy
 
@@ -16,6 +17,7 @@ def initialize_calibration(nxs_file_name, must_load=False):
     diamond_ws_name = 'vulcan_diamond'
     group_ws_name = 'vulcan_group'
 
+    print ('Input file to load: {0}'.format(nxs_file_name))
     if mtd.doesExist(diamond_ws_name) is False or must_load:
         Load(Filename=nxs_file_name, OutputWorkspace=diamond_ws_name)
     if mtd.doesExist(group_ws_name) is False:
@@ -180,10 +182,17 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
                                       ref_ws_index, cc_number, 1, -0.0003, 'high_angle_{0}'.format(flag),
                                       peak_fit_time=fit_time)
 
+    west_offset_clone = CloneWorkspace(InputWorkspace=west_offset, OutputWorkspace=str(west_offset) + '_copy')
+    west_mask_clone = CloneWorkspace(InputWorkspace=west_mask, OutputWorkspace=str(west_mask) + '_copy')
+
     save_calibration(diamond_ws_name, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
                      group_ws_name, 'vulcan_vz_test')
 
-    return
+
+    offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
+    mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
+
+    return offset_dict, mask_dict
 
 
 def cross_correlate_vulcan_data_test(wkspName, group_ws_name):
@@ -407,29 +416,29 @@ def main(argv):
     cross_correlate_vulcan_data(diamond_ws_name, group_ws_name)
 
 
-main([])
-
-# WEST
-calculate_model('cc_vulcan_diamond_west', 1755, 'offset_vulcan_diamond_west_FitResult')
-# plot cost list
-cost_list, west_bad = evaluate_cc_quality('cc_vulcan_diamond_west', 'offset_vulcan_diamond_west_FitResult')
-cost_array = numpy.array(cost_list).transpose()
-CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='West_Cost')
-
-
-# East
-# plot cost list
-cost_list, east_bad = evaluate_cc_quality('cc_vulcan_diamond_east', 'offset_vulcan_diamond_east_FitResult')
-cost_array = numpy.array(cost_list).transpose()
-print (cost_array)
-CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='East_Cost')
-
-# HIGH ANGLE
-calculate_model('cc_vulcan_diamond_high_angle', 12200, 'offset_vulcan_diamond_high_angle_FitResult')
-# plot cost list
-cost_list, high_angle_bad = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
-cost_array = numpy.array(cost_list).transpose()
-CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
+# main([])
+# 
+# # WEST
+# calculate_model('cc_vulcan_diamond_west', 1755, 'offset_vulcan_diamond_west_FitResult')
+# # plot cost list
+# cost_list, west_bad = evaluate_cc_quality('cc_vulcan_diamond_west', 'offset_vulcan_diamond_west_FitResult')
+# cost_array = numpy.array(cost_list).transpose()
+# CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='West_Cost')
+# 
+# 
+# # East
+# # plot cost list
+# cost_list, east_bad = evaluate_cc_quality('cc_vulcan_diamond_east', 'offset_vulcan_diamond_east_FitResult')
+# cost_array = numpy.array(cost_list).transpose()
+# print (cost_array)
+# CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='East_Cost')
+# 
+# # HIGH ANGLE
+# calculate_model('cc_vulcan_diamond_high_angle', 12200, 'offset_vulcan_diamond_high_angle_FitResult')
+# # plot cost list
+# cost_list, high_angle_bad = evaluate_cc_quality('cc_vulcan_diamond_high_angle', 'offset_vulcan_diamond_high_angle_FitResult')
+# cost_array = numpy.array(cost_list).transpose()
+# CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
 
 
 
