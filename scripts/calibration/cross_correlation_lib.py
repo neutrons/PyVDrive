@@ -3,7 +3,7 @@ import os
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
-from mantid.simpleapi import CloneWorkspace
+from mantid.simpleapi import CloneWorkspace, DeleteWorkspace
 import bisect
 import numpy
 
@@ -94,6 +94,34 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     return offset_ws_name, mask_ws_name
 
 
+def PlusMaskWorkspace(lhs_mask_name, rhs_mask_name, output_mask_name):
+    """
+    """
+    Plus(LHSWorkspace=lhs_mask_name, RHSWorkspace=rhs_mask_name,
+         OutputWorkspace=output_mask_name)
+
+    # now time to set everything right
+    lhs_mask = mtd[lhs_mask_name]
+    rhs_mask = mtd[rhs_mask_name]
+    ohs_mask = mtd[output_mask_name]
+
+    print ('Inputs: {0}, {1}'.format(lhs_mask_name, rhs_mask_name))
+
+    mask_wsindex_list = list()
+    for iws in range(lhs_mask.getNumberHistograms()):
+        if lhs_mask.readY(iws)[0] > 0.5:
+            mask_wsindex_list.append(iws)
+    for iws in range(rhs_mask.getNumberHistograms()):
+        if rhs_mask.readY(iws)[0] > 0.5:
+            mask_wsindex_list.append(iws)
+
+    print ('Total masked: {0}'.format(len(mask_wsindex_list)))
+
+    ohs_mask.maskDetectors(WorkspaceIndexList=mask_wsindex_list)
+
+    return
+
+
 def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix):
     """
 
@@ -112,14 +140,19 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
     if mask_ws_name != mask_ws_name0:
         RenameWorkspace(InputWorkspace=mask_ws_name0, OutputWorkspace=mask_ws_name)
 
+    print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
     for ituple in range(1, len(offset_mask_list)):
         offset_ws_name_i, mask_ws_name_i = offset_mask_list[ituple]
         Plus(LHSWorkspace=offset_ws_name, RHSWorkspace=offset_ws_name_i,
              OutputWorkspace=offset_ws_name)
-        Plus(LHSWorkspace=mask_ws_name, RHSWorkspace=mask_ws_name_i,
-             OutputWorkspace=mask_ws_name)
+        #Plus(LHSWorkspace=mask_ws_name, RHSWorkspace=mask_ws_name_i,
+        #     OutputWorkspace=mask_ws_name)
+        PlusMaskWorkspace(mask_ws_name, mask_ws_name_i, mask_ws_name+'_temp')
+        DeleteWorkspace(Workspace=mask_ws_name)
+        RenameWorkspace(InputWorkspace=mask_ws_name+'_temp', OutputWorkspace=mask_ws_name)
+        print ('Number of masked spectra = {0} in {1}'.format(mtd[mask_ws_name].getNumberMasked(), mask_ws_name))
 
-    # for the sake of legacy
+     # for the sake of legacy
     SaveCalFile(OffsetsWorkspace=offset_ws_name,
                 GroupingWorkspace=group_ws_name,
                 MaskWorkspace=mask_ws_name,
@@ -137,7 +170,7 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
                 MaskWorkspace=mask_ws_name,
                 Filename=out_file_name)
 
-    print ('Calibration file is saved as {0}'.format(out_file_name))
+    print ('Calibration file is saved as {0} from {1}, {2} and {3}'.format(out_file_name, calib_ws_name, mask_ws_name, group_ws_name))
 
     return calib_ws_name, offset_ws_name, mask_ws_name
 
@@ -185,8 +218,7 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     west_offset_clone = CloneWorkspace(InputWorkspace=west_offset, OutputWorkspace=str(west_offset) + '_copy')
     west_mask_clone = CloneWorkspace(InputWorkspace=west_mask, OutputWorkspace=str(west_mask) + '_copy')
 
-    save_calibration(diamond_ws_name, [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
-                     group_ws_name, 'vulcan_vz_test')
+    save_calibration(diamond_ws_name+'_{0}'.format(flag), [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)], group_ws_name, 'vulcan_{0}'.format(flag))
 
 
     offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}

@@ -133,6 +133,8 @@ def main(argv):
         exit(1)
     if not os.path.exists(src_calib_file):
         print ('Calibration file {0} cannot be found.'.format(CALIBRATION_FILE))
+
+    print ('Loading source calibration file: {0}'.format(src_calib_file))
     LoadDiffCal(
         InstrumentFilename=INSTRUMENT_FILE,
         Filename=src_calib_file,
@@ -143,6 +145,8 @@ def main(argv):
         new_group_ws_name = make_27_bank_group_workspace()
     elif args.banks == 7:
         new_group_ws_name = make_7_bank_group_workspace()
+    elif args.banks == 3:
+        new_group_ws_name = 
     else:
         print ('{0}-bank grouping/calibration file is not supported.'.format(args.banks))
         sys.exit(1)

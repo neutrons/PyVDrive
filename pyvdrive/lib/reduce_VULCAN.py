@@ -72,9 +72,9 @@ CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
                         # east/west bank
-                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03.h5',
-                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03_7bank.h5',
-                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_3_CAL/VULCAN_calibrate_2018_04_03_27bank.h5'},
+                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11.h5',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_7bank.h5',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_27bank.h5'},
                          '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         # east/west and high angle bank
@@ -2379,6 +2379,7 @@ class ReduceVulcanData(object):
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # NOTE: The bank ID (from 1) is required here
 
+            # TODO FIXME NOW3 (1) size of binning table! (2) instrument geometry for 27 banks!
             bin_table_name = create_bin_table(reduced_workspace, not_align_idl,
                                               self._reductionSetup.get_vulcan_bin_file(),
                                               (east_west_binning_parameters, high_angle_binning_parameters))
