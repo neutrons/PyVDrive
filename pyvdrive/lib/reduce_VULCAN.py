@@ -75,7 +75,9 @@ CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc
                         [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11.h5',
                           7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_7bank.h5',
                           27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_27bank.h5'},
-                         '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                         {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
                          '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
                         # east/west and high angle bank
                         ]
@@ -863,7 +865,8 @@ class ReductionSetup(object):
         :param file_name:
         :return:
         """
-        assert isinstance(file_name, str), 'Input arg type error.'
+        assert isinstance(file_name, str), 'Characterization file {0} must be a string but not a {1}.' \
+                                           ''.format(file_name, type(file_name))
 
         self._characterFileName = file_name
 
@@ -976,11 +979,13 @@ class ReductionSetup(object):
         file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
 
         calibrate_file_name = file_list[0][num_focused_banks]
-        character_file_name = file_list[1]
+        character_file_name = file_list[1][num_focused_banks]
         binning_ref_file_name = file_list[2]
 
         self.set_focus_file(calibrate_file_name)
-        print ('[DB...BAT] calibration file: {0}.  number of focused banks = {1}'.format(calibrate_file_name, num_focused_banks))
+        print ('[INFO] number of focused banks = {1}: calibration file: {0}, '
+               'characterization file: {2}'.format(calibrate_file_name, num_focused_banks,
+                                                   character_file_name))
         self.set_charact_file(character_file_name)
         if binning_ref_file_name is not None:
             self.set_vulcan_bin_file(binning_ref_file_name)
@@ -2329,11 +2334,14 @@ class ReduceVulcanData(object):
 
     def export_to_gsas(self, reduced_workspace, gsas_file_name, gsas_iparm_file_name, delete_exist_gsas_file,
                        east_west_binning_parameters, high_angle_binning_parameters, not_align_idl):
-        """
-        export reduced workspace to GSAS file
-        :param gsas_iparm_file_name: default '"Vulcan.prm"'
+        """ export reduced workspace to GSAS file
         :param reduced_workspace:
         :param gsas_file_name:
+        :param gsas_iparm_file_name: default '"Vulcan.prm"'
+        :param delete_exist_gsas_file:
+        :param east_west_binning_parameters:
+        :param high_angle_binning_parameters:
+        :param not_align_idl:
         :return:
         """
         # convert unit to TOF and Rebin for exporting reduced data to GSAS
@@ -2343,19 +2351,19 @@ class ReduceVulcanData(object):
                                   EMode="Elastic",
                                   AlignBins=False)
 
-        # rebin to regular bin size: east and west
-        mantidsimple.Rebin(InputWorkspace=reduced_workspace,
-                           OutputWorkspace=reduced_workspace,
-                           Params=east_west_binning_parameters)
-
-        # delete existing GSAS file
-        if delete_exist_gsas_file:
-            os.remove(gsas_file_name)
+        # # delete existing GSAS file
+        # if delete_exist_gsas_file:
+        #     os.remove(gsas_file_name)
 
         pre_ned = False
         if self._is_nED is False and self._reductionSetup.align_bins_to_vdrive_standard:
             # align bins to VDrive standard for VDRIVE to analyze the data (pre-nED)
             vdrive_bin_ws_name = '{0}_V2Bank'.format(reduced_workspace)
+
+            # # rebin to regular bin size: east and west
+            # mantidsimple.Rebin(InputWorkspace=reduced_workspace,
+            #                    OutputWorkspace=reduced_workspace,
+            #                    Params=east_west_binning_parameters)
 
             # save to Vuclan GSAS
             bin_file_name = self._reductionSetup.get_vulcan_bin_file()
@@ -2790,20 +2798,36 @@ class MainUtility(object):
 def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_parameters=None):
     """
     create a TableWorkspace with binning information
+    :param not_align_idl:
     :param data_ws:
+    :param h5_bin_file_name:
+    :param binning_parameters:
     :return:
     """
     def generate_binning_table(table_name):
         """
-        generate a binning TableWorkspace
+        generate an EMPTY binning TableWorkspace
         :param table_name:
         :return:
         """
-        ref_bin_table = mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=bin_table_name)
-        ref_bin_table.addColumn('str', 'indexes')
-        ref_bin_table.addColumn('str', 'params')
+        bin_table = mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=table_name)
+        bin_table.addColumn('str', 'indexes')
+        bin_table.addColumn('str', 'params')
 
-        return ref_bin_table
+        return bin_table
+
+    def extrapolate_last_bin(bins):
+        """
+        :param bins:
+        :return:
+        """
+        assert isinstance(bins, numpy.ndarray) and len(bins.shape) == 1, '{0} must be a 1D array but not {1}.' \
+                                                                         ''.format(bins, type(bins))
+
+        delta_bin = (bins[-1] - bins[-2]) / bins[-2]
+        next_bin = bins[-1] * (1 + delta_bin)
+
+        return next_bin
 
     # get input workspace
     if isinstance(data_ws, str):
@@ -2816,7 +2840,7 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
             'Binning parameters must be either tuple of list'
         assert len(binning_parameters) == 2, 'Must have both low resolution and high resolution'
 
-        #
+        # create binning table
         bin_table_name = 'VULCAN_Binning_Table_{0}Banks'.format(num_banks)
         # if AnalysisDataService.doesExist(bin_table_name) is False:  FIXME how to avoid duplicate operation?
         bin_table_ws = generate_binning_table(bin_table_name)
@@ -2838,8 +2862,8 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
 
     else:
+        # use explicitly defined bins and thus matrix workspace is required
         # import h5 file
-
         base_table_name = os.path.basename(h5_bin_file_name).split('.')[0]
 
         # load vdrive bin file to 2 different workspaces
@@ -2847,6 +2871,10 @@ def create_bin_table(data_ws, not_align_idl, h5_bin_file_name=None, binning_para
         low_bins = bin_file['west_east_bank'][:]
         high_bins = bin_file['high_angle_bank'][:]
         bin_file.close()
+
+        # append last value for both east/west bin and high angle bin
+        low_bins = numpy.append(low_bins, extrapolate_last_bin(low_bins))
+        high_bins = numpy.append(high_bins, extrapolate_last_bin(high_bins))
 
         low_bin_ws_name = '{0}_LowResBin'.format(base_table_name)
         high_bin_ws_name = '{0}_HighResBin'.format(base_table_name)

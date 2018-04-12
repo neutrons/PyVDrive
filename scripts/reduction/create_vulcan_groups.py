@@ -101,6 +101,40 @@ def make_27_bank_group_workspace():
     return new_group_ws.name()
 
 
+def make_3_bank_group_workspace():
+    """
+    make 1 + 1 + 1 bank group workspace
+    :return:
+    """
+    # Clone from original group workspace to modify
+    new_group_ws = CloneWorkspace(InputWorkspace='vulcan_orig_group')
+
+    # group 1-18 west and east bank
+    num_det_per_bank = 6468 / 2
+
+    for bank_id in range(2):
+        start_det_id = num_det_per_bank * bank_id
+        stop_det_id = num_det_per_bank * (bank_id + 1)
+
+        # determine group ID
+        group_id = bank_id + 1
+
+        # set group ID
+        for iws in range(start_det_id, stop_det_id):
+            new_group_ws.dataY(iws)[0] = group_id
+        # END-FOR (sub_bank_index)
+    # END-FOR (bank_id)
+
+    # high angle bank: bank 7
+    group_id = 3
+    high_angle_bank_start_det_id = 6468
+    for ws_index in range(high_angle_bank_start_det_id, new_group_ws.getNumberHistograms()):
+        new_group_ws.dataY(ws_index)[0] = group_id
+    # END-FOR
+
+    return new_group_ws.name()
+
+
 def main(argv):
     """
     main method to create VULCAN groups
@@ -146,7 +180,7 @@ def main(argv):
     elif args.banks == 7:
         new_group_ws_name = make_7_bank_group_workspace()
     elif args.banks == 3:
-        new_group_ws_name = 
+        new_group_ws_name = make_3_bank_group_workspace()
     else:
         print ('{0}-bank grouping/calibration file is not supported.'.format(args.banks))
         sys.exit(1)
