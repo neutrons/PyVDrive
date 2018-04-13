@@ -17,7 +17,7 @@ vulcan_l2_list = [2.] * 27
 vulcan_2theta_list = [270.]*9
 vulcan_2theta_list.extend([90.]*9)
 vulcan_2theta_list.extend([150.]*9)
-vulcan_azimulth_list = [0] * 27
+vulcan_azimulth_list = [0.] * 27
 
 # Get range of wd index for group=4
 ws_index_list = list()
@@ -35,17 +35,56 @@ group4_stop_index = ws_index_list[-1]  # included
 midindex = (1436 + 1078) / 2
 
 """ Step 1  Nail down to lower """
-for iws in range(1078, 1200):
-    group_ws.dataY(iws)[0] = 28
-for iws in range(1200, midindex):
-    group_ws.dataY(iws)[0] = 29
-vulcan_l2_list.extend([2., 2.])
-vulcan_2theta_list.extend([270., 270.])
-vulcan_azimulth_list.extend([0., 0])
-
-spectra_list = range(1, 29)
+# for iws in range(1078, 1200):
+#     group_ws.dataY(iws)[0] = 28
+# for iws in range(1200, midindex):
+#     group_ws.dataY(iws)[0] = 29
+# vulcan_l2_list.extend([2., 2.])
+# vulcan_2theta_list.extend([270., 270.])
+# vulcan_azimulth_list.extend([0., 0])
+# spectra_list = range(1, 29)
 
 # step2 : more aggressive
+# for iws in range(1078, 1100):
+#     group_ws.dataY(iws)[0] = 28
+# for iws in range(1100, 1200):
+#     group_ws.dataY(iws)[0] = 29
+# for iws in range(1200, midindex):
+#     group_ws.dataY(iws)[0] = 30
+# vulcan_l2_list.extend([2., 2., 2.])
+# vulcan_2theta_list.extend([270., 270., 270])
+# vulcan_azimulth_list.extend([0., 0., 0.])
+# spectra_list = range(1, 30)
+
+# Step 3: (A)
+# for iws in range(1078, 1090):
+#     group_ws.dataY(iws)[0] = 28
+# for iws in range(1090, 1120):
+#     group_ws.dataY(iws)[0] = 29
+# for iws in range(1120, 1200):
+#     group_ws.dataY(iws)[0] = 30
+# for iws in range(1200, midindex):
+#     group_ws.dataY(iws)[0] = 31
+# vulcan_l2_list.extend([2., 2., 2., 2.])
+# vulcan_2theta_list.extend([270., 270., 270, 270.])
+# vulcan_azimulth_list.extend([0., 0., 0., 0.])
+# spectra_list = range(1, 31)
+
+# Step 3: (B)
+for iws in range(1078, 1106):
+    group_ws.dataY(iws)[0] = 28
+for iws in range(1106, 1120):
+    group_ws.dataY(iws)[0] = 29
+for iws in range(1120, 1200):
+    group_ws.dataY(iws)[0] = 30
+for iws in range(1200, midindex):
+    group_ws.dataY(iws)[0] = 31
+vulcan_l2_list.extend([2., 2., 2., 2.])
+vulcan_2theta_list.extend([270., 270., 270, 270.])
+vulcan_azimulth_list.extend([0., 0., 0., 0.])
+spectra_list = range(1, 31)
+
+
 # for iws in range(1078, midindex):
 #     group_ws.dataY(iws)[0] = 28
 #     
@@ -61,14 +100,13 @@ spectra_list = range(1, 29)
 #     group_ws.dataY(iws)[0] = 32
 
 # apply the new group workspace to diamond data
-AlignAndFocusPowder(InputWorkspace='raw_diamond', OutputWorkspace='focus2',
+AlignAndFocusPowder(InputWorkspace='diamond', OutputWorkspace='focus2',
                     GroupingWorkspace='vulcan_debug_group', CalibrationWorkspace='vulcan_27_cal',
                     MaskWorkspace='vulcan_27_mask', Params='-0.001', DMin='0.5', DMax='5',
-                    Spectra=spec_list,
-                    L1=vulcan_l1,
+                    SpectrumIDs=spectra_list,
                     L2=vulcan_l2_list,
-                    twotheta=vulcan_2theta_list,
-                    azimuthal=vulcan_azimulth_list)
-ConvertUnits(InputWorkspace='diamond', OutputWorkspace='diamond', Target='dSpacing', ConvertFromPointData=False)
-Rebin(InputWorkspace='diamond', OutputWorkspace='diamond', Params='0.5,-0.001,2', FullBinsOnly=True)
+                    Polar=vulcan_2theta_list,
+                    Azimuthal=vulcan_azimulth_list)
+ConvertUnits(InputWorkspace='focus2', OutputWorkspace='focus2', Target='dSpacing', ConvertFromPointData=False)
+Rebin(InputWorkspace='focus2', OutputWorkspace='focus2', Params='0.5,-0.001,2', FullBinsOnly=True)
 

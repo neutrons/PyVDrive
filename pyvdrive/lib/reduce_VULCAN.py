@@ -72,9 +72,9 @@ CalibrationFilesList = [['/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt',
                          '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
                         # east/west bank
-                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11.h5',
-                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_7bank.h5',
-                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_11_27bank.h5'},
+                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'},
                          {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
                           7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
                           27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
