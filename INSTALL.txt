@@ -1,6 +1,7 @@
 Debug installation
 
-sh debug_deploy.sh
+ * step1: compile ui file by ...
+ * step2: sh debug_deploy.sh
 
 
 Path to mantid: 
