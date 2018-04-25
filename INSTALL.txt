@@ -1,5 +1,7 @@
 Debug installation
 
+sh debug_deploy.sh
+
 
 Path to mantid: 
   - determined by: pyvdrive/interface/gui/mantidipythonwidget.py
