@@ -120,8 +120,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_plot.clicked.connect(self.do_plot_diffraction_data)
         self.ui.pushButton_allFillPlot.clicked.connect(self.do_plot_contour)
         self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_logs)
-        self.ui.comboBox_runs.currentIndexChanged.connect()
-        #              self.evt_select_new_run_number)
+        self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         # TEST : check whether the signal can trigger calling method
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)

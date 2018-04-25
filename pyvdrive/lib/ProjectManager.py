@@ -1090,7 +1090,8 @@ class ProjectManager(object):
 
     def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters,
                            merge_banks,
-                           align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None):
+                           align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None,
+                           num_banks=3):
         """
         Reduce a list of NeXus files
         This could be similar to reduce runs
@@ -1102,6 +1103,7 @@ class ProjectManager(object):
         :param align_to_vdrive_bin:
         :param vanadium_tuple:
         :param standard_sample_tuple:
+        :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
         :return:
         """
         # check inputs
@@ -1120,7 +1122,8 @@ class ProjectManager(object):
                                                                     vanadium_tuple=vanadium_tuple,
                                                                     gsas=gsas,
                                                                     standard_sample_tuple=standard_sample_tuple,
-                                                                    binning_parameters=binning_parameters)
+                                                                    binning_parameters=binning_parameters,
+                                                                    num_banks=num_banks)
             if not status:
                 sum_status = False
                 sum_message += '{0}\n'.format(sum_message)
@@ -1132,9 +1135,8 @@ class ProjectManager(object):
                     vanadium, gsas, fullprof, record_file,
                     sample_log_file, standard_sample_tuple,
                     merge_banks,
-                    merge_runs, binning_parameters):
-        """
-        Reduce a set of runs with selected options
+                    merge_runs, binning_parameters, num_banks=3):
+        """ Reduce a set of runs with selected options
         Purpose:
         Requirements:
         Guarantees:
@@ -1157,7 +1159,7 @@ class ProjectManager(object):
         Focus and process the selected data sets to powder diffraction data
         for GSAS/Fullprof/ format
         :param run_number_list:
-        :param output_directory: output directory. if not given (None) then set it up to instrument default?
+        :param output_directory:  output directory. if not given (None) then set it up to instrument default?
         :param background:
         :param vanadium:
         :param gsas:
@@ -1165,7 +1167,11 @@ class ProjectManager(object):
         :param record_file:
         :param sample_log_file:
         :param standard_sample_tuple: 3-tuple: (sample_name, sample_directory, sample_record_name)
-        :return: (boolean, message)
+        :param merge_banks:
+        :param merge_runs:
+        :param binning_parameters:
+        :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
+        :return:  (boolean, message)
         """
         # rule out the situation that the standard can be only processed one at a time
         if standard_sample_tuple is not None and len(run_number_list) > 1:
@@ -1207,7 +1213,8 @@ class ProjectManager(object):
                                                                         vanadium_tuple=vanadium_tuple, gsas=gsas,
                                                                         standard_sample_tuple=standard_sample_tuple,
                                                                         binning_parameters=binning_parameters,
-                                                                        merge_banks=merge_banks)
+                                                                        merge_banks=merge_banks,
+                                                                        num_banks=num_banks)
 
                 reduce_all_success = reduce_all_success and status
                 if not status:
