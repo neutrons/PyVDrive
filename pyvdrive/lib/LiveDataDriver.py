@@ -131,33 +131,26 @@ class LiveDataDriver(QtCore.QThread):
         return peak_integral, average_d, variance
 
     @staticmethod
-    def convert_time_stamps(date_time_vec, relative):
+    def convert_time_stamps(date_time_vec, time_shift):
         """convert a vector of DateAndTime instance to a vector of double as relative
         time to a specified time in DateAndTime
         :param date_time_vec:
-        :param relative: start time
+        :param time_shift: start time
         :return: a vector of time stamps in double/float in unit of seconds
         """
         # check inputs
-        assert isinstance(date_time_vec, numpy.ndarray) or \
-               isinstance(date_time_vec, mantid.kernel._kernel.std_vector_dateandtime),\
-            'Input time vector must be a numpy.array but not a {0}.'.format(type(date_time_vec))
-        assert relative is None or relative.__class__.__name__.count('DateAndTime') > 0, \
-            'Relative time {0} must be None or a DateAndTime instance but not a {1}.' \
-            ''.format(relative, type(relative))
+        assert isinstance(date_time_vec, numpy.ndarray), 'Input time vector must be a numpy.array but not a {0}.' \
+                                                         ''.format(type(date_time_vec))
+        assert isinstance(time_shift, numpy.datetime64), 'Relative time {0} must be a numpy.datetime64 instance ' \
+                                                         'but not a {1}.'.format(time_shift, type(time_shift))
 
         # create an array
         shape = len(date_time_vec)
         time_vec = numpy.ndarray(shape=(shape,), dtype='float')
 
-        if relative is None:
-            start_time = 0
-        else:
-            start_time = relative.totalNanoseconds()
-
         # convert
         for i in range(shape):
-            time_i = (date_time_vec[i].totalNanoseconds() - start_time) * 1.E-9
+            time_i = (date_time_vec[i] - time_shift).tolist() * 1.E-9
             time_vec[i] = time_i
 
         return time_vec
@@ -261,10 +254,14 @@ class LiveDataDriver(QtCore.QThread):
         return ws_names
 
     def get_peaks_parameters(self, param_type, bank_id_list, time0, d_min=None, d_max=None, norm_by_vanadium=None):
-        """ get the peaks' positions (calculated) along with time
+        """
+        get the peaks' positions (calculated) along with time
         :param param_type:
         :param bank_id_list: bank IDs
-        :param time0: time zero for time stamps
+        :param time0: starting time for time stamps
+        :param d_min:
+        :param d_max:
+        :param norm_by_vanadium:
         :return:
         """
         # check whether inputs are valid
@@ -272,13 +269,8 @@ class LiveDataDriver(QtCore.QThread):
                                                ''.format(bank_id_list, type(bank_id_list))
         assert isinstance(param_type, str), 'Peak parameter type {0} must be a string but not a {1}.' \
                                             ''.format(param_type, type(param_type))
-
-        # time 0
-        try:
-            time0_ns = time0.totalNanoseconds()
-        except AttributeError as att_err:
-            raise RuntimeError('Time Zero must be a DateAndTime instance: {0}'
-                               ''.format(att_err))
+        assert isinstance(time0, numpy.datetime64), 'Time0 {0} must be of type datetime64 but not {1}.' \
+                                                    ''.format(time0, type(time0))
 
         # get peak type
         if param_type == 'center':
@@ -302,7 +294,7 @@ class LiveDataDriver(QtCore.QThread):
         param_matrix = numpy.ndarray(shape=(num_pts, dim), dtype='float')  # time, b1, b2, b3
         for index, value_dict in enumerate(self._peakParamDict[peak_key].values()):
             time_i = value_dict['time']
-            time_i_rel = (time_i.totalNanoseconds() - time0_ns) * 1.E-9
+            time_i_rel = (time_i - time0).tolist() * 1.E-9  # convert from nanosecond to second
             param_matrix[index][0] = time_i_rel
             for col_index, bank_id in enumerate(bank_id_list):
                 value_i = value_dict[bank_id][type_index]
@@ -387,7 +379,7 @@ class LiveDataDriver(QtCore.QThread):
             # END-FOR (iws)
 
             # get latest time
-            time_stamp = workspace_i.run().getProperty('proton_charge').lastTime()
+            time_stamp = workspace_i.run().getProperty('proton_charge').times[-1]
             self._peakParamDict[peak_key][ws_name]['time'] = time_stamp
         # END-FOR
 
@@ -500,7 +492,7 @@ class LiveDataDriver(QtCore.QThread):
         :except RuntimeError:
         :param ws_name_list:
         :param sample_log_name:
-        :return: date time vector, sample value vector, last time (kernel.DateAndTime)
+        :return: time stamps (ndarray for datetime64), sample values (float vector), last pulse time (numpy.datetime64)
         """
         # check inputs
         assert isinstance(ws_name_list, list), 'Workspace names {0} must be given as a list but not a {1}.' \
@@ -511,7 +503,7 @@ class LiveDataDriver(QtCore.QThread):
         date_time_vec = None
         sample_value_vec = None
 
-        last_time = None
+        last_pulse_time = None
         for seq_index, ws_name in enumerate(ws_name_list):
             if ADS.doesExist(ws_name) is False:
                 raise RuntimeError('Workspace {0} does not exist.'.format(ws_name))
@@ -519,7 +511,7 @@ class LiveDataDriver(QtCore.QThread):
             temp_workspace = ADS.retrieve(ws_name)
             time_series = temp_workspace.run().getProperty(sample_log_name)
 
-            time_vec_i = time_series.times
+            time_vec_i = time_series.times  # numpy.ndarray
             value_vec_i = time_series.value
 
             if date_time_vec is None:
@@ -530,7 +522,7 @@ class LiveDataDriver(QtCore.QThread):
                 # in append mode
                 # check
                 if date_time_vec[-1] > time_vec_i[0]:
-                    diff_ns = date_time_vec[-1].totalNanoseconds() - time_vec_i[0].totalNanoseconds()
+                    diff_ns = (date_time_vec[-1] - time_vec_i[0]).tolist()
                     error_message = 'Previous workspace {0} is later than the current one {1} on sample log {2}:' \
                                     ' {3} vs {4} by {5}' \
                                     ''.format(ws_name_list[seq_index - 1], ws_name, sample_log_name,
@@ -553,14 +545,13 @@ class LiveDataDriver(QtCore.QThread):
             # END-IF-ELSE
 
             # DEBUG OUTPUT
-            print '[DB...SEVERE] Workspace {0} Entry 0: {1} ({2}); Entry -1: {3} ({4}); Number of Entries: {5}' \
-                  ''.format(ws_name, time_vec_i[0], time_vec_i[0].totalNanoseconds(),
-                            time_vec_i[-1], time_vec_i[-1].totalNanoseconds(), len(time_vec_i))
+            print '[DB...SEVERE] Workspace {0} Entry 0: {1}; Entry -1: {2}; Number of Entries: {3}' \
+                  ''.format(ws_name, time_vec_i[0], time_vec_i[-1], len(time_vec_i))
 
-            last_time = temp_workspace.run().getProperty('proton_charge').lastTime()
+            last_pulse_time = temp_workspace.run().getProperty('proton_charge').times[-1]
         # END-FOR (workspaces)
 
-        return date_time_vec, sample_value_vec, last_time
+        return date_time_vec, sample_value_vec, last_pulse_time
 
     @staticmethod
     def sum_workspaces(workspace_name_list, target_workspace_name):

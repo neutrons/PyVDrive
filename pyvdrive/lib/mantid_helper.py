@@ -516,7 +516,7 @@ def get_run_start(workspace, time_unit):
         raise RuntimeError('Unable to get run start due to %s.' % str(e))
 
     # Get first value in proton charge's time as run start
-    run_start_ns = pcharge_log.times[0].totalNanoseconds()
+    run_start_ns = pcharge_log.firstTime().totalNanoseconds()
 
     # Convert unit if
     run_start = run_start_ns

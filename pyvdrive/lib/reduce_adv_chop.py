@@ -134,7 +134,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get run start time
         if is_epoch_time:
-            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
+            run_start_ns = raw_ws.run().getProperty('proton_charge').firstTime().totalNanoseconds()
         else:
             run_start_ns = 0
 
@@ -374,7 +374,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for i_loop in range(num_loops):
             # get the partial splitters workspaces
             sub_split_ws = self.get_sub_splitters(i_loop * NUM_TARGET_WS_IN_MEM, (i_loop + 1) * NUM_TARGET_WS_IN_MEM,
-                                                  run_start_ns=run_start_time_ns)  # run_start_time.totalNanoseconds())
+                                                  run_start_ns=run_start_time_ns)
 
             sns_arg_dict['SplittersWorkspace'] = sub_split_ws
             sns_arg_dict['SplitInformationWorkspace'] = split_info_table

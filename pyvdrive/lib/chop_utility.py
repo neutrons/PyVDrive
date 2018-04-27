@@ -195,9 +195,8 @@ class DataChopper(object):
         proton_charge_property = mantid_helper.get_sample_log_tsp(self._mtdWorkspaceName, 'proton_charge')
         pc_times = proton_charge_property.times
 
-        info_str += 'run start: {0} ({1:.9f});\n\t\trun stop:  {2} ({3:.9f})' \
-                    ''.format(pc_times[0], 1.E-9*pc_times[0].totalNanoseconds(),
-                              pc_times[-1], 1.E-9*pc_times[-1].totalNanoseconds())
+        info_str += 'run start: {0}; run stop:  {1}' \
+                    ''.format(pc_times[0], pc_times[-1])
 
         return info_str
 
