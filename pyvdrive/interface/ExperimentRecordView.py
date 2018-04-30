@@ -4,7 +4,7 @@ except ImportError:
     from PyQt4.QtGui import QMainWindow
 
 
-import gui.ui_ExperimentRecord_ui as ui_ExperimentRecord
+import gui.ui_ExperimentRecord as ui_ExperimentRecord
 
 
 class VulcanExperimentRecordView(QMainWindow):

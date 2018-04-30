@@ -5,7 +5,7 @@ except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QMainWindow
 
-import gui.ui_ConfigWindow_ui as ui_ConfigWindow
+import gui.ui_ConfigWindow as ui_ConfigWindow
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

@@ -5,8 +5,8 @@ except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QDialog, QFileDialog
 import gui.GuiUtility as GuiUtility
-import gui.ui_LiveDataGPPlotSetup_ui as dialog_ui
-import gui.ui_LiveDataViewSetup_ui as SetupDialogUi
+import gui.ui_LiveDataGPPlotSetup as dialog_ui
+import gui.ui_LiveDataViewSetup as SetupDialogUi
 
 
 class LiveViewSetupDialog(QDialog):

@@ -14,7 +14,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 import gui.GuiUtility as gutil
-import gui.ui_ProcessVanadiumDialog_ui as van_ui
+import gui.ui_ProcessVanadiumDialog as van_ui
 
 
 class VanadiumProcessControlDialog(QDialog):

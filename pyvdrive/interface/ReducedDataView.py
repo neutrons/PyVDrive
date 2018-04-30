@@ -20,7 +20,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_ReducedDataView_ui
+import gui.ui_ReducedDataView
 import vanadium_controller_dialog
 
 
@@ -93,7 +93,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._vanadiumFWHM = None
 
         # set up UI
-        self.ui = gui.ui_ReducedDataView_ui.Ui_MainWindow()
+        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # initialize widgets

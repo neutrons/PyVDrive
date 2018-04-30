@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 if sys.argv[-1] == 'pyuic':
     indir = 'designer'
-    outdir = 'pyvdrive/interface/ui'
+    outdir = 'pyvdrive/interface/gui'
     files = os.listdir(indir)
     files = [os.path.join('designer', item) for item in files]
     files = [item for item in files if item.endswith('.ui')]
@@ -24,7 +24,7 @@ if sys.argv[-1] == 'pyuic':
             if os.stat(inname).st_mtime < os.stat(outname).st_mtime:
                 continue
         print("Converting '%s' to '%s'" % (inname, outname))
-        command = "pyuic4 %s -o %s"  % (inname, outname)
+        command = "pyuic5 %s -o %s"  % (inname, outname)
         os.system(command)
         done += 1
     if not done:
@@ -36,7 +36,7 @@ if sys.argv[-1] == 'pyuic':
 
 NAME = "pyvdrive"
 PACKAGES = find_packages(where="src")
-PACKAGES = ["pyvdrive", "pyrs/core", "pyrs/interface", "pyrs/interface/ui"]
+PACKAGES = ["pyvdrive", "pyvdrive/lib", "pyvdrive/interface", "pyvdrive/interface/gui", "pyvdrive/interface/gui/ndav_widgets/", "pyvdrive/interface/vdrive_commands/"]
 META_PATH = os.path.join("src", "pyvdrive", "__init__.py")
 KEYWORDS = ["class", "attribute", "boilerplate"]
 CLASSIFIERS = [
@@ -113,6 +113,6 @@ if __name__ == "__main__":
         install_requires=INSTALL_REQUIRES,
         # from ours
         package_dir={},  # {"": "src"},
-        scripts=["scripts/Lava.py", "tests/workflow/chop_reduce_command_test.py"],
+        scripts=["scripts/Lava.py", "tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py"],
         cmdclass=versioneer.get_cmdclass(),
     )

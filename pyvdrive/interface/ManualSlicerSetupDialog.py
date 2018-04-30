@@ -7,7 +7,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_ManualSlicerTable_ui
+import gui.ui_ManualSlicerTable
 import gui.GuiUtility as GuiUtil
 
 
@@ -26,7 +26,7 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         super(ManualSlicerSetupTableDialog, self).__init__(parent)
         self._myParent = parent
 
-        self.ui = gui.ui_ManualSlicerTable_ui.Ui_Dialog()
+        self.ui = gui.ui_ManualSlicerTable.Ui_Dialog()
         self.ui.setupUi(self)
 
         self._init_widgets()

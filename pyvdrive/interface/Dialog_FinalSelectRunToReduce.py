@@ -15,7 +15,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 import gui.GuiUtility as gutil
-import gui.ui_FinalSelectRunToReduce_ui as gui
+import gui.ui_FinalSelectRunToReduce as gui
 
 
 class FinalSelectRunToReduceDialog(QMainWindow):

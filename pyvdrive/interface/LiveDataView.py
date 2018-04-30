@@ -11,7 +11,7 @@ import numpy
 
 from LiveDataChildWindows import SampleLogPlotSetupDialog
 from LiveDataChildWindows import LiveViewSetupDialog
-import gui.ui_LiveDataView_ui as ui_LiveDataView
+import gui.ui_LiveDataView as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
 import pyvdrive.lib.mantid_helper as helper
