@@ -29,7 +29,9 @@ if sys.argv[-1] == 'pyuic':
             ver = 5
         except ImportError:
             ver = 4
-        command = "pyuic%d %s -o %s"  % (ver, inname, outname)
+
+        ver = 4
+        command = "pyuic%d %s -o %s" % (ver, inname, outname)
         os.system(command)
         done += 1
     if not done:
@@ -97,8 +99,13 @@ def find_meta(meta):
     raise RuntimeError("Unable to find __{meta}__ string.".format(meta=meta))
 
 
-
 if __name__ == "__main__":
+    """
+    main setup
+    """
+    scripts = ['scripts/Lava.py']
+    test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py"]
+    scripts.extend(test_scripts)
 
     setup(
         name=NAME,
@@ -118,6 +125,6 @@ if __name__ == "__main__":
         install_requires=INSTALL_REQUIRES,
         # from ours
         package_dir={},  # {"": "src"},
-        scripts=["scripts/Lava.py", "tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py"],
+        scripts=scripts,
         cmdclass=versioneer.get_cmdclass(),
     )
