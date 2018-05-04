@@ -531,7 +531,8 @@ class ReductionManager(object):
 
             # set the flag for not being an auto reduction
             reduction_setup.is_auto_reduction_service = False
-            reduction_setup.set_default_calibration_files()
+            # TODO FIXME ASAP3 - Need to pass number of banks to focus on
+            reduction_setup.set_default_calibration_files(num_focused_banks=3)
 
             # set up reducer
             reduction_setup.process_configurations()

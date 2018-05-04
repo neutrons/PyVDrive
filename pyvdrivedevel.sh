@@ -6,4 +6,4 @@ if [ $1 ]; then
 else
     CMD=''
 fi
-PYTHONPATH=build/lib:$PYTHONPATH $CMD build/scripts-2.7/Lava.py
+PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/Lava.py $CMD

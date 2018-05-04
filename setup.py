@@ -105,7 +105,8 @@ if __name__ == "__main__":
     main setup
     """
     scripts = ['scripts/Lava.py']
-    test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py"]
+    test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py",
+                    'tests/workflow/vbin_test.py']
     scripts.extend(test_scripts)
 
     setup(
