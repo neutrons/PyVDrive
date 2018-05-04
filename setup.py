@@ -24,7 +24,12 @@ if sys.argv[-1] == 'pyuic':
             if os.stat(inname).st_mtime < os.stat(outname).st_mtime:
                 continue
         print("Converting '%s' to '%s'" % (inname, outname))
-        command = "pyuic5 %s -o %s"  % (inname, outname)
+        try:
+            import PyQt5
+            ver = 5
+        except ImportError:
+            ver = 4
+        command = "pyuic%d %s -o %s"  % (ver, inname, outname)
         os.system(command)
         done += 1
     if not done:
