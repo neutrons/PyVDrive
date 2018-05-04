@@ -1,7 +1,5 @@
 #!/usr/bin/python
 import sys
-sys.path.append('/SNS/users/wzz/.local//lib/python2.7/site-packages')
-
 import pyvdrive
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
 import os

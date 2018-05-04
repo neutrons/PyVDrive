@@ -25,12 +25,13 @@ if sys.argv[-1] == 'pyuic':
                 continue
         print("Converting '%s' to '%s'" % (inname, outname))
         try:
+            # check the key package to determine whether the build shall be Qt4 or Qt5
             import PyQt5
+            from qtconsole.inprocess import QtInProcessKernelManager
             ver = 5
         except ImportError:
             ver = 4
 
-        ver = 4
         command = "pyuic%d %s -o %s" % (ver, inname, outname)
         os.system(command)
         done += 1

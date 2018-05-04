@@ -25,9 +25,11 @@ from pygments.lexer import RegexLexer
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
 try:
+    # This is PyQt5 compatible
     from qtconsole.rich_ipython_widget import RichIPythonWidget
     from qtconsole.inprocess import QtInProcessKernelManager
-except ImportError:
+except ImportError as import_err:
+    # This is PyQt4 compatible
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
 from mantid.api import AnalysisDataService as mtd
