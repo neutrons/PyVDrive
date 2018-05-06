@@ -541,7 +541,7 @@ class ReductionManager(object):
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
 
             # reduce data
-            status, message = chop_reducer.execute_chop_reduction(clear_workspaces=False)
+            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)

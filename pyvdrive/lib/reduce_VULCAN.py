@@ -2369,6 +2369,7 @@ class ReduceVulcanData(object):
 
             # save to Vuclan GSAS
             bin_file_name = self._reductionSetup.get_vulcan_bin_file()
+            print ('[DB...INFO] SaveVulcanGSS from {0} to {1}'.format(reduced_workspace, gsas_file_name))
             try:
                 # TODO FIXME How to work with old system?
                 mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
