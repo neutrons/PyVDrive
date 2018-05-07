@@ -8,6 +8,7 @@ import numpy
 from mantid.api import AnalysisDataService
 import os
 import h5py
+import time
 
 
 # chop data
@@ -17,6 +18,11 @@ run_number = 160560
 # event_file_name = '/SNS/VULCAN/IPTS-13924/nexus/VULCAN_160989.nxs.h5'
 # event_file_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts, run_number)
 # event_file_name = '/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5'
+
+# TODO FIXME - In order to make mutex work... It is necessary to write everything in a class
+
+
+_SAVEGSS_MUTEX = False
 
 
 def create_bin_table(num_banks, not_align_idl, h5_bin_file_name=None, binning_parameters=None):
@@ -146,13 +152,17 @@ def reduce_data(ws_name_list, bin_table_name, ipts_number, gsas_iparm_file_name)
         DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
         ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
         gsas_file_name = '/tmp/{0}.gda'.format(ws_name)
+
+        while _SAVEGSS_MUTEX is False:
+            time.sleep(0.0001)
+        _SAVEGSS_MUTEX = True
         SaveVulcanGSS(InputWorkspace=ws_name,
                       BinningTable=bin_table_name,
                       OutputWorkspace=ws_name,
                       GSSFilename=gsas_file_name,
                       IPTS=ipts_number,
                       GSSParmFileName=gsas_iparm_file_name)
-
+        _SAVEGSS_MUTEX = False
 
     return
 
@@ -211,7 +221,7 @@ def chop_focus_save(event_file_name, event_ws_name, split_ws_name, info_ws_name,
 
     # Now start to use multi-threading
     num_outputs = len(output_names)
-    num_threads = 4
+    num_threads = 16
     half_num = int(num_outputs/num_threads)
 
     # create binning table
@@ -222,6 +232,7 @@ def chop_focus_save(event_file_name, event_ws_name, split_ws_name, info_ws_name,
                                       (east_west_binning_parameters, high_angle_binning_parameters))
 
     thread_pool = dict()
+    _SAVEGSS_MUTEX = False
     for thread_id in range(num_threads):
         start = thread_id * half_num
         end = min(start + half_num, num_outputs)
@@ -233,6 +244,11 @@ def chop_focus_save(event_file_name, event_ws_name, split_ws_name, info_ws_name,
 
     for thread_id in range(num_threads):
         thread_pool[thread_id].join()
+
+    for thread_id in range(num_threads):
+        thread_i = thread_pool[thread_id]
+        if thread_i is not None and thread_i.isAlive():
+            thread_i._Thread_stop()
 
     tf = time.time()
 
@@ -257,4 +273,12 @@ def chop_focus_save(event_file_name, event_ws_name, split_ws_name, info_ws_name,
 #     DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
 #     ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
 #     # Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params='5000,-0.001,50000', FullBinsOnly=True)
+
+
+# /SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5: Runtime = 226.181304932   Total output workspaces = 733
+# Details for thread = 32:
+# 	Loading  = 97.1458098888
+# 	Chopping = 35.0766251087
+# 	Focusing = 93.9588699341
+
 
