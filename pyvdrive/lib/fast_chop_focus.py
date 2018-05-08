@@ -22,14 +22,12 @@ run_number = 160560
 # TODO FIXME - In order to make mutex work... It is necessary to write everything in a class
 
 
-_SAVEGSS_MUTEX = False
-
-
 class SliceFocusVulcan(object):
     """
 
     """
     def __init__(self):
+        self._SAVEGSS_MUTEX = False
         return
 
     @staticmethod
@@ -161,16 +159,16 @@ class SliceFocusVulcan(object):
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
             gsas_file_name = '/tmp/{0}.gda'.format(ws_name)
 
-            # while _SAVEGSS_MUTEX is False:
-            #     time.sleep(0.0001)
-            # _SAVEGSS_MUTEX = True
-            # SaveVulcanGSS(InputWorkspace=ws_name,
-            #               BinningTable=bin_table_name,
-            #               OutputWorkspace=ws_name,
-            #               GSSFilename=gsas_file_name,
-            #               IPTS=ipts_number,
-            #               GSSParmFileName=gsas_iparm_file_name)
-            # _SAVEGSS_MUTEX = False
+            while self._SAVEGSS_MUTEX is True:
+                time.sleep(0.0001)
+            self._SAVEGSS_MUTEX = True
+            SaveVulcanGSS(InputWorkspace=ws_name,
+                          BinningTable=bin_table_name,
+                          OutputWorkspace=ws_name,
+                          GSSFilename=gsas_file_name,
+                          IPTS=ipts_number,
+                          GSSParmFileName=gsas_iparm_file_name)
+            self._SAVEGSS_MUTEX = False
 
         return
 
@@ -227,7 +225,7 @@ class SliceFocusVulcan(object):
 
         # Now start to use multi-threading
         num_outputs = len(output_names)
-        num_threads = 16
+        num_threads = 32
         half_num = int(num_outputs / num_threads)
 
         # create binning table
@@ -289,4 +287,12 @@ class SliceFocusVulcan(object):
 # 	Chopping = 35.0766251087
 # 	Focusing = 93.9588699341
 
+"""
+new algorithm: mutex
+/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5: Runtime = 307.683965921   Total output workspaces = 733
+Details for thread = 16:
+	Loading  = 93.5135071278
+	Chopping = 35.1256639957
+	Focusing = 179.044794798
 
+"""
