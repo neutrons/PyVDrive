@@ -658,7 +658,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         ew_params = '5000.,-0.001,70000.'
         high_params = '5000.,-0.0003,70000.'
 
-        fast_chop_focus.chop_focus_save(event_file_name=raw_file_name, event_ws_name=event_ws_name,
+        runner = fast_chop_focus.SliceFocusVulcan()
+
+        runner.chop_focus_save(event_file_name=raw_file_name, event_ws_name=event_ws_name,
                                         split_ws_name=split_ws_name, info_ws_name=split_info_table,
                                         output_ws_base=output_ws_name,
                                         idl_bin_file_name=self._reductionSetup.get_vulcan_bin_file(),
