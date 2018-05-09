@@ -6,7 +6,10 @@ import os
 
 home_dir = os.path.expanduser('~')
 # NOTE: This is the entry point to define the path to Mantid
-if home_dir.startswith('/home/wzz') is False:
+if home_dir.startswith('/SNS/'):
+    # analysis
+    sys.path.insert(1, '/opt/mantidnightly/bin/')
+elif home_dir.startswith('/home/wzz') is False:
     # Mac debug build
     sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
     # Analysis cluster build
@@ -16,6 +19,8 @@ if home_dir.startswith('/home/wzz') is False:
     # Personal VULCAN build
     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+# ....
+print ('[MANTID  1] {0} ... Path: {1}'.format(mantid, sys.path))
 
 # IPython monkey patches the  pygments.lexer.RegexLexer.get_tokens_unprocessed method
 # and breaks Sphinx when running within MantidPlot.
@@ -25,9 +30,11 @@ from pygments.lexer import RegexLexer
 RegexLexer.get_tokens_unprocessed_unpatched = RegexLexer.get_tokens_unprocessed
 
 try:
+    # This is PyQt5 compatible
     from qtconsole.rich_ipython_widget import RichIPythonWidget
     from qtconsole.inprocess import QtInProcessKernelManager
-except ImportError:
+except ImportError as import_err:
+    # This is PyQt4 compatible
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
 from mantid.api import AnalysisDataService as mtd

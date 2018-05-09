@@ -21,10 +21,10 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-import gui.ui_VdrivePeakPicker_ui as VdrivePeakPicker
+import gui.ui_VdrivePeakPicker as VdrivePeakPicker
 import gui.diffractionplotview as dv
 import GroupPeakDialog
-import gui.ui_PeakWidthSetup_ui as widthSetupWindow
+import gui.ui_PeakWidthSetup as widthSetupWindow
 
 # Set up path to PyVDrive
 import socket

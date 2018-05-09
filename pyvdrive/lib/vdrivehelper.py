@@ -281,31 +281,3 @@ if __name__ == '__main__':
     time_2 = parse_time(time_str2, local_est=True)
     print time_2, type(time_2)
 
-
-#def getIptsRunFromFileName(nxsfilename):
-#    """ Get IPTS number from a standard SNS nexus file name
-#
-#    Return :: tuple as 2 int, IPTS and run number
-#    """
-#    basename = os.path.basename(nxsfilename)
-#
-#    # Get IPTS
-#    if basename == nxsfilename:
-#        # not a full path
-#        ipts = None
-#    else:
-#        # Format is /SNS/VULCAN/IPTS-????/0/NeXus/VULCAN_run...
-#        try:
-#            ipts = int(nxsfilename.split('IPTS-')[1].split('/')[0])
-#        except IndexError:
-#            ipts = None
-#
-#    # Get run number
-#    try:
-#        runnumber = int(basename.split('_')[1])
-#    except IndexError:
-#        runnumber = None
-#    except ValueError:
-#        runnumber = None
-#
-#    return ipts, runnumber

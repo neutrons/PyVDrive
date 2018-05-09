@@ -134,7 +134,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get run start time
         if is_epoch_time:
-            run_start_ns = raw_ws.run().getProperty('proton_charge').times[0].totalNanoseconds()
+            run_start_ns = raw_ws.run().getProperty('proton_charge').firstTime().totalNanoseconds()
         else:
             run_start_ns = 0
 
@@ -374,7 +374,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         for i_loop in range(num_loops):
             # get the partial splitters workspaces
             sub_split_ws = self.get_sub_splitters(i_loop * NUM_TARGET_WS_IN_MEM, (i_loop + 1) * NUM_TARGET_WS_IN_MEM,
-                                                  run_start_ns=run_start_time_ns)  # run_start_time.totalNanoseconds())
+                                                  run_start_ns=run_start_time_ns)
 
             sns_arg_dict['SplittersWorkspace'] = sub_split_ws
             sns_arg_dict['SplitInformationWorkspace'] = split_info_table
@@ -462,16 +462,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return everything_is_right, message
 
-    def chop_save_reduce(self):
+    def chop_save_reduce(self, save_nexus=False):
         """
         chop the data, save to NeXus file and then reduce them
+        :param save_nexus:
         :return: 2-tuple.  (1) boolean: successful or failed  (2) list of 3-tuples: chopped file name,
                                                                                     reduced successful,
                                                                                     reduced result
         """
-        # TODO/FIXME/NEXT/FUTURE - Data will be read from HDD to reduce.  This might not be efficient.
-        #   But it is a quick solution.
-
         # chop and save data
         status, ret_obj = self.chop_data()
         if status:
@@ -635,6 +633,42 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, message
 
+    def execute_chop_reduction_v2(self, clear_workspaces=False):
+        """
+        chop and reduce data with the upgraded algorithm for speed
+        :return:
+        """
+        import fast_chop_focus
+
+        # create output directory and set instance variable _choppedDataDirectory
+        self.create_chop_dir()
+        if self._choppedDataDirectory is None:
+            self._choppedDataDirectory = self._reductionSetup.get_reduced_data_dir()
+
+        # find out what kind of chopping algorithm shall be used
+        split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
+        print '[DB...BAT...V2] Splitters workspace name: ', split_ws_name
+
+        # load data from file to workspace
+        raw_file_name = self._reductionSetup.get_event_file()
+        event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
+        output_ws_name = event_ws_name + '_split'
+
+        # FIXME
+        ew_params = '5000.,-0.001,70000.'
+        high_params = '5000.,-0.0003,70000.'
+
+        runner = fast_chop_focus.SliceFocusVulcan()
+
+        runner.slice_focus_event_workspace(event_file_name=raw_file_name, event_ws_name=event_ws_name,
+                                           split_ws_name=split_ws_name, info_ws_name=split_info_table,
+                                           output_ws_base=output_ws_name,
+                                           idl_bin_file_name=self._reductionSetup.get_vulcan_bin_file(),
+                                           east_west_binning_parameters=ew_params,
+                                           high_angle_binning_parameters=high_params)
+
+        return True, 'Testing'
+
     def export_chopped_information(self, lookup_list):
         """
         Export the chopped data information to a csv-compatible file
@@ -720,7 +754,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             p_name = sample_log.name
             property_name_list.append(p_name)
         property_name_list.sort()
-        run_start = DateAndTime(workspace.run().getProperty('run_start').value)
+        run_start = DateAndTime(workspace.run().getProperty('run_start').value)  # Kernel.DateAndtime
 
         # start value
         start_file_name = os.path.join(self._choppedDataDirectory,
@@ -811,13 +845,17 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param i_ws:
         :param property_name_list:
         :param header_list:
-        :param run_start_time:
+        :param run_start_time: Kernel.DateAndTime type
         :param workspace_i:
         :param start_series_dict:
         :param mean_series_dict:
         :param end_series_dict:
         :return:
         """
+        assert isinstance(run_start_time, DateAndTime), 'Run start time {0} must be a Mantid.Kernel.DateAndTime ' \
+                                                        'instance but not a {1}'.format(run_start_time,
+                                                                                        type(run_start_time))
+
         # check: log "run_start" should be the same for workspaces split from the same EventWorkspace.
         run_start_i = DateAndTime(workspace_i.run().getProperty('run_start').value)
         assert run_start_time == run_start_i, '{0}-th workspace\'s "run_start {1}" should be same as others\'s start ' \
@@ -825,7 +863,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # get difference in REAL starting time (proton_charge[0])
         try:
-            real_start_time_i = workspace_i.run().getProperty('proton_charge').times[0]
+            real_start_time_i = workspace_i.run().getProperty('proton_charge').firstTime()
         except IndexError:
             print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
             return

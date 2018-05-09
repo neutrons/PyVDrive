@@ -1,9 +1,9 @@
-#!/bin/bash
-#
-# Basic wrapper script for running in development mode. It assumes the current
-# working directory is the directory containing this script.
-#
-python setup.py build_py --inplace
-PYTHONPATH=$(dirname $0):$PYTHONPATH
-echo $PYTHONPATH
-python scripts/Lava.py
+#!/bin/sh
+python setup.py pyuic
+python setup.py build
+if [ $1 ]; then
+    CMD=$1
+else
+    CMD=''
+fi
+PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/Lava.py $CMD

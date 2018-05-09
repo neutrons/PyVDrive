@@ -19,7 +19,7 @@ except AttributeError:
         return s
         
 import gui.GuiUtility as gutil
-import gui.ui_LogSnapView_ui as ui_LogSnapView
+import gui.ui_LogSnapView as ui_LogSnapView
 
 
 class DialogLogSnapView(QDialog):

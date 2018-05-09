@@ -35,7 +35,7 @@ class WorkspaceViewWidget(QWidget):
     def __init__(self, parent=None):
         """ Init
         """
-        import ui_WorkspacesView_ui as ui_WorkspacesView
+        import ui_WorkspacesView as ui_WorkspacesView
 
         # call base
         QWidget.__init__(self)

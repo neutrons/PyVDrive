@@ -14,7 +14,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_ChopDialog_ui
+import gui.ui_ChopDialog
 import gui.GuiUtility as GuiUtility
 
 
@@ -31,7 +31,7 @@ class QuickChopDialog(QDialog):
         super(QuickChopDialog, self).__init__(parent)
 
         # init UI
-        self.ui = gui.ui_ChopDialog_ui.Ui_Dialog()
+        self.ui = gui.ui_ChopDialog.Ui_Dialog()
         self.ui.setupUi(self)
 
         # set up the default value of the widgets

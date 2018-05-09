@@ -11,7 +11,7 @@ import numpy
 
 from LiveDataChildWindows import SampleLogPlotSetupDialog
 from LiveDataChildWindows import LiveViewSetupDialog
-import gui.ui_LiveDataView_ui as ui_LiveDataView
+import gui.ui_LiveDataView as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
 import pyvdrive.lib.mantid_helper as helper
@@ -120,7 +120,7 @@ class VulcanLiveDataView(QMainWindow):
         self._plotPeakVanadiumNorm = {1: False, 0: False}  # 1 for True/main axis, 0 for False/right axis
 
         # other time
-        self._liveStartTimeStamp = None
+        self._liveStartTimeStamp = None  # shall be of time numpy.datetime64
 
         # start UI
         self.ui = ui_LiveDataView.Ui_MainWindow()
@@ -963,7 +963,7 @@ class VulcanLiveDataView(QMainWindow):
         :param y_axis_name:
         :param last_n_accumulation: (1) >= 0.  get specified number (2) < 0: get all (3) None: append mode
         :param relative_time
-        :return:
+        :return: vector of datetime64 or float (seconds), log value vector
         """
         # check input
         assert isinstance(y_axis_name, str), 'Y-axis (sample log) name {0} must be a string but not a {1}.' \
@@ -978,23 +978,7 @@ class VulcanLiveDataView(QMainWindow):
             ws_name_list, index_list = self.get_accumulation_workspaces(last_n_accumulation)
 
         # get log values
-        time_vec, log_value_vec, last_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
-
-        # TODO REMOVE! Let the caller to worry about this
-        # if len(time_vec) == 1:
-        #     # need to add another entry if there is only 1 entry in the whole series
-        #     print '[WARNING] One entry log {0}! last time = {1}'.format(y_axis_name, time_vec[0])
-        #
-        #     # convert to list and back to numpy 1D array
-        #     list_time = list(time_vec)
-        #     list_value = list(log_value_vec)
-        #
-        #     list_time.append(last_time)
-        #     list_value.append(list_value[0])
-        #
-        #     time_vec = numpy.array(list_time)
-        #     log_value_vec = numpy.array(list_value)
-        # # END
+        time_vec, log_value_vec, last_pulse_time = self._controller.parse_sample_log(ws_name_list, y_axis_name)
 
         # convert the vector of time
         if relative_time is not None:
@@ -1309,7 +1293,7 @@ class VulcanLiveDataView(QMainWindow):
             # live data start time
             if self._liveStartTimeStamp is None:
                 # get from the proton charge for T0
-                self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').firstTime()
+                self._liveStartTimeStamp = workspace_i.run().getProperty('proton_charge').times[0]
                 # convert to local time for better communication
                 east_time = vdrivehelper.convert_utc_to_local_time(self._liveStartTimeStamp)
                 # set time

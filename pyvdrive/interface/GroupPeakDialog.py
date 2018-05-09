@@ -3,7 +3,7 @@ try:
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
     from PyQt4.QtGui import QMainWindow
-import gui.ui_GroupPeakDialog_ui
+import gui.ui_GroupPeakDialog
 
 
 class GroupPeakDialog(QMainWindow):
@@ -23,7 +23,7 @@ class GroupPeakDialog(QMainWindow):
         self._parentWindow = parent
 
         # set up UI
-        self.ui = gui.ui_GroupPeakDialog_ui.Ui_MainWindow()
+        self.ui = gui.ui_GroupPeakDialog.Ui_MainWindow()
         self.ui.setupUi(self)
 
         # init set up of widgets

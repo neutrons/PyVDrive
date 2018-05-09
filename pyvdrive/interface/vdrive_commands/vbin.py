@@ -120,7 +120,10 @@ class VBin(procss_vcommand.VDriveCommand):
         # FOCUS_EW: TODO/FIXME : anything interesting?
 
         # check and set IPTS
-        self.set_ipts()
+        try:
+            self.set_ipts()
+        except RuntimeError as run_err:
+            return False, 'Error in setting IPTS: {0}'.format(run_err)
 
         # RUNS or CHOPRUN
         try:

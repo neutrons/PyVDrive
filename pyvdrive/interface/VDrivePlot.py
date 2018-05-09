@@ -9,25 +9,26 @@ try:
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
     from PyQt5.QtGui import QCursor
+    is_qt_4 = False
 except ImportError as import_e:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor
-
-
+    is_qt_4 = True
 
 # include this try/except block to remap QString needed when using IPython
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    _fromUtf8 = lambda s: s
+if is_qt_4:
+    try:
+        _fromUtf8 = QtCore.QString.fromUtf8
+    except AttributeError:
+        _fromUtf8 = lambda s: s
 
 # Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
 import socket
 if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
-import gui.ui_VdrivePlot_ui as mainUi
+import gui.ui_VdrivePlot as mainUi
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView

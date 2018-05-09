@@ -90,7 +90,7 @@ def get_calibrated_difc(cal_ws_name):
     for irow in range(3234, 6468):
         east_difc_vec[irow-3234] = cal_table_ws.cell(irow, difc_col_index)
 
-    CreateWorkspace(DataX=east_spec_vec, DataY=east_difc_vec, NSpec=1, OutputWorkspace='eastt_difc')
+    CreateWorkspace(DataX=east_spec_vec, DataY=east_difc_vec, NSpec=1, OutputWorkspace='east_difc')
 
     # high angle bank
     highangle_spec_vec = numpy.arange(6468, 24900)

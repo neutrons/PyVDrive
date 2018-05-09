@@ -228,15 +228,15 @@ class VdriveChop(VDriveCommand):
         else:
             return False, 'Unable to generate data slicer by time due to {0}.'.format(ret_obj)
 
-        status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
-                                                                     chop_period,
-                                                                     reduce_data=reduce_flag,
-                                                                     vanadium=vanadium, save_chopped_nexus=True,
-                                                                     output_dir=output_dir,
-                                                                     export_log_type=exp_log_type)
-
-
-        return status, message
+        return False, 'DT option is not implemented. Contact developer!'
+        # status, message = self._controller.slice_data_segment_period(run_number, slicer_key,
+        #                                                              chop_period,
+        #                                                              reduce_data=reduce_flag,
+        #                                                              vanadium=vanadium, save_chopped_nexus=True,
+        #                                                              output_dir=output_dir,
+        #                                                              export_log_type=exp_log_type)
+        #
+        # return status, message
 
     def chop_data_manually(self, run_number, slicer_list, reduce_flag, vanadium, output_dir, epoch_time, dry_run,
                            chop_loadframe_log, chop_furnace_log):
@@ -443,18 +443,19 @@ class VdriveChop(VDriveCommand):
 
             # chop and optionally reduce
             if chop_period is not None:
-                # chopping with period
-                status, mesage = self.chop_data_by_time_period(run_number=run_number,
-                                                               start_time=None,
-                                                               stop_time=None,
-                                                               time_interval=time_step,
-                                                               chop_period=chop_period,
-                                                               reduce_flag=output_to_gsas,
-                                                               vanadium=van_run_number,
-                                                               output_dir=output_dir,
-                                                               dry_run=is_dry_run,
-                                                               chop_loadframe_log=chop_load_frame,
-                                                               chop_furnace_log=chop_furnace_log)
+                # chopping with OVERLAPPED period
+                # FIXME - This is NOTE implemented and tested
+                status, message = self.chop_data_by_time_period(run_number=run_number,
+                                                                start_time=None,
+                                                                stop_time=None,
+                                                                time_interval=time_step,
+                                                                chop_period=chop_period,
+                                                                reduce_flag=output_to_gsas,
+                                                                vanadium=van_run_number,
+                                                                output_dir=output_dir,
+                                                                dry_run=is_dry_run,
+                                                                chop_loadframe_log=chop_load_frame,
+                                                                chop_furnace_log=chop_furnace_log)
 
             elif time_step is not None:
                 # chop by time and reduce

@@ -401,7 +401,7 @@ class ProjectManager(object):
     def chop_run_time_segment_period(self, run_number, slicer_key, chop_period, reduce_data_flag, vanadium,
                                      save_chopped_nexus, output_dir, export_log_type):
         """
-
+        chop events by time segments
         :param run_number:
         :param slicer_key:
         :param chop_period:
