@@ -35,7 +35,7 @@ class SliceFocusVulcan(object):
 
         # threads
         if num_threads is None:
-            self._num_threads = 32
+            self._num_threads = 16
         else:
             assert isinstance(num_threads, int) and num_threads > 0, 'Number of threads {0} must be an integer ' \
                                                                      'and larger than 0'.format(num_threads)
@@ -81,49 +81,61 @@ class SliceFocusVulcan(object):
         :param h5_bin_file_name:
         :return:
         """
-        def extrapolate_last_bin(bins):
+        def process_bins_to_binning_params(bins_vector):
             """
-            :param bins:
+            convert a list of bin boundaries to x1, dx, x2, dx, ... style
+            :param bins_vector:
             :return:
             """
-            assert isinstance(bins, numpy.ndarray) and len(bins.shape) == 1, '{0} must be a 1D array but not {1}.' \
-                                                                             ''.format(bins, type(bins))
+            assert isinstance(bins_vector, numpy.ndarray)
+            assert len(bins_vector.shape) == 1
 
-            delta_bin = (bins[-1] - bins[-2]) / bins[-2]
-            next_bin = bins[-1] * (1 + delta_bin)
+            delta_tof_vec = bins_vector[1:] - bins_vector[:-1]
 
-            return next_bin
+            bin_param = numpy.empty((bins_vector.size + delta_tof_vec.size), dtype=bins_vector.dtype)
+            bin_param[0::2] = bins_vector
+            bin_param[1::2] = delta_tof_vec
+
+            # extrapolate_last_bin
+            delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
+            next_bin = bins_vector[-1] * (1 + delta_bin)
+
+            # append last value for both east/west bin and high angle bin
+            numpy.append(bin_param, delta_bin)
+            numpy.append(bin_param, next_bin)
+
+            return bin_param
 
         # use explicitly defined bins and thus matrix workspace is required
         # import h5 file
         # load vdrive bin file to 2 different workspaces
         bin_file = h5py.File(h5_bin_file_name, 'r')
-        low_bins = bin_file['west_east_bank'][:]
-        high_bins = bin_file['high_angle_bank'][:]
+        west_east_bins = bin_file['west_east_bank'][:]
+        high_angle_bins = bin_file['high_angle_bank'][:]
         bin_file.close()
 
-        # append last value for both east/west bin and high angle bin
-        low_bins = numpy.append(low_bins, extrapolate_last_bin(low_bins))
-        high_bins = numpy.append(high_bins, extrapolate_last_bin(high_bins))
+        # convert a list of bin boundaries to x1, dx, x2, dx, ... style
+        west_east_bin_params = process_bins_to_binning_params(west_east_bins)
+        high_angle_bin_params = process_bins_to_binning_params(high_angle_bins)
 
         binning_parameter_dict = dict()
         if num_banks == 3:
             # west(1), east(1), high(1)
             # west(1), east(1), high(1)
             for bank_id in range(1, 3):
-                binning_parameter_dict[bank_id] = low_bins
-            binning_parameter_dict[3] = high_bins
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[3] = high_angle_bin_params
         elif num_banks == 7:
             # west (3), east (3), high (1)
             for bank_id in range(1, 7):
-                binning_parameter_dict[bank_id] = low_bins
-            binning_parameter_dict[7] = high_bins
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[7] = high_angle_bin_params
         elif num_banks == 27:
             # west (9), east (9), high (9)
             for bank_id in range(1, 19):
-                binning_parameter_dict[bank_id] = low_bins
+                binning_parameter_dict[bank_id] = west_east_bin_params
             for bank_id in range(19, 28):
-                binning_parameter_dict[bank_id] = high_bins
+                binning_parameter_dict[bank_id] = high_angle_bin_params
         else:
             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
         # END-IF-ELSE
@@ -163,7 +175,12 @@ class SliceFocusVulcan(object):
         :return:
         """
         assert isinstance(binning_param_dict, dict), 'Binning parameters {0} must be given as a dictionary ' \
-                                                     'but not a {1}'.format(binning_param_dict, type(binning_param_dict))
+                                                     'but not a {1}' \
+                                                     ''.format(binning_param_dict, type(binning_param_dict))
+
+        # check input workspace
+        if isinstance(input_ws, str):
+            input_ws = AnalysisDataService.retrieve(input_ws)
 
         # check input binning parameters
         for ws_index in range(input_ws.getNumberHistograms()):
@@ -232,12 +249,16 @@ class SliceFocusVulcan(object):
         assert isinstance(workspace_name_list, list)
 
         for index, ws_name in enumerate(workspace_name_list):
-            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index+1))
+            if len(ws_name) == 0:
+                continue
+
+            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
 
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)
             if output_workspace.isHistogramData():
-                raise RuntimeError('Output workspace shall be point data at this stage.')
+                raise RuntimeError('Output workspace {0} for {1} shall be point data at this stage.'
+                                   ''.format(ws_name, gsas_file_name))
 
             # construct the headers
             vulcan_gsas_header = self.create_vulcan_gsas_header(output_workspace, gsas_file_name, ipts_number,
@@ -308,30 +329,30 @@ class SliceFocusVulcan(object):
 
         t2 = time.time()
 
-        # Now start to use multi-threading
-        num_outputs = len(output_names)
-        number_ws_per_thread = int(num_outputs / self._num_threads)
-
-        # create binning table
-        # not_align_idl = False
-        # bin_table_name = self.create_bin_table(self._number_banks, not_align_idl,
-        #                                        idl_bin_file_name,
-        #                                        (east_west_binning_parameters, high_angle_binning_parameters))
+        # process binning parameters
         if idl_bin_file_name is not None:
             binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
         else:
             binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
                                                              high_angle_binning_parameters)
 
+        # Now start to use multi-threading
+        num_outputs = len(output_names)
+        number_ws_per_thread = int(num_outputs / self._num_threads)
+        extra = num_outputs % self._num_threads
+
+        print ('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
+               'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
         thread_pool = dict()
         # create threads and start
+        end = 0  # exclusive last
         for thread_id in range(self._num_threads):
-            start = thread_id * number_ws_per_thread
-            end = min(start + number_ws_per_thread, num_outputs)
+            start = end
+            end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
                                                       args=(output_names[start:end], binning_parameter_dict,))
             thread_pool[thread_id].start()
-            print ('thread {0}: [{1}: {2})'.format(thread_id, start, end))
+            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
 
         # join the threads
         for thread_id in range(self._num_threads):
@@ -346,7 +367,7 @@ class SliceFocusVulcan(object):
         t3 = time.time()
 
         # write all the processed workspaces to GSAS
-        self.write_to_gsas(output_names)
+        self.write_to_gsas(output_names, ipts_number=12345, parm_file_name='vulcan.prm')
 
         tf = time.time()
 
