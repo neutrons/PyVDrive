@@ -35,7 +35,7 @@ class SliceFocusVulcan(object):
 
         # threads
         if num_threads is None:
-            self._num_threads = 16
+            self._num_threads = 24
         else:
             assert isinstance(num_threads, int) and num_threads > 0, 'Number of threads {0} must be an integer ' \
                                                                      'and larger than 0'.format(num_threads)
@@ -377,6 +377,12 @@ class SliceFocusVulcan(object):
         process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
                         'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._num_threads)
         print (process_info)
+
+        end = 0
+        for thread_id in range(self._num_threads):
+            start = end
+            end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
+            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
 
         return process_info
 
