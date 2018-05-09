@@ -660,12 +660,12 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         runner = fast_chop_focus.SliceFocusVulcan()
 
-        runner.chop_focus_save(event_file_name=raw_file_name, event_ws_name=event_ws_name,
-                                        split_ws_name=split_ws_name, info_ws_name=split_info_table,
-                                        output_ws_base=output_ws_name,
-                                        idl_bin_file_name=self._reductionSetup.get_vulcan_bin_file(),
-                                        east_west_binning_parameters=ew_params,
-                                        high_angle_binning_parameters=high_params)
+        runner.slice_focus_event_workspace(event_file_name=raw_file_name, event_ws_name=event_ws_name,
+                                           split_ws_name=split_ws_name, info_ws_name=split_info_table,
+                                           output_ws_base=output_ws_name,
+                                           idl_bin_file_name=self._reductionSetup.get_vulcan_bin_file(),
+                                           east_west_binning_parameters=ew_params,
+                                           high_angle_binning_parameters=high_params)
 
         return True, 'Testing'
 
