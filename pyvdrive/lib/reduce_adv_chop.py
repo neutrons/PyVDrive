@@ -12,6 +12,7 @@ from mantid.kernel import DateAndTime
 import reduce_VULCAN
 import chop_utility
 import mantid_helper
+import vulcan_slice_reduce
 
 MAX_ALLOWED_WORKSPACES = 200
 MAX_CHOPPED_WORKSPACE_IN_MEM = 200
@@ -638,8 +639,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         chop and reduce data with the upgraded algorithm for speed
         :return:
         """
-        import fast_chop_focus
-
         # create output directory and set instance variable _choppedDataDirectory
         self.create_chop_dir()
         if self._choppedDataDirectory is None:
@@ -658,7 +657,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         ew_params = '5000.,-0.001,70000.'
         high_params = '5000.,-0.0003,70000.'
 
-        runner = fast_chop_focus.SliceFocusVulcan()
+        runner = vulcan_slice_reduce.SliceFocusVulcan()
 
         runner.slice_focus_event_workspace(event_file_name=raw_file_name, event_ws_name=event_ws_name,
                                            split_ws_name=split_ws_name, info_ws_name=split_info_table,
