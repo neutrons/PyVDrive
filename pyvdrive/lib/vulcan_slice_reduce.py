@@ -27,7 +27,15 @@ class SliceFocusVulcan(object):
         """
         initialization
         """
-        self._detector_calibration_file = '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5'
+        if number_banks == 3:
+            self._detector_calibration_file = \
+                '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5'
+        elif number_banks == 7:
+            self._detector_calibration_file = \
+                '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5'
+        else:
+            raise
+
         self._number_banks = number_banks
         self._output_dir = '/tmp/'
 
@@ -40,6 +48,8 @@ class SliceFocusVulcan(object):
             assert isinstance(num_threads, int) and num_threads > 0, 'Number of threads {0} must be an integer ' \
                                                                      'and larger than 0'.format(num_threads)
 
+        self._ws_name_dict = dict()
+
         return
 
     def __str__(self):
@@ -48,6 +58,16 @@ class SliceFocusVulcan(object):
         :return:
         """
         return 'Set up to ... ...'
+
+    def align_detectors(self, ref_id):
+        # TODO
+        event_ws_name = self._ws_name_dict[ref_id]
+
+        AlignDetectors(InputWorkspace=event_ws_name,
+                       OutputWorkspace=event_ws_name,
+                       CalibrationWorkspace='Vulcan_cal')
+
+        return
 
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
@@ -149,6 +169,38 @@ class SliceFocusVulcan(object):
 
         return binning_parameter_dict
 
+    def diffraction_focus(self, ref_id, unit, binning, apply_det_efficiency):
+        """
+
+        :param ref_id:
+        :param unit:
+        :param binning:
+        :param apply_det_efficiency:
+        :return:
+        """
+        ws_name = self._ws_name_dict[ref_id]
+
+        # convert unit to d-spacing
+        ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
+
+        # rebin
+        convert_to_matrix = self._det_eff_vector is not None and apply_det_efficiency
+        Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
+
+        # apply detector efficiency
+        if apply_det_efficiency:
+            pass
+
+        # sum spectra
+        DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
+
+        event_ws = AnalysisDataService.retrieve(ws_name)
+
+
+        if apply_det_efficiency:
+            blabla
+
+
     def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
         """
         do diffraction focus on a list workspaces and also convert them to IDL GSAS
@@ -162,7 +214,7 @@ class SliceFocusVulcan(object):
             # skip empty workspace name that might be returned from FilterEvents
             if len(ws_name) == 0:
                 continue
-            # focus
+            # focus (simple)
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
             DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
@@ -170,6 +222,42 @@ class SliceFocusVulcan(object):
             self.rebin_workspace(input_ws=ws_name, binning_param_dict=binning_parameter_dict,
                                  output_ws_name=ws_name)
         # END-FOR
+
+        return
+
+    def generate_output_workspace_name(self, event_file_name):
+        # TODO shall be better
+        out_ws_name = os.path.basename(event_file_name).split('.')[0]
+        ref_id = out_ws_name  # same name existed?
+
+        return out_ws_name, ref_id
+
+    def load_detector_eff_file(self, file_name):
+        """
+
+        :param file_name:
+        :return:
+        """
+        assert isinstance(file_name, str)
+
+        try:
+            import file_utilities
+            returned = file_utilities.import_detector_efficiency(file_name)
+            self._pid_vector = returned[0]
+            self._det_eff_vector = returned[1]   # inverted efficiency.  so need to multiply
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to load detector efficiency file {0} due to {1}'.format(file_name,
+                                                                                               run_err))
+
+        return
+
+    def load_data(self, event_file_name):
+        # TODO
+
+        out_ws_name, data_key = self.generate_output_workspace_name(event_file_name)
+        self._event_ws = Load(Filename=event_file_name, MetaDataOnly=False, OutputWorkspace=out_ws_name)
+
+        self._ws_name_dict[data_key] = out_ws_name
 
         return
 

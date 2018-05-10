@@ -12,17 +12,17 @@ import h5py
 import datetime
 
 van_run = 156473   # 161069: bad  # vulcan_158562
-van_ws = 'vanadium_{0}'.format(van_run)
+van_ws_name = 'vanadium_{0}'.format(van_run)
 
-if not mtd.doesExist('vanadium'):
-    Load(Filename='/SNS/VULCAN/IPTS-19653/nexus/VULCAN_{0}.nxs.h5'.format(van_run), OutputWorkspace=van_ws)
+if not mtd.doesExist(van_ws_name):
+    Load(Filename='/SNS/VULCAN/IPTS-19576/nexus/VULCAN_{0}.nxs.h5'.format(van_run), OutputWorkspace=van_ws_name)
 
 # uniform integration
 if not mtd.doesExist('van_uniform_sum'):
     Integration(InputWorkspace=van_ws, OutputWorkspace='van_uniform_sum', RangeLower=10000, RangeUpper=30000)
 
 # integration with fine tune
-van_ws = mtd['vanadium']
+van_ws = mtd[van_ws_name]
 start_index = 0
 stop_index = van_ws.getNumberHistograms() - 1
 print ('Range of index: [{0}, {1}]'.format(start_index, stop_index))
@@ -47,7 +47,7 @@ print ('Range of highest TOF among all detectors: {0}, {1}'.format(min(RangeUppe
 params = '{0}, -0.001, {1}'.format(10000, max(RangeUpperList))
 print (params)
 
-Rebin(InputWorkspace='vanadium',
+Rebin(InputWorkspace=van_ws,
       Params='{0},-0.001,{1}'.format(10000, max(RangeUpperList)),
       FullBinsOnly=True,
       OutputWorkspace='vanadium')
@@ -104,7 +104,7 @@ ds.attrs[u'units'] = u''
 ds.attrs[u'long_name'] = u'Pixel ID'    # suggested X axis plot label
 
 # Y axis data
-ds = nx_data.create_dataset(u'I00', data=weight_vec)
+ds = nx_data.create_dataset(u'inversed efficiency', data=weight_vec)
 ds.attrs[u'units'] = u''
 ds.attrs[u'long_name'] = u'Detector Efficiency Factor'    # suggested Y axis plot label
 
