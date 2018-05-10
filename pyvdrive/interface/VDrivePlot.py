@@ -531,26 +531,13 @@ class VdriveMainWindow(QMainWindow):
         # show the window if it exists and return
         self._reducedDataViewWindow.show()
 
-        # I think the following section is redundant
-        # # update to current reduction status
-        # runs_tuples = self._myWorkflow.get_reduced_runs(with_ipts=True)
-        # if len(runs_tuples) == 0:
-        #     print '[INFO] No reduced run is found. '
-        #     return self._reducedDataViewWindow
-        #
-        # self._reducedDataViewWindow.set_ipts_number(runs_tuples[0][1])
-        # # 1-D image
-        # self._reducedDataViewWindow.set_canvas_type(dimension=1)
-        # self._reducedDataViewWindow.add_run_numbers(self._myWorkflow.get_reduced_runs(with_ipts=True),
-        #                                             clear_previous=True)
-
         return self._reducedDataViewWindow
 
     def do_remove_runs_from_reduction(self):
         """
-        TODO/FIXME
         :return:
         """
+        # TODO / FIXME
         # get run to delete
         try:
             remove_run = GuiUtility.parse_integer(self.ui.lineEdit_runsToDelete)

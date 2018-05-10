@@ -42,6 +42,13 @@ class SliceFocusVulcan(object):
 
         return
 
+    def __str__(self):
+        """
+        nice output
+        :return:
+        """
+        return 'Set up to ... ...'
+
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
         """
