@@ -37,6 +37,7 @@ if __name__ == '__main__':
     # this must be here!
     test_window = test_main()
     test_window.show()
+    test_window.load_preprocess_nexus(file_name='.nxs')
     # I cannot close it!  test_window.close()
 
     app.exec_()
