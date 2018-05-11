@@ -2,7 +2,7 @@
 import time
 from mantid.simpleapi import Load, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder, Rebin
 from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace
-from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS
+from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
 from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace, SaveVulcanGSS
 from mantid.api import AnalysisDataService
 import threading
@@ -10,6 +10,7 @@ import numpy
 import os
 import h5py
 import time
+import file_utilities
 
 
 # chop data
@@ -33,6 +34,9 @@ class SliceFocusVulcan(object):
         elif number_banks == 7:
             self._detector_calibration_file = \
                 '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5'
+        elif number_banks == 27:
+            self._detector_calibration_file = '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/' \
+                                              'VULCAN_calibrate_2018_04_12_27bank.h5'
         else:
             raise
 
@@ -49,6 +53,7 @@ class SliceFocusVulcan(object):
                                                                      'and larger than 0'.format(num_threads)
 
         self._ws_name_dict = dict()
+        self._det_eff_ws_name = None
 
         return
 
@@ -62,6 +67,10 @@ class SliceFocusVulcan(object):
     def align_detectors(self, ref_id):
         # TODO
         event_ws_name = self._ws_name_dict[ref_id]
+
+        diff_cal_ws_name = 'Vulcan_cal'
+        if not AnalysisDataService.doesExist(diff_cal_ws_name):
+            self.load_diff_calibration('Vulcan')
 
         AlignDetectors(InputWorkspace=event_ws_name,
                        OutputWorkspace=event_ws_name,
@@ -184,22 +193,17 @@ class SliceFocusVulcan(object):
         ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
 
         # rebin
-        convert_to_matrix = self._det_eff_vector is not None and apply_det_efficiency
+        convert_to_matrix = self._det_eff_ws_name is not None and apply_det_efficiency
         Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
 
         # apply detector efficiency
         if apply_det_efficiency:
-            pass
+            Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
 
         # sum spectra
         DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
 
-        event_ws = AnalysisDataService.retrieve(ws_name)
-
-
-        if apply_det_efficiency:
-            blabla
-
+        return
 
     def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
         """
@@ -241,13 +245,19 @@ class SliceFocusVulcan(object):
         assert isinstance(file_name, str)
 
         try:
-            import file_utilities
             returned = file_utilities.import_detector_efficiency(file_name)
             self._pid_vector = returned[0]
             self._det_eff_vector = returned[1]   # inverted efficiency.  so need to multiply
         except RuntimeError as run_err:
             raise RuntimeError('Unable to load detector efficiency file {0} due to {1}'.format(file_name,
                                                                                                run_err))
+
+        # create the detector efficiency workspace
+        self._det_eff_ws_name = os.path.basename(file_name).split(',')[0]
+        CreateWorkspace(OutputWorkspace=self._det_eff_ws_name,
+                        DataX=numpy.arange(len(self._det_eff_vector)),
+                        DataY=self._det_eff_vector,
+                        NSpec=len(self._det_eff_vector))
 
         return
 
@@ -258,6 +268,15 @@ class SliceFocusVulcan(object):
         self._event_ws = Load(Filename=event_file_name, MetaDataOnly=False, OutputWorkspace=out_ws_name)
 
         self._ws_name_dict[data_key] = out_ws_name
+
+        return data_key
+
+    def load_diff_calibration(self, base_name):
+        # TODO
+        # Load diffraction calibration file
+        LoadDiffCal(InputWorkspace=self._event_ws,
+                    Filename=self._detector_calibration_file,
+                    WorkspaceName=base_name)
 
         return
 
@@ -334,6 +353,13 @@ class SliceFocusVulcan(object):
         # END-IF-ELSE
 
         return output_workspace
+
+    def save_nexus(self, ws_ref_id, output_file_name):
+        # TODO
+        ws_name = self._ws_name_dict[ws_ref_id]
+        file_utilities.save_workspace(ws_name, output_file_name, file_type='nxs')
+
+        return
 
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
         """

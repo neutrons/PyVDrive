@@ -11,6 +11,8 @@ import numpy
 import h5py
 import datetime
 
+COUNT_THRESHOLD = 1000
+
 van_run = 156473   # 161069: bad  # vulcan_158562
 van_ws_name = 'vanadium_{0}'.format(van_run)
 
@@ -19,7 +21,7 @@ if not mtd.doesExist(van_ws_name):
 
 # uniform integration
 if not mtd.doesExist('van_uniform_sum'):
-    Integration(InputWorkspace=van_ws, OutputWorkspace='van_uniform_sum', RangeLower=10000, RangeUpper=30000)
+    Integration(InputWorkspace=van_ws_name, OutputWorkspace='van_uniform_sum', RangeLower=10000, RangeUpper=30000)
 
 # integration with fine tune
 van_ws = mtd[van_ws_name]
@@ -64,14 +66,20 @@ weight_ws = mtd['van_tuned_sum']
 num_spec = weight_ws.getNumberHistograms()
 
 pid_vec = numpy.ndarray(shape=(num_spec,), dtype='int64')
-weight_vec = numpy.ndarray(shape=(num_spec,), dtype='float')
+integrated_count_vec = numpy.ndarray(shape=(num_spec,), dtype='float')
 
 for iws in range(num_spec):
     pid_vec[iws] = weight_ws.getDetector(iws).getID()
-    weight_vec[iws] = weight_ws.readY(iws)[0]
+    integrated_count_vec[iws] = weight_ws.readY(iws)[0]
 
 # normalize and reverse
-weight_vec = numpy.max(weight_vec) / weight_vec
+eff_vec = integrated_count_vec/numpy.max(integrated_count_vec)
+
+weight_vec = 1/eff_vec
+for i in range(len(weight_vec)):
+    if integrated_count_vec[i] < COUNT_THRESHOLD:
+        weight_vec[i] = 0
+        eff_vec[i] = 0
 
 # write to HDF5 file
 eff_name = 'vulcan_eff_{0}.hdf5'.format(van_run)
@@ -95,7 +103,7 @@ nx_data = nx_entry.create_group(u'detector_efficiency')
 nx_data.attrs[u'NX_class'] = u'NXdata'
 nx_data.attrs[u'signal'] = u'weight'    # Y axis of default plot
 nx_data.attrs[u'axes'] = u'pid'         # X axis of default plot
-nx_data.attrs[u'mr_indices'] = [0,]     # use "mr" as the first dimension of I00
+nx_data.attrs[u'mr_indices'] = [0, ]     # use "mr" as the first dimension of I00
 
 
 # X axis data
@@ -104,8 +112,13 @@ ds.attrs[u'units'] = u''
 ds.attrs[u'long_name'] = u'Pixel ID'    # suggested X axis plot label
 
 # Y axis data
-ds = nx_data.create_dataset(u'inversed efficiency', data=weight_vec)
+ds = nx_data.create_dataset(u'inverted efficiency', data=weight_vec)
 ds.attrs[u'units'] = u''
-ds.attrs[u'long_name'] = u'Detector Efficiency Factor'    # suggested Y axis plot label
+ds.attrs[u'long_name'] = u'Inverted Detector Efficiency Factor'    # suggested Y axis plot label
+
+# Original data
+ds = nx_data.create_dataset(u'efficiency', data=eff_vec)
+ds.attrs[u'unit'] = u''
+ds.attrs[u'long_name'] = u'Detector Efficiency'
 
 eff_file.close()   # be CERTAIN to close the file
