@@ -17,11 +17,10 @@ except ImportError as import_e:
     is_qt_4 = True
 
 # include this try/except block to remap QString needed when using IPython
-if is_qt_4:
-    try:
-        _fromUtf8 = QtCore.QString.fromUtf8
-    except AttributeError:
-        _fromUtf8 = lambda s: s
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except (AttributeError, ImportError):
+    _fromUtf8 = lambda s: s
 
 # Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
 import socket
@@ -296,7 +295,8 @@ class VdriveMainWindow(QMainWindow):
                 QMainWindow.__init__(self)
 
                 # set up
-                self.setObjectName(_fromUtf8("MainWindow"))
+                if is_qt_4:
+                    self.setObjectName(_fromUtf8("MainWindow"))
                 self.resize(1600, 1200)
                 self.centralwidget = QWidget(self)
                 self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
