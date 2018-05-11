@@ -134,11 +134,11 @@ class SliceFocusVulcan(object):
 
             # extrapolate_last_bin
             delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
-            next_bin = bins_vector[-1] * (1 + delta_bin)
+            next_x = bins_vector[-1] * (1 + delta_bin)
 
             # append last value for both east/west bin and high angle bin
             numpy.append(bin_param, delta_bin)
-            numpy.append(bin_param, next_bin)
+            numpy.append(bin_param, next_x)
 
             return bin_param
 
@@ -201,7 +201,8 @@ class SliceFocusVulcan(object):
             Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
 
         # sum spectra
-        DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
+        # TODO FIXME ASAP3: Vulcan_group shall be a generalized workspace name!
+        DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='Vulcan_group')
 
         return
 
