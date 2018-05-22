@@ -7,6 +7,9 @@ try:
 except ImportError:
     print ('PyQt4 will be imported')
     from PyQt4.QtGui import QApplication
+mac_mantid_path = '/Users/wzz/MantidBuild/debug/bin/'
+sys.path.append(mac_mantid_path)
+import mantid
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 
 
