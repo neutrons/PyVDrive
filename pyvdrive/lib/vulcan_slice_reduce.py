@@ -2,7 +2,7 @@
 import time
 from mantid.simpleapi import Load, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder, Rebin
 from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace
-from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS
+from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
 from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace, SaveVulcanGSS
 from mantid.api import AnalysisDataService
 import threading
@@ -10,6 +10,8 @@ import numpy
 import os
 import h5py
 import time
+import file_utilities
+import datatypeutility
 
 
 # chop data
@@ -20,25 +22,76 @@ import time
 # event_file_name = '/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5'
 
 
+CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                     7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                     27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
+
+
 class SliceFocusVulcan(object):
     """ Class to handle the slice and focus on vulcan data
     """
-    def __init__(self, number_banks=3, num_threads=None):
+    def __init__(self, number_banks=3, num_threads=24):
         """
         initialization
+        :param number_banks:
+        :param num_threads:
         """
-        self._detector_calibration_file = '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5'
-        self._number_banks = number_banks
-        self._output_dir = '/tmp/'
+        datatypeutility.check_int_variable('Number of banks', number_banks, [1, None])
+        datatypeutility.check_int_variable('Number of threads', number_banks, [1, 256])
 
-        self._save_gss_mutex = False  # a mutex to control the access to HDD
-
-        # threads
-        if num_threads is None:
-            self._num_threads = 24
+        if number_banks in CALIBRATION_FILES:
+            self._detector_calibration_file = CALIBRATION_FILES[number_banks]
+            self._number_banks = number_banks
         else:
-            assert isinstance(num_threads, int) and num_threads > 0, 'Number of threads {0} must be an integer ' \
-                                                                     'and larger than 0'.format(num_threads)
+            raise RuntimeError('{0}-bank case is not supported.'.format(number_banks))
+
+        # other directories
+        self._output_dir = '/tmp/'
+        self._ws_name_dict = dict()
+        self._last_loaded_event_ws = None
+        self._last_loaded_ref_id = ''
+        self._det_eff_ws_name = None
+
+        # calibration, grouping and mask file
+        self._diff_base_name = 'Vulcan_Bank{0}'.format(self._number_banks)
+        self._diff_cal_ws_name = '{0}_cal'.format(self._diff_base_name)
+        self._group_ws_name = '{0}_group'.format(self._diff_base_name)
+        self._mask_ws_name = '{0}_mask'.format(self._diff_base_name)
+
+        # multiple threading variables
+        self._number_threads = num_threads
+
+        return
+
+    def __str__(self):
+        """
+        nice output
+        :return:
+        """
+        return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
+                                                                                   self._number_threads)
+
+    def align_detectors(self, ref_id):
+        """
+        Align detector of an EventWorkspace indexed by reference ID
+        :param ref_id:
+        :return:
+        """
+        datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
+        if ref_id not in self._ws_name_dict:
+            raise RuntimeError('Workspace/data reference ID {0} does not exist. Existing IDs are {1}'
+                               ''.format(ref_id, self._ws_name_dict.keys()))
+
+        # get event workspace name
+        event_ws_name = self._ws_name_dict[ref_id]
+
+        # get calibration file name
+        if not AnalysisDataService.doesExist(self._diff_cal_ws_name):
+            self.load_diff_calibration(self._diff_base_name)
+
+        AlignDetectors(InputWorkspace=event_ws_name,
+                       OutputWorkspace=event_ws_name,
+                       CalibrationWorkspace=self._diff_cal_ws_name)
 
         return
 
@@ -98,11 +151,11 @@ class SliceFocusVulcan(object):
 
             # extrapolate_last_bin
             delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
-            next_bin = bins_vector[-1] * (1 + delta_bin)
+            next_x = bins_vector[-1] * (1 + delta_bin)
 
             # append last value for both east/west bin and high angle bin
             numpy.append(bin_param, delta_bin)
-            numpy.append(bin_param, next_bin)
+            numpy.append(bin_param, next_x)
 
             return bin_param
 
@@ -142,22 +195,62 @@ class SliceFocusVulcan(object):
 
         return binning_parameter_dict
 
+    def diffraction_focus(self, ref_id, binning, apply_det_efficiency):
+        """
+        Do diffraction focus to a workspace indexed by its reference ID
+        :param ref_id:
+        :param binning:
+        :param apply_det_efficiency:
+        :return:
+        """
+        # check input
+        datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
+        assert isinstance(binning, str) or isinstance(binning, numpy.ndarray) or isinstance(binning, list),\
+            'Binning parameter {0} of type is not acceptible.'.format(binning, type(binning))
+
+        # workspace
+        if ref_id in self._ws_name_dict:
+            ws_name = self._ws_name_dict[ref_id]
+        else:
+            raise RuntimeError('Workspace/data reference ID {0} does not exist.'.format(ref_id))
+
+        # convert unit to d-spacing
+        ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
+
+        # convert to matrix workspace to apply detector efficiency?
+        convert_to_matrix = self._det_eff_ws_name is not None and apply_det_efficiency
+        if apply_det_efficiency:
+            # rebin
+            Rebin(InputWorkspace=ws_name, OutputWorkspace=ws_name, Params=binning, PreserveEvents=not convert_to_matrix)
+            # apply detector efficiency
+            Multiply(LHSWorkspace=ws_name, RHSWorkspace=self._det_eff_ws_name, OutputWorkspace=ws_name)
+
+        # sum spectra: not binned well
+        DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace=self._group_ws_name)
+
+        return
+
     def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
         """
         do diffraction focus on a list workspaces and also convert them to IDL GSAS
         :param ws_name_list:
+        :param binning_parameter_dict: dictionary for binning parameters. it is used for convert binning to VDRIVE-IDL
         :return:
         """
-        assert isinstance(ws_name_list, list)
-        assert isinstance(binning_parameter_dict, dict)
+        datatypeutility.check_list('Workspace names', ws_name_list)
+        datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
 
         for ws_name in ws_name_list:
+            # check input
+            datatypeutility.check_string_variable('Workspace name', ws_name)
             # skip empty workspace name that might be returned from FilterEvents
             if len(ws_name) == 0:
                 continue
-            # focus
+            # focus (simple) it is the same but simplied version in diffraction_focus()
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='dSpacing')
+            # diffraction focus
             DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
+            # convert unit to TOF
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
             # convert VULCAN binning
             self.rebin_workspace(input_ws=ws_name, binning_param_dict=binning_parameter_dict,
@@ -166,7 +259,79 @@ class SliceFocusVulcan(object):
 
         return
 
-    def rebin_workspace(self, input_ws, binning_param_dict, output_ws_name):
+    def generate_output_workspace_name(self, event_file_name):
+        """
+        generate output workspace name from the input event file
+        :param event_file_name:
+        :return:
+        """
+        out_ws_name = os.path.basename(event_file_name).split('.')[0] + '_{0}banks'.format(self._number_banks)
+        ref_id = out_ws_name
+
+        return out_ws_name, ref_id
+
+    def load_detector_eff_file(self, file_name):
+        """
+        load detector efficency factor file (HDF5)
+        :param file_name:
+        :return:
+        """
+        datatypeutility.check_file_name(file_name, check_exist=True, note='Detector efficiency (HDF5) file')
+
+        try:
+            returned = file_utilities.import_detector_efficiency(file_name)
+            pid_vector = returned[0]
+            det_eff_vector = returned[1]   # inverted efficiency.  so need to multiply
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to load detector efficiency file {0} due to {1}'.format(file_name,
+                                                                                               run_err))
+
+        # create the detector efficiency workspace
+        self._det_eff_ws_name = os.path.basename(file_name).split(',')[0]
+        CreateWorkspace(OutputWorkspace=self._det_eff_ws_name,
+                        DataX=pid_vector,  # np.arange(len(det_eff_vector)),
+                        DataY=det_eff_vector,
+                        NSpec=len(det_eff_vector))
+
+        return
+
+    def load_data(self, event_file_name):
+        """
+        Load an event file
+        :param event_file_name:
+        :return:
+        """
+        datatypeutility.check_file_name(event_file_name, check_exist=True, note='Event data file')
+
+        # generate output workspace and data key
+        out_ws_name, data_key = self.generate_output_workspace_name(event_file_name)
+
+        # keep it as the current workspace
+        self._last_loaded_event_ws = Load(Filename=event_file_name, MetaDataOnly=False, OutputWorkspace=out_ws_name)
+        self._last_loaded_ref_id = data_key
+
+        self._ws_name_dict[data_key] = out_ws_name
+
+        return data_key
+
+    def load_diff_calibration(self, base_name):
+        """
+        Load diffraction calibration file (.h5)
+        :param base_name:
+        :return:
+        """
+        datatypeutility.check_file_name(file_name=self._detector_calibration_file, check_exist=True,
+                                        note='Diffraction calibration/group/mask file')
+
+        # Load diffraction calibration file
+        LoadDiffCal(InputWorkspace=self._last_loaded_event_ws,
+                    Filename=self._detector_calibration_file,
+                    WorkspaceName=base_name)
+
+        return
+
+    @staticmethod
+    def rebin_workspace(input_ws, binning_param_dict, output_ws_name):
         """
         rebin input workspace with user specified binning parameters
         :param input_ws:
@@ -174,9 +339,9 @@ class SliceFocusVulcan(object):
         :param output_ws_name:
         :return:
         """
-        assert isinstance(binning_param_dict, dict), 'Binning parameters {0} must be given as a dictionary ' \
-                                                     'but not a {1}' \
-                                                     ''.format(binning_param_dict, type(binning_param_dict))
+        # check
+        datatypeutility.check_dict('Binning parameters', binning_param_dict)
+        datatypeutility.check_string_variable('Output workspace name', output_ws_name)
 
         # check input workspace
         if isinstance(input_ws, str):
@@ -239,6 +404,23 @@ class SliceFocusVulcan(object):
         # END-IF-ELSE
 
         return output_workspace
+
+    def save_nexus(self, ws_ref_id, output_file_name):
+        """
+        Save workspace to processed NeXus
+        :param ws_ref_id:
+        :param output_file_name:
+        :return:
+        """
+        datatypeutility.check_string_variable('Workspace/data reference ID', ws_ref_id)
+
+        if ws_ref_id in self._ws_name_dict:
+            ws_name = self._ws_name_dict[ws_ref_id]
+            file_utilities.save_workspace(ws_name, output_file_name, file_type='nxs')
+        else:
+            raise RuntimeError('Workspace/data reference ID {0} does not exist.'.format(ws_ref_id))
+
+        return
 
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
         """

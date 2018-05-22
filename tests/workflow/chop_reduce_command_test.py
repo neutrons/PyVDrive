@@ -18,9 +18,9 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     chop_cmd01 = "CHOP, IPTS=13924, RUNS=160989, dbin=60,loadframe=1,bin=1,DRYRUN=0, output='/tmp/'"
-    # command_tester.run_command(chop_cmd01)
+    command_tester.run_command(chop_cmd01)
     chop_cmd02 = "CHOP, IPTS=19577, RUNS=155771, dbin=60,loadframe=1,bin=1,DRYRUN=0, output='/tmp/x/'"
-    command_tester.run_command(chop_cmd02)
+    # command_tester.run_command(chop_cmd02)
 
     return command_tester.main_window
 

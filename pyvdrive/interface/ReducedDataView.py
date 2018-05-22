@@ -140,6 +140,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # vanadium
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
+        # menu
+        self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocess_nexus)
+
         # self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
         #              self.do_load_single_gsas)
         # self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
