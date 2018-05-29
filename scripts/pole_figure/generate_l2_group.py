@@ -2,7 +2,7 @@
 # This is a script that is supposed to be used in MantidPlot environment
 """
 # FACTS
-# Bank 1: L2 in (2.00000155478, 2.04122819734)
+Bank 1: L2 in (2.00000155478, 2.04122819734)
 Bank 2: L2 in (2.0000015625, 2.04122818421)
 Bank 3: L2 in (2.00000155478, 2.04122819734)
 Bank 4: L2 in (2.00000155478, 2.04122819734)

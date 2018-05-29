@@ -1,6 +1,7 @@
+# This is the main cross correlation code
 # TODO FIXME NOW3 Implement
 import mantid
-import cross_correlation
+import cross_correlation_lib as cross_correlation
 import os
 
 # Analyze the result from cross-correlation

@@ -1,6 +1,7 @@
 # script to do cross-correlation
 import os
 from mantid.api import AnalysisDataService as mtd
+from mantid.api import AnalysisDataService
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
 from mantid.simpleapi import CloneWorkspace, DeleteWorkspace
