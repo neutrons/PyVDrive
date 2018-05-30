@@ -8,8 +8,25 @@ import os
 # (This is intended to be used with Mantid or IPython Notebook)
 
 # prepare
-working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
-nxs_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
+if 0:
+    # 2017 Startup
+    working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
+    nxs_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
+
+if 0:
+    # 2018 Summer
+    nxs_file_name = '/SNS/VULCAN/IPTS-21356/nexus/VULCAN_161364.nxs.h5'
+    # prepare!
+    Load(Filename='/SNS/VULCAN/IPTS-21356/nexus/VULCAN_161364.nxs.h5', OutputWorkspace='vulcan_diamond')
+    ConvertUnits(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Target='dSpacing')
+    Rebin(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Params='0.5,-0.0003,3')
+    ConvertToMatrixWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond_matrix')
+    SaveNexusProcessed(InputWorkspace='vulcan_diamond_matrix',
+            Filename='/SNS/users/wzz/Projects/VULCAN/20180411_Calibration/VULCAN_Diamond_Matrix.nxs', Title='Diamond for instrument geometry calibration')
+
+if 1:
+    nxs_file_name = '/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/VULCAN_161364_diamond.nxs'
+        
 
 # decide to load or not and thus group workspace
 diamond_ws_name, group_ws_name = cross_correlation.initialize_calibration(nxs_file_name, False)
@@ -36,7 +53,7 @@ for bank_name in ['west', 'east', 'high angle']:
     diff_spectra_set = set(masked_2fit_ws_indexes) - set(masked_1fit_ws_indexes)
     diff_spectra_set_op = set(masked_1fit_ws_indexes) - set(masked_2fit_ws_indexes)
 
-    print ('Difference: {0} vs {1}'.format(len(diff_spectra_set), len(diff_spectra_set_op)))
+    print ('Masked pixels set difference: {0} vs {1}'.format(len(diff_spectra_set), len(diff_spectra_set_op)))
 
     ofile = open('diff_mask_{0}.txt'.format(bank_name), 'w')
     ofile.write('{0}\n'.format(list(diff_spectra_set)))
