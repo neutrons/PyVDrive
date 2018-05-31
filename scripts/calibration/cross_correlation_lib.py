@@ -249,6 +249,58 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     return offset_dict, mask_dict
 
 
+def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
+    """ main cross-correlation (for VULCAN west/east and high angle)
+    :param diamond_ws_name:
+    :param group_ws_name:
+    :param fit_time:
+    :param flag:
+    :return:
+    """
+    # peak position in d-Spacing
+    peakpos1 = 1.2614
+    # peakpos2 = 1.2614
+    peakpos3 = 1.07577
+
+    # West and east bank
+    ref_ws_index = 1613
+    peak_width = 0.04   # modified from 0.005
+    cc_number_west = 80
+    westeast_offset, westeast_mask = cc_calibrate(diamond_ws_name, peakpos1, peakpos1 - peak_width, peakpos1 + peak_width,
+                                          [0, 6468 - 1],
+                                          ref_ws_index, cc_number_west, 1, -0.0003, 'westeast_{0}'.format(flag),
+                                          peak_fit_time=fit_time)
+
+    # # East bank
+    # ref_ws_index = 4847 - 7    # 4854 ends with an even right-shift spectrum
+    # peak_width = 0.04
+    # cc_number_east = 80
+    # east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
+    #                                       [3234, 6468 - 1],
+    #                                       ref_ws_index, cc_number_east, 1, -0.0003, 'east_{0}'.format(flag),
+    #                                       peak_fit_time=fit_time)
+    #                                       
+    # High angle bank
+    ref_ws_index = 15555
+    peak_width = 0.01
+    cc_number = 20
+    ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
+                                      [6468, 24900 - 1],
+                                      ref_ws_index, cc_number=cc_number, max_offset=1, binning=-0.0003, index='high_angle_{0}'.format(flag),
+                                      peak_fit_time=fit_time)
+
+    westeast_offset_clone = CloneWorkspace(InputWorkspace=westeast_offset, OutputWorkspace=str(westeast_offset) + '_copy')
+    westeast_mask_clone = CloneWorkspace(InputWorkspace=westeast_mask, OutputWorkspace=str(westeast_mask) + '_copy')
+
+    save_calibration(diamond_ws_name+'_{0}'.format(flag), [(westeast_offset, westeast_mask), (ha_offset, ha_mask)],
+                     group_ws_name, 'vulcan_{0}'.format(flag))
+
+
+    offset_dict = {'westeast': westeast_offset_clone, 'high angle': ha_offset}
+    mask_dict = {'westeast': westeast_mask_clone, 'high angle': ha_mask}
+
+    return offset_dict, mask_dict
+
 def cross_correlate_vulcan_data_test(wkspName, group_ws_name):
     """
     cross correlation on vulcan data
@@ -472,20 +524,6 @@ def main(argv):
     diamond_ws_name, group_ws_name = initialize_calibration(nxs_file_name, False)
         
     cross_correlate_vulcan_data(diamond_ws_name, group_ws_name)
-
-
-def second_cc:
-Load(Filename='/SNS/VULCAN/IPTS-21356/nexus/VULCAN_161364.nxs.h5', OutputWorkspace='vulcan_diamond')
-LoadDiffCal(InputWorkspace='vulcan_diamond', Filename='/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/vulcan_2fit.h5', WorkspaceName='vulcan')
-LoadDiffCal(InputWorkspace='vulcan_diamond', Filename='/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5', WorkspaceName='vulcanold')
-AlignDetectors(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', CalibrationWorkspace='vulcan_cal')
-DiffractionFocussing(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', GroupingWorkspace='vulcanold_group')
-Rebin(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Params='0.5,-0.0003,3')
-ConvertToMatrixWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond_3bank')
-EditInstrumentGeometry(Workspace='vulcan_diamond_3bank', PrimaryFlightPath=42, SpectrumIDs='1-3', L2='2,2,2', Polar='89.9284,90.0716,150.059', Azimuthal='0,0,0', DetectorIDs='1-3', InstrumentName='vulcan_3bank')
-CrossCorrelate(InputWorkspace='vulcan_diamond_3bank', OutputWorkspace='cc_vulcan_diamond_3bank', ReferenceSpectra=1, WorkspaceIndexMax=2, XMin=1.0649999999999999, XMax=1.083)
-GetDetectorOffsets(InputWorkspace='cc_vulcan_diamond_3bank', Step=0.00029999999999999997, DReference=1.0757699999999999, XMin=-20, XMax=20, OutputWorkspace='zz_test_3bank', FitEachPeakTwice=True, PeakFitResultTableWorkspace='ddd', OutputFitResult=True, MinimumPeakHeight=1)
-    
 
 
 # main([])
