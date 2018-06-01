@@ -242,7 +242,6 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     save_calibration(diamond_ws_name+'_{0}'.format(flag), [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
                      group_ws_name, 'vulcan_{0}'.format(flag))
 
-
     offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
     mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
 

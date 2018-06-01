@@ -62,41 +62,61 @@ from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 import h5py
 
-"""
-VULCAN_calibrate_2018_04_03_27bank.h5  VULCAN_calibrate_2018_04_03.h5  VULCAN_calibrate_2018_04_04_7bank.h5
-
-"""
-
+# FIXME FIXME TODO TODO - Need an algorithm to locate run time with calibration file
 if os.path.exists('/SNS/VULCAN/shared/CALIBRATION'):
-    # on analysis cluster
-    CalibrationFilesList = [[{3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'},
-                             {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt'},
-                             '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
-                            # east/west bank
-                            [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-                              7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-                              27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'},
-                             {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
-                              7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
-                              27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
-                             '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
-                            # east/west and high angle bank
+    # on analysis cluster: used by auto reduction
+    base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+
+    pre_ned_setup = [{3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'},
+                     {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt'},
+                     '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat']
+
+    ned_2017_setup = [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                       7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                       27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'},
+                      {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                       7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
+                       27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
+                      '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
+
+    ned_2018_setup = [{3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')},
+                      {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_3Banks_v1.txt'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_7Banks_v1.txt'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_27Banks_v1.txt')},
+                      os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
+
+    CalibrationFilesList = [pre_ned_setup,   # east/west bank
+                            ned_2017_setup,  # east/west and high angle bank
+                            ned_2018_setup   # east, west and high angle from May 2018
                             ]
+
 elif os.path.exists('/SNS/users/wzz/VULCAN/shared/CALIBRATION'):
     # for dasopi3
     pre_ned_local_dir = '/SNS/users/wzz/VULCAN/shared/CALIBRATION/preNED'
-    ned_local_dir = '/SNS/users/wzz/VULCAN/shared/CALIBRATION/NED'
+    base_calib_dir = '/SNS/users/wzz/VULCAN/shared/CALIBRATION'
+    ned_2018_setup = [{3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')},
+                      {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_3Banks_v1.txt'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_7Banks_v1.txt'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_27Banks_v1.txt')},
+                      os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
+
+    ned_2018_setup = [{3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')},
+                      {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_3Banks_v1.txt'),
+                       7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_7Banks_v1.txt'),
+                       27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_Characterization_27Banks_v1.txt')},
+                      os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
+
     CalibrationFilesList = [[{3: os.path.join(pre_ned_local_dir, 'vulcan_foc_all_2bank_11p.cal')},
                              {3: os.path.join(pre_ned_local_dir, 'VULCAN_Characterization_2Banks_v2.txt')},
                              os.path.join(pre_ned_local_dir, 'vdrive_log_bin.dat')],
                             # east/west bank
-                            [{3: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12.h5'),
-                              7: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12_7bank.h5'),
-                              27: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12_27bank.h5')},
-                             {3: os.path.join(ned_local_dir, 'VULCAN_Characterization_3Banks_v1.txt'),
-                              7: os.path.join(ned_local_dir, 'VULCAN_Characterization_7Banks_v1.txt'),
-                              27: os.path.join(ned_local_dir, 'VULCAN_Characterization_27Banks_v1.txt')},
-                             os.path.join(ned_local_dir, 'vdrive_3bank_bin.h5')]
+                            ned_2018_setup
                             # east/west and high angle bank
                             ]
 
