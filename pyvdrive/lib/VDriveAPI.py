@@ -7,7 +7,6 @@
 #
 #####
 import os
-import pandas as pd
 
 import ProjectManager as ProjectMrg
 import archivemanager
@@ -1748,6 +1747,7 @@ class VDriveAPI(object):
         Read (partially) MTS file
         :return:
         """
+        import pandas as pd
         # check existence of file
         assert isinstance(log_file_name, str)
         assert os.path.exists(log_file_name)

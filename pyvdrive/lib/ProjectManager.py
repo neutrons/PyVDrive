@@ -983,6 +983,9 @@ class ProjectManager(object):
         if not os.path.exists(template_file_name):
             template_file_name = '/SNS/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
         if not os.path.exists(template_file_name):
+            # for live-data-view from dasopi3
+            template_file_name = '/SNS/users/wzz/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
+        if not os.path.exists(template_file_name):
             raise RuntimeError('Unable to load binning template NeXus file {0}.'.format(template_file_name))
 
         # load it!

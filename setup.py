@@ -29,8 +29,10 @@ if sys.argv[-1] == 'pyuic':
             import PyQt5
             from qtconsole.inprocess import QtInProcessKernelManager
             ver = 5
+            print ('Qt5 is used!')
         except ImportError:
             ver = 4
+            print ('Qt4 is used!')
 
         command = "pyuic%d %s -o %s" % (ver, inname, outname)
         os.system(command)

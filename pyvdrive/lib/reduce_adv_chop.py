@@ -2,7 +2,6 @@
 # It is split from ReduceVulcanData in reduce_Vulcan.py
 import os
 import math
-import pandas as pd
 
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
@@ -733,6 +732,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
+        import pandas as pd
         # check inputs
         assert isinstance(ws_name_list, list) and len(ws_name_list) > 0,\
             'Workspace name list {0} must be a non-empty list, but not a {1}.'.format(ws_name_list, type(ws_name_list))

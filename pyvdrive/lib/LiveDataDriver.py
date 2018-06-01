@@ -33,7 +33,11 @@ class LiveDataDriver(QtCore.QThread):
     # TODO/FIXME/NOW - Make this script more robust and informative
     # LIVE_PROCESS_SCRIPTS = '/home/wzz/Mantid_Project/builds/vulcan_live_data_test.py'  # local test only
     # LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_beta.py'
-    LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
+
+    if os.path.exists('/SNS/VULCAN/'):
+        LIVE_PROCESS_SCRIPTS = '/SNS/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
+    else:
+        LIVE_PROCESS_SCRIPTS = '/SNS/users/wzz/VULCAN/shared/livereduce/vulcan_live_data_v0_9.py'
 
     def __init__(self):
         """
