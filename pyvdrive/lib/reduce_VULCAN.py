@@ -67,20 +67,39 @@ VULCAN_calibrate_2018_04_03_27bank.h5  VULCAN_calibrate_2018_04_03.h5  VULCAN_ca
 
 """
 
+if os.path.exists('/SNS/VULCAN/shared/CALIBRATION'):
+    # on analysis cluster
+    CalibrationFilesList = [[{3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'},
+                             {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt'},
+                             '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
+                            # east/west bank
+                            [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                              7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                              27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'},
+                             {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
+                              7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
+                              27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
+                             '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
+                            # east/west and high angle bank
+                            ]
+elif os.path.exists('/SNS/users/wzz/VULCAN/shared/CALIBRATION'):
+    # for dasopi3
+    pre_ned_local_dir = '/SNS/users/wzz/VULCAN/shared/CALIBRATION/preNED'
+    ned_local_dir = '/SNS/users/wzz/VULCAN/shared/CALIBRATION/NED'
+    CalibrationFilesList = [[{3: os.path.join(pre_ned_local_dir, 'vulcan_foc_all_2bank_11p.cal')},
+                             {3: os.path.join(pre_ned_local_dir, 'VULCAN_Characterization_2Banks_v2.txt')},
+                             os.path.join(pre_ned_local_dir, 'vdrive_log_bin.dat')],
+                            # east/west bank
+                            [{3: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12.h5'),
+                              7: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12_7bank.h5'),
+                              27: os.path.join(ned_local_dir, 'VULCAN_calibrate_2018_04_12_27bank.h5')},
+                             {3: os.path.join(ned_local_dir, 'VULCAN_Characterization_3Banks_v1.txt'),
+                              7: os.path.join(ned_local_dir, 'VULCAN_Characterization_7Banks_v1.txt'),
+                              27: os.path.join(ned_local_dir, 'VULCAN_Characterization_27Banks_v1.txt')},
+                             os.path.join(ned_local_dir, 'vdrive_3bank_bin.h5')]
+                            # east/west and high angle bank
+                            ]
 
-CalibrationFilesList = [[{3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'},
-                         {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/VULCAN_Characterization_2Banks_v2.txt'},
-                         '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'],
-                        # east/west bank
-                        [{3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'},
-                         {3: '/SNS/VULCAN/shared/CALIBRATION/2017_1_7_CAL/VULCAN_Characterization_3Banks_v1.txt',
-                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_7Banks_v1.txt',
-                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_Characterization_27Banks_v1.txt'},
-                         '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5']
-                        # east/west and high angle bank
-                        ]
 ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
 
 

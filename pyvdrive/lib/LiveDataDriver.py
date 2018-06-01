@@ -1,6 +1,9 @@
 import os
 import sys
+
+# path will be ... TODO TODO TODO
 sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+
 
 import numpy
 import mantid.simpleapi as mantidsimple

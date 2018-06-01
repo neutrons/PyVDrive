@@ -1,26 +1,30 @@
 # Generate VULCAN's calibration
+import os
+import sys
+sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 import math
-from cross_correlation_lib import *
+import cross_correlation_lib as ccl
 
 
 def main(argv):
     """
-
+    main argument
     :param argv:
     :return:
     """
-    if len(argv) == 0:
-        # default
-        working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
-        nxs_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
+    # get input
+    if argv[0].count('-h') == 1:
+        print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
+        sys.exit(0)
     else:
         # user specified
         nxs_file_name = argv[0]
 
     # decide to load or not and thus group workspace
-    diamond_ws_name, group_ws_name = initialize_calibration(nxs_file_name, False)
+    diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
 
-    cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
+    # do cross correlation: 2 fit
+    ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
 
     # west bank
     ws = mtd['vulcan_diamond']
@@ -148,7 +152,18 @@ def analyze_result():
     cost_array = numpy.array(cost_list).transpose()
     CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
 
-main([])
+
+if __name__ == '__main__':
+    # main
+    if len(sys.argv) == 1:
+        # default
+        working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
+        diamond_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
+        argv = [diamond_file_name]
+    else:
+        argv = sys.argv[1:]
+
+    main(argv)
 
 
 
