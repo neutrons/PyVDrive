@@ -1,10 +1,7 @@
 #!/usr/bin/python
 # Test the chop and reduce command
+import os
 import sys
-# from pyvdrive.lib import *
-# from pyvdrive.interface import *
-# from pyvdrive.interface.vdrive_commands import *
-# from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
@@ -23,6 +20,13 @@ def test_main():
 
     cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
     command_tester.run_command(cmd)
+
+    # TODO TODO NOW3 Fill in!
+    cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
+    cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
+
+    print ('Current working dir: {0}'.format(os.getcwd()))
+    cmd = "vbin, ipts=?????, runs=?????, grouping=l2_group_cal.h5"
 
     return command_tester.main_window
 

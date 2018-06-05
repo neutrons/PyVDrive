@@ -8,46 +8,19 @@ from dateutil import tz
 __author__ = 'wzz'
 
 #
-# static methods for general purpose
+# static methods for general purpose for VDRIVE compatible
 #
-
-
-def check_int_variable(var_name, variable, var_range):
-    """
-    check integer type and range
-    :param var_name:
-    :param variable:
-    :param var_range: range of input as [min, max)
-    :return:
-    """
-    assert isinstance(var_name, str), 'Variable name {0} must be a string but not a {1}' \
-                                      ''.format(var_name, type(var_name))
-    assert isinstance(variable, int), 'Input variable {0} must be an integer but not a {1}.' \
-                                      ''.format(variable, type(variable))
-
-    if var_range is not None:
-        assert isinstance(var_range, list) or isinstance(var_range, tuple), 'Variable value range {0} must be given' \
-                                                                            'as either list or tuple but not {1}.' \
-                                                                            ''.format(var_range, type(var_range))
-        assert len(var_range) == 2, 'Variable range list/tuple {0} must have 2 values'.format(var_range)
-        if var_range[0] is not None and variable < var_range[0]:
-            raise RuntimeError('Variable {0} is smaller than minimum value {1}'.format(variable, var_range[0]))
-        elif var_range[1] is not None and variable >= var_range[1]:
-            raise RuntimeError('Variable {1} is equal or larger than maximum value {1}'
-                               ''.format(variable, var_range[1]))
-
-    return
 
 
 # Methods to process time
 def convert_to_epoch1(date_time):
     """
+    convert date time to epoch (version 1)
+    :param date_time:
+    :return:
     """
-    print (type(date_time))
     # convert to time.struct_time
     converted = date_time.timetuple()
-    print (converted)
-
     epoch_time = time.mktime(converted)
 
     return epoch_time
@@ -86,13 +59,11 @@ def convert_to_epoch(m_date, m_time="00:00:00", date_pattern='%m/%d/%Y',
 
 
 def convert_to_strtime_from_epoch(epoch_time):
-    """
-
+    """ convert time in string in %Y-%m-%d %H:%M:%S format to epoch time
     :param epoch_time:
-    :return: string
+    :return: python datetime.datetime object
     """
     date_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time))
-    # such as : '2015-08-01 00:00:00'
 
     return date_time
 

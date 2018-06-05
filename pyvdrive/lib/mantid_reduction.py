@@ -10,7 +10,20 @@ VULCAN_FOCUS_CAL = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrat
 VULCAN_FOCUS_CAL_GEN1 = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'
 
 
-def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters):
+def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters, convert_to_matrix):
+    """
+    align and focus a run
+    :param run_number:
+    :param nexus_file_name:
+    :param target_unit:
+    :param binning_parameters:
+    :param convert_to_matrix:
+    :return:
+    """
+
+
+
+
     """
 
     :param nexus_file_name:

@@ -1380,13 +1380,13 @@ class VDriveAPI(object):
                                                       is_dry_run=False)
             message = message
 
-        elif dspace:
-            # reduce to d-space only
-            status, message = self._myProject.simple_reduce_runs(run_number_list=runs_to_reduce,
-                                                                 output_directory=output_directory,
-                                                                 dspace=True,
-                                                                 binning_parameters=binning_parameters,
-                                                                 num_banks=num_banks)
+        elif dspace and version == 2:
+            # user version 2 reduction algorithm
+            status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
+                                                                    output_directory=output_directory,
+                                                                    d_spacing=True,
+                                                                    binning_parameters=binning_parameters,
+                                                                    num_banks=num_banks)
 
         else:
             # manual reduction: Reduce runs

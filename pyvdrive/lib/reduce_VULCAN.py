@@ -1014,7 +1014,8 @@ class ReductionSetup(object):
         :param num_focused_banks:
         :return:
         """
-        helper.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, None))
+        import datatypeutility
+        datatypeutility.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, None))
 
         # get the reduction calibration and etc files from event data file
         file_list = get_auto_reduction_calibration_files(self._eventFileFullPath)
