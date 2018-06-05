@@ -791,6 +791,9 @@ class ReductionManager(object):
 
         return new_tracker
 
+    # TODO FIXME - From here!  Reduction 2.0!
+    def reduce_workspace(self, event_ws_name):
+
     def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
                    vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
                    num_banks=3):
@@ -866,6 +869,7 @@ class ReductionManager(object):
         # reduce
         reduction_setup.is_auto_reduction_service = False
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
+        # TODO/TODO/NOW/NOW - This shall be re-writen???
         reduce_good, message = reducer.execute_vulcan_reduction(output_logs=False)
 
         # record reduction tracker

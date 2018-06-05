@@ -1,6 +1,8 @@
 # Set up the testing environment for PyVDrive commands
 import os
 import sys
+from pyvdrive.interface import vcommand_processor
+from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 home_dir = os.path.expanduser('~')
 # NOTE: This is the entry point to define the path to Mantid
 if home_dir.startswith('/SNS/'):
@@ -16,9 +18,6 @@ elif home_dir.startswith('/home/wzz') is False:
     # Personal VULCAN build
     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-
-from pyvdrive.interface import vcommand_processor
-from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 
 
 class PyVdriveCommandTestEnvironment(object):
