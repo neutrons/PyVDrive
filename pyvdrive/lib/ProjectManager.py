@@ -1352,7 +1352,7 @@ class ProjectManager(object):
 
     def simple_reduce_runs(self, run_number_list,  output_directory, dspace, binning_parameters):
         """
-
+        reduce runs in a simplied way! (it can be thought be the version 2.0!)
         :param run_number_list:
         :param output_directory:
         :param dspace:

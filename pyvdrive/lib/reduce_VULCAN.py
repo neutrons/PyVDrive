@@ -120,7 +120,9 @@ elif os.path.exists('/SNS/users/wzz/VULCAN/shared/CALIBRATION'):
                             # east/west and high angle bank
                             ]
 
-ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1), datetime.datetime(2100, 1, 1)]
+# there are 3 different calibration file
+ValidDateList = [datetime.datetime(2000, 1, 1), datetime.datetime(2017, 7, 1),
+                 datetime.datetime(2018, 5, 1), datetime.datetime(2100, 1, 1)]
 
 
 def get_auto_reduction_calibration_files(nexus_file_name):

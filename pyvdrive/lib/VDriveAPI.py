@@ -1321,7 +1321,8 @@ class VDriveAPI(object):
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False, num_banks=3):
+                        merge_runs=False, dspace=False, num_banks=3,
+                        version=1):
         """
         Reduce a set of data
         Purpose:
@@ -1346,13 +1347,15 @@ class VDriveAPI(object):
         :param binning_parameters: None for default and otherwise using user specified
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
-        :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed.
+        :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
+        :param version: reduction algorithm version in integer
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
         runs_to_reduce = self._myProject.get_runs_to_reduce()
         num_runs_flagged = len(runs_to_reduce)
-        assert num_runs_flagged > 0, 'At least one run should be flagged for reduction.'
+        if num_runs_flagged == 0:
+            raise RuntimeError('At least one run should be flagged for reduction.')
 
         # check whether all the runs to reduce are belonged to the same IPTS number
         ipts_set = set()
@@ -1363,7 +1366,8 @@ class VDriveAPI(object):
             except KeyError:
                 return False, 'Run {0} has not been searched and thus found in archive.'.format(run_number)
         # END-FOR
-        assert len(ipts_set) == 1, 'There are runs from different IPTS.  It is not supported in PyVDrive.'
+        if len(ipts_set) != 1:
+            raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
         # Reduce data set
