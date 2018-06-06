@@ -1117,16 +1117,16 @@ class ProjectManager(object):
         sum_message = ''
 
         for nexus_file_name in raw_file_list:
-            status, sub_message = self._reductionManager.reduce_run(ipts_number=None, run_number=None,
-                                                                    event_file=nexus_file_name,
-                                                                    output_directory=output_directory,
-                                                                    merge_banks=merge_banks,
-                                                                    vanadium=vanadium,
-                                                                    vanadium_tuple=vanadium_tuple,
-                                                                    gsas=gsas,
-                                                                    standard_sample_tuple=standard_sample_tuple,
-                                                                    binning_parameters=binning_parameters,
-                                                                    num_banks=num_banks)
+            status, sub_message = self._reductionManager.process_vulcan_ipts_run(ipts_number=None, run_number=None,
+                                                                                 event_file=nexus_file_name,
+                                                                                 output_directory=output_directory,
+                                                                                 merge_banks=merge_banks,
+                                                                                 vanadium=vanadium,
+                                                                                 vanadium_tuple=vanadium_tuple,
+                                                                                 gsas=gsas,
+                                                                                 standard_sample_tuple=standard_sample_tuple,
+                                                                                 binning_parameters=binning_parameters,
+                                                                                 num_banks=num_banks)
             if not status:
                 sum_status = False
                 sum_message += '{0}\n'.format(sum_message)
@@ -1211,13 +1211,13 @@ class ProjectManager(object):
 
                 # reduce
                 print '[DB....BAT....BAT] Reduce {0}, {1}'.format(ipts_number, run_number)
-                status, sub_message = self._reductionManager.reduce_run(ipts_number, run_number, full_event_file_path,
-                                                                        output_directory, vanadium=vanadium,
-                                                                        vanadium_tuple=vanadium_tuple, gsas=gsas,
-                                                                        standard_sample_tuple=standard_sample_tuple,
-                                                                        binning_parameters=binning_parameters,
-                                                                        merge_banks=merge_banks,
-                                                                        num_banks=num_banks)
+                status, sub_message = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number, full_event_file_path,
+                                                                                     output_directory, vanadium=vanadium,
+                                                                                     vanadium_tuple=vanadium_tuple, gsas=gsas,
+                                                                                     standard_sample_tuple=standard_sample_tuple,
+                                                                                     binning_parameters=binning_parameters,
+                                                                                     merge_banks=merge_banks,
+                                                                                     num_banks=num_banks)
 
                 reduce_all_success = reduce_all_success and status
                 if not status:
@@ -1389,8 +1389,10 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name = mantid_reduction.align_and_focus(run_number, raw_file_name, unit, binning_parameters,
-                                                               convert_to_matrix)
+                out_ws_name = self._reductionManager.reduce_event_nexus(raw_file_name,
+                                                                        unit, binning_parameters,
+                                                                        convert_to_matrix)
+
                 reduced_run_numbers.append((run_number, out_ws_name))
                 self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
             except RuntimeError as run_error:

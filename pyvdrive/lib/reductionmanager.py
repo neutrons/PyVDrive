@@ -791,12 +791,62 @@ class ReductionManager(object):
 
         return new_tracker
 
-    # TODO FIXME - From here!  Reduction 2.0!
-    def reduce_workspace(self, event_ws_name):
+    def check_load_calibration_mask_grouping(self):
 
-    def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
-                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
-                   num_banks=3):
+        # check calibration
+        if calibration_file is None and self._default_calibration_ws_name is None:
+            # no calibration
+            self.load_default_calibration_file(num_banks)
+        elif calibration_file is not None:
+            self.load_calibration_file(calibration_file, num_banks)
+        elif user_grouping_file_name is not None:
+            self.load_user_grouping_file(user_grouping_file_name)
+
+        return calibration_ws_name, mask_ws_name, grouping_ws_name
+
+    # TODO
+    def reduce_event_nexus(self, event_nexus_name, target_unit,  binning_parameters, convert_to_matrix):
+        """
+
+        :param event_nexus_name:
+        :param target_unit:
+        :param binning_parameters:
+        :param convert_to_matrix:
+        :return:
+        """
+        # Load data
+        mantid_helper.load_nexus(event_nexus_name, blabla)  # TODO
+
+        # TODO use 'run_start' or 'start_time' to determine the calibration file!
+
+        self.check_load_calibration_mask_grouping(blabla)
+
+        reduce_workspace(event_ws_name, event_ws_name, keep_raw_ws=False)
+
+        return
+
+    # TODO FIXME - From here!  Reduction 2.0!
+    def reduce_workspace(self, event_ws_name, output_ws_name, binning_params,
+                         calibration_file_name, user_grouping_file_name, keep_raw_ws,
+                         convert_to_matrix):
+        """ focus workspace
+
+        :param event_ws_name:
+        :param output_ws_name:
+        :param keep_raw_ws:
+        :return:
+        """
+        import mantid_reduction
+
+        mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
+                                                  calibration_file_name, user_grouping_file_name,
+                                                  keep_raw_ws, convert_to_matrix=False)
+
+        return
+
+    def process_vulcan_ipts_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
+                                vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
+                                num_banks=3):
         """
         Reduce run with selected options
         Purpose:
