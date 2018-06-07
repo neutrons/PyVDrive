@@ -1042,7 +1042,7 @@ def is_calibration_workspace(workspace_name):
     """
     if is_a_workspace(workspace_name):
         event_ws = retrieve_workspace(workspace_name)
-        return event_ws.id() == EVENT_WORKSPACE_ID
+        return event_ws.id() == 'TableWorkspace'
 
     return False
 
@@ -1068,7 +1068,7 @@ def is_grouping_workspace(workspace_name):
     """
     if is_a_workspace(workspace_name):
         group_ws = retrieve_workspace(workspace_name)
-        return group_ws.id() == EVENT_WORKSPACE_ID
+        return group_ws.id() == 'GroupingWorkspace'
 
     return False
 
@@ -1081,7 +1081,7 @@ def is_masking_workspace(workspace_name):
     """
     if is_a_workspace(workspace_name):
         mask_ws = retrieve_workspace(workspace_name)
-        return mask_ws.id() == EVENT_WORKSPACE_ID
+        return mask_ws.id() == 'MaskWorkspace'
 
     return False
 
