@@ -8,6 +8,7 @@ import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
+import datatypeutility
 
 import vdrivehelper
 
@@ -1019,38 +1020,84 @@ def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VU
     return '%s_%d_%s' % (instrument_name, run_number, out_base_name)
 
 
+def is_a_workspace(workspace_name):
+    """
+    check whether a string is a workspace
+    :param workspace_name:
+    :return:
+    """
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+
+    if ADS.doesExist(workspace_name):
+        return True
+
+    return False
+
+
+def is_calibration_workspace(workspace_name):
+    """
+
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        event_ws = retrieve_workspace(workspace_name)
+        return event_ws.id() == EVENT_WORKSPACE_ID
+
+    return False
+
+
 def is_event_workspace(workspace_name):
     """
     Check whether a workspace, specified by name, is an event workspace
     :param workspace_name:
     :return:
     """
-    # Check requirement
-    assert isinstance(workspace_name, str)
+    if is_a_workspace(workspace_name):
+        event_ws = retrieve_workspace(workspace_name)
+        return event_ws.id() == EVENT_WORKSPACE_ID
 
-    event_ws = retrieve_workspace(workspace_name)
-    assert event_ws is not None
+    return False
 
-    return event_ws.id() == EVENT_WORKSPACE_ID
+
+def is_grouping_workspace(workspace_name):
+    """
+    check whether a workspace is a grouping workspace
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        group_ws = retrieve_workspace(workspace_name)
+        return group_ws.id() == EVENT_WORKSPACE_ID
+
+    return False
+
+
+def is_masking_workspace(workspace_name):
+    """
+    check whether a workspace is a mask workspace
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        mask_ws = retrieve_workspace(workspace_name)
+        return mask_ws.id() == EVENT_WORKSPACE_ID
+
+    return False
 
 
 def is_matrix_workspace(workspace_name):
     """
-    check wehther a workspace is a MatrixWorkspace
+    check whether a workspace is a MatrixWorkspace
     :param workspace_name:
     :return:
     """
-    # Check requirement
-    assert isinstance(workspace_name, str), 'input workspace name {0} is not a string but a {1}' \
-                                            ''.format(workspace_name, type(workspace_name))
+    if is_a_workspace(workspace_name):
+        matrix_workspace = retrieve_workspace(workspace_name)
+        is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
+        return is_matrix
 
-    # get workspace
-    matrix_workspace = retrieve_workspace(workspace_name)
-    assert matrix_workspace is not None, 'blabla'
-
-    is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
-
-    return is_matrix
+    return False
 
 
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):

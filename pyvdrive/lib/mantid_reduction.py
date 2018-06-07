@@ -31,7 +31,17 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     :return:
     """
     # check input
-    mantid_helper.check_vulcan_event_workspace(event_ws_name, check_exist=True, throw_if_false=True)
+    if not mantid_helper.is_event_workspace(event_ws_name):
+        raise RuntimeError('Input {0} is not an EventWorkspace'.format(event_ws_name))
+    if not mantid_helper.is_calibration_workspace(diff_cal_ws_name):
+        raise RuntimeError('Input {0} is not a Calibration workspace'.format(diff_cal_ws_name))
+    if not mantid_helper.is_masking_workspace(mask_ws_name):
+        raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
+    if not mantid_helper.is_grouping_workspace(grouping_ws_name):
+        raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
+
+
+
     mantid_helper.check_diff_calibration_workspace()
     # TODO... check MaskWorkspace and GroupingWorkspace
     # TODO... check types
@@ -41,9 +51,7 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         keep_raw_ws = True
 
     # Compress events
-    # API::IAlgorithm_sptr
-    # compressAlg = createChildAlgorithm("CompressEvents");
-    # compressAlg->setProperty("InputWorkspace", m_outputEW);
+    mantidapi.CompressEvents(InputWorkspace=m_outputEW);
     # compressAlg->setProperty("OutputWorkspace", m_outputEW);
     # compressAlg->setProperty("OutputWorkspace", m_outputEW);
     # compressAlg->setProperty("Tolerance", tolerance);
