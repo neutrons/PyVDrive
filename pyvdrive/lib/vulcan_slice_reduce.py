@@ -71,29 +71,29 @@ class SliceFocusVulcan(object):
         return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
                                                                                    self._number_threads)
 
-    def align_detectors(self, ref_id):
-        """
-        Align detector of an EventWorkspace indexed by reference ID
-        :param ref_id:
-        :return:
-        """
-        datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
-        if ref_id not in self._ws_name_dict:
-            raise RuntimeError('Workspace/data reference ID {0} does not exist. Existing IDs are {1}'
-                               ''.format(ref_id, self._ws_name_dict.keys()))
-
-        # get event workspace name
-        event_ws_name = self._ws_name_dict[ref_id]
-
-        # get calibration file name
-        if not AnalysisDataService.doesExist(self._diff_cal_ws_name):
-            self.load_diff_calibration(self._diff_base_name)
-
-        AlignDetectors(InputWorkspace=event_ws_name,
-                       OutputWorkspace=event_ws_name,
-                       CalibrationWorkspace=self._diff_cal_ws_name)
-
-        return
+    # def align_detectors(self, ref_id):
+    #     """
+    #     Align detector of an EventWorkspace indexed by reference ID
+    #     :param ref_id:
+    #     :return:
+    #     """
+    #     datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
+    #     if ref_id not in self._ws_name_dict:
+    #         raise RuntimeError('Workspace/data reference ID {0} does not exist. Existing IDs are {1}'
+    #                            ''.format(ref_id, self._ws_name_dict.keys()))
+    #
+    #     # get event workspace name
+    #     event_ws_name = self._ws_name_dict[ref_id]
+    #
+    #     # get calibration file name
+    #     if not AnalysisDataService.doesExist(self._diff_cal_ws_name):
+    #         self.load_diff_calibration(self._diff_base_name)
+    #
+    #     AlignDetectors(InputWorkspace=event_ws_name,
+    #                    OutputWorkspace=event_ws_name,
+    #                    CalibrationWorkspace=self._diff_cal_ws_name)
+    #
+    #     return
 
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
@@ -428,13 +428,15 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
-        assert isinstance(workspace_name_list, list)
+        datatypeutility.check_list('Workspace name list', list)
 
         for index, ws_name in enumerate(workspace_name_list):
             if len(ws_name) == 0:
                 continue
 
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
+
+            # TODO/FIXME/NOW : why not use SaveVulcanGSS??? Need to find
 
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)

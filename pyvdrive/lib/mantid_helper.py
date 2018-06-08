@@ -16,6 +16,9 @@ from reduce_VULCAN import align_bins
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 WORKSPACE_2D_ID = 'Workspace2D'
+MASK_WORKSPACE_ID = 'MaskWorkspace'
+GROUPING_WORKSPACE_ID = 'GroupingWorkspace'
+CALIBRATION_WORKSPACE_ID = 'TableWorkspace'
 
 # define constants
 VULCAN_L1 = 43.754
@@ -28,10 +31,14 @@ VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
 def clone_workspace(srs_ws_name, target_ws_name):
-    """blabla"""
-
-    assert isinstance(srs_ws_name, str), 'blabla'
-    assert isinstance(target_ws_name, str), 'blabla'
+    """
+    clone workspace
+    :param srs_ws_name:
+    :param target_ws_name:
+    :return:
+    """
+    datatypeutility.check_string_variable('Source workspace name', srs_ws_name)
+    datatypeutility.check_string_variable('Target workspace name', target_ws_name)
 
     mantidapi.CloneWorkspace(InputWorkspace=srs_ws_name, OutputWorkspace=target_ws_name)
 
@@ -1036,13 +1043,13 @@ def is_a_workspace(workspace_name):
 
 def is_calibration_workspace(workspace_name):
     """
-
+    check whether a workspace is a calibration workspace, which is in fact a TableWorkspace
     :param workspace_name:
     :return:
     """
     if is_a_workspace(workspace_name):
         event_ws = retrieve_workspace(workspace_name)
-        return event_ws.id() == 'TableWorkspace'
+        return event_ws.id() == CALIBRATION_WORKSPACE_ID
 
     return False
 
@@ -1068,7 +1075,7 @@ def is_grouping_workspace(workspace_name):
     """
     if is_a_workspace(workspace_name):
         group_ws = retrieve_workspace(workspace_name)
-        return group_ws.id() == 'GroupingWorkspace'
+        return group_ws.id() == GROUPING_WORKSPACE_ID
 
     return False
 
@@ -1081,7 +1088,7 @@ def is_masking_workspace(workspace_name):
     """
     if is_a_workspace(workspace_name):
         mask_ws = retrieve_workspace(workspace_name)
-        return mask_ws.id() == 'MaskWorkspace'
+        return mask_ws.id() == MASK_WORKSPACE_ID
 
     return False
 

@@ -11,22 +11,20 @@ import mantid_helper
 VULCAN_FOCUS_CAL = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrate_2017_08_17.h5'
 VULCAN_FOCUS_CAL_GEN1 = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'
 
-# TODO / FIXME - NOWNOW
-# def mantod_helper.check_event_workspace
-#
-
 
 def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                              diff_cal_ws_name, mask_ws_name, grouping_ws_name,
-                             keep_raw_ws, convert_to_matrix=False):
+                             keep_raw_ws, reduction_params_dict, convert_to_matrix=False):
     """
-    TODO blabla
+    align and focus event workspace
     :param event_ws_name:
     :param output_ws_name:
     :param binning_params:
-    :param calibration_file_name:
-    :param user_grouping_file_name:
+    :param diff_cal_ws_name:
+    :param mask_ws_name:
+    :param grouping_ws_name:
     :param keep_raw_ws:
+    :param reduction_params_dict:
     :param convert_to_matrix:
     :return:
     """
@@ -40,26 +38,20 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     if not mantid_helper.is_grouping_workspace(grouping_ws_name):
         raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
 
+    datatypeutility.check_dict('Reduction parameter dictionary', reduction_params_dict)
 
-
-    mantid_helper.check_diff_calibration_workspace()
-    # TODO... check MaskWorkspace and GroupingWorkspace
-    # TODO... check types
-
-    # set something
+    # set some fags
     if event_ws_name == output_ws_name:
         keep_raw_ws = True
 
     # Compress events
-    mantidapi.CompressEvents(InputWorkspace=m_outputEW);
-    # compressAlg->setProperty("OutputWorkspace", m_outputEW);
-    # compressAlg->setProperty("OutputWorkspace", m_outputEW);
-    # compressAlg->setProperty("Tolerance", tolerance);
-    # compressAlg->executeAsChildAlg();
+    compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
+    mantidapi.CompressEvents(InputWorkspace=event_ws_name,
+                             OutputWorkspace=output_ws_name,
+                             Tolerance=compress_events_tolerance)
 
     # Mask detectors
-    mantidapi.MaskDetectors(Workspace=event_ws_name,
-                            MaskedWorkspace=mask_ws_name)
+    mask_detectors_by_mask_ws(output_ws_name, mask_ws_name)
 
     # Align detector
     mantidapi.AlignDetector(InputWorkspace=event_ws_name,
@@ -67,39 +59,26 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                             CalibratoionWorkspace=diff_cal_ws_name)
 
     # Sort events
-    # childAlgorithm("SortEvents");
-    # alg->setProperty("InputWorkspace", eventWS);
-    # alg->setPropertyValue("SortBy", "X Value");
-    # alg->executeAsChildAlg();
+    mantidapi.SortEvents(InputWorkspace=output_ws_name,
+                         SortBy='X Value')
 
-    # Focus
-    # API::IAlgorithm_sptr
-    # focusAlg = createChildAlgorithm("DiffractionFocussing");
-    # focusAlg->setProperty("InputWorkspace", ws);
-    # focusAlg->setProperty("OutputWorkspace", ws);
-    # focusAlg->setProperty("GroupingWorkspace", m_groupWS);
-    # focusAlg->setProperty("PreserveEvents", m_preserveEvents);
-    # focusAlg->executeAsChildAlg();
-    # ws = focusAlg->getProperty("OutputWorkspace");
+    # Diffraction focus
+    mantidapi.DiffractionFocussing(InputWorkspace=output_ws_name,
+                                   OutputWorkspace=output_ws_name,
+                                   GroupingWorkspace=grouping_ws_name,
+                                   PreserveEvents=not convert_to_matrix)
 
     # Sort again!
+    mantidapi.SortEvents(InputWorkspace=output_ws_name,
+                         SortBy='X Value')
 
     # Edit instrument
-    # editAlg = createChildAlgorithm("EditInstrumentGeometry");
-    # editAlg->setProperty("Workspace", ws);
-    # if (m_l1 > 0.)
-    #     editAlg->setProperty("PrimaryFlightPath", m_l1);
-    # if (!polars.empty())
-    # editAlg->setProperty("Polar", polars);
-    #
-    #
-    # if (!specids.empty())
-    #     editAlg->setProperty("SpectrumIDs", specids);
-    # if (!l2s.empty())
-    #     editAlg->setProperty("L2", l2s);
-    # if (!phis.empty())
-    # editAlg->setProperty("Azimuthal", phis);
-    # editAlg->executeAsChildAlg();
+    mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
+                                     PrimaryFlightPath=mantid_helper.VULCAN_L1,
+                                     SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
+                                     L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
+                                     Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
+                                     Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
 
     # rebin
     if binning_params is not None:
@@ -110,6 +89,17 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         mantid_helper.delete_workspace(event_ws_name)
 
     return
+
+
+def mask_detectors_by_mask_ws(workspace_name, mask_ws_name):
+    """
+    mask detectors by masking workspace
+    :param workspace_name:
+    :param mask_ws_name:
+    :return:
+    """
+    # TODO/FIXME/NOWNOW - Need to find out by AlignAndFocusPowder()
+    raise NotImplementedError('ASAP')
 
 
 def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters, convert_to_matrix):
