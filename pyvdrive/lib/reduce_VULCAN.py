@@ -2433,6 +2433,7 @@ class ReduceVulcanData(object):
             # nED NeXus. save to VDRIVE GSAS format with 3 banks of different resolution
             # NOTE: The bank ID (from 1) is required here
 
+            # THIS IS FOR NEXT FOR STEP TODO NOW5
             # TODO FIXME NOW3 (1) size of binning table! (2) instrument geometry for 27 banks!
             bin_table_name = create_bin_table(reduced_workspace, not_align_idl,
                                               self._reductionSetup.get_vulcan_bin_file(),

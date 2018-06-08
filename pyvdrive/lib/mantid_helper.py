@@ -1533,6 +1533,14 @@ def retrieve_workspace(ws_name, raise_if_not_exist=False):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
+def create_vulcan_binning_table(binning_reference_file):
+    """
+
+    :param binning_reference_file:
+    :return:
+    """
+
+
 def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
     """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
     Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
@@ -1549,6 +1557,8 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
+    # requiring re-do! TODO FIXME FIXME
+
     # Check requirements
     assert isinstance(source_ws_name, str), 'source workspace name {0} must be a string but not {1}.' \
                                             ''.format(source_ws_name, type(source_ws_name))
@@ -1580,7 +1590,7 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
 
     # Save to GSAS
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
-                            BinFilename=binning_reference_file,
+                            BinningTable=binning_table_name,
                             OutputWorkspace=final_ws_name,
                             GSSFilename=out_gss_file,
                             IPTS=ipts,

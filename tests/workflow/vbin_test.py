@@ -18,10 +18,11 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
+    # TODO FIXME - Find a case for nED case!
     cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
     command_tester.run_command(cmd)
 
-    # TODO TODO NOW3 Fill in!
+    # TODO TODO NOW3 Fill in! : Find a case for the new run!
     cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
     cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
 

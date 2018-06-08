@@ -459,7 +459,7 @@ class CalibrationManager(object):
 
         # record
         location = os.path.dirname(calibration_file_name)
-        balbla fROM NOW
+        raise NotImplementedError('ASAP')
 
         return
 
@@ -940,10 +940,9 @@ class ReductionManager(object):
         # check and load calibration workspace
         datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
         if calibration_file_name not in self._calibration_workspace_container:
+            raise NotImplementedError('ASAP')
 
-
-
-
+        # align and focus
         mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                                   calibration_file_name, user_grouping_file_name,
                                                   keep_raw_ws, reduction_params_dict=reduction_param_dict,
