@@ -18,11 +18,22 @@ def test_main():
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    # TODO FIXME - Find a case for nED case!
-    cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
-    command_tester.run_command(cmd)
+    # FIXME - pre-nED case does not work
+    # preNed cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
 
-    # TODO TODO NOW3 Fill in! : Find a case for the new run!
+    # nED case
+    cmd = 'VBIN,IPTS=21356,RUNS=161972,output=\'/tmp\''
+    # FIXME/TODO - Check result
+    # command_tester.run_command(cmd)
+
+    # FIXME error message:
+    """
+    [ERROR] Command VBIN/VDRIVEBIN's argument "VERSION" is not recognized. Supported arguments are ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW', 'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG', 'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP'].
+            Current working dir: /home/wzz/Projects/PyVDrive
+
+    """
+    cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
+    command_tester.run_command(cmd)
     cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
     cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
 
