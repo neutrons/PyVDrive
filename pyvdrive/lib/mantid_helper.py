@@ -925,6 +925,31 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     return data_set_dict, current_unit
 
 
+def get_detectors_in_roi(mask_ws_name):
+    """
+
+    :param mask_ws_name:
+    :return:
+    """
+    if not is_masking_workspace(mask_ws_name):
+        raise RuntimeError('Not MaskingWorkspace {0}'.format(mask_ws_name))
+
+    mask_ws = ADS.retrieve(mask_ws_name)
+
+    det_id_list = list()
+    for iws in range(mask_ws.getNumberHistograms()):
+        # get ROI
+        if mask_ws.readY(iws)[0] < 0.9:
+            det_id_i = mask_ws.getDetector(iws).getID()
+            det_id_list.append(det_id_i)
+    # END-FOR
+    # print (len(det_id_list))
+    # print (mask_ws.getNumberHistograms() - len(det_id_list))
+    # print (mask_ws.getNumberMasked())
+
+    return det_id_list
+
+
 def get_ipts_number(ws_name):
     """
     get IPTS number from a standard EventWorkspace
@@ -1253,13 +1278,12 @@ def load_roi_xml(ws_name, roi_file_name):
 
     out_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
 
-    # load XML file
-    mantidapi.LoadMask(Workspace=ws_name,
-                       MaskFilename=roi_file_name,
+    # load XML file: Mantid can recognize the ROI or mask file
+    # In output workspace, 1 is for being masked
+    mantidapi.LoadMask(Instrument='VULCAN',
+                       RefWorkspace=ws_name,
+                       InputFile=roi_file_name,
                        OutputWorkspace=out_ws_name)
-
-    # invert for ROI
-    mantidapi.InvertMask(Workspace=out_ws_name)
 
     return out_ws_name
 
@@ -1348,11 +1372,33 @@ def mask_workspace(to_mask_workspace_name, mask_workspace_name):
     :param mask_workspace_name:
     :return:
     """
+    # TODO/NOWNOWNOW - ASAP3
     # check inputs
     if not is_matrix_workspace(to_mask_workspace_name):
         raise RuntimeError('{0} does not exist in ADS as a MatrixWorkspace'.format(to_mask_workspace_name))
     if not is_masking_workspace(mask_workspace_name):
         raise RuntimeError('{0} does not exist in ADS as a MaskingWorkspace'.format(mask_workspace_name))
+
+    """
+        g_log.information() << "running MaskDetectors started at "
+                        << Types::Core::DateAndTime::getCurrentTime() << "\n";
+    const auto &maskedDetectors = m_maskWS->getMaskedDetectors();
+    API::IAlgorithm_sptr maskAlg = createChildAlgorithm("MaskInstrument");
+    maskAlg->setProperty("InputWorkspace", m_outputW);
+    maskAlg->setProperty("OutputWorkspace", m_outputW);
+    maskAlg->setProperty(
+        "DetectorIDs",
+        std::vector<detid_t>(maskedDetectors.begin(), maskedDetectors.end()));
+    maskAlg->executeAsChildAlg();
+    MatrixWorkspace_sptr tmpW = maskAlg->getProperty("OutputWorkspace");
+
+    API::IAlgorithm_sptr clearAlg = createChildAlgorithm("ClearMaskedSpectra");
+    clearAlg->setProperty("InputWorkspace", tmpW);
+    clearAlg->setProperty("OutputWorkspace", tmpW);
+    clearAlg->executeAsChildAlg();
+    m_outputW = clearAlg->getProperty("OutputWorkspace");
+    m_outputEW = boost::dynamic_pointer_cast<EventWorkspace>(m_outputW);
+    """
 
     raise RuntimeError('I don"t know how to do mask!  Refer to SNSPowderRedcuction!')
 
