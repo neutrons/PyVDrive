@@ -30,6 +30,66 @@ VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
+def check_bins_can_align(workspace_name, template_workspace_name):
+    """
+    match the bins of workspace to the template workspace
+    :param workspace_name:
+    :param template_workspace_name:
+    :return: 2-tuple (boolean as align-able, string for reason
+    """
+    # get workspace
+    try:
+        target_workspace = ADS.retrieve(workspace_name)
+        template_workspace = ADS.retrieve(template_workspace_name)
+    except KeyError as key_err:
+        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
+                      ''.format(workspace_name, template_workspace_name, key_err)
+
+    # check number of spectra
+    num_template_hist = template_workspace.getNumberHistograms()
+    num_target_hist = target_workspace.getNumberHistograms()
+
+    if num_template_hist == 1:
+        single_template_bin = True
+    elif num_template_hist == num_target_hist:
+        single_template_bin = False
+    else:
+        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
+                      ''.format(workspace_name, template_workspace_name)
+
+    # mapping
+    if single_template_bin:
+        template_vec_x = template_workspace.readX(0)
+    else:
+        template_vec_x = None
+
+    for i_ws in range(num_target_hist):
+        # get vector X of template and target
+        if template_vec_x is None:
+            template_vec_x = template_workspace.readX(i_ws)
+        target_vec_x = target_workspace.readX(i_ws)
+
+        # check number of bins
+        if len(template_vec_x) != len(target_vec_x):
+            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
+                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
+                                                 len(template_vec_x), len(target_vec_x))
+
+        # check difference in bins
+        sum_vec_target = numpy.sum(target_vec_x)
+        sum_vec_template = numpy.sum(template_vec_x)
+
+        diff_vec = target_vec_x - template_vec_x
+        diff_vec_square = diff_vec**2
+        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
+
+        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
+            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
+    # END-FOR
+
+    return True, ''
+
+
 def clone_workspace(srs_ws_name, target_ws_name):
     """
     clone workspace
@@ -1233,66 +1293,6 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
 
 
-def check_bins_can_align(workspace_name, template_workspace_name):
-    """
-    match the bins of workspace to the template workspace
-    :param workspace_name:
-    :param template_workspace_name:
-    :return: 2-tuple (boolean as align-able, string for reason
-    """
-    # get workspace
-    try:
-        target_workspace = ADS.retrieve(workspace_name)
-        template_workspace = ADS.retrieve(template_workspace_name)
-    except KeyError as key_err:
-        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
-                      ''.format(workspace_name, template_workspace_name, key_err)
-
-    # check number of spectra
-    num_template_hist = template_workspace.getNumberHistograms()
-    num_target_hist = target_workspace.getNumberHistograms()
-
-    if num_template_hist == 1:
-        single_template_bin = True
-    elif num_template_hist == num_target_hist:
-        single_template_bin = False
-    else:
-        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
-                      ''.format(workspace_name, template_workspace_name)
-
-    # mapping
-    if single_template_bin:
-        template_vec_x = template_workspace.readX(0)
-    else:
-        template_vec_x = None
-
-    for i_ws in range(num_target_hist):
-        # get vector X of template and target
-        if template_vec_x is None:
-            template_vec_x = template_workspace.readX(i_ws)
-        target_vec_x = target_workspace.readX(i_ws)
-
-        # check number of bins
-        if len(template_vec_x) != len(target_vec_x):
-            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
-                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
-                                                 len(template_vec_x), len(target_vec_x))
-
-        # check difference in bins
-        sum_vec_target = numpy.sum(target_vec_x)
-        sum_vec_template = numpy.sum(template_vec_x)
-
-        diff_vec = target_vec_x - template_vec_x
-        diff_vec_square = diff_vec**2
-        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
-
-        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
-            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
-    # END-FOR
-
-    return True, ''
-
-
 def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name):
     """
     add the all the workspaces given by their names to a target workspace with certain geometry
@@ -1339,6 +1339,22 @@ def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name
     # END-IF
 
     return target_workspace_name
+
+
+def mask_workspace(to_mask_workspace_name, mask_workspace_name):
+    """
+    mask a MatrixWorkspace
+    :param to_mask_workspace_name:
+    :param mask_workspace_name:
+    :return:
+    """
+    # check inputs
+    if not is_matrix_workspace(to_mask_workspace_name):
+        raise RuntimeError('{0} does not exist in ADS as a MatrixWorkspace'.format(to_mask_workspace_name))
+    if not is_masking_workspace(mask_workspace_name):
+        raise RuntimeError('{0} does not exist in ADS as a MaskingWorkspace'.format(mask_workspace_name))
+
+    raise RuntimeError('I don"t know how to do mask!  Refer to SNSPowderRedcuction!')
 
 
 def edit_compressed_chopped_workspace_geometry(ws_name):
@@ -1523,12 +1539,36 @@ def normalize_by_vanadium(data_ws_name, van_ws_name):
 
     return
 
+
+def parse_mask_roi_xml(xml_file_name):
+    """
+    parse the Mask/ROI XML file to a list of masked/ROI detectors' IDs
+    :param xml_file_name:
+    :return: is_roi, det_id_list
+    """
+
+    return is_roi, det_id_list
+
+
 def rebin(workspace_name, params, preserve):
-    # TODO/ISSUE/NOW/DOC
+    """
+    rebin the workspace
+    :param workspace_name:
+    :param params:
+    :param preserve:
+    :return:
+    """
+    if not is_a_workspace(workspace_name):
+        raise RuntimeError('{0} is not a workspace in ADS'.format(workspace_name))
+    assert isinstance(params, str) or isinstance(params, list) or isinstance(params, tuple) \
+        or isinstance(params, numpy.ndarray), 'Params {0} of type {1} is not supported.' \
+                                                 ''.format(params, type(params))
+
     mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
                     Params=params,
                     PreserveEvents=preserve)
     return
+
 
 def retrieve_workspace(ws_name, raise_if_not_exist=False):
     """

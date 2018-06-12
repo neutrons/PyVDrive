@@ -4,7 +4,37 @@ import os
 import pyvdrive.lib.mantid_helper as mantid_api
 import pyvdrive.lib.vulcan_util as vulcan_util
 import pyvdrive.lib.vdrivehelper as my_helper
+import pyvdrive.lib.geometry_utilities as vulcan
+import pyvdrive.lib.mantid_reduction as reduction
 
+
+def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d, is_ned):
+    """
+
+    :param ws_name:
+    :param mask_ws_name:
+    :param central_d:
+    :param delta_d:
+    :return:
+    """
+    # get unmasked detector from mask workspace
+    roi_det_list = mantid_api.get_detectors_in_roi(mask_ws_name)
+
+    # get the detector id list for rows and columns
+    vulcan_instrument = vulcan.VulcanGeometry(not is_ned)
+    panel_row_set, panel_col_set = vulcan_instrument.get_detectors_rows_cols(roi_det_list)
+    panel_complete_row_list = vulcan_instrument.get_detectors_in_row(panel_row_set)
+    panel_complete_col_list = vulcan_instrument.get_detectors_in_column(panel_col_set)
+
+    # align detectors
+    reduction.align_workspace(ws_name, output=ws_name, calibration=whatever)
+
+    # sum spectra
+    for detid_list in [panel_complete_col_list, panel_row_set]:
+        mantid_api.sum_spectra(ws_name, ws_name, detid_list)
+        mantid_api.save_ascii(ws_name)
+
+    return
 
 
 def main(argv):
