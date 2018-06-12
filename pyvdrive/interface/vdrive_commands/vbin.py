@@ -87,7 +87,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
-                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP']
+                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',

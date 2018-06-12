@@ -1180,6 +1180,30 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     return True, out_ws
 
 
+def load_roi_xml(ws_name, roi_file_name):
+    """
+    load standard ROI XML file
+    :param ws_name:
+    :param roi_file_name:
+    :return:
+    """
+    datatypeutility.check_file_name(roi_file_name, check_exist=True, note='ROI XML file')
+    if not is_matrix_workspace(ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(ws_name))
+
+    out_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+
+    # load XML file
+    mantidapi.LoadMask(Workspace=ws_name,
+                       MaskFilename=roi_file_name,
+                       OutputWorkspace=out_ws_name)
+
+    # invert for ROI
+    mantidapi.InvertMask(Workspace=out_ws_name)
+
+    return out_ws_name
+
+
 def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     """ Load time focus file (or say calibration in Mantid's nomenclature)
     :return:
