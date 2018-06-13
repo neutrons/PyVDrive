@@ -1,7 +1,8 @@
 ** TODO List **
 
+1. Test mask detectors with get detectors in same rows or in same columns
 
-1. Refactor the Mantid reduction hierarchy for PyVDrive-Vulcan-Reduction 2.0
+2. Refactor the Mantid reduction hierarchy for PyVDrive-Vulcan-Reduction 2.0
   a) goal 1: replace SNSPowderReduciton
   b) goal 2: unify the reduction workflow for single run reduction and chopped run reduction
   c) target code structure

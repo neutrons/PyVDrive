@@ -8,6 +8,9 @@ import pyvdrive.lib.archivemanager as vulcan_archive
 import pyvdrive.lib.geometry_utilities as vulcan
 import pyvdrive.lib.mantid_reduction as reduction
 
+# Using default/latest calibration file
+CALIBRATION_FILE_PATH = '/SNS/VULCAN/shared/CALIBRATION/'
+
 
 def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d):
     """
@@ -30,9 +33,20 @@ def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d):
     panel_complete_row_list = vulcan_instrument.get_detectors_in_row(list(panel_row_set))
     panel_complete_col_list = vulcan_instrument.get_detectors_in_column(list(panel_col_set))
 
+    # side test : FIXME remove the next section as soon as test is over
+    if True:
+        col_masked_ws = ws_name + '_column_masked'
+        row_masked_ws = ws_name + '_row_masked'
+        mantid_api.clone_workspace(ws_name, col_masked_ws)
+        mantid_api.clone_workspace(ws_name, row_masked_ws)
+        mantid_api.mask_workspace_by_detector_ids(col_masked_ws, panel_complete_col_list)
+        mantid_api.mask_workspace_by_detector_ids(row_masked_ws, panel_complete_row_list)
+        mantid_api.save_processed_nexus(col_masked_ws, 'column_masked.nxs')
+        mantid_api.save_processed_nexus(row_masked_ws, 'row_masked.nxs')
+
     # align detectors
     # need a lot of work on this TODO! about how to locate the calibration file!
-    reduction.align_workspace(ws_name, output=ws_name, calibration=whatever)
+    reduction.align_instrument(ws_name, output=ws_name, calibration=whatever)
 
     # sum spectra
     for detid_list in [panel_complete_col_list, panel_complete_row_list]:
@@ -85,8 +99,11 @@ def main(argv):
     # load geometry
     mask_ws_name = mantid_api.load_roi_xml(out_ws_name, roi_file_name)
 
+    # load calibration file
+    mantid_api.load_calibration_file(CALIBRATION_FILE_PATH, output_name='VULCAN_SCX')
+
     # integrate
-    integrate_single_crystal_peak(out_ws_name, mask_ws_name, central_d, delta_d)
+    integrate_single_crystal_peak(out_ws_name, mask_ws_name, central_d, delta_d, 'VULCAN_SCX_Calibration')
 
     return
 

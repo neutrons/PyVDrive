@@ -1248,6 +1248,31 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     return out_ws_name
 
 
+def load_calibration_file(calib_file_name, output_name):
+    """
+    load calibration file
+    :param calib_file_name:
+    :param output_name:
+    :return:
+    """
+    # check
+    datatypeutility.check_file_name(calib_file_name, check_exist=True, check_writable=False, is_dir=False,
+                                    note='Calibration file')
+    datatypeutility.check_string_variable('Calibration/grouping/masking workspace name', output_name)
+
+    if calib_file_name.endswith('.h5'):
+        # new diff calib file
+        mantidapi.LoadDiffCal(Filename=calib_file_name,
+                              OutputWorkspace=output_name)
+
+    elif calib_file_name.endswith('.dat'):
+        # old style calibration file
+        mantidapi.LoadCalFile(Filename=calib_file_name,
+                              Output=output_name)
+
+    return
+
+
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
     """ Load NeXus file
     :param data_file_name:
@@ -1365,6 +1390,7 @@ def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name
     return target_workspace_name
 
 
+# TODO/FIXME/TEST - ASAP
 def mask_workspace(to_mask_workspace_name, mask_workspace_name):
     """
     mask a MatrixWorkspace
@@ -1372,36 +1398,45 @@ def mask_workspace(to_mask_workspace_name, mask_workspace_name):
     :param mask_workspace_name:
     :return:
     """
-    # TODO/NOWNOWNOW - ASAP3
     # check inputs
     if not is_matrix_workspace(to_mask_workspace_name):
         raise RuntimeError('{0} does not exist in ADS as a MatrixWorkspace'.format(to_mask_workspace_name))
     if not is_masking_workspace(mask_workspace_name):
         raise RuntimeError('{0} does not exist in ADS as a MaskingWorkspace'.format(mask_workspace_name))
 
-    """
-        g_log.information() << "running MaskDetectors started at "
-                        << Types::Core::DateAndTime::getCurrentTime() << "\n";
-    const auto &maskedDetectors = m_maskWS->getMaskedDetectors();
-    API::IAlgorithm_sptr maskAlg = createChildAlgorithm("MaskInstrument");
-    maskAlg->setProperty("InputWorkspace", m_outputW);
-    maskAlg->setProperty("OutputWorkspace", m_outputW);
-    maskAlg->setProperty(
-        "DetectorIDs",
-        std::vector<detid_t>(maskedDetectors.begin(), maskedDetectors.end()));
-    maskAlg->executeAsChildAlg();
-    MatrixWorkspace_sptr tmpW = maskAlg->getProperty("OutputWorkspace");
+    # retrieve masked detectors
+    mask_ws = retrieve_workspace(mask_workspace_name, raise_if_not_exist=True)
+    detid_vector = mask_ws.gettMaskedDetectors()
 
-    API::IAlgorithm_sptr clearAlg = createChildAlgorithm("ClearMaskedSpectra");
-    clearAlg->setProperty("InputWorkspace", tmpW);
-    clearAlg->setProperty("OutputWorkspace", tmpW);
-    clearAlg->executeAsChildAlg();
-    m_outputW = clearAlg->getProperty("OutputWorkspace");
-    m_outputEW = boost::dynamic_pointer_cast<EventWorkspace>(m_outputW);
+    # mask detectors
+    mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
+                             OutputWorkspace=to_mask_workspace_name,
+                             DetectorIDs=detid_vector)
+
+    # clear masked spectra
+    mantidapi.ClearMaskedSpectra(InputWorkspace=to_mask_workspace_name,
+                                 OutputWorkspace=to_mask_workspace_name)
+
+    return
+
+
+def mask_workspace_by_detector_ids(to_mask_workspace_name, detector_ids):
     """
 
-    raise RuntimeError('I don"t know how to do mask!  Refer to SNSPowderRedcuction!')
+    :param to_mask_workspace_name:
+    :param detector_ids:
+    :return:
+    """
+    # mask detectors
+    mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
+                             OutputWorkspace=to_mask_workspace_name,
+                             DetectorIDs=detector_ids)
 
+    # clear masked spectra
+    mantidapi.ClearMaskedSpectra(InputWorkspace=to_mask_workspace_name,
+                                 OutputWorkspace=to_mask_workspace_name)
+
+    return
 
 def edit_compressed_chopped_workspace_geometry(ws_name):
     """
