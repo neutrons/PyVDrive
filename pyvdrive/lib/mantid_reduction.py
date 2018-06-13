@@ -12,16 +12,16 @@ VULCAN_FOCUS_CAL = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/VULCAN_calibrat
 VULCAN_FOCUS_CAL_GEN1 = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'
 
 
-def align_instrument(matrix_ws):
+def align_instrument(matrix_ws, diff_cal_ws_name):
     """
     align whole instrument
     :param matrix_ws:
     :return:
     """
     # Align detector
-    mantidapi.AlignDetector(InputWorkspace=matrix_ws,
-                            OutputWorkspace=matrix_ws,
-                            CalibratoionWorkspace=diff_cal_ws_name)
+    mantidapi.AlignDetectors(InputWorkspace=matrix_ws,
+                             OutputWorkspace=matrix_ws,
+                             CalibrationWorkspace=diff_cal_ws_name)
 
     return
 

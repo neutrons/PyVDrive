@@ -515,6 +515,15 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     return True, (splitter_ws_name, info_ws_name)
 
 
+def generate_processing_history(workspace_name, output_python_name):
+    # TODO
+    mantidapi.GeneratePythonScript(InputWorkspace=workspace_name,
+                                   Filename=output_python_name,
+                                   UnrollAll=True)
+
+    return
+
+
 def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
                                    start_time, stop_time, delta_time, time_unit):
     """
@@ -1248,7 +1257,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     return out_ws_name
 
 
-def load_calibration_file(calib_file_name, output_name):
+def load_calibration_file(calib_file_name, output_name, ref_ws_name):
     """
     load calibration file
     :param calib_file_name:
@@ -1262,8 +1271,9 @@ def load_calibration_file(calib_file_name, output_name):
 
     if calib_file_name.endswith('.h5'):
         # new diff calib file
-        mantidapi.LoadDiffCal(Filename=calib_file_name,
-                              OutputWorkspace=output_name)
+        mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                              Filename=calib_file_name,
+                              WorkspaceName=output_name)
 
     elif calib_file_name.endswith('.dat'):
         # old style calibration file
@@ -1428,6 +1438,8 @@ def mask_workspace_by_detector_ids(to_mask_workspace_name, detector_ids):
     :return:
     """
     # mask detectors
+    print ('[DB...BAT] Mask {0} detectors.'.format(len(detector_ids)))
+    # print ('[DB...BAT] Mask detectors:\n{0}'.format(detector_ids))
     mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
                              OutputWorkspace=to_mask_workspace_name,
                              DetectorIDs=detector_ids)
@@ -1437,6 +1449,7 @@ def mask_workspace_by_detector_ids(to_mask_workspace_name, detector_ids):
                                  OutputWorkspace=to_mask_workspace_name)
 
     return
+
 
 def edit_compressed_chopped_workspace_geometry(ws_name):
     """

@@ -118,6 +118,10 @@ class VulcanGeometry(object):
             panel_id, row_index, col_index = self.get_detector_location(det_id)
             panel_row_set.add((panel_id, row_index))
             panel_col_set.add((panel_id, col_index))
+        # END-FOR
+
+        print ('[DB...BAT] {0} Rows   : {1}'.format(len(panel_row_set), sorted(list(panel_row_set))))
+        print ('[DB...BAT] {0} Columns: {1}'.format(len(panel_col_set), sorted(list(panel_col_set))))
 
         return panel_row_set, panel_col_set
 
@@ -128,22 +132,26 @@ class VulcanGeometry(object):
         :return:
         """
         datatypeutility.check_list('Panel index / row index list', panel_column_list)
+        panel_column_list.sort()
 
         det_id_list = list()
-        for panel_row_tuple in panel_column_list:
-            datatypeutility.check_tuple('Panel index / row index', panel_row_tuple, 2)
-            panel_index, row_index = panel_row_tuple
+        for panel_col_tuple in panel_column_list:
+            datatypeutility.check_tuple('Panel index / row index', panel_col_tuple, 2)
+            panel_index, col_index = panel_col_tuple
 
             zero_det_id = VULCAN_PANEL_DETECTORS[self._generation][panel_index][0]
-            for col_index in range(VULCAN_PANEL_COLUMN_COUNT[self._generation][panel_index]):
-                if VULCAN_PANEL_COLUMN_MAJOR[self._generation][panel_index]:
-                    # column major
-                    num_rows_per_column = VULCAN_PANEL_ROW_COUNT[self._generation][panel_index]
-                    det_id_list.extend(range(zero_det_id + col_index * num_rows_per_column,
-                                             zero_det_id + (col_index+1) * num_rows_per_column))
-                else:
-                    raise NotImplementedError('Row major case is not implemented')
-            # END-FOR
+            if VULCAN_PANEL_COLUMN_MAJOR[self._generation][panel_index]:
+                num_rows_per_column = VULCAN_PANEL_ROW_COUNT[self._generation][panel_index]
+                det_id_list.extend(range(zero_det_id + col_index * num_rows_per_column,
+                                         zero_det_id + (col_index+1) * num_rows_per_column))
+            else:
+                raise NotImplementedError('Row major case is not implemented')
+            # END-IF-ELSE
+        # END-FOR
+        det_id_list.sort()
+
+        print ('[DB] There are {0} pixels in given {1} columns starting from detector ID {2}'
+               ''.format(len(det_id_list), len(panel_column_list), det_id_list[0]))
 
         return det_id_list
 
@@ -154,6 +162,7 @@ class VulcanGeometry(object):
         :return:
         """
         datatypeutility.check_list('Panel index / row index list', panel_row_list)
+        panel_row_list.sort()
 
         det_id_list = list()
         for panel_row_tuple in panel_row_list:
@@ -168,5 +177,10 @@ class VulcanGeometry(object):
                 else:
                     raise NotImplementedError('Row major case is not implemented')
             # END-FOR
+        # END-FOR
+        det_id_list.sort()
+
+        print ('[DB] There are {0} pixels in given {1} rows starting from detector ID {2}'
+               ''.format(len(det_id_list), len(panel_row_list), det_id_list[0]))
 
         return det_id_list
