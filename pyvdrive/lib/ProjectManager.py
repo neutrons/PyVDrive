@@ -1351,13 +1351,14 @@ class ProjectManager(object):
         return
 
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix=False):
+                              convert_to_matrix=False, number_banks=3):
         """
         reduce runs in a simplied way! (it can be thought be the version 2.0!)
         :param run_number_list:
         :param output_directory:
         :param d_spacing:
         :param binning_parameters:
+        :param number_banks:
         :return:
         """
         # check inputs
@@ -1402,11 +1403,6 @@ class ProjectManager(object):
         # END-FOR
 
         return reduced_run_numbers, error_messages
-
-    def save_to_ascii(self, ws_name):
-
-        # output
-        mantid_reduction.save_ws_ascii(out_ws_name, output_directory, out_ws_name + '.dat')
 
     @property
     def vanadium_processing_manager(self):

@@ -1380,8 +1380,9 @@ class VDriveAPI(object):
                                                       is_dry_run=False)
             message = message
 
-        elif dspace and version == 2:
+        elif dspace or version == 2:
             # user version 2 reduction algorithm
+            # TODO - NowNowNow - Starting from here!
             status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                     output_directory=output_directory,
                                                                     d_spacing=True,
