@@ -318,6 +318,31 @@ def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
     return ADS.retrieve(output_ws_name)
 
 
+def crop_workspace(ws_name, cropped_ws_name, x_min, x_max):
+    """
+
+    :param ws_name:
+    :param cropped_ws_name:
+    :param x_min:
+    :param x_max:
+    :return:
+    """
+    # check type
+    datatypeutility.check_float_variable('XMin', x_min, (0, None))
+    datatypeutility.check_float_variable('XMax', x_max, (0, None))
+    if x_max <= x_min:
+        raise RuntimeError('Xmin {0} >= Xmax {1} for cropping!'.format(x_min, x_max))
+    if is_a_workspace(ws_name) is False:
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(ws_name))
+    datatypeutility.check_string_variable('Output cropped workspace name', cropped_ws_name)
+
+    mantidapi.CropWorkspace(InputWorkspace=ws_name,
+                            OutputWorkspace=cropped_ws_name,
+                            XMin=x_min, XMax=x_max)
+
+    return
+
+
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:
@@ -2091,7 +2116,7 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
     return output_ws_dict
 
 
-def sum_spectra(input_workspace, output_workspace):
+def sum_spectra(input_workspace, output_workspace, workspace_index_list):
     """
     sum spectra
     :param input_workspace:
@@ -2104,7 +2129,9 @@ def sum_spectra(input_workspace, output_workspace):
 
     # call Mantid
     mantidapi.SumSpectra(InputWorkspsace=input_workspace,
-                         OutputWorkspace=output_workspace)
+                         OutputWorkspace=output_workspace,
+                         WorkspaceIndexList=workspace_index_list,
+                         IncludeMonitors=False, RemoveSpecialValues=True)
 
     return
 

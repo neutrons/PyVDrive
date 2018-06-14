@@ -1,5 +1,6 @@
 # A collection of methods and constants for VULCAN instrument geometry
 import datatypeutility
+import mantid_helper
 
 
 """
@@ -22,6 +23,16 @@ VULCAN_PANEL_DETECTORS = {1: {1: {1, 2}},
                               5: (33750, 34827),
                               6: (35000, 36077),
                               7: (62500, 80931)}}
+
+VULCAN_PANEL_START_WSINDEX = {1: {},
+                              2: {1: (0, 0),
+                                  2: (0, 0),
+                                  3: (0, 0),
+                                  4: (0, 0),
+                                  5: (0, 0),
+                                  6: (0, 0),
+                                  7: (0, 0)}
+                              }
 
 # number of column of detectors in each panel
 VULCAN_PANEL_COLUMN_COUNT = {1: {},  # pre-Ned
@@ -69,6 +80,52 @@ class VulcanGeometry(object):
             self._generation = 2
 
         return
+
+    def create_detid_boundaries(self):
+        """
+        create a list such that 2n item is the first detector's ID of panel (n+1), while 2n+1 item is the
+        last detector's ID of the same panel
+        :return:
+        """
+        detid_dict = VULCAN_PANEL_DETECTORS[self._generation]
+        detid_boundaries = list()
+        for panel_index in sorted(detid_dict.keys()):
+            first_id, last_id = detid_dict[panel_index]
+            detid_boundaries.extend([first_id, last_id+1])
+
+        return detid_boundaries
+
+    def convert_detectors_to_wsindex(self, ref_ws_name, detid_list):
+        """
+        convert a list of detector IDs to workspace indexes
+        :param detid_list:
+        :return:
+        """
+        import bisect
+        ws_index_list = list()
+        det_id_boundary_list = self.create_detid_boundaries()
+        ref_workspace = mantid_helper.retrieve_workspace(ref_ws_name, raise_if_not_exist=True)
+
+        for detid in detid_list:
+            location = bisect.bisect(det_id_boundary_list, detid)
+            if location % 2 == 0:
+                raise RuntimeError('Found a detector (ID = {0}) is out the boundary of any panel'
+                                   ''.format(detid))
+
+            # convert
+            panel = location/2 + 1
+            ws_index = VULCAN_PANEL_START_WSINDEX[self._generation][panel] + detid - det_id_boundary_list[location]
+
+            # check
+            if ref_workspace.getDetetor(ws_index).getID() != detid:
+                raise RuntimeError('Workspace index {0} has detector ID {1} other than {2}'
+                                   ''.format(ws_index, ref_workspace.getDetetor(ws_index).getID(), detid))
+
+            # append
+            ws_index_list.append(ws_index)
+        # END-FOR
+
+        return ws_index_list
 
     def get_detector_location(self, detector_id):
         """

@@ -32,36 +32,40 @@ def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d, cal
     panel_row_set, panel_col_set = vulcan_instrument.get_detectors_rows_cols(roi_det_list)
     panel_complete_row_list = vulcan_instrument.get_detectors_in_row(list(panel_row_set))
     panel_complete_col_list = vulcan_instrument.get_detectors_in_column(list(panel_col_set))
-    # TODO: also export the list of detectors from the original ROI file for reference
 
     # side test : FIXME remove the next section as soon as test is over
     if True:
+        # this section is for testing purpose only
+        # names
         col_masked_ws = ws_name + '_column_masked'
         row_masked_ws = ws_name + '_row_masked'
+        roi_ws = ws_name + '_roi'
+        # cloning
         mantid_api.clone_workspace(ws_name, col_masked_ws)
         mantid_api.clone_workspace(ws_name, row_masked_ws)
+        mantid_api.clone_workspace(ws_name, roi_ws)
+        # mask
         mantid_api.mask_workspace_by_detector_ids(col_masked_ws, panel_complete_col_list)
         mantid_api.mask_workspace_by_detector_ids(row_masked_ws, panel_complete_row_list)
+        mantid_api.mask_workspace_by_detector_ids(roi_ws, roi_det_list)
+        # save for check
         mantid_api.generate_processing_history(row_masked_ws, 'mask_rows.py')
         mantid_api.save_event_workspace(col_masked_ws, 'column_masked.nxs')
         mantid_api.save_event_workspace(row_masked_ws, 'row_masked.nxs')
+    # END-IF
 
     # align detectors
-    # need a lot of work on this TODO! about how to locate the calibration file!
     reduction.align_instrument(ws_name, diff_cal_ws_name=calib_ws_name)
 
     # sum spectra
-    for detid_list in [panel_complete_col_list, panel_complete_row_list]:  # TODO: add the original ROI list
-        ws_index_list = vulcan.convert_detectors_to_wsindex(detid_list)
+    for detid_list, file_name in [(roi_det_list, 'raw_roi'),
+                                  (panel_complete_col_list, 'column'),
+                                  (panel_complete_row_list, 'row')]:
+        ws_index_list = vulcan_instrument.convert_detectors_to_wsindex(detid_list)
         mantid_api.sum_spectra(ws_name, ws_name, ws_index_list)
-        reduction.save_ws_ascii(ws_name)
+        mantid_api.crop_workspace(ws_name, ws_name, central_d - delta_d, central_d + delta_d)
+        reduction.save_ws_ascii(ws_name, './', file_name)
     # ENDFOR
-
-    """
-    SumSpectra(InputWorkspace='masked_columns', OutputWorkspace='van_d_high', StartWorkspaceIndex=10000, EndWorkspaceIndex=20000, IncludeMonitors=False, RemoveSpecialValues=True)
-    CropWorkspace(InputWorkspace='van_d_high', OutputWorkspace='van_d_high', XMin=2, XMax=2.5)
-    SaveAscii
-    """
 
     return
 
