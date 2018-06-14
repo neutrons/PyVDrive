@@ -192,7 +192,7 @@ def save_ws_ascii(ws_name, output_directory, base_name):
     :return:
     """
     # check input blabla
-
-    mantidapi.SaveAscii(InputWorkspace=ws_name, Filename=os.path.join(output_directory, base_name))
+    mantidapi.SaveAscii(InputWorkspace=ws_name, Filename=os.path.join(output_directory, base_name),
+                        Separator='Space')
 
     return

@@ -2128,9 +2128,9 @@ def sum_spectra(input_workspace, output_workspace, workspace_index_list):
     assert isinstance(output_workspace, str), 'Output workspace must be string'
 
     # call Mantid
-    mantidapi.SumSpectra(InputWorkspsace=input_workspace,
+    mantidapi.SumSpectra(InputWorkspace=input_workspace,
                          OutputWorkspace=output_workspace,
-                         WorkspaceIndexList=workspace_index_list,
+                         ListOfWorkspaceIndices=workspace_index_list,
                          IncludeMonitors=False, RemoveSpecialValues=True)
 
     return

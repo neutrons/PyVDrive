@@ -1,6 +1,7 @@
 # A collection of methods and constants for VULCAN instrument geometry
 import datatypeutility
 import mantid_helper
+import bisect
 
 
 """
@@ -25,13 +26,13 @@ VULCAN_PANEL_DETECTORS = {1: {1: {1, 2}},
                               7: (62500, 80931)}}
 
 VULCAN_PANEL_START_WSINDEX = {1: {},
-                              2: {1: (0, 0),
-                                  2: (0, 0),
-                                  3: (0, 0),
-                                  4: (0, 0),
-                                  5: (0, 0),
-                                  6: (0, 0),
-                                  7: (0, 0)}
+                              2: {1: 0,
+                                  2: 1078,
+                                  3: 2156,
+                                  4: 3234,
+                                  5: 4312,
+                                  6: 5390,
+                                  7: 6468}
                               }
 
 # number of column of detectors in each panel
@@ -101,7 +102,6 @@ class VulcanGeometry(object):
         :param detid_list:
         :return:
         """
-        import bisect
         ws_index_list = list()
         det_id_boundary_list = self.create_detid_boundaries()
         ref_workspace = mantid_helper.retrieve_workspace(ref_ws_name, raise_if_not_exist=True)
@@ -112,12 +112,15 @@ class VulcanGeometry(object):
                 raise RuntimeError('Found a detector (ID = {0}) is out the boundary of any panel'
                                    ''.format(detid))
 
+            # print ('[DB...BAT] detector {0} is located at {1} in {2}'
+            #        ''.format(detid, location, det_id_boundary_list))
+
             # convert
             panel = location/2 + 1
-            ws_index = VULCAN_PANEL_START_WSINDEX[self._generation][panel] + detid - det_id_boundary_list[location]
+            ws_index = VULCAN_PANEL_START_WSINDEX[self._generation][panel] + detid - det_id_boundary_list[location-1]
 
             # check
-            if ref_workspace.getDetetor(ws_index).getID() != detid:
+            if ref_workspace.getDetector(ws_index).getID() != detid:
                 raise RuntimeError('Workspace index {0} has detector ID {1} other than {2}'
                                    ''.format(ws_index, ref_workspace.getDetetor(ws_index).getID(), detid))
 

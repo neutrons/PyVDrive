@@ -56,15 +56,18 @@ def integrate_single_crystal_peak(ws_name, mask_ws_name, central_d, delta_d, cal
 
     # align detectors
     reduction.align_instrument(ws_name, diff_cal_ws_name=calib_ws_name)
+    mantid_api.mtd_convert_units(ws_name, 'dSpacing')
+    mantid_api.rebin(ws_name, '-0.0003', preserve=False)
 
     # sum spectra
     for detid_list, file_name in [(roi_det_list, 'raw_roi'),
                                   (panel_complete_col_list, 'column'),
                                   (panel_complete_row_list, 'row')]:
-        ws_index_list = vulcan_instrument.convert_detectors_to_wsindex(detid_list)
-        mantid_api.sum_spectra(ws_name, ws_name, ws_index_list)
-        mantid_api.crop_workspace(ws_name, ws_name, central_d - delta_d, central_d + delta_d)
-        reduction.save_ws_ascii(ws_name, './', file_name)
+        ws_index_list = vulcan_instrument.convert_detectors_to_wsindex(ws_name, detid_list)
+        summed_ws_name = ws_name + '_' + file_name
+        mantid_api.sum_spectra(ws_name, summed_ws_name, ws_index_list)
+        mantid_api.crop_workspace(summed_ws_name, summed_ws_name, central_d - delta_d, central_d + delta_d)
+        reduction.save_ws_ascii(summed_ws_name, './', file_name + '.dat')
     # ENDFOR
 
     return
