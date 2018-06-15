@@ -79,24 +79,31 @@ def main(argv):
     :param argv:
     :return:
     """
-    if len(argv) == 1:
+    if len(argv) == 1 or argv[0] == '--help':
         print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]'
                '"'.format(argv[0]))
+        print ('Example: > ./integrate_single_crystal_peaks 21356 161394 tests/data/highangle_roi_0607.xml 1.2 0.5')
         sys.exit(0)
 
     # get inputs
     try:
+        print (argv[1])
         ipts_number = int(argv[1])
+        print ('IPTS = {0}'.format(ipts_number))
         run_number = int(argv[2])
+        print ('Run Number = {0}'.format(run_number))
         roi_file_name = str(argv[3])
+        print ('ROI File = {0}'.format(roi_file_name))
         central_d = float(argv[4])
+        print ('Peak Position (d-spacing) = {0}'.format(central_d))
         delta_d = float(argv[5])
+        print ('Peak range (d-spacing) = {0}'.format(delta_d))
     except IndexError:
-        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]'
+        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]  (too few arguments)'
                '"'.format(argv[0]))
         sys.exit(1)
     except ValueError:
-        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d]'
+        print ('Integrate single crystal peaks\nRun: "{0} [IPTS] [Run Number] [ROI File] [d-value] [delta d] (invalid value)'
                '"'.format(argv[0]))
         sys.exit(1)
 
@@ -126,7 +133,7 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    if False:
+    if True:
         argv = sys.argv
     else:
         argv = ['blabla', '21356', '161394', 'tests/data/highangle_roi_0607.xml', '1.2', '0.5']
