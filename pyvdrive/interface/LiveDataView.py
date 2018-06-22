@@ -1437,8 +1437,12 @@ class VulcanLiveDataView(QMainWindow):
         """ Show the accumulation/refresh/update rate information
         :return:
         """
+        # TODO NOW NOW NOW : whether _myAccumulationTime is changed, this method shall be called!
+        # TODO NOW - Better documentation on 'lineEdit_accPeriod'
         acc_time = self._myRefreshTimeStep * self._myAccumulationTime
         self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
+
+        return
 
     def sum_incremental_workspaces(self, workspace_i):
         """sum up the incremental workspace to an accumulated workspace

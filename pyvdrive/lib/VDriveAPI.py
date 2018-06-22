@@ -1387,7 +1387,7 @@ class VDriveAPI(object):
                                                                     output_directory=output_directory,
                                                                     d_spacing=True,
                                                                     binning_parameters=binning_parameters,
-                                                                    num_banks=num_banks)
+                                                                    number_banks=num_banks)
 
         else:
             # manual reduction: Reduce runs
