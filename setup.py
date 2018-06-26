@@ -106,7 +106,9 @@ if __name__ == "__main__":
     """
     main setup
     """
-    scripts = ['scripts/Lava.py', 'scripts/reduction/integrate_single_crystal_peaks.py']
+    scripts = ['scripts/Lava.py', 'scripts/reduction/integrate_single_crystal_peaks.py',
+               'scripts/single_crystal/chop_single_crystal_run.py',
+               'scripts/single_crystal/focus_single_crystal_run.py']
     test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py",
                     'tests/workflow/vbin_test.py',
                     'tests/unit/vulcan_slice_reduce_test.py',

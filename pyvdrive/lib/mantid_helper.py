@@ -583,8 +583,11 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
         my_arg_dict['StopTime'] = '%.15E' % stop_time
     if delta_time is not None:
         my_arg_dict['TimeInterval'] = delta_time
-    if time_unit != 'Seconds' and time_unit is not None:
-        my_arg_dict['UnitOfTime'] = time_unit
+
+    if time_unit is None or time_unit.lower().startswith('second'):
+        # more flexible to set time unit as Seconds
+        time_unit = 'Seconds'
+    my_arg_dict['UnitOfTime'] = time_unit
 
     try:
         print '[DB...BAT] Generate events by time: ', my_arg_dict
@@ -1306,6 +1309,8 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
         mantidapi.LoadCalFile(Filename=calib_file_name,
                               Output=output_name)
 
+    # print (ADS.getObjectNames())
+
     return
 
 
@@ -1331,22 +1336,22 @@ def load_roi_xml(ws_name, roi_file_name):
     load standard ROI XML file
     :param ws_name:
     :param roi_file_name:
-    :return:
+    :return: ROI workspace name
     """
     datatypeutility.check_file_name(roi_file_name, check_exist=True, note='ROI XML file')
     if not is_matrix_workspace(ws_name):
         raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(ws_name))
 
-    out_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+    roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
 
     # load XML file: Mantid can recognize the ROI or mask file
     # In output workspace, 1 is for being masked
     mantidapi.LoadMask(Instrument='VULCAN',
                        RefWorkspace=ws_name,
                        InputFile=roi_file_name,
-                       OutputWorkspace=out_ws_name)
+                       OutputWorkspace=roi_ws_name)
 
-    return out_ws_name
+    return roi_ws_name
 
 
 def load_time_focus_file(instrument, time_focus_file, base_ws_name):

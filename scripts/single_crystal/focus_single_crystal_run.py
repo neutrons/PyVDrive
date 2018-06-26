@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """
 chop a single crystal run and provide tool to visualize it
 """
@@ -21,18 +22,36 @@ def read_csv(csv_file_name):
                                     note='NeXus file Output Workspace Name File')
 
     file_workspace_list = list()
-    csv_file = open(csv_file_name, 'r')
-    csv_reader = csv.reader(csv_file)
-    with csv_reader:
-        file_name, workspace_name = csv_reader
-        file_workspace_list.append((file_name, workspace_name))
+
+    if False:
+        with open(csv_file_name, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',', quotechar='#')
+            for row in csv_reader:
+                print type(row), len(row)
+                print row
+    else:
+        csv_file = open(csv_file_name, 'r')
+        lines = csv_file.readlines()
+        csv_file.close()
+        for line in lines:
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+
+            terms = line.split(',')
+            file_name = terms[0].strip()
+            ws_name = terms[1].strip()
+            file_workspace_list.append((file_name, ws_name))
 
     return file_workspace_list
 
 
 def get_help(cmd):
     """
-    get help
+    get help:
+    Example: pyvdrivescript.sh --input=~/Temp/mydata/README.csv --roi=sample_roi.xml
+        --calibration=/SNS/VULCAN/shared/CALIBRATION/2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5
+        --output=~/Temp/mydata/reduced
     :param cmd: name of command/executable
     :return:
     """
@@ -43,6 +62,7 @@ def get_help(cmd):
     help_str += 'Result will be saved to a series of ASCII column files.\n'
     help_str += 'It is the second step operation in single crystal peak reduction.\n'
     help_str += '\nExamples:\n'
+    # TODO FIXME - Make it right!
     help_str += '> {0}--input=~/temp/mychopped/filelist.csv  --roi=~/temp/roi.xml ' \
                 '--calibration=/SNS/VULCAN/shared/CALIBRATION/....' \
                 ' --output=~/temp/myfocus/ --time=60\n'
@@ -64,15 +84,17 @@ def main(argv):
     status, setup_dict = parse_argv(opts, argv)
     if not status:
         sys.exit(-1)
+    elif setup_dict is None:
+        sys.exit(1)
 
     # parse input file
     nexus_workspace_list = read_csv(setup_dict['input'])
 
     # define calibration
     root_name = 'vulcan'
-    calib_ws_name = 'vulcan_calib'
+    calib_ws_name = 'vulcan_cal'
     group_ws_name = 'vulcan_group'
-    mask_ws_name = 'vulcan_mask'
+    mask_ws_name = None
 
     # do diffraction focus
     for index in range(len(nexus_workspace_list)):
@@ -92,7 +114,7 @@ def main(argv):
                                                 ref_ws_name=data_ws_name)
 
             # load region of interest file
-            mantid_helper.load_roi_xml(mask_ws_name, roi_file_name=setup_dict['roi'])
+            mask_ws_name = mantid_helper.load_roi_xml(data_ws_name, roi_file_name=setup_dict['roi'])
 
         mantid_reduction.align_and_focus_event_ws(event_ws_name=data_ws_name,
                                                   output_ws_name=data_ws_name,
@@ -118,7 +140,7 @@ def process_inputs(argv):
     :return:
     """
     try:
-        opts, args = getopt.getopt(argv, "h:o:", ["help", "input=", "roi=", 'output=', 'calibration='])
+        opts, args = getopt.getopt(argv[1:], "h:o:", ["help", "input=", "roi=", 'output=', 'calibration='])
     except getopt.GetoptError:
         print "Exception: %s" % (str(getopt.GetoptError))
         return False, None, None
@@ -133,8 +155,8 @@ def parse_argv(opts, argv):
     :return:
     """
     # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
-    if len(argv) == 0:
-        print ('Run "{0} --help" to see help information')
+    if len(argv) <= 1:
+        print ('Run "{0} --help" to see help information'.format(argv[0]))
         return False, None
 
     # init return dictionary
@@ -152,29 +174,38 @@ def parse_argv(opts, argv):
 
         elif opt == '--input':
             # IPTS number Input NeXus file
-            setup_dict['input'] = int(arg)
+            setup_dict['input'] = str(arg)
 
         elif opt == '--calibration':
             # Run number
-            setup_dict['calibration'] = int(arg)
+            setup_dict['calibration'] = str(arg)
 
         elif opt == '--output':
             # output dir
             setup_dict['output'] = str(arg)
 
-        elif opts == '--roi':
+        elif opt == '--roi':
             # time slicer
-            setup_dict['roi'] = float(arg)
+            setup_dict['roi'] = str(arg)
         else:
             print ('[ERROR] Option {0} with value {1} is not recoganized'.format(opt, arg))
     # END-FOR
 
     # check
     for arg_key in setup_dict:
-        if setup_dict[argv] is None:
+        if setup_dict[arg_key] is None:
             print ('Option {0} must be given!'.format(arg_key))
             return False, None
     # END-IF
+
+    for arg_key in ['input', 'roi', 'calibration', 'output']:
+        if setup_dict[arg_key].startswith('~'):
+            setup_dict[arg_key] = os.path.expanduser(setup_dict[arg_key])
+
+    # if setup_dict['input'].startswith('~'):
+    #     setup_dict['input'] = os.path.expanduser(setup_dict['input'])
+    # if setup_dict['roi'].startswith('~'):
+    #     setup_dict['roi'] = os.path.expanduser(setup_dict['roi'])
 
     return True, setup_dict
 

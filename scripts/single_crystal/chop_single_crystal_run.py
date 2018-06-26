@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """
 chop a single crystal run and provide tool to visualize it
 """
@@ -9,6 +10,7 @@ from pyvdrive.lib import mantid_helper
 from pyvdrive.lib import vulcan_util
 import random
 from pyvdrive.lib import datatypeutility
+from pyvdrive.lib import archivemanager
 
 
 def generate_list_csv(file_workspace_list, csv_file_name):
@@ -39,6 +41,7 @@ def generate_list_csv(file_workspace_list, csv_file_name):
 def get_help(cmd):
     """
     get help
+    example: cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
     :param cmd: name of command/executable
     :return:
     """
@@ -47,7 +50,7 @@ def get_help(cmd):
     help_str += 'Result will be saved to a series of Mantid-format NeXus files.\n'
     help_str += 'A series of PNG files will be generated for each time slice\'s counts on all 3 banks.\n'
     help_str += '\nExamples:\n'
-    help_str += '> {0}--ipts=12345 --run=987654 --output=~/temp/mydata/ --time=60\n'.format(cmd)
+    help_str += '> {0} --ipts=21356 --run=161972 --output=~/temp/mydata/ --time=60\n'.format(cmd)
     help_str += 'Time bin is in unit of second'
 
     return help_str
@@ -64,15 +67,18 @@ def main(argv):
     if not status:
         sys.exit(-1)
 
-    status, arg_dict = parse_argv(opts, args)
+    status, arg_dict = parse_argv(opts, argv)
     if not status:
         sys.exit(-1)
+    elif arg_dict is None:
+        sys.exit(1)
 
     # load data
     ipts_number = arg_dict['ipts']
     run_number = arg_dict['run']
     try:
-        nexus_file_name = vulcan_util.get_nexus_file_name(ipts_number, run_number)
+        nexus_file_name = archivemanager.DataArchiveManager(instrument='VULCAN'
+                                                            ).get_event_file(ipts_number, run_number, True)
         data_ws_name = 'VULCAN_{0}_events'.format(run_number)
         mantid_helper.load_nexus(data_file_name=nexus_file_name, output_ws_name=data_ws_name, meta_data_only=False)
     except RuntimeError as run_err:
@@ -98,12 +104,59 @@ def main(argv):
         sys.exit(-1)
 
     # generate info csv
-    generate_list_csv(chop_list)
+    csv_file_name = os.path.join(arg_dict['output'], 'README.csv')
+    generate_list_csv(chop_list, csv_file_name)
 
     # create detector views
     generate_detector_view(chop_list)
 
     return
+
+
+def generate_detector_view(file_ws_list):
+    """
+
+    :param file_ws_list:
+    :return:
+    """
+    # TODO/FIXME : this is a prototype!
+    ws = mtd['chop1']
+
+    import numpy
+    import matplotlib
+    from matplotlib import pyplot as plt
+
+    det_data = numpy.ndarray(shape=(256, 72), dtype='float')
+
+    wsindex = 6468
+    for j in range(72):
+        for i in range(256):
+            det_data[i, j] = ws.readY(wsindex)[0]
+            wsindex += 1
+
+    # fig = plt.figure(figsize=(256, 72))
+    fig = plt.figure(figsize=(16, 9))
+    ax = fig.add_subplot(111)
+    plt.imshow(det_data, origin='lower')
+    plt.colorbar()
+    ax.set_aspect('auto')
+    plt.title('4 of 10 of time...')
+
+    plt.show()
+    plt.savefig('myhighangle.png')
+
+    det_data2 = numpy.ndarray(shape=(7, 153), dtype='float')
+    wsindex = 0
+    for j in range(153):
+        for i in range(7):
+            det_data2[i, j] = ws.readY(wsindex)[0]
+            wsindex += 1
+    plt.cla()
+    fig2 = plt.figure(figsize=(16, 9))
+    ax = fig2.add_subplot(111)
+    plt.imshow(det_data2, origin='lower')
+    ax.set_aspect('auto')
+    plt.show()
 
 
 def process_inputs(argv):
@@ -113,7 +166,8 @@ def process_inputs(argv):
     :return:
     """
     try:
-        opts, args = getopt.getopt(argv, "h:o:", ["help", "ipts=", "run=", 'output=', 'time='])
+        print argv
+        opts, args = getopt.getopt(argv[1:], '', ['help', 'ipts=', "run=", 'output=', 'time='])
     except getopt.GetoptError:
         print "Exception: %s" % (str(getopt.GetoptError))
         return False, None, None
@@ -128,8 +182,8 @@ def parse_argv(opts, argv):
     :return: 
     """
     # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
-    if len(argv) == 0:
-        print ('Run "{0} --help" to see help information')
+    if len(argv) <= 1:
+        print ('Run "{0} --help" to see help information'.format(argv[0]))
         return False, None
 
     # init return dictionary
@@ -157,19 +211,23 @@ def parse_argv(opts, argv):
             # output dir
             setup_dict['output'] = str(arg)
 
-        elif opts == '--time':
+        elif opt == '--time':
             # time slicer
             setup_dict['time'] = float(arg)
+
         else:
             print ('[ERROR] Option {0} with value {1} is not recoganized'.format(opt, arg))
     # END-FOR
 
     # check
     for arg_key in setup_dict:
-        if setup_dict[argv] is None:
+        if setup_dict[arg_key] is None:
             print ('Option {0} must be given!'.format(arg_key))
             return False, None
     # END-IF
+
+    if setup_dict['output'].startswith('~'):
+        setup_dict['output'] = os.path.expanduser(setup_dict['output'])
 
     return True, setup_dict
 

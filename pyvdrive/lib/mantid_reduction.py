@@ -46,7 +46,9 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     if not mantid_helper.is_event_workspace(event_ws_name):
         raise RuntimeError('Input {0} is not an EventWorkspace'.format(event_ws_name))
     if not mantid_helper.is_calibration_workspace(diff_cal_ws_name):
-        raise RuntimeError('Input {0} is not a Calibration workspace'.format(diff_cal_ws_name))
+        diff_ws = mantid_helper.retrieve_workspace(diff_cal_ws_name)
+        raise RuntimeError('Input {0} is not a Calibration workspace but a {1}'.format(diff_cal_ws_name,
+                                                                                       diff_ws.__class__.__name__))
     if not mantid_helper.is_masking_workspace(mask_ws_name):
         raise RuntimeError('Input {0} is not a Masking workspace'.format(mask_ws_name))
     if not mantid_helper.is_grouping_workspace(grouping_ws_name):
