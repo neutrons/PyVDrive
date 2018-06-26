@@ -1286,7 +1286,8 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
     """
     load calibration file
     :param calib_file_name:
-    :param output_name:
+    :param output_name: this is NOT calibration workspace name but the root name for calib, mask and group
+    :param ref_ws_name:
     :return:
     """
     # check

@@ -5,8 +5,29 @@ import getopt
 import os
 import sys
 from pyvdrive.lib import mantid_reduction
+from pyvdrive.lib import mantid_helper
+from pyvdrive.lib import datatypeutility
+import csv
 
 
+def read_csv(csv_file_name):
+    """
+    read input csv for data
+    :param csv_file_name:
+    :return:
+    """
+    # check input
+    datatypeutility.check_file_name(csv_file_name, check_exist=True, check_writable=False,
+                                    note='NeXus file Output Workspace Name File')
+
+    file_workspace_list = list()
+    csv_file = open(csv_file_name, 'r')
+    csv_reader = csv.reader(csv_file)
+    with csv_reader:
+        file_name, workspace_name = csv_reader
+        file_workspace_list.append((file_name, workspace_name))
+
+    return file_workspace_list
 
 
 def get_help(cmd):
@@ -35,8 +56,57 @@ def main(argv):
     :param argv:
     :return:
     """
-    
+    # process inputs
+    status, opts, args = process_inputs(argv)
+    if not status:
+        sys.exit(-1)
 
+    status, setup_dict = parse_argv(opts, argv)
+    if not status:
+        sys.exit(-1)
+
+    # parse input file
+    nexus_workspace_list = read_csv(setup_dict['input'])
+
+    # define calibration
+    root_name = 'vulcan'
+    calib_ws_name = 'vulcan_calib'
+    group_ws_name = 'vulcan_group'
+    mask_ws_name = 'vulcan_mask'
+
+    # do diffraction focus
+    for index in range(len(nexus_workspace_list)):
+        # get file and data workspace name
+        nexus_file_name, data_ws_name = nexus_workspace_list[index]
+
+        # load data
+        mantid_helper.load_nexus(data_file_name=nexus_file_name,
+                                 output_ws_name=data_ws_name,
+                                 meta_data_only=False)
+
+        # load calibration for the first time
+        if index == 0:
+            # load calibration
+            mantid_helper.load_calibration_file(calib_file_name=setup_dict['calibration'],
+                                                output_name=root_name,
+                                                ref_ws_name=data_ws_name)
+
+            # load region of interest file
+            mantid_helper.load_roi_xml(mask_ws_name, roi_file_name=setup_dict['roi'])
+
+        mantid_reduction.align_and_focus_event_ws(event_ws_name=data_ws_name,
+                                                  output_ws_name=data_ws_name,
+                                                  binning_params='0.3,-0.0003,5.0',
+                                                  diff_cal_ws_name=calib_ws_name,
+                                                  mask_ws_name=mask_ws_name,
+                                                  grouping_ws_name=group_ws_name,
+                                                  keep_raw_ws=False,
+                                                  convert_to_matrix=True,
+                                                  reduction_params_dict=dict())
+
+        # save!
+        mantid_reduction.save_ws_ascii(data_ws_name, setup_dict['output'], data_ws_name)
+    # END-FOR
 
     return
 
