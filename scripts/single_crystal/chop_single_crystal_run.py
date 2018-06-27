@@ -205,9 +205,10 @@ def parse_argv(opts, argv):
     :param argv: 
     :return: 
     """
+    cmd = 'vulcan.chop_single_crystal_run'
     # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
     if len(argv) <= 1:
-        print ('Run "{0} --help" to see help information'.format(argv[0]))
+        print ('Run "{0} --help" to see help information'.format(cmd))
         return False, None
 
     # init return dictionary
@@ -220,7 +221,7 @@ def parse_argv(opts, argv):
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             # Help
-            print (get_help(argv[0]))
+            print (get_help(cmd))
             return True, None
 
         elif opt == '--ipts':
