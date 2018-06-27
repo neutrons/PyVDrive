@@ -114,49 +114,67 @@ def main(argv):
 
 
 def generate_detector_view(file_ws_list):
-    """
-
+    """ generate detector view to images
     :param file_ws_list:
     :return:
     """
-    # TODO/FIXME : this is a prototype!
-    ws = mtd['chop1']
-
     import numpy
     import matplotlib
     from matplotlib import pyplot as plt
 
-    det_data = numpy.ndarray(shape=(256, 72), dtype='float')
+    datatypeutility.check_list('File name/workspace name list', file_ws_list)
 
-    wsindex = 6468
-    for j in range(72):
-        for i in range(256):
-            det_data[i, j] = ws.readY(wsindex)[0]
-            wsindex += 1
+    for file_name, ws_name in file_ws_list:
+        workspace = mantid_helper.retrieve_workspace(ws_name, raise_if_not_exist=True)
+        output_dir = os.path.basename(file_name)
 
-    # fig = plt.figure(figsize=(256, 72))
-    fig = plt.figure(figsize=(16, 9))
-    ax = fig.add_subplot(111)
-    plt.imshow(det_data, origin='lower')
-    plt.colorbar()
-    ax.set_aspect('auto')
-    plt.title('4 of 10 of time...')
+        for bank_id in range(1, 8):
 
-    plt.show()
-    plt.savefig('myhighangle.png')
+            if bank_id < 7:
+                # get 2D array
+                det_data_we = numpy.ndarray(shape=(7, 153), dtype='float')
+                ws_index = (bank_id-1) * 7 * 153
+                for j in range(153):
+                    for i in range(7):
+                        det_data_we[i, j] = workspace.readY(ws_index)[0]
+                        ws_index += 1
+                # plot
+                fig_we = plt.figure(figsize=(16, 9))
+                ax = fig_we.add_subplot(111)
+                plt.imshow(det_data_we, origin='lower')
+                plt.title('{0}: West/East Bank {1} of 7'.format(file_name, bank_id))
+                ax.set_aspect('auto')
 
-    det_data2 = numpy.ndarray(shape=(7, 153), dtype='float')
-    wsindex = 0
-    for j in range(153):
-        for i in range(7):
-            det_data2[i, j] = ws.readY(wsindex)[0]
-            wsindex += 1
-    plt.cla()
-    fig2 = plt.figure(figsize=(16, 9))
-    ax = fig2.add_subplot(111)
-    plt.imshow(det_data2, origin='lower')
-    ax.set_aspect('auto')
-    plt.show()
+                plt.savefig(os.path.join(output_dir, '{0}_west_east_bank{0}.png').format(workspace, bank_id))
+
+            # last bank (7)
+            if bank_id == 7:
+                # get 2D array
+                det_data = numpy.ndarray(shape=(256, 72), dtype='float')
+                ws_index = 6468
+                for j in range(72):
+                    for i in range(256):
+                        det_data[i, j] = workspace.readY(ws_index)[0]
+                    ws_index += 1
+
+                # plot
+                fig = plt.figure(figsize=(16, 9))
+                ax = fig.add_subplot(111)
+                plt.imshow(det_data, origin='lower')
+                plt.colorbar()
+                ax.set_aspect('auto')
+                plt.title('{0}: high angle bank'.format(file_name))
+
+                plt.savefig(os.path.join(output_dir, '{0}_high_angle.png').format(workspace))
+            # END-IF
+
+            plt.cla()
+
+        # END-FOR
+
+    # END-FOR
+
+    return
 
 
 def process_inputs(argv):
