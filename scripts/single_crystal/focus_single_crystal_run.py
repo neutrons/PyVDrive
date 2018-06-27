@@ -63,9 +63,9 @@ def get_help(cmd):
     help_str += 'It is the second step operation in single crystal peak reduction.\n'
     help_str += '\nExamples:\n'
     # TODO FIXME - Make it right!
-    help_str += '> {0}--input=~/temp/mychopped/filelist.csv  --roi=~/temp/roi.xml ' \
-                '--calibration=/SNS/VULCAN/shared/CALIBRATION/....' \
-                ' --output=~/temp/myfocus/ --time=60\n'
+    help_str += '> {0} --input=~/Temp/mydata/README.csv --roi=sample_roi.xml ' \
+                '--calibration=/SNS/VULCAN/shared/CALIBRATION/2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5 ' \
+                '--output=~/Temp/mydata/reduced\n'.format(cmd)
 
     return help_str
 
@@ -127,7 +127,9 @@ def main(argv):
                                                   reduction_params_dict=dict())
 
         # save!
-        mantid_reduction.save_ws_ascii(data_ws_name, setup_dict['output'], data_ws_name)
+        output_dir = setup_dict['output']
+        mantid_helper.save_event_workspace(data_ws_name, os.path.join(output_dir, data_ws_name + '.nxs'))
+        mantid_reduction.save_ws_ascii(data_ws_name, output_dir, data_ws_name)
     # END-FOR
 
     return
@@ -155,8 +157,9 @@ def parse_argv(opts, argv):
     :return:
     """
     # process input arguments in 2 different modes: auto-reduction and manual reduction (options)
+    cmd = 'vulcan.' + os.path.basename(argv[0]).split('.')[0]
     if len(argv) <= 1:
-        print ('Run "{0} --help" to see help information'.format(argv[0]))
+        print ('Run "{0} --help" to see help information'.format(cmd))
         return False, None
 
     # init return dictionary
@@ -169,7 +172,7 @@ def parse_argv(opts, argv):
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             # Help
-            print (get_help(argv[0]))
+            print (get_help(cmd))
             return True, None
 
         elif opt == '--input':

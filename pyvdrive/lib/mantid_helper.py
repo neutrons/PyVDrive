@@ -1460,7 +1460,7 @@ def mask_workspace(to_mask_workspace_name, mask_workspace_name):
 
     # retrieve masked detectors
     mask_ws = retrieve_workspace(mask_workspace_name, raise_if_not_exist=True)
-    detid_vector = mask_ws.gettMaskedDetectors()
+    detid_vector = mask_ws.getMaskedDetectors()
 
     # mask detectors
     mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
@@ -1812,7 +1812,7 @@ def save_event_workspace(event_ws_name, nxs_file_name):
     :param nxs_file_name:
     :return:
     """
-    mantidapi.SaveNexus(InputWorkspace=event_ws_name, Filename=nxs_file_name)
+    mantidapi.SaveNexusProcessed(InputWorkspace=event_ws_name, Filename=nxs_file_name)
 
     return
 

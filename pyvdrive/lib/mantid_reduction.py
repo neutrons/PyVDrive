@@ -60,19 +60,21 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     if event_ws_name == output_ws_name:
         keep_raw_ws = True
 
-    # Compress events
-    compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
-    mantidapi.CompressEvents(InputWorkspace=event_ws_name,
-                             OutputWorkspace=output_ws_name,
-                             Tolerance=compress_events_tolerance)
+    # Compress events as an option
+    if 'CompressEvents' in reduction_params_dict:
+        compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
+        mantidapi.CompressEvents(InputWorkspace=event_ws_name,
+                                 OutputWorkspace=output_ws_name,
+                                 Tolerance=compress_events_tolerance)
 
     # Mask detectors
-    mask_detectors_by_mask_ws(output_ws_name, mask_ws_name)
+    mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
+                                 mask_workspace_name=mask_ws_name)
 
     # Align detector
-    mantidapi.AlignDetector(InputWorkspace=event_ws_name,
-                            OutputWorkspace=output_ws_name,
-                            CalibratoionWorkspace=diff_cal_ws_name)
+    mantidapi.AlignDetectors(InputWorkspace=event_ws_name,
+                             OutputWorkspace=output_ws_name,
+                             CalibrationWorkspace=diff_cal_ws_name)
 
     # Sort events
     mantidapi.SortEvents(InputWorkspace=output_ws_name,
@@ -82,42 +84,37 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     mantidapi.DiffractionFocussing(InputWorkspace=output_ws_name,
                                    OutputWorkspace=output_ws_name,
                                    GroupingWorkspace=grouping_ws_name,
-                                   PreserveEvents=not convert_to_matrix)
+                                   PreserveEvents=True)
+
+    current_ws = mantid_helper.retrieve_workspace(output_ws_name)
+    print ('[DB...BAt] workspace 29*3 unit = {0}'.format(current_ws.getAxis(0).getUnit().unitID()))
+    print ('[DB...BAT] workspace 28*4 type = {0}'.format(type(current_ws)))
 
     # Sort again!
     mantidapi.SortEvents(InputWorkspace=output_ws_name,
                          SortBy='X Value')
 
-    # Edit instrument
-    mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
-                                     PrimaryFlightPath=mantid_helper.VULCAN_L1,
-                                     SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
-                                     L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
-                                     Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
-                                     Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+    # Edit instrument as an option
+    if 'EditInstrumentGeometry' in reduction_params_dict:
+        mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
+                                         PrimaryFlightPath=mantid_helper.VULCAN_L1,
+                                         SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
+                                         L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
+                                         Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
+                                         Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
 
     # rebin
     if binning_params is not None:
         mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
 
     # remove
-    if not keep_raw_ws:
+    if not keep_raw_ws and event_ws_name != output_ws_name:
         mantid_helper.delete_workspace(event_ws_name)
 
     return
 
 
-def mask_detectors_by_mask_ws(workspace_name, mask_ws_name):
-    """
-    mask detectors by masking workspace
-    :param workspace_name:
-    :param mask_ws_name:
-    :return:
-    """
-    # TODO/FIXME/NOWNOW - Need to find out by AlignAndFocusPowder()
-    raise NotImplementedError('ASAP')
-
-
+# TODO - This method shall be refactored with align_and_focus_event_ws - FIXME
 def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters, convert_to_matrix):
     """
     align and focus a run
@@ -126,16 +123,6 @@ def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters
     :param target_unit:
     :param binning_parameters:
     :param convert_to_matrix:
-    :return:
-    """
-
-
-
-
-    """
-
-    :param nexus_file_name:
-    :param target_unit:
     :return:
     """
     # check inputs ... blabla
@@ -194,7 +181,7 @@ def save_ws_ascii(ws_name, output_directory, base_name):
     :return:
     """
     # check input blabla
-    mantidapi.SaveAscii(InputWorkspace=ws_name, Filename=os.path.join(output_directory, base_name),
+    mantidapi.SaveAscii(InputWorkspace=ws_name, Filename=os.path.join(output_directory, base_name + '.dat'),
                         Separator='Space')
 
     return
