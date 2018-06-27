@@ -181,7 +181,14 @@ def save_ws_ascii(ws_name, output_directory, base_name):
     :return:
     """
     # check input blabla
-    mantidapi.SaveAscii(InputWorkspace=ws_name, Filename=os.path.join(output_directory, base_name + '.dat'),
-                        Separator='Space')
+
+    workspace = mantid_helper.retrieve_workspace(ws_name)
+    print ('[DB...BAT] {0} has {1} spectra'.format(ws_name, workspace.getNumberHistograms()))
+    for ws_index in range(workspace.getNumberHistograms()):
+        spec_id = ws_index + 1
+        mantidapi.SaveAscii(InputWorkspace=ws_name,
+                            Filename=os.path.join(output_directory, base_name + '_Spec{0}.dat'.format(spec_id)),
+                            Separator='Space',
+                            SpectrumList='{0}'.format(ws_index))
 
     return
