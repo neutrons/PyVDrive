@@ -48,7 +48,7 @@ def check_file_name(file_name, check_exist=True, check_writable=False, is_dir=Fa
     if check_exist and os.path.exists(file_name) is False:
         raise RuntimeError('{1} File {0} does not exist.'.format(file_name, note))
 
-    if check_writable and os.access(file_name, os.W_OK):
+    if check_writable and os.access(file_name, os.W_OK) is False:
         raise RuntimeError('File {0} is not writable.'.format(file_name))
 
     check_bool_variable('Flag for input string is a directory', is_dir)

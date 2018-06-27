@@ -1331,6 +1331,19 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
     return True, out_ws
 
 
+def load_nexus_processed(nexus_name, workspace_name):
+    """
+
+    :param nexus_name:
+    :param workspace_name:
+    :return:
+    """
+    out_ws = mantidapi.LoadNexusProcessed(Filename=nexus_name,
+                                          OutputWorkspace=workspace_name)
+
+    return out_ws
+
+
 def load_roi_xml(ws_name, roi_file_name):
     """
     load standard ROI XML file

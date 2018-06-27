@@ -25,7 +25,7 @@ def generate_list_csv(file_workspace_list, csv_file_name):
     datatypeutility.check_list('File name workspace tuples', file_workspace_list)
 
     # write file
-    write_buffer = '# NeXus file name, Workspace name'
+    write_buffer = '# NeXus file name, Workspace name\n'
     for index in range(len(file_workspace_list)):
         file_name, workspace_name = file_workspace_list[index]
         write_buffer += '{0}, {1}\n'.format(file_name, workspace_name)
@@ -125,19 +125,20 @@ def generate_detector_view(file_ws_list):
     datatypeutility.check_list('File name/workspace name list', file_ws_list)
 
     for file_name, ws_name in file_ws_list:
+        # workspace = mantid_helper.load_nexus_processed(file_name, ws_name)
         workspace = mantid_helper.retrieve_workspace(ws_name, raise_if_not_exist=True)
-        output_dir = os.path.basename(file_name)
+        output_dir = os.path.dirname(file_name)
 
         for bank_id in range(1, 8):
 
             if bank_id < 7:
                 # get 2D array
                 det_data_we = numpy.ndarray(shape=(7, 153), dtype='float')
-                ws_index = (bank_id-1) * 7 * 153
+                ws_index_we = (bank_id-1) * 7 * 153
                 for j in range(153):
                     for i in range(7):
-                        det_data_we[i, j] = workspace.readY(ws_index)[0]
-                        ws_index += 1
+                        det_data_we[i, j] = workspace.readY(ws_index_we)[0]
+                        ws_index_we += 1
                 # plot
                 fig_we = plt.figure(figsize=(16, 9))
                 ax = fig_we.add_subplot(111)
@@ -145,17 +146,20 @@ def generate_detector_view(file_ws_list):
                 plt.title('{0}: West/East Bank {1} of 7'.format(file_name, bank_id))
                 ax.set_aspect('auto')
 
-                plt.savefig(os.path.join(output_dir, '{0}_west_east_bank{0}.png').format(workspace, bank_id))
+                # save
+                png_name = '{0}_west_east_bank{1}.png'.format(workspace, bank_id)
+                plt.savefig(os.path.join(output_dir, png_name))
+                # print ('[INFO] Save bank {0} to {1}'.format(bank_id, png_name))
 
-            # last bank (7)
-            if bank_id == 7:
+            elif bank_id == 7:
+                # last bank (7)
                 # get 2D array
                 det_data = numpy.ndarray(shape=(256, 72), dtype='float')
                 ws_index = 6468
                 for j in range(72):
                     for i in range(256):
                         det_data[i, j] = workspace.readY(ws_index)[0]
-                    ws_index += 1
+                        ws_index += 1
 
                 # plot
                 fig = plt.figure(figsize=(16, 9))
@@ -168,10 +172,12 @@ def generate_detector_view(file_ws_list):
                 plt.savefig(os.path.join(output_dir, '{0}_high_angle.png').format(workspace))
             # END-IF
 
+            # close
+            plt.clf()
+            plt.close()
             plt.cla()
 
         # END-FOR
-
     # END-FOR
 
     return
