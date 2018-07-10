@@ -1370,6 +1370,9 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
+        # TODO - 20180710 - binning_parameters is default to be None.  If None, a real default value
+        # shall be added
+
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
