@@ -8,6 +8,7 @@ import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
+import datatypeutility
 
 import vdrivehelper
 
@@ -15,6 +16,9 @@ from reduce_VULCAN import align_bins
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 WORKSPACE_2D_ID = 'Workspace2D'
+MASK_WORKSPACE_ID = 'MaskWorkspace'
+GROUPING_WORKSPACE_ID = 'GroupingWorkspace'
+CALIBRATION_WORKSPACE_ID = 'TableWorkspace'
 
 # define constants
 VULCAN_L1 = 43.754
@@ -26,11 +30,75 @@ VULCAN_2BANK_2_L2 = 2.009436
 VULCAN_2BANK_2_POLAR = 360. - 90.1120
 
 
-def clone_workspace(srs_ws_name, target_ws_name):
-    """blabla"""
+def check_bins_can_align(workspace_name, template_workspace_name):
+    """
+    match the bins of workspace to the template workspace
+    :param workspace_name:
+    :param template_workspace_name:
+    :return: 2-tuple (boolean as align-able, string for reason
+    """
+    # get workspace
+    try:
+        target_workspace = ADS.retrieve(workspace_name)
+        template_workspace = ADS.retrieve(template_workspace_name)
+    except KeyError as key_err:
+        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
+                      ''.format(workspace_name, template_workspace_name, key_err)
 
-    assert isinstance(srs_ws_name, str), 'blabla'
-    assert isinstance(target_ws_name, str), 'blabla'
+    # check number of spectra
+    num_template_hist = template_workspace.getNumberHistograms()
+    num_target_hist = target_workspace.getNumberHistograms()
+
+    if num_template_hist == 1:
+        single_template_bin = True
+    elif num_template_hist == num_target_hist:
+        single_template_bin = False
+    else:
+        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
+                      ''.format(workspace_name, template_workspace_name)
+
+    # mapping
+    if single_template_bin:
+        template_vec_x = template_workspace.readX(0)
+    else:
+        template_vec_x = None
+
+    for i_ws in range(num_target_hist):
+        # get vector X of template and target
+        if template_vec_x is None:
+            template_vec_x = template_workspace.readX(i_ws)
+        target_vec_x = target_workspace.readX(i_ws)
+
+        # check number of bins
+        if len(template_vec_x) != len(target_vec_x):
+            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
+                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
+                                                 len(template_vec_x), len(target_vec_x))
+
+        # check difference in bins
+        sum_vec_target = numpy.sum(target_vec_x)
+        sum_vec_template = numpy.sum(template_vec_x)
+
+        diff_vec = target_vec_x - template_vec_x
+        diff_vec_square = diff_vec**2
+        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
+
+        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
+            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
+    # END-FOR
+
+    return True, ''
+
+
+def clone_workspace(srs_ws_name, target_ws_name):
+    """
+    clone workspace
+    :param srs_ws_name:
+    :param target_ws_name:
+    :return:
+    """
+    datatypeutility.check_string_variable('Source workspace name', srs_ws_name)
+    datatypeutility.check_string_variable('Target workspace name', target_ws_name)
 
     mantidapi.CloneWorkspace(InputWorkspace=srs_ws_name, OutputWorkspace=target_ws_name)
 
@@ -250,6 +318,31 @@ def create_workspace_2d(vec_x, vec_y, vec_e, output_ws_name):
     return ADS.retrieve(output_ws_name)
 
 
+def crop_workspace(ws_name, cropped_ws_name, x_min, x_max):
+    """
+
+    :param ws_name:
+    :param cropped_ws_name:
+    :param x_min:
+    :param x_max:
+    :return:
+    """
+    # check type
+    datatypeutility.check_float_variable('XMin', x_min, (0, None))
+    datatypeutility.check_float_variable('XMax', x_max, (0, None))
+    if x_max <= x_min:
+        raise RuntimeError('Xmin {0} >= Xmax {1} for cropping!'.format(x_min, x_max))
+    if is_a_workspace(ws_name) is False:
+        raise RuntimeError('Workspace {0} does not exist in ADS.'.format(ws_name))
+    datatypeutility.check_string_variable('Output cropped workspace name', cropped_ws_name)
+
+    mantidapi.CropWorkspace(InputWorkspace=ws_name,
+                            OutputWorkspace=cropped_ws_name,
+                            XMin=x_min, XMax=x_max)
+
+    return
+
+
 def delete_workspace(workspace):
     """ Delete a workspace in AnalysisService
     :param workspace:
@@ -447,6 +540,15 @@ def generate_event_filters_by_log(ws_name, splitter_ws_name, info_ws_name,
     return True, (splitter_ws_name, info_ws_name)
 
 
+def generate_processing_history(workspace_name, output_python_name):
+    # TODO
+    mantidapi.GeneratePythonScript(InputWorkspace=workspace_name,
+                                   Filename=output_python_name,
+                                   UnrollAll=True)
+
+    return
+
+
 def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
                                    start_time, stop_time, delta_time, time_unit):
     """
@@ -481,8 +583,11 @@ def generate_event_filters_by_time(ws_name, splitter_ws_name, info_ws_name,
         my_arg_dict['StopTime'] = '%.15E' % stop_time
     if delta_time is not None:
         my_arg_dict['TimeInterval'] = delta_time
-    if time_unit != 'Seconds' and time_unit is not None:
-        my_arg_dict['UnitOfTime'] = time_unit
+
+    if time_unit is None or time_unit.lower().startswith('second'):
+        # more flexible to set time unit as Seconds
+        time_unit = 'Seconds'
+    my_arg_dict['UnitOfTime'] = time_unit
 
     try:
         print '[DB...BAT] Generate events by time: ', my_arg_dict
@@ -857,6 +962,31 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     return data_set_dict, current_unit
 
 
+def get_detectors_in_roi(mask_ws_name):
+    """
+
+    :param mask_ws_name:
+    :return:
+    """
+    if not is_masking_workspace(mask_ws_name):
+        raise RuntimeError('Not MaskingWorkspace {0}'.format(mask_ws_name))
+
+    mask_ws = ADS.retrieve(mask_ws_name)
+
+    det_id_list = list()
+    for iws in range(mask_ws.getNumberHistograms()):
+        # get ROI
+        if mask_ws.readY(iws)[0] < 0.9:
+            det_id_i = mask_ws.getDetector(iws).getID()
+            det_id_list.append(det_id_i)
+    # END-FOR
+    # print (len(det_id_list))
+    # print (mask_ws.getNumberHistograms() - len(det_id_list))
+    # print (mask_ws.getNumberMasked())
+
+    return det_id_list
+
+
 def get_ipts_number(ws_name):
     """
     get IPTS number from a standard EventWorkspace
@@ -1019,38 +1149,84 @@ def get_split_workpsace_base_name(run_number, out_base_name, instrument_name='VU
     return '%s_%d_%s' % (instrument_name, run_number, out_base_name)
 
 
+def is_a_workspace(workspace_name):
+    """
+    check whether a string is a workspace
+    :param workspace_name:
+    :return:
+    """
+    datatypeutility.check_string_variable('Workspace name', workspace_name)
+
+    if ADS.doesExist(workspace_name):
+        return True
+
+    return False
+
+
+def is_calibration_workspace(workspace_name):
+    """
+    check whether a workspace is a calibration workspace, which is in fact a TableWorkspace
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        event_ws = retrieve_workspace(workspace_name)
+        return event_ws.id() == CALIBRATION_WORKSPACE_ID
+
+    return False
+
+
 def is_event_workspace(workspace_name):
     """
     Check whether a workspace, specified by name, is an event workspace
     :param workspace_name:
     :return:
     """
-    # Check requirement
-    assert isinstance(workspace_name, str)
+    if is_a_workspace(workspace_name):
+        event_ws = retrieve_workspace(workspace_name)
+        return event_ws.id() == EVENT_WORKSPACE_ID
 
-    event_ws = retrieve_workspace(workspace_name)
-    assert event_ws is not None
+    return False
 
-    return event_ws.id() == EVENT_WORKSPACE_ID
+
+def is_grouping_workspace(workspace_name):
+    """
+    check whether a workspace is a grouping workspace
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        group_ws = retrieve_workspace(workspace_name)
+        return group_ws.id() == GROUPING_WORKSPACE_ID
+
+    return False
+
+
+def is_masking_workspace(workspace_name):
+    """
+    check whether a workspace is a mask workspace
+    :param workspace_name:
+    :return:
+    """
+    if is_a_workspace(workspace_name):
+        mask_ws = retrieve_workspace(workspace_name)
+        return mask_ws.id() == MASK_WORKSPACE_ID
+
+    return False
 
 
 def is_matrix_workspace(workspace_name):
     """
-    check wehther a workspace is a MatrixWorkspace
+    check whether a workspace is a MatrixWorkspace
     :param workspace_name:
     :return:
     """
-    # Check requirement
-    assert isinstance(workspace_name, str), 'input workspace name {0} is not a string but a {1}' \
-                                            ''.format(workspace_name, type(workspace_name))
+    if is_a_workspace(workspace_name):
+        matrix_workspace = retrieve_workspace(workspace_name)
+        is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
+        return is_matrix
 
-    # get workspace
-    matrix_workspace = retrieve_workspace(workspace_name)
-    assert matrix_workspace is not None, 'blabla'
-
-    is_matrix = matrix_workspace.id() == EVENT_WORKSPACE_ID or matrix_workspace.id() == WORKSPACE_2D_ID
-
-    return is_matrix
+    return False
 
 
 def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
@@ -1109,6 +1285,35 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
     return out_ws_name
 
 
+def load_calibration_file(calib_file_name, output_name, ref_ws_name):
+    """
+    load calibration file
+    :param calib_file_name:
+    :param output_name: this is NOT calibration workspace name but the root name for calib, mask and group
+    :param ref_ws_name:
+    :return:
+    """
+    # check
+    datatypeutility.check_file_name(calib_file_name, check_exist=True, check_writable=False, is_dir=False,
+                                    note='Calibration file')
+    datatypeutility.check_string_variable('Calibration/grouping/masking workspace name', output_name)
+
+    if calib_file_name.endswith('.h5'):
+        # new diff calib file
+        mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                              Filename=calib_file_name,
+                              WorkspaceName=output_name)
+
+    elif calib_file_name.endswith('.dat'):
+        # old style calibration file
+        mantidapi.LoadCalFile(Filename=calib_file_name,
+                              Output=output_name)
+
+    # print (ADS.getObjectNames())
+
+    return
+
+
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
     """ Load NeXus file
     :param data_file_name:
@@ -1124,6 +1329,42 @@ def load_nexus(data_file_name, output_ws_name, meta_data_only):
         return False, 'Unable to load Nexus file %s due to %s' % (data_file_name, str(e))
 
     return True, out_ws
+
+
+def load_nexus_processed(nexus_name, workspace_name):
+    """
+
+    :param nexus_name:
+    :param workspace_name:
+    :return:
+    """
+    out_ws = mantidapi.LoadNexusProcessed(Filename=nexus_name,
+                                          OutputWorkspace=workspace_name)
+
+    return out_ws
+
+
+def load_roi_xml(ws_name, roi_file_name):
+    """
+    load standard ROI XML file
+    :param ws_name:
+    :param roi_file_name:
+    :return: ROI workspace name
+    """
+    datatypeutility.check_file_name(roi_file_name, check_exist=True, note='ROI XML file')
+    if not is_matrix_workspace(ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(ws_name))
+
+    roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+
+    # load XML file: Mantid can recognize the ROI or mask file
+    # In output workspace, 1 is for being masked
+    mantidapi.LoadMask(Instrument='VULCAN',
+                       RefWorkspace=ws_name,
+                       InputFile=roi_file_name,
+                       OutputWorkspace=roi_ws_name)
+
+    return roi_ws_name
 
 
 def load_time_focus_file(instrument, time_focus_file, base_ws_name):
@@ -1153,66 +1394,6 @@ def load_time_focus_file(instrument, time_focus_file, base_ws_name):
     assert workspace_does_exist(cal_ws_name), 'Calibration worksapce does not exist.'
 
     return True, [offset_ws_name, grouping_ws_name, mask_ws_name, cal_ws_name]
-
-
-def check_bins_can_align(workspace_name, template_workspace_name):
-    """
-    match the bins of workspace to the template workspace
-    :param workspace_name:
-    :param template_workspace_name:
-    :return: 2-tuple (boolean as align-able, string for reason
-    """
-    # get workspace
-    try:
-        target_workspace = ADS.retrieve(workspace_name)
-        template_workspace = ADS.retrieve(template_workspace_name)
-    except KeyError as key_err:
-        return False, 'Unable to retrieve workspace {0} and/or {1} due to {2}.' \
-                      ''.format(workspace_name, template_workspace_name, key_err)
-
-    # check number of spectra
-    num_template_hist = template_workspace.getNumberHistograms()
-    num_target_hist = target_workspace.getNumberHistograms()
-
-    if num_template_hist == 1:
-        single_template_bin = True
-    elif num_template_hist == num_target_hist:
-        single_template_bin = False
-    else:
-        return False, 'There are unequal numbers of histograms of {0} and {1}.' \
-                      ''.format(workspace_name, template_workspace_name)
-
-    # mapping
-    if single_template_bin:
-        template_vec_x = template_workspace.readX(0)
-    else:
-        template_vec_x = None
-
-    for i_ws in range(num_target_hist):
-        # get vector X of template and target
-        if template_vec_x is None:
-            template_vec_x = template_workspace.readX(i_ws)
-        target_vec_x = target_workspace.readX(i_ws)
-
-        # check number of bins
-        if len(template_vec_x) != len(target_vec_x):
-            return False, 'Of workspace index {0}, {1} and {2} has different number of bins, such that {3} and {4} ' \
-                          'respectively.'.format(i_ws, workspace_name, template_workspace_name,
-                                                 len(template_vec_x), len(target_vec_x))
-
-        # check difference in bins
-        sum_vec_target = numpy.sum(target_vec_x)
-        sum_vec_template = numpy.sum(template_vec_x)
-
-        diff_vec = target_vec_x - template_vec_x
-        diff_vec_square = diff_vec**2
-        diff_sum = numpy.sqrt(numpy.sum(diff_vec_square))
-
-        if diff_sum/min(sum_vec_target, sum_vec_template) > 1.:
-            return False, 'Difference of workspace index {0} is huge!'.format(i_ws)
-    # END-FOR
-
-    return True, ''
 
 
 def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name):
@@ -1261,6 +1442,57 @@ def make_compressed_reduced_workspace(workspace_name_list, target_workspace_name
     # END-IF
 
     return target_workspace_name
+
+
+# TODO/FIXME/TEST - ASAP
+def mask_workspace(to_mask_workspace_name, mask_workspace_name):
+    """
+    mask a MatrixWorkspace
+    :param to_mask_workspace_name:
+    :param mask_workspace_name:
+    :return:
+    """
+    # check inputs
+    if not is_matrix_workspace(to_mask_workspace_name):
+        raise RuntimeError('{0} does not exist in ADS as a MatrixWorkspace'.format(to_mask_workspace_name))
+    if not is_masking_workspace(mask_workspace_name):
+        raise RuntimeError('{0} does not exist in ADS as a MaskingWorkspace'.format(mask_workspace_name))
+
+    # retrieve masked detectors
+    mask_ws = retrieve_workspace(mask_workspace_name, raise_if_not_exist=True)
+    detid_vector = mask_ws.getMaskedDetectors()
+
+    # mask detectors
+    mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
+                             OutputWorkspace=to_mask_workspace_name,
+                             DetectorIDs=detid_vector)
+
+    # clear masked spectra
+    mantidapi.ClearMaskedSpectra(InputWorkspace=to_mask_workspace_name,
+                                 OutputWorkspace=to_mask_workspace_name)
+
+    return
+
+
+def mask_workspace_by_detector_ids(to_mask_workspace_name, detector_ids):
+    """
+
+    :param to_mask_workspace_name:
+    :param detector_ids:
+    :return:
+    """
+    # mask detectors
+    print ('[DB...BAT] Mask {0} detectors.'.format(len(detector_ids)))
+    # print ('[DB...BAT] Mask detectors:\n{0}'.format(detector_ids))
+    mantidapi.MaskInstrument(InputWorkspace=to_mask_workspace_name,
+                             OutputWorkspace=to_mask_workspace_name,
+                             DetectorIDs=detector_ids)
+
+    # clear masked spectra
+    mantidapi.ClearMaskedSpectra(InputWorkspace=to_mask_workspace_name,
+                                 OutputWorkspace=to_mask_workspace_name)
+
+    return
 
 
 def edit_compressed_chopped_workspace_geometry(ws_name):
@@ -1445,12 +1677,36 @@ def normalize_by_vanadium(data_ws_name, van_ws_name):
 
     return
 
+
+def parse_mask_roi_xml(xml_file_name):
+    """
+    parse the Mask/ROI XML file to a list of masked/ROI detectors' IDs
+    :param xml_file_name:
+    :return: is_roi, det_id_list
+    """
+
+    return is_roi, det_id_list
+
+
 def rebin(workspace_name, params, preserve):
-    # TODO/ISSUE/NOW/DOC
+    """
+    rebin the workspace
+    :param workspace_name:
+    :param params:
+    :param preserve:
+    :return:
+    """
+    if not is_a_workspace(workspace_name):
+        raise RuntimeError('{0} is not a workspace in ADS'.format(workspace_name))
+    assert isinstance(params, str) or isinstance(params, list) or isinstance(params, tuple) \
+        or isinstance(params, numpy.ndarray), 'Params {0} of type {1} is not supported.' \
+                                                 ''.format(params, type(params))
+
     mantidapi.Rebin(InputWorkspace=workspace_name, OutputWorkspace=workspace_name,
                     Params=params,
                     PreserveEvents=preserve)
     return
+
 
 def retrieve_workspace(ws_name, raise_if_not_exist=False):
     """
@@ -1479,6 +1735,14 @@ def retrieve_workspace(ws_name, raise_if_not_exist=False):
     return mantidapi.AnalysisDataService.retrieve(ws_name)
 
 
+def create_vulcan_binning_table(binning_reference_file):
+    """
+
+    :param binning_reference_file:
+    :return:
+    """
+
+
 def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file, gss_parm_file):
     """ Convert to VULCAN's IDL and save_to_buffer to GSAS file
     Purpose: Convert a reduced workspace to IDL binning workspace and export to GSAS file
@@ -1495,6 +1759,8 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
     :param gss_parm_file:
     :return:
     """
+    # requiring re-do! TODO FIXME FIXME
+
     # Check requirements
     assert isinstance(source_ws_name, str), 'source workspace name {0} must be a string but not {1}.' \
                                             ''.format(source_ws_name, type(source_ws_name))
@@ -1526,7 +1792,7 @@ def save_vulcan_gsas(source_ws_name, out_gss_file, ipts, binning_reference_file,
 
     # Save to GSAS
     mantidapi.SaveVulcanGSS(InputWorkspace=source_ws_name,
-                            BinFilename=binning_reference_file,
+                            BinningTable=binning_table_name,
                             OutputWorkspace=final_ws_name,
                             GSSFilename=out_gss_file,
                             IPTS=ipts,
@@ -1546,7 +1812,7 @@ def save_event_workspace(event_ws_name, nxs_file_name):
     :param nxs_file_name:
     :return:
     """
-    mantidapi.SaveNexus(InputWorkspace=event_ws_name, Filename=nxs_file_name)
+    mantidapi.SaveNexusProcessed(InputWorkspace=event_ws_name, Filename=nxs_file_name)
 
     return
 
@@ -1664,7 +1930,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
         # DEBUG: where does raw workspace go?
         if ADS.doesExist(raw_ws_name):
             print '[DB...BAT] Check3 Raw workspace {0} is still there.'.format(raw_ws_name)
-            mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_1.py')
+            # mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_1.py')
 
         else:
             print '[DB...BAT] Check3 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
@@ -1691,7 +1957,7 @@ def split_event_data(raw_ws_name, split_ws_name, info_table_name, target_ws_name
     # DEBUG: where does raw workspace go?
     if ADS.doesExist(raw_ws_name):
         print '[DB...BAT] Check2 Raw workspace {0} is still there.'.format(raw_ws_name)
-        mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_2.py')
+        # mantidapi.GeneratePythonScript(InputWorkspace=raw_ws_name, Filename='/tmp/raw_2.py')
     else:
         print '[DB...BAT] Check2 Raw workspace {0} disappears after FilterEvents.'.format(raw_ws_name)
 
@@ -1869,7 +2135,7 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
     return output_ws_dict
 
 
-def sum_spectra(input_workspace, output_workspace):
+def sum_spectra(input_workspace, output_workspace, workspace_index_list):
     """
     sum spectra
     :param input_workspace:
@@ -1881,8 +2147,10 @@ def sum_spectra(input_workspace, output_workspace):
     assert isinstance(output_workspace, str), 'Output workspace must be string'
 
     # call Mantid
-    mantidapi.SumSpectra(InputWorkspsace=input_workspace,
-                         OutputWorkspace=output_workspace)
+    mantidapi.SumSpectra(InputWorkspace=input_workspace,
+                         OutputWorkspace=output_workspace,
+                         ListOfWorkspaceIndices=workspace_index_list,
+                         IncludeMonitors=False, RemoveSpecialValues=True)
 
     return
 

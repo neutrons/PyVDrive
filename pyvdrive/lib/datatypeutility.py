@@ -48,7 +48,8 @@ def check_file_name(file_name, check_exist=True, check_writable=False, is_dir=Fa
     if check_exist and os.path.exists(file_name) is False:
         raise RuntimeError('{1} File {0} does not exist.'.format(file_name, note))
 
-    if check_writable and os.access(file_name, os.W_OK):
+    if check_writable and os.path.exists(file_name) and os.access(file_name, os.W_OK) is False:
+        # FIXME - It is not considered the case such that the directory is not wriable! TODO
         raise RuntimeError('File {0} is not writable.'.format(file_name))
 
     check_bool_variable('Flag for input string is a directory', is_dir)
@@ -173,13 +174,14 @@ def check_numpy_arrays(var_name, variables, dimension, check_same_shape):
     return
 
 
-def check_string_variable(var_name, variable):
+def check_string_variable(var_name, variable, allowed_values=None):
     """
     check whether an input variable is a float
     :except AssertionError:
     :except ValueError:
     :param var_name:
     :param variable:
+    :param allowed_values: a list of string such that variable must be one of them.
     :return:
     """
     assert isinstance(var_name, str), 'Variable name {0} must be a string but not a {1}'\
@@ -187,6 +189,11 @@ def check_string_variable(var_name, variable):
 
     assert isinstance(variable, str), '{0} {1} must be a string but not a {2}'\
         .format(var_name, variable, type(variable))
+
+    if allowed_values is not None:
+        check_list('String must be list', allowed_values)
+        if variable not in allowed_values:
+            raise RuntimeError('{0} must be equal to one of {1}'.format(variable, allowed_values))
 
     return
 

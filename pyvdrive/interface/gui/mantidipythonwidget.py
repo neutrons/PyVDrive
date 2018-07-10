@@ -32,10 +32,12 @@ try:
     # This is PyQt5 compatible
     from qtconsole.rich_ipython_widget import RichIPythonWidget
     from qtconsole.inprocess import QtInProcessKernelManager
+    print ('mantidipythonwidget: import PyQt5')
 except ImportError as import_err:
     # This is PyQt4 compatible
     from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
     from IPython.qt.inprocess import QtInProcessKernelManager
+    print ('mantidipythonwidget: import PyQt4')
 from mantid.api import AnalysisDataService as mtd
 
 try:

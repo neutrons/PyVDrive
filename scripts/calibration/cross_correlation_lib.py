@@ -1,5 +1,6 @@
 # script to do cross-correlation
 import os
+import math
 from mantid.api import AnalysisDataService as mtd
 from mantid.simpleapi import CrossCorrelate, GetDetectorOffsets, SaveCalFile, ConvertDiffCal, SaveDiffCal
 from mantid.simpleapi import RenameWorkspace, Plus, CreateWorkspace, Load, CreateGroupingWorkspace
@@ -10,7 +11,7 @@ import numpy
 
 def initialize_calibration(nxs_file_name, must_load=False):
     """
-    initialize the cross-correlation calibration
+    initialize the cross-correlation calibration by loading data if it is not loaded
     :return:
     """
     # set workspace name
@@ -24,6 +25,17 @@ def initialize_calibration(nxs_file_name, must_load=False):
         CreateGroupingWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace=group_ws_name)
 
     return diamond_ws_name, group_ws_name
+
+def cal_2theta(workspace, ws_index):
+    detpos = workspace.getDetector(ws_index).getPos()
+    samplepos = workspace.getInstrument().getPos()
+    sourcepos = workspace.getInstrument().getSource().getPos()
+    q_out = detpos - samplepos
+    q_in = samplepos - sourcepos
+    
+    twotheta = q_out.angle(q_in) / math.pi * 180
+    
+    return twotheta
 
 
 def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, reference_ws_index, cc_number, max_offset,
@@ -56,7 +68,9 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                 reference_ws_index = s
                 ymax = y_s[midBin]
     # END-IF
-    print ('Reference spectra=%s' % reference_ws_index)
+    det_pos = workspace.getDetector(reference_ws_index).getPos()
+    twotheta = cal_2theta(workspace, reference_ws_index)
+    print ('Reference spectra = {0}  @ {1}   2-theta = {2}'.format(reference_ws_index, det_pos, twotheta))
 
     # Cross correlate spectra using interval around peak at peakpos (d-Spacing)
     cc_ws_name = 'cc_' + ws_name + '_' + index
@@ -75,16 +89,22 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     else:
         fit_twice = True
 
+    # TODO - THIS IS AN IMPORTANT PARAMETER TO SET THE MASK
+    min_peak_height = 1.0
+    
     GetDetectorOffsets(InputWorkspace=cc_ws_name,
-                       OutputWorkspace=offset_ws_name, MaskWorkspace=mask_ws_name,
+                       OutputWorkspace=offset_ws_name,
+                       MaskWorkspace=mask_ws_name,
                        Step=abs(binning),
                        DReference=peak_position,
-                       XMin=-cc_number, XMax=cc_number,
+                       XMin=-cc_number,
+                       XMax=cc_number,
                        MaxOffset=max_offset,
                        OutputFitResult=True,
                        FitEachPeakTwice=fit_twice,
                        PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
-                       MinimumPeakHeight=1.0  # any peak is lower than 1 shall be masked!
+                       MinimumPeakHeight=min_peak_height,  # any peak is lower than 1 shall be masked!
+                       PeakFitResultTableWorkspace=cc_ws_name + '_fit'
                        )
 
     # check result and remove interval result
@@ -184,6 +204,7 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     :param flag:
     :return:
     """
+    # peak position in d-Spacing
     peakpos1 = 1.2614
     peakpos2 = 1.2614
     peakpos3 = 1.07577
@@ -198,7 +219,7 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
                                           peak_fit_time=fit_time)
 
     # East bank
-    ref_ws_index = 4847
+    ref_ws_index = 4847 - 7    # 4854 ends with an even right-shift spectrum
     peak_width = 0.04
     cc_number_east = 80
     east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
@@ -212,20 +233,72 @@ def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag
     cc_number = 20
     ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
                                       [6468, 24900 - 1],
-                                      ref_ws_index, cc_number, 1, -0.0003, 'high_angle_{0}'.format(flag),
+                                      ref_ws_index, cc_number=cc_number, max_offset=1, binning=-0.0003, index='high_angle_{0}'.format(flag),
                                       peak_fit_time=fit_time)
 
     west_offset_clone = CloneWorkspace(InputWorkspace=west_offset, OutputWorkspace=str(west_offset) + '_copy')
     west_mask_clone = CloneWorkspace(InputWorkspace=west_mask, OutputWorkspace=str(west_mask) + '_copy')
 
-    save_calibration(diamond_ws_name+'_{0}'.format(flag), [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)], group_ws_name, 'vulcan_{0}'.format(flag))
-
+    save_calibration(diamond_ws_name+'_{0}'.format(flag), [(west_offset, west_mask), (east_offset, east_mask), (ha_offset, ha_mask)],
+                     group_ws_name, 'vulcan_{0}'.format(flag))
 
     offset_dict = {'west': west_offset_clone, 'east': east_offset, 'high angle': ha_offset}
     mask_dict = {'west': west_mask_clone, 'east': east_mask, 'high angle': ha_mask}
 
     return offset_dict, mask_dict
 
+
+def cross_correlate_vulcan_data_2bank(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
+    """ main cross-correlation (for VULCAN west/east and high angle)
+    :param diamond_ws_name:
+    :param group_ws_name:
+    :param fit_time:
+    :param flag:
+    :return:
+    """
+    # peak position in d-Spacing
+    peakpos1 = 1.2614
+    # peakpos2 = 1.2614
+    peakpos3 = 1.07577
+
+    # West and east bank
+    ref_ws_index = 1613
+    peak_width = 0.04   # modified from 0.005
+    cc_number_west = 80
+    westeast_offset, westeast_mask = cc_calibrate(diamond_ws_name, peakpos1, peakpos1 - peak_width, peakpos1 + peak_width,
+                                          [0, 6468 - 1],
+                                          ref_ws_index, cc_number_west, 1, -0.0003, 'westeast_{0}'.format(flag),
+                                          peak_fit_time=fit_time)
+
+    # # East bank
+    # ref_ws_index = 4847 - 7    # 4854 ends with an even right-shift spectrum
+    # peak_width = 0.04
+    # cc_number_east = 80
+    # east_offset, east_mask = cc_calibrate(diamond_ws_name, peakpos2, peakpos2 - peak_width, peakpos2 + peak_width,
+    #                                       [3234, 6468 - 1],
+    #                                       ref_ws_index, cc_number_east, 1, -0.0003, 'east_{0}'.format(flag),
+    #                                       peak_fit_time=fit_time)
+    #                                       
+    # High angle bank
+    ref_ws_index = 15555
+    peak_width = 0.01
+    cc_number = 20
+    ha_offset, ha_mask = cc_calibrate(diamond_ws_name, peakpos3, peakpos3 - peak_width, peakpos3 + peak_width,
+                                      [6468, 24900 - 1],
+                                      ref_ws_index, cc_number=cc_number, max_offset=1, binning=-0.0003, index='high_angle_{0}'.format(flag),
+                                      peak_fit_time=fit_time)
+
+    westeast_offset_clone = CloneWorkspace(InputWorkspace=westeast_offset, OutputWorkspace=str(westeast_offset) + '_copy')
+    westeast_mask_clone = CloneWorkspace(InputWorkspace=westeast_mask, OutputWorkspace=str(westeast_mask) + '_copy')
+
+    save_calibration(diamond_ws_name+'_{0}'.format(flag), [(westeast_offset, westeast_mask), (ha_offset, ha_mask)],
+                     group_ws_name, 'vulcan_{0}'.format(flag))
+
+
+    offset_dict = {'westeast': westeast_offset_clone, 'high angle': ha_offset}
+    mask_dict = {'westeast': westeast_mask_clone, 'high angle': ha_mask}
+
+    return offset_dict, mask_dict
 
 def cross_correlate_vulcan_data_test(wkspName, group_ws_name):
     """
@@ -282,8 +355,10 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
     :param fit_param_table_name:
     :return:
     """
-    data_ws = AnalysisDataService.retrieve(data_ws_name)
-    param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
+    # data_ws = AnalysisDataService.retrieve(data_ws_name)
+    data_ws = mtd[data_ws_name]
+    # param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
+    param_table_ws = mtd[fit_param_table_name]
 
     cost_list = list()
 
@@ -332,8 +407,10 @@ def calculate_model(data_ws_name, ws_index, fit_param_table_name):
     :param fit_param_table_name:
     :return:
     """
-    data_ws = AnalysisDataService.retrieve(data_ws_name)
-    param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
+    #data_ws = AnalysisDataService.retrieve(data_ws_name)
+    data_ws = mtd[data_ws_name]
+    # param_table_ws = AnalysisDataService.retrieve(fit_param_table_name)
+    param_table_ws = mtd[fit_param_table_name]
 
     for row_index in range(param_table_ws.rowCount()):
 

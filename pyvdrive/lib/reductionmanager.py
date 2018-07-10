@@ -6,6 +6,8 @@ import reduce_VULCAN
 import mantid_helper
 import chop_utility
 import reduce_adv_chop
+import mantid_reduction
+import datatypeutility
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -419,6 +421,60 @@ class DataReductionTracker(object):
         return
 
 
+class CalibrationManager(object):
+    """
+    A container and manager for calibration files loaded, number of banks of groupings and etc
+    """
+    def __init__(self):
+        """
+        initialization
+        """
+        self._calibration_ws_name_list = list()
+        self._grouping_ws_name_list = list()
+        self._masking_ws_name_list = list()
+
+        self._reference_container = dict()   # key: [location][num_banks][..]
+        self._loaded_file_dict = dict()  # key: file name (full path).  value: tuple as path: location, number banks ...
+        self._current_calibration_loc = None    #
+
+    def is_file_load(self, cal_file_name):
+        """
+        check whether a calibration file loaded
+        :param cal_file_name:
+        :return:
+        """
+        datatypeutility.check_string_variable('Calibration file name', cal_file_name)
+
+        return cal_file_name in self._loaded_file_dict
+
+    def load_calibration_file(self, calibration_file_name, num_banks, ref_ws_name):
+        """
+
+        :return:
+        """
+        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
+
+        base_name = self.get_base_name(calibration_file_name, num_banks)
+        mantid_reduction.load_diff_cal_file(ref_ws_name, calibration_file_name, base_name)
+
+        # record
+        location = os.path.dirname(calibration_file_name)
+        raise NotImplementedError('ASAP')
+
+        return
+
+    def get_base_name(self, file_name, num_banks):
+        """
+
+        :param file_name:
+        :param num_banks:
+        :return:
+        """
+        base_name = os.path.basename(file_name).split('.')[0] + '{0}banks'.format(num_banks)
+
+        return base_name
+
+
 class ReductionManager(object):
     """ Class ReductionManager takes the control of reducing SNS/VULCAN's event data
     to diffraction pattern for Rietveld analysis.
@@ -463,6 +519,9 @@ class ReductionManager(object):
 
         # simplified reduced workspace manager.  key = run number, value = workspace name
         self._runFocusedWorkspaceDict = dict()
+
+        # calibration file and workspaces management
+        self._calibrationFileManager = CalibrationManager()   # key = calibration file name
 
         return
 
@@ -791,9 +850,109 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def reduce_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
-                   vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
-                   num_banks=3):
+    def check_load_calibration_mask_grouping(self):
+
+        # check calibration
+        if calibration_file is None and self._default_calibration_ws_name is None:
+            # no calibration
+            self.load_default_calibration_file(num_banks)
+        elif calibration_file is not None:
+            self.load_calibration_file(calibration_file, num_banks)
+        elif user_grouping_file_name is not None:
+            self.load_user_grouping_file(user_grouping_file_name)
+
+        return calibration_ws_name, mask_ws_name, grouping_ws_name
+
+    # TODO
+    def reduce_event_nexus(self, event_nexus_name, target_unit,  binning_parameters, convert_to_matrix):
+        """
+
+        :param event_nexus_name:
+        :param target_unit:
+        :param binning_parameters:
+        :param convert_to_matrix:
+        :return:
+        """
+        # Load data
+        mantid_helper.load_nexus(event_nexus_name, blabla)  # TODO
+
+        # TODO use 'run_start' or 'start_time' to determine the calibration file!
+
+        self.check_load_calibration_mask_grouping(blabla)
+
+        reduce_workspace(event_ws_name, event_ws_name, keep_raw_ws=False)
+
+        return
+
+    # TODO FIXME - From here!  Reduction 2.0!
+    def reduce_workspace(self, event_ws_name, output_ws_name, binning_params, target_unit,
+                         calibration_file_name, user_grouping_file_name, keep_raw_ws,
+                         convert_to_matrix):
+        """ focus workspace
+
+        :param event_ws_name:
+        :param output_ws_name:
+        :param keep_raw_ws:
+        :param calibration_file_name: standard calibration file name
+        :return:
+        """
+        def check_binning_parameter_range(x_min, x_max, target_unit):
+            """
+            check whether range of X values of binning makes sense with target unit
+            :param x_min:
+            :param x_max:
+            :param target_unit:
+            :return:
+            """
+            if target_unit == 'dSpacing':
+                if not 0 < x_min < x_max < 20:
+                    raise RuntimeError('For dSpacing, X range ({0}, {1}) does not make sense'
+                                       ''.format(x_min, x_max))
+            elif target_unit == 'TOF':
+                if not 1000 < x_min < x_max < 1000000:
+                    raise RuntimeError('For TOF, X range ({0}, {1}) does not make sense'
+                                       ''.format(x_min, x_max))
+            else:
+                raise RuntimeError('Impossible case')
+
+            return
+
+        # check inputs
+        datatypeutility.check_string_variable('Target unit', target_unit, ['TOF', 'dSpacing'])
+
+        if binning_params is None:
+            # do nothing
+            pass
+        else:
+            datatypeutility.check_tuple('Binning parameters', binning_params)
+            if len(binning_params) == 1:
+                # it is fine
+                pass
+            elif len(binning_params) == 3:
+                # check against the unit
+                check_binning_parameter_range(binning_params[0], binning_params[1], target_unit)
+            else:
+                # unsupported number of binning parameters
+                raise RuntimeError('Binning parameters {0} with {1} items are not supported.'
+                                   ''.format(binning_params, len(binning_params)))
+        # END-IF-ELSE
+
+        # check and load calibration workspace
+        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
+        if calibration_file_name not in self._calibration_workspace_container:
+            raise NotImplementedError('ASAP')
+
+        # align and focus
+        mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
+                                                  calibration_file_name, user_grouping_file_name,
+                                                  keep_raw_ws, reduction_params_dict=reduction_param_dict,
+                                                  convert_to_matrix=False)
+
+        return
+
+    def process_vulcan_ipts_run(self, ipts_number, run_number, event_file, output_directory, merge_banks, vanadium=False,
+                                vanadium_tuple=None, gsas=True, standard_sample_tuple=None, binning_parameters=None,
+                                num_banks=3):
         """
         Reduce run with selected options
         Purpose:
@@ -866,6 +1025,7 @@ class ReductionManager(object):
         # reduce
         reduction_setup.is_auto_reduction_service = False
         reducer = reduce_VULCAN.ReduceVulcanData(reduction_setup)
+        # TODO/TODO/NOW/NOW - This shall be re-writen???
         reduce_good, message = reducer.execute_vulcan_reduction(output_logs=False)
 
         # record reduction tracker

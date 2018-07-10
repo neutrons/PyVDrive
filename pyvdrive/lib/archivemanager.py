@@ -4,7 +4,7 @@
 import os
 import time
 import pickle
-
+import datatypeutility
 import mantid_helper
 import vdrivehelper
 import vulcan_util
@@ -782,7 +782,7 @@ class DataArchiveManager(object):
 
 
 ################################################################################
-# External Methods
+# Static Methods
 ################################################################################
 def check_read_access(file_name):
     """ Check whether it is possible to access a file
@@ -834,3 +834,23 @@ def save_to_xml(save_dict, xml_file_name):
     output.close()
 
     return
+
+
+def sns_archive_nexus_path(ipts_number, run_number):
+    """
+    get the SNS archived nexus file path for VULCAN
+    :param ipts_number:
+    :param run_number:
+    :return: name
+    """
+    datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+    datatypeutility.check_int_variable('Run number', run_number, (1, None))
+
+    ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5' \
+                     ''.format(ipts_number, run_number)
+
+    # TODO/FIXME : need to add pre-nED NeXus case
+    if os.path.exists(ned_nexus_name) is False:
+        raise RuntimeError('{0} not exist'.format(ned_nexus_name))
+
+    return ned_nexus_name

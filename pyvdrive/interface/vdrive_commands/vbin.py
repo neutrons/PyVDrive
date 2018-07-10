@@ -87,7 +87,7 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
-                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT']
+                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -98,7 +98,9 @@ class VBin(procss_vcommand.VDriveCommand):
         'OneBank': 'Add 2 bank data together (=1).',
         'Mytofbmin': 'User defined TOF min in binning parameter',
         'Tag': '"Si/V" for instrument calibration.',
-        'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin'
+        'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
+        'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS',
+        'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2'
     }
 
     def __init__(self, controller, command_args):
@@ -169,14 +171,27 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             merge_to_one_bank = False
 
+        # banks/grouping
         if 'BANKS' in self._commandArgsDict:
             bank_group = int(self._commandArgsDict['BANKS'])
             if bank_group not in [3, 7, 27]:
                 raise RuntimeError('BANKS can only be 3 (east, west, high-angle), 7 (6+1)), or 27 (9+9+9).'
                                    'So {0} is not allowed.'.format(bank_group))
+        elif 'GROUP' in self._commandArgsDict:
+            # user specified calibration file for group
+            user_group_calib_name = self._commandArgsDict['GROUP']
+            if user_group_calib_name == '':
+                return False, 'User specified group/calibration file is empty.'
+            bank_group = user_group_calib_name
         else:
             # default
             bank_group = 3
+
+        # reduction algorithm version
+        if 'VERSION' in self._commandArgsDict:
+            reduction_alg_ver = int(self._commandArgsDict['VERSION'])
+        else:
+            reduction_alg_ver = 1
 
         # scan the runs with data archive manager and add the runs to project
         if use_chop_data:
@@ -224,7 +239,8 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
                                                                merge_runs=False,
-                                                               num_banks=bank_group)
+                                                               num_banks=bank_group,
+                                                               version=reduction_alg_ver)
 
         # END-IF-ELSE
 
@@ -281,7 +297,10 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
-        help_str += '> VBIN,RUNS=152782, RUNE=153144, BANKS=7'
+        help_str += '> VBIN,RUNS=152782, RUNE=153144, BANKS=7\n'
+        help_str += 'New (in test):\n'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,VERSION=2\n'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5'
 
         return help_str
 

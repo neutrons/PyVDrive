@@ -2,7 +2,6 @@
 # It is split from ReduceVulcanData in reduce_Vulcan.py
 import os
 import math
-import pandas as pd
 
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
@@ -34,10 +33,12 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def chop_data(self, split_ws_name=None, info_ws_name=None):
+    def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction = False):
         """
         chop data and save to GSAS file
         :param split_ws_name:
+        :param info_ws_name:
+        :param TOF correction
         :return:
         """
         # get data file names, splitters workspace and output directory from reduction setup object
@@ -48,8 +49,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
             raise RuntimeError('Splitters workspace name must be given with information workspace name.')
         useless, output_directory = self._reductionSetup.get_chopped_directory(True, nexus_only=True)
 
-        # FIXME/TODO/FUTURE/ISSUE - do_tof_correction : should get from somewhere
-        do_tof_correction = False
+        if do_tof_correction:
+            raise RuntimeError('Not implemented for TOF correction yet.')
 
         # get number of target workspace
         number_target_ws, is_epoch_time = chop_utility.get_number_chopped_ws(split_ws_name)
@@ -733,6 +734,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
+        import pandas as pd
         # check inputs
         assert isinstance(ws_name_list, list) and len(ws_name_list) > 0,\
             'Workspace name list {0} must be a non-empty list, but not a {1}.'.format(ws_name_list, type(ws_name_list))

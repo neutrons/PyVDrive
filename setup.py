@@ -29,8 +29,10 @@ if sys.argv[-1] == 'pyuic':
             import PyQt5
             from qtconsole.inprocess import QtInProcessKernelManager
             ver = 5
+            print ('Qt5 is used!')
         except ImportError:
             ver = 4
+            print ('Qt4 is used!')
 
         command = "pyuic%d %s -o %s" % (ver, inname, outname)
         os.system(command)
@@ -104,11 +106,14 @@ if __name__ == "__main__":
     """
     main setup
     """
-    scripts = ['scripts/Lava.py']
+    scripts = ['scripts/Lava.py', 'scripts/reduction/integrate_single_crystal_peaks.py',
+               'scripts/single_crystal/chop_single_crystal_run.py',
+               'scripts/single_crystal/focus_single_crystal_run.py']
     test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py",
                     'tests/workflow/vbin_test.py',
                     'tests/unit/vulcan_slice_reduce_test.py',
-                    'tests/workflow/reduction_view_test.py']
+                    'tests/workflow/reduction_view_test.py',
+                    'tests/workflow/vbin_test.py']
     scripts.extend(test_scripts)
 
     setup(

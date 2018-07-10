@@ -28,6 +28,10 @@ class LiveViewSetupDialog(QDialog):
         self.ui = SetupDialogUi.Ui_Dialog()
         self.ui.setupUi(self)
 
+        # initialize some widget
+        self.ui.radioButton_plotAcc.setChecked(True)
+        self.ui.radioButton_plotRun.setChecked(False)
+
         # define the event handlers
         self.ui.pushButton_setRefreshRate.clicked.connect(self.do_set_refresh_rate)
         self.ui.pushButton_setLiveUpdate.clicked.connect(self.do_set_acc_plot)
@@ -37,26 +41,10 @@ class LiveViewSetupDialog(QDialog):
         self.ui.pushButton_loadGSS.clicked.connect(self.do_load_van_gss)
 
         self.ui.radioButton_plotRun.toggled.connect(self.toggle_options)
+        # self.ui.radioButton_plotAcc.toggled.connect(self.toggle_options)
 
-        # self.connect(self.ui.pushButton_setRefreshRate, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_refresh_rate)
-        # self.connect(self.ui.pushButton_setLiveUpdate, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_acc_plot)
-        # self.connect(self.ui.pushButton_setupMix2D, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_run_view)
-        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-        #              self.do_quit)
-        # self.connect(self.ui.pushButton_browseGSS, QtCore.SIGNAL('clicked()'),
-        #              self.do_browse_van_gss)
-        # self.connect(self.ui.pushButton_loadGSS, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_van_gss)
-        #
-        # self.connect(self.ui.radioButton_plotRun, QtCore.SIGNAL('toggled(bool)'),
-        #              self.toggle_options)
-
-        # initialize some widget
-        self.ui.radioButton_plotAcc.setChecked(True)
-        self.ui.radioButton_plotRun.setChecked(False)
+        # set up every in last step
+        self.toggle_options()
 
         return
 
@@ -155,10 +143,10 @@ class LiveViewSetupDialog(QDialog):
 
         # group 1
         self.ui.pushButton_setLiveUpdate.setEnabled(enable_group1)
-        self.ui.lineEdit_maxRunTime.setEnabled(enable_group1)
         self.ui.lineEdit_collectionPeriod.setEnabled(enable_group1)
 
         # group 2
+        self.ui.lineEdit_maxRunTime.setEnabled(enable_group2)
         self.ui.pushButton_setupMix2D.setEnabled(enable_group2)
         self.ui.lineEdit_run0.setEnabled(enable_group2)
 
