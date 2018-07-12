@@ -1370,8 +1370,9 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
-        # TODO - 20180710 - binning_parameters is default to be None.  If None, a real default value
-        # shall be added
+        # binning_parameters is default to be None.  If None, a real default value - TEST - 20180710
+        if binning_parameters is None:
+            binning_parameters = [-0.001]
 
         # Reduce data set
         if auto_reduce:
@@ -1390,6 +1391,7 @@ class VDriveAPI(object):
                                                                     output_directory=output_directory,
                                                                     d_spacing=True,
                                                                     binning_parameters=binning_parameters,
+                                                                    convert_to_matrix=True,
                                                                     number_banks=num_banks)
 
         else:

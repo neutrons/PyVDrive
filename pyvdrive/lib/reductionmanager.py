@@ -525,18 +525,27 @@ class ReductionManager(object):
 
         return
 
-    def add_reduced_workspace(self, run_number, out_ws_name):
+    def add_reduced_workspace(self, run_number, out_ws_name, binning_parameters=None):
         """
         add a reduced workspace
         :param run_number:
         :param out_ws_name:
+        :param binning_parameters:
         :return:
         """
-        # check input ... blabla
-        assert isinstance(run_number, int), 'blabla 213dd'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_string_variable('Reduced workspace name', out_ws_name)
 
         # add
-        self._runFocusedWorkspaceDict[run_number] = out_ws_name
+        if run_number not in self._runFocusedWorkspaceDict:
+            self._runFocusedWorkspaceDict = dict()
+
+        if binning_parameters is not None:
+            binning_key = str(binning_parameters)
+        else:
+            binning_key = None
+
+        self._runFocusedWorkspaceDict[run_number][binning_key] = out_ws_name
 
         return
 
@@ -735,7 +744,7 @@ class ReductionManager(object):
 
         return return_list
 
-    def get_reduced_workspace(self, run_number, is_vdrive_bin=True, unit='TOF'):
+    def get_reduced_workspace(self, run_number, binning_params=None, is_vdrive_bin=True, unit='TOF'):
         """ Get the reduced matrix workspace
         Requirements:
             1. Specified run is correctly reduced;
@@ -746,17 +755,21 @@ class ReductionManager(object):
         :exception: Assertion Error if run number does not exist in self._reductionTrackDict
         :exception: RuntimeError if unit is not supported
         :param run_number:
+        :param binning_params: binning parameters string
         :param is_vdrive_bin:
         :param unit:
         :return: Workspace (success) or 2-tuple (False and error message)
         """
         # Check requirements
-        assert isinstance(run_number, int), 'Run number must be integer but not %s.' % str(type(run_number))
+        import datatypeutility
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        if binning_params is not None:
+            datatypeutility.check_string_variable('Binning parameter (string)', binning_params)
 
         # where is this run?
         if run_number in self._runFocusedWorkspaceDict:
             # simple reduce
-            return_ws_name = self._runFocusedWorkspaceDict[run_number]
+            return_ws_name = self._runFocusedWorkspaceDict[run_number][binning_params]
         else:
             # full reduction
             # get tracker
@@ -805,7 +818,7 @@ class ReductionManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int), 'blabla'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
         has = False
         if run_number in self._runFocusedWorkspaceDict:

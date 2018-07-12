@@ -14,9 +14,10 @@ from LiveDataChildWindows import LiveViewSetupDialog
 import gui.ui_LiveDataView as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
-import pyvdrive.lib.mantid_helper as helper
+from pyvdrive.lib import mantid_helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-import pyvdrive.lib.vdrivehelper as vdrivehelper
+from pyvdrive.lib import vdrivehelper
+from pyvdrive.lib import datatypeutility
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -394,12 +395,14 @@ class VulcanLiveDataView(QMainWindow):
         start to fit single peak of certain bank
         :param bank_id:
         :param graphics_view:
-        :param run_start:
+        :param x_max_widget:
+        :param x_min_widget
         :return:
         """
         # check inputs
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id, type(bank_id))
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+
+        # check input special instances
         assert graphics_view.__class__.__name__.count('SingleBankView') > 0,\
             'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
             ''.format(graphics_view, type(graphics_view))
@@ -417,12 +420,13 @@ class VulcanLiveDataView(QMainWindow):
             self.write_log('error', err_msg)
             return
 
-        # current or previous?
+        # TODO - ASAP : need a use case to continue
+        # FIXME - the data obtained is current or previous?
         vec_x, vec_y = graphics_view.get_data(x_min, x_max)
-        # TODO ASAP
         coeff, model_y = optimize_utilities.fit_gaussian(vec_x, vec_y)
 
-        # blabla
+        # plot the fitted data
+        graphics_view.plot_fitted_peak(vec_x, model_y)
 
         return
 
@@ -463,7 +467,7 @@ class VulcanLiveDataView(QMainWindow):
 
         # get axis
         curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
-        logs = helper.get_sample_log_names(curr_ws_name, smart=True)
+        logs = mantid_helper.get_sample_log_names(curr_ws_name, smart=True)
 
         self._gpPlotSetupDialog.set_axis_options(logs, reset=True)
         self._gpPlotSetupDialog.show()
@@ -690,21 +694,21 @@ class VulcanLiveDataView(QMainWindow):
             # get workspace name
             try:
                 ws_name_i = self._myAccumulationWorkspaceList[acc_list_index]
-            except IndexError as index_err:
-                raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
-                                   ''.format(acc_list_index, len(self._myAccumulationWorkspaceList),
-                                             index_err))
-            finally:
                 # check
                 if ws_name_i is None:
                     # no more workspace (range is too big)
                     break
-                elif helper.workspace_does_exist(ws_name_i) is False:
+                elif mantid_helper.workspace_does_exist(ws_name_i) is False:
                     # this is weird!  shouldn't be removed
                     break
                 else:
                     ws_name_list.append(ws_name_i)
                     ws_index_list.append(acc_list_index)
+            except IndexError as index_err:
+                raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
+                                   ''.format(acc_list_index, len(self._myAccumulationWorkspaceList),
+                                             index_err))
+            # END-TRY-EXCEPT
         # END-FOR
 
         # reverse the order

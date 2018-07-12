@@ -1351,13 +1351,13 @@ class ProjectManager(object):
         return
 
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix=False, number_banks=3):
-        """
-        reduce runs in a simplied way! (it can be thought be the version 2.0!)
+                              convert_to_matrix, number_banks):
+        """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         :param run_number_list:
         :param output_directory:
         :param d_spacing:
         :param binning_parameters:
+        :param convert_to_matrix:
         :param number_banks:
         :return:
         """
@@ -1367,11 +1367,14 @@ class ProjectManager(object):
         datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
 
         # check binning parameters
+        if binning_parameters is None:
+            raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
         if d_spacing:
             if len(binning_parameters) == 1:
                 bin_size = binning_parameters[0]
             else:
                 bin_size = binning_parameters[1]
+            # force the binning range to be from 0.3 to 5.0
             binning_parameters = [0.3, '{0}'.format(bin_size), 5.0]
         # END-IF
 
