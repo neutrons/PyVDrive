@@ -1393,7 +1393,7 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(raw_file_name,
+                out_ws_name = self._reductionManager.reduce_event_nexus(run_number, raw_file_name,
                                                                         unit, binning_parameters,
                                                                         convert_to_matrix)
 

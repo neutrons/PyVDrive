@@ -655,9 +655,9 @@ class ReductionManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int), 'Input run number must be an integer but not {0}.'.format(type(run_number))
-        assert run_number > 0, 'Given run number {0} must be a positive number.'.format(run_number)
-
+        # check
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        # form the reduction-manager-standard name
         event_ws_name = '%s_%d_events' % (self._myInstrument, run_number)
 
         return event_ws_name
@@ -863,22 +863,51 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def check_load_calibration_mask_grouping(self):
+    def check_calibration_mask_grouping(self, run_start_date, bank_numbers):
+        """
+        check whether the calibration file is loaded. If not then load the files
+        :param run_start_date: string in YYYY-MM-DD format
+        :param bank_numbers:
+        :return: status, calibration workspace name, mask workspace name
+        """
+        # TODO - 20180812 - Make this part work! Now it is a temporary solution - FIXME
 
-        # check calibration
-        if calibration_file is None and self._default_calibration_ws_name is None:
-            # no calibration
-            self.load_default_calibration_file(num_banks)
-        elif calibration_file is not None:
-            self.load_calibration_file(calibration_file, num_banks)
-        elif user_grouping_file_name is not None:
-            self.load_user_grouping_file(user_grouping_file_name)
+        # 1. use run_start_date (str) to search in the calibration date time string (TODO)
+
+        # 2. locate the calibration file key (TODO)
+
+        # 3. check whether the workspaces are loaded or not (workspace =? None) (TODO)
+
+        # # check calibration
+        # if calibration_file is None and self._default_calibration_ws_name is None:
+        #     # no calibration
+        #     self.load_default_calibration_file(num_banks)
+        # elif calibration_file is not None:
+        #     self.load_calibration_file(calibration_file, num_banks)
+        # elif user_grouping_file_name is not None:
+        #     self.load_user_grouping_file(user_grouping_file_name)
+        #
+        # return calibration_ws_name, mask_ws_name, grouping_ws_name
+
+        return False, None, None
+
+    def load_calibration_file(self, run_start_date, ref_ws_name, bank_numbers):
+        """
+        load a calibration file
+        :param run_start_date:
+        :param ref_ws_name:
+        :param bank_numbers:
+        :return:
+        """
+        # TODO - 20180812 - Implement!
 
         return calibration_ws_name, mask_ws_name, grouping_ws_name
 
-    # TODO
-    def reduce_event_nexus(self, event_nexus_name, target_unit,  binning_parameters, convert_to_matrix):
-        """
+
+    # TODO - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
+    def reduce_event_nexus(self, run_number, event_nexus_name, target_unit,  binning_parameters, convert_to_matrix,
+                           num_banks):
+        """ reduce event workspace
 
         :param event_nexus_name:
         :param target_unit:
@@ -887,13 +916,27 @@ class ReductionManager(object):
         :return:
         """
         # Load data
-        mantid_helper.load_nexus(event_nexus_name, blabla)  # TODO
+        event_ws_name = self.get_event_workspace_name(run_number=run_number)
+        mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
 
-        # TODO use 'run_start' or 'start_time' to determine the calibration file!
+        # get start time: it is not convenient to get date/year/month from datetime64.
+        # use the simple but fragile method first
+        run_start_time = mantid_helper.get_run_start(event_ws_name, time_unit=None)
+        if run_start_time.__class__.__name__ == 'mantid.kernel._kernel.DateAndTime':
+            run_start_date = str(run_start_time).split('T')[0]
+        else:
+            raise NotImplementedError('Run start time from Mantid TSP is not DateAndTime anymore, '
+                                      'but is {0}'.format(run_start_time.__class__.__name__))
 
-        self.check_load_calibration_mask_grouping(blabla)
+        # TODO - 20180712 - Continue to implement!
+        # use 'run_start' or 'start_time' to determine the calibration file!
+        status, calib_ws_name, mask_ws_name, group_ws_name = self.check_calibration_mask_grouping(run_start_date,
+                                                                                                  num_banks)
+        if not status:
+            calib_ws_name, mask_ws_name, group_ws_name = self.load_calibration_file(run_start_date, event_nexus_name,
+                                                                                    num_banks)
 
-        reduce_workspace(event_ws_name, event_ws_name, keep_raw_ws=False)
+        self.reduce_workspace(event_ws_name, event_ws_name, keep_raw_ws=False)
 
         return
 

@@ -605,7 +605,6 @@ def get_run_start(workspace, time_unit):
     :return:
     """
     # check the situation if workspace is a string
-    assert isinstance(time_unit, str)
     if isinstance(workspace, str):
         if ADS.doesExist(workspace):
             workspace = ADS.retrieve(workspace)
@@ -613,6 +612,7 @@ def get_run_start(workspace, time_unit):
             raise RuntimeError('Workspace %s does not exist in Mantid AnalysisDataService.' % workspace)
     # END-IF
 
+    # get run start from proton charge
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
     except AttributeError as e:
@@ -621,16 +621,26 @@ def get_run_start(workspace, time_unit):
         raise RuntimeError('Unable to get run start due to %s.' % str(e))
 
     # Get first value in proton charge's time as run start
-    run_start_ns = pcharge_log.firstTime().totalNanoseconds()
+    pcharge_time0 = pcharge_log.firstTime()
 
-    # Convert unit if
-    run_start = run_start_ns
-    if time_unit.lower().startswith('nanosecond'):
-        pass
-    elif time_unit.lower().startswith('second'):
-        run_start *= 1.E-9
+    if time_unit is None:
+        # no unit defined. original run start time
+        run_start = pcharge_time0
     else:
-        raise RuntimeError('Unit %s is not supported by get_run_start().' % time_unit)
+        # convert to seconds or nanoseconds
+        run_start_ns = pcharge_time0.totalNanoseconds()
+
+        # check time unit
+        datatypeutility.check_string_variable('Time Unit', time_unit, allowed_values=['nanosecond', 'second'])
+
+        # Convert unit if
+        if time_unit.lower().startswith('nanosecond'):
+            run_start = run_start_ns
+        elif time_unit.lower().startswith('second'):
+            run_start = run_start_ns * 1.E-9
+        else:
+            raise RuntimeError('Impossible to reach')
+    # END-IF-ELSE
 
     return run_start
 

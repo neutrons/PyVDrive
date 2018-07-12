@@ -522,6 +522,7 @@ class SliceFocusVulcan(object):
 
         # Now start to use multi-threading
         num_outputs = len(output_names)
+        # TODO - 20180712 - self._num_threads are not defined - FIXME
         number_ws_per_thread = int(num_outputs / self._num_threads)
         extra = num_outputs % self._num_threads
 
