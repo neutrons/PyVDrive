@@ -361,6 +361,20 @@ class Live2DView(MplGraphicsView2D):
 
         return
 
+    # TODO - 20180718 - Handle the home/zoom events in order to keep zoom-state with replotting!
+    # TODO  .....       Solution is to override the event handling methods
+
+    def evt_toolbar_home(self):
+        """
+
+        @return:
+        """
+        super(Live2DView, self).evt_toolbar_home()
+
+        print ('[HOME]..... Live Data View')
+
+        return
+
     def plot_contour(self, data_set_dict):
         """ Plot 2D data as a contour plot
         :param data_set_dict: dictionary such that
@@ -395,6 +409,8 @@ class Live2DView(MplGraphicsView2D):
         print '[DB........BAT........BAT] vec_y = {0}; size of matrix = {1}.'.format(vec_y, matrix_y.shape)
 
         self.canvas().add_contour_plot(vec_x, vec_y, matrix_y)
+
+        self.setXYLimit(xmin=1.2, xmax=2.5)
 
         return
 

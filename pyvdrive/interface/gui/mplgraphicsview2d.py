@@ -72,6 +72,7 @@ class MplGraphicsView2D(QWidget):
 
         # state of operation
         self._isZoomed = False
+        self._zoomInXRange = None
         # X and Y limit with home button
         self._homeXYLimit = None
 
@@ -185,6 +186,8 @@ class MplGraphicsView2D(QWidget):
         # turn off zoom mode
         self._isZoomed = False
 
+        print ('[HOME]..... BASE')
+
         return
 
     def evt_view_updated(self):
@@ -204,13 +207,23 @@ class MplGraphicsView2D(QWidget):
 
         return
 
+    def evt_press_zoom(self):
+        """
+
+        :return:
+        """
+        # TODO - 20180718 - Set the signal correct! and shall work around with home!
+        print ('Now I know that it is in zoom state now')
+
+        return
+
     def evt_zoom_released(self):
         """ event for zoom is release
         @return:
         """
         # record home XY limit if it is never zoomed
         if self._isZoomed is False:
-            self._homeXYLimit = list(self.getXLimit())
+            self._homeXYLimit = list(self.current_x_range())
             self._homeXYLimit.extend(list(self.getYLimit()))
         # END-IF
 
@@ -224,7 +237,7 @@ class MplGraphicsView2D(QWidget):
         """
         return self._myCanvas.getLastPlotIndexKey()
 
-    def getXLimit(self):
+    def current_x_range(self):
         """ Get limit of Y-axis
         :return: 2-tuple as xmin, xmax
         """
@@ -984,9 +997,10 @@ class MyNavigationToolbar(NavigationToolbar2):
     # This defines a signal called 'home_button_pressed' that takes 1 boolean
     # argument for being in zoomed state or not
     home_button_pressed = pyqtSignal()
-
     # This defines a signal called 'canvas_zoom_released'
     canvas_zoom_released = pyqtSignal()
+    # zoom is pressed
+    zoom_pressed = pyqtSignal()
 
     def __init__(self, parent, canvas):
         """ Initialization
@@ -1002,6 +1016,7 @@ class MyNavigationToolbar(NavigationToolbar2):
 
         # connect the events to parent
         self.home_button_pressed.connect(self._myParent.evt_toolbar_home)
+        self.zoom_pressed.connect(self._myParent.evt_press_zoom)
         self.canvas_zoom_released.connect(self._myParent.evt_zoom_released)
 
         return
@@ -1035,15 +1050,9 @@ class MyNavigationToolbar(NavigationToolbar2):
         return
 
     def home(self, *args):
-        """
-
-        Parameters
-        ----------
-        args
-
-        Returns
-        -------
-
+        """ handle the event that is emitted as the home-button is pressed
+        :param args:
+        :return:
         """
         # call super's home() method
         NavigationToolbar2.home(self, args)
@@ -1068,7 +1077,16 @@ class MyNavigationToolbar(NavigationToolbar2):
             # into pan mode
             self._myMode = MyNavigationToolbar.NAVIGATION_MODE_PAN
 
-        print 'PANNED'
+        return
+
+    def press_zoom(self, event):
+        """ event emit when mouse is pressed while the zoom button is pushed to on-mode
+        :param event:
+        :return:
+        """
+        super(MyNavigationToolbar, self).press_pan(event)
+
+        self.zoom_pressed.emit()
 
         return
 
@@ -1090,19 +1108,21 @@ class MyNavigationToolbar(NavigationToolbar2):
         return
 
     def release_zoom(self, event):
+        """ override zoom released method
+        :param event:
+        :return:
         """
-        override zoom released method
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-
-        """
-        self.canvas_zoom_released.emit()
-
         NavigationToolbar2.release_zoom(self, event)
+
+        # TODO - 20180718 : crashed if there is no image ever plotted
+        """
+        NavigationToolbar2.release_zoom(self, event)
+        File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 3053, in release_zoom
+        lastx, lasty, a, ind, view = cur_xypress
+        ValueError: need more than 2 values to unpack
+        """
+
+        self.canvas_zoom_released.emit()
 
         return
 

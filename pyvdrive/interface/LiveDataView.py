@@ -795,9 +795,9 @@ class VulcanLiveDataView(QMainWindow):
                 prev_acc_index = acc_index
 
             # get data from memory
-            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name_i,
-                                                                         bank_id=bank_id, target_unit='dSpacing',
-                                                                         point_data=True, start_bank_id=1)
+            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name=ws_name_i,
+                                                                                bank_id=bank_id, target_unit='dSpacing',
+                                                                                point_data=True, start_bank_id=1)
             acc_data_dict[acc_index] = data_set_dict[bank_id]
         # END-FOR
 
@@ -826,9 +826,9 @@ class VulcanLiveDataView(QMainWindow):
         # get data
         data_set = dict()
         for index, ws_name in enumerate(ws_name_list):
-            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name,
-                                                                         bank_id=bank_id, target_unit='dSpacing',
-                                                                         point_data=True, start_bank_id=1)
+            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
+                                                                                bank_id=bank_id, target_unit='dSpacing',
+                                                                                point_data=True, start_bank_id=1)
             data_set[ws_index_list[index]] = data_set_dict[bank_id]
         # END-FOR
 
@@ -1266,16 +1266,17 @@ class VulcanLiveDataView(QMainWindow):
                 continue
 
             # convert unit
-            if helper.get_workspace_unit(ws_name_i) != 'dSpacing':
-                helper.mtd_convert_units(ws_name_i, 'dSpacing')
+            if mantid_helper.get_workspace_unit(ws_name_i) != 'dSpacing':
+                mantid_helper.mtd_convert_units(ws_name_i, 'dSpacing')
             else:
                 self.write_log('information', 'Input workspace {0} has unit dSpacing.'.format(ws_name_i))
+            # END-IF-ELSE
 
             # rebin
-            helper.rebin(ws_name_i, '0.3,-0.001,3.5', preserve=False)
+            mantid_helper.rebin(ws_name_i, '0.3,-0.001,3.5', preserve=False)
 
             # reference to workspace
-            workspace_i = helper.retrieve_workspace(ws_name_i)
+            workspace_i = mantid_helper.retrieve_workspace(ws_name_i)
 
             ws_x_info = ''
             for iws in range(3):
@@ -1304,7 +1305,7 @@ class VulcanLiveDataView(QMainWindow):
                 self.ui.lineEdit_logStarTime.setText(str(east_time))
 
             # skip non-matrix workspace or workspace sounds not right
-            if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
+            if not (mantid_helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
                 log_message = 'Workspace {0} of type {1} is not expected.\n'.format(workspace_i, type(workspace_i))
                 self.write_log('error', log_message)
@@ -1466,7 +1467,7 @@ class VulcanLiveDataView(QMainWindow):
 
             # clone workspace
             accumulate_name = 'Accumulated_{0:05d}'.format(self._myAccumulationListIndex)
-            helper.clone_workspace(ws_name, accumulate_name)
+            mantid_helper.clone_workspace(ws_name, accumulate_name)
             self._inAccumulationWorkspaceName = accumulate_name
 
             # add to list
@@ -1490,7 +1491,7 @@ class VulcanLiveDataView(QMainWindow):
 
         else:
             # add to existing accumulation workspace
-            ws_in_acc = helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
+            ws_in_acc = mantid_helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
 
             # more check on histogram number and spectrum size
             if ws_in_acc.getNumberHistograms() != workspace_i.getNumberHistograms():
@@ -1611,7 +1612,7 @@ class VulcanLiveDataView(QMainWindow):
 
         message = ''
         for ws_name in new_ws_name_list:
-            ws_i = helper.retrieve_workspace(ws_name)
+            ws_i = mantid_helper.retrieve_workspace(ws_name)
             if ws_i is None:
                 self.write_log('error', 'In update-timer: unable to retrieve workspace {0}'.format(ws_name))
             elif ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
