@@ -12,6 +12,187 @@ import datatypeutility
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
 
+class CalibrationManager(object):
+    """
+    A container and manager for calibration files loaded, number of banks of groupings and etc
+    """
+    def __init__(self):
+        """
+        initialization
+        """
+        self._calibration_dict = None
+        self._vdrive_bin_ref_dict = None
+
+        self._calibration_ws_name_list = list()
+        self._grouping_ws_name_list = list()
+        self._masking_ws_name_list = list()
+
+        self._reference_container = dict()   # key: [location][num_banks][..]
+        self._loaded_file_dict = dict()  # key: file name (full path).  value: tuple as path: location, number banks ...
+        self._current_calibration_loc = None    #
+
+        # set up
+        self._init_vulcan_calibration_files()
+        self._init_vdrive_binning_refs()
+
+
+        return
+
+    def _init_vulcan_calibration_files(self):
+        """
+        generate a dictionary for vulcan's hard coded calibration files
+        :return:
+        """
+        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+
+        # hard coded list of available calibration file names
+        pre_ned_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'}
+
+        ned_2017_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
+
+        ned_2018_setup = {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
+                          7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                          27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
+
+        self._calibration_dict = dict()
+        self._calibration_dict['2010-01-01'] = pre_ned_setup
+        self._calibration_dict['2017-06-01'] = ned_2017_setup
+        self._calibration_dict['2018-05-31'] = ned_2018_setup
+
+        return
+
+    def _init_vdrive_binning_refs(self):
+        """
+
+        :return:
+        """
+        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+
+        # hard coded list of available calibration file names
+        pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
+
+        ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
+
+        ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
+
+        self._vdrive_bin_ref_dict = dict()
+        self._vdrive_bin_ref_dict['2010-01-01'] = pre_ned_setup
+        self._vdrive_bin_ref_dict['2017-06-01'] = ned_2017_setup
+        self._vdrive_bin_ref_dict['2018-05-31'] = ned_2018_setup
+
+        return
+
+    def _init_focused_instruments(self):
+        """
+        set up the dictionary for the instrument geometry after focusing
+        each detector (virtual) will have 3 value as L2, polar (2theta) and azimuthal (phi)
+        and the angles are in unit as degree
+        :return:
+        """
+        self._focus_instrument_dict = dict()
+        self._focus_instrument_dict['L1'] = 43.753999999999998
+
+        east_bank = [2.0, 90., 0.]
+        west_bank = [2.0, -90., 0.]
+        high_angle_bank = [2.0, 155., 0.]
+
+        # 2 bank
+        self._focus_instrument_dict[2] = {1: west_bank,
+                                          2: east_bank}
+
+        # 3 bank
+        self._focus_instrument_dict[3] = {1: west_bank,
+                                          2: east_bank,
+                                          3: high_angle_bank}
+
+        # 7 bank
+        # TODO - 2018-07-18 Fill the blanks for all the focused banks
+        self._focus_instrument_dict[7] = {7: high_angle_bank}
+
+        # 27 banks
+        # TODO - 2018-07-18 Fill the blanks for all the focused banks
+        self._focus_instrument_dict[27] = {}
+
+        return
+
+    @staticmethod
+    def get_base_name(file_name, num_banks):
+        """ get the base name for the calbration workspace, grouping workspace and mask workspace
+        :param file_name:
+        :param num_banks:
+        :return:
+        """
+        datatypeutility.check_string_variable('Calibration file name', file_name)
+
+        base_name = os.path.basename(file_name).split('.')[0] + '{0}banks'.format(num_banks)
+
+        return base_name
+
+    def get_calibration_file(self, year_month_date, num_banks):
+        """
+        get the calibration file by date and number of banks
+        :param year_month_date:
+        :param num_banks:
+        :return:
+        """
+        datatypeutility.check_string_variable('YYYY-MM-DD string', year_month_date)
+        datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
+
+        # search the previous date
+        # check format first
+        if len(year_month_date) != 10 or year_month_date.count('-') != 2:
+            raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
+                               ''.format(year_month_date))
+
+        # search the list
+        date_list = sorted(self._calibration_dict.keys())
+        if year_month_date < date_list[0]:
+            raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
+                               ''.format(year_month_date, date_list[0]))
+
+        # do a brute force search (as there are only very few of them)
+        cal_date_index = None
+        for i_date in range(len(date_list)-1, 0, -1):
+            if year_month_date > date_list[i_date]:
+                cal_date_index = date_list[i_date]
+                break
+            # END-IF
+        # END-FOR
+
+        calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
+
+        return cal_date_index, calibration_file_name
+
+    def is_file_load(self, cal_file_name):
+        """
+        check whether a calibration file loaded
+        :param cal_file_name:
+        :return:
+        """
+        datatypeutility.check_string_variable('Calibration file name', cal_file_name)
+
+        return cal_file_name in self._loaded_file_dict
+
+    def load_calibration_file(self, calibration_file_name, num_banks, ref_ws_name):
+        """
+
+        :return:
+        """
+        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
+
+        base_name = self.get_base_name(calibration_file_name, num_banks)
+        mantid_reduction.load_diff_cal_file(ref_ws_name, calibration_file_name, base_name)
+
+        # record
+        location = os.path.dirname(calibration_file_name)
+        raise NotImplementedError('ASAP')
+
+        return
+
+
+
 class DataReductionTracker(object):
     """ Record tracker of data reduction for an individual run.
     """
@@ -92,7 +273,7 @@ class DataReductionTracker(object):
     @property
     def dpsace_worksapce(self):
         """
-        Mantid binned DSpaceing workspace
+        Mantid binned d-Spacing workspace
         :return:
         """
         return self._dspaceWorkspace
@@ -419,60 +600,7 @@ class DataReductionTracker(object):
         self._vanadiumCalibrationRunNumber = value
 
         return
-
-
-class CalibrationManager(object):
-    """
-    A container and manager for calibration files loaded, number of banks of groupings and etc
-    """
-    def __init__(self):
-        """
-        initialization
-        """
-        self._calibration_ws_name_list = list()
-        self._grouping_ws_name_list = list()
-        self._masking_ws_name_list = list()
-
-        self._reference_container = dict()   # key: [location][num_banks][..]
-        self._loaded_file_dict = dict()  # key: file name (full path).  value: tuple as path: location, number banks ...
-        self._current_calibration_loc = None    #
-
-    def is_file_load(self, cal_file_name):
-        """
-        check whether a calibration file loaded
-        :param cal_file_name:
-        :return:
-        """
-        datatypeutility.check_string_variable('Calibration file name', cal_file_name)
-
-        return cal_file_name in self._loaded_file_dict
-
-    def load_calibration_file(self, calibration_file_name, num_banks, ref_ws_name):
-        """
-
-        :return:
-        """
-        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
-
-        base_name = self.get_base_name(calibration_file_name, num_banks)
-        mantid_reduction.load_diff_cal_file(ref_ws_name, calibration_file_name, base_name)
-
-        # record
-        location = os.path.dirname(calibration_file_name)
-        raise NotImplementedError('ASAP')
-
-        return
-
-    def get_base_name(self, file_name, num_banks):
-        """
-
-        :param file_name:
-        :param num_banks:
-        :return:
-        """
-        base_name = os.path.basename(file_name).split('.')[0] + '{0}banks'.format(num_banks)
-
-        return base_name
+# END-CLASS
 
 
 class ReductionManager(object):
@@ -892,14 +1020,19 @@ class ReductionManager(object):
         return False, None, None
 
     def load_calibration_file(self, run_start_date, ref_ws_name, bank_numbers):
-        """
-        load a calibration file
+        """ load a calibration file according to its start date and number of banks
         :param run_start_date:
         :param ref_ws_name:
         :param bank_numbers:
         :return:
         """
-        # TODO - 20180812 - Implement!
+        # TODO - 20180818 - It is not in a good shape to have the all the calibration file managed!
+
+        cal_date_key, calibration_file = self._calibrationFileManager.get_calibration_file(run_start_date, bank_numbers)
+
+        calib_key = self._calibrationFileManager.load_calibration_file(calibration_file, ref_ws_name)
+
+        calibration_ws_name, mask_ws_name, grouping_ws_name = self._calibrationFileManager.get_workspaces(calib_key)
 
         return calibration_ws_name, mask_ws_name, grouping_ws_name
 
