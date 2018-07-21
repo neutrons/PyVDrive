@@ -141,69 +141,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
         # menu
-        self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocess_nexus)
-
-        # self.connect(self.ui.pushButton_loadSingleGSAS, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_single_gsas)
-        # self.connect(self.ui.pushButton_loadChoppedGSASSet, QtCore.SIGNAL('clicked()'),
-        #              self.do_load_chopped_gsas)
-        # self.connect(self.ui.pushButton_browseAnyGSAS, QtCore.SIGNAL('clicked()'),
-        #              self.do_browse_local_gsas)
-        # self.connect(self.ui.pushButton_refreshList, QtCore.SIGNAL('clicked()'),
-        #              self.do_refresh_existing_runs)
-        # self.connect(self.ui.radioButton_fromArchive, QtCore.SIGNAL('toggled (bool)'),
-        #              self.event_load_options)
-        # # TEST : whether the handling method is triggered?
-        # self.ui.radioButton_anyGSAS.toggled.connect(self.event_load_options)
-        # # self.connect(self.ui.radioButton_anyGSAS, QtCore.SIGNAL('toggled (bool)'),
-        # #              self.event_load_options)
-        #
-        # # section: choose to plot
-        # self.connect(self.ui.pushButton_prevRun, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_prev_run)
-        # self.connect(self.ui.pushButton_nextRun, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_next_run)
-        # self.connect(self.ui.pushButton_prevChopped, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_prev_chopped)
-        # self.connect(self.ui.pushButton_nextChopped, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_next_chopped)
-        #
-        # # section: plot
-        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_diffraction_data)
-        # self.connect(self.ui.pushButton_allFillPlot, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_contour)
-        # self.connect(self.ui.pushButton_plotSampleLog, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_sample_logs)
-        # # self.connect(self.ui.comboBox_runs, QtCore.SIGNAL('currentIndexChanged(int)'),
-        # #              self.evt_select_new_run_number)
-        # # TEST : check whether the signal can trigger calling method
-        # self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
-        # self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
-        # # self.connect(self.ui.comboBox_chopSeq, QtCore.SIGNAL('currentIndexChanged(int)'),
-        # #              self.evt_select_new_chopped_child)
-        #
-        # # other
-        # self.connect(self.ui.pushButton_clearCanvas, QtCore.SIGNAL('clicked()'),
-        #              self.do_clear_canvas)
-        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-        #              self.do_close)
-        #
-        # # data processing
-        # self.connect(self.ui.pushButton_normByCurrent, QtCore.SIGNAL('clicked()'),
-        #              self.do_normalise_by_current)
-        # self.connect(self.ui.pushButton_apply, QtCore.SIGNAL('clicked()'),
-        #              self.do_apply_new_range)
-        #
-        # # combo boxes
-        # self.connect(self.ui.comboBox_spectraList, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_bank_id_changed)
-        # self.connect(self.ui.comboBox_unit, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_unit_changed)
-        #
-        # # vanadium
-        # self.connect(self.ui.pushButton_launchVanProcessDialog, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_vanadium_dialog)
+        self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
 
         # widgets to load reduced data
 
@@ -315,8 +253,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         self.ui.lineEdit_gsasFileName.setEnabled(enabled)
         self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
-        self.ui.pushButton_loadAnyGSAS.setEnabled(enabled)
-        # self.ui.checkBox_loadChoppedAny.setEnabled(enabled)
 
         return
 
@@ -333,18 +269,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         gsas_file_name = QFileDialog.getOpenFileName(self, 'GSAS file name', default_dir, gsas_filter)
         self.ui.lineEdit_gsasFileName.setText(gsas_file_name)
 
-        # # get GSAS file or gsas files
-        # if is_chopped_data:
-        #     # get the directory of chopped data
-        #     chopped_data_dir = str(QtGui.QFileDialog.getExistingDirectory(self, 'Directory of chopped GSAS files',
-        #                                                                   default_dir))
-        #     self.ui.lineEdit_gsasFileName.setText(chopped_data_dir)
-        # else:
-            # get the data file
-
-
-
-
         return
 
     def do_clear_canvas(self):
@@ -353,6 +277,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :return:
         """
         self.ui.graphicsView_mainPlot.reset_1d_plots()
+
+        return
+
+    def do_load_preprocessed_nexus(self):
+        """ load previously processed and saved (by Mantid SavePreprocessedNeXus()) nexus file
+        :return:
+        """
+        # TODO - 20180721 - Implement!
 
         return
 
