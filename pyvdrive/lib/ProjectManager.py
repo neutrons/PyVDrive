@@ -261,7 +261,7 @@ class ProjectManager(object):
             if data_key.endswith('G') or data_key.endswith('H'):
                 ws_name = self._loadedDataManager.get_workspace_name(data_key)
                 print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
-            else:
+            elif data_key.isdigit():
                 # reduced runs.  data key is the string version of integer run number
                 run_number = int(data_key)
                 found_it = self._reductionManager.has_run(run_number)
@@ -270,7 +270,8 @@ class ProjectManager(object):
                                                                            is_vdrive_bin=False)
                 else:
                     raise RuntimeError('Run number {0} cannot be found in reduction manager.'.format(run_number))
-                    # END-FOR
+            else:
+                raise RuntimeError('Data key {} is not recognized.'.format(data_key))
         elif isinstance(data_key, tuple):
             # case for chopped series
             if len(data_key) != 2:
@@ -1395,7 +1396,7 @@ class ProjectManager(object):
             try:
                 out_ws_name = self._reductionManager.reduce_event_nexus(run_number, raw_file_name,
                                                                         unit, binning_parameters,
-                                                                        convert_to_matrix)
+                                                                        convert_to_matrix, num_banks=number_banks)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
                 self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)

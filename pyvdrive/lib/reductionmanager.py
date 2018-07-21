@@ -996,13 +996,22 @@ class ReductionManager(object):
         check whether the calibration file is loaded. If not then load the files
         :param run_start_date: string in YYYY-MM-DD format
         :param bank_numbers:
-        :return: status, calibration workspace name, mask workspace name
+        :return: status, ... ...
         """
-        # TODO - 20180812 - Make this part work! Now it is a temporary solution - FIXME
+        # TODO - 20180821 - Document the return
 
         # 1. use run_start_date (str) to search in the calibration date time string (TODO)
+        cal_date_index, calibration_file_name = self._calibrationFileManager.get_calibration_file(run_start_date,
+                                                                                                  bank_numbers)
+        print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
+               ''.format(calibration_file_name, cal_date_index))
 
-        # 2. locate the calibration file key (TODO)
+        # check whether this file has been loaded
+        if self._calibrationFileManager.has_loaded(cal_date_index, bank_numbers):
+            return True, (cal_date_index, bank_numbers)
+
+
+
 
         # 3. check whether the workspaces are loaded or not (workspace =? None) (TODO)
 
@@ -1017,7 +1026,7 @@ class ReductionManager(object):
         #
         # return calibration_ws_name, mask_ws_name, grouping_ws_name
 
-        return False, None, None
+        return False, (cal_date_index, calibration_file_name, bank_numbers)
 
     def load_calibration_file(self, run_start_date, ref_ws_name, bank_numbers):
         """ load a calibration file according to its start date and number of banks
@@ -1051,25 +1060,38 @@ class ReductionManager(object):
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
+        print ('[DB...INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
 
         # get start time: it is not convenient to get date/year/month from datetime64.
         # use the simple but fragile method first
         run_start_time = mantid_helper.get_run_start(event_ws_name, time_unit=None)
-        if run_start_time.__class__.__name__ == 'mantid.kernel._kernel.DateAndTime':
+        if run_start_time.__class__.__name__.count('DateAndTime') == 1:
             run_start_date = str(run_start_time).split('T')[0]
         else:
-            raise NotImplementedError('Run start time from Mantid TSP is not DateAndTime anymore, '
-                                      'but is {0}'.format(run_start_time.__class__.__name__))
+            err_msg = 'Run start time from Mantid TSP is not DateAndTime anymore, but is {0}' \
+                      ''.format(run_start_time.__class__.__name__)
+            print ('[RAISING ERROR] {0}'.format(err_msg))
+            raise NotImplementedError(err_msg)
+        print ('[DB...BAT] run start date: {0} of type {1}'.format(run_start_date, type(run_start_date)))
 
         # TODO - 20180712 - Continue to implement!
         # use 'run_start' or 'start_time' to determine the calibration file!
-        status, calib_ws_name, mask_ws_name, group_ws_name = self.check_calibration_mask_grouping(run_start_date,
-                                                                                                  num_banks)
-        if not status:
-            calib_ws_name, mask_ws_name, group_ws_name = self.load_calibration_file(run_start_date, event_nexus_name,
-                                                                                    num_banks)
+        status, return_tuple = self.check_calibration_mask_grouping(run_start_date, num_banks)
+        if status:
+            # TODO - 20180821 - Implement!
+            loaded_calib_key = return_tuple
+            calib_ws_name, mask_ws_name, group_ws_name =\
+                self._calibrationFileManager.get_loaded_calibration_workspaces(loaded_calib_key)
+        else:
+            # load
+            cal_date_index, calibration_file_name, bank_numbers = return_tuple
+            calib_ws_name, mask_ws_name, group_ws_name = self.load_calibration_file(calibration_date_index=cal_date_index,
+                                                                                    bank_numbers=bank_numbers,
+                                                                                    ref_ws_name=event_ws_name)
+        # END-IF
 
-        self.reduce_workspace(event_ws_name, event_ws_name, keep_raw_ws=False)
+        self.reduce_workspace(event_ws_name, event_ws_name, calib_ws_name, group_ws_name, mask_ws_name,
+                              keep_raw_ws=False)
 
         return
 
