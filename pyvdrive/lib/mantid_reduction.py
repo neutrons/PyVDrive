@@ -28,7 +28,7 @@ def align_instrument(matrix_ws, diff_cal_ws_name):
 
 def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                              diff_cal_ws_name, mask_ws_name, grouping_ws_name,
-                             keep_raw_ws, reduction_params_dict, convert_to_matrix=False):
+                             reduction_params_dict, convert_to_matrix):
     """
     align and focus event workspace
     :param event_ws_name:
@@ -37,7 +37,6 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     :param diff_cal_ws_name:
     :param mask_ws_name:
     :param grouping_ws_name:
-    :param keep_raw_ws:
     :param reduction_params_dict:
     :param convert_to_matrix:
     :return:
@@ -55,10 +54,6 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
 
     datatypeutility.check_dict('Reduction parameter dictionary', reduction_params_dict)
-
-    # set some fags
-    if event_ws_name == output_ws_name:
-        keep_raw_ws = True
 
     # Compress events as an option
     if 'CompressEvents' in reduction_params_dict:
@@ -107,10 +102,6 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     if binning_params is not None:
         mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
 
-    # remove
-    if not keep_raw_ws and event_ws_name != output_ws_name:
-        mantid_helper.delete_workspace(event_ws_name)
-
     return
 
 
@@ -152,7 +143,7 @@ def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters
                                   CalFileName=cal_file_name,
                                   Params='-0.001',
                                   DMin='0.5', DMax='3.5',
-                                  PreserveEvents=True)
+                                  PreserveEvents=not convert_to_matrix)
 
     # clean
     mantidapi.DeleteWorkspace(Workspace=output_ws_name)

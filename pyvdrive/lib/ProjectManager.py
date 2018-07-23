@@ -1376,7 +1376,7 @@ class ProjectManager(object):
             else:
                 bin_size = binning_parameters[1]
             # force the binning range to be from 0.3 to 5.0
-            binning_parameters = [0.3, '{0}'.format(bin_size), 5.0]
+            binning_parameters = (0.3, float(bin_size), 5.0)
         # END-IF
 
         # reduce one by one

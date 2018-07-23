@@ -1310,18 +1310,16 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
 
     if calib_file_name.endswith('.h5'):
         # new diff calib file
-        mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
-                              Filename=calib_file_name,
-                              WorkspaceName=output_name)
+        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                                        Filename=calib_file_name,
+                                        WorkspaceName=output_name)
 
     elif calib_file_name.endswith('.dat'):
         # old style calibration file
-        mantidapi.LoadCalFile(Filename=calib_file_name,
-                              Output=output_name)
+        outputs = mantidapi.LoadCalFile(Filename=calib_file_name,
+                                        Output=output_name)
 
-    # print (ADS.getObjectNames())
-
-    return
+    return outputs
 
 
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
