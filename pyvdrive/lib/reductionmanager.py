@@ -23,18 +23,11 @@ class CalibrationManager(object):
         self._calibration_dict = None
         self._vdrive_bin_ref_dict = None
 
-        self._calibration_ws_name_list = list()
-        self._grouping_ws_name_list = list()
-        self._masking_ws_name_list = list()
-
-        self._reference_container = dict()   # key: [location][num_banks][..]
-        self._loaded_file_dict = dict()  # key: file name (full path).  value: tuple as path: location, number banks ...
-        self._current_calibration_loc = None    #
+        self._loaded_calibration_file_dict = dict()
 
         # set up
         self._init_vulcan_calibration_files()
         self._init_vdrive_binning_refs()
-
 
         return
 
@@ -135,7 +128,7 @@ class CalibrationManager(object):
         get the calibration file by date and number of banks
         :param year_month_date:
         :param num_banks:
-        :return:
+        :return: calibration file date, calibration file name
         """
         datatypeutility.check_string_variable('YYYY-MM-DD string', year_month_date)
         datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
@@ -165,32 +158,96 @@ class CalibrationManager(object):
 
         return cal_date_index, calibration_file_name
 
-    def is_file_load(self, cal_file_name):
+    def get_focused_instrument_parameters(self, num_banks):
         """
-        check whether a calibration file loaded
-        :param cal_file_name:
+
+        :param num_banks:
         :return:
         """
-        datatypeutility.check_string_variable('Calibration file name', cal_file_name)
+        # TODO - 20180722 - Return a dictionary with same keys are EditInstrument...
 
-        return cal_file_name in self._loaded_file_dict
+        raise
 
-    def load_calibration_file(self, calibration_file_name, num_banks, ref_ws_name):
+    def get_loaded_calibration_workspaces(self, run_start_date, num_banks):
         """
-
+        get the loaded workspaces
+        :param run_start_date:
+        :param num_banks:
         :return:
         """
+        cal_date, cal_file_name = self.get_calibration_file(run_start_date, num_banks)
+
+        try:
+            calib_ws_collection = self._loaded_calibration_file_dict[cal_date][num_banks]
+        except KeyError as key_err:
+            error_msg = 'File {0} is not loaded yet! Client shall check the loaded workspace first.' \
+                        'FYI: {1}'.format(cal_file_name, key_err)
+            print ('[Crash Error] {}'.format(error_msg))
+            raise RuntimeError(error_msg)
+
+        return calib_ws_collection
+
+    def has_loaded(self, run_start_date, num_banks):
+        """ check whether a run's corresponding calibration file has been loaded
+        :param run_start_date:
+        :param num_banks:
+        :return:
+        """
+        calib_file_date, calib_file_name = self.get_calibration_file(run_start_date, num_banks)
+        print ('[DB...BAT] ID/Date: {}; Calibration file name: {}'.format(calib_file_date, calib_file_name))
+
+        if calib_file_date not in self._loaded_calibration_file_dict:
+            return False
+        elif num_banks not in self._loaded_calibration_file_dict[calib_file_date]:
+            return False
+
+        return True
+
+    def load_calibration_file(self, calibration_file_name, cal_date_index, num_banks, ref_ws_name):
+        """ load calibration file
+        :return:
+        """
+        # check inputs
         datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
+        datatypeutility.check_int_variable('Number of banks', num_banks, (1, None))
 
+        # load calibration
         base_name = self.get_base_name(calibration_file_name, num_banks)
-        mantid_reduction.load_diff_cal_file(ref_ws_name, calibration_file_name, base_name)
+        outputs = mantid_helper.load_calibration_file(calibration_file_name, base_name, ref_ws_name)
+        # get output workspaces for their names
+        calib_ws_collection = DetectorCalibrationWorkspaces()
+        calib_ws_collection.calibration = outputs.OutputCalWorkspace.name()
+        calib_ws_collection.mask = outputs.OutputMaskWorkspace.name()
+        calib_ws_collection.grouping = outputs.OutputGroupingWorkspace.name()
+        print ('[DB...BAT] Output: {}'.format(calib_ws_collection))
 
-        # record
-        location = os.path.dirname(calibration_file_name)
-        raise NotImplementedError('ASAP')
+        # add to loaded calibration file container
+        if cal_date_index not in self._loaded_calibration_file_dict:
+            self._loaded_calibration_file_dict[cal_date_index] = dict()
+        self._loaded_calibration_file_dict[cal_date_index][num_banks] = calib_ws_collection
+
+        return calib_ws_collection
+
+    def search_load_calibration_file(self, run_start_date, bank_numbers, ref_workspace_name):
+        """
+        search for calibration and load it
+        :param run_start_date: string in YYYY-MM-DD format
+        :param bank_numbers:
+        :return:
+        """
+        # use run_start_date (str) to search in the calibration date time string
+        cal_date_index, calibration_file_name = self.get_calibration_file(run_start_date, bank_numbers)
+        print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
+               ''.format(calibration_file_name, cal_date_index))
+
+        # check whether this file has been loaded
+        if self.has_loaded(cal_date_index, bank_numbers):
+            return
+
+        # load
+        self.load_calibration_file(calibration_file_name, cal_date_index, bank_numbers, ref_workspace_name)
 
         return
-
 
 
 class DataReductionTracker(object):
@@ -651,7 +708,32 @@ class ReductionManager(object):
         # calibration file and workspaces management
         self._calibrationFileManager = CalibrationManager()   # key = calibration file name
 
+        # init standard diffraction focus parameters
+        self._diff_focus_params = self._init_vulcan_diff_focus_params()
+
         return
+
+    @staticmethod
+    def _init_vulcan_diff_focus_params():
+        """
+        initial setup for diffraction focus algorithm parameters
+        :return:
+        """
+        params_dict = dict()
+        params_dict['CompressEvents'] = dict()
+        params_dict['EditInstrumentGeometry'] = dict()
+
+        # compress events
+        params_dict['CompressEvents']['Tolerance'] = 0.01
+
+        # edit instrument
+        params_dict['EditInstrumentGeometry']['L1'] = None
+        params_dict['EditInstrumentGeometry']['SpectrumIDs'] = None
+        params_dict['EditInstrumentGeometry']['L2'] = None
+        params_dict['EditInstrumentGeometry']['Polar'] = None
+        params_dict['EditInstrumentGeometry']['Azimuthal'] = None
+
+        return params_dict
 
     def add_reduced_workspace(self, run_number, out_ws_name, binning_parameters=None):
         """
@@ -991,70 +1073,17 @@ class ReductionManager(object):
 
         return new_tracker
 
-    def check_calibration_mask_grouping(self, run_start_date, bank_numbers):
-        """
-        check whether the calibration file is loaded. If not then load the files
-        :param run_start_date: string in YYYY-MM-DD format
-        :param bank_numbers:
-        :return: status, ... ...
-        """
-        # TODO - 20180821 - Document the return
-
-        # 1. use run_start_date (str) to search in the calibration date time string (TODO)
-        cal_date_index, calibration_file_name = self._calibrationFileManager.get_calibration_file(run_start_date,
-                                                                                                  bank_numbers)
-        print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
-               ''.format(calibration_file_name, cal_date_index))
-
-        # check whether this file has been loaded
-        if self._calibrationFileManager.has_loaded(cal_date_index, bank_numbers):
-            return True, (cal_date_index, bank_numbers)
-
-
-
-
-        # 3. check whether the workspaces are loaded or not (workspace =? None) (TODO)
-
-        # # check calibration
-        # if calibration_file is None and self._default_calibration_ws_name is None:
-        #     # no calibration
-        #     self.load_default_calibration_file(num_banks)
-        # elif calibration_file is not None:
-        #     self.load_calibration_file(calibration_file, num_banks)
-        # elif user_grouping_file_name is not None:
-        #     self.load_user_grouping_file(user_grouping_file_name)
-        #
-        # return calibration_ws_name, mask_ws_name, grouping_ws_name
-
-        return False, (cal_date_index, calibration_file_name, bank_numbers)
-
-    def load_calibration_file(self, run_start_date, ref_ws_name, bank_numbers):
-        """ load a calibration file according to its start date and number of banks
-        :param run_start_date:
-        :param ref_ws_name:
-        :param bank_numbers:
-        :return:
-        """
-        # TODO - 20180818 - It is not in a good shape to have the all the calibration file managed!
-
-        cal_date_key, calibration_file = self._calibrationFileManager.get_calibration_file(run_start_date, bank_numbers)
-
-        calib_key = self._calibrationFileManager.load_calibration_file(calibration_file, ref_ws_name)
-
-        calibration_ws_name, mask_ws_name, grouping_ws_name = self._calibrationFileManager.get_workspaces(calib_key)
-
-        return calibration_ws_name, mask_ws_name, grouping_ws_name
-
-
     # TODO - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
-    def reduce_event_nexus(self, run_number, event_nexus_name, target_unit,  binning_parameters, convert_to_matrix,
+    def reduce_event_nexus(self, run_number, event_nexus_name, target_unit, binning_parameters, convert_to_matrix,
                            num_banks):
-        """ reduce event workspace
-
+        """
+        reduce event workspace including load and diffraction focus
+        :param run_number:
         :param event_nexus_name:
         :param target_unit:
         :param binning_parameters:
         :param convert_to_matrix:
+        :param num_banks:
         :return:
         """
         # Load data
@@ -1074,62 +1103,77 @@ class ReductionManager(object):
             raise NotImplementedError(err_msg)
         print ('[DB...BAT] run start date: {0} of type {1}'.format(run_start_date, type(run_start_date)))
 
-        # TODO - 20180712 - Continue to implement!
-        # use 'run_start' or 'start_time' to determine the calibration file!
-        status, return_tuple = self.check_calibration_mask_grouping(run_start_date, num_banks)
-        if status:
-            # TODO - 20180821 - Implement!
-            loaded_calib_key = return_tuple
-            calib_ws_name, mask_ws_name, group_ws_name =\
-                self._calibrationFileManager.get_loaded_calibration_workspaces(loaded_calib_key)
-        else:
-            # load
-            cal_date_index, calibration_file_name, bank_numbers = return_tuple
-            calib_ws_name, mask_ws_name, group_ws_name = self.load_calibration_file(calibration_date_index=cal_date_index,
-                                                                                    bank_numbers=bank_numbers,
-                                                                                    ref_ws_name=event_ws_name)
-        # END-IF
+        # check (and load as an option) calibration file
+        has_loaded_cal = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
+        if not has_loaded_cal:
+            self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
+        workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+        calib_ws_name = workspaces.calibration
+        group_ws_name = workspaces.grouping
+        mask_ws_name = workspaces.mask
 
-        self.reduce_workspace(event_ws_name, event_ws_name, calib_ws_name, group_ws_name, mask_ws_name,
-                              keep_raw_ws=False)
+        # diffraction focus
+        print ('[DB...FLAG] About to diffraction focus!')
+        self.diffraction_focus_workspace(event_ws_name, event_ws_name,
+                                         binning_params=binning_parameters,
+                                         target_unit=target_unit,
+                                         calibration_workspace=calib_ws_name,
+                                         mask_workspace=mask_ws_name,
+                                         grouping_workspace=group_ws_name,
+                                         # TODO - 20180722 - fix compile/coding issue
+                                         virtual_instrument_geometry=self._calibrationFileManager.get_focused_instrument_parameters(num_banks),
+                                         convert_to_matrix=convert_to_matrix,
+                                         keep_raw_ws=False)
 
         return
 
-    # TODO FIXME - From here!  Reduction 2.0!
-    def reduce_workspace(self, event_ws_name, output_ws_name, binning_params, target_unit,
-                         calibration_file_name, user_grouping_file_name, keep_raw_ws,
-                         convert_to_matrix):
+    def diffraction_focus_workspace(self, event_ws_name, output_ws_name, binning_params, target_unit,
+                                    calibration_workspace, mask_workspace, grouping_workspace,
+                                    virtual_instrument_geometry, keep_raw_ws, convert_to_matrix):
         """ focus workspace
-
         :param event_ws_name:
         :param output_ws_name:
+        :param binning_params:
+        :param target_unit:
+        :param calibration_workspace:
+        :param mask_workspace:
+        :param grouping_workspace:
+        :param virtual_instrument_geometry:
         :param keep_raw_ws:
-        :param calibration_file_name: standard calibration file name
+        :param convert_to_matrix:
         :return:
         """
-        def check_binning_parameter_range(x_min, x_max, target_unit):
+        def check_binning_parameter_range(x_min, x_max, ws_unit):
             """
             check whether range of X values of binning makes sense with target unit
             :param x_min:
             :param x_max:
-            :param target_unit:
+            :param ws_unit:
             :return:
             """
-            if target_unit == 'dSpacing':
-                if not 0 < x_min < x_max < 20:
-                    raise RuntimeError('For dSpacing, X range ({0}, {1}) does not make sense'
-                                       ''.format(x_min, x_max))
-            elif target_unit == 'TOF':
-                if not 1000 < x_min < x_max < 1000000:
-                    raise RuntimeError('For TOF, X range ({0}, {1}) does not make sense'
-                                       ''.format(x_min, x_max))
+            if ws_unit == 'dSpacing' and not 0 < x_min < x_max < 20:
+                # dspacing within (0, 20)
+                x_range_is_wrong = True
+            elif ws_unit == 'TOF' and not 1000 < x_min < x_max < 1000000:
+                # TOF within (1000, 1000000)
+                x_range_is_wrong = True
+            elif ws_unit != 'dSpacing' and ws_unit != 'TOF':
+                raise NotImplementedError('Impossible case for unit {}'.format(ws_unit))
             else:
-                raise RuntimeError('Impossible case')
+                # good cases
+                x_range_is_wrong = False
+
+            if x_range_is_wrong:
+                ero_msg = 'For {0}, X range ({1}, {2}) does not make sense' \
+                          ''.format(ws_unit, x_min, x_max)
+                print ('[ERROR CAUSING CRASH] {}'.format(ero_msg))
+                raise RuntimeError(ero_msg)
 
             return
 
         # check inputs
         datatypeutility.check_string_variable('Target unit', target_unit, ['TOF', 'dSpacing'])
+        print ('[DB...BAT] Target unit {} is accepted'.format(target_unit))
 
         if binning_params is None:
             # do nothing
@@ -1141,23 +1185,29 @@ class ReductionManager(object):
                 pass
             elif len(binning_params) == 3:
                 # check against the unit
-                check_binning_parameter_range(binning_params[0], binning_params[1], target_unit)
+                check_binning_parameter_range(binning_params[0], binning_params[2], target_unit)
             else:
                 # unsupported number of binning parameters
-                raise RuntimeError('Binning parameters {0} with {1} items are not supported.'
-                                   ''.format(binning_params, len(binning_params)))
+                err_msg = 'Binning parameters {0} with {1} items are not supported.' \
+                          ''.format(binning_params, len(binning_params))
+                print ('[Crash Error] {}'.format(err_msg))
+                raise RuntimeError(err_msg)
         # END-IF-ELSE
 
-        # check and load calibration workspace
-        datatypeutility.check_file_name(calibration_file_name, check_exist=True, note='Calibration file')
-        if calibration_file_name not in self._calibration_workspace_container:
-            raise NotImplementedError('ASAP')
+        # virtual instrument
+        self._diff_focus_params['Ed...'] = virtual_instrument_geometry
 
         # align and focus
+        print ('[DB...FLAG] About to align and focus event workspace with binning {}'.format(binning_params))
         mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
-                                                  calibration_file_name, user_grouping_file_name,
-                                                  keep_raw_ws, reduction_params_dict=reduction_param_dict,
-                                                  convert_to_matrix=False)
+                                                  calibration_workspace, mask_workspace, grouping_workspace,
+                                                  reduction_params_dict=self._diff_focus_params,
+                                                  convert_to_matrix=convert_to_matrix)
+
+        # remove input event workspace
+        if output_ws_name != event_ws_name and keep_raw_ws is False:
+            # if output name is same as input. no need to do the operation
+            mantid_helper.delete_workspace(event_ws_name)
 
         return
 
@@ -1322,3 +1372,26 @@ class ReductionManager(object):
         # TRY-EXCEPT
 
         return
+
+
+class DetectorCalibrationWorkspaces(object):
+    """
+    a simple workspace for detector instrument calibration workspaces
+    """
+    def __init__(self):
+        """
+        initialization: all workspaces shall be workspace names but not references to workspaces
+        """
+        self.calibration = None
+        self.mask = None
+        self.grouping = None
+
+    def __str__(self):
+        """
+        customized nice output
+        :return:
+        """
+        nice = 'Calibration workspace: {}\nGrouping workspace: {}\nMask workspace: {}' \
+               ''.format(self.calibration, self.grouping, self.mask)
+
+        return nice
