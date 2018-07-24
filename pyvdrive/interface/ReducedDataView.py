@@ -351,6 +351,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # END-IF-ELSE
 
+        # set spectra list
+        # TODO - 20180724 - Break Point!
+        data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
+        print data_bank_list
+        raise
+        self._myController.get_bank_list(data_key)
+
         # add run number to run number list and plot
         self.add_reduced_runs([data_key], focus_to_first=True)
         self.do_plot_diffraction_data()
@@ -373,6 +380,41 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # set the label
         seq_list = None
         self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+
+        return
+
+    def update_bank_id_combo(self, data_key):
+        """ Update the bank ID combo box.
+        Updating the figure accordingly is not within the scope of this method
+        :param data_key: key to find out the bank IDs
+        :return:
+        """
+        # get bank ID list
+        if data_key.isdigit():
+            run_number = int(data_key)
+            data_key_temp = None
+        else:
+            run_number = None
+            data_key_temp = data_key
+        status, data_bank_list = self._myController.get_reduced_run_info(run_number=run_number,
+                                                                         data_key=data_key_temp)  # , info_type='bank')
+        if not status:
+            print ('[ERROR-POP] Unable to get bank list from {0}'.format(data_key))
+            return
+        print data_bank_list
+
+        # number of banks are same
+        if len(data_bank_list) == len(self._bankIDList):
+            return
+
+        # lock the event handling, set the bank IDs and focus to first bank
+        self._mutexBankIDList = True
+        self.ui.comboBox_spectraList.clear()
+        for bank_id in data_bank_list:
+            self.ui.comboBox_spectraList.addItem('{}'.format(bank_id))
+        self.ui.comboBox_spectraList.setCurrentIndex(0)
+        self._bankIDList = data_bank_list[:]
+        self._mutexBankIDList = False
 
         return
 
@@ -555,62 +597,82 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def update_single_run_combo_box(self, item_name, remove_item, focus_to_new):
-        """
-
-        :param item_name:
+    def update_single_run_combo_box(self, run_key, remove_item, focus_to_new):
+        """ update the combo box for single run (no chopped).
+        Note: it will give out the signal whether a re-plot is necessary but it won't do the job
+        :param run_key: a string serving as the key to the run. can be the run number or etc
         :param remove_item: flag for adding or removing item
         :param focus_to_new: flag to set the current index to newly added term
         :return:
         """
-        pyvdrive.lib.datatypeutility.check_string_variable('Single run number', item_name)
+        # check inputs
+        pyvdrive.lib.datatypeutility.check_string_variable('Single run number', run_key)
         pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove the specified run number', remove_item)
 
-        print ('[DB...BAT...Update Combo: item name: {0} type {1}'.format(item_name, type(item_name)))
-        # check inputs ... TODO blabla
+        # get current index
+        start_combo_index = self.ui.comboBox_runs.currentIndex()
+        start_run_key = str(self.ui.comboBox_runs.currentText())
+        final_combo_index = start_combo_index
 
         if remove_item:
             # remove item
+            print ('[DB...BAT...Update Combo (Remove): item name: {0} type {1}'.format(run_key, type(run_key)))
+
             try:
-                item_index = self._runNumberList.index(item_name)
+                item_index = self._runNumberList.index(run_key)
             except ValueError as value_err:
-                raise RuntimeError('Unable to locate {0} in single run list.'.format(item_name))
+                raise RuntimeError('Unable to locate {0} in single run list due to {1}.'
+                                   ''.format(run_key, value_err))
             # check again
-            assert str(self.ui.comboBox_runs.itemText(item_index)) == item_name, 'blabla342'
+            if not str(self.ui.comboBox_runs.itemText(item_index)) == run_key:
+                err_msg = 'Run to remove with key {} must be equal to {}-th item in combo box (which is {} now)' \
+                          ''.format(run_key, item_index, self.ui.comboBox_runs.itemText(item_index))
+                raise NotImplementedError(err_msg)
 
             self._mutexRunNumberList = True
             self.ui.comboBox_runs.removeItem(item_index)
-            self._mutexRunNumberList = False
             self._runNumberList.pop(item_index)
+            self._mutexRunNumberList = False
 
-            # TODO LATER - how to focus the current index if current item is removed???
+            # check re-focus: reduce 1 if necessary
+            if start_combo_index <= item_index:
+                final_combo_index = start_combo_index - 1
+                re_plot = True
 
         else:
             # add the new item
+            print ('[DB...BAT...Update Combo (Add): item name: {0} type {1}'.format(run_key, type(run_key)))
+
             # check existing?
-            if item_name in self._runNumberList:
-                raise RuntimeError('Entry {0} has been in the combo box already.'.format(item_name))
+            if run_key in self._runNumberList:
+                raise RuntimeError('Entry {0} has been in the combo box already.'.format(run_key))
 
             # insert and find position
-            self._runNumberList.append(item_name)
+            self._runNumberList.append(run_key)
             self._runNumberList.sort()
-            index_to_be = self._runNumberList.index(item_name)
+            index_to_be = self._runNumberList.index(run_key)
 
             # add to combo box
             self._mutexRunNumberList = True
-            self.ui.comboBox_runs.insertItem(index_to_be, item_name)
+            self.ui.comboBox_runs.insertItem(index_to_be, run_key)
             self._mutexRunNumberList = False
 
             # optionally set current index to the new item
             if focus_to_new:
-                self._mutexRunNumberList = True
+                final_combo_index = index_to_be
+            else:
+                final_combo_index = self._runNumberList.index(start_run_key)
                 self.ui.comboBox_runs.setCurrentIndex(index_to_be)
-                self._mutexRunNumberList = False
             # END-IF
-
         # END-IF-ELSE
 
-        return
+        # focus the current index
+        self._mutexRunNumberList = True
+        self.ui.comboBox_runs.setCurrentIndex(final_combo_index)
+        self._mutexRunNumberList = False
+        re_plot = str(self.ui.comboBox_runs.currentText()) != start_run_key
+
+        return re_plot
 
     # def add_data_set(self, ipts_number, run_number, controller_data_key, unit=None):
     #     """
@@ -650,20 +712,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     def add_reduced_runs(self, data_key_list, focus_to_first=True):
         """
         add a series of reduced runs in single run format in their data key presentation to
+
+        used by:  pyvdrive/interface/VDrivePlot.py  483:
+                  pyvdrive/interface/vcommand_processor.py
+                  self.do_load_single_gsas
         :param data_key_list:
         :param focus_to_first:
         :return:
         """
-
-        """
-        used by:  pyvdrive/interface/VDrivePlot.py  483:
-                  pyvdrive/interface/vcommand_processor.py
-                  self.do_load_single_gsas
-
-        """
         # check inputs
-        assert isinstance(data_key_list, list), 'Input {0} must be a list of run numbers but not of type {1}.' \
-                                                ''.format(data_key_list, type(data_key_list))
+        pyvdrive.lib.datatypeutility.check_list('Reduced data keys list', data_key_list)
 
         # sort and add
         data_key_list.sort()
@@ -679,6 +737,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # in case it is a run number (int)
                 data_key = '{0}'.format(data_key)
             self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=focus)
+        # END-FOR
+
+        # update
+        self.update_bank_id_combo()
+
 
             # register?
             # self._dataIptsRunDict[run_number] = ipts_number, run_number
@@ -990,7 +1053,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif self.ui.radioButton_chooseChopped.isChecked():
             # chopped run
             main_run_key = str(self.ui.comboBox_choppedRunNumber.currentText())
-            # TODO/FIXME/ASAP - a lookup table is required if the workspace name is not preferred in chopped list
+            # TODO - 20180724 - a lookup table is required if the workspace name is not preferred in chopped list
             # THIS IS A HACK
             child_run_key = str(self.ui.comboBox_chopSeq.currentText())
             curr_run_key = main_run_key, child_run_key
@@ -999,16 +1062,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             raise RuntimeError('Neither ... nor ... blabla')
 
         # check bank information: assumption is that all data keys are related to data with workspace
-        if False:
-            # TODO FIXME ASAP ASAP2 - make this work!
-            data_bank_list = self._myController.get_reduced_data_info(data_key=curr_run_key, info_type='bank')
-        else:
-            data_bank_list = [1, 2]
-
-        if data_bank_list != self._bankIDList:
-            # data banks and current banks do not match
-            # TODO FIXME ASAP3
-            self.reset_bank_combo_box(data_bank_list)   # update _bankIDList and combobox to make them consistent
+        # if False:
+        #     # TODO FIXME ASAP ASAP2 - make this work!
+        #     data_bank_list = self._myController.get_reduced_data_info(data_key=curr_run_key, info_type='bank')
+        # else:
+        #     data_bank_list = [1, 2]
+        #
+        # if data_bank_list != self._bankIDList:
+        #     # data banks and current banks do not match
+        #     # TODO FIXME ASAP3
+        #     self.update_bank_id_combo(data_bank_list)   # update _bankIDList and combobox to make them consistent
 
         # get selected bank
         bank_id_str = str(self.ui.comboBox_spectraList.currentText())
@@ -2126,9 +2189,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         reduced_run_number_list.sort()
         self.ui.comboBox_runs.clear()
         for index, run_number in enumerate(reduced_run_number_list):
-            print ('[DB...BAT] Added run: {0}'.format(run_number))
-            self.update_single_run_combo_box('{0}'.format(run_number), remove_item=False,
+            data_key = '{0}'.format(run_number)
+            print ('[DB...BAT] Added run: {0} ({1}) with data key {2}'
+                   ''.format(run_number, type(run_number), data_key))
+            self.update_single_run_combo_box(data_key, remove_item=False,
                                              focus_to_new=(index == 0))
+            self.update_bank_id_combo(data_key=data_key)
         # END-FOR
 
         # plot

@@ -24,10 +24,12 @@ class CalibrationManager(object):
         self._vdrive_bin_ref_dict = None
 
         self._loaded_calibration_file_dict = dict()
+        self._focus_instrument_dict = dict()
 
         # set up
         self._init_vulcan_calibration_files()
         self._init_vdrive_binning_refs()
+        self._init_focused_instruments()
 
         return
 
@@ -83,7 +85,6 @@ class CalibrationManager(object):
         and the angles are in unit as degree
         :return:
         """
-        self._focus_instrument_dict = dict()
         self._focus_instrument_dict['L1'] = 43.753999999999998
 
         # L2, Polar and Azimuthal
@@ -188,6 +189,7 @@ class CalibrationManager(object):
             edit_instrument_param_dict['L2'] = self._focus_instrument_dict['L2'][num_banks]
             edit_instrument_param_dict['Polar'] = self._focus_instrument_dict['Polar'][num_banks]
             edit_instrument_param_dict['Azimuthal'] = self._focus_instrument_dict['Azimuthal'][num_banks]
+            edit_instrument_param_dict['SpectrumIDs'] = self._focus_instrument_dict['SpectrumIDs'][num_banks]
         except KeyError as key_err:
             err_msg = 'Unable to retrieve virtual instrument geometry for {}-bank case. FYI: {}' \
                       ''.format(num_banks, key_err)
@@ -801,7 +803,7 @@ class ReductionManager(object):
 
         # add
         if run_number not in self._runFocusedWorkspaceDict:
-            self._runFocusedWorkspaceDict = dict()
+            self._runFocusedWorkspaceDict[run_number] = dict()
 
         if binning_parameters is not None:
             binning_key = str(binning_parameters)
@@ -1032,6 +1034,11 @@ class ReductionManager(object):
         # where is this run?
         if run_number in self._runFocusedWorkspaceDict:
             # simple reduce
+            print ('[DB...BAT] run-focused-workspace-dict[{}] has {}'
+                   ''.format(run_number, self._runFocusedWorkspaceDict[run_number].keys()))
+            # use the first binning parameter as default
+            if binning_params is None:
+                binning_params = self._runFocusedWorkspaceDict[run_number].keys()[0]
             return_ws_name = self._runFocusedWorkspaceDict[run_number][binning_params]
         else:
             # full reduction
@@ -1178,7 +1185,7 @@ class ReductionManager(object):
                                          convert_to_matrix=convert_to_matrix,
                                          keep_raw_ws=False)
 
-        return
+        return event_ws_name
 
     def diffraction_focus_workspace(self, event_ws_name, output_ws_name, binning_params, target_unit,
                                     calibration_workspace, mask_workspace, grouping_workspace,
