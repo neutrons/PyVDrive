@@ -425,10 +425,15 @@ class SliceFocusVulcan(object):
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
         """
         Write all the workspaces to GSAS file sequentially
+        :param parm_file_name
+        :param ipts_number
         :param workspace_name_list:
         :return:
         """
-        datatypeutility.check_list('Workspace name list', list)
+        # check inputs
+        datatypeutility.check_list('Workspace name list', workspace_name_list)
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_string_variable('GSAS parm file name', parm_file_name)
 
         for index, ws_name in enumerate(workspace_name_list):
             if len(ws_name) == 0:
@@ -436,7 +441,8 @@ class SliceFocusVulcan(object):
 
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
 
-            # TODO/FIXME/NOW : why not use SaveVulcanGSS??? Need to find
+            # TODO - 20180723 - Confirm that using Mantid SaveVulcanGSS can cause contention :
+            # TODO - continue   why not use SaveVulcanGSS??? Need to find:
 
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)
@@ -522,16 +528,15 @@ class SliceFocusVulcan(object):
 
         # Now start to use multi-threading
         num_outputs = len(output_names)
-        # TODO - 20180712 - self._num_threads are not defined - FIXME
-        number_ws_per_thread = int(num_outputs / self._num_threads)
-        extra = num_outputs % self._num_threads
+        number_ws_per_thread = int(num_outputs / self._number_threads)
+        extra = num_outputs % self._number_threads
 
         print ('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
                'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
         thread_pool = dict()
         # create threads and start
         end = 0  # exclusive last
-        for thread_id in range(self._num_threads):
+        for thread_id in range(self._number_threads):
             start = end
             end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
@@ -540,11 +545,11 @@ class SliceFocusVulcan(object):
             print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
 
         # join the threads
-        for thread_id in range(self._num_threads):
+        for thread_id in range(self._number_threads):
             thread_pool[thread_id].join()
 
         # kill any if still alive
-        for thread_id in range(self._num_threads):
+        for thread_id in range(self._number_threads):
             thread_i = thread_pool[thread_id]
             if thread_i is not None and thread_i.isAlive():
                 thread_i._Thread_stop()
@@ -560,11 +565,11 @@ class SliceFocusVulcan(object):
         process_info = '{0}: Runtime = {1}   Total output workspaces = {2}' \
                        ''.format(event_file_name, tf - t0, len(output_names))
         process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
-                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._num_threads)
+                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
         print (process_info)
 
         end = 0
-        for thread_id in range(self._num_threads):
+        for thread_id in range(self._number_threads):
             start = end
             end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
             print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
@@ -574,7 +579,8 @@ class SliceFocusVulcan(object):
     @staticmethod
     def create_vulcan_gsas_header(workspace, gsas_file_name, ipts, parm_file_name):
         """
-        create specific GSAS header required by VULCAN team/VDRIVE
+        create specific GSAS header required by VULCAN team/VDRIVE.
+        It is found that calling Mantid for writing GSAS can cause contending among threads
         :param workspace:
         :param gsas_file_name:
         :param ipts:
@@ -590,12 +596,12 @@ class SliceFocusVulcan(object):
         # Get information on start/stop
         if run.hasProperty("run_start") and run.hasProperty("duration"):
             # have run start and duration information
-            run_start = run.getProperty("run_start").value
+            # run_start = run.getProperty("run_start").value
             duration = float(run.getProperty("duration").value)
 
             # separate second and sub-seconds
-            run_start_seconds = run_start.split(".")[0]
-            run_start_sub_seconds = run_start.split(".")[1]
+            # run_start_seconds = run_start.split(".")[0]
+            # run_start_sub_seconds = run_start.split(".")[1]
             # self.log().warning('Run start {0} is split to {1} and {2}'.format(run_start, run_start_seconds,
             #                                                                   run_start_sub_seconds))
 

@@ -22,6 +22,7 @@ except AttributeError:
         
 import gui.ui_ReducedDataView
 import vanadium_controller_dialog
+import pyvdrive.lib.datatypeutility
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -180,9 +181,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def _get_plot_x_range_(self):
-        """
-        blabla
-        :return:
+        """ get the x range of current plot
+        :return: 2-tuple.  min x, max x
         """
         # check current min/max for data
         min_x_str = str(self.ui.lineEdit_minX.text()).strip()
@@ -284,7 +284,24 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """ load previously processed and saved (by Mantid SavePreprocessedNeXus()) nexus file
         :return:
         """
-        # TODO - 20180721 - Implement!
+        # get the NeXus file name
+        nxs_file_name = GuiUtility.browse_file(self, 'Select a Mantid PreNeXus file',
+                                               default_dir=self._myController.get_working_dir(),
+                                               file_filter='NeXus File (*.nxs)',
+                                               file_list=False, save_file=False)
+        if nxs_file_name is None:
+            return
+
+        # TODO - 20180721 - Make the following work!
+        # load
+        try:
+            self._currentDataID = self._myController.load_nexus_file(nxs_file_name)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(nxs_file_name, run_err))
+            return
+
+        # plot
+        self.plot_by_data_key(self._currentDataID, bank_id_list=None, over_plot=False, x_limit=None)
 
         return
 
@@ -384,6 +401,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif self.ui.radioButton_anyGSAS.isChecked():
             # load from HDD
             # input is a directory: load chopped data series
+            raise RuntimeError('Figure out how to specify GSAS file path')
             data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
 
             # a key as run number
@@ -393,6 +411,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # get workspaces from data key dictionary and add to data management
             diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
             self.add_chopped_workspaces(run_number, diff_ws_list, True)
+            seg_list = diff_ws_list
 
             data_key = None
 
@@ -400,6 +419,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         else:
             # unsupported case
             raise RuntimeError('Neither from archive nor from HDD is selected.')
+
+        # load and plot GSAS
+        # add segments list
+        self.ui.comboBox_chopSeq.clear()
+        for segment_index in sorted(seg_list):
+            self.ui.comboBox_chopSeq.addItem(segment_index)
+
+        # plot the first workspace!
+        raise RuntimeError('It is supposed to plot the first workspace in the chop list!')
 
         return
     #
@@ -456,22 +484,38 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     #
     #     return
 
+    # TEST - 20180723 - Just implemented
     def update_chopped_run_combo_box(self, item_name, remove_item):
-        """
-        TODO ASAP blabla
-        :param item_name:
-        :param remove_item:
+        """ Update the combo-box recording all the chopped runs with new workspace/run number/data ID
+        :param item_name: new item name
+        :param remove_item: flag whether the current items in the combo box shall be cleared
         :return:
         """
         # check
-        assert isinstance(item_name, str), 'blabla... {0}'.format(item_name)
+        pyvdrive.lib.datatypeutility.check_string_variable('Chopped run item', item_name)
+        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove existing items in chopped run combo-box',
+                                                         remove_item)
 
+        # remove items if required
         if remove_item:
-            # TODO ASAP2 blabla
-            blabla()
+            # remove the specified item
+            if item_name not in self._loadedChoppedRunList:
+                GuiUtility.pop_dialog_error(self, 'Run number {0} is not in the combo-box to remove.'
+                                                  ''.format(item_name))
+                return
 
+            # NOTE: _loadedChoppedRunList is always synchronized with comboBox_choppedRunNumber
+            pos_index = self._loadedChoppedRunList.index(item_name)
+            curr_pos = self.ui.comboBox_choppedRunNumber.currentIndex()
 
-            insert_pos = 0
+            self._mutexChopRunList = True
+            self.ui.comboBox_choppedRunNumber.removeItem(pos_index)
+            self._loadedChoppedRunList.pop(pos_index)
+
+            # if necessary, reset the current position
+            if pos_index <= curr_pos:
+                self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos-1)
+            self._mutexChopRunList = False
         else:
             # add item
             if item_name in self._loadedChoppedRunList:
@@ -483,10 +527,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._loadedChoppedRunList.append(item_name)
                 self._mutexChopRunList = True
                 self.ui.comboBox_choppedRunNumber.addItem(item_name)
-                self._mutexRunNumberList = False
+                self._mutexChopRunList = False
                 insert_pos = 0
             else:
-                # other item
+                # other item exits
                 current_item = str(self.ui.comboBox_choppedRunNumber.currentText())
                 print ('[DB..BAT] Current count = {0}, index = {1}, text = {2}'
                        ''.format(self.ui.comboBox_choppedRunNumber.count(),
@@ -505,11 +549,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._mutexChopRunList = True
                 self.ui.comboBox_choppedRunNumber.insert(insert_pos, item_name)
                 self.ui.comboBox_choppedRunNumber.setCurrentIndex(curr_pos)
-                self._mutexRunNumberList = False
+                self._mutexChopRunList = False
             # END-IF-ELSE
         # END-IF
 
-        return insert_pos
+        return
 
     def update_single_run_combo_box(self, item_name, remove_item, focus_to_new):
         """
@@ -519,6 +563,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param focus_to_new: flag to set the current index to newly added term
         :return:
         """
+        pyvdrive.lib.datatypeutility.check_string_variable('Single run number', item_name)
+        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to remove the specified run number', remove_item)
+
         print ('[DB...BAT...Update Combo: item name: {0} type {1}'.format(item_name, type(item_name)))
         # check inputs ... TODO blabla
 

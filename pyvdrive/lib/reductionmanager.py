@@ -57,8 +57,7 @@ class CalibrationManager(object):
         return
 
     def _init_vdrive_binning_refs(self):
-        """
-
+        """ initialize binning references
         :return:
         """
         base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
@@ -87,26 +86,41 @@ class CalibrationManager(object):
         self._focus_instrument_dict = dict()
         self._focus_instrument_dict['L1'] = 43.753999999999998
 
-        east_bank = [2.0, 90., 0.]
-        west_bank = [2.0, -90., 0.]
-        high_angle_bank = [2.0, 155., 0.]
+        # L2, Polar and Azimuthal
+        self._focus_instrument_dict['L2'] = dict()
+        self._focus_instrument_dict['Polar'] = dict()
+        self._focus_instrument_dict['Azimuthal'] = dict()
+        self._focus_instrument_dict['SpectrumIDs'] = dict()
+
+        # east_bank = [2.0, 90., 0.]
+        # west_bank = [2.0, -90., 0.]
+        # high_angle_bank = [2.0, 155., 0.]
 
         # 2 bank
-        self._focus_instrument_dict[2] = {1: west_bank,
-                                          2: east_bank}
+        self._focus_instrument_dict['L2'][2] = [2., 2.]
+        self._focus_instrument_dict['Polar'][2] = [-90.,  90]
+        self._focus_instrument_dict['Azimuthal'][2] = [0., 0.]
+        self._focus_instrument_dict['SpectrumIDs'][2] = [1, 2]
 
         # 3 bank
-        self._focus_instrument_dict[3] = {1: west_bank,
-                                          2: east_bank,
-                                          3: high_angle_bank}
+        self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
+        self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
+        self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
         # 7 bank
-        # TODO - 2018-07-18 Fill the blanks for all the focused banks
-        self._focus_instrument_dict[7] = {7: high_angle_bank}
+        # TODO - Fill the blanks for all the focused banks
+        self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][7] = None
+        self._focus_instrument_dict['Azimuthal'][7] = None
+        self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
         # 27 banks
-        # TODO - 2018-07-18 Fill the blanks for all the focused banks
-        self._focus_instrument_dict[27] = {}
+        # TODO - Fill the blanks for all the focused banks
+        self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][27] = None
+        self._focus_instrument_dict['Azimuthal'][27] = None
+        self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
 
         return
 
@@ -164,9 +178,23 @@ class CalibrationManager(object):
         :param num_banks:
         :return:
         """
-        # TODO - 20180722 - Return a dictionary with same keys are EditInstrument...
+        # check input
+        datatypeutility.check_int_variable('Number of banks', num_banks, (1, 28))
 
-        raise
+        edit_instrument_param_dict = dict()
+
+        try:
+            edit_instrument_param_dict['L1'] = self._focus_instrument_dict['L1']
+            edit_instrument_param_dict['L2'] = self._focus_instrument_dict['L2'][num_banks]
+            edit_instrument_param_dict['Polar'] = self._focus_instrument_dict['Polar'][num_banks]
+            edit_instrument_param_dict['Azimuthal'] = self._focus_instrument_dict['Azimuthal'][num_banks]
+        except KeyError as key_err:
+            err_msg = 'Unable to retrieve virtual instrument geometry for {}-bank case. FYI: {}' \
+                      ''.format(num_banks, key_err)
+            print ('[ERROR CAUSING CRASH] {}'.format(err_msg))
+            raise RuntimeError(err_msg)
+
+        return edit_instrument_param_dict
 
     def get_loaded_calibration_workspaces(self, run_start_date, num_banks):
         """
@@ -186,6 +214,31 @@ class CalibrationManager(object):
             raise RuntimeError(error_msg)
 
         return calib_ws_collection
+
+    def get_vdrive_binning_reference(self, run_date):
+        """
+        find the VDRIVE binning reference file by run start date (YYYY-MM-DD)
+        :param run_date:
+        :return: None or reference file name
+        """
+        datatypeutility.check_string_variable('Run start date in format YYYY-MM-DD', run_date)
+
+        ref_date_index = sorted(self._vdrive_bin_ref_dict.keys())
+        start_date_index = None
+        for index in range(len(ref_date_index)-1, -1, -1):
+            if run_date > ref_date_index[index]:
+                start_date_index = ref_date_index[index]
+                break
+        # END-FOR
+
+        if start_date_index is None:
+            # not found
+            err_msg = 'Run start date {} is before all VDRIVE reference file date {}'.format(run_date, ref_date_index)
+            print ('[ERROR CAUSING CRASH] {0}'.format(err_msg))
+            raise RuntimeError(err_msg)
+        # END-IF
+
+        return self._vdrive_bin_ref_dict[start_date_index]
 
     def has_loaded(self, run_start_date, num_banks):
         """ check whether a run's corresponding calibration file has been loaded
@@ -1114,14 +1167,14 @@ class ReductionManager(object):
 
         # diffraction focus
         print ('[DB...FLAG] About to diffraction focus!')
+        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
         self.diffraction_focus_workspace(event_ws_name, event_ws_name,
                                          binning_params=binning_parameters,
                                          target_unit=target_unit,
                                          calibration_workspace=calib_ws_name,
                                          mask_workspace=mask_ws_name,
                                          grouping_workspace=group_ws_name,
-                                         # TODO - 20180722 - fix compile/coding issue
-                                         virtual_instrument_geometry=self._calibrationFileManager.get_focused_instrument_parameters(num_banks),
+                                         virtual_instrument_geometry=virtual_geometry_dict,
                                          convert_to_matrix=convert_to_matrix,
                                          keep_raw_ws=False)
 
@@ -1173,7 +1226,7 @@ class ReductionManager(object):
 
         # check inputs
         datatypeutility.check_string_variable('Target unit', target_unit, ['TOF', 'dSpacing'])
-        print ('[DB...BAT] Target unit {} is accepted'.format(target_unit))
+        datatypeutility.check_dict('Virtual (focused) instrument geometry', virtual_instrument_geometry)
 
         if binning_params is None:
             # do nothing
@@ -1195,7 +1248,7 @@ class ReductionManager(object):
         # END-IF-ELSE
 
         # virtual instrument
-        self._diff_focus_params['Ed...'] = virtual_instrument_geometry
+        self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
         print ('[DB...FLAG] About to align and focus event workspace with binning {}'.format(binning_params))
