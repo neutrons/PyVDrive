@@ -223,6 +223,9 @@ class VdriveChop(VDriveCommand):
         # generate data slicer
         status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
                                                                       time_interval)
+
+        # TODO TODO - 20180727 - Is it called for DT????
+        raise RuntimeError('Chop No Chop????')
         if status:
             slicer_key = ret_obj
         else:
@@ -442,6 +445,7 @@ class VdriveChop(VDriveCommand):
                     continue
 
             # chop and optionally reduce
+            # TODO - FIXME - 20180727 - Use version 2.0 (multiple threading) chop and reduction
             if chop_period is not None:
                 # chopping with OVERLAPPED period
                 # FIXME - This is NOTE implemented and tested
