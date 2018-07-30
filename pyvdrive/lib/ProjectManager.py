@@ -330,7 +330,8 @@ class ProjectManager(object):
 
         return status, error_message, available_runs
 
-    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
+    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
+                 number_banks, tof_correction, output_directory):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -345,17 +346,16 @@ class ProjectManager(object):
         :param reduce_flag:
         :param vanadium:
         :param save_chopped_nexus: flag for saving chopped data to NeXus
+        :param tof_correction:
+        :param number_banks:
         :param output_directory:
         :return:
         """
         # check inputs' validity
-        assert isinstance(slicer_key, str), 'Slicer key %s of type %s is not supported. It ' \
-                                            'must be a string.' % (str(slicer_key), type(slicer_key))
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
+        datatypeutility.check_string_variable('Slicer key', slicer_key)
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
         if vanadium is not None:
-            assert isinstance(vanadium, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
-                                              ''.format(vanadium, type(vanadium))
+            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
         # get chopping helper
         try:
@@ -376,7 +376,7 @@ class ProjectManager(object):
             return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                           ''.format(run_number, run_error)
 
-        # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
+        # reduce data
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
@@ -386,7 +386,8 @@ class ProjectManager(object):
                                                                        output_directory=output_directory,
                                                                        reduce_data_flag=reduce_flag,
                                                                        save_chopped_nexus=save_chopped_nexus,
-                                                                       tof_correction=False,
+                                                                       number_banks=number_banks,
+                                                                       tof_correction=tof_correction,
                                                                        vanadium=vanadium)
 
         # process outputs

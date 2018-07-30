@@ -361,17 +361,14 @@ class Live2DView(MplGraphicsView2D):
 
         return
 
-    # TODO - 20180718 - Handle the home/zoom events in order to keep zoom-state with replotting!
-    # TODO  .....       Solution is to override the event handling methods
-
+    # TEST - 20180730
     def evt_toolbar_home(self):
         """
-
         @return:
         """
         super(Live2DView, self).evt_toolbar_home()
 
-        print ('[HOME]..... Live Data View')
+        # zoom the image back???
 
         return
 
@@ -384,7 +381,15 @@ class Live2DView(MplGraphicsView2D):
         assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
                                                 ''.format(type(data_set_dict))
 
-        # construct
+        # TEST/TODO - Find out the status in real time test
+        print ('[DB...FIND] About to plot contour... Is Zoom From Home = {}, Home XY Limit = {}, '
+               'Current X limit = {}'.format(self._isZoomedFromHome, self._homeXYLimit,
+                                             self._zoomInXRange))
+
+        # record current setup
+        self._zoomInXRange = self.canvas.getXLimit()
+
+        # construct the vectors for 2D contour plot
         x_list = sorted(data_set_dict.keys())
         vec_x = data_set_dict[x_list[0]][0]
         vec_y = numpy.array(x_list)
@@ -400,59 +405,28 @@ class Live2DView(MplGraphicsView2D):
             if len(vec_x_i) != size_x:
                 raise RuntimeError('Unable to form a contour plot because {0}-th vector has a different size {1} '
                                    'than first size {2}'.format(index, len(vec_x_i), size_x))
-
+            # END-IF
             # vector Y: each row will have the value of a pattern
             matrix_y[matrix_index:] = data_set_dict[index][1]  #
             matrix_index += 1
         # END-FOR
 
-        print '[DB........BAT........BAT] vec_y = {0}; size of matrix = {1}.'.format(vec_y, matrix_y.shape)
+        # plot
+        self.canvas.add_contour_plot(vec_x, vec_y, matrix_y)
 
-        self.canvas().add_contour_plot(vec_x, vec_y, matrix_y)
-
-        self.setXYLimit(xmin=1.2, xmax=2.5)
-
-        return
-
-    def plot_image(self, data_set_dict):
-        """ Plot 2D data as a contour plot
-        :param data_set_dict: dictionary such that
-        :return:
-        """
-        # Check inputs
-        assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
-                                                ''.format(type(data_set_dict))
-
-        # construct
-        x_list = sorted(data_set_dict.keys())
-        vec_x = data_set_dict[x_list[0]][0]
-        vec_y = numpy.array(x_list)
-        size_x = len(vec_x)
-
-        # create matrix on mesh
-        grid_shape = len(vec_y), len(vec_x)
-        matrix_y = numpy.ndarray(grid_shape, dtype='float')
-        matrix_index = 0
-        for index in vec_y:
-            # vector X
-            vec_x_i = data_set_dict[index][0]
-            if len(vec_x_i) != size_x:
-                raise RuntimeError('Unable to form a contour plot because {0}-th vector has a different size {1} '
-                                   'than first size {2}'.format(index, len(vec_x_i), size_x))
-
-            # vector Y: each row will have the value of a pattern
-            matrix_y[matrix_index:] = data_set_dict[index][1]  #
-            matrix_index += 1
-        # END-FOR
-
-        # clear canvas and add contour plot
-        if self.canvas().has_plot('image'):
-            self.canvas().update_image(matrix_y)
+        if self._zoomInXRange is None:
+            # no zoom in: set to user defined
+            x_min=1.2
+            x_max=2.5
         else:
-            self.add_2d_plot(array2d=matrix_y, x_min=min(vec_x), x_max=max(vec_x),
-                             y_min=0, y_max=10, plot_type='image')
+            # zoom is pressed down and already zoomed
+            x_min = self._zoomInXRange[0]
+            x_max = self._zoomInXRange[1]
+        self.setXYLimit(xmin=x_min, xmax=x_max)
+
 
         return
+# END-DEF-CLASS ()
 
 
 class SingleBankView(MplGraphicsView):

@@ -326,8 +326,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                   ''.format(run_number, run_error))
                 return
 
-            # X self.add_data_set(ipts_number=ipts_number, run_number=run_number, controller_data_key=data_key)
-
         elif self.ui.radioButton_anyGSAS.isChecked():
             # load from HDD
             # input is a file: load a single GSAS file, get GSAS file path
@@ -352,22 +350,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # END-IF-ELSE
 
         # set spectra list
-        # TODO - 20180724 - Break Point!
-        data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
-        print data_bank_list
-        raise
-        self._myController.get_bank_list(data_key)
+        # TEST - 20180724 - Break Point!
+        try:
+            data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
+        except RuntimeError as run_err:
+            raise RuntimeError('Unable to get bank information from {} due to {}'
+                               ''.format(data_key, run_err))
+            # TODO - Later - shall be a pop-up dialog to show the error
 
         # add run number to run number list and plot
-        self.add_reduced_runs([data_key], focus_to_first=True)
-        self.do_plot_diffraction_data()
-        # 
-        # # # set up the data file to this data viewer and
-        # # status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
-        # # if not status:
-        # #     GuiUtility.pop_dialog_error(self, error_message)
-        # #     return
-        #
+        self.add_reduced_run(data_key, data_bank_list)
+
+        # TODO - Remove: the commented out part shall be covered in self.add_reduced_runs().  Remove it after TEST
+        # self.do_plot_diffraction_data()
         # # clear some quick references, including GUI widgets its associated chopped data dictionary
         # # self._mutexChopSeqList = True
         # self._mutexRunNumberList = True
@@ -376,10 +371,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # self._mutexRunNumberList = False
         # # self._mutexChopSeqList = False
         # # self._mutexChopSeqList = False
-
-        # set the label
-        seq_list = None
-        self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
+        #
+        # # set the label
+        # seq_list = None
+        # self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
 
         return
 
@@ -709,38 +704,35 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     #
     #     return controller_data_key
 
-    def add_reduced_runs(self, data_key_list, focus_to_first=True):
-        """
-        add a series of reduced runs in single run format in their data key presentation to
-
-        used by:  pyvdrive/interface/VDrivePlot.py  483:
-                  pyvdrive/interface/vcommand_processor.py
-                  self.do_load_single_gsas
-        :param data_key_list:
-        :param focus_to_first:
+    # TEST -20180730 - Newly Refactored
+    def add_reduced_run(self, data_key, bank_id_list, plot_new):
+        """ add a reduced run to this UI
+        Usage:
+            pyvdrive/interface/VDrivePlot.py  483:
+            pyvdrive/interface/vcommand_processor.py
+            self.do_load_single_gsas
+        :param data_key:
+        :param bank_id_list: the list of banks of the data key
+        :param plot_new: flag to focus the combo box to the newly added run and plot
         :return:
         """
         # check inputs
-        pyvdrive.lib.datatypeutility.check_list('Reduced data keys list', data_key_list)
+        pyvdrive.lib.datatypeutility.check_string_variable('Reduced data key', data_key)
+        pyvdrive.lib.datatypeutility.check_list('Bank ID list', bank_id_list)
+        pyvdrive.lib.datatypeutility.check_bool_variable('Flag to plot newly added run', plot_new)
 
-        # sort and add
-        data_key_list.sort()
+        # set plot new
+        if len(self._runNumberList) == 0:
+            # first run to add
+            plot_new = True
 
-        # update the run list
-        for key_index, data_key in enumerate(data_key_list):
-            # determine need to focus or not
-            if focus_to_first and key_index == 0:
-                focus = True
-            else:
-                focus = False
-            if isinstance(data_key, int):
-                # in case it is a run number (int)
-                data_key = '{0}'.format(data_key)
-            self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=focus)
+        # update run combo box without plotting
+        self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=plot_new)
         # END-FOR
 
-        # update
-        self.update_bank_id_combo()
+        # update bank ID box without plotting
+        if plot_new:
+            self.update_bank_id_combo(bank_id_list)
 
 
             # register?
@@ -956,20 +948,31 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         Normalize by current/proton charge if the reduced run is not.
         :return:
         """
+        # TEST - 20180730 - Refactored
         # Get run number
-        data_key = self.ui.comboBox_runs.currentText()
+        run_number_st = self.ui.comboBox_runs.currentText()
 
         # Get reduction information from run number
-        if data_key.endswith('G'):
+        if run_number_st.endswith('G'):
             # from gsas file
-            GuiUtility.pop_dialog_information()
+            GuiUtility.pop_dialog_information(self, 'This is a data loaded from GSAS. Normailze by current'
+                                                    ' cannot be applied to data loaded from GSAS')
+            return
 
+        # from reduced data
+        run_number = int(run_number_st)
         status, ret_obj = self._myController.get_reduced_run_info(run_number)
-        assert status, ret_obj
-        reduction_info = ret_obj
+        if not status:
+            GuiUtility.pop_dialog_error(self, 'Unable to access reduced run {} due to {}'.format(run_number_st,
+                                                                                                 ret_obj))
+            return
+        else:
+            reduction_info = ret_obj
+        # END-IF
 
+        # check whether
         if reduction_info.is_noramalised_by_current() is True:
-            GuiUtility.pop_dialog_error(self, 'Run %d has been normalised by current already.' % run_number)
+            GuiUtility.pop_dialog_information(self, 'Run %d has been normalised by current already.' % run_number)
             return
 
         # Normalize by current
@@ -977,9 +980,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Re-plot
         bank_id = int(self.ui.comboBox_spectraList.currentText())
-        over_plot = self.ui.checkBox_overPlot.isChecked()
+        over_plot = False
 
-        self.plot_by_data_key(data_key, bank_id_list=[bank_id], over_plot=over_plot)
+        self.plot_by_data_key(run_number_st, bank_id_list=[bank_id], over_plot=over_plot)
 
         return
 
@@ -1029,7 +1032,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 data_key_list.append(data_key)
         else:
             # unsupported
-            raise RuntimeError('balbla todo')
+            raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
 
         # bank information
         curr_bank = int(self.ui.comboBox_spectraList.currentText())
@@ -1059,7 +1062,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             curr_run_key = main_run_key, child_run_key
 
         else:
-            raise RuntimeError('Neither ... nor ... blabla')
+            raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
 
         # check bank information: assumption is that all data keys are related to data with workspace
         # if False:

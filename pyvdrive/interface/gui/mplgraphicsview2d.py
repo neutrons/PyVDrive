@@ -70,17 +70,20 @@ class MplGraphicsView2D(QWidget):
         self._myCanvas = Qt4Mpl2DCanvas(self)
         self._myToolBar = MyNavigationToolbar(self, self._myCanvas)
 
-        # state of operation
-        self._isZoomed = False
-        self._zoomInXRange = None
+        # state of zoom
+        self._isZoomedFromHome = False   # figure is zoomed from home
+        self._isZoomPressedDown = False  # flag that the zoom key is pressed down
+
         # X and Y limit with home button
-        self._homeXYLimit = None
+        self._homeXYLimit = None  # if used, it shall be a 4-element list as min x, max x, min y, max y
+        self._zoomInXRange = None  # if used, it shall be a 4-element list as min x, max x, min y, max y
 
         # set up layout
         self._vBox = QVBoxLayout(self)
         self._vBox.addWidget(self._myCanvas)
         self._vBox.addWidget(self._myToolBar)
 
+        # list of arrows
         self._arrowList = list()
 
         #
@@ -89,8 +92,7 @@ class MplGraphicsView2D(QWidget):
         return
 
     def add_arrow(self, start_x, start_y, stop_x, stop_y):
-        """
-
+        """ add an arrow to the image
         :param start_x:
         :param start_y:
         :param stop_x:
@@ -103,11 +105,11 @@ class MplGraphicsView2D(QWidget):
         return
 
     def add_image(self, image_file_name):
-        """ Add an image by file
+        """ Add an image to canvas by file
         """
         # check
         if os.path.exists(image_file_name) is False:
-            raise NotImplementedError("Image file %s does not exist." % image_file_name)
+            raise RuntimeError("Image file %s does not exist." % image_file_name)
 
         self._myCanvas.add_image_file(image_file_name)
 
@@ -122,38 +124,26 @@ class MplGraphicsView2D(QWidget):
         :param y_min:
         :param y_max:
         :param y_tick_label:
+        :param plot_type:s
         :return:
         """
         # obsoleted: self._myCanvas.addPlot2D(array2d, x_min, x_max, y_min, y_max, hold_prev_image, y_tick_label)
 
         if plot_type == 'image':
+            # regular image
             self._myCanvas.add_image_plot(array2d, x_min, x_max, y_min, y_max, yticklabels=y_tick_label)
-        elif plot_type == 'image file':
-            self._myCanvas.add_image_file()
         elif plot_type == 'scatter':
-            blabla
+            # 2D scatters
+            self._myCanvas.add_scatter_plot(array2d)
         else:
-            blabla
+            raise RuntimeError('Plot type {} of type {} is not supported.  Present supported plot types include '
+                               'image and scatter of type string'.format(plot_type, type(plot_type)))
 
         self._hasImage = True
 
         return
 
-    def has_image_on_canvas(self):
-        """
-        blabla
-        @return:
-        """
-        # TODO/ASAP
-        return self._hasImage
-
-    def update_2d_plot(self):
-        """
-
-        @return:
-        """
-        pass
-
+    @property
     def canvas(self):
         """ Get the canvas
         :return:
@@ -169,9 +159,9 @@ class MplGraphicsView2D(QWidget):
         # about zoom
         # to-be-filled
 
-        r = self._myCanvas.clear_canvas()
+        self._myCanvas.clear_canvas()
 
-        return r
+        return
 
     def draw(self):
         """ Draw to commit the change
@@ -179,14 +169,15 @@ class MplGraphicsView2D(QWidget):
         return self._myCanvas.draw()
 
     def evt_toolbar_home(self):
-        """
-
+        """ event triggered as home is pressed in tool bar
         @return:
         """
         # turn off zoom mode
-        self._isZoomed = False
+        self._isZoomedFromHome = False
+        self._isZoomPressedDown = False
 
-        print ('[HOME]..... BASE')
+        # reset zoom in X range
+        self._zoomInXRange = None
 
         return
 
@@ -194,6 +185,8 @@ class MplGraphicsView2D(QWidget):
         """ Event handling as canvas size updated
         :return:
         """
+        print ('[DB...FIND] View is updated.  From {}'.format(self.__class__.__name__))
+
         # # update the indicator
         # new_x_range = self.getXLimit()
         # new_y_range = self.getYLimit()
@@ -208,27 +201,32 @@ class MplGraphicsView2D(QWidget):
         return
 
     def evt_press_zoom(self):
-        """
-
+        """ event triggered as the zoom is pressed
         :return:
         """
-        # TODO - 20180718 - Set the signal correct! and shall work around with home!
-        print ('Now I know that it is in zoom state now')
+        self._isZoomPressedDown = not self._isZoomPressedDown
+
+        print ('{} zoom key is pressed down = {}'.format(self.__class__.__name__,
+                                                         self._isZoomPressedDown))
 
         return
 
+    # TEST - 20180730 - Live View Zoom In
     def evt_zoom_released(self):
         """ event for zoom is release
         @return:
         """
         # record home XY limit if it is never zoomed
-        if self._isZoomed is False:
+        if self._isZoomedFromHome is False:
             self._homeXYLimit = list(self.current_x_range())
             self._homeXYLimit.extend(list(self.getYLimit()))
+            print ('[DB...BAT] Updated home X Y limit: {}'.format(self._homeXYLimit))
+        else:
+            print ('[DB...BAT] Original home X Y limit: {}'.format(self._homeXYLimit))
         # END-IF
 
         # set the state of being zoomed
-        self._isZoomed = True
+        self._isZoomedFromHome = True
 
         return
 
@@ -280,6 +278,12 @@ class MplGraphicsView2D(QWidget):
 
         return max_y
 
+    def has_image_on_canvas(self):
+        """ state whether there is an image plot on canvas
+        @return:
+        """
+        return self._hasImage
+
     def move_indicator(self, line_id, dx, dy):
         """
         Move the indicator line in horizontal
@@ -303,6 +307,46 @@ class MplGraphicsView2D(QWidget):
 
             self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=h_vec_set[0], vecy=h_vec_set[1])
             self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=v_vec_set[0], vecy=v_vec_set[1])
+
+        return
+
+    def plot_image(self, data_set_dict):
+        """ Plot 2D data as a contour plot
+        :param data_set_dict: dictionary such that
+        :return:
+        """
+        # Check inputs
+        assert isinstance(data_set_dict, dict), 'Input data must be in a dictionary but not a {0}' \
+                                                ''.format(type(data_set_dict))
+
+        # construct
+        x_list = sorted(data_set_dict.keys())
+        vec_x = data_set_dict[x_list[0]][0]
+        vec_y = np.array(x_list)
+        size_x = len(vec_x)
+
+        # create matrix on mesh
+        grid_shape = len(vec_y), len(vec_x)
+        matrix_y = np.ndarray(grid_shape, dtype='float')
+        matrix_index = 0
+        for index in vec_y:
+            # vector X
+            vec_x_i = data_set_dict[index][0]
+            if len(vec_x_i) != size_x:
+                raise RuntimeError('Unable to form a contour plot because {0}-th vector has a different size {1} '
+                                   'than first size {2}'.format(index, len(vec_x_i), size_x))
+
+            # vector Y: each row will have the value of a pattern
+            matrix_y[matrix_index:] = data_set_dict[index][1]  #
+            matrix_index += 1
+        # END-FOR
+
+        # clear canvas and add contour plot
+        if self.canvas.has_plot('image'):
+            self.canvas.update_image(matrix_y)
+        else:
+            self.add_2d_plot(array2d=matrix_y, x_min=min(vec_x), x_max=max(vec_x),
+                             y_min=0, y_max=10, plot_type='image')
 
         return
 
@@ -335,91 +379,6 @@ class MplGraphicsView2D(QWidget):
 
         return
 
-    def set_indicator_position(self, line_id, pos_x, pos_y):
-        """ Set the indicator to new position
-        :param line_id: indicator ID
-        :param pos_x:
-        :param pos_y:
-        :return:
-        """
-        # Set value
-        self._myIndicatorsManager.set_position(line_id, pos_x, pos_y)
-
-        # apply to plot on canvas
-        if self._myIndicatorsManager.get_line_type(line_id) < 2:
-            # horizontal or vertical
-            canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(line_id)
-            vec_x, vec_y = self._myIndicatorsManager.get_data(line_id)
-            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=vec_x, vecy=vec_y)
-        else:
-            # 2-way
-            canvas_line_index_h, canvas_line_index_v = self._myIndicatorsManager.get_canvas_line_index(line_id)
-            h_vec_set, v_vec_set = self._myIndicatorsManager.get_2way_data(line_id)
-
-            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=h_vec_set[0], vecy=h_vec_set[1])
-            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=v_vec_set[0], vecy=v_vec_set[1])
-
-        return
-
-    def removePlot(self, ikey):
-        """
-        """
-        return self._myCanvas.remove_plot_1d(ikey)
-
-    def updateLine(self, ikey, vecx=None, vecy=None, linestyle=None, linecolor=None, marker=None, markercolor=None):
-        """
-        update a line's set up
-        Parameters
-        ----------
-        ikey
-        vecx
-        vecy
-        linestyle
-        linecolor
-        marker
-        markercolor
-
-        Returns
-        -------
-
-        """
-        # check
-        assert isinstance(ikey, int), 'Line key must be an integer.'
-        assert ikey in self._my1DPlotDict, 'Line with ID %d is not on canvas. ' % ikey
-
-        return self._myCanvas.updateLine(ikey, vecx, vecy, linestyle, linecolor, marker, markercolor)
-
-    def update_indicator(self, i_key, color):
-        """
-        Update indicator with new color
-        :param i_key:
-        :param vec_x:
-        :param vec_y:
-        :param color:
-        :return:
-        """
-        if self._myIndicatorsManager.get_line_type(i_key) < 2:
-            # horizontal or vertical
-            canvas_line_index = self._myIndicatorsManager.get_canvas_line_index(i_key)
-            self._myCanvas.updateLine(ikey=canvas_line_index, vecx=None, vecy=None, linecolor=color)
-        else:
-            # 2-way
-            canvas_line_index_h, canvas_line_index_v = self._myIndicatorsManager.get_canvas_line_index(i_key)
-            # h_vec_set, v_vec_set = self._myIndicatorsManager.get_2way_data(i_key)
-
-            self._myCanvas.updateLine(ikey=canvas_line_index_h, vecx=None, vecy=None, linecolor=color)
-            self._myCanvas.updateLine(ikey=canvas_line_index_v, vecx=None, vecy=None, linecolor=color)
-
-        return
-
-    def get_canvas(self):
-        """
-        get canvas
-        Returns:
-
-        """
-        return self._myCanvas
-
     def set_title(self, title, color='black'):
         """
         set title to canvas
@@ -440,6 +399,12 @@ class MplGraphicsView2D(QWidget):
         self._myCanvas.draw()
 
         return
+
+    def update_2d_plot(self):
+        """ update 2D plot
+        @return:
+        """
+        raise RuntimeError('Base class of {}: virtual method update_2d_plot'.format(self.__class__.__name__))
 
 
 class Qt4Mpl2DCanvas(FigureCanvas):
@@ -757,7 +722,9 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         return self.axes
 
     def getXLimit(self):
-        """ Get limit of Y-axis
+        """
+        Get limit of Y-axis
+        :return: list of 2 float as min X and max X
         """
         return self.axes.get_xlim()
 
@@ -1001,6 +968,8 @@ class MyNavigationToolbar(NavigationToolbar2):
     canvas_zoom_released = pyqtSignal()
     # zoom is pressed
     zoom_pressed = pyqtSignal()
+    # view is updated
+    view_updated_signal = pyqtSignal(name='ViewUpdatedSignal')
 
     def __init__(self, parent, canvas):
         """ Initialization
@@ -1018,6 +987,7 @@ class MyNavigationToolbar(NavigationToolbar2):
         self.home_button_pressed.connect(self._myParent.evt_toolbar_home)
         self.zoom_pressed.connect(self._myParent.evt_press_zoom)
         self.canvas_zoom_released.connect(self._myParent.evt_zoom_released)
+        self.view_updated_signal.connect(self._myParent.evt_view_updated)
 
         return
 
@@ -1043,9 +1013,14 @@ class MyNavigationToolbar(NavigationToolbar2):
         Canvas is drawn called by pan(), zoom()
         :return:
         """
-        NavigationToolbar2.draw(self)
+        # draw!
+        super(MyNavigationToolbar, self).draw()
+        # NavigationToolbar2.draw(self)
 
-        self._myParent.evt_view_updated()
+        # send a signal to notify window
+        self.view_updated_signal.emit()
+
+        #  self._myParent.evt_view_updated()
 
         return
 
@@ -1090,6 +1065,41 @@ class MyNavigationToolbar(NavigationToolbar2):
 
         return
 
+    def release_zoom(self, event):
+        """ override zoom released method
+        :param event:
+        :return:
+        """
+        # TEST ME - 20180718 : crashed if there is no image ever plotted
+        """
+        NavigationToolbar2.release_zoom(self, event)
+        File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 3053, in release_zoom
+        lastx, lasty, a, ind, view = cur_xypress
+        ValueError: need more than 2 values to unpack
+        """
+        if self._myParent.has_image_on_canvas():
+            super(MyNavigationToolbar, self).release_zoom(event)
+        # NavigationToolbar2.release_zoom(self, event)
+
+        self.canvas_zoom_released.emit()
+
+        return
+
+    def _update_view(self):
+        """
+        view update called by home(), back() and forward()
+        :return:
+        """
+        # NavigationToolbar2._update_view(self)
+        # call base class to update view
+        super(MyNavigationToolbar, self)._update_view()
+
+        # send signal
+        self.view_updated_signal.emit()
+        # self._myParent.evt_view_updated()
+
+        return
+
     def zoom(self, *args):
         """
         Turn on/off zoom (zoom button)
@@ -1104,35 +1114,5 @@ class MyNavigationToolbar(NavigationToolbar2):
         else:
             # into zoom mode
             self._myMode = MyNavigationToolbar.NAVIGATION_MODE_ZOOM
-
-        return
-
-    def release_zoom(self, event):
-        """ override zoom released method
-        :param event:
-        :return:
-        """
-        NavigationToolbar2.release_zoom(self, event)
-
-        # TODO - 20180718 : crashed if there is no image ever plotted
-        """
-        NavigationToolbar2.release_zoom(self, event)
-        File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 3053, in release_zoom
-        lastx, lasty, a, ind, view = cur_xypress
-        ValueError: need more than 2 values to unpack
-        """
-
-        self.canvas_zoom_released.emit()
-
-        return
-
-    def _update_view(self):
-        """
-        view update called by home(), back() and forward()
-        :return:
-        """
-        NavigationToolbar2._update_view(self)
-
-        self._myParent.evt_view_updated()
 
         return

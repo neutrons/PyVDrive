@@ -242,21 +242,57 @@ class CalibrationManager(object):
 
         return self._vdrive_bin_ref_dict[start_date_index]
 
-    def has_loaded(self, run_start_date, num_banks):
+    # TESTME - 20180730 - Updated
+    def has_loaded(self, run_start_date, num_banks, check_workspaces=False):
         """ check whether a run's corresponding calibration file has been loaded
+        If check_workspace is True, then check the real workspaces if they are not in the dictionary;
+        If the workspaces are there, then add the calibration files to the dictionary
         :param run_start_date:
         :param num_banks:
+        :param check_workspaces: if True, then check the workspace names instead of dictionary.
         :return:
         """
+        # get calibration date and file name
         calib_file_date, calib_file_name = self.get_calibration_file(run_start_date, num_banks)
         print ('[DB...BAT] ID/Date: {}; Calibration file name: {}'.format(calib_file_date, calib_file_name))
 
+        # regular check with dictionary
+        has_them = True
         if calib_file_date not in self._loaded_calibration_file_dict:
-            return False
+            has_them = False
         elif num_banks not in self._loaded_calibration_file_dict[calib_file_date]:
-            return False
+            has_them = False
 
-        return True
+        if not has_them and check_workspaces:
+            # check with workspace name
+            base_ws_name = self.get_base_name(calib_file_name, num_banks)
+            has_all = True
+            has_some = False
+            for sub_ws_name in ['calib', 'mask', 'grouping']:
+                ws_name = '{}_{}'.format(base_ws_name, sub_ws_name)
+                if mantid_helper.workspace_does_exist(ws_name) is False:
+                    has_all = False
+                else:
+                    has_some = True
+            # END-FOR
+
+            if has_all != has_some:
+                raise RuntimeError('Some calibration workspace existed but not all!')
+            if has_all:
+                # add to dictionary
+                has_them = True
+                if calib_file_date not in self._loaded_calibration_file_dict:
+                    self._loaded_calibration_file_dict[calib_file_date] = dict()
+                calib_ws_collection = DetectorCalibrationWorkspaces()
+                calib_ws_collection.calibration = '{}_{}'.format(base_ws_name, 'calib')
+                calib_ws_collection.mask = '{}_{}'.format(base_ws_name, 'mask')
+                calib_ws_collection.grouping = '{}_{}'.format(base_ws_name, 'grouping')
+                self._loaded_calibration_file_dict[calib_file_date][num_banks] = calib_ws_collection
+
+            # END-IF
+        # END-IF-NOT
+
+        return has_them
 
     def load_calibration_file(self, calibration_file_name, cal_date_index, num_banks, ref_ws_name):
         """ load calibration file
@@ -816,7 +852,7 @@ class ReductionManager(object):
 
     # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
-                        output_directory, reduce_data_flag, save_chopped_nexus,
+                        output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, vanadium):
         """
         chop VULCAN run with reducing to GSAS file as an option
@@ -827,6 +863,7 @@ class ReductionManager(object):
         :param split_info_name:
         :param slice_key: a general keyword to refer from the reduction tracker
         :param output_directory: string for directory or None for saving to archive
+        :param number_banks:
         :param vanadium: vanadium run number of None for not normalizing
         :param tof_correction:
         :return: 2-tuple.  (1) boolean as status  (2) error message
@@ -857,15 +894,35 @@ class ReductionManager(object):
             reduction_setup.set_chopped_nexus_dir(output_directory)
         # END-IF-ELSE
 
-        if reduce_data_flag:
+        # use run number to check against with calibration manager
+        run_start_date = self._calibrationFileManager.check_creation_date(raw_file_name)
+        cal_loaded = self._calibrationFileManager.has_loaded(run_start_date=run_start_date, num_banks=number_banks,
+                                                             check_workspaces=True)
+        # get the information about the calibration file or calibration workspaces
+        if not cal_loaded:
+            cal_file_name = self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
+                                                                              num_banks=number_banks)
+            cal_ws_base_name = self._calibrationFileManager.get_base_name(cal_file_name, number_banks)
+        else:
+            cal_file_name = None
+
+        if reduce_data_flag and not save_chopped_nexus:
             # chop and reduce chopped data to GSAS
             # set up the flag to save chopped raw data
             reduction_setup.save_chopped_workspace = save_chopped_nexus
 
             # set the flag for not being an auto reduction
             reduction_setup.is_auto_reduction_service = False
-            # TODO FIXME ASAP3 - Need to pass number of banks to focus on
-            reduction_setup.set_default_calibration_files(num_focused_banks=3)
+            if not cal_loaded:
+                reduction_setup.set_calibration_file(calib_file_name=cal_file_name)
+            else:
+                reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
+
+            reduction_setup.set_align_vdrive_bin()
+
+            # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
+            #                                               cal_file_name=cal_file_name,
+            #                                               base_ws_name=cal_ws_base_name)
 
             # set up reducer
             reduction_setup.process_configurations()
@@ -874,7 +931,7 @@ class ReductionManager(object):
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
 
             # reduce data
-            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False)
+            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False,)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)
@@ -882,6 +939,11 @@ class ReductionManager(object):
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
             self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+
+        elif reduce_data_flag and save_chopped_nexus:
+            # required to save the chopped workspace to NeXus file
+            # slow algorithm is then used
+            raise NotImplementedError('Find out the old way to reduce and save data')
 
         else:
             # chop data only without reduction

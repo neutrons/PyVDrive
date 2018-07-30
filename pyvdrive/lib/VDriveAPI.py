@@ -16,6 +16,7 @@ import crystal_helper
 import io_peak_file
 import reduce_VULCAN
 import chop_utility
+import datatypeutility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -391,7 +392,7 @@ class VDriveAPI(object):
         :return:
         """
         # check input
-        assert run_number is not None, 'Run number cannot be None.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
         # get chopper
         chopper = self._myProject.get_chopper(run_number)
@@ -1880,7 +1881,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   export_log_type='loadframe'):
+                   number_banks, export_log_type='loadframe'):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1890,13 +1891,17 @@ class VDriveAPI(object):
         :param vanadium:
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive
+        :param number_banks:
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
         # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
-        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data, vanadium=vanadium,
-                                                   save_chopped_nexus=save_chopped_nexus, output_directory=output_dir)
+        status, message = self._myProject.chop_run(run_number, slicer_id,
+                                                   reduce_flag=reduce_data, vanadium=vanadium,
+                                                   save_chopped_nexus=save_chopped_nexus,
+                                                   output_directory=output_dir,
+                                                   number_banks=number_banks)
 
         return status, message
 

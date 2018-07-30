@@ -9,11 +9,13 @@ except ImportError:
     from PyQt4.QtCore import pyqtSignal
 
 import vdrive_commands.chop
+import vdrive_commands.show_info
 import vdrive_commands.vbin
 import vdrive_commands.vmerge
 import vdrive_commands.view
 import vdrive_commands.vpeak
 import vdrive_commands.procss_vcommand
+import pyvdrive.lib.datatypeutility
 
 
 class VdriveCommandProcessor(object):
@@ -149,6 +151,10 @@ class VdriveCommandProcessor(object):
             # process vanadium peak
             status, err_msg = self._process_vanadium_peak(arg_dict)
 
+        elif command == 'INFO':
+            # query some information from previoulsy measured runs
+            status, err_msg = self._process_info_query(arg_dict)
+
         else:
             raise RuntimeError('Impossible situation!')
 
@@ -202,6 +208,23 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
+    def _process_info_query(self, arg_dict):
+        """
+        process information query
+        :param arg_dict:
+        :return:
+        """
+        # create a new Info query instance
+        try:
+            processor = vdrive_commands.show_info.RunsInfoQuery(self._myController, arg_dict)
+        except vdrive_commands.procss_vcommand.CommandKeyError as comm_err:
+            return False, str(comm_err)
+
+        # call and execute
+        status, message = self._process_command(processor, arg_dict)
+
+        return status, message
+
     def _process_merge(self, arg_dict):
         """
         process command MERGE
@@ -219,6 +242,7 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
+    # TEST - 20180730 - Refactored
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -246,6 +270,17 @@ class VdriveCommandProcessor(object):
         view_window.set_x_range(processor.x_min, processor.x_max)
         view_window.set_unit(processor.unit)
 
+        # find out whether the runs to plot are in memory or need to load from HDD/archive/previously reduced
+        in_mem_dict = dict()
+        ipts_dict = dict()
+        for run_i, ipts_i in processor.get_run_tuple_list():
+            if self._myController.reduced_manager.has_reduced_run(run_i):
+                in_mem_dict[run_i] = True
+            else:
+                in_mem_dict[run_i] = False
+            ipts_dict[run_i] = ipts_i
+        # END-FOR
+
         if processor.is_1_d:
             # 1-D image
             view_window.set_canvas_type(dimension=1)
@@ -254,17 +289,20 @@ class VdriveCommandProcessor(object):
             if processor.do_vanadium_normalization:
                 vanadium_dict = dict()
                 for run_number in processor.get_run_number():
-                    vanadium_dict[run_number] = processor.get_vanadium_number(run_number)
+                    van_run_number = processor.get_vanadium_number(run_number)
+                    vanadium_dict[run_number] = van_run_number
+                    self._myController.set_vanadium_run(run_number, van_run_number)
 
-            # view_window.add_reduced_runs(processor.get_run_tuple_list(), vanadium_dict)
-            # TODO ASAP Need to find out how to set vanadium information... but now
-            # ipts_run_list = processor.get_run_tuple_list()
-            # run_list = list()
-            # for run, ipts in ipts_run_list:
-            #     run_list.append(run)
-            # view_window.add_reduced_runs(run_list, True)
+            for i_run, run_number in enumerate(sorted(in_mem_dict.keys())):
+                # load
+                if in_mem_dict[run_number]:
+                    data_key = self._myController.get_reduced_run_ref_id(run_number)
+                else:
+                    data_key = self._myController.load_gsas_from_archive(run_number)
 
-            # view_window.plot_by_run_number(processor.get_run_number(), bank_id=1)
+                bank_id_list = self._myController.get_reduced_run_banks(ipts_dict[run_number], run_number)
+                view_window.add_reduced_run(self, data_key, bank_id_list, plot_new=(i_run == 0))
+            # END-FOR
 
         elif processor.is_chopped_run:
             # chopped run... can be 1D (only 1 chopped data) or 2D (more than 1 chopped data)
@@ -291,6 +329,7 @@ class VdriveCommandProcessor(object):
 
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:
+            raise RuntimeError('Need a solid use case to test this feature')
             ipts_number, run_number_list = processor.get_ipts_runs()
             chop_list = processor.get_chopped_sequence_range()
             status, ret_obj = self._myController.calculate_peak_parameters(ipts_number, run_number_list, chop_list,
@@ -362,18 +401,20 @@ class VdriveCommandProcessor(object):
 
     @staticmethod
     def _process_command(command_processor, arg_dict):
-        """
-
+        """ process VDrive-compatible command
         :param command_processor:
         :param arg_dict:
         :return:
         """
         assert isinstance(command_processor, vdrive_commands.procss_vcommand.VDriveCommand), \
-            'not command processor but ...'
-        assert isinstance(arg_dict, dict), 'Arguments dictionary %s must be a dictionary but not a %s.' \
-                                           '' % (str(arg_dict), type(arg_dict))
+            'VDrive IDL-compatible command processor {} must be an instance of ' \
+            'vdrive_commands.procss_vcommand.VDriveCommandbut but not of type {}' \
+            ''.format(command_processor, type(command_processor))
+
+        pyvdrive.lib.datatypeutility.check_dict('VDrive IDL-compatible command arguments', arg_dict)
 
         if len(arg_dict) == 0:
+            # if there is no argument, just print out the help information
             message = command_processor.get_help()
             status = True
         else:

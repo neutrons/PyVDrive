@@ -4,10 +4,10 @@
 import os
 import time
 import pickle
-import datatypeutility
 import mantid_helper
 import vdrivehelper
 import vulcan_util
+import datatypeutility
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
@@ -54,6 +54,9 @@ class DataArchiveManager(object):
         # data storage
         self._iptsInfoDict = dict()   # key: archive ID as IPTS number, value: dictionary of dictionaries: key = run
         self._runIptsDict = dict()  # key: run number value: IPTS number
+
+        # VULCAN auto record dictionary
+        self._auto_record_dict = dict()
 
         # Other class variables
         # # ipts number of type integer
@@ -508,6 +511,43 @@ class DataArchiveManager(object):
         :return: directory under ..../shared/
         """
         return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
+
+    def load_auto_record(self, ipts_number, record_type):
+        """
+        load auto record file
+        :except RuntimeError if there is no IPTS in auto record
+        :param ipts_number:
+        :param record_type: None for AutoRecord.txt, 'data' for AutoRecordData.txt', 'align' for AutoRecordAlign.txt
+        :return:
+        """
+        # check input
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        if record_type is not None:
+            datatypeutility.check_string_variable('Log type', 'Record type', allowed_values=['data', 'align'])
+
+        # locate IPTS folder and AutoRecord file
+        ipts_shared_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
+        if os.path.exists(ipts_shared_dir) is False:
+            raise RuntimeError('IPTS {} has no directory {} in SNS archive'.format(ipts_number, ipts_shared_dir))
+
+        if record_type is None:
+            base_name = 'AutoRecord.txt'
+        elif record_type == 'data':
+            base_name = 'AutoRecordData.txt'
+        elif record_type == 'align':
+            base_name = 'AutoRecordAlign.txt'
+        else:
+            raise NotImplementedError('Impossible to reach this point')
+
+        auto_record_file_name = os.path.join(ipts_shared_dir, base_name)
+        if not os.path.exists(auto_record_file_name):
+            raise RuntimeError('Auto {} record file {} does not exist.'.format(record_type, auto_record_file_name))
+
+        # load and parse the file
+        record_key = 'Auto{}-IPTS{}'.format(record_type, ipts_number)
+        self._auto_record_dict[record_key] = vulcan_util.import_vulcan_log(auto_record_file_name)
+
+        return record_key
 
     @staticmethod
     def locate_vanadium_gsas_file(ipts_number, van_run_number):
