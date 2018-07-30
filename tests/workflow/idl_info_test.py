@@ -28,7 +28,8 @@ def test_case_duration(command_tester):
     test viewing data from archive with multiple reduced runs
     :return:
     """
-    command_line = 'INFO,IPTS=14094,RUNS=96450, DURATION=1, -n=30'
+    # command_line = 'INFO,IPTS=14094,RUNS=96450, DURATION=1, -n=30'
+    command_line = 'INFO, IPTS=21356, DURATION=1, -n=40'
     command_tester.run_command(command_line)
 
     return

@@ -73,12 +73,12 @@ class VulcanLiveDataView(QMainWindow):
 
         # define data structure by setting some default
         self._myAccumulationWorkspaceNumber = 360  # default as 360 * 0.5 (min) = = 180 min = 3 hours
-        self._myRefreshTimeStep = 10  # seconds
-        self._myAccumulationTime = 30  # 30 x 10 = 300 seconds = 5 min per accumulation
+        self._myUpdateTimePeriod = 10   # seconds.  time interval to update live view
+        self._myAccumulationTime = 30   # seconds.  time interval to start a new slice/chopped = 5 min per accumulation
         # decide whether a new workspace shall be started
-        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
         # containing 2 sets of incremental workspaces for safe
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2
         # incremental workspace list
         self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
         self._myIncrementalListIndex = 0  # This is always the next index to write except in add...()
@@ -161,46 +161,6 @@ class VulcanLiveDataView(QMainWindow):
         # general purpose
         self.ui.pushButton_setupGeneralPurposePlot.clicked.connect(self.do_setup_gpplot)
 
-        # # set up the event handlers
-        # self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
-        #              self.do_start_live)
-        # self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
-        #              self.do_stop_live)
-        #
-        # self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank1_roi)
-        # self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank2_roi)
-        # self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank3_roi)
-        # self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
-        #              self.do_fit_bank1_peak)
-        #
-        # # 2D contour
-        #
-        # # menu bar
-        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-        #              self.do_quit)
-        # self.connect(self.ui.actionClear_Logs, QtCore.SIGNAL('triggered()'),
-        #              self.do_clear_log)
-        # self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
-        #              self.do_launch_ipython)
-        # self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
-        #              self.menu_launch_setup)
-        # self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
-        #              self.menu_show_multi_purpose_dock)
-        #
-        # # other widgets
-        # self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_bank_view_change_unit)
-        #
-        # self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
-        #              self.evt_show_high_prev_data)
-        #
-        # # general purpose
-        # self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
-        #              self.do_setup_gpplot)
-
         # multiple thread pool
         self._checkStateTimer = None
         self._2dUpdater = None
@@ -272,8 +232,10 @@ class VulcanLiveDataView(QMainWindow):
         set the workspace numbers, indicators and etc.
         Note: all the time given will be in seconds
         :param max_acc_ws_number: number of accumulated workspace that will be stored in memory
-        :param accumulation_time: for long run, the time for a chopped section, i.e., an accumulation workspace's time
-        :param update_time: frequency for update
+        :param accumulation_time: for long run, the time for a chopped section,
+                                  i.e., an accumulation workspace's time
+                                  (unit=second, integer)
+        :param update_time: time period to update the live view (unit=second, integer)
         :return:
         """
         # check inputs
@@ -297,17 +259,19 @@ class VulcanLiveDataView(QMainWindow):
 
         # set as all the inputs are validated
         self._myAccumulationWorkspaceNumber = max_acc_ws_number
-        self._myRefreshTimeStep = update_time
+        self._myUpdateTimePeriod = update_time
         if accumulation_time % update_time == 0:
             self._myAccumulationTime = accumulation_time
         else:
             # accumulation time is not a multiplication to update/refresh time
-            self._myAccumulationTime = (self._myAccumulationTime/self._myRefreshTimeStep + 1) * self._myRefreshTimeStep
+            # reset define the accumulation time to be nearest integer multiplication to update time period
+            accumulation_time = (accumulation_time/self._myUpdateTimePeriod+1)*self._myUpdateTimePeriod
+            self._myAccumulationTime = accumulation_time
             self.write_log(level='warning', message='Accumulation time is modified to {0}'
                                                     ''.format(self._myAccumulationTime))
         # END-IF
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2  # leave some space
-        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2  # leave some space
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
 
         # set the lists
         self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber
@@ -579,7 +543,7 @@ class VulcanLiveDataView(QMainWindow):
         :return:
         """
         # start timer
-        self._checkStateTimer = TimerThread(self._myRefreshTimeStep, self)
+        self._checkStateTimer = TimerThread(self._myUpdateTimePeriod, self)
         self._checkStateTimer.start()
 
         self._2dUpdater = TwoDimPlotUpdateThread()
@@ -1357,7 +1321,7 @@ class VulcanLiveDataView(QMainWindow):
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=accumulation_time,
-                                    update_time=self._myRefreshTimeStep)
+                                    update_time=self._myUpdateTimePeriod)
 
         return
 
@@ -1442,10 +1406,9 @@ class VulcanLiveDataView(QMainWindow):
         """ Show the accumulation/refresh/update rate information
         :return:
         """
-        # TODO NOW NOW NOW : whether _myAccumulationTime is changed, this method shall be called!
-        # TODO NOW - Better documentation on 'lineEdit_accPeriod'
-        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
+        acc_time = self._myAccumulationTime
         self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
+        self.ui.lineEdit_updateTime.setText('{} sec'.format(self._myUpdateTimePeriod))
 
         return
 

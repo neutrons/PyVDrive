@@ -264,7 +264,7 @@ class ProjectManager(object):
             elif data_key.isdigit():
                 # reduced runs.  data key is the string version of integer run number
                 run_number = int(data_key)
-                found_it = self._reductionManager.has_run(run_number)
+                found_it = self._reductionManager.has_run_reduced(run_number)
                 if found_it:
                     ws_name = self._reductionManager.get_reduced_workspace(run_number=int(data_key),
                                                                            is_vdrive_bin=False)
@@ -577,7 +577,7 @@ class ProjectManager(object):
         assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
 
         # locate the workspace
-        if self._reductionManager.has_run(data_key):
+        if self._reductionManager.has_run_reduced(data_key):
             data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=True)
         elif self._loadedDataManager.has_data(data_key):
             data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
@@ -822,7 +822,7 @@ class ProjectManager(object):
             # get data from loaded data manager
             data_set = self._loadedDataManager.get_data_set(run_id, target_unit)
 
-        elif self._reductionManager.has_run(run_id):
+        elif self._reductionManager.has_run_reduced(run_id):
             # try to get data from reduction manager if given run number (run id)
             data_set = self._reductionManager.get_reduced_data(run_id, target_unit)
 
@@ -926,7 +926,7 @@ class ProjectManager(object):
         """
         has_workspace = False
 
-        if self._reductionManager.has_run(run_number):
+        if self._reductionManager.has_run_reduced(run_number):
             has_workspace = True
         elif (ipts_number, run_number) in self._loadedDataDict:
             has_workspace = True

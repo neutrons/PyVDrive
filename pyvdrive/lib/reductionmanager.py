@@ -1144,7 +1144,7 @@ class ReductionManager(object):
 
         return tracker
 
-    def has_run(self, run_number):
+    def has_run_reduced(self, run_number):
         """
         check whether a certain run number is reduced and stored
         :param run_number:

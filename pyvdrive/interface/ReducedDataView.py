@@ -1012,8 +1012,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def do_plot_contour(self):
-        """
-        plot all the chopped data as contour or single reduced data
+        """ plot Either (1) all the chopped data Or (2) all loaded single runs
+        by contour plot
         :return:
         """
         data_key_list = list()
@@ -1038,7 +1038,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         curr_bank = int(self.ui.comboBox_spectraList.currentText())
 
         # plot
-        self.plot_multiple_runs_2d(bank_id=curr_bank, ws_key_list=data_key_list)
+        self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank)
 
         return
 
@@ -1875,11 +1875,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def plot_multiple_runs_2d(self, bank_id, ws_key_list=None):
-        """
-        Plot multiple runs (reduced data) to contour plot. 2D
+    def plot_multiple_runs_2d(self, ws_key_list, bank_id):
+        """ Plot multiple runs (reduced data) to contour plot. 2D
+        :param ws_key_list: list of workspace keys (from the UI's combo box widgets)
+        :param bank_id:
         :return:
         """
+        # TODO - 20180730 - Modernize!
         assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negative integer.' \
                                                           '' % str(bank_id)
         assert isinstance(ws_key_list, list), 'blabla 928pp'
@@ -1889,7 +1891,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         run_number_list = list()
         data_set_list = list()
 
-        # get unit TODO - this shall be an input
+        # get unit TODO - 20180730 - this shall be an input
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
         # construct input for contour plot

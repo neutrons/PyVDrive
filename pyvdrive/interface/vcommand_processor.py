@@ -39,7 +39,8 @@ class VdriveCommandProcessor(object):
         self._myController = controller
 
         # set up the commands
-        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK']
+        self._commandList = ['CHOP', 'VBIN', 'VDRIVE', 'MERGE', 'AUTO', 'VIEW', 'VDRIVEVIEW', 'VPEAK',
+                             'INFO']
 
         return
 
@@ -274,7 +275,7 @@ class VdriveCommandProcessor(object):
         in_mem_dict = dict()
         ipts_dict = dict()
         for run_i, ipts_i in processor.get_run_tuple_list():
-            if self._myController.reduced_manager.has_reduced_run(run_i):
+            if self._myController.project.reduction_manager.has_run_reduced(run_i):
                 in_mem_dict[run_i] = True
             else:
                 in_mem_dict[run_i] = False
@@ -323,7 +324,11 @@ class VdriveCommandProcessor(object):
         else:
             # 2-D or 3-D image for multiple runs
             view_window.set_canvas_type(dimension=2)
-            view_window.add_reduced_runs(processor.get_run_tuple_list())
+            # TODO - 20180730 - Fix the codes to add runs (shall be same as is_1_d until the last) Code structure
+            for run_number_i in processor.get_run_tuple_list():
+                print '[DB...BAT] Run tuple???? {}'.format(run_number_i)
+                view_window.add_reduced_run(run_number_i)
+            # view_window.add_reduced_runs(processor.get_run_tuple_list())
             view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
         # END-FOR
 

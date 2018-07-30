@@ -72,7 +72,7 @@ class MplGraphicsView2D(QWidget):
 
         # state of zoom
         self._isZoomedFromHome = False   # figure is zoomed from home
-        self._isZoomPressedDown = False  # flag that the zoom key is pressed down
+        self._mousePressedInZoom = False  # flag that the zoom key is pressed down
 
         # X and Y limit with home button
         self._homeXYLimit = None  # if used, it shall be a 4-element list as min x, max x, min y, max y
@@ -174,10 +174,12 @@ class MplGraphicsView2D(QWidget):
         """
         # turn off zoom mode
         self._isZoomedFromHome = False
-        self._isZoomPressedDown = False
+        self._mousePressedInZoom = False
 
         # reset zoom in X range
         self._zoomInXRange = None
+
+        print ('[DB...FIND] Tool Bar Home Triggered')
 
         return
 
@@ -200,33 +202,23 @@ class MplGraphicsView2D(QWidget):
 
         return
 
-    def evt_press_zoom(self):
-        """ event triggered as the zoom is pressed
+    def evt_zoom_pressed(self):
+        """ event triggered as when mouse key is pressed down while the zoom button is in pressed-down state
+        It is paired with evt_press_released
         :return:
         """
-        self._isZoomPressedDown = not self._isZoomPressedDown
-
-        print ('{} zoom key is pressed down = {}'.format(self.__class__.__name__,
-                                                         self._isZoomPressedDown))
+        self._mousePressedInZoom = True
 
         return
 
-    # TEST - 20180730 - Live View Zoom In
     def evt_zoom_released(self):
         """ event for zoom is release
         @return:
         """
-        # record home XY limit if it is never zoomed
-        if self._isZoomedFromHome is False:
-            self._homeXYLimit = list(self.current_x_range())
-            self._homeXYLimit.extend(list(self.getYLimit()))
-            print ('[DB...BAT] Updated home X Y limit: {}'.format(self._homeXYLimit))
-        else:
-            print ('[DB...BAT] Original home X Y limit: {}'.format(self._homeXYLimit))
-        # END-IF
-
-        # set the state of being zoomed
-        self._isZoomedFromHome = True
+        self._mousePressedInZoom = True
+        # zoom-in range
+        if self.has_image_on_canvas():
+            self._zoomInXRange = self.current_x_range()
 
         return
 
@@ -521,7 +513,7 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         :return:
         """
         # check input
-        # TODO - labor
+        # TODO - 20180730
         assert isinstance(vec_x, list) or isinstance(vec_x, np.ndarray), 'blabla'
         assert isinstance(vec_y, list) or isinstance(vec_y, np.ndarray), 'blabla'
         assert isinstance(matrix_z, np.ndarray), 'blabla'
@@ -985,7 +977,7 @@ class MyNavigationToolbar(NavigationToolbar2):
 
         # connect the events to parent
         self.home_button_pressed.connect(self._myParent.evt_toolbar_home)
-        self.zoom_pressed.connect(self._myParent.evt_press_zoom)
+        self.zoom_pressed.connect(self._myParent.evt_zoom_pressed)
         self.canvas_zoom_released.connect(self._myParent.evt_zoom_released)
         self.view_updated_signal.connect(self._myParent.evt_view_updated)
 
@@ -1030,7 +1022,7 @@ class MyNavigationToolbar(NavigationToolbar2):
         :return:
         """
         # call super's home() method
-        NavigationToolbar2.home(self, args)
+        super(MyNavigationToolbar, self).home(args)
 
         # send a signal to parent class for further operation
         self.home_button_pressed.emit()
@@ -1059,7 +1051,7 @@ class MyNavigationToolbar(NavigationToolbar2):
         :param event:
         :return:
         """
-        super(MyNavigationToolbar, self).press_pan(event)
+        super(MyNavigationToolbar, self).press_zoom(event)
 
         self.zoom_pressed.emit()
 
@@ -1070,16 +1062,10 @@ class MyNavigationToolbar(NavigationToolbar2):
         :param event:
         :return:
         """
-        # TEST ME - 20180718 : crashed if there is no image ever plotted
-        """
-        NavigationToolbar2.release_zoom(self, event)
-        File "/usr/lib/python2.7/dist-packages/matplotlib/backend_bases.py", line 3053, in release_zoom
-        lastx, lasty, a, ind, view = cur_xypress
-        ValueError: need more than 2 values to unpack
-        """
-        if self._myParent.has_image_on_canvas():
+        try:
             super(MyNavigationToolbar, self).release_zoom(event)
-        # NavigationToolbar2.release_zoom(self, event)
+        except ValueError as run_err:
+            print ('[ERROR-Caught] Release Zoom: {}'.format(run_err))
 
         self.canvas_zoom_released.emit()
 

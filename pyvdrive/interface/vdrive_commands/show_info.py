@@ -8,14 +8,14 @@ class RunsInfoQuery(VDriveCommand):
     """
     Process command MERGE
     """
-    SupportedArgs = ['IPTS', 'RUNS', 'RUNE']
+    SupportedArgs = ['IPTS', 'RUNS', 'RUNE', 'DURATION', '-N']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number to search information from',
         'RUNE': 'Last run number to search information from',
         'DURATION': 'Show duration of the runs in the IPTS folder',
-        '-n': 'Number of items to show.  Default = 20'
+        '-N': 'Number of items to show.  Default = 20'
     }
 
     def __init__(self, controller, command_args):
@@ -33,7 +33,7 @@ class RunsInfoQuery(VDriveCommand):
         # check whether the any non-supported args
         input_args = self._commandArgsDict.keys()
         for arg_key in input_args:
-            if arg_key not in VdriveMerge.SupportedArgs:
+            if arg_key not in RunsInfoQuery.SupportedArgs:
                 raise KeyError('INFO argument {} is not recognized.  Supported arguments include '
                                '{}'.format(arg_key, self.ArgsDocDict.keys()))
         # END-FOF
@@ -105,9 +105,9 @@ class RunsInfoQuery(VDriveCommand):
 
         for info_dict in info_dict_list:
             # check
-            pyvdrive.lib.datatypeutility.check_dict(info_dict, 'Run information dictionary')
+            pyvdrive.lib.datatypeutility.check_dict('Run information dictionary', info_dict)
             # if it fails due to KeyError, let it be
-            for col_name in info_dict:
+            for col_name in keys:
                 col_value = '{}'.format(info_dict[col_name])
                 nice_str += '{:20s}'.format(col_value)
             nice_str += '\n'
@@ -120,7 +120,7 @@ class RunsInfoQuery(VDriveCommand):
         get help
         :return:
         """
-        help_str = 'INFO, IPTS=12345, RUNS=20000, RUNE=30000, DURATION=1, -n=40\n'
+        help_str = 'Query and show information of an IPTS\n'
 
         for arg_str in self.SupportedArgs:
             help_str += '  %-10s: ' % arg_str
@@ -132,7 +132,8 @@ class RunsInfoQuery(VDriveCommand):
 
         # examples
         help_str += 'Examples:\n'
-        help_str += '> MERGE, IPTS=18420, RUN=135318 & 135775\n'
+        help_str += '> INFO, IPTS=21356, DURATION=1, -n=40\n'
+        help_str += '> INFO, IPTS=21356, RUNS=20000, RUNE=30000, DURATION=1, -n=40\n'
 
         return help_str
 

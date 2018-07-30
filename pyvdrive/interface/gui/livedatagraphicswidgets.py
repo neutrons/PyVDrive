@@ -387,7 +387,10 @@ class Live2DView(MplGraphicsView2D):
                                              self._zoomInXRange))
 
         # record current setup
-        self._zoomInXRange = self.canvas.getXLimit()
+        if self.has_image_on_canvas():
+            #
+            print '[DB...BAT] Do I have Image? {}'.format(self.has_image_on_canvas())
+            self._zoomInXRange = self.canvas.getXLimit()
 
         # construct the vectors for 2D contour plot
         x_list = sorted(data_set_dict.keys())
@@ -416,14 +419,16 @@ class Live2DView(MplGraphicsView2D):
 
         if self._zoomInXRange is None:
             # no zoom in: set to user defined
-            x_min=1.2
-            x_max=2.5
+            x_min = 0.3
+            x_max = 3.0
         else:
             # zoom is pressed down and already zoomed
             x_min = self._zoomInXRange[0]
             x_max = self._zoomInXRange[1]
         self.setXYLimit(xmin=x_min, xmax=x_max)
 
+        # update flag
+        self._hasImage = True
 
         return
 # END-DEF-CLASS ()

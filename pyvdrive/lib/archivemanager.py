@@ -8,9 +8,13 @@ import mantid_helper
 import vdrivehelper
 import vulcan_util
 import datatypeutility
+import pandas
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
+
+AUTO_LOG_MAP = {'run': 'RUN', 'duration': 'Duration', 'sample': 'Sample',
+                'totalcounts': 'TotalCounts'}
 
 
 class DataArchiveManager(object):
@@ -523,7 +527,7 @@ class DataArchiveManager(object):
         # check input
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
         if record_type is not None:
-            datatypeutility.check_string_variable('Log type', 'Record type', allowed_values=['data', 'align'])
+            datatypeutility.check_string_variable('Log type', record_type, allowed_values=['data', 'align'])
 
         # locate IPTS folder and AutoRecord file
         ipts_shared_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
@@ -816,7 +820,69 @@ class DataArchiveManager(object):
         stime2 = time.strptime(time.ctime(rollbacktime))
         print stime2.tm_yday
 
-        return 
+        return
+
+    def sort_info(self, auto_record_ref_id, sort_by, run_range, output_items, num_outputs):
+        """ sort the information loaded from auto record file
+        Note: current list of indexes
+        Index([u'RUN', u'IPTS', u'Title', u'Notes', u'Sample', u'ITEM', u'StartTime',
+        u'Duration', u'ProtonCharge', u'TotalCounts', u'Monitor1', u'Monitor2',
+        u'X', u'Y', u'Z', u'O', u'HROT', u'VROT', u'BandCentre', u'BandWidth',
+        u'Frequency', u'Guide', u'IX', u'IY', u'IZ', u'IHA', u'IVA',
+        u'Collimator', u'MTSDisplacement', u'MTSForce', u'MTSStrain',
+        u'MTSStress', u'MTSAngle', u'MTSTorque', u'MTSLaser', u'MTSlaserstrain',
+        u'MTSDisplaceoffset', u'MTSAngleceoffset', u'MTST1', u'MTST2', u'MTST3',
+        u'MTST4', u'MTSHighTempStrain', u'FurnaceT', u'FurnaceOT',
+        u'FurnacePower', u'VacT', u'VacOT', u'EuroTherm1Powder',
+        u'EuroTherm1SP', u'EuroTherm1Temp', u'EuroTherm2Powder',
+        u'EuroTherm2SP', u'EuroTherm2Temp'],
+        :param auto_record_ref_id:
+        :param sort_by:
+        :param run_range:
+        :param output_items:
+        :param num_outputs:
+        :return:
+        """
+        # TODO - 20180730 - Clean and add run range into algorithm
+        datatypeutility.check_string_variable('Auto record reference ID', auto_record_ref_id)
+
+        if auto_record_ref_id not in self._auto_record_dict:
+            raise RuntimeError('Auto record ID {} is not in dictionary.  Available keys are {}'
+                               ''.format(auto_record_ref_id, self._auto_record_dict.keys()))
+        if run_range is not None:
+            print ('[ERROR] Notify developer that run range shall be implemented.')
+
+        # get data frame (data set)
+        record_data_set = self._auto_record_dict[auto_record_ref_id]
+
+        # sort the value
+        record_data_set.sort_values(by=[AUTO_LOG_MAP[sort_by.lower()]], ascending=False, inplace=True)
+
+        # output_set = record_data_set[range(0, num_outputs), :]
+
+        # filter out required
+        needed_index_list = list()
+        for item in output_items:
+            needed_index_list.append(AUTO_LOG_MAP[item.lower()])
+        filtered = record_data_set.filter(needed_index_list)
+
+        # print filtered
+        # print type(filtered)
+
+        # get the first N outputs
+        # output_set = filtered[range(0, num_outputs), :]
+
+        # convert to list of dictionary
+        column_names = filtered.columns.tolist()
+        output_list = list()
+        for row_index in range(num_outputs):
+            dict_i = dict()
+            for j in range(len(column_names)):
+                dict_i[output_items[j]] = filtered.iloc[row_index, j]
+            # print dict_i
+            output_list.append(dict_i)
+
+        return output_list
 
 # END-CLASS
 

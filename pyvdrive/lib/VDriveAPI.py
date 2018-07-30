@@ -1091,7 +1091,7 @@ class VDriveAPI(object):
         :param reduced:
         :return:
         """
-        return self._myProject.reduction_manager.has_run(run_number)
+        return self._myProject.reduction_manager.has_run_reduced(run_number)
 
     @staticmethod
     def import_data_slicers(file_name):
