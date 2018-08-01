@@ -243,7 +243,7 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
-    # TEST - 20180730 - Refactored
+    # TestMe - 20180730 - Refactored
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -282,30 +282,7 @@ class VdriveCommandProcessor(object):
             ipts_dict[run_i] = ipts_i
         # END-FOR
 
-        if processor.is_1_d:
-            # 1-D image
-            view_window.set_canvas_type(dimension=1)
-
-            vanadium_dict = None
-            if processor.do_vanadium_normalization:
-                vanadium_dict = dict()
-                for run_number in processor.get_run_number():
-                    van_run_number = processor.get_vanadium_number(run_number)
-                    vanadium_dict[run_number] = van_run_number
-                    self._myController.set_vanadium_run(run_number, van_run_number)
-
-            for i_run, run_number in enumerate(sorted(in_mem_dict.keys())):
-                # load
-                if in_mem_dict[run_number]:
-                    data_key = self._myController.get_reduced_run_ref_id(run_number)
-                else:
-                    data_key = self._myController.load_gsas_from_archive(run_number)
-
-                bank_id_list = self._myController.get_reduced_run_banks(ipts_dict[run_number], run_number)
-                view_window.add_reduced_run(self, data_key, bank_id_list, plot_new=(i_run == 0))
-            # END-FOR
-
-        elif processor.is_chopped_run:
+        if processor.is_chopped_run:
             # chopped run... can be 1D (only 1 chopped data) or 2D (more than 1 chopped data)
             # get normalization information
             if processor.do_vanadium_normalization:
@@ -321,19 +298,52 @@ class VdriveCommandProcessor(object):
                                              chopped_data_dir=processor.get_reduced_data_directory(),
                                              vanadium_run_number=van_run,
                                              proton_charge_normalization=pc_norm)
+
         else:
-            # 2-D or 3-D image for multiple runs
-            view_window.set_canvas_type(dimension=2)
-            # TODO - 20180730 - Fix the codes to add runs (shall be same as is_1_d until the last) Code structure
-            for run_number_i in processor.get_run_tuple_list():
-                print '[DB...BAT] Run tuple???? {}'.format(run_number_i)
-                view_window.add_reduced_run(run_number_i)
-            # view_window.add_reduced_runs(processor.get_run_tuple_list())
-            view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
-        # END-FOR
+            # regular single runs but the output could be 2D, i.e., multiple runs
+
+            # shall do vanadium first
+            # TODO - NEXT - How to use the vanadium dictionary?
+            if processor.do_vanadium_normalization:
+                vanadium_dict = dict()
+                for run_number in processor.get_run_number():
+                    van_run_number = processor.get_vanadium_number(run_number)
+                    vanadium_dict[run_number] = van_run_number
+                    self._myController.set_vanadium_run(run_number, van_run_number)
+            else:
+                vanadium_dict = None
+            # END-IF-ELSE
+
+            # add runs to reduced data viewer
+            for i_run, run_number in enumerate(sorted(in_mem_dict.keys())):
+                # load
+                if in_mem_dict[run_number]:
+                    data_key = self._myController.get_reduced_run_ref_id(run_number)
+                else:
+                    data_key = self._myController.load_gsas_from_archive(run_number)
+
+                if i_run == 0:
+                    bank_id_list = self._myController.get_reduced_run_banks(ipts_dict[run_number], run_number)
+                else:
+                    bank_id_list = None
+                view_window.add_reduced_run(self, data_key, bank_id_list=bank_id_list, plot_new=False)
+            # END-FOR
+
+            # plot
+            if processor.is_1_d:
+                # 1-D image
+                view_window.set_canvas_type(dimension=1)
+                view_window.do_plot_diffraction_data()
+            else:
+                # 2-D image or 3-D image for multiple runs
+                view_window.set_canvas_type(dimension=2)
+                view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
+            # END-IF-ELSE
+        # END-IF-ELSE (chopped or single run)
 
         # write out the peak parameters
         if processor.do_calculate_peak_parameter:
+            # TODO - NEXT - Need a use case to calculate peak parameters to further development
             raise RuntimeError('Need a solid use case to test this feature')
             ipts_number, run_number_list = processor.get_ipts_runs()
             chop_list = processor.get_chopped_sequence_range()

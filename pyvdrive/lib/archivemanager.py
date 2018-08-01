@@ -214,10 +214,9 @@ class DataArchiveManager(object):
         :param chop_child_list: a list of chopped child
         :return:
         """
-        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method!
-        assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
+        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method! - NEED A SOLID USE CASE!
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
 
         # form the directory name
         chop_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}'.format(ipts_number, run_number)
@@ -843,8 +842,22 @@ class DataArchiveManager(object):
         :param num_outputs:
         :return:
         """
-        # TODO - 20180730 - Clean and add run range into algorithm
+        # check inputs
         datatypeutility.check_string_variable('Auto record reference ID', auto_record_ref_id)
+        datatypeutility.check_string_variable('Column name to sort by', sort_by)
+        if sort_by.lower not in AUTO_LOG_MAP:
+            raise RuntimeError('Pandas DataFrame has no columns mapped from {}; Available include'
+                               ''.format(sort_by.lower(), AUTO_LOG_MAP.keys()))
+        if run_range is not None:
+            assert not isinstance(run_range, str), 'Runs range cannot be a string'
+            if len(run_range) != 2:
+                raise RuntimeError('Run range {} must have 2 items for start and end.'
+                                   ''.format(run_range))
+        # END-IF
+
+        datatypeutility.check_list('Output column names', output_items)
+        if num_outputs is not None:
+            datatypeutility.check_int_variable('Number of output rows', num_outputs, (1, None))
 
         if auto_record_ref_id not in self._auto_record_dict:
             raise RuntimeError('Auto record ID {} is not in dictionary.  Available keys are {}'
@@ -856,9 +869,8 @@ class DataArchiveManager(object):
         record_data_set = self._auto_record_dict[auto_record_ref_id]
 
         # sort the value
-        record_data_set.sort_values(by=[AUTO_LOG_MAP[sort_by.lower()]], ascending=False, inplace=True)
-
-        # output_set = record_data_set[range(0, num_outputs), :]
+        auto_log_key = AUTO_LOG_MAP[sort_by.lower()]
+        record_data_set.sort_values(by=[auto_log_key], ascending=False, inplace=True)
 
         # filter out required
         needed_index_list = list()
@@ -866,11 +878,9 @@ class DataArchiveManager(object):
             needed_index_list.append(AUTO_LOG_MAP[item.lower()])
         filtered = record_data_set.filter(needed_index_list)
 
-        # print filtered
-        # print type(filtered)
-
-        # get the first N outputs
-        # output_set = filtered[range(0, num_outputs), :]
+        # number of outputs
+        if num_outputs is None:
+            num_outputs = len(record_data_set)
 
         # convert to list of dictionary
         column_names = filtered.columns.tolist()
@@ -955,8 +965,16 @@ def sns_archive_nexus_path(ipts_number, run_number):
     ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5' \
                      ''.format(ipts_number, run_number)
 
-    # TODO/FIXME : need to add pre-nED NeXus case
-    if os.path.exists(ned_nexus_name) is False:
-        raise RuntimeError('{0} not exist'.format(ned_nexus_name))
+    if os.path.exists(ned_nexus_name):
+        r_file_name = ned_nexus_name
+    else:
+        # pre-Ned case
+        pre_ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/0/{1}/NeXus/VULCAN_{1}_event.nxs'.format(ipts_number, run_number)
+        if os.path.exists(pre_ned_nexus_name):
+            r_file_name = pre_ned_nexus_name
+        else:
+            raise RuntimeError('For IPTS-{0} Run {1}: Either nED {2} or pre-nED {3} exists'
+                               ''.format(ipts_number, run_number, ned_nexus_name, pre_ned_nexus_name))
+    # END-IF-ELSE
 
-    return ned_nexus_name
+    return r_file_name

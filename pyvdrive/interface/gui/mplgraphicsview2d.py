@@ -439,23 +439,6 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         self._isLegendOn = False
         self._legendFontSize = 8
 
-        # # TODO/FIXME/TODO/FIXME ----- Prototype!
-        # import matplotlib.pyplot as plt
-        #
-        # plt.ion()
-        # data = np.random.rand(256, 3)
-        #
-        # #    subplot_kw = dict(xlim=(0, 1), ylim=(0, 1), autoscale_on=False)
-        # #   fig, ax = plt.subplots(subplot_kw=subplot_kw)
-        #
-        # self.pts = self.axes.scatter(data[:, 0], data[:, 1], s=80, c=data[:, 2],
-        #                              marker='s')
-        # # print pts
-        # # print dir(pts)
-        # # print type(pts), pts.__class__.__name__
-        #
-        # self.pts.set_offsets(data)
-
         return
 
     def update_image(self, array2d):
@@ -513,10 +496,14 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         :return:
         """
         # check input
-        # TODO - 20180730
-        assert isinstance(vec_x, list) or isinstance(vec_x, np.ndarray), 'blabla'
-        assert isinstance(vec_y, list) or isinstance(vec_y, np.ndarray), 'blabla'
-        assert isinstance(matrix_z, np.ndarray), 'blabla'
+        assert isinstance(vec_x, list) or isinstance(vec_x, np.ndarray), 'Vector of X {} must be either a list ' \
+                                                                         'or a numpy.ndarray but not of type {}' \
+                                                                         ''.format(vec_x, type(vec_x))
+        assert isinstance(vec_y, list) or isinstance(vec_y, np.ndarray), 'Vector of Y {} must be either a list ' \
+                                                                         'or a numpy.ndarray but not of type {}' \
+                                                                         ''.format(vec_y, type(vec_y))
+        assert isinstance(matrix_z, np.ndarray), 'Matrix Z {} must be a numpy.ndarray but not of type {}' \
+                                                 ''.format(matrix_z, type(matrix_z))
 
         # create mesh grid
         grid_x, grid_y = np.meshgrid(vec_x, vec_y)
@@ -524,11 +511,9 @@ class Qt4Mpl2DCanvas(FigureCanvas):
         # print '[DB...BAT] Grid X and Grid Y size: ', grid_x.shape, grid_y.shape
 
         # check size
-        assert grid_x.shape == matrix_z.shape, 'Size of X (%d) and Y (%d) must match size of Z (%s).' \
-                                               '' % (len(vec_x), len(vec_y), matrix_z.shape)
-
-        # # Release the current image
-        # self.axes.hold(False)
+        if grid_x.shape != matrix_z.shape:
+            raise RuntimeError('Size of X (%d) and Y (%d) must match size of Z (%s).'
+                               '' % (len(vec_x), len(vec_y), matrix_z.shape))
 
         # Do plot: resolution on Z axis (color bar is set to 100)
         self.axes.clear()

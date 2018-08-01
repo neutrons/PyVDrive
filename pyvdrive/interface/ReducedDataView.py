@@ -64,7 +64,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currChoppedData = False
         self._currWorkspaceTag = None
         self._currBank = 1
-        self._currUnit = 'TOF'
 
         self._choppedRunNumber = 0
         self._choppedSequenceList = None
@@ -292,16 +291,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if nxs_file_name is None:
             return
 
-        # TODO - 20180721 - Make the following work!
         # load
         try:
-            self._currentDataID = self._myController.load_nexus_file(nxs_file_name)
+            data_key = self._myController.load_nexus_file(nxs_file_name)
+            data_bank_list = self._myController.get_reduced_data_info(data_key=data_key, info_type='bank')
+            self.add_reduced_run(data_key, data_bank_list, True)
         except RuntimeError as run_err:
             GuiUtility.pop_dialog_error(self, 'Unable to load {} due to {}'.format(nxs_file_name, run_err))
             return
-
-        # plot
-        self.plot_by_data_key(self._currentDataID, bank_id_list=None, over_plot=False, x_limit=None)
 
         return
 
@@ -359,7 +356,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # TODO - Later - shall be a pop-up dialog to show the error
 
         # add run number to run number list and plot
-        self.add_reduced_run(data_key, data_bank_list)
+        self.add_reduced_run(data_key, data_bank_list, True)
 
         # TODO - Remove: the commented out part shall be covered in self.add_reduced_runs().  Remove it after TEST
         # self.do_plot_diffraction_data()
@@ -712,19 +709,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             pyvdrive/interface/vcommand_processor.py
             self.do_load_single_gsas
         :param data_key:
-        :param bank_id_list: the list of banks of the data key
+        :param bank_id_list: the list of banks of the data key. it is only required when plotting is required
         :param plot_new: flag to focus the combo box to the newly added run and plot
         :return:
         """
         # check inputs
         pyvdrive.lib.datatypeutility.check_string_variable('Reduced data key', data_key)
-        pyvdrive.lib.datatypeutility.check_list('Bank ID list', bank_id_list)
         pyvdrive.lib.datatypeutility.check_bool_variable('Flag to plot newly added run', plot_new)
 
-        # set plot new
-        if len(self._runNumberList) == 0:
-            # first run to add
-            plot_new = True
+        # # set plot new : NOTE that it is not required to plot newly added data even it was empty before
+        # if len(self._runNumberList) == 0:
+        #     # first run to add
+        #     plot_new = True
 
         # update run combo box without plotting
         self.update_single_run_combo_box(data_key, remove_item=False, focus_to_new=plot_new)
@@ -733,7 +729,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # update bank ID box without plotting
         if plot_new:
             self.update_bank_id_combo(bank_id_list)
-
+            pyvdrive.lib.datatypeutility.check_list('Bank ID list', bank_id_list)
 
             # register?
             # self._dataIptsRunDict[run_number] = ipts_number, run_number
@@ -1034,14 +1030,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             # unsupported
             raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
 
-        # bank information
+        # bank information and unit
         curr_bank = int(self.ui.comboBox_spectraList.currentText())
+        curr_unit = str(self.ui.comboBox_unit.currentIndex())
 
         # plot
-        self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank)
+        self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank,
+                                   target_unit=curr_unit)
 
         return
 
+    # TESTME - Shall find out how this breaks
     def do_plot_diffraction_data(self):
         """
         Plot the diffraction data in single run mode or chopped mode but 1D plot is the goal.
@@ -1056,11 +1055,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         elif self.ui.radioButton_chooseChopped.isChecked():
             # chopped run
             main_run_key = str(self.ui.comboBox_choppedRunNumber.currentText())
-            # TODO - 20180724 - a lookup table is required if the workspace name is not preferred in chopped list
+            # TODO - 20180724 - Try & Find out how to deal with the situation
+            # TODO            - a lookup table is required if the workspace name is not preferred in chopped list
             # THIS IS A HACK
             child_run_key = str(self.ui.comboBox_chopSeq.currentText())
             curr_run_key = main_run_key, child_run_key
-
         else:
             raise RuntimeError('Neither radio button to choose single run or chopped is checked.')
 
@@ -1875,24 +1874,25 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def plot_multiple_runs_2d(self, ws_key_list, bank_id):
-        """ Plot multiple runs (reduced data) to contour plot. 2D
+    # TESTME - This is refactored recently
+    def plot_multiple_runs_2d(self, ws_key_list, bank_id, target_unit):
+        """ Plot multiple runs, including the case for both chopped run and multiple single runs,
+        to contour plot. 2D
         :param ws_key_list: list of workspace keys (from the UI's combo box widgets)
         :param bank_id:
+        :param target_unit:
         :return:
         """
-        # TODO - 20180730 - Modernize!
-        assert isinstance(bank_id, int) and bank_id >= 0, 'Bank ID %s must be a non-negative integer.' \
-                                                          '' % str(bank_id)
-        assert isinstance(ws_key_list, list), 'blabla 928pp'
+        # check inputs
+        pyvdrive.lib.datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+        pyvdrive.lib.datatypeutility.check_list('Workspace keys/reference IDs', ws_key_list)
+        pyvdrive.lib.datatypeutility.check_string_variable('Unit', target_unit,
+                                                           ['dSpacing', 'TOF', 'MomentumTransfer'])
 
         # get the list of runs
         error_msg = ''
         run_number_list = list()
         data_set_list = list()
-
-        # get unit TODO - 20180730 - this shall be an input
-        self._currUnit = str(self.ui.comboBox_unit.currentText())
 
         # construct input for contour plot
         for index, data_key in enumerate(ws_key_list):
@@ -1906,7 +1906,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 # TODO FIXME ASAP: this is not a robust way to get index number
                 index_number = int(data_key[1].split('_')[-1])
             else:
-                raise NotImplementedError('dl99')
+                raise NotImplementedError('Data key {} must be either a string or a 2-tuple but not a {}'
+                                          ''.format(data_key, type(data_key)))
 
             # get data
             print ('[DB...BAT] Index {1} Run Index {2} Get data from {0}'.format(data_key, index, index_number))
@@ -1949,29 +1950,37 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_unit(self, unit):
-        """
-
+        """ set unit from external scripts
+        This provides a flexible way to set unit from external script.
+        Being flexible means that it is not case sensitive and multiple terms (d, dspacing and etc) are
+        supported.
+        :param unit:
         :return:
         """
-        unit_candidates = list()
-        for i_text in range(self.ui.comboBox_unit.count()):
-            unit_candidates.append(str(self.ui.comboBox_unit.itemText(i_text)))
+        # check inputs
+        pyvdrive.lib.datatypeutility.check_string_variable('Unit', unit)
+        unit = unit.lower()
 
-        if unit.lower().count('tof') > 0:
-            index = unit_candidates.index('TOF')
-        elif unit.lower().count('spac') > 0:  # consider space or spacing both
-            index = unit_candidates.index('dSpacing')
+        ui_supported_units = list()
+        for i_text in range(self.ui.comboBox_unit.count()):
+            ui_supported_units.append(str(self.ui.comboBox_unit.itemText(i_text)))
+
+        if unit.count('tof') > 0:
+            index = ui_supported_units.index('TOF')
+        elif unit.startswith('d') or unit.count('spac') > 0:  # consider space or spacing both
+            index = ui_supported_units.index('dSpacing')
         elif unit.lower().count('q') > 0 or unit.lower().count('momentum'):
-            index = unit_candidates.index('Q')
+            index = ui_supported_units.index('Q')
         else:
             raise RuntimeError('Unsupported unit {0}'.format(unit))
 
+        # focus the combo box to the correct unit
         self.ui.comboBox_unit.setCurrentIndex(index)
 
-        # also set the current unit
-        self._currUnit = str(self.ui.comboBox_unit.currentText())
+        # also set the current unit in strict/correct term
+        set_unit = str(self.ui.comboBox_unit.currentText())
 
-        return
+        return set_unit
 
     # def plot_by_run_number(self, run_number, bank_id, unit=None, over_plot=False):
     #     """
