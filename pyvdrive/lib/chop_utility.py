@@ -5,7 +5,7 @@ import random
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-import math
+import datatypeutility
 
 FifteenYearsInSecond = 15*356*24*3600
 # MAX_CHOPPED_WORKSPACE_IN_MEM = 40
@@ -96,8 +96,9 @@ class DataChopper(object):
         :return:
         """
         # Check input's validity
-        assert isinstance(run_number, int), 'Run number must be integer'
-        assert isinstance(nxs_file_name, str), 'NeXus file name must be integer'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_file_name(nxs_file_name, check_exist=True, check_writable=False,
+                                        is_dir=False, note='NeXus file name')
 
         # Data structure for log data that is worked on now
         self._myNeXusFileName = nxs_file_name
@@ -322,7 +323,7 @@ class DataChopper(object):
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
+        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanosecond')
 
         return out_ws_name
 
