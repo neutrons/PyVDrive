@@ -121,9 +121,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_allFillPlot.clicked.connect(self.do_plot_contour)
         self.ui.pushButton_plotSampleLog.clicked.connect(self.do_plot_sample_logs)
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
-        # TEST : check whether the signal can trigger calling method
         self.ui.comboBox_runs.currentIndexChanged.connect(self.evt_select_new_run_number)
         self.ui.comboBox_chopSeq.currentIndexChanged.connect(self.evt_select_new_chopped_child)
+
+        # radio buttons
+        self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)
 
         # other
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -131,7 +133,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # data processing
         self.ui.pushButton_normByCurrent.clicked.connect(self.do_normalise_by_current)
-        self.ui.pushButton_apply.clicked.connect(self.do_apply_new_range)
+        self.ui.pushButton_apply_x_range.clicked.connect(self.do_apply_new_range)
+        # TODO - 20180803 - New: self.ui.pushButton_apply_y_range
 
         # combo boxes
         self.ui.comboBox_spectraList.currentIndexChanged.connect(self.evt_bank_id_changed)
@@ -142,6 +145,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # menu
         self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
+        self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
 
         # widgets to load reduced data
 
@@ -219,42 +223,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def set_group1_enabled(self, enabled):
-        """
-        set the group of widgets to load run from PyVdrive reduced in memory
-        :param enabled:
-        :return:
-        """
-        self.ui.comboBox_runs.setEnabled(enabled)
-        # self.ui.pushButton_setReducedRunMem.setEnabled(enabled)
-        # self.ui.checkBox_choppedDataMem.setEnabled(enabled)
-
-        return
-
-    def set_group2_enabled(self, enabled):
-        """
-        set the group of widgets to load run from archived reduced data
-        :param enabled:
-        :return:
-        """
-        self.ui.lineEdit_iptsNumber.setEnabled(enabled)
-        self.ui.pushButton_loadArchivedGSAS.setEnabled(enabled)
-        self.ui.lineEdit_run.setEnabled(enabled)
-        # self.ui.checkBox_loadChoppedArchive.setEnabled(enabled)
-
-        return
-
-    def set_group3_enabled(self, enabled):
-        """
-        set the group of widgets to load run from arbitrary reduced data
-        :param enabled:
-        :return:
-        """
-        self.ui.lineEdit_gsasFileName.setEnabled(enabled)
-        self.ui.pushButton_browseAnyGSAS.setEnabled(enabled)
-
-        return
-
     def do_browse_local_gsas(self):
         """
         browse GSAS file or chopped GSAS files via local HDD
@@ -303,7 +271,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def do_load_single_gsas(self):
-        """ Load archived GSAS for a single run
+        """ Load a single GSAS file either from SNS archive (/SNS/VULCAN/...) or from local HDD
         :return:
         """
         is_chopped_data = False
@@ -353,25 +321,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         except RuntimeError as run_err:
             raise RuntimeError('Unable to get bank information from {} due to {}'
                                ''.format(data_key, run_err))
-            # TODO - Later - shall be a pop-up dialog to show the error
+            # TODO - 20180807 - shall be a pop-up dialog to show the error
 
         # add run number to run number list and plot
         self.add_reduced_run(data_key, data_bank_list, True)
-
-        # TODO - Remove: the commented out part shall be covered in self.add_reduced_runs().  Remove it after TEST
-        # self.do_plot_diffraction_data()
-        # # clear some quick references, including GUI widgets its associated chopped data dictionary
-        # # self._mutexChopSeqList = True
-        # self._mutexRunNumberList = True
-        # # self.ui.comboBox_chopSeq.clear()
-        #
-        # self._mutexRunNumberList = False
-        # # self._mutexChopSeqList = False
-        # # self._mutexChopSeqList = False
-        #
-        # # set the label
-        # seq_list = None
-        # self.label_loaded_data(self._currRunNumber, is_chopped_data, seq_list)
 
         return
 
@@ -464,59 +417,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         raise RuntimeError('It is supposed to plot the first workspace in the chop list!')
 
         return
-    #
-    # def do_load_local_gsas(self):
-    #     """
-    #     load gsas or sequence of GSAS files
-    #     If given a directory, then it is to load a series of GSAS files from chopping a run;
-    #     If given a single file, then it is to
-    #     :return:
-    #     """
-    #     # get GSAS file path
-    #     gsas_path = str(self.ui.lineEdit_gsasFileName.text())
-    #     if len(gsas_path) == 0:
-    #         # check
-    #         GuiUtility.pop_dialog_information(self, 'No GSAS file is given')
-    #         return
-    #
-    #     if os.path.isdir(gsas_path):
-    #         # input is a directory: load chopped data series
-    #         data_key_dict, run_number = self._myController.load_chopped_diffraction_files(gsas_path, None, 'gsas')
-    #
-    #         # a key as run number
-    #         if run_number is None:
-    #             run_number = gsas_path
-    #
-    #         # get workspaces from data key dictionary and add to data management
-    #         diff_ws_list = self.process_loaded_chop_suite(data_key_dict)
-    #         self.add_chopped_workspaces(run_number, diff_ws_list, True)
-    #
-    #         data_key = None
-    #
-    #     else:
-    #         # input is a file: load a single GSAS file
-    #         # load the data file and returned as data key
-    #         data_key = self._myController.load_diffraction_file(file_name=gsas_path, file_type='gsas')
-    #
-    #         # set up the data file to this data viewer and
-    #         status, error_message = self._myController.get_run_info(run_number=None, data_key=data_key)
-    #         if not status:
-    #             GuiUtility.pop_dialog_error(self, error_message)
-    #             return
-    #
-    #         # clear some quick references, including GUI widgets its associated chopped data dictionary
-    #         self._mutexChopSeqList = True
-    #         self._mutexRunNumberList = True
-    #         self.ui.comboBox_chopSeq.clear()
-    #         self.ui.comboBox_runs.addItem(data_key)
-    #         self._mutexChopSeqList = False
-    #         self._mutexChopSeqList = False
-    #     # END-IF-ELSE
-    #
-    #     # activate it!
-    #     # self.do_set_reduced_from_memory(data_key=data_key)
-    #
-    #     return
 
     # TEST - 20180723 - Just implemented
     def update_chopped_run_combo_box(self, item_name, remove_item):
@@ -906,6 +806,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #
         # return range(len(workspace_name_list))
 
+    # FIXME TODO - 20180807 - who is calling me?
     def do_apply_new_range(self):
         """ Apply new data range to the plots on graph
         Purpose: Change the X limits of the figure
@@ -1258,34 +1159,47 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
     def do_refresh_existing_runs(self):
         """
-        refresh existing runs
+        refresh existing runs including single runs and chopped runs
         :return:
         """
-        # current selection
-        current_single_run = str(self.ui.comboBox_runs.currentText())
-
-        # single runs
+        # Part 1: single runs
         single_runs_list = self._myController.get_loaded_runs(chopped=False)
-        single_runs_list.sort()
+        if len(single_runs_list) > 0:
+            # current selection
+            current_single_run = str(self.ui.comboBox_runs.currentText()).strip()
+            if current_single_run == '':
+                current_single_run = None
 
-        # update
-        for run_number in single_runs_list:
-            if isinstance(run_number, int):
-                print ('[DB...INFO] run number {0} is an integer.'.format(run_number))
-                run_number = '{0}'.format(run_number)
-            if run_number not in self._runNumberList:
-                self.update_single_run_combo_box(run_number, False, False)
+            # single runs
+            single_runs_list.sort()
+
+            # update
+            for run_number in single_runs_list:
+                print ('[INFO] Loaded run {} ({})'.format(run_number, type(run_number)))
+                # convert run  number from integer to string as the standard
+                if isinstance(run_number, int):
+                    run_number = '{0}'.format(run_number)
+                # if not existed, then update the single run combo-box
+                if run_number not in self._runNumberList:
+                    self.update_single_run_combo_box(run_number, False, False)
+                    # END-IF
             # END-IF
+
+            # re-focus back to original one
+            self._mutexRunNumberList = True
+            if current_single_run is None:
+                new_pos = 0
+                self.ui.comboBox_runs.setCurrentIndex(new_pos)
+            else:
+                new_pos = self._runNumberList.index(current_single_run)
+                self.ui.comboBox_runs.setCurrentIndex(new_pos)
+            self._mutexRunNumberList = False
         # END-IF
 
-        # re-focus back to original one
-        new_pos = self._runNumberList.index(current_single_run)
-        self._mutexRunNumberList = True
-        self.ui.comboBox_runs.setCurrentIndex(new_pos)
-        self._mutexRunNumberList = False
-
-        # chopped runs
-        #  NEXT: chopped_run_list = self._myController.get_loaded_runs(chopped=True)
+        # Part 2: chopped runs
+        chopped_run_list = self._myController.get_loaded_runs(chopped=True)
+        print ('[DB...BAT] Chopped runs: {}'.format(chopped_run_list))
+        # TODO - 20180807 - To be continued
 
         return
 
@@ -1407,6 +1321,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot diffraction data same as
         self.do_plot_diffraction_data()
+
+        return
+
+    def evt_toggle_run_type(self):
+        """
+        toggle the group boxes for reduced runs
+        :return:
+        """
+        self.ui.groupBox_plotSingleRun.setEnabled(self.ui.radioButton_chooseSingleRun.isChecked())
+        self.ui.groupBox_plotChoppedRun.setEnabled(self.ui.radioButton_chooseChopped.isChecked())
 
         return
 

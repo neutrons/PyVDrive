@@ -944,6 +944,7 @@ class ReductionManager(object):
             cal_ws_base_name = self._calibrationFileManager.get_base_name(cal_file_name, number_banks)
         else:
             cal_file_name = None
+            cal_ws_base_name = None
 
         if reduce_data_flag and not save_chopped_nexus:
             # chop and reduce chopped data to GSAS
@@ -953,11 +954,14 @@ class ReductionManager(object):
             # set the flag for not being an auto reduction
             reduction_setup.is_auto_reduction_service = False
             if not cal_loaded:
-                reduction_setup.set_calibration_file(calib_file_name=cal_file_name)
+                assert cal_ws_base_name is not None, 'Impossible to have None cal base name'
+                reduction_setup.set_calibration_file(calib_file_name=cal_file_name,
+                                                     base_ws_name=cal_ws_base_name)
             else:
+                # TODO FIXME - This is not correct!
                 reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
 
-            reduction_setup.set_align_vdrive_bin()
+            reduction_setup.set_align_vdrive_bin(flag=False)
 
             # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
             #                                               cal_file_name=cal_file_name,

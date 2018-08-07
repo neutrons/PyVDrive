@@ -852,7 +852,7 @@ class ProjectManager(object):
         get run numbers of chopped and reduced runs
         :return:
         """
-        # FIXME ASAP ASAP2 TODO - Find which manager is for reduced chopped data
+        # TODO FIXME TODO - 20180803 - Find which manager is for reduced chopped data
         return list()
 
     def get_reduced_runs(self):

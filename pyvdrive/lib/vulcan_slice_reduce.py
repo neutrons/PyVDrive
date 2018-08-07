@@ -351,9 +351,13 @@ class SliceFocusVulcan(object):
         for ws_index in range(input_ws.getNumberHistograms()):
             bank_id = ws_index + 1
             bin_params = binning_param_dict[bank_id]
-            if len(bin_params) % 2 == 0:
+            if not isinstance(bin_params, str) and len(bin_params) % 2 == 0:
                 # odd number and cannot be binning parameters
-                raise RuntimeError('Binning parameter {0} cannot be accepted.'.format(bin_params))
+                raise RuntimeError('Binning parameter {0} of type {1} with size {2} cannot be accepted.'
+                                   ''.format(bin_params, type(bin_params), len(bin_params)))
+            elif isinstance(bin_params, str) and bin_params.count(',') % 2 == 1:
+                raise RuntimeError('Binning parameter {0} (as a string) cannot be accepted.'
+                                   ''.format(bin_params))
 
         # rebin input workspace
         processed_single_spec_ws_list = list()
@@ -430,6 +434,10 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
+        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading!
+        # TODO FIXME TODO - CONTINUE - A proper way shall be found to write to a VDRIVE GSAS
+        return
+
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
@@ -447,8 +455,10 @@ class SliceFocusVulcan(object):
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)
             if output_workspace.isHistogramData():
-                raise RuntimeError('Output workspace {0} for {1} shall be point data at this stage.'
-                                   ''.format(ws_name, gsas_file_name))
+
+                raise RuntimeError('Output workspace {0} of type {1} to export to {2} shall be point data '
+                                   'at this stage.'
+                                   ''.format(ws_name, type(output_workspace), gsas_file_name))
 
             # construct the headers
             vulcan_gsas_header = self.create_vulcan_gsas_header(output_workspace, gsas_file_name, ipts_number,

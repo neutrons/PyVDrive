@@ -845,9 +845,9 @@ class DataArchiveManager(object):
         # check inputs
         datatypeutility.check_string_variable('Auto record reference ID', auto_record_ref_id)
         datatypeutility.check_string_variable('Column name to sort by', sort_by)
-        if sort_by.lower not in AUTO_LOG_MAP:
-            raise RuntimeError('Pandas DataFrame has no columns mapped from {}; Available include'
-                               ''.format(sort_by.lower(), AUTO_LOG_MAP.keys()))
+        if sort_by.lower() not in AUTO_LOG_MAP:
+            raise RuntimeError('Pandas DataFrame has no columns mapped from {}; Available include '
+                               '{}'.format(sort_by.lower(), AUTO_LOG_MAP.keys()))
         if run_range is not None:
             assert not isinstance(run_range, str), 'Runs range cannot be a string'
             if len(run_range) != 2:
