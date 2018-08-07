@@ -1897,10 +1897,12 @@ class VDriveAPI(object):
         """
         # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
+        # TODO FIXME - 20180806 - TOF correction shall be specified by user
         status, message = self._myProject.chop_run(run_number, slicer_id,
                                                    reduce_flag=reduce_data, vanadium=vanadium,
                                                    save_chopped_nexus=save_chopped_nexus,
                                                    output_directory=output_dir,
+                                                   tof_correction=False,
                                                    number_banks=number_banks)
 
         return status, message

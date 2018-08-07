@@ -168,8 +168,10 @@ class VdriveChop(VDriveCommand):
             exp_log_type = None
 
         # chop
+        # TODO FIXME - 20180806 - Number of banks shall be given from console
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
                                                       vanadium=vanadium, save_chopped_nexus=True, output_dir=output_dir,
+                                                      number_banks=3,
                                                       export_log_type=exp_log_type)
 
         return status, message
