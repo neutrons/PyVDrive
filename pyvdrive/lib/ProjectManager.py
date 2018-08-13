@@ -59,7 +59,7 @@ class ProjectManager(object):
         self._sampleRunReductionFlagDict = dict()  # Key: run number. Value: boolean flag for reduction
 
         # name of the workspace for VDRIVE bins tempate
-        self._vdriveBinTemplateName = None
+        # self._vdriveBinTemplateName = None
 
         return
 
@@ -975,27 +975,6 @@ class ProjectManager(object):
 
         return dict()
 
-    def load_standard_binning_workspace(self, data_directory):
-        """
-        Load the standard binning NeXus file to a workspace
-        :return:
-        """
-        # find the template file
-        template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
-        if not os.path.exists(template_file_name):
-            template_file_name = '/SNS/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
-        if not os.path.exists(template_file_name):
-            # for live-data-view from dasopi3
-            template_file_name = '/SNS/users/wzz/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
-        if not os.path.exists(template_file_name):
-            raise RuntimeError('Unable to load binning template NeXus file {0}.'.format(template_file_name))
-
-        # load it!
-        self._vdriveBinTemplateName = 'VDriveBinTemplate'
-        mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
-
-        return
-
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
         :param save_dict:
@@ -1212,15 +1191,18 @@ class ProjectManager(object):
                 # END-IF (vanadium)
 
                 # reduce
-                print '[DB....BAT....BAT] Reduce {0}, {1}'.format(ipts_number, run_number)
-                status, sub_message = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number, full_event_file_path,
-                                                                                     output_directory, vanadium=vanadium,
-                                                                                     vanadium_tuple=vanadium_tuple, gsas=gsas,
-                                                                                     standard_sample_tuple=standard_sample_tuple,
-                                                                                     binning_parameters=binning_parameters,
-                                                                                     merge_banks=merge_banks,
-                                                                                     num_banks=num_banks)
+                print '[INFO] (Version 1) Reduce IPTS {0} Run {1}'.format(ipts_number, run_number)
+                r_tup = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number,
+                                                                       full_event_file_path,
+                                                                       output_directory,
+                                                                       vanadium=vanadium, vanadium_tuple=vanadium_tuple,
+                                                                       gsas=gsas,
+                                                                       standard_sample_tuple=standard_sample_tuple,
+                                                                       binning_parameters=binning_parameters,
+                                                                       merge_banks=merge_banks,
+                                                                       num_banks=num_banks)
 
+                status, sub_message = r_tup
                 reduce_all_success = reduce_all_success and status
                 if not status:
                     message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
@@ -1266,6 +1248,72 @@ class ProjectManager(object):
         # END-IF-ELSE(merge or not)
 
         return reduce_all_success, message
+
+    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
+                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs):
+        """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
+        :param run_number_list:
+        :param output_directory:
+        :param d_spacing:
+        :param binning_parameters:
+        :param convert_to_matrix:
+        :param number_banks:
+        :param gsas: flag to reduce to GSAS file
+        :param merge_banks:
+        :param merge_runs:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_list('Run numbers', run_number_list)
+        datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
+        datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
+
+        # check binning parameters
+        if binning_parameters is None:
+            raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
+        if d_spacing:
+            if len(binning_parameters) == 1:
+                bin_size = binning_parameters[0]
+            else:
+                bin_size = binning_parameters[1]
+            # force the binning range to be from 0.3 to 5.0
+            binning_parameters = (0.3, float(bin_size), 5.0)
+        # END-IF
+
+        # reduce one by one
+        reduced_run_numbers = list()
+        error_messages = list()
+        for run_number in run_number_list:
+            raw_file_name, ipts_number = self._dataFileDict[run_number]
+            print '[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}' \
+                  ''.format(run_number, raw_file_name, binning_parameters)
+
+            # reduce
+            if d_spacing:
+                unit = 'dSpacing'
+            else:
+                unit = 'TOF'
+
+            try:
+                out_ws_name = self._reductionManager.reduce_event_nexus(run_number, raw_file_name,
+                                                                        unit, binning_parameters,
+                                                                        convert_to_matrix, num_banks=number_banks)
+
+                reduced_run_numbers.append((run_number, out_ws_name))
+                self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
+
+                # save to GSAS
+                if gsas:
+                    pass
+                    # TODO - 20180813 - Next: mantid_reduction.save_vulcan_gsas()
+
+            except RuntimeError as run_error:
+                error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
+            # manage
+
+        # END-FOR
+
+        return reduced_run_numbers, error_messages
 
     def set_focus_calibration_file(self, focus_cal_file):
         """
@@ -1352,63 +1400,6 @@ class ProjectManager(object):
 
         return
 
-    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix, number_banks):
-        """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
-        :param run_number_list:
-        :param output_directory:
-        :param d_spacing:
-        :param binning_parameters:
-        :param convert_to_matrix:
-        :param number_banks:
-        :return:
-        """
-        # check inputs
-        datatypeutility.check_list('Run numbers', run_number_list)
-        datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
-        datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
-
-        # check binning parameters
-        if binning_parameters is None:
-            raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
-        if d_spacing:
-            if len(binning_parameters) == 1:
-                bin_size = binning_parameters[0]
-            else:
-                bin_size = binning_parameters[1]
-            # force the binning range to be from 0.3 to 5.0
-            binning_parameters = (0.3, float(bin_size), 5.0)
-        # END-IF
-
-        # reduce one by one
-        reduced_run_numbers = list()
-        error_messages = list()
-        for run_number in run_number_list:
-            raw_file_name, ipts_number = self._dataFileDict[run_number]
-            print '[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}' \
-                  ''.format(run_number, raw_file_name, binning_parameters)
-
-            # reduce
-            if d_spacing:
-                unit = 'dSpacing'
-            else:
-                unit = 'TOF'
-
-            try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(run_number, raw_file_name,
-                                                                        unit, binning_parameters,
-                                                                        convert_to_matrix, num_banks=number_banks)
-
-                reduced_run_numbers.append((run_number, out_ws_name))
-                self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
-            except RuntimeError as run_error:
-                error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, error_messages))
-            # manage
-
-        # END-FOR
-
-        return reduced_run_numbers, error_messages
-
     @property
     def vanadium_processing_manager(self):
         """
@@ -1417,13 +1408,13 @@ class ProjectManager(object):
         """
         return self._processVanadiumManager
 
-    @property
-    def vdrive_bin_template(self):
-        """
-        get the VDRIVE binning template workspace name
-        :return:
-        """
-        return self._vdriveBinTemplateName
+    # @property
+    # def vdrive_bin_template(self):
+    #     """
+    #     get the VDRIVE binning template workspace name
+    #     :return:
+    #     """
+    #     return self._vdriveBinTemplateName
 
 
 def get_data_key(file_name):

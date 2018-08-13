@@ -56,11 +56,11 @@ class VDriveAPI(object):
         self._myProject = ProjectMrg.ProjectManager('New Project')
 
         # construct the data location
-        if module_location is not None:
-            template_data_dir = os.path.join(module_location, 'data')
-        else:
-            template_data_dir = None
-        self._myProject.load_standard_binning_workspace(template_data_dir)
+        # if module_location is not None:
+        #     template_data_dir = os.path.join(module_location, 'data')
+        # else:
+        #     template_data_dir = None
+        # REMOVED 2018 TODO self._myProject.load_standard_binning_workspace(template_data_dir)
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.
@@ -1388,12 +1388,17 @@ class VDriveAPI(object):
         elif dspace or version == 2:
             # user version 2 reduction algorithm
             # TODO - NowNowNow - Starting from here!
+            print ('GSAS = {}'.format(gsas))
+
             status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                     output_directory=output_directory,
                                                                     d_spacing=True,
                                                                     binning_parameters=binning_parameters,
                                                                     convert_to_matrix=True,
-                                                                    number_banks=num_banks)
+                                                                    number_banks=num_banks,
+                                                                    gsas=gsas,
+                                                                    merge_banks=merge_banks,
+                                                                    merge_runs=merge_runs)
 
         else:
             # manual reduction: Reduce runs

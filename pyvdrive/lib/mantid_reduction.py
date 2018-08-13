@@ -163,6 +163,32 @@ def align_and_focus(run_number, nexus_file_name, target_unit, binning_parameters
     return final_ws_name
 
 
+def save_vulcan_gsas(workspace_name):
+    """
+    save a workspace to VULCAN GSAS file name
+    :param workspace_name:
+    :return:
+    """
+    # TODO TODO - 20180813 - Passing IDL-VDRIVE binning file shall be in the setup phase of PyVDRive
+    # self._reductionSetup.get_vulcan_bin_file(),
+    # mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
+    #                            BinningTable=bin_table_name,
+    #                            OutputWorkspace=reduced_workspace,
+    #                            GSSFilename=gsas_file_name,
+    #                            IPTS=self._reductionSetup.get_ipts_number(),
+    #                            GSSParmFileName=gsas_iparm_file_name)
+    #
+    # reduce_VULCAN.py: def create_bin_table
+    #     h5_bin_file_name = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
+    #
+    #     bin_table_name = create_bin_table(reduced_workspace, not_align_idl,
+    #
+    # self._reductionSetup.get_vulcan_bin_file(),
+    # (east_west_binning_parameters, high_angle_binning_parameters))
+
+    return
+
+
 def save_ws_ascii(ws_name, output_directory, base_name):
     """
 

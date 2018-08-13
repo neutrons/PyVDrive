@@ -1319,6 +1319,10 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
         outputs = mantidapi.LoadCalFile(Filename=calib_file_name,
                                         Output=output_name)
 
+    else:
+        raise RuntimeError('Calibration file {} does not end with .h5 or .dat.  Unable to support'
+                           ''.format(calib_file_name))
+
     return outputs
 
 
