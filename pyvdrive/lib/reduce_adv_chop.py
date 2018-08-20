@@ -31,6 +31,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         """
         super(AdvancedChopReduce, self).__init__(reduce_setup)
 
+        self._sliced_ws_name_list = None
+
         return
 
     def chop_data(self, split_ws_name=None, info_ws_name=None, do_tof_correction = False):
@@ -635,6 +637,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, message
 
+    # TODO - 20180820 - Clean
     def execute_chop_reduction_v2(self, clear_workspaces=False):
         """
         chop and reduce data with the upgraded algorithm for speed
@@ -659,15 +662,19 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         high_params = '5000.,-0.0003,70000.'
 
         runner = vulcan_slice_reduce.SliceFocusVulcan()
+        idl_name = self._reductionSetup.get_vulcan_bin_file()
+        info, output_ws_names = runner.slice_focus_event_workspace(event_file_name=raw_file_name,
+                                                                   event_ws_name=event_ws_name,
+                                                                   split_ws_name=split_ws_name,
+                                                                   info_ws_name=split_info_table,
+                                                                   output_ws_base=output_ws_name,
+                                                                   idl_bin_file_name=idl_name,
+                                                                   east_west_binning_parameters=ew_params,
+                                                                   high_angle_binning_parameters=high_params)
 
-        runner.slice_focus_event_workspace(event_file_name=raw_file_name, event_ws_name=event_ws_name,
-                                           split_ws_name=split_ws_name, info_ws_name=split_info_table,
-                                           output_ws_base=output_ws_name,
-                                           idl_bin_file_name=self._reductionSetup.get_vulcan_bin_file(),
-                                           east_west_binning_parameters=ew_params,
-                                           high_angle_binning_parameters=high_params)
+        self._reducedWorkspaceList.extend(output_ws_names)
 
-        return True, 'Testing'
+        return True, info
 
     def export_chopped_information(self, lookup_list):
         """

@@ -520,6 +520,7 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
+    # TODO - 20180820 - better doc and clean!
     def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
                          is_workspace=False):
         """ Get reduced data

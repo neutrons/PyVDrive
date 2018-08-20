@@ -170,9 +170,9 @@ class LoadedDataManager(object):
             # END-IF
             print ('Loaded GSAS file workspace name: {0} from case {1}'.format(data_ws_name, case))
 
-            # load data
+            # load data: TODO - 20180820 - IDL-VDRIVE binning is disabled due to multiple various binning among banks
             gsas_ws_name = mantid_helper.load_gsas_file(data_file_name, data_ws_name,
-                                                        standard_bin_workspace=self._myParent.vdrive_bin_template)
+                                                        standard_bin_workspace=None)
         else:
             raise RuntimeError('Unable to support %s file.' % data_file_type)
 

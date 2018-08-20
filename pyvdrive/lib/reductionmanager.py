@@ -1080,6 +1080,7 @@ class ReductionManager(object):
         reduction_setup.set_splitters(split_ws_name, split_info_name)
 
         # define chop processor
+        # TODO - 20180820 - How to manager this!
         chop_reducer = reduce_adv_chop.AdvancedChopReduce(reduction_setup)
 
         # option to save to archive
@@ -1107,7 +1108,7 @@ class ReductionManager(object):
             cal_ws_base_name = None
 
         if reduce_data_flag and not save_chopped_nexus:
-            # chop and reduce chopped data to GSAS
+            # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
             # set up the flag to save chopped raw data
             reduction_setup.save_chopped_workspace = save_chopped_nexus
 
@@ -1118,7 +1119,7 @@ class ReductionManager(object):
                 reduction_setup.set_calibration_file(calib_file_name=cal_file_name,
                                                      base_ws_name=cal_ws_base_name)
             else:
-                # TODO FIXME - This is not correct!
+                # TODO FIXME - 20180820 - This is not correct!
                 reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
 
             reduction_setup.set_align_vdrive_bin(flag=False)
@@ -1133,8 +1134,8 @@ class ReductionManager(object):
             # set up reduction tracker
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
 
-            # reduce data
-            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False,)
+            # Slice and focus the data *** V2.0
+            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)

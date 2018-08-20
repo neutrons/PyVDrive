@@ -71,60 +71,26 @@ class SliceFocusVulcan(object):
         return 'Slice and focus VULCAN data into {0}-bank with {1} threads'.format(self._number_banks,
                                                                                    self._number_threads)
 
-    # def align_detectors(self, ref_id):
-    #     """
-    #     Align detector of an EventWorkspace indexed by reference ID
-    #     :param ref_id:
-    #     :return:
-    #     """
-    #     datatypeutility.check_string_variable('Workspace/data reference ID', ref_id)
-    #     if ref_id not in self._ws_name_dict:
-    #         raise RuntimeError('Workspace/data reference ID {0} does not exist. Existing IDs are {1}'
-    #                            ''.format(ref_id, self._ws_name_dict.keys()))
-    #
-    #     # get event workspace name
-    #     event_ws_name = self._ws_name_dict[ref_id]
-    #
-    #     # get calibration file name
-    #     if not AnalysisDataService.doesExist(self._diff_cal_ws_name):
-    #         self.load_diff_calibration(self._diff_base_name)
-    #
-    #     AlignDetectors(InputWorkspace=event_ws_name,
-    #                    OutputWorkspace=event_ws_name,
-    #                    CalibrationWorkspace=self._diff_cal_ws_name)
-    #
-    #     return
-
     @staticmethod
-    def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
+    def create_bank_header(bank_id, vec_x):
         """
-        create binning parameters
-        :param num_banks:
-        :param east_west_binning_parameters:
-        :param high_angle_binning_parameters:
+        create bank header of VDRIVE/GSAS convention
+        as: BANK bank_id data_size data_size  binning_type 'SLOG' tof_min tof_max deltaT/T
+        :param bank_id:
+        :param vec_x:
         :return:
         """
-        binning_parameter_dict = dict()
-        if num_banks == 3:
-            # west(1), east(1), high(1)
-            for bank_id in range(1, 3):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            binning_parameter_dict[3] = high_angle_binning_parameters
-        elif num_banks == 7:
-            # west (3), east (3), high (1)
-            for bank_id in range(1, 7):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            binning_parameter_dict[7] = high_angle_binning_parameters
-        elif num_banks == 27:
-            # west (9), east (9), high (9)
-            for bank_id in range(1, 19):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            for bank_id in range(19, 28):
-                binning_parameter_dict[bank_id] = high_angle_binning_parameters
-        else:
-            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+        tof_min = vec_x[0]
+        tof_max = vec_x[-1]
+        delta_tof = (vec_x[1] - tof_min) / tof_min  # deltaT/T
+        data_size = len(vec_x)
 
-        return binning_parameter_dict
+        bank_header = 'BANK {0} {1} {2} {3} {4} {5:.1f} {6:.7f} 0 FXYE' \
+                      ''.format(bank_id, data_size, data_size, 'SLOG', tof_min, tof_max, delta_tof)
+
+        bank_header = '{0:80s}'.format(bank_header)
+
+        return bank_header
 
     @staticmethod
     def create_idl_bins(num_banks, h5_bin_file_name):
@@ -194,6 +160,105 @@ class SliceFocusVulcan(object):
         # END-IF-ELSE
 
         return binning_parameter_dict
+
+    @staticmethod
+    def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
+        """
+        create binning parameters
+        :param num_banks:
+        :param east_west_binning_parameters:
+        :param high_angle_binning_parameters:
+        :return:
+        """
+        binning_parameter_dict = dict()
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            for bank_id in range(1, 3):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            binning_parameter_dict[3] = high_angle_binning_parameters
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            for bank_id in range(1, 7):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            binning_parameter_dict[7] = high_angle_binning_parameters
+        elif num_banks == 27:
+            # west (9), east (9), high (9)
+            for bank_id in range(1, 19):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            for bank_id in range(19, 28):
+                binning_parameter_dict[bank_id] = high_angle_binning_parameters
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+
+        return binning_parameter_dict
+
+    @staticmethod
+    def create_vulcan_gsas_header(workspace, gsas_file_name, ipts, parm_file_name):
+        """
+        create specific GSAS header required by VULCAN team/VDRIVE.
+        It is found that calling Mantid for writing GSAS can cause contending among threads
+        :param workspace:
+        :param gsas_file_name:
+        :param ipts:
+        :param parm_file_name:
+        :return:
+        """
+        # Get necessary information including title, run start, duration and etc.
+        title = workspace.getTitle()
+
+        # Get run object for sample log information
+        run = workspace.getRun()
+
+        # Get information on start/stop
+        if run.hasProperty("run_start") and run.hasProperty("duration"):
+            # have run start and duration information
+            # run_start = run.getProperty("run_start").value
+            duration = float(run.getProperty("duration").value)
+
+            # separate second and sub-seconds
+            # run_start_seconds = run_start.split(".")[0]
+            # run_start_sub_seconds = run_start.split(".")[1]
+            # self.log().warning('Run start {0} is split to {1} and {2}'.format(run_start, run_start_seconds,
+            #                                                                   run_start_sub_seconds))
+
+            # property run_start and duration exist
+            utctime = numpy.datetime64(run.getProperty('run_start').value)
+            time0 = numpy.datetime64("1990-01-01T00:00:00")
+            total_nanosecond_start = int((utctime - time0) / numpy.timedelta64(1, 'ns'))
+            total_nanosecond_stop = total_nanosecond_start + int(duration*1.0E9)
+
+        else:
+            # not both property is found
+            total_nanosecond_start = 0
+            total_nanosecond_stop = 0
+        # END-IF
+
+        # self.log().debug("Start = %d, Stop = %d" % (total_nanosecond_start, total_nanosecond_stop))
+
+        # Construct new header
+        vulcan_gsas_header = list()
+
+        if len(title) > 80:
+            title = title[0:80]
+        vulcan_gsas_header.append("%-80s" % title)
+
+        vulcan_gsas_header.append("%-80s" % ("Instrument parameter file: %s" % parm_file_name))
+
+        vulcan_gsas_header.append("%-80s" % ("#IPTS: %s" % str(ipts)))
+
+        vulcan_gsas_header.append("%-80s" % "#binned by: Mantid")
+
+        vulcan_gsas_header.append("%-80s" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name)))
+
+        vulcan_gsas_header.append("%-80s" % ("#GSAS IPARM file: %s" % parm_file_name))
+
+        vulcan_gsas_header.append("%-80s" % ("#Pulsestart:    %d" % total_nanosecond_start))
+
+        vulcan_gsas_header.append("%-80s" % ("#Pulsestop:     %d" % total_nanosecond_stop))
+
+        vulcan_gsas_header.append('{0:80s}'.format('#'))
+
+        return vulcan_gsas_header
 
     def diffraction_focus(self, ref_id, binning, apply_det_efficiency):
         """
@@ -426,6 +491,143 @@ class SliceFocusVulcan(object):
 
         return
 
+    def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
+                                    output_ws_base, idl_bin_file_name, east_west_binning_parameters,
+                                    high_angle_binning_parameters):
+        """
+        slice and diffraction focus event workspace with option to write the reduced data to GSAS file
+        :param event_file_name:
+        :param event_ws_name:
+        :param split_ws_name:
+        :param info_ws_name:
+        :param output_ws_base:
+        :param idl_bin_file_name:
+        :param east_west_binning_parameters:
+        :param high_angle_binning_parameters:
+        :return: tuple: [1] slicing information, [2] output workspace names
+        """
+
+        # starting time
+        t0 = time.time()
+
+        # Load event file
+        Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
+
+        # Load diffraction calibration file
+        LoadDiffCal(InputWorkspace=event_ws_name,
+                    Filename=self._detector_calibration_file,
+                    WorkspaceName='Vulcan')
+
+        # Align detectors: OpenMP
+        AlignDetectors(InputWorkspace=event_ws_name,
+                       OutputWorkspace=event_ws_name,
+                       CalibrationWorkspace='Vulcan_cal')
+
+        t1 = time.time()
+
+        # Filter events: OpenMP
+        result = FilterEvents(InputWorkspace=event_ws_name,
+                              SplitterWorkspace=split_ws_name, InformationWorkspace=info_ws_name,
+                              OutputWorkspaceBaseName=output_ws_base,
+                              FilterByPulseTime=False, GroupWorkspaces=True,
+                              OutputWorkspaceIndexedFrom1=True,
+                              SplitSampleLogs=True)
+
+        # get output workspaces' names
+        output_names = None
+        for r in result:
+            if isinstance(r, int):
+                # print r
+                pass
+            elif isinstance(r, list):
+                output_names = r
+            else:
+                continue
+            # END-IF-ELSE
+        # END-IF
+
+        t2 = time.time()
+
+        # process binning parameters
+        if idl_bin_file_name is not None:
+            print ('[DB...INFO] Create IDL Bins')
+            binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
+        else:
+            print ('[DB...INFO] Create Native Bins')
+            binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
+                                                             high_angle_binning_parameters)
+
+        # Now start to use multi-threading to diffraction focus the sliced event data
+        num_outputs = len(output_names)
+        number_ws_per_thread = int(num_outputs / self._number_threads)
+        extra = num_outputs % self._number_threads
+
+        print ('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
+               'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
+
+        thread_pool = dict()
+        # create threads and start
+        end_sliced_ws_index = 0  # exclusive last
+        for thread_id in range(self._number_threads):
+            start_sliced_ws_index = end_sliced_ws_index
+            end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
+                                      num_outputs)
+            # Note: Tread(target=[method name], args=(method argument 0, method argument 1, ...,)
+            thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
+                                                      args=(output_names[start_sliced_ws_index:end_sliced_ws_index],
+                                                            binning_parameter_dict,))
+            thread_pool[thread_id].start()
+            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start_sliced_ws_index,
+                                                                       end_sliced_ws_index, end_sliced_ws_index-start_sliced_ws_index))
+        # END-FOR
+
+        # join the threads after the diffraction focus is finished
+        for thread_id in range(self._number_threads):
+            thread_pool[thread_id].join()
+
+        # kill any if still alive
+        for thread_id in range(self._number_threads):
+            thread_i = thread_pool[thread_id]
+            if thread_i is not None and thread_i.isAlive():
+                thread_i._Thread_stop()
+
+        t3 = time.time()
+
+        # write all the processed workspaces to GSAS
+        # TODO - 20180820 - IPTS number and parm_file_name shall be passed
+        self.write_to_gsas(output_names, ipts_number=12345, parm_file_name='vulcan.prm')
+
+        tf = time.time()
+
+        # processing time output
+        process_info = '{0}: Runtime = {1}   Total output workspaces = {2}' \
+                       ''.format(event_file_name, tf - t0, len(output_names))
+        process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
+                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
+        print (process_info)
+
+        end_sliced_ws_index = 0
+        for thread_id in range(self._number_threads):
+            start_sliced_ws_index = end_sliced_ws_index
+            end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
+                                      num_outputs)
+            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'
+                   .format(thread_id, start_sliced_ws_index, end_sliced_ws_index,
+                           end_sliced_ws_index-start_sliced_ws_index))
+
+        return process_info, output_names
+
+    def write_to_nexuses(self, workspace_name_list, output_file_name_base):
+        """
+
+        :param workspace_name_list:
+        :param output_file_name_base:
+        :return:
+        """
+        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading! FIXME
+
+        # NOTE: this method shall create a thread but return without thread returns
+
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
         """
         Write all the workspaces to GSAS file sequentially
@@ -434,9 +636,12 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
-        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading!
+        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading! FIXME
         # TODO FIXME TODO - CONTINUE - A proper way shall be found to write to a VDRIVE GSAS
+        # TODO FIXME TODO - IDEA     - Copy over SaveVulcanGSS()
         return
+
+        # TODO - 20180807 - Multiple threading is required to construct the output string buffer
 
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
@@ -485,196 +690,7 @@ class SliceFocusVulcan(object):
 
         return
 
-    def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
-                                    output_ws_base, idl_bin_file_name, east_west_binning_parameters,
-                                    high_angle_binning_parameters):
-
-        # starting time
-        t0 = time.time()
-
-        # Load event file
-        Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
-
-        # Load diffraction calibration file
-        LoadDiffCal(InputWorkspace=event_ws_name,
-                    Filename=self._detector_calibration_file,
-                    WorkspaceName='Vulcan')
-
-        # Align detectors
-        AlignDetectors(InputWorkspace=event_ws_name,
-                       OutputWorkspace=event_ws_name,
-                       CalibrationWorkspace='Vulcan_cal')
-
-        t1 = time.time()
-
-        # Filter events
-        result = FilterEvents(InputWorkspace=event_ws_name,
-                              SplitterWorkspace=split_ws_name, InformationWorkspace=info_ws_name,
-                              OutputWorkspaceBaseName=output_ws_base,
-                              FilterByPulseTime=False, GroupWorkspaces=True,
-                              OutputWorkspaceIndexedFrom1=True,
-                              SplitSampleLogs=True)
-
-        # get output workspaces' names
-        output_names = None
-        for r in result:
-            if isinstance(r, int):
-                # print r
-                pass
-            elif isinstance(r, list):
-                output_names = r
-            else:
-                continue
-                # print r.name(), type(r)
-
-        t2 = time.time()
-
-        # process binning parameters
-        if idl_bin_file_name is not None:
-            binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
-        else:
-            binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
-                                                             high_angle_binning_parameters)
-
-        # Now start to use multi-threading
-        num_outputs = len(output_names)
-        number_ws_per_thread = int(num_outputs / self._number_threads)
-        extra = num_outputs % self._number_threads
-
-        print ('[DB...IMPORTANT] Output workspace number = {0}, workspace per thread = {1}\n'
-               'Output workspaces names: {2}'.format(num_outputs, number_ws_per_thread, output_names))
-        thread_pool = dict()
-        # create threads and start
-        end = 0  # exclusive last
-        for thread_id in range(self._number_threads):
-            start = end
-            end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
-            thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
-                                                      args=(output_names[start:end], binning_parameter_dict,))
-            thread_pool[thread_id].start()
-            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
-
-        # join the threads
-        for thread_id in range(self._number_threads):
-            thread_pool[thread_id].join()
-
-        # kill any if still alive
-        for thread_id in range(self._number_threads):
-            thread_i = thread_pool[thread_id]
-            if thread_i is not None and thread_i.isAlive():
-                thread_i._Thread_stop()
-
-        t3 = time.time()
-
-        # write all the processed workspaces to GSAS
-        self.write_to_gsas(output_names, ipts_number=12345, parm_file_name='vulcan.prm')
-
-        tf = time.time()
-
-        # processing time output
-        process_info = '{0}: Runtime = {1}   Total output workspaces = {2}' \
-                       ''.format(event_file_name, tf - t0, len(output_names))
-        process_info += 'Details for thread = {4}:\n\tLoading  = {0}\n\tChopping = {1}\n\tFocusing = {2}\n\t' \
-                        'SaveGSS = {3}'.format(t1 - t0, t2 - t1, t3 - t2, tf - t3, self._number_threads)
-        print (process_info)
-
-        end = 0
-        for thread_id in range(self._number_threads):
-            start = end
-            end = min(start + number_ws_per_thread + int(thread_id < extra), num_outputs)
-            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start, end, end-start))
-
-        return process_info
-
-    @staticmethod
-    def create_vulcan_gsas_header(workspace, gsas_file_name, ipts, parm_file_name):
-        """
-        create specific GSAS header required by VULCAN team/VDRIVE.
-        It is found that calling Mantid for writing GSAS can cause contending among threads
-        :param workspace:
-        :param gsas_file_name:
-        :param ipts:
-        :param parm_file_name:
-        :return:
-        """
-        # Get necessary information including title, run start, duration and etc.
-        title = workspace.getTitle()
-
-        # Get run object for sample log information
-        run = workspace.getRun()
-
-        # Get information on start/stop
-        if run.hasProperty("run_start") and run.hasProperty("duration"):
-            # have run start and duration information
-            # run_start = run.getProperty("run_start").value
-            duration = float(run.getProperty("duration").value)
-
-            # separate second and sub-seconds
-            # run_start_seconds = run_start.split(".")[0]
-            # run_start_sub_seconds = run_start.split(".")[1]
-            # self.log().warning('Run start {0} is split to {1} and {2}'.format(run_start, run_start_seconds,
-            #                                                                   run_start_sub_seconds))
-
-            # property run_start and duration exist
-            utctime = numpy.datetime64(run.getProperty('run_start').value)
-            time0 = numpy.datetime64("1990-01-01T00:00:00")
-            total_nanosecond_start = int((utctime - time0) / numpy.timedelta64(1, 'ns'))
-            total_nanosecond_stop = total_nanosecond_start + int(duration*1.0E9)
-
-        else:
-            # not both property is found
-            total_nanosecond_start = 0
-            total_nanosecond_stop = 0
-        # END-IF
-
-        # self.log().debug("Start = %d, Stop = %d" % (total_nanosecond_start, total_nanosecond_stop))
-
-        # Construct new header
-        vulcan_gsas_header = list()
-
-        if len(title) > 80:
-            title = title[0:80]
-        vulcan_gsas_header.append("%-80s" % title)
-
-        vulcan_gsas_header.append("%-80s" % ("Instrument parameter file: %s" % parm_file_name))
-
-        vulcan_gsas_header.append("%-80s" % ("#IPTS: %s" % str(ipts)))
-
-        vulcan_gsas_header.append("%-80s" % "#binned by: Mantid")
-
-        vulcan_gsas_header.append("%-80s" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name)))
-
-        vulcan_gsas_header.append("%-80s" % ("#GSAS IPARM file: %s" % parm_file_name))
-
-        vulcan_gsas_header.append("%-80s" % ("#Pulsestart:    %d" % total_nanosecond_start))
-
-        vulcan_gsas_header.append("%-80s" % ("#Pulsestop:     %d" % total_nanosecond_stop))
-
-        vulcan_gsas_header.append('{0:80s}'.format('#'))
-
-        return vulcan_gsas_header
-
-    @staticmethod
-    def create_bank_header(bank_id, vec_x):
-        """
-        create bank header of VDRIVE/GSAS convention
-        as: BANK bank_id data_size data_size  binning_type 'SLOG' tof_min tof_max deltaT/T
-        :param bank_id:
-        :param vec_x:
-        :return:
-        """
-        tof_min = vec_x[0]
-        tof_max = vec_x[-1]
-        delta_tof = (vec_x[1] - tof_min) / tof_min  # deltaT/T
-        data_size = len(vec_x)
-
-        bank_header = 'BANK {0} {1} {2} {3} {4} {5:.1f} {6:.7f} 0 FXYE' \
-                      ''.format(bank_id, data_size, data_size, 'SLOG', tof_min, tof_max, delta_tof)
-
-        bank_header = '{0:80s}'.format(bank_header)
-
-        return bank_header
-
+# END-DEF-CLASS
 
 
 # t1 = threading.Thread(target=reduce_data, args=(output_names[:half_num], ))

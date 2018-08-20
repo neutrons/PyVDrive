@@ -25,6 +25,7 @@ import vanadium_controller_dialog
 import pyvdrive.lib.datatypeutility
 
 
+# TODO - 20180802 - CLEANUP - EASY!
 class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
@@ -32,8 +33,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
     def __init__(self, parent=None):
         """ Init
         """
-        # call base
+        # base class initialization
         super(GeneralPurposedDataViewWindow, self).__init__(parent)
+
+        # set up UI
+        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
+        self.ui.setupUi(self)
+
+        # initialize widgets
+        self._init_widgets()
 
         # Parent & others
         self._myParent = parent
@@ -50,7 +58,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._choppedSampleDict = dict()  # key: data workspace name. value: sample (NeXus) workspace name
 
         # Controlling data structure on lines that are plotted on graph
-        self._currentPlotDataKeyDict = dict()  # key: data key, bank ID, unit; value: value = vec x, vec y
+        self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
         self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
 
         # A status flag to show whether the current plot is for sample log or diffraction data
@@ -64,6 +72,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._currChoppedData = False
         self._currWorkspaceTag = None
         self._currBank = 1
+        self._currUnit = str(self.ui.comboBox_unit.currentText())
 
         self._choppedRunNumber = 0
         self._choppedSequenceList = None
@@ -91,13 +100,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # about vanadium process
         self._vanadiumFWHM = None
-
-        # set up UI
-        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
-        self.ui.setupUi(self)
-
-        # initialize widgets
-        self._init_widgets()
 
         # Event handling
         # section: load data
@@ -858,16 +860,17 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # from reduced data
         run_number = int(run_number_st)
+        # TODO/FIXME - 20180820 - get_reduced_run_info() gives the banks' list!
         status, ret_obj = self._myController.get_reduced_run_info(run_number)
-        if not status:
+        if status:
+            reduction_info = ret_obj
+        else:
             GuiUtility.pop_dialog_error(self, 'Unable to access reduced run {} due to {}'.format(run_number_st,
                                                                                                  ret_obj))
-            return
-        else:
-            reduction_info = ret_obj
         # END-IF
 
         # check whether
+        # TODO/FIXME - 20180820 - No method called is_noramalised_by_current in pyvdrive
         if reduction_info.is_noramalised_by_current() is True:
             GuiUtility.pop_dialog_information(self, 'Run %d has been normalised by current already.' % run_number)
             return
@@ -1354,10 +1357,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # Clear previous image and re-plot
         self.ui.graphicsView_mainPlot.clear_all_lines()
 
+        # set unit
+        self._currUnit = str(self.ui.comboBox_unit.currentText())
+
         # Get the data sets that are currently plot and replace them with new unit
-        for run_number in self._currentPlotDataKeyDict:
-            # plot
-            self.plot_by_run_number(run_number, self._currBank, over_plot=True)
+        existing_entries = self._currentPlotDataKeyDict.keys()
+        for entry_key in existing_entries:
+            # plot: using default x limit
+            data_key, bank_id, unit = entry_key
+
+            # skip the bank that is not plotted now
+            if bank_id != self._currBank:
+                continue
+
+            self.plot_by_data_key(data_key=data_key, bank_id_list=[self._currBank], over_plot=False,
+                                  x_limit=None)
         # END-FOR
 
         return
@@ -1491,7 +1505,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(data_key, unit,
         #                                                                     self._iptsNumber, is_workspace)
 
-        status, ret_obj = self._myController.get_reduced_data(data_key, unit, bank_id=bank_id)
+        print ('[DB...BAT] Data key = {}'.format(data_key))
+
+        status, ret_obj = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
         if status:
             # re-format return
             print ('[DB....BAT] Returned reduced data: type = {0}.  Data = {1}'.format(type(ret_obj), ret_obj))
@@ -1588,6 +1604,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         # check existence of data
         entry_key = data_key, bank_id, self._currUnit
+
+        # synchronize the unit with combobox
+        if self._currUnit == 'TOF' and self.ui.comboBox_unit.currentIndex() != 0:
+            raise RuntimeError('Current unit {} and combo box unit {} is not synchronized'
+                               ''.format(self._currUnit, str(self.ui.comboBox_unit.currentText())))
+        elif self._currUnit == 'dSpacing' and self.ui.comboBox_unit.currentIndex() != 1:
+            raise RuntimeError('Current unit {} and combo box unit {} is not synchronized'
+                               ''.format(self._currUnit, str(self.ui.comboBox_unit.currentText())))
 
         if entry_key not in self._currentPlotDataKeyDict:
             status, ret_obj = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
@@ -1769,16 +1793,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def plot_by_data_key(self, data_key, bank_id_list, over_plot, x_limit):
-        """
-        plot loaded GSAS data
-        :param data_key:
+        """ plot reduced data including loaded GSAS or reduced in memory
+        :param data_key: str (single run), tuple (chopped run)
         :param bank_id_list:
         :param over_plot:
+        :param x_limit:
         :return:
         """
         # check input
         assert isinstance(data_key, str) or isinstance(data_key, tuple),\
             'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
+
+        print ('[DB...BAT] Plot By Data Key = {}'.format(data_key))
 
         # plot
         for index, bank_id in enumerate(bank_id_list):
@@ -1791,7 +1817,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                      clear_previous=clear_canvas)
         # END-FOR
 
-        min_x, max_x = x_limit
+        if x_limit is None:
+            if self._currUnit == 'TOF':
+                min_x = 3000.
+                max_x = 30000.
+            elif self._currUnit == 'dSpacing':
+                min_x = 0.3
+                max_x = 5.0
+            else:
+                print ('[ERROR] Unit {} is not defined to support default X-limit'.format(self._currUnit))
+                min_x = None
+                max_x = None
+        else:
+            min_x, max_x = x_limit
         self.ui.graphicsView_mainPlot.setXYLimit(xmin=min_x, xmax=max_x)
 
         self._currentPlotSampleLogs = False
@@ -2140,7 +2178,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             self.do_plot_diffraction_data()
 
         # also load reduced chopped runs
-        # ... blabla
+        # TODO - 20180820 - TODO - to be continued
+        reduced_run_number_list = self._myController.get_loaded_runs(chopped=True)
+        print (reduced_run_number_list)
 
         return
 
@@ -2204,7 +2244,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # plot the data without vanadium peaks
         # re-plot the original data because the operation can back from final stage
         # TODO/FIXME/NOW - what if data_key is None??? VDrivePlot version
-        self._currUnit = 'dSpacing'
         self.plot_1d_diffraction(data_key=data_key, bank_id=self._currBank,
                                  label='blabla raw label', title='blabla raw title', clear_previous=True,
                                  color='black')

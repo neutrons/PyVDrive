@@ -1286,7 +1286,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                            ''.format(num_spec))
 
     # convert unit and to point data
-    if num_spec == 2:
+    if standard_bin_workspace is not None and num_spec == 2:
         align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
