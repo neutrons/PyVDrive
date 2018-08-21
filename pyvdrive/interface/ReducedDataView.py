@@ -68,13 +68,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._iptsNumber = None
         self._runNumberList = list()
 
-        self._currRunNumber = None
-        self._currChoppedData = False
+        self._currRunNumber = None   # run number of single run reduced
+        self._currSlicedRunNumber = None   # run number of sliced case
         self._currWorkspaceTag = None
         self._currBank = 1
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        self._choppedRunNumber = 0
+        self._slicedRunsList = list()
         self._choppedSequenceList = None
 
         self._canvasDimension = 1
@@ -1206,23 +1206,48 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    # TODO ASAP ASAP2 : need to separate to different methods for the new UI
-    # TODO --- Verify!
-    def do_set_current_run(self, data_key=None):
+    def set_sliced_run(self, mandatory_load=False):
         """
         select the run (data key) in comboBox_runs's current text as the current run to plot
         :return:
         """
+        # no need to anything as this has already been imported
+        if self._currSlicedRunNumber == str(self.ui.comboBox_choppedRunNumber.currentText()) and not mandatory_load:
+            return
+
+        run_number_str = self.ui.comboBox_choppedRunNumber.currentText()
+        workspace_names = self._myController.get_reduced_workspaces(run_number_str, chopped=True)
+
+        # TODO TODO TODO ...... FIXME ... FIXME ....  TODO TODO TODO  20180821
+        """
+        (160989, 'TimeSlicer_160989')
+[DB...BAT] API: In-Memory chopped runs: [(160989, 'TimeSlicer_160989')]
+Selected chopped run: 160989_TimeSlicer_160989
+Current chopped data: None
+Traceback (most recent call last):
+  File "/home/wzz/Projects/PyVDrive/pyvdrive/interface/ReducedDataView.py", line 1357, in evt_toggle_run_type
+    self.set_sliced_run(mandatory_load=True)
+  File "/home/wzz/Projects/PyVDrive/pyvdrive/interface/ReducedDataView.py", line 1219, in set_sliced_run
+    workspace_names = self._myController.get_reduced_workspaces(run_number_str, chopped=True)
+AttributeError: 'VDriveAPI' object has no attribute 'get_reduced_workspaces'
+        """
+
+        # update
+        self._currSlicedRunNumber = str(self.ui.comboBox_choppedRunNumber.currentText())
+
+        # return
+
+
         # get information: current run number be a string to be more flexible
         if data_key is None:
             self._currRunNumber = str(self.ui.comboBox_runs.currentText())
         else:
             self._currRunNumber = '{0}'.format(data_key)
 
-        self._currChoppedData = self.ui.checkBox_choppedDataMem.isChecked()
+        self._currSlicedRunNumber = self.ui.checkBox_choppedDataMem.isChecked()
 
         # pre-load the data
-        if self._currChoppedData:
+        if self._currSlicedRunNumber:
             # NOTE:
             # case 1: loaded GSAS file
             #       chopped sequence list (ui)  : RUN_CHOPINDEX (example: 12345_2)
@@ -1277,7 +1302,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             seq_list = None
 
         # set the label
-        self.label_loaded_data(self._currRunNumber, self._currChoppedData, seq_list)
+        self.label_loaded_data(self._currRunNumber, self._currSlicedRunNumber, seq_list)
 
         return
 
@@ -1334,6 +1359,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         self.ui.groupBox_plotSingleRun.setEnabled(self.ui.radioButton_chooseSingleRun.isChecked())
         self.ui.groupBox_plotChoppedRun.setEnabled(self.ui.radioButton_chooseChopped.isChecked())
+
+        # set the run number and etc
+        if self.ui.radioButton_chooseChopped.isChecked():
+            print ('Selected chopped run: {}'.format(self.ui.comboBox_choppedRunNumber.currentText()))
+            print ('Current chopped data: {}'.format(self._currSlicedRunNumber))
+
+            self.set_sliced_run(mandatory_load=True)
+        # END-IF
 
         return
 
@@ -1450,6 +1483,53 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return run_number
 
+    def init_setup(self, controller):
+        """ Set up the GUI from controller, and add reduced runs to SELF automatically
+        :param controller:
+        :return:
+        """
+        # Check
+        # assert isinstance(controller, VDriveAPI)
+        self._myController = controller
+
+        # Set the reduced runs
+        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
+        if len(reduced_run_number_list) > 0:
+            reduced_run_number_list.sort()
+            # set up the combo box
+            self.ui.comboBox_runs.clear()
+            for index, run_number in enumerate(reduced_run_number_list):
+                data_key = '{0}'.format(run_number)
+                print ('[DB...BAT] Added run: {0} ({1}) with data key {2}'
+                       ''.format(run_number, type(run_number), data_key))
+                self.update_single_run_combo_box(data_key, remove_item=False,
+                                                 focus_to_new=(index == 0))
+                self.update_bank_id_combo(data_key=data_key)
+            # END-FOR
+
+            # plot
+            self.do_plot_diffraction_data()
+        # END-IF
+
+        # also load reduced chopped runs
+        chopped_run_number_list = self._myController.get_loaded_runs(chopped=True)
+        self._slicedRunsList = list()
+        if len(chopped_run_number_list) > 0:
+            chopped_run_number_list.sort()
+            # set up the combo box
+            self.ui.comboBox_choppedRunNumber.clear()
+            for run_number, slice_key in chopped_run_number_list:
+                self.ui.comboBox_choppedRunNumber.addItem('{}_{}'.format(run_number, slice_key))
+                self._slicedRunsList.append((run_number, slice_key))
+            # END-FOR
+
+            # switch radio button if possible
+            if len(reduced_run_number_list) == 0:
+                self.ui.radioButton_chooseChopped.setChecked(True)
+        # END-IF
+
+        return
+
     def label_loaded_data(self, run_number, is_chopped, chop_seq_list):
         """
         make a label of loaded data to plot
@@ -1477,34 +1557,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
-        # # search in this object's reduced data dictionary
-        # if data_key in self._currentPlotDataKeyDict:
-        #     assert isinstance(self._currentPlotDataKeyDict[data_key], dict),\
-        #         'Expected run data info {0} is stored in a dictionary but not a {1}.' \
-        #         ''.format(self._currentPlotDataKeyDict[data_key], type(self._currentPlotDataKeyDict[data_key]))
-        #
-        #     if self._currentPlotDataKeyDict[data_key]['unit'] == unit:
-        #         # data existing and unit is same
-        #         return True, None
-        #
-        # # find out the input run number is a workspace name or a run number
-        # if isinstance(data_key, str) and data_key.isdigit() is False:
-        #     # cannot be an integer. then must be a workspace name
-        #     is_workspace = True
-        # else:
-        #     # integer or can be a string, then shall be a run number
-        #     is_workspace = False
-        #     data_key = int(data_key)
-        #     try:
-        #         self._iptsNumber = self._dataIptsRunDict[data_key][0]
-        #     except KeyError as key_err:
-        #         raise RuntimeError('DataIPTSRunDict keys are {0}; Not include {1}. FYI {2}'
-        #                            ''.format(self._dataIptsRunDict.keys(), data_key, key_err))
-        #
-        # # try to load the data from memory
-        # print '[DB...BAT] Run {0} Unit {1} IPTS {2} IsWorkspace {3}'.format(data_key, unit,
-        #                                                                     self._iptsNumber, is_workspace)
-
         print ('[DB...BAT] Data key = {}'.format(data_key))
 
         status, ret_obj = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
@@ -1514,24 +1566,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             vec_x = ret_obj[bank_id][0]
             vec_y = ret_obj[bank_id][1]
             ret_obj = vec_x, vec_y
-
-        #
-        # # if not in memory, try to load from archive
-        # if not status and not is_workspace:
-        #     # or archive
-        #     print '[DB...BAT] Loading data without searching archive fails... {0}'.format(ret_obj)
-        #     status, ret_obj = self._myController.get_reduced_data(data_key, unit,
-        #                                                           ipts_number=self._iptsNumber,
-        #                                                           search_archive=True)
-        #
-        # if status:
-        #     assert isinstance(ret_obj, dict), 'Reduced data set should be dict but not {0}.'.format(type(ret_obj))
-        #     self._currentPlotDataKeyDict[data_key] = ret_obj
-        #     ret_obj['unit'] = unit
-        #
-        # else:
-        #     error_message = str(ret_obj) + '\n' + 'Unable to find data in memory or archive.'
-        #     return status, error_message
 
         return status, ret_obj
 
@@ -1777,7 +1811,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.add_chopped_workspaces(run_number, diff_ws_list, True)
 
         # set to current and plot
-        self.do_set_current_run(run_number)
+        self.set_sliced_run(run_number)
         self.ui.checkBox_plotallChoppedLog.setChecked(True)
 
         # plot
@@ -2146,41 +2180,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         self._minX = min_x
         self._maxX = max_x
-
-        return
-
-    def init_setup(self, controller):
-        """ Set up the GUI from controller, and add reduced runs to SELF automatically
-        :param controller:
-        :return:
-        """
-        # Check
-        # assert isinstance(controller, VDriveAPI)
-        self._myController = controller
-
-        # Set the reduced runs
-        reduced_run_number_list = self._myController.get_loaded_runs(chopped=False)
-        print ('[DB...BAT] loaded runs (type: {0}): {1}'
-               ''.format(type(reduced_run_number_list), reduced_run_number_list))
-        reduced_run_number_list.sort()
-        self.ui.comboBox_runs.clear()
-        for index, run_number in enumerate(reduced_run_number_list):
-            data_key = '{0}'.format(run_number)
-            print ('[DB...BAT] Added run: {0} ({1}) with data key {2}'
-                   ''.format(run_number, type(run_number), data_key))
-            self.update_single_run_combo_box(data_key, remove_item=False,
-                                             focus_to_new=(index == 0))
-            self.update_bank_id_combo(data_key=data_key)
-        # END-FOR
-
-        # plot
-        if len(reduced_run_number_list) > 0:
-            self.do_plot_diffraction_data()
-
-        # also load reduced chopped runs
-        # TODO - 20180820 - TODO - to be continued
-        reduced_run_number_list = self._myController.get_loaded_runs(chopped=True)
-        print (reduced_run_number_list)
 
         return
 

@@ -170,11 +170,13 @@ class VdriveChop(VDriveCommand):
         # chop
         # TODO FIXME - 20180806 - Number of banks shall be given from console
         # TODO FIXME - 20180806 - Save chopped nexus shall be specified by user
+        # TODO FIXME - 20180821 - use_bin_parameter shall be parsed from suer
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
                                                       vanadium=vanadium, save_chopped_nexus=False,
                                                       output_dir=output_dir,
                                                       number_banks=3,
-                                                      export_log_type=exp_log_type)
+                                                      export_log_type=exp_log_type,
+                                                      user_bin_parameter=None)
 
         return status, message
 

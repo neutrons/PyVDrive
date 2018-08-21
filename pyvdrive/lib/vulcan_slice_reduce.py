@@ -92,74 +92,74 @@ class SliceFocusVulcan(object):
 
         return bank_header
 
-    @staticmethod
-    def create_idl_bins(num_banks, h5_bin_file_name):
-        """
-        create a Mantid to VDRIVE-IDL mapping binning
-        :param num_banks:
-        :param h5_bin_file_name:
-        :return:
-        """
-        def process_bins_to_binning_params(bins_vector):
-            """
-            convert a list of bin boundaries to x1, dx, x2, dx, ... style
-            :param bins_vector:
-            :return:
-            """
-            assert isinstance(bins_vector, numpy.ndarray)
-            assert len(bins_vector.shape) == 1
+    # @staticmethod
+    # def create_idl_bins(num_banks, h5_bin_file_name):
+    #     """
+    #     create a Mantid to VDRIVE-IDL mapping binning
+    #     :param num_banks:
+    #     :param h5_bin_file_name:
+    #     :return:
+    #     """
+    #     def process_bins_to_binning_params(bins_vector):
+    #         """
+    #         convert a list of bin boundaries to x1, dx, x2, dx, ... style
+    #         :param bins_vector:
+    #         :return:
+    #         """
+    #         assert isinstance(bins_vector, numpy.ndarray)
+    #         assert len(bins_vector.shape) == 1
 
-            delta_tof_vec = bins_vector[1:] - bins_vector[:-1]
+    #         delta_tof_vec = bins_vector[1:] - bins_vector[:-1]
 
-            bin_param = numpy.empty((bins_vector.size + delta_tof_vec.size), dtype=bins_vector.dtype)
-            bin_param[0::2] = bins_vector
-            bin_param[1::2] = delta_tof_vec
+    #         bin_param = numpy.empty((bins_vector.size + delta_tof_vec.size), dtype=bins_vector.dtype)
+    #         bin_param[0::2] = bins_vector
+    #         bin_param[1::2] = delta_tof_vec
 
-            # extrapolate_last_bin
-            delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
-            next_x = bins_vector[-1] * (1 + delta_bin)
+    #         # extrapolate_last_bin
+    #         delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
+    #         next_x = bins_vector[-1] * (1 + delta_bin)
 
-            # append last value for both east/west bin and high angle bin
-            numpy.append(bin_param, delta_bin)
-            numpy.append(bin_param, next_x)
+    #         # append last value for both east/west bin and high angle bin
+    #         numpy.append(bin_param, delta_bin)
+    #         numpy.append(bin_param, next_x)
 
-            return bin_param
+    #         return bin_param
 
-        # use explicitly defined bins and thus matrix workspace is required
-        # import h5 file
-        # load vdrive bin file to 2 different workspaces
-        bin_file = h5py.File(h5_bin_file_name, 'r')
-        west_east_bins = bin_file['west_east_bank'][:]
-        high_angle_bins = bin_file['high_angle_bank'][:]
-        bin_file.close()
+    #     # use explicitly defined bins and thus matrix workspace is required
+    #     # import h5 file
+    #     # load vdrive bin file to 2 different workspaces
+    #     bin_file = h5py.File(h5_bin_file_name, 'r')
+    #     west_east_bins = bin_file['west_east_bank'][:]
+    #     high_angle_bins = bin_file['high_angle_bank'][:]
+    #     bin_file.close()
 
-        # convert a list of bin boundaries to x1, dx, x2, dx, ... style
-        west_east_bin_params = process_bins_to_binning_params(west_east_bins)
-        high_angle_bin_params = process_bins_to_binning_params(high_angle_bins)
+    #     # convert a list of bin boundaries to x1, dx, x2, dx, ... style
+    #     west_east_bin_params = process_bins_to_binning_params(west_east_bins)
+    #     high_angle_bin_params = process_bins_to_binning_params(high_angle_bins)
 
-        binning_parameter_dict = dict()
-        if num_banks == 3:
-            # west(1), east(1), high(1)
-            # west(1), east(1), high(1)
-            for bank_id in range(1, 3):
-                binning_parameter_dict[bank_id] = west_east_bin_params
-            binning_parameter_dict[3] = high_angle_bin_params
-        elif num_banks == 7:
-            # west (3), east (3), high (1)
-            for bank_id in range(1, 7):
-                binning_parameter_dict[bank_id] = west_east_bin_params
-            binning_parameter_dict[7] = high_angle_bin_params
-        elif num_banks == 27:
-            # west (9), east (9), high (9)
-            for bank_id in range(1, 19):
-                binning_parameter_dict[bank_id] = west_east_bin_params
-            for bank_id in range(19, 28):
-                binning_parameter_dict[bank_id] = high_angle_bin_params
-        else:
-            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-        # END-IF-ELSE
+    #     binning_parameter_dict = dict()
+    #     if num_banks == 3:
+    #         # west(1), east(1), high(1)
+    #         # west(1), east(1), high(1)
+    #         for bank_id in range(1, 3):
+    #             binning_parameter_dict[bank_id] = west_east_bin_params
+    #         binning_parameter_dict[3] = high_angle_bin_params
+    #     elif num_banks == 7:
+    #         # west (3), east (3), high (1)
+    #         for bank_id in range(1, 7):
+    #             binning_parameter_dict[bank_id] = west_east_bin_params
+    #         binning_parameter_dict[7] = high_angle_bin_params
+    #     elif num_banks == 27:
+    #         # west (9), east (9), high (9)
+    #         for bank_id in range(1, 19):
+    #             binning_parameter_dict[bank_id] = west_east_bin_params
+    #         for bank_id in range(19, 28):
+    #             binning_parameter_dict[bank_id] = high_angle_bin_params
+    #     else:
+    #         raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+    #     # END-IF-ELSE
 
-        return binning_parameter_dict
+    #     return binning_parameter_dict
 
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
@@ -398,7 +398,8 @@ class SliceFocusVulcan(object):
     @staticmethod
     def rebin_workspace(input_ws, binning_param_dict, output_ws_name):
         """
-        rebin input workspace with user specified binning parameters
+        rebin input workspace with user specified binning parameters and support various number of bins across
+        the whole spectra
         :param input_ws:
         :param binning_param_dict:
         :param output_ws_name:
@@ -415,6 +416,7 @@ class SliceFocusVulcan(object):
         # check input binning parameters
         for ws_index in range(input_ws.getNumberHistograms()):
             bank_id = ws_index + 1
+            print ('[DB...ERROR] binning parameter keys: {}'.format(binning_param_dict.keys()))
             bin_params = binning_param_dict[bank_id]
             if not isinstance(bin_params, str) and len(bin_params) % 2 == 0:
                 # odd number and cannot be binning parameters
@@ -576,7 +578,7 @@ class SliceFocusVulcan(object):
             # Note: Tread(target=[method name], args=(method argument 0, method argument 1, ...,)
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
                                                       args=(output_names[start_sliced_ws_index:end_sliced_ws_index],
-                                                            binning_parameter_dict,))
+                                                            binning_parameters,))
             thread_pool[thread_id].start()
             print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
                    format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,

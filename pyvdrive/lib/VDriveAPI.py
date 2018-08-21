@@ -832,16 +832,18 @@ class VDriveAPI(object):
             # chopped runs
             # from archive
             loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
+            print ('[DB...BAT] API: Loaded chopped runs: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.get_reduced_chopped_runs()
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)
+            print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
             # from archive
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.get_reduced_runs()
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
 
         # END-IF-ELSE
 
@@ -861,6 +863,7 @@ class VDriveAPI(object):
         :param standard_sns_file:
         :return:
         """
+        # FIXME TODO - 20180821
         raise NotImplementedError('Method need to be reviewed and refactored.')
         # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
@@ -1698,17 +1701,19 @@ class VDriveAPI(object):
                                                            merge_banks=False,
                                                            merge_runs=False,
                                                            binning_parameters=binning_parameters)
-            if not reduced:
+
+            if reduced:
+                van_ws_key = ipts_number, run_number
+            else:
                 return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
                               ''.format(run_number, ipts_number, message)
-            else:
-                van_ws_key = self._myProject.reduction_manager.get_reduced_run(ipts_number, run_number)
             # END-IF
         else:
             # load vanadium file
             van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas',
                                                                                None, 1000)
             self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
+        # END-IF-ELSE
 
         # convert unit
         print '[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name)
@@ -1887,7 +1892,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, export_log_type='loadframe'):
+                   number_banks, export_log_type='loadframe', user_bin_parameter=None):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1904,12 +1909,20 @@ class VDriveAPI(object):
         # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
         # TODO FIXME - 20180806 - TOF correction shall be specified by user
+
+        if output_dir is not None and user_bin_parameter is not None:
+            bin_for_vdrive = True
+        else:
+            bin_for_vdrive = False
+
         status, message = self._myProject.chop_run(run_number, slicer_id,
                                                    reduce_flag=reduce_data, vanadium=vanadium,
                                                    save_chopped_nexus=save_chopped_nexus,
                                                    output_directory=output_dir,
                                                    tof_correction=False,
-                                                   number_banks=number_banks)
+                                                   number_banks=number_banks,
+                                                   user_bin_parameter=user_bin_parameter,
+                                                   vdrive_bin_flag=bin_for_vdrive)
 
         return status, message
 

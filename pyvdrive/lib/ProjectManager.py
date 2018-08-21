@@ -251,7 +251,6 @@ class ProjectManager(object):
 
     def get_workspace_name_by_data_key(self, data_key):
         """
-
         :param data_key:
         :return:
         """
@@ -331,7 +330,8 @@ class ProjectManager(object):
         return status, error_message, available_runs
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
-                 number_banks, tof_correction, output_directory):
+                 number_banks, tof_correction, output_directory,
+                 user_bin_parameter, vdrive_bin_flag):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -349,6 +349,8 @@ class ProjectManager(object):
         :param tof_correction:
         :param number_banks:
         :param output_directory:
+        :param user_bin_parameter: None or [NOT SURE]
+        :param vdrive_bin_flag: boolea to use vdrive binning flag
         :return:
         """
         # check inputs' validity
@@ -388,7 +390,9 @@ class ProjectManager(object):
                                                                        save_chopped_nexus=save_chopped_nexus,
                                                                        number_banks=number_banks,
                                                                        tof_correction=tof_correction,
-                                                                       vanadium=vanadium)
+                                                                       vanadium=vanadium,
+                                                                       user_binning_parameter=user_bin_parameter,
+                                                                       vdrive_binning=vdrive_bin_flag)
 
         # process outputs
         if status:
@@ -847,21 +851,6 @@ class ProjectManager(object):
 
         return data_set
 
-    def get_reduced_chopped_runs(self):
-        """
-        get run numbers of chopped and reduced runs
-        :return:
-        """
-        # TODO FIXME TODO - 20180803 - Find which manager is for reduced chopped data
-        return list()
-
-    def get_reduced_runs(self):
-        """
-        find out the runs that have been reduced and are still in memory
-        :return: list of run numbers of the runs
-        """
-        return self._reductionManager.get_reduced_runs()
-
     def get_reduced_workspace(self, ipts_number, run_number):
         """
         get the workspace KEY or name via IPTS number and run number
@@ -893,7 +882,7 @@ class ProjectManager(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=False)
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -1295,12 +1284,12 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(run_number, raw_file_name,
+                out_ws_name = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
                                                                         unit, binning_parameters,
                                                                         convert_to_matrix, num_banks=number_banks)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
-                self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
+                # self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
 
                 # save to GSAS
                 if gsas:

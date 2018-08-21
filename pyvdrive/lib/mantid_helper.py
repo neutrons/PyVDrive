@@ -845,7 +845,10 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (2) unit of the returned data
     """
     # check requirements by asserting
-    assert isinstance(workspace_name, str) and isinstance(point_data, bool), 'blabla'
+    assert isinstance(workspace_name, str), 'Workspace name {} must be a string but not a {}' \
+                                            ''.format(workspace_name, type(workspace_name))
+    assert isinstance(point_data, bool), 'Point-data flag {} must be a bool but not a {}' \
+                                         ''.format(point_data, type(point_data))
     assert isinstance(target_unit, str) or target_unit is None,\
         'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
     assert isinstance(start_bank_id, int) and start_bank_id >= 0,\

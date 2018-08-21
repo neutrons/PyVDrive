@@ -10,6 +10,8 @@ import mantid_reduction
 import datatypeutility
 import h5py
 import numpy
+import platform
+import time
 
 EVENT_WORKSPACE_ID = "EventWorkspace"
 
@@ -22,8 +24,15 @@ class CalibrationManager(object):
         """
         initialization
         """
+        # important dates
+        self._ned_date = '2017-06-01'  # string only
+
         self._calibration_dict = None
-        self._vdrive_bin_ref_dict = None
+
+        # binning
+        self._vdrive_bin_ref_file_dict = None
+        self._vdrive_binning_ref_dict = dict()   # [date, num_banks] ...
+        self._default_tof_bins_dict = None   # [cal_date, num_banks]
 
         self._loaded_calibration_file_dict = dict()
         self._focus_instrument_dict = dict()
@@ -32,51 +41,17 @@ class CalibrationManager(object):
         self._init_vulcan_calibration_files()
         self._init_vdrive_binning_refs()
         self._init_focused_instruments()
+        self._init_default_tof_bins()
 
         return
 
-    def _init_vulcan_calibration_files(self):
-        """
-        generate a dictionary for vulcan's hard coded calibration files
+    def _init_default_tof_bins(self):
+        """ initialize default TOF bins
         :return:
         """
-        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+        self._default_tof_bins_dict = dict()
 
-        # hard coded list of available calibration file names
-        pre_ned_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'}
-
-        ned_2017_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
-
-        ned_2018_setup = {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
-                          7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
-                          27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
-
-        self._calibration_dict = dict()
-        self._calibration_dict['2010-01-01'] = pre_ned_setup
-        self._calibration_dict['2017-06-01'] = ned_2017_setup
-        self._calibration_dict['2018-05-31'] = ned_2018_setup
-
-        return
-
-    def _init_vdrive_binning_refs(self):
-        """ initialize binning references
-        :return:
-        """
-        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
-
-        # hard coded list of available calibration file names
-        pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
-
-        ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
-
-        ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
-
-        self._vdrive_bin_ref_dict = dict()
-        self._vdrive_bin_ref_dict['2010-01-01'] = pre_ned_setup
-        self._vdrive_bin_ref_dict['2017-06-01'] = ned_2017_setup
-        self._vdrive_bin_ref_dict['2018-05-31'] = ned_2018_setup
+        self.get_default_binning_reference(self._ned_date, 3)
 
         return
 
@@ -127,6 +102,158 @@ class CalibrationManager(object):
 
         return
 
+    def _init_vulcan_calibration_files(self):
+        """
+        generate a dictionary for vulcan's hard coded calibration files
+        :return:
+        """
+        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+
+        # hard coded list of available calibration file names
+        pre_ned_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vulcan_foc_all_2bank_11p.cal'}
+
+        ned_2017_setup = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                          7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                          27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
+
+        ned_2018_setup = {3: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01.h5'),
+                          7: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_7bank.h5'),
+                          27: os.path.join(base_calib_dir, '2018_6_1_CAL/VULCAN_calibrate_2018_06_01_27bank.h5')}
+
+        self._calibration_dict = dict()
+        self._calibration_dict['2010-01-01'] = pre_ned_setup
+        self._calibration_dict['2017-06-01'] = ned_2017_setup
+        self._calibration_dict['2018-05-31'] = ned_2018_setup
+
+        return
+
+    def _init_vdrive_binning_refs(self):
+        """ initialize binning references
+        :return:
+        """
+        base_calib_dir = '/SNS/VULCAN/shared/CALIBRATION'
+
+        # hard coded list of available calibration file names
+        pre_ned_setup = '/SNS/VULCAN/shared/CALIBRATION/2011_1_7_CAL/vdrive_log_bin.dat'
+
+        ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
+
+        ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
+
+        self._vdrive_bin_ref_file_dict = dict()
+        self._vdrive_bin_ref_file_dict['2010-01-01'] = pre_ned_setup
+        self._vdrive_bin_ref_file_dict['2017-06-01'] = ned_2017_setup
+        self._vdrive_bin_ref_file_dict['2018-05-31'] = ned_2018_setup
+
+        # parse the files and create bins: better to choose the latest and with 3 banks
+        dates_list = sorted(self._vdrive_bin_ref_file_dict.keys())
+        cal_date = dates_list[-1]
+
+        self._vdrive_binning_ref_dict[cal_date, 3] = \
+            self.create_idl_bins(num_banks=3, h5_bin_file_name=self._vdrive_bin_ref_file_dict[cal_date])
+
+        return
+
+    @staticmethod
+    def create_idl_bins(num_banks, h5_bin_file_name):
+        """
+        create a Mantid to VDRIVE-IDL mapping binning
+        :param num_banks:
+        :param h5_bin_file_name:
+        :return:
+        """
+        def process_bins_to_binning_params(bins_vector):
+            """
+            convert a list of bin boundaries to x1, dx, x2, dx, ... style
+            :param bins_vector:
+            :return:
+            """
+            assert isinstance(bins_vector, numpy.ndarray)
+            assert len(bins_vector.shape) == 1
+
+            delta_tof_vec = bins_vector[1:] - bins_vector[:-1]
+
+            bin_param = numpy.empty((bins_vector.size + delta_tof_vec.size), dtype=bins_vector.dtype)
+            bin_param[0::2] = bins_vector
+            bin_param[1::2] = delta_tof_vec
+
+            # extrapolate_last_bin
+            delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
+            next_x = bins_vector[-1] * (1 + delta_bin)
+
+            # append last value for both east/west bin and high angle bin
+            numpy.append(bin_param, delta_bin)
+            numpy.append(bin_param, next_x)
+
+            return bin_param
+
+        # use explicitly defined bins and thus matrix workspace is required
+        # import h5 file
+        # load vdrive bin file to 2 different workspaces
+        bin_file = h5py.File(h5_bin_file_name, 'r')
+        west_east_bins = bin_file['west_east_bank'][:]
+        high_angle_bins = bin_file['high_angle_bank'][:]
+        bin_file.close()
+
+        # convert a list of bin boundaries to x1, dx, x2, dx, ... style
+        west_east_bin_params = process_bins_to_binning_params(west_east_bins)
+        high_angle_bin_params = process_bins_to_binning_params(high_angle_bins)
+
+        binning_parameter_dict = dict()
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            # west(1), east(1), high(1)
+            for bank_id in range(1, 3):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[3] = high_angle_bin_params
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            for bank_id in range(1, 7):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[7] = high_angle_bin_params
+        elif num_banks == 27:
+            # west (9), east (9), high (9)
+            for bank_id in range(1, 19):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            for bank_id in range(19, 28):
+                binning_parameter_dict[bank_id] = high_angle_bin_params
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+        # END-IF-ELSE
+
+        return binning_parameter_dict
+
+    @staticmethod
+    def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
+        """
+        create binning parameters
+        :param num_banks:
+        :param east_west_binning_parameters:
+        :param high_angle_binning_parameters:
+        :return:
+        """
+        binning_parameter_dict = dict()
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            for bank_id in range(1, 3):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            binning_parameter_dict[3] = high_angle_binning_parameters
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            for bank_id in range(1, 7):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            binning_parameter_dict[7] = high_angle_binning_parameters
+        elif num_banks == 27:
+            # west (9), east (9), high (9)
+            for bank_id in range(1, 19):
+                binning_parameter_dict[bank_id] = east_west_binning_parameters
+            for bank_id in range(19, 28):
+                binning_parameter_dict[bank_id] = high_angle_binning_parameters
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+
+        return binning_parameter_dict
+
     # TODO - 2018 - May move this to a utility module
     @staticmethod
     def check_creation_date(file_name):
@@ -136,12 +263,7 @@ class CalibrationManager(object):
         :param file_name: 
         :return: 
         """
-        import os
-        import platform
-        import time
-        # import checkdatatypes
-        # TODO - 2018 - Enable this
-        # checkdatatypes.check_file_name(file_name, check_exist=True)
+        datatypeutility.check_file_name(file_name, check_exist=True)
     
         # get the creation date in float (epoch time)
         if platform.system() == 'Windows':
@@ -356,6 +478,40 @@ class CalibrationManager(object):
 
         return cal_date_index, calibration_file_name
 
+    def get_default_binning_reference(self, run_date, num_banks):
+        """ get default binning reference parameters
+        :param run_date:
+        :param num_banks:
+        :return:
+        """
+        datatypeutility.check_string_variable('Run date', run_date)
+        if run_date.count('-') != 2:
+            raise RuntimeError('{} is not a standard YYYY-MM-DD format'.format(run_date))
+
+        if run_date >= self._ned_date:
+            calib_date = self._ned_date
+        else:
+            calib_date = '1990-01-01'
+
+        if (calib_date, num_banks) in self._default_tof_bins_dict:
+            return self._default_tof_bins_dict[calib_date, num_banks]
+
+        # hard coded default binning parameters
+        ew_bin_params = '5000.,-0.001,70000.'
+        if run_date >= self._ned_date:
+            high_angle_params = '5000.,-0.0003,70000.'
+        else:
+            high_angle_params = None
+
+        # create binning
+        self._default_tof_bins_dict[calib_date, num_banks] = \
+            self.create_nature_bins(num_banks=num_banks, east_west_binning_parameters=ew_bin_params,
+                                    high_angle_binning_parameters=high_angle_params)
+
+        print ('[DB...BAT] Binning: {}'.format(self._default_tof_bins_dict[calib_date, num_banks]))
+
+        return self._default_tof_bins_dict[calib_date, num_banks]
+
     def get_focused_instrument_parameters(self, num_banks):
         """
 
@@ -408,7 +564,7 @@ class CalibrationManager(object):
         """
         datatypeutility.check_string_variable('Run start date in format YYYY-MM-DD', run_date)
 
-        ref_date_index = sorted(self._vdrive_bin_ref_dict.keys())
+        ref_date_index = sorted(self._vdrive_bin_ref_file_dict.keys())
         start_date_index = None
         for index in range(len(ref_date_index)-1, -1, -1):
             if run_date > ref_date_index[index]:
@@ -423,7 +579,7 @@ class CalibrationManager(object):
             raise RuntimeError(err_msg)
         # END-IF
 
-        return self._vdrive_bin_ref_dict[start_date_index]
+        return self._vdrive_bin_ref_file_dict[start_date_index]
 
     # TESTME - 20180730 - Updated
     def has_loaded(self, run_start_date, num_banks, check_workspaces=False):
@@ -615,7 +771,7 @@ class DataReductionTracker(object):
         return self._compressedChoppedWorkspaceName
 
     @property
-    def dpsace_worksapce(self):
+    def dspace_workspace(self):
         """
         Mantid binned d-Spacing workspace
         :return:
@@ -801,6 +957,19 @@ class DataReductionTracker(object):
         return self._vdriveWorkspace
 
     @property
+    def sliced_focused_workspaces(self):
+        """
+        get the names of sliced and focused workspaces
+        :return:
+        """
+        if self._choppedWorkspaceNameList is None or len(self._choppedWorkspaceNameList) == 0:
+            return None
+        elif self.is_reduced is False:
+            return None
+
+        return self._choppedWorkspaceNameList[:]
+
+    @property
     def tof_workspace(self):
         """
         Mantid binned TOF workspace
@@ -868,10 +1037,13 @@ class DataReductionTracker(object):
         :return:
         """
         # check workspaces existing
-        assert mantid_helper.workspace_does_exist(vdrive_bin_ws), 'VDrive-binned workspace {0} does not exist ' \
-                                                                  'in ADS'.format(vdrive_bin_ws)
-        assert mantid_helper.workspace_does_exist(tof_ws), 'Mantid-binned TOF workspace {0} does not exist in ADS.' \
-                                                           ''.format(tof_ws)
+        if vdrive_bin_ws is not None:
+            assert mantid_helper.workspace_does_exist(vdrive_bin_ws), 'VDrive-binned workspace {0} does not exist ' \
+                                                                      'in ADS'.format(vdrive_bin_ws)
+        if tof_ws is not None:
+            assert mantid_helper.workspace_does_exist(tof_ws), 'Mantid-binned TOF workspace {0} does not exist ' \
+                                                               'in ADS.'.format(tof_ws)
+
         if dspace_ws is not None:
             assert mantid_helper.workspace_does_exist(dspace_ws),\
                 'Mantid-binned D-space workspace {0} does not exist in ADS.'.format(dspace_ws)
@@ -885,6 +1057,7 @@ class DataReductionTracker(object):
         self._tofWorkspace = tof_ws
         self._dspaceWorkspace = dspace_ws
 
+        # TODO - 20180821 - Find out all the isReduced.setter() usage
         self._isReduced = True
 
         return
@@ -990,7 +1163,7 @@ class ReductionManager(object):
         self._reductionTrackDict = dict()
 
         # simplified reduced workspace manager.  key = run number, value = workspace name
-        self._runFocusedWorkspaceDict = dict()
+        # self._runFocusedWorkspaceDict = dict()
 
         # calibration file and workspaces management
         self._calibrationFileManager = CalibrationManager()   # key = calibration file name
@@ -1025,29 +1198,30 @@ class ReductionManager(object):
 
         return params_dict
 
-    def add_reduced_workspace(self, run_number, out_ws_name, binning_parameters=None):
-        """
-        add a reduced workspace
-        :param run_number:
-        :param out_ws_name:
-        :param binning_parameters:
-        :return:
-        """
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
-        datatypeutility.check_string_variable('Reduced workspace name', out_ws_name)
-
-        # add
-        if run_number not in self._runFocusedWorkspaceDict:
-            self._runFocusedWorkspaceDict[run_number] = dict()
-
-        if binning_parameters is not None:
-            binning_key = str(binning_parameters)
-        else:
-            binning_key = None
-
-        self._runFocusedWorkspaceDict[run_number][binning_key] = out_ws_name
-
-        return
+    # NOTE: remove method add_reduced_workspace(); use ReductionTracker instead
+    # def add_reduced_workspace(self, run_number, out_ws_name, binning_parameters=None):
+    #     """
+    #     add a reduced workspace
+    #     :param run_number:
+    #     :param out_ws_name:
+    #     :param binning_parameters:
+    #     :return:
+    #     """
+    #     datatypeutility.check_int_variable('Run number', run_number, (1, None))
+    #     datatypeutility.check_string_variable('Reduced workspace name', out_ws_name)
+    #
+    #     # add
+    #     if run_number not in self._runFocusedWorkspaceDict:
+    #         self._runFocusedWorkspaceDict[run_number] = dict()
+    #
+    #     if binning_parameters is not None:
+    #         binning_key = str(binning_parameters)
+    #     else:
+    #         binning_key = None
+    #
+    #     self._runFocusedWorkspaceDict[run_number][binning_key] = out_ws_name
+    #
+    #     return
 
     # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
@@ -1108,7 +1282,8 @@ class ReductionManager(object):
         run_start_date = self._calibrationFileManager.check_creation_date(raw_file_name)
         cal_loaded = self._calibrationFileManager.has_loaded(run_start_date=run_start_date, num_banks=number_banks,
                                                              check_workspaces=True)
-        # get the information about the calibration file or calibration workspaces
+
+        # set up the calibration workspaces
         if not cal_loaded:
             cal_file_date, cal_file_name = self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
                                                                               num_banks=number_banks)
@@ -1117,6 +1292,21 @@ class ReductionManager(object):
             cal_file_name = None
             cal_ws_base_name = None
 
+        if not cal_loaded:
+            assert cal_ws_base_name is not None, 'Impossible to have None cal base name'
+            reduction_setup.set_calibration_file(calib_file_name=cal_file_name,
+                                                 base_ws_name=cal_ws_base_name)
+        else:
+            # TODO FIXME - 20180820 - This is not correct!
+            reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
+        # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
+        #                                               cal_file_name=cal_file_name,
+        #                                               base_ws_name=cal_ws_base_name)
+
+        # initialize tracker
+        tracker = self.init_tracker(ipts_number, run_number, slice_key)
+        tracker.is_reduced = False
+
         if reduce_data_flag and not save_chopped_nexus:
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
             # set up the flag to save chopped raw data
@@ -1124,34 +1314,18 @@ class ReductionManager(object):
 
             # set the flag for not being an auto reduction
             reduction_setup.is_auto_reduction_service = False
-            if not cal_loaded:
-                assert cal_ws_base_name is not None, 'Impossible to have None cal base name'
-                reduction_setup.set_calibration_file(calib_file_name=cal_file_name,
-                                                     base_ws_name=cal_ws_base_name)
-            else:
-                # TODO FIXME - 20180820 - This is not correct!
-                reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
 
+            # TODO - 20180821 - Need to have this as an option and verify what if flag is True
             reduction_setup.set_align_vdrive_bin(flag=False)
-
-            # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
-            #                                               cal_file_name=cal_file_name,
-            #                                               base_ws_name=cal_ws_base_name)
 
             # set up reducer
             reduction_setup.process_configurations()
 
-            # set up reduction tracker
-            # ew_params = '5000.,-0.001,70000.'
-            # high_params = '5000.,-0.0003,70000.'
-
-            tracker = self.init_tracker(ipts_number, run_number, slice_key)
-
             # Slice and focus the data *** V2.0
+            # determine the binning for output GSAS workspace
             if vdrive_binning:
+                # vdrive binning
                 binning_param_dict = self._calibrationFileManager.get_vdrive_binning_reference(run_start_date)
-                vs
-                binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
 
             elif user_binning_parameter:
                 binning_param_dict = self.form_binning_parameters(number_banks, user_binning_parameter)
@@ -1159,11 +1333,10 @@ class ReductionManager(object):
                 binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
                                                                  high_angle_binning_parameters)
             else:
+                # default binning
                 binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
                                                                                                 number_banks)
-                vs
-                binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
-                                                                 high_angle_binning_parameters)
+            # END-IF-ELSE
 
             gsas_info = {'IPTS': ipts_number, 'parm file': 'vulcan.prm'}
             status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False,
@@ -1176,6 +1349,8 @@ class ReductionManager(object):
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
             self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
+
+            tracker.is_reduced = True
 
         elif reduce_data_flag and save_chopped_nexus:
             # required to save the chopped workspace to NeXus file
@@ -1201,7 +1376,6 @@ class ReductionManager(object):
 
             # initialize tracker
             tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=slice_key)
-
             tracker.is_reduced = False
             tracker.is_chopped = True
             if len(chopped_ws_name_list) > 0:
@@ -1268,47 +1442,65 @@ class ReductionManager(object):
 
         return file_name
 
-    def get_reduced_run(self, ipts_number, run_number):
+    def get_reduced_runs(self, with_ipts=False, chopped=False):
         """
-        get the workspace key to a reduced run
-        :param ipts_number:
-        :param run_number:
-        :return:
-        """
-        if (ipts_number, run_number) in self._reductionTrackDict:
-            return ipts_number, run_number
-
-        return None
-
-    def get_reduced_runs(self, with_ipts=False):
-        """
-        Get the runs that have been reduced. It is just for information
-        :return:  a list of run numbers
+        get reduced VULCAN runs with option for single run or chopped run
+        (It is just for information)
+        :param with_ipts:
+        :param chopped:
+        :return: a list of [case 1] run numbers [case 2] (run number, ipts) [case 3] (run number, slice key, ipts)
+                           [case 4] (run number, slice key)
         """
         return_list = list()
-
         # from tracker
-        for run_number in self._reductionTrackDict.keys():
-            tracker = self._reductionTrackDict[run_number]
-            if tracker.is_reduced is True:
+        for tracker_key in self._reductionTrackDict.keys():
+            # get tracker with is_reduced being True
+            tracker = self._reductionTrackDict[tracker_key]
+            if not tracker.is_reduced:
+                continue
+
+            # filter out the tracker with key type and flag-chopped
+            if isinstance(tracker_key, tuple):
+                # slicing reduction case
+                if not chopped:
+                    continue
+
+                run_number, slice_id = tracker_key
+                if with_ipts:
+                    new_item = run_number, slice_id, tracker.ipts_number
+                else:
+                    new_item = run_number, slice_id
+            else:
+                # single run
+                if chopped:
+                    continue
+
+                run_number = tracker_key
                 if with_ipts:
                     new_item = run_number, tracker.ipts_number
                 else:
                     new_item = run_number
+            # END-IF-ELSE
 
-                return_list.append(new_item)
-            # END-IF
+            print new_item
+
+            return_list.append(new_item)
         # END-FOR
-
-        # from simple reduced runs manager
-        run_number_list = self._runFocusedWorkspaceDict.keys()
-
-        # combine
-        return_list = list(set(return_list).union(set(run_number_list)))
 
         return return_list
 
-    def get_reduced_workspace(self, run_number, binning_params=None, is_vdrive_bin=True, unit='TOF'):
+    def get_sliced_focused_workspaces(self, run_number, slice_key):
+        """
+        get the sliced and diffraction focused data in workspace
+        :param run_number:
+        :param slice_key:
+        :return: a list of string as workspace names
+        """
+        tracker = self.get_tracker(run_number, slice_key)
+
+        return tracker.sliced_focused_workspaces
+
+    def get_reduced_workspace(self, run_number, binning_params=None, is_vdrive_bin=True, unit=None):
         """ Get the reduced matrix workspace
         Requirements:
             1. Specified run is correctly reduced;
@@ -1325,41 +1517,47 @@ class ReductionManager(object):
         :return: Workspace (success) or 2-tuple (False and error message)
         """
         # Check requirements
-        import datatypeutility
         datatypeutility.check_int_variable('Run number', run_number, (1, None))
         if binning_params is not None:
             datatypeutility.check_string_variable('Binning parameter (string)', binning_params)
 
         # where is this run?
-        if run_number in self._runFocusedWorkspaceDict:
-            # simple reduce
-            print ('[DB...BAT] run-focused-workspace-dict[{}] has {}'
-                   ''.format(run_number, self._runFocusedWorkspaceDict[run_number].keys()))
-            # use the first binning parameter as default
-            if binning_params is None:
-                binning_params = self._runFocusedWorkspaceDict[run_number].keys()[0]
-            return_ws_name = self._runFocusedWorkspaceDict[run_number][binning_params]
+        # if run_number in self._runFocusedWorkspaceDict:
+        #     # simple reduce
+        #     print ('[DB...BAT] run-focused-workspace-dict[{}] has {}'
+        #            ''.format(run_number, self._runFocusedWorkspaceDict[run_number].keys()))
+        #     # use the first binning parameter as default
+        #     if binning_params is None:
+        #         binning_params = self._runFocusedWorkspaceDict[run_number].keys()[0]
+        #     return_ws_name = self._runFocusedWorkspaceDict[run_number][binning_params]
+        # else:
+
+        # full reduction
+        # get tracker
+        assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
+        tracker = self._reductionTrackDict[run_number]
+        assert isinstance(tracker, DataReductionTracker), \
+            'Stored tracker must be an instance of DataReductionTracker.'
+
+        if is_vdrive_bin and unit != 'TOF':
+            raise RuntimeError('It is possible to get a VDrive-binned workspace in unit {0} other than TOF.'
+                               ''.format(unit))
+        elif unit is not None and unit != 'TOF' and unit.lower() != 'dspace':
+            raise RuntimeError('Unit {0} is not supported.'.format(unit))
+
+        # get the position
+        if is_vdrive_bin:
+            return_ws_name = tracker.vdrive_workspace
+        elif unit is None:
+            return_ws_name = tracker.tof_workspace
+            if return_ws_name is None:
+                return_ws_name = tracker.dspace_workspace
+        elif unit == 'TOF':
+            return_ws_name = tracker.tof_workspace
+        elif unit.lower() == 'dSpacing':
+            return_ws_name = tracker.dspace_workspace
         else:
-            # full reduction
-            # get tracker
-            assert run_number in self._reductionTrackDict, 'Run number {0} is not reduced.'.format(run_number)
-            tracker = self._reductionTrackDict[run_number]
-            assert isinstance(tracker, DataReductionTracker), \
-                'Stored tracker must be an instance of DataReductioTracker.'
-
-            if is_vdrive_bin and unit != 'TOF':
-                raise RuntimeError('It is possible to get a VDrive-binned workspace in unit {0} other than TOF.'
-                                   ''.format(unit))
-            elif unit != 'TOF' and unit.lower() != 'dspace':
-                raise RuntimeError('Unit {0} is not supported.'.format(unit))
-
-            if is_vdrive_bin:
-                return_ws_name = tracker.vdrive_workspace
-            elif unit == 'TOF':
-                return_ws_name = tracker.tof_workspace
-            else:
-                return_ws_name = tracker.dpsace_worksapce
-            # END-IF-ELSE
+            raise RuntimeError('It is very hardly to happen!')
         # END-IF-ELSE
 
         return return_ws_name
@@ -1389,11 +1587,7 @@ class ReductionManager(object):
         """
         datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
-        has = False
-        if run_number in self._runFocusedWorkspaceDict:
-            has = True
-        elif run_number in self._reductionTrackDict:
-            has = True
+        has = run_number in self._reductionTrackDict
 
         return has
 
@@ -1405,10 +1599,8 @@ class ReductionManager(object):
         :return: a DataReductionTracker object that is just created and initialized
         """
         # Check requirements
-        assert isinstance(ipts_number, int) or ipts_number is None, 'IPTS number {0}  must be an integer or None but ' \
-                                                                    'not a {1}.'.format(ipts_number, type(ipts_number))
-        assert isinstance(run_number, int), 'Run number %s must be integer but not %s' % (str(run_number),
-                                                                                          str(type(run_number)))
+        datatypeutility.check_int_variable('IPTS', ipts_number, (1, None))
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
         # Initialize a new tracker
         if slicer_key is None:
@@ -1646,9 +1838,9 @@ class ReductionManager(object):
 
         return reduce_good, message
 
-    # TODO - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
-    def reduce_event_nexus(self, run_number, event_nexus_name, target_unit, binning_parameters, convert_to_matrix,
-                           num_banks):
+    # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
+    def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
+                           convert_to_matrix, num_banks):
         """
         reduce event workspace including load and diffraction focus
         :param run_number:
@@ -1697,6 +1889,13 @@ class ReductionManager(object):
                                          virtual_instrument_geometry=virtual_geometry_dict,
                                          convert_to_matrix=convert_to_matrix,
                                          keep_raw_ws=False)
+
+        tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
+        if target_unit.lower().count('d'):
+            tracker.set_reduced_workspaces(vdrive_bin_ws=None, tof_ws=None, dspace_ws=event_ws_name)
+        else:
+            tracker.set_reduced_workspaces(vdrive_bin_ws=None, tof_ws=event_ws_name, dspace_ws=None)
+        # END-IF
 
         return event_ws_name
 
