@@ -1052,7 +1052,7 @@ class ReductionManager(object):
     # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, vanadium):
+                        tof_correction, vanadium, user_binning_parameter, vdrive_binning):
         """
         chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
@@ -1065,13 +1065,23 @@ class ReductionManager(object):
         :param number_banks:
         :param vanadium: vanadium run number of None for not normalizing
         :param tof_correction:
+        :param user_binning_parameter: float (for user specified binning parameter) or None
+        :param vdrive_binning: flag to use vdrive binning
         :return: 2-tuple.  (1) boolean as status  (2) error message
         """
         if tof_correction:
             raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')
 
+        # check other inputs
+        if user_binning_parameter is not None and vdrive_binning:
+            raise RuntimeError('User binning parameter {} and vdrive binning flag {} cannot be specified '
+                               'simultaneously'.format(user_binning_parameter, vdrive_binning))
+        if user_binning_parameter is not None:
+            datatypeutility.check_float_variable('User specified binning', user_binning_parameter, (0.00001, None))
+
         # set up reduction parameters
         reduction_setup = reduce_VULCAN.ReductionSetup()
+
         reduction_setup.set_ipts_number(ipts_number)
         reduction_setup.set_run_number(run_number)
         reduction_setup.set_event_file(raw_file_name)
@@ -1132,10 +1142,33 @@ class ReductionManager(object):
             reduction_setup.process_configurations()
 
             # set up reduction tracker
+            # ew_params = '5000.,-0.001,70000.'
+            # high_params = '5000.,-0.0003,70000.'
+
             tracker = self.init_tracker(ipts_number, run_number, slice_key)
 
             # Slice and focus the data *** V2.0
-            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False)
+            if vdrive_binning:
+                binning_param_dict = self._calibrationFileManager.get_vdrive_binning_reference(run_start_date)
+                vs
+                binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
+
+            elif user_binning_parameter:
+                binning_param_dict = self.form_binning_parameters(number_banks, user_binning_parameter)
+                vs
+                binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
+                                                                 high_angle_binning_parameters)
+            else:
+                binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
+                                                                                                number_banks)
+                vs
+                binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
+                                                                 high_angle_binning_parameters)
+
+            gsas_info = {'IPTS': ipts_number, 'parm file': 'vulcan.prm'}
+            status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False,
+                                                                     binning_parameters=binning_param_dict,
+                                                                     gsas_info_dict=gsas_info)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)

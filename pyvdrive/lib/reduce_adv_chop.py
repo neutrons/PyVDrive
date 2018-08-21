@@ -12,6 +12,7 @@ import reduce_VULCAN
 import chop_utility
 import mantid_helper
 import vulcan_slice_reduce
+import datatypeutility
 
 MAX_ALLOWED_WORKSPACES = 200
 MAX_CHOPPED_WORKSPACE_IN_MEM = 200
@@ -89,12 +90,11 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, ret_obj
 
-    # TODO/NOW - Implement this!
+    # TESTME/TODO - Implement and develop
     def chop_data_overlap_slicers(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws,
                                        delete_split_ws=True):
-        """
-
+        """ Slice workspace by time.  The time bins may have overlapped (in time) events
         :param raw_ws_name:
         :param tof_correction:
         :param output_dir:
@@ -103,6 +103,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param delete_split_ws:
         :return:
         """
+        # TODO - Algorithm concept
+        # 1. find out the overlapped time periods.
+        # 2. separate the overlapped time periods from the original time periods and book keep these tends to be
+        #    overlapped time periods
+        # 3. diffraction focus all the sliced workspaces
+        # 4. duplicate the focused workspace belonged to overlapped time period and add them to its neighboring
+        #    workspaces (both left and right)
+
         # get split information workspace
         split_ws_name, split_info_name = self._reductionSetup.get_splitters(throw_not_set=True)
         # check that the splitters workspace must be a TableWorkspace
@@ -125,12 +133,13 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
     def chop_data_large_number_targets(self, raw_ws_name, tof_correction,
                                        output_dir, is_epoch_time, num_target_ws,
                                        delete_split_ws=True):
-        """
+        """ Slice event workspace with large number of output workspaces
         chop data to a large number of output targets
         :param raw_ws_name: raw event workspace to get split
         :param tof_correction:
         :param output_dir:
         :param is_epoch_time:
+        :param delete_split_ws:
         :return:
         """
         # get raw workspace
@@ -637,12 +646,14 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, message
 
-    # TODO - 20180820 - Clean
-    def execute_chop_reduction_v2(self, clear_workspaces=False):
-        """
-        chop and reduce data with the upgraded algorithm for speed
+    def execute_chop_reduction_v2(self, binning_parameters, gsas_info_dict, clear_workspaces=False):
+        """ chop and reduce data with the upgraded algorithm for speed
+        :param binning_parameters:
+        :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
         :return:
         """
+        datatypeutility.check_dict('Binning parameters', binning_parameters)
+
         # create output directory and set instance variable _choppedDataDirectory
         self.create_chop_dir()
         if self._choppedDataDirectory is None:
@@ -650,27 +661,26 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # find out what kind of chopping algorithm shall be used
         split_ws_name, split_info_table = self._reductionSetup.get_splitters(throw_not_set=True)
-        print '[DB...BAT...V2] Splitters workspace name: ', split_ws_name
 
         # load data from file to workspace
         raw_file_name = self._reductionSetup.get_event_file()
         event_ws_name = os.path.split(raw_file_name)[1].split('.')[0]
         output_ws_name = event_ws_name + '_split'
 
-        # FIXME
-        ew_params = '5000.,-0.001,70000.'
-        high_params = '5000.,-0.0003,70000.'
+        # set up default
 
         runner = vulcan_slice_reduce.SliceFocusVulcan()
-        idl_name = self._reductionSetup.get_vulcan_bin_file()
+        # idl_name = self._reductionSetup.get_vulcan_bin_file()
         info, output_ws_names = runner.slice_focus_event_workspace(event_file_name=raw_file_name,
                                                                    event_ws_name=event_ws_name,
                                                                    split_ws_name=split_ws_name,
                                                                    info_ws_name=split_info_table,
                                                                    output_ws_base=output_ws_name,
-                                                                   idl_bin_file_name=idl_name,
-                                                                   east_west_binning_parameters=ew_params,
-                                                                   high_angle_binning_parameters=high_params)
+                                                                   binning_parameters=binning_parameters,
+                                                                   gsas_info_dict=gsas_info_dict)
+                                                                   # idl_bin_file_name=idl_name,
+                                                                   # east_west_binning_parameters=ew_params,
+                                                                   # high_angle_binning_parameters=high_params)
 
         self._reducedWorkspaceList.extend(output_ws_names)
 

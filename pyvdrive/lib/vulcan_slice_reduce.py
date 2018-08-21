@@ -492,8 +492,7 @@ class SliceFocusVulcan(object):
         return
 
     def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
-                                    output_ws_base, idl_bin_file_name, east_west_binning_parameters,
-                                    high_angle_binning_parameters):
+                                    output_ws_base, binning_parameters, gsas_info_dict):
         """
         slice and diffraction focus event workspace with option to write the reduced data to GSAS file
         :param event_file_name:
@@ -501,11 +500,13 @@ class SliceFocusVulcan(object):
         :param split_ws_name:
         :param info_ws_name:
         :param output_ws_base:
-        :param idl_bin_file_name:
-        :param east_west_binning_parameters:
-        :param high_angle_binning_parameters:
+        :param binning_parameters:
+        :param gsas_info_dict: keys (IPTS, 'parm file' = 'vulcan.prm')
         :return: tuple: [1] slicing information, [2] output workspace names
         """
+        # check inputs
+        datatypeutility.check_dict('Binning parameters', binning_parameters)
+        datatypeutility.check_dict('GSAS information', gsas_info_dict)
 
         # starting time
         t0 = time.time()
@@ -548,14 +549,14 @@ class SliceFocusVulcan(object):
 
         t2 = time.time()
 
-        # process binning parameters
-        if idl_bin_file_name is not None:
-            print ('[DB...INFO] Create IDL Bins')
-            binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
-        else:
-            print ('[DB...INFO] Create Native Bins')
-            binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
-                                                             high_angle_binning_parameters)
+        # process binning parameters FIXME removed to reduced_adv_chop.py to make it a standard. Delete after testing
+        # if idl_bin_file_name is not None:
+        #     print ('[DB...INFO] Create IDL Bins')
+        #     binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
+        # else:
+        #     print ('[DB...INFO] Create Native Bins')
+        #     binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
+        #                                                      high_angle_binning_parameters)
 
         # Now start to use multi-threading to diffraction focus the sliced event data
         num_outputs = len(output_names)
@@ -577,8 +578,9 @@ class SliceFocusVulcan(object):
                                                       args=(output_names[start_sliced_ws_index:end_sliced_ws_index],
                                                             binning_parameter_dict,))
             thread_pool[thread_id].start()
-            print ('thread {0}: [{1}: {2}) ---> {3} workspaces'.format(thread_id, start_sliced_ws_index,
-                                                                       end_sliced_ws_index, end_sliced_ws_index-start_sliced_ws_index))
+            print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
+                   format(thread_id, start_sliced_ws_index,  end_sliced_ws_index,
+                          end_sliced_ws_index-start_sliced_ws_index))
         # END-FOR
 
         # join the threads after the diffraction focus is finished
@@ -595,7 +597,7 @@ class SliceFocusVulcan(object):
 
         # write all the processed workspaces to GSAS
         # TODO - 20180820 - IPTS number and parm_file_name shall be passed
-        self.write_to_gsas(output_names, ipts_number=12345, parm_file_name='vulcan.prm')
+        self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
 
         tf = time.time()
 
