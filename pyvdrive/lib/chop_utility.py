@@ -469,7 +469,7 @@ def parse_time_segments(file_name):
             (False, error message)
     """
     # Check
-    assert isinstance(file_name, str), 'blabla'
+    datatypeutility.check_file_name(file_name, check_exist=True, note='Time segmentation file')
 
     # Read file
     try:
@@ -477,9 +477,7 @@ def parse_time_segments(file_name):
         raw_lines = in_file.readlines()
         in_file.close()
     except IOError as e:
-        return False, 'Failed to read time segment file %s due to %s.' % (
-            file_name, str(e)
-        )
+        raise RuntimeError('Failed to read time segment file {} due to {}'.format(file_name, e))
 
     ref_run = None
     run_start = None
@@ -539,7 +537,7 @@ def parse_time_segments(file_name):
         # END-IF (#)
     # END-FOR
 
-    return True, (ref_run, run_start, segment_list)
+    return ref_run, run_start, segment_list
 
 
 def get_standard_manual_tag(run_number):

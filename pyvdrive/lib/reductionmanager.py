@@ -87,14 +87,12 @@ class CalibrationManager(object):
         self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
 
         # 7 bank
-        # TODO - Fill the blanks for all the focused banks
         self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][7] = None
         self._focus_instrument_dict['Azimuthal'][7] = None
         self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
 
         # 27 banks
-        # TODO - Fill the blanks for all the focused banks
         self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
         self._focus_instrument_dict['Polar'][27] = None
         self._focus_instrument_dict['Azimuthal'][27] = None

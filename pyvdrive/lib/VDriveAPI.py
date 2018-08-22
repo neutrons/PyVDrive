@@ -1101,14 +1101,11 @@ class VDriveAPI(object):
     def import_data_slicers(file_name):
         """ import slicers from a text file
         :param file_name:
-        :return: True, (ref_run, run_start, segment_list)
+        :return: ref_run, run_start, segment_list
         """
-        try:
-            status, ret_obj = chop_utility.parse_time_segments(file_name)
-        except AssertionError as assert_err:
-            raise AssertionError('VDriveAPI unable to parse data slicers/time segements. {0}'.format(assert_err))
+        ref_run, run_start_time, time_segment_list = chop_utility.parse_time_segments(file_name)
 
-        return slicers
+        return ref_run, run_start_time, time_segment_list
 
     def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
         """
@@ -1646,17 +1643,6 @@ class VDriveAPI(object):
                            '' % (log_file_name, str(self._mtsLogDict.keys())))
 
         return self._mtsLogDict[log_file_name].keys()
-
-    @staticmethod
-    def parse_time_segment_file(file_name):
-        """
-
-        :param file_name:
-        :return:
-        """
-        status, ret_obj = chop_utility.parse_time_segments(file_name)
-
-        return status, ret_obj
 
     # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
