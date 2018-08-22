@@ -57,6 +57,8 @@ class RunsInfoQuery(VDriveCommand):
         else:
             num_to_show = 20
 
+        # TODO - 20180822 - New Feature Important : Can show and order by 'TotalCounts' - TODO
+
         # load AUTO-DATA
         auto_data_key = self._controller.archive_manager.load_auto_record(self._iptsNumber, 'data')
 

@@ -463,14 +463,18 @@ class CalibrationManager(object):
             raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
                                ''.format(year_month_date, date_list[0]))
 
+        print ('[DB...BAT] File YYYY-MM-DD: {}'.format(year_month_date))
         # do a brute force search (as there are only very few of them)
         cal_date_index = None
-        for i_date in range(len(date_list)-1, 0, -1):
+        for i_date in range(len(date_list)-1, -1, -1):
+            print ('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
             if year_month_date > date_list[i_date]:
                 cal_date_index = date_list[i_date]
                 break
             # END-IF
-        # END-FOR
+        # END-FOR  
+
+        print ('[DB...BAT] calibration dict: {}'.format(self._calibration_dict.keys()))
 
         calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
 

@@ -40,6 +40,9 @@ class SliceFocusVulcan(object):
         datatypeutility.check_int_variable('Number of threads', number_banks, [1, 256])
 
         if number_banks in CALIBRATION_FILES:
+            # TODO FIXME - 20180822 - Calibration file or workspace shall be passed in
+            # TODO       - continue - pre-nED is not supported due to this
+            # TODO       - continue - flexible-bank (other than 3) is not supported due to this
             self._detector_calibration_file = CALIBRATION_FILES[number_banks]
             self._number_banks = number_banks
         else:
@@ -517,9 +520,15 @@ class SliceFocusVulcan(object):
         Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
 
         # Load diffraction calibration file
-        LoadDiffCal(InputWorkspace=event_ws_name,
-                    Filename=self._detector_calibration_file,
-                    WorkspaceName='Vulcan')
+        # TODO - 20180822 - LoadDffCal shall be an option such that if 'Vulcan_cal' exists... FIXME
+        try:
+            LoadDiffCal(InputWorkspace=event_ws_name,
+                        Filename=self._detector_calibration_file,
+                        WorkspaceName='Vulcan')
+        except ValueError as val_err:
+            err_msg = 'Unable to load diffraction calibration file {} with reference to workspace {} due to {}'.format(self._detector_calibration_file, event_ws_name, val_err)
+            print ('[ERROR] {}'.format(err_msg))
+            raise RuntimeError(err_msg)
 
         # Align detectors: OpenMP
         AlignDetectors(InputWorkspace=event_ws_name,
