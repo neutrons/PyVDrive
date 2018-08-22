@@ -83,6 +83,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         if self._has2DImage:
             self.reset_2d_plots()
 
+        print ('[DB...BAT] Plot 1D: size vecX = {}, size vecY = {}'.format(len(vec_x), len(vec_y)))
+
         # draw line
         line_id = self.add_plot_1d(vec_x=vec_x, vec_y=vec_y,
                                    label=label, x_label=x_unit,
@@ -101,7 +103,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return line_id
 
-    def plot_diffraction_data(self, vec_xy_set, unit, run_id, bank_id, over_plot, chop_tag=None):
+    def plot_diffraction_data(self, vec_xy_set, unit, run_id, bank_id, over_plot, label, chop_tag=None):
         """
         plot diffraction data with proper unit... 1D
         :param vec_xy_set:
@@ -121,7 +123,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
         vec_y = vec_xy_set[1]
 
         # take are of label
-        line_label = "Run {0} Bank {1}".format(run_id, bank_id)
+        line_label = "{} Run {} Bank {}".format(label, run_id, bank_id)
 
         # process the current image
         if not over_plot:

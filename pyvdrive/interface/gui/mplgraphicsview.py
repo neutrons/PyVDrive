@@ -461,9 +461,14 @@ class MplGraphicsView(QWidget):
         if len(vec_y) == 0:
             print '[WARNING] Input is an empty vector set'
             return False
+        elif len(vec_x) == len(vec_y) + 1:
+            print '[WARNING] Histogram mode.  Plot may not be precise.'
+        elif len(vec_x) != len(vec_y):
+            RuntimeError('X vector has a different size {} to Y vector\'s {}.'
+                         .format(len(vec_x), len(vec_y)))
 
-        line_key = self._myCanvas.add_plot_1d(vec_x, vec_y, y_err, color, label, x_label, y_label, marker, line_style,
-                                              line_width, show_legend)
+        line_key = self._myCanvas.add_plot_1d(vec_x[:len(vec_y)], vec_y, y_err, color, label, x_label, y_label, marker,
+                                              line_style, line_width, show_legend)
 
         # record min/max
         self._statDict[line_key] = min(vec_x), max(vec_x), min(vec_y), max(vec_y)
@@ -1171,7 +1176,8 @@ class Qt4MplCanvas(FigureCanvas):
                 raise NotImplementedError('Input y_err must be either None or numpy.array.')
 
         if len(vec_x) != len(vec_y):
-            raise NotImplementedError('Input vec_x and vec_y must have same size.')
+            raise NotImplementedError('Input vec_x and vec_y must have same size ({} vs {})'
+                                      .format(len(vec_x), len(vec_y)))
         if plot_error is True and len(y_err) != len(vec_x):
             raise NotImplementedError('Input vec_x, vec_y and y_error must have same size.')
 

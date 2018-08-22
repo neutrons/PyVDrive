@@ -829,6 +829,7 @@ def get_data_banks(workspace_name, start_bank_id=1):
     return bank_list
 
 
+# TODO - 20180822 - Refactor!
 def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
@@ -926,11 +927,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # all banks
         num_spec = workspace.getNumberHistograms()
         for i_ws in xrange(num_spec):
-            # TODO/FIXME/FUTURE : for point data need 1 fewer X value
-            if len(num_bins_set) > 1 and point_data:
-                vec_x = workspace.readX(i_ws)[:-1]
-            else:
-                vec_x = workspace.readX(i_ws)
+            vec_x = workspace.readX(i_ws)
             size_x = len(vec_x)
             vec_y = workspace.readY(i_ws)
             size_y = len(vec_y)
@@ -948,11 +945,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # END-FOR
     else:
         # specific bank
-        # TODO/FIXME/FUTURE : for point data need 1 fewer X value
-        if len(num_bins_set) > 1 and point_data:
-            vec_x = workspace.readX(required_workspace_index)[:-1]
-        else:
-            vec_x = workspace.readX(required_workspace_index)
+        vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
         vec_y = workspace.readY(required_workspace_index)
         size_y = len(vec_y)

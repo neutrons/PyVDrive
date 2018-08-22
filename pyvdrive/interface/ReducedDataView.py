@@ -916,7 +916,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # bank information and unit
         curr_bank = int(self.ui.comboBox_spectraList.currentText())
-        curr_unit = str(self.ui.comboBox_unit.currentIndex())
+        curr_unit = str(self.ui.comboBox_unit.currentText())
 
         # plot
         self.plot_multiple_runs_2d(ws_key_list=data_key_list, bank_id=curr_bank,
@@ -1176,14 +1176,18 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             sliced_ws_names_list, bank_id_list, series_sample_log_list = self._choppedRunDict[(run_number, slice_id)]
         else:
             # first time: get workspaces first
-            sliced_ws_names = self._myController.get_sliced_worksapces(run_number, slice_id, reduced=True)
+            sliced_ws_names = self._myController.get_sliced_focused_workspaces(run_number, slice_id)
+
+            print ('[DB...BAT] sliced workspace names: {}'.format(sliced_ws_names))
 
             # order the sliced workspace name as 1, ..., 9, 10, ...
             sliced_ws_names_list = sort_mantid_sliced_ws_names(sliced_ws_names)
+            print ('[DB...BAT] sorted workspace names: {}'.format(sliced_ws_names_list))
             if sliced_ws_names_list is None:
                 sliced_ws_names_list = sliced_ws_names
 
             # get the bank list
+            print ('[DB...BAT] data key: {}'.format(sliced_ws_names_list[0]))
             status, ret_obj = self._myController.get_reduced_run_info(run_number=None, data_key=sliced_ws_names_list[0])
             if status:
                 bank_id_list = ret_obj
@@ -1425,6 +1429,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    # FIXME - 20180822 - 2 calls of this method does not handle things correctly
     def retrieve_loaded_reduced_data(self, data_key, bank_id, unit):
         """
         Retrieve reduced data from workspace (via run number) to _reducedDataDict.
@@ -1436,15 +1441,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         """
         print ('[DB...BAT] Data key = {}'.format(data_key))
 
-        status, ret_obj = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        if status:
-            # re-format return
-            print ('[DB....BAT] Returned reduced data: type = {0}.  Data = {1}'.format(type(ret_obj), ret_obj))
-            vec_x = ret_obj[bank_id][0]
-            vec_y = ret_obj[bank_id][1]
-            ret_obj = vec_x, vec_y
+        data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
+        # convert format
+        vec_x = data_set[bank_id][0]
+        vec_y = data_set[bank_id][1]
+        print ('[DB...BAT] Just retrieved: {} vs {}'.format(len(vec_x), len(vec_y)))
 
-        return status, ret_obj
+        return vec_x, vec_y
 
     def load_sample_logs(self):
         """
@@ -1525,15 +1528,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                ''.format(self._currUnit, str(self.ui.comboBox_unit.currentText())))
 
         if entry_key not in self._currentPlotDataKeyDict:
-            status, ret_obj = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
-                                                                unit=self._currUnit)
-            if status:
-                vec_x, vec_y = ret_obj
-                # TODO FIXME NEXT : use a stack to manage the data stored
-                self._currentPlotDataKeyDict[entry_key] = ret_obj
-            else:
-                raise RuntimeError('Unable to load bank {0} of run with data key {1} in unit {2} due to {3}'
-                                   ''.format(bank_id, data_key, self._currUnit, ret_obj))
+            vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
+                                                             unit=self._currUnit)
+            # TODO FIXME NEXT : use a stack to manage the data stored
+            self._currentPlotDataKeyDict[entry_key] = vec_x, vec_y
         else:
             # data already been loaded before
             vec_x, vec_y = self._currentPlotDataKeyDict[entry_key]
@@ -1714,10 +1712,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
             # get data
             print ('[DB...BAT] Index {1} Run Index {2} Get data from {0}'.format(data_key, index, index_number))
-            status, ret_obj = self._myController.get_reduced_data(data_key, self._currUnit, bank_id=bank_id)
-            if not status:
-                print ('[ERROR] Unable to get data via {0}'.format(data_key))
-                continue
+            ret_obj = self._myController.get_reduced_data(data_key, self._currUnit, bank_id=bank_id)
 
             # re-format return
             vec_x = ret_obj[bank_id][0]

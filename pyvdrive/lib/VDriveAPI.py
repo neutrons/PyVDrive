@@ -471,20 +471,20 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
+    def get_sliced_focused_workspaces(self, run_number, slice_id):
         """
         Find chopped data (in GSAS) in archive or user specified directories
-        :param ipts_number:
         :param run_number:
-        :param chop_seq:
-        :param search_archive: flag to search the chopped data from archive under
-            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/ or
-            /SNS/VULCAN/IPTS-ipts/shared/binned_data/run/
-        :return: 2-tuple [1] boolean (data found) [2] data dictionary
+        :param slice_id:
+        :return: list of workspace names
         """
-        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number, int), 'Run number must be an integer'
-        assert isinstance(chop_seq, int), 'chop sequence must be a non-negative integer.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_string_variable('Slice ID', slice_id)
+
+        return self._myProject.reduction_manager.get_sliced_focused_workspaces(run_number, slice_id)
+
+    # TODO - 20180822 - Find out how this method can be integrated into the ReducedDataView and other UI
+    def get_sliced_gsas_data(self, ipts, run_number, chop_sq):
 
         # try to get from archive first
         data_set_dict = None
@@ -527,15 +527,19 @@ class VDriveAPI(object):
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: it is a run number or data key or a tuple
+        :param run_id: A flexible input that can be (1) run number (int) (2) data key (str) (3) workspace (str)
         :param target_unit:
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
         :param is_workspace:
-        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+                 example dict[bank] = vec_x, vec_y, vec_e
         """
-        # check whether run ID is a data key
-        workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+        # check whether run ID is a data key or a workspace name
+        if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
+            workspace_name = run_id
+        else:
+            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
 
         # get data
         data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
@@ -545,35 +549,7 @@ class VDriveAPI(object):
             raise NotImplementedError('Target unit {0} does not match reduced unit {1}.'
                                       ''.format(target_unit, current_unit))
 
-        # if is_workspace:
-        #     # get data from project as the first priority
-        #     workspace_name = run_id
-        #     data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
-        #     assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
-        #                                         ''.format(target_unit, current_unit)
-        #
-        # else:
-        #     # search for archive with GSAS file
-        #     # get GSAS file name
-        #     if self._myProject.reduction_manager.has_run(run_number=run_id):
-        #         # reduced data that is still in memory
-        #         data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
-        #
-        #     elif search_archive and isinstance(run_id, int):
-        #         # search /SNS/VULCAN/
-        #         try:
-        #             gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
-        #             data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
-        #         except RuntimeError as run_err:
-        #             return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
-        #                           ''.format(run_id, gsas_file, run_err)
-        #
-        #     else:
-        #         return False, 'Unable to locate run {0} in archive'.format(run_id)
-        #     # END-IF
-        # # END-IF-ELSE
-
-        return True, data_set_dict
+        return data_set_dict
 
     def get_reduced_run_info(self, run_number, data_key=None):
         """
@@ -1909,6 +1885,8 @@ class VDriveAPI(object):
                                                    number_banks=number_banks,
                                                    user_bin_parameter=user_bin_parameter,
                                                    vdrive_bin_flag=bin_for_vdrive)
+
+        print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 
         return status, message
 

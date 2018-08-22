@@ -983,15 +983,36 @@ class DataReductionTracker(object):
         :return:
         """
         # check inputs
-        assert isinstance(workspace_name_list, list), 'Input list of workspaces names {1} must be list but not a {1}.' \
-                                                      ''.format(workspace_name_list, type(workspace_name_list))
+        datatypeutility.check_list('Workspace names', workspace_name_list)
 
+        # reset self._choppedWorkspaceNameList if needed
         if self._choppedWorkspaceNameList is None or not append:
-            self._choppedWorkspaceNameList = workspace_name_list[:]
-        else:
-            self._choppedWorkspaceNameList.extend(workspace_name_list)
+            self._choppedWorkspaceNameList = list()
 
-        return
+        # append input workspace names by checking valid or existence
+        err_msg = ''
+
+        for ws_name in workspace_name_list:
+            # check type
+            if not isinstance(ws_name, str):
+                err_msg += 'Input {} of type {} is invalid to be a workspace name'.format(ws_name, type(ws_name))
+                continue
+
+            # check name and existence
+            ws_name = ws_name.strip()
+            # skip
+            if len(ws_name) == 0 or mantid_helper.workspace_does_exist(ws_name) is False:
+                err_msg += 'Workspace "{}" does not exist'
+                continue
+
+            # append
+            self._choppedWorkspaceNameList.append(ws_name)
+        # END-FOR
+
+        if len(err_msg) == 0:
+            err_msg = None
+
+        return err_msg
 
     def set_chopped_nexus_files(self, chopped_file_list, append=True):
         """ set NeXus files that are saved from chopped workspace to this tracker
@@ -1305,6 +1326,8 @@ class ReductionManager(object):
         tracker = self.init_tracker(ipts_number, run_number, slice_key)
         tracker.is_reduced = False
 
+        error_message = None
+
         if reduce_data_flag and not save_chopped_nexus:
             # chop and reduce chopped data to GSAS: NOW, it is Version 2.0 speedup
             # set up the flag to save chopped raw data
@@ -1345,7 +1368,7 @@ class ReductionManager(object):
             tracker.set_reduction_status(status, message, True)
 
             reduced, workspace_name_list = chop_reducer.get_reduced_workspaces(chopped=True)
-            self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
+            error_message = self.set_chopped_reduced_workspaces(run_number, slice_key, workspace_name_list, append=True)
             self.set_chopped_reduced_files(run_number, slice_key, chop_reducer.get_reduced_files(), append=True)
 
             tracker.is_reduced = True
@@ -1382,7 +1405,7 @@ class ReductionManager(object):
                 tracker.set_chopped_nexus_files(chopped_file_list, append=True)
         # END-IF
 
-        return True, None
+        return True, error_message
 
     def get_event_workspace_name(self, run_number):
         """
@@ -1912,13 +1935,13 @@ class ReductionManager(object):
 
         # add files
         assert isinstance(tracker, DataReductionTracker), 'Must be a DataReductionTracker'
-        tracker.set_chopped_workspaces(workspace_name_list, append=append)
+        error_messge = tracker.set_chopped_workspaces(workspace_name_list, append=append)
 
         if compress:
             target_ws_name = tracker.compressed_ws_name
             mantid_helper.make_compressed_reduced_workspace(workspace_name_list, target_workspace_name=target_ws_name)
 
-        return
+        return error_messge
 
     def set_chopped_reduced_files(self, run_number, slicer_key, gsas_file_list, append):
         """
