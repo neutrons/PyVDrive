@@ -33,9 +33,10 @@ class VdriveView(VDriveCommand):
         'DIR': 'User specified directory to find the reduced data (including those being chopped)',
         'PEAK': 'Integrate peak and output value. PEAK=1: output to console. Otherwise, output '
                 'to the file name',
-        # TODO/ISSUE/NOWNOW - Implement this 'SHOW'
         'SHOW': 'Launch the reduced-data viewer'
     }
+    # TODO - 20180807 - Implement this 'SHOW'
+
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
         """
@@ -86,7 +87,11 @@ class VdriveView(VDriveCommand):
         :return: 2-tuple, status, error message
         """
         # parse IPTS
-        self.set_ipts()
+        try:
+            self.set_ipts()
+        except RuntimeError as run_err:
+            # TODO - 20180807 Shall check with SHOW
+            return True, ''
 
         # parse RUNS and RUNE
         if 'RUNS' in self._commandArgsDict:

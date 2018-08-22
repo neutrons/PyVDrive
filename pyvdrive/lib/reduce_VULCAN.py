@@ -61,6 +61,7 @@ import mantid
 from mantid.api import AnalysisDataService
 from mantid.kernel import DateAndTime
 import h5py
+import datatypeutility
 
 # FIXME FIXME TODO TODO - Need an algorithm to locate run time with calibration file
 if os.path.exists('/SNS/VULCAN/shared/CALIBRATION'):
@@ -335,6 +336,9 @@ class ReductionSetup(object):
         self._characterFileName = None
         self._vulcanBinsFileName = None
 
+        # calibration
+        self._calibration_base_name = 'Vulcan'
+
         # binning parameters
         self._binningParameters = None
         self._defaultBinSize = -0.001
@@ -369,6 +373,7 @@ class ReductionSetup(object):
         # post diffraction focusing operations
         self._mergeBanks = False
         self._alignVDriveBinFlag = True
+        self._vdrive_binning_ref_ws_name = None
 
         return
 
@@ -1008,13 +1013,69 @@ class ReductionSetup(object):
 
         return
 
+    def set_calibration_file(self, calib_file_name, base_ws_name):
+        """
+        set up calibration file name
+        :param calib_file_name:
+        :param base_ws_name:
+        :return:
+        """
+        # check input
+        datatypeutility.check_file_name(calib_file_name, check_exist=True, note='Calibration file')
+        datatypeutility.check_string_variable('Base calibration workspace', base_ws_name)
+
+        # set
+        self.set_focus_file(calib_file_name)
+        # set calibration workspace names
+        self.set_calibration_base_name(base_ws_name)
+
+        return
+
+    def set_calibration_base_name(self, base_name):
+        """
+        set the calibration base name
+        :param base_name:
+        :return:
+        """
+        self._calibration_base_name = base_name
+
+        return
+
+    @property
+    def calibration_base_name(self):
+        """
+        get the base name for calibration workspaces
+        :return:
+        """
+        return self._calibration_base_name
+
+    def set_binning_ref_workspace(self, ref_ws_name):
+        """
+        set binning reference workspace name
+        :param ref_ws_name:
+        :return:
+        """
+        if ref_ws_name is not None:
+            datatypeutility.check_string_variable('VDrive binning reference workspace name', ref_ws_name)
+
+        self._vdrive_binning_ref_ws_name = ref_ws_name
+
+        return
+
+    @property
+    def binning_ref_workspace(self):
+        """
+        return the binning reference workspace name
+        :return:
+        """
+        return self._vdrive_binning_ref_ws_name
+
     def set_default_calibration_files(self, num_focused_banks):
         """
         set default calibration files
         :param num_focused_banks:
         :return:
         """
-        import datatypeutility
         datatypeutility.check_int_variable('Number of focused banks/spectra', num_focused_banks, (0, None))
 
         # get the reduction calibration and etc files from event data file

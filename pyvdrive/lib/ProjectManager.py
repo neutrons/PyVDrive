@@ -59,7 +59,7 @@ class ProjectManager(object):
         self._sampleRunReductionFlagDict = dict()  # Key: run number. Value: boolean flag for reduction
 
         # name of the workspace for VDRIVE bins tempate
-        self._vdriveBinTemplateName = None
+        # self._vdriveBinTemplateName = None
 
         return
 
@@ -251,7 +251,6 @@ class ProjectManager(object):
 
     def get_workspace_name_by_data_key(self, data_key):
         """
-
         :param data_key:
         :return:
         """
@@ -261,16 +260,17 @@ class ProjectManager(object):
             if data_key.endswith('G') or data_key.endswith('H'):
                 ws_name = self._loadedDataManager.get_workspace_name(data_key)
                 print ('[DB...BAT...33n: workspace name: {0}'.format(ws_name))
-            else:
+            elif data_key.isdigit():
                 # reduced runs.  data key is the string version of integer run number
                 run_number = int(data_key)
-                found_it = self._reductionManager.has_run(run_number)
+                found_it = self._reductionManager.has_run_reduced(run_number)
                 if found_it:
                     ws_name = self._reductionManager.get_reduced_workspace(run_number=int(data_key),
                                                                            is_vdrive_bin=False)
                 else:
                     raise RuntimeError('Run number {0} cannot be found in reduction manager.'.format(run_number))
-                    # END-FOR
+            else:
+                raise RuntimeError('Data key {} is not recognized.'.format(data_key))
         elif isinstance(data_key, tuple):
             # case for chopped series
             if len(data_key) != 2:
@@ -329,7 +329,9 @@ class ProjectManager(object):
 
         return status, error_message, available_runs
 
-    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus, output_directory):
+    def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
+                 number_banks, tof_correction, output_directory,
+                 user_bin_parameter, vdrive_bin_flag):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -344,17 +346,18 @@ class ProjectManager(object):
         :param reduce_flag:
         :param vanadium:
         :param save_chopped_nexus: flag for saving chopped data to NeXus
+        :param tof_correction:
+        :param number_banks:
         :param output_directory:
+        :param user_bin_parameter: None or [NOT SURE]
+        :param vdrive_bin_flag: boolea to use vdrive binning flag
         :return:
         """
         # check inputs' validity
-        assert isinstance(slicer_key, str), 'Slicer key %s of type %s is not supported. It ' \
-                                            'must be a string.' % (str(slicer_key), type(slicer_key))
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
+        datatypeutility.check_string_variable('Slicer key', slicer_key)
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
         if vanadium is not None:
-            assert isinstance(vanadium, int), 'Vanadium run number {0} must be an integer but not a {1}.' \
-                                              ''.format(vanadium, type(vanadium))
+            datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
         # get chopping helper
         try:
@@ -375,7 +378,7 @@ class ProjectManager(object):
             return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                           ''.format(run_number, run_error)
 
-        # TODO/ISSUE/NOW/TOMORROW - TOF correction is not set up
+        # reduce data
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
@@ -385,13 +388,16 @@ class ProjectManager(object):
                                                                        output_directory=output_directory,
                                                                        reduce_data_flag=reduce_flag,
                                                                        save_chopped_nexus=save_chopped_nexus,
-                                                                       tof_correction=False,
-                                                                       vanadium=vanadium)
+                                                                       number_banks=number_banks,
+                                                                       tof_correction=tof_correction,
+                                                                       vanadium=vanadium,
+                                                                       user_binning_parameter=user_bin_parameter,
+                                                                       vdrive_binning=vdrive_bin_flag)
 
         # process outputs
         if status:
-            message = 'IPTS-{0} Run {1} is chopped, reduced? {2} and saved to {3}' \
-                      ''.format(ipts_number, run_number, reduce_flag, output_directory)
+            message = 'IPTS-{0} Run {1} is chopped, reduced? {2} and saved to {3}\nWarning: {4}' \
+                      ''.format(ipts_number, run_number, reduce_flag, output_directory, error_message)
         else:
             message = error_message
         # END-IF-ELSE
@@ -575,7 +581,7 @@ class ProjectManager(object):
         assert isinstance(peak_positions, list) or peak_positions is None, 'Peak positions must be a list or None.'
 
         # locate the workspace
-        if self._reductionManager.has_run(data_key):
+        if self._reductionManager.has_run_reduced(data_key):
             data_ws_name = self._reductionManager.get_reduced_workspace(run_number=data_key, is_vdrive_bin=True)
         elif self._loadedDataManager.has_data(data_key):
             data_ws_name = self._loadedDataManager.get_workspace_name(data_key)
@@ -820,7 +826,7 @@ class ProjectManager(object):
             # get data from loaded data manager
             data_set = self._loadedDataManager.get_data_set(run_id, target_unit)
 
-        elif self._reductionManager.has_run(run_id):
+        elif self._reductionManager.has_run_reduced(run_id):
             # try to get data from reduction manager if given run number (run id)
             data_set = self._reductionManager.get_reduced_data(run_id, target_unit)
 
@@ -844,21 +850,6 @@ class ProjectManager(object):
         assert isinstance(data_set, dict), 'Returned data set should be a dictionary but not %s.' % str(type(data_set))
 
         return data_set
-
-    def get_reduced_chopped_runs(self):
-        """
-        get run numbers of chopped and reduced runs
-        :return:
-        """
-        # FIXME ASAP ASAP2 TODO - Find which manager is for reduced chopped data
-        return list()
-
-    def get_reduced_runs(self):
-        """
-        find out the runs that have been reduced and are still in memory
-        :return: list of run numbers of the runs
-        """
-        return self._reductionManager.get_reduced_runs()
 
     def get_reduced_workspace(self, ipts_number, run_number):
         """
@@ -891,7 +882,7 @@ class ProjectManager(object):
         assert isinstance(run_number, int), 'Run number must be an integer.'
 
         # Get workspace
-        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=True)
+        run_ws_name = self._reductionManager.get_reduced_workspace(run_number, is_vdrive_bin=False)
         ws_info = mantid_helper.get_workspace_information(run_ws_name)
 
         return ws_info
@@ -924,7 +915,7 @@ class ProjectManager(object):
         """
         has_workspace = False
 
-        if self._reductionManager.has_run(run_number):
+        if self._reductionManager.has_run_reduced(run_number):
             has_workspace = True
         elif (ipts_number, run_number) in self._loadedDataDict:
             has_workspace = True
@@ -972,27 +963,6 @@ class ProjectManager(object):
             raise NotImplementedError('blabla NOWNOW')
 
         return dict()
-
-    def load_standard_binning_workspace(self, data_directory):
-        """
-        Load the standard binning NeXus file to a workspace
-        :return:
-        """
-        # find the template file
-        template_file_name = os.path.join(data_directory, 'vdrive_bin_template.nxs')
-        if not os.path.exists(template_file_name):
-            template_file_name = '/SNS/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
-        if not os.path.exists(template_file_name):
-            # for live-data-view from dasopi3
-            template_file_name = '/SNS/users/wzz/VULCAN/shared/PyVDrive-Data/vdrive_bin_template.nxs'
-        if not os.path.exists(template_file_name):
-            raise RuntimeError('Unable to load binning template NeXus file {0}.'.format(template_file_name))
-
-        # load it!
-        self._vdriveBinTemplateName = 'VDriveBinTemplate'
-        mantid_helper.load_nexus(template_file_name, self._vdriveBinTemplateName, meta_data_only=False)
-
-        return
 
     def load_session_from_dict(self, save_dict):
         """ Load session from a dictionary
@@ -1210,15 +1180,18 @@ class ProjectManager(object):
                 # END-IF (vanadium)
 
                 # reduce
-                print '[DB....BAT....BAT] Reduce {0}, {1}'.format(ipts_number, run_number)
-                status, sub_message = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number, full_event_file_path,
-                                                                                     output_directory, vanadium=vanadium,
-                                                                                     vanadium_tuple=vanadium_tuple, gsas=gsas,
-                                                                                     standard_sample_tuple=standard_sample_tuple,
-                                                                                     binning_parameters=binning_parameters,
-                                                                                     merge_banks=merge_banks,
-                                                                                     num_banks=num_banks)
+                print '[INFO] (Version 1) Reduce IPTS {0} Run {1}'.format(ipts_number, run_number)
+                r_tup = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number,
+                                                                       full_event_file_path,
+                                                                       output_directory,
+                                                                       vanadium=vanadium, vanadium_tuple=vanadium_tuple,
+                                                                       gsas=gsas,
+                                                                       standard_sample_tuple=standard_sample_tuple,
+                                                                       binning_parameters=binning_parameters,
+                                                                       merge_banks=merge_banks,
+                                                                       num_banks=num_banks)
 
+                status, sub_message = r_tup
                 reduce_all_success = reduce_all_success and status
                 if not status:
                     message += 'Failed to reduce run {0} due to {1}.\n'.format(run_number, sub_message)
@@ -1264,6 +1237,72 @@ class ProjectManager(object):
         # END-IF-ELSE(merge or not)
 
         return reduce_all_success, message
+
+    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
+                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs):
+        """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
+        :param run_number_list:
+        :param output_directory:
+        :param d_spacing:
+        :param binning_parameters:
+        :param convert_to_matrix:
+        :param number_banks:
+        :param gsas: flag to reduce to GSAS file
+        :param merge_banks:
+        :param merge_runs:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_list('Run numbers', run_number_list)
+        datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
+        datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
+
+        # check binning parameters
+        if binning_parameters is None:
+            raise RuntimeError('Binning parameters in reduce_vulcan_runs_v2 cannot be None.')
+        if d_spacing:
+            if len(binning_parameters) == 1:
+                bin_size = binning_parameters[0]
+            else:
+                bin_size = binning_parameters[1]
+            # force the binning range to be from 0.3 to 5.0
+            binning_parameters = (0.3, float(bin_size), 5.0)
+        # END-IF
+
+        # reduce one by one
+        reduced_run_numbers = list()
+        error_messages = list()
+        for run_number in run_number_list:
+            raw_file_name, ipts_number = self._dataFileDict[run_number]
+            print '[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}' \
+                  ''.format(run_number, raw_file_name, binning_parameters)
+
+            # reduce
+            if d_spacing:
+                unit = 'dSpacing'
+            else:
+                unit = 'TOF'
+
+            try:
+                out_ws_name = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
+                                                                        unit, binning_parameters,
+                                                                        convert_to_matrix, num_banks=number_banks)
+
+                reduced_run_numbers.append((run_number, out_ws_name))
+                # self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
+
+                # save to GSAS
+                if gsas:
+                    pass
+                    # TODO - 20180813 - Next: mantid_reduction.save_vulcan_gsas()
+
+            except RuntimeError as run_error:
+                error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
+            # manage
+
+        # END-FOR
+
+        return reduced_run_numbers, error_messages
 
     def set_focus_calibration_file(self, focus_cal_file):
         """
@@ -1350,60 +1389,6 @@ class ProjectManager(object):
 
         return
 
-    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix=False, number_banks=3):
-        """
-        reduce runs in a simplied way! (it can be thought be the version 2.0!)
-        :param run_number_list:
-        :param output_directory:
-        :param d_spacing:
-        :param binning_parameters:
-        :param number_banks:
-        :return:
-        """
-        # check inputs
-        datatypeutility.check_list('Run numbers', run_number_list)
-        datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
-        datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
-
-        # check binning parameters
-        if d_spacing:
-            if len(binning_parameters) == 1:
-                bin_size = binning_parameters[0]
-            else:
-                bin_size = binning_parameters[1]
-            binning_parameters = [0.3, '{0}'.format(bin_size), 5.0]
-        # END-IF
-
-        # reduce one by one
-        reduced_run_numbers = list()
-        error_messages = list()
-        for run_number in run_number_list:
-            raw_file_name, ipts_number = self._dataFileDict[run_number]
-            print '[DB...BAT] Attempt to reduce run {0} from {1}... Binned to {2}' \
-                  ''.format(run_number, raw_file_name, binning_parameters)
-
-            # reduce
-            if d_spacing:
-                unit = 'dSpacing'
-            else:
-                unit = 'TOF'
-
-            try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(raw_file_name,
-                                                                        unit, binning_parameters,
-                                                                        convert_to_matrix)
-
-                reduced_run_numbers.append((run_number, out_ws_name))
-                self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
-            except RuntimeError as run_error:
-                error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, error_messages))
-            # manage
-
-        # END-FOR
-
-        return reduced_run_numbers, error_messages
-
     @property
     def vanadium_processing_manager(self):
         """
@@ -1412,13 +1397,13 @@ class ProjectManager(object):
         """
         return self._processVanadiumManager
 
-    @property
-    def vdrive_bin_template(self):
-        """
-        get the VDRIVE binning template workspace name
-        :return:
-        """
-        return self._vdriveBinTemplateName
+    # @property
+    # def vdrive_bin_template(self):
+    #     """
+    #     get the VDRIVE binning template workspace name
+    #     :return:
+    #     """
+    #     return self._vdriveBinTemplateName
 
 
 def get_data_key(file_name):

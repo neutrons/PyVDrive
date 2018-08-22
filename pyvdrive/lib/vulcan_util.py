@@ -4,6 +4,7 @@
 import os
 import math
 import mantid_helper
+import datatypeutility
 
 
 def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
@@ -241,25 +242,47 @@ def search_vulcan_runs(record_data, start_time, end_time):
     """
 
 
-def locateRun(ipts, runnumber, basepath='/SNS/VULCAN/'):
-    """ Add a list of run numbers and check whether they are valid or not.
+def locate_run(ipts, run_number, base_path='/SNS/VULCAN/'):
     """
-    errmsg = ""
+    check whether a run exists
+    Note: this is renamed from locateRun()
+    :param ipts:
+    :param run_number:
+    :param base_path:
+    :return:
+    """
+    datatypeutility.check_int_variable('IPTS number', ipts, (1, None))
+    datatypeutility.check_int_variable('Run number', run_number, (1, None))
+    datatypeutility.check_file_name(base_path, check_exist=True, is_dir=True)
+
+    err_msg = ''
 
     # build the name according to the convention
-    run = int(runnumber)
-    relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run, run)
-    # FIXME - ASAP
-    raise NotImplementedError('ASAP {0} is an old file path.'.format(relpathname))
-    nxsfilename = os.path.join(basepath, relpathname)
+    # there could be 2 possibilities
+    # new nED first
+    rel_full_path = 'IPTS-{0}/nexus/VULCAN_{1}.nxs.h5'.format(ipts, run_number)
+    full_path = os.path.join(base_path, rel_full_path)
 
-    # check existence of file
-    if os.path.isfile(nxsfilename) is False:
-        good = False
-        errmsg = "Run %d does not exist in IPTS %d.  NeXus file cannot be found at %s. " % (run, ipts, nxsfilename)
-        return (False, errmsg)
+    if os.path.exists(full_path):
+        # nED
+        file_name = full_path
+    else:
+        # pre-nED
+        relpathname = "IPTS-%d/0/%d/NeXus/VULCAN_%d_event.nxs" % (ipts, run_number, run_number)
+        nxsfilename = os.path.join(base_path, relpathname)
+        if os.path.exists(nxsfilename):
+            file_name = full_path
+        else:
+            file_name = None
+            err_msg = 'IPTS {} Run {} does not exist. Neither {} nor {} is a valid path.' \
+                      ''.format(full_path, nxsfilename, ipts, run_number)
+    # END-IF
 
-    return (True, nxsfilename)
+    status = file_name is not None
+    if not status:
+        return status, err_msg
+
+    return True, file_name
 
 
 class AutoVanadiumCalibrationLocator(object):

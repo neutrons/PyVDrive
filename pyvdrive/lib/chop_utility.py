@@ -5,7 +5,7 @@ import random
 import mantid_helper
 from mantid.api import ITableWorkspace, MatrixWorkspace
 from mantid.dataobjects import SplittersWorkspace
-import math
+import datatypeutility
 
 FifteenYearsInSecond = 15*356*24*3600
 # MAX_CHOPPED_WORKSPACE_IN_MEM = 40
@@ -96,8 +96,9 @@ class DataChopper(object):
         :return:
         """
         # Check input's validity
-        assert isinstance(run_number, int), 'Run number must be integer'
-        assert isinstance(nxs_file_name, str), 'NeXus file name must be integer'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_file_name(nxs_file_name, check_exist=True, check_writable=False,
+                                        is_dir=False, note='NeXus file name')
 
         # Data structure for log data that is worked on now
         self._myNeXusFileName = nxs_file_name
@@ -322,7 +323,7 @@ class DataChopper(object):
             return False, 'Unable to retrieve series log due to %s.' % str(err)
 
         # Set up run start time
-        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanoseconds')
+        self._runStartTime = mantid_helper.get_run_start(self._mtdWorkspaceName, time_unit='nanosecond')
 
         return out_ws_name
 
@@ -468,7 +469,7 @@ def parse_time_segments(file_name):
             (False, error message)
     """
     # Check
-    assert isinstance(file_name, str), 'blabla'
+    datatypeutility.check_file_name(file_name, check_exist=True, note='Time segmentation file')
 
     # Read file
     try:
@@ -476,9 +477,7 @@ def parse_time_segments(file_name):
         raw_lines = in_file.readlines()
         in_file.close()
     except IOError as e:
-        return False, 'Failed to read time segment file %s due to %s.' % (
-            file_name, str(e)
-        )
+        raise RuntimeError('Failed to read time segment file {} due to {}'.format(file_name, e))
 
     ref_run = None
     run_start = None
@@ -538,7 +537,7 @@ def parse_time_segments(file_name):
         # END-IF (#)
     # END-FOR
 
-    return True, (ref_run, run_start, segment_list)
+    return ref_run, run_start, segment_list
 
 
 def get_standard_manual_tag(run_number):

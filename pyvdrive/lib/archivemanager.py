@@ -4,13 +4,17 @@
 import os
 import time
 import pickle
-import datatypeutility
 import mantid_helper
 import vdrivehelper
 import vulcan_util
+import datatypeutility
+import pandas
 
 SUPPORTED_INSTRUMENT = {'VULCAN': 'VULCAN'}
 SUPPORTED_INSTRUMENT_SHORT = {'VUL': 'VULCAN'}
+
+AUTO_LOG_MAP = {'run': 'RUN', 'duration': 'Duration', 'sample': 'Sample',
+                'totalcounts': 'TotalCounts'}
 
 
 class DataArchiveManager(object):
@@ -54,6 +58,9 @@ class DataArchiveManager(object):
         # data storage
         self._iptsInfoDict = dict()   # key: archive ID as IPTS number, value: dictionary of dictionaries: key = run
         self._runIptsDict = dict()  # key: run number value: IPTS number
+
+        # VULCAN auto record dictionary
+        self._auto_record_dict = dict()
 
         # Other class variables
         # # ipts number of type integer
@@ -207,10 +214,9 @@ class DataArchiveManager(object):
         :param chop_child_list: a list of chopped child
         :return:
         """
-        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method!
-        assert isinstance(run_number, int), 'Run number %s must be an integer.' % str(run_number)
-        assert isinstance(ipts_number, int), 'IPTS number {0} must be an integer but not a {1}.' \
-                                             ''.format(ipts_number, type(ipts_number))
+        # TODO/ISSUE/NOWNOW - Apply chop_child_list to this method! - NEED A SOLID USE CASE!
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
 
         # form the directory name
         chop_dir = '/SNS/VULCAN/IPTS-{0}/shared/ChoppedData/{1}'.format(ipts_number, run_number)
@@ -509,6 +515,43 @@ class DataArchiveManager(object):
         """
         return '/SNS/VULCAN/IPTS-{0}/shared/binned_data/{1}/'.format(ipts_number, run_number)
 
+    def load_auto_record(self, ipts_number, record_type):
+        """
+        load auto record file
+        :except RuntimeError if there is no IPTS in auto record
+        :param ipts_number:
+        :param record_type: None for AutoRecord.txt, 'data' for AutoRecordData.txt', 'align' for AutoRecordAlign.txt
+        :return:
+        """
+        # check input
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        if record_type is not None:
+            datatypeutility.check_string_variable('Log type', record_type, allowed_values=['data', 'align'])
+
+        # locate IPTS folder and AutoRecord file
+        ipts_shared_dir = '/SNS/VULCAN/IPTS-{}/shared'.format(ipts_number)
+        if os.path.exists(ipts_shared_dir) is False:
+            raise RuntimeError('IPTS {} has no directory {} in SNS archive'.format(ipts_number, ipts_shared_dir))
+
+        if record_type is None:
+            base_name = 'AutoRecord.txt'
+        elif record_type == 'data':
+            base_name = 'AutoRecordData.txt'
+        elif record_type == 'align':
+            base_name = 'AutoRecordAlign.txt'
+        else:
+            raise NotImplementedError('Impossible to reach this point')
+
+        auto_record_file_name = os.path.join(ipts_shared_dir, base_name)
+        if not os.path.exists(auto_record_file_name):
+            raise RuntimeError('Auto {} record file {} does not exist.'.format(record_type, auto_record_file_name))
+
+        # load and parse the file
+        record_key = 'Auto{}-IPTS{}'.format(record_type, ipts_number)
+        self._auto_record_dict[record_key] = vulcan_util.import_vulcan_log(auto_record_file_name)
+
+        return record_key
+
     @staticmethod
     def locate_vanadium_gsas_file(ipts_number, van_run_number):
         """ Locate a smoothed vanadium run reduced to GSAS file format
@@ -776,7 +819,80 @@ class DataArchiveManager(object):
         stime2 = time.strptime(time.ctime(rollbacktime))
         print stime2.tm_yday
 
-        return 
+        return
+
+    def sort_info(self, auto_record_ref_id, sort_by, run_range, output_items, num_outputs):
+        """ sort the information loaded from auto record file
+        Note: current list of indexes
+        Index([u'RUN', u'IPTS', u'Title', u'Notes', u'Sample', u'ITEM', u'StartTime',
+        u'Duration', u'ProtonCharge', u'TotalCounts', u'Monitor1', u'Monitor2',
+        u'X', u'Y', u'Z', u'O', u'HROT', u'VROT', u'BandCentre', u'BandWidth',
+        u'Frequency', u'Guide', u'IX', u'IY', u'IZ', u'IHA', u'IVA',
+        u'Collimator', u'MTSDisplacement', u'MTSForce', u'MTSStrain',
+        u'MTSStress', u'MTSAngle', u'MTSTorque', u'MTSLaser', u'MTSlaserstrain',
+        u'MTSDisplaceoffset', u'MTSAngleceoffset', u'MTST1', u'MTST2', u'MTST3',
+        u'MTST4', u'MTSHighTempStrain', u'FurnaceT', u'FurnaceOT',
+        u'FurnacePower', u'VacT', u'VacOT', u'EuroTherm1Powder',
+        u'EuroTherm1SP', u'EuroTherm1Temp', u'EuroTherm2Powder',
+        u'EuroTherm2SP', u'EuroTherm2Temp'],
+        :param auto_record_ref_id:
+        :param sort_by:
+        :param run_range:
+        :param output_items:
+        :param num_outputs:
+        :return:
+        """
+        # check inputs
+        datatypeutility.check_string_variable('Auto record reference ID', auto_record_ref_id)
+        datatypeutility.check_string_variable('Column name to sort by', sort_by)
+        if sort_by.lower() not in AUTO_LOG_MAP:
+            raise RuntimeError('Pandas DataFrame has no columns mapped from {}; Available include '
+                               '{}'.format(sort_by.lower(), AUTO_LOG_MAP.keys()))
+        if run_range is not None:
+            assert not isinstance(run_range, str), 'Runs range cannot be a string'
+            if len(run_range) != 2:
+                raise RuntimeError('Run range {} must have 2 items for start and end.'
+                                   ''.format(run_range))
+        # END-IF
+
+        datatypeutility.check_list('Output column names', output_items)
+        if num_outputs is not None:
+            datatypeutility.check_int_variable('Number of output rows', num_outputs, (1, None))
+
+        if auto_record_ref_id not in self._auto_record_dict:
+            raise RuntimeError('Auto record ID {} is not in dictionary.  Available keys are {}'
+                               ''.format(auto_record_ref_id, self._auto_record_dict.keys()))
+        if run_range is not None:
+            print ('[ERROR] Notify developer that run range shall be implemented.')
+
+        # get data frame (data set)
+        record_data_set = self._auto_record_dict[auto_record_ref_id]
+
+        # sort the value
+        auto_log_key = AUTO_LOG_MAP[sort_by.lower()]
+        record_data_set.sort_values(by=[auto_log_key], ascending=False, inplace=True)
+
+        # filter out required
+        needed_index_list = list()
+        for item in output_items:
+            needed_index_list.append(AUTO_LOG_MAP[item.lower()])
+        filtered = record_data_set.filter(needed_index_list)
+
+        # number of outputs
+        if num_outputs is None:
+            num_outputs = len(record_data_set)
+
+        # convert to list of dictionary
+        column_names = filtered.columns.tolist()
+        output_list = list()
+        for row_index in range(num_outputs):
+            dict_i = dict()
+            for j in range(len(column_names)):
+                dict_i[output_items[j]] = filtered.iloc[row_index, j]
+            # print dict_i
+            output_list.append(dict_i)
+
+        return output_list
 
 # END-CLASS
 
@@ -849,8 +965,16 @@ def sns_archive_nexus_path(ipts_number, run_number):
     ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/nexus/VULCAN_{1}.nxs.h5' \
                      ''.format(ipts_number, run_number)
 
-    # TODO/FIXME : need to add pre-nED NeXus case
-    if os.path.exists(ned_nexus_name) is False:
-        raise RuntimeError('{0} not exist'.format(ned_nexus_name))
+    if os.path.exists(ned_nexus_name):
+        r_file_name = ned_nexus_name
+    else:
+        # pre-Ned case
+        pre_ned_nexus_name = '/SNS/VULCAN/IPTS-{0}/0/{1}/NeXus/VULCAN_{1}_event.nxs'.format(ipts_number, run_number)
+        if os.path.exists(pre_ned_nexus_name):
+            r_file_name = pre_ned_nexus_name
+        else:
+            raise RuntimeError('For IPTS-{0} Run {1}: Either nED {2} or pre-nED {3} exists'
+                               ''.format(ipts_number, run_number, ned_nexus_name, pre_ned_nexus_name))
+    # END-IF-ELSE
 
-    return ned_nexus_name
+    return r_file_name

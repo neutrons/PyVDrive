@@ -168,9 +168,15 @@ class VdriveChop(VDriveCommand):
             exp_log_type = None
 
         # chop
+        # TODO FIXME - 20180806 - Number of banks shall be given from console
+        # TODO FIXME - 20180806 - Save chopped nexus shall be specified by user
+        # TODO FIXME - 20180821 - use_bin_parameter shall be parsed from suer
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      vanadium=vanadium, save_chopped_nexus=True, output_dir=output_dir,
-                                                      export_log_type=exp_log_type)
+                                                      vanadium=vanadium, save_chopped_nexus=False,
+                                                      output_dir=output_dir,
+                                                      number_banks=3,
+                                                      export_log_type=exp_log_type,
+                                                      user_bin_parameter=None)
 
         return status, message
 
@@ -223,6 +229,9 @@ class VdriveChop(VDriveCommand):
         # generate data slicer
         status, ret_obj = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
                                                                       time_interval)
+
+        # TODO TODO - 20180727 - Is it called for DT????
+        raise RuntimeError('Chop No Chop????')
         if status:
             slicer_key = ret_obj
         else:
@@ -442,6 +451,7 @@ class VdriveChop(VDriveCommand):
                     continue
 
             # chop and optionally reduce
+            # TODO - FIXME - 20180727 - Use version 2.0 (multiple threading) chop and reduction
             if chop_period is not None:
                 # chopping with OVERLAPPED period
                 # FIXME - This is NOTE implemented and tested

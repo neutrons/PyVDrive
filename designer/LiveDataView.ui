@@ -617,7 +617,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_20">
          <property name="text">
-          <string>Accumulate Time</string>
+          <string>Accumulation Period</string>
          </property>
         </widget>
        </item>
@@ -667,12 +667,18 @@
         </widget>
        </item>
        <item row="2" column="5">
-        <widget class="QLineEdit" name="lineEdit_elapsedTime">
+        <widget class="QLineEdit" name="lineEdit_updateTime">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Time period to update the live view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -686,7 +692,7 @@
        <item row="2" column="4">
         <widget class="QLabel" name="label_17">
          <property name="text">
-          <string>Elapsed Time</string>
+          <string>Update Period</string>
          </property>
         </widget>
        </item>
@@ -709,7 +715,7 @@
        <item row="3" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Elapsed Time</string>
+          <string>Collection Time</string>
          </property>
         </widget>
        </item>
@@ -758,6 +764,9 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Current data collection time.&lt;/p&gt;&lt;p&gt; Maximum collection time is equal to &lt;span style=&quot; font-style:italic;&quot;&gt;Accumulation Time&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>

@@ -605,7 +605,6 @@ def get_run_start(workspace, time_unit):
     :return:
     """
     # check the situation if workspace is a string
-    assert isinstance(time_unit, str)
     if isinstance(workspace, str):
         if ADS.doesExist(workspace):
             workspace = ADS.retrieve(workspace)
@@ -613,6 +612,7 @@ def get_run_start(workspace, time_unit):
             raise RuntimeError('Workspace %s does not exist in Mantid AnalysisDataService.' % workspace)
     # END-IF
 
+    # get run start from proton charge
     try:
         pcharge_log = workspace.run().getProperty('proton_charge')
     except AttributeError as e:
@@ -621,16 +621,26 @@ def get_run_start(workspace, time_unit):
         raise RuntimeError('Unable to get run start due to %s.' % str(e))
 
     # Get first value in proton charge's time as run start
-    run_start_ns = pcharge_log.firstTime().totalNanoseconds()
+    pcharge_time0 = pcharge_log.firstTime()
 
-    # Convert unit if
-    run_start = run_start_ns
-    if time_unit.lower().startswith('nanosecond'):
-        pass
-    elif time_unit.lower().startswith('second'):
-        run_start *= 1.E-9
+    if time_unit is None:
+        # no unit defined. original run start time
+        run_start = pcharge_time0
     else:
-        raise RuntimeError('Unit %s is not supported by get_run_start().' % time_unit)
+        # convert to seconds or nanoseconds
+        run_start_ns = pcharge_time0.totalNanoseconds()
+
+        # check time unit
+        datatypeutility.check_string_variable('Time Unit', time_unit, allowed_values=['nanosecond', 'second'])
+
+        # Convert unit if
+        if time_unit.lower().startswith('nanosecond'):
+            run_start = run_start_ns
+        elif time_unit.lower().startswith('second'):
+            run_start = run_start_ns * 1.E-9
+        else:
+            raise RuntimeError('Impossible to reach')
+    # END-IF-ELSE
 
     return run_start
 
@@ -819,6 +829,7 @@ def get_data_banks(workspace_name, start_bank_id=1):
     return bank_list
 
 
+# TODO - 20180822 - Refactor!
 def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, point_data=True, start_bank_id=1):
     """
     Purpose: get data from a workspace
@@ -835,7 +846,10 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (2) unit of the returned data
     """
     # check requirements by asserting
-    assert isinstance(workspace_name, str) and isinstance(point_data, bool), 'blabla'
+    assert isinstance(workspace_name, str), 'Workspace name {} must be a string but not a {}' \
+                                            ''.format(workspace_name, type(workspace_name))
+    assert isinstance(point_data, bool), 'Point-data flag {} must be a bool but not a {}' \
+                                         ''.format(point_data, type(point_data))
     assert isinstance(target_unit, str) or target_unit is None,\
         'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
     assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
@@ -913,11 +927,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # all banks
         num_spec = workspace.getNumberHistograms()
         for i_ws in xrange(num_spec):
-            # TODO/FIXME/FUTURE : for point data need 1 fewer X value
-            if len(num_bins_set) > 1 and point_data:
-                vec_x = workspace.readX(i_ws)[:-1]
-            else:
-                vec_x = workspace.readX(i_ws)
+            vec_x = workspace.readX(i_ws)
             size_x = len(vec_x)
             vec_y = workspace.readY(i_ws)
             size_y = len(vec_y)
@@ -935,11 +945,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
         # END-FOR
     else:
         # specific bank
-        # TODO/FIXME/FUTURE : for point data need 1 fewer X value
-        if len(num_bins_set) > 1 and point_data:
-            vec_x = workspace.readX(required_workspace_index)[:-1]
-        else:
-            vec_x = workspace.readX(required_workspace_index)
+        vec_x = workspace.readX(required_workspace_index)
         size_x = len(vec_x)
         vec_y = workspace.readY(required_workspace_index)
         size_y = len(vec_y)
@@ -1276,7 +1282,7 @@ def load_gsas_file(gss_file_name, out_ws_name, standard_bin_workspace):
                            ''.format(num_spec))
 
     # convert unit and to point data
-    if num_spec == 2:
+    if standard_bin_workspace is not None and num_spec == 2:
         align_bins(out_ws_name, standard_bin_workspace)
         mantidapi.ConvertUnits(InputWorkspace=out_ws_name, OutputWorkspace=out_ws_name,
                                Target='dSpacing')
@@ -1300,18 +1306,20 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
 
     if calib_file_name.endswith('.h5'):
         # new diff calib file
-        mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
-                              Filename=calib_file_name,
-                              WorkspaceName=output_name)
+        outputs = mantidapi.LoadDiffCal(InputWorkspace=ref_ws_name,
+                                        Filename=calib_file_name,
+                                        WorkspaceName=output_name)
 
     elif calib_file_name.endswith('.dat'):
         # old style calibration file
-        mantidapi.LoadCalFile(Filename=calib_file_name,
-                              Output=output_name)
+        outputs = mantidapi.LoadCalFile(Filename=calib_file_name,
+                                        Output=output_name)
 
-    # print (ADS.getObjectNames())
+    else:
+        raise RuntimeError('Calibration file {} does not end with .h5 or .dat.  Unable to support'
+                           ''.format(calib_file_name))
 
-    return
+    return outputs
 
 
 def load_nexus(data_file_name, output_ws_name, meta_data_only):

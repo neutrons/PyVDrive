@@ -16,6 +16,7 @@ import crystal_helper
 import io_peak_file
 import reduce_VULCAN
 import chop_utility
+import datatypeutility
 
 SUPPORTED_INSTRUMENT = ['VULCAN']
 
@@ -55,11 +56,11 @@ class VDriveAPI(object):
         self._myProject = ProjectMrg.ProjectManager('New Project')
 
         # construct the data location
-        if module_location is not None:
-            template_data_dir = os.path.join(module_location, 'data')
-        else:
-            template_data_dir = None
-        self._myProject.load_standard_binning_workspace(template_data_dir)
+        # if module_location is not None:
+        #     template_data_dir = os.path.join(module_location, 'data')
+        # else:
+        #     template_data_dir = None
+        # REMOVED 2018 TODO self._myProject.load_standard_binning_workspace(template_data_dir)
         self._myArchiveManager = archivemanager.DataArchiveManager(self._myInstrument)
 
         # default working directory to current directory.
@@ -391,7 +392,7 @@ class VDriveAPI(object):
         :return:
         """
         # check input
-        assert run_number is not None, 'Run number cannot be None.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
         # get chopper
         chopper = self._myProject.get_chopper(run_number)
@@ -470,20 +471,20 @@ class VDriveAPI(object):
         """
         return self._myLastDataDirectory
 
-    def get_reduced_chopped_data(self, ipts_number, run_number, chop_seq, search_archive=True, search_dirs=None):
+    def get_sliced_focused_workspaces(self, run_number, slice_id):
         """
         Find chopped data (in GSAS) in archive or user specified directories
-        :param ipts_number:
         :param run_number:
-        :param chop_seq:
-        :param search_archive: flag to search the chopped data from archive under
-            /SNS/VULCAN/IPTS-ipts/shared/ChoppedData/run/ or
-            /SNS/VULCAN/IPTS-ipts/shared/binned_data/run/
-        :return: 2-tuple [1] boolean (data found) [2] data dictionary
+        :param slice_id:
+        :return: list of workspace names
         """
-        assert isinstance(ipts_number, int), 'IPTS number must be an integer.'
-        assert isinstance(run_number, int), 'Run number must be an integer'
-        assert isinstance(chop_seq, int), 'chop sequence must be a non-negative integer.'
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_string_variable('Slice ID', slice_id)
+
+        return self._myProject.reduction_manager.get_sliced_focused_workspaces(run_number, slice_id)
+
+    # TODO - 20180822 - Find out how this method can be integrated into the ReducedDataView and other UI
+    def get_sliced_gsas_data(self, ipts, run_number, chop_sq):
 
         # try to get from archive first
         data_set_dict = None
@@ -519,21 +520,26 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
+    # TODO - 20180820 - better doc and clean!
     def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
                          is_workspace=False):
         """ Get reduced data
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: it is a run number or data key or a tuple
+        :param run_id: A flexible input that can be (1) run number (int) (2) data key (str) (3) workspace (str)
         :param target_unit:
         :param ipts_number: IPTS number
         :param search_archive: flag to allow search reduced data from archive
         :param is_workspace:
-        :return: 2-tuple: status and a dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
+                 example dict[bank] = vec_x, vec_y, vec_e
         """
-        # check whether run ID is a data key
-        workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+        # check whether run ID is a data key or a workspace name
+        if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
+            workspace_name = run_id
+        else:
+            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
 
         # get data
         data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
@@ -543,35 +549,7 @@ class VDriveAPI(object):
             raise NotImplementedError('Target unit {0} does not match reduced unit {1}.'
                                       ''.format(target_unit, current_unit))
 
-        # if is_workspace:
-        #     # get data from project as the first priority
-        #     workspace_name = run_id
-        #     data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit)
-        #     assert current_unit == target_unit, 'Target unit {0} does not match reduced unit {1}.' \
-        #                                         ''.format(target_unit, current_unit)
-        #
-        # else:
-        #     # search for archive with GSAS file
-        #     # get GSAS file name
-        #     if self._myProject.reduction_manager.has_run(run_number=run_id):
-        #         # reduced data that is still in memory
-        #         data_set_dict = self._myProject.reduction_manager.get_reduced_data(run_number=run_id, unit=target_unit)
-        #
-        #     elif search_archive and isinstance(run_id, int):
-        #         # search /SNS/VULCAN/
-        #         try:
-        #             gsas_file = self._myArchiveManager.get_data_archive_gsas(ipts_number, run_id)
-        #             data_set_dict = self._myProject.get_reduced_data(run_id, target_unit, gsas_file)
-        #         except RuntimeError as run_err:
-        #             return False, 'Failed to to get data for run {0} from {1}.\nError message: {2}.' \
-        #                           ''.format(run_id, gsas_file, run_err)
-        #
-        #     else:
-        #         return False, 'Unable to locate run {0} in archive'.format(run_id)
-        #     # END-IF
-        # # END-IF-ELSE
-
-        return True, data_set_dict
+        return data_set_dict
 
     def get_reduced_run_info(self, run_number, data_key=None):
         """
@@ -830,16 +808,18 @@ class VDriveAPI(object):
             # chopped runs
             # from archive
             loaded_runs_list = self._myProject.get_loaded_chopped_reduced_runs()
+            print ('[DB...BAT] API: Loaded chopped runs: {}'.format(loaded_runs_list))
 
             # from memory
-            reduced_runs_list = self._myProject.get_reduced_chopped_runs()
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=True)
+            print ('[DB...BAT] API: In-Memory chopped runs: {}'.format(reduced_runs_list))
 
         else:
             # from archive
             loaded_runs_list = self._myProject.get_loaded_reduced_runs()
 
             # from project
-            reduced_runs_list = self._myProject.get_reduced_runs()
+            reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
 
         # END-IF-ELSE
 
@@ -859,6 +839,7 @@ class VDriveAPI(object):
         :param standard_sns_file:
         :return:
         """
+        # FIXME TODO - 20180821
         raise NotImplementedError('Method need to be reviewed and refactored.')
         # call archive manager
         run_info_dict_list = self._myArchiveManager.get_local_run_info(archive_key, local_dir, begin_run, end_run,
@@ -1090,20 +1071,17 @@ class VDriveAPI(object):
         :param reduced:
         :return:
         """
-        return self._myProject.reduction_manager.has_run(run_number)
+        return self._myProject.reduction_manager.has_run_reduced(run_number)
 
     @staticmethod
     def import_data_slicers(file_name):
         """ import slicers from a text file
         :param file_name:
-        :return: True, (ref_run, run_start, segment_list)
+        :return: ref_run, run_start, segment_list
         """
-        try:
-            status, ret_obj = chop_utility.parse_time_segments(file_name)
-        except AssertionError as assert_err:
-            raise AssertionError('VDriveAPI unable to parse data slicers/time segements. {0}'.format(assert_err))
+        ref_run, run_start_time, time_segment_list = chop_utility.parse_time_segments(file_name)
 
-        return slicers
+        return ref_run, run_start_time, time_segment_list
 
     def load_archived_gsas(self, ipts_number, run_number, is_chopped_data, data_key):
         """
@@ -1370,6 +1348,10 @@ class VDriveAPI(object):
             raise RuntimeError('There are runs from different IPTS.  It is not supported in PyVDrive.')
         ipts_number = ipts_set.pop()
 
+        # binning_parameters is default to be None.  If None, a real default value - TEST - 20180710
+        if binning_parameters is None:
+            binning_parameters = [-0.001]
+
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
@@ -1383,11 +1365,17 @@ class VDriveAPI(object):
         elif dspace or version == 2:
             # user version 2 reduction algorithm
             # TODO - NowNowNow - Starting from here!
+            print ('GSAS = {}'.format(gsas))
+
             status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                     output_directory=output_directory,
                                                                     d_spacing=True,
                                                                     binning_parameters=binning_parameters,
-                                                                    number_banks=num_banks)
+                                                                    convert_to_matrix=True,
+                                                                    number_banks=num_banks,
+                                                                    gsas=gsas,
+                                                                    merge_banks=merge_banks,
+                                                                    merge_runs=merge_runs)
 
         else:
             # manual reduction: Reduce runs
@@ -1632,17 +1620,6 @@ class VDriveAPI(object):
 
         return self._mtsLogDict[log_file_name].keys()
 
-    @staticmethod
-    def parse_time_segment_file(file_name):
-        """
-
-        :param file_name:
-        :return:
-        """
-        status, ret_obj = chop_utility.parse_time_segments(file_name)
-
-        return status, ret_obj
-
     # TODO/TEST/NOWNOW/#71 - New feature on binning_parameters
     def load_vanadium_run(self, ipts_number, run_number, use_reduced_file, unit='dSpacing',
                           binning_parameters=None, smoothed=False):
@@ -1686,17 +1663,19 @@ class VDriveAPI(object):
                                                            merge_banks=False,
                                                            merge_runs=False,
                                                            binning_parameters=binning_parameters)
-            if not reduced:
+
+            if reduced:
+                van_ws_key = ipts_number, run_number
+            else:
                 return False, 'Unable to reduce vanadium run {0} (IPTS-{1}) due to {2}.' \
                               ''.format(run_number, ipts_number, message)
-            else:
-                van_ws_key = self._myProject.reduction_manager.get_reduced_run(ipts_number, run_number)
             # END-IF
         else:
             # load vanadium file
             van_ws_key = self._myProject.data_loading_manager.load_binned_data(van_file_name, 'gsas',
                                                                                None, 1000)
             self._myProject.add_reduced_workspace(ipts_number, run_number, van_ws_key)
+        # END-IF-ELSE
 
         # convert unit
         print '[DB...BAT] Load vanadium and convert unit???  from {0}'.format(van_file_name)
@@ -1875,7 +1854,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   export_log_type='loadframe'):
+                   number_banks, export_log_type='loadframe', user_bin_parameter=None):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1885,13 +1864,29 @@ class VDriveAPI(object):
         :param vanadium:
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive
+        :param number_banks:
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
         # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
-        status, message = self._myProject.chop_run(run_number, slicer_id, reduce_flag=reduce_data, vanadium=vanadium,
-                                                   save_chopped_nexus=save_chopped_nexus, output_directory=output_dir)
+        # TODO FIXME - 20180806 - TOF correction shall be specified by user
+
+        if output_dir is not None and user_bin_parameter is not None:
+            bin_for_vdrive = True
+        else:
+            bin_for_vdrive = False
+
+        status, message = self._myProject.chop_run(run_number, slicer_id,
+                                                   reduce_flag=reduce_data, vanadium=vanadium,
+                                                   save_chopped_nexus=save_chopped_nexus,
+                                                   output_directory=output_dir,
+                                                   tof_correction=False,
+                                                   number_banks=number_banks,
+                                                   user_bin_parameter=user_bin_parameter,
+                                                   vdrive_bin_flag=bin_for_vdrive)
+
+        print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 
         return status, message
 

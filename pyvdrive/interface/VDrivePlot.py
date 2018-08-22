@@ -932,13 +932,11 @@ class VdriveMainWindow(QMainWindow):
         seg_file_name = str(QFileDialog.getOpenFileName(self, 'Open Time Segment File', log_path, file_filter))
 
         # Import file
-        status, ret_obj = self._myWorkflow.parse_time_segment_file(seg_file_name)
-        if status is False:
-            err_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, err_msg)
+        try:
+            ref_run, run_start, time_seg_list = self._myWorkflow.import_data_slicers(seg_file_name)
+        except RuntimeError as run_err:
+            GuiUtility.pop_dialog_error(self, str(run_err))
             return
-        else:
-            ref_run, run_start, time_seg_list = ret_obj
 
         # Set to table
         self.ui.tableWidget_timeSegment.remove_all_rows()

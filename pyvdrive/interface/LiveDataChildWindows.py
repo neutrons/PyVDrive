@@ -80,20 +80,6 @@ class LiveViewSetupDialog(QDialog):
 
         return
 
-    def do_set_refresh_rate(self):
-        """
-        set the update/refresh rate in unit as second
-        :return:
-        """
-        try:
-            refresh_unit_time = int(str(self.ui.lineEdit_updateFreq.text()))
-            self._myParent.set_refresh_rate(refresh_unit_time)
-        except ValueError as value_err:
-            raise RuntimeError('Update/refresh time step {0} cannot be parsed to an integer due to {1}.'
-                               ''.format(self.ui.lineEdit_updateFreq.text(), value_err))
-
-        return
-
     def do_set_acc_plot(self):
         """
         set the accumulation/update unit
@@ -102,9 +88,25 @@ class LiveViewSetupDialog(QDialog):
         try:
             accum_time = int(str(self.ui.lineEdit_collectionPeriod.text()))
             self._myParent.set_accumulation_time(accum_time)
+            self._myParent.show_refresh_info()
         except ValueError as value_err:
             raise RuntimeError('Accumulation time {0} cannot be parsed to an integer due to {1}.'
                                ''.format(str(self.ui.lineEdit_collectionPeriod.text()), value_err))
+
+        return
+
+    def do_set_refresh_rate(self):
+        """
+        set the update/refresh rate in unit as second
+        :return:
+        """
+        try:
+            refresh_unit_time = int(str(self.ui.lineEdit_updateFreq.text()))
+            self._myParent.set_refresh_rate(refresh_unit_time)
+            self._myParent.show_refresh_info()
+        except ValueError as value_err:
+            raise RuntimeError('Update/refresh time step {0} cannot be parsed to an integer due to {1}.'
+                               ''.format(self.ui.lineEdit_updateFreq.text(), value_err))
 
         return
 

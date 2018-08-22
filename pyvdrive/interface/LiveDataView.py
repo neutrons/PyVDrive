@@ -14,9 +14,10 @@ from LiveDataChildWindows import LiveViewSetupDialog
 import gui.ui_LiveDataView as ui_LiveDataView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
-import pyvdrive.lib.mantid_helper as helper
+from pyvdrive.lib import mantid_helper
 from gui.pvipythonwidget import IPythonWorkspaceViewer
-import pyvdrive.lib.vdrivehelper as vdrivehelper
+from pyvdrive.lib import vdrivehelper
+from pyvdrive.lib import datatypeutility
 
 # include this try/except block to remap QString needed when using IPython
 try:
@@ -72,12 +73,12 @@ class VulcanLiveDataView(QMainWindow):
 
         # define data structure by setting some default
         self._myAccumulationWorkspaceNumber = 360  # default as 360 * 0.5 (min) = = 180 min = 3 hours
-        self._myRefreshTimeStep = 10  # seconds
-        self._myAccumulationTime = 30  # 30 x 10 = 300 seconds = 5 min per accumulation
+        self._myUpdateTimePeriod = 10   # seconds.  time interval to update live view
+        self._myAccumulationTime = 30   # seconds.  time interval to start a new slice/chopped = 5 min per accumulation
         # decide whether a new workspace shall be started
-        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
         # containing 2 sets of incremental workspaces for safe
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2
         # incremental workspace list
         self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber  # a holder for workspace names
         self._myIncrementalListIndex = 0  # This is always the next index to write except in add...()
@@ -160,46 +161,6 @@ class VulcanLiveDataView(QMainWindow):
         # general purpose
         self.ui.pushButton_setupGeneralPurposePlot.clicked.connect(self.do_setup_gpplot)
 
-        # # set up the event handlers
-        # self.connect(self.ui.pushButton_startLiveReduction, QtCore.SIGNAL('clicked()'),
-        #              self.do_start_live)
-        # self.connect(self.ui.pushButton_stopLiveReduction, QtCore.SIGNAL('clicked()'),
-        #              self.do_stop_live)
-        #
-        # self.connect(self.ui.pushButton_setROIb1, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank1_roi)
-        # self.connect(self.ui.pushButton_setROIb2, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank2_roi)
-        # self.connect(self.ui.pushButton_setROIb3, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_bank3_roi)
-        # self.connect(self.ui.pushButton_fitB1, QtCore.SIGNAL('clicked()'),
-        #              self.do_fit_bank1_peak)
-        #
-        # # 2D contour
-        #
-        # # menu bar
-        # self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
-        #              self.do_quit)
-        # self.connect(self.ui.actionClear_Logs, QtCore.SIGNAL('triggered()'),
-        #              self.do_clear_log)
-        # self.connect(self.ui.actionIPython_Console, QtCore.SIGNAL('triggered()'),
-        #              self.do_launch_ipython)
-        # self.connect(self.ui.actionControl_Panel, QtCore.SIGNAL('triggered()'),
-        #              self.menu_launch_setup)
-        # self.connect(self.ui.actionMulti_Purpose_Plot, QtCore.SIGNAL('triggered()'),
-        #              self.menu_show_multi_purpose_dock)
-        #
-        # # other widgets
-        # self.connect(self.ui.comboBox_currUnits, QtCore.SIGNAL('currentIndexChanged(int)'),
-        #              self.evt_bank_view_change_unit)
-        #
-        # self.connect(self.ui.checkBox_showPrevReduced,  QtCore.SIGNAL('stateChanged(int)'),
-        #              self.evt_show_high_prev_data)
-        #
-        # # general purpose
-        # self.connect(self.ui.pushButton_setupGeneralPurposePlot, QtCore.SIGNAL('clicked()'),
-        #              self.do_setup_gpplot)
-
         # multiple thread pool
         self._checkStateTimer = None
         self._2dUpdater = None
@@ -271,8 +232,10 @@ class VulcanLiveDataView(QMainWindow):
         set the workspace numbers, indicators and etc.
         Note: all the time given will be in seconds
         :param max_acc_ws_number: number of accumulated workspace that will be stored in memory
-        :param accumulation_time: for long run, the time for a chopped section, i.e., an accumulation workspace's time
-        :param update_time: frequency for update
+        :param accumulation_time: for long run, the time for a chopped section,
+                                  i.e., an accumulation workspace's time
+                                  (unit=second, integer)
+        :param update_time: time period to update the live view (unit=second, integer)
         :return:
         """
         # check inputs
@@ -296,17 +259,19 @@ class VulcanLiveDataView(QMainWindow):
 
         # set as all the inputs are validated
         self._myAccumulationWorkspaceNumber = max_acc_ws_number
-        self._myRefreshTimeStep = update_time
+        self._myUpdateTimePeriod = update_time
         if accumulation_time % update_time == 0:
             self._myAccumulationTime = accumulation_time
         else:
             # accumulation time is not a multiplication to update/refresh time
-            self._myAccumulationTime = (self._myAccumulationTime/self._myRefreshTimeStep + 1) * self._myRefreshTimeStep
+            # reset define the accumulation time to be nearest integer multiplication to update time period
+            accumulation_time = (accumulation_time/self._myUpdateTimePeriod+1)*self._myUpdateTimePeriod
+            self._myAccumulationTime = accumulation_time
             self.write_log(level='warning', message='Accumulation time is modified to {0}'
                                                     ''.format(self._myAccumulationTime))
         # END-IF
-        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myRefreshTimeStep * 2  # leave some space
-        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myRefreshTimeStep
+        self._myIncrementalWorkspaceNumber = self._myAccumulationTime / self._myUpdateTimePeriod * 2  # leave some space
+        self._myMaxIncrementalNumber = self._myAccumulationTime / self._myUpdateTimePeriod
 
         # set the lists
         self._myIncrementalWorkspaceList = [None] * self._myIncrementalWorkspaceNumber
@@ -394,12 +359,14 @@ class VulcanLiveDataView(QMainWindow):
         start to fit single peak of certain bank
         :param bank_id:
         :param graphics_view:
-        :param run_start:
+        :param x_max_widget:
+        :param x_min_widget
         :return:
         """
         # check inputs
-        assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not a {1}.' \
-                                         ''.format(bank_id, type(bank_id))
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, None))
+
+        # check input special instances
         assert graphics_view.__class__.__name__.count('SingleBankView') > 0,\
             'Graphics view {0} must be a Q GraphicsView instance but not a {1}.' \
             ''.format(graphics_view, type(graphics_view))
@@ -417,12 +384,13 @@ class VulcanLiveDataView(QMainWindow):
             self.write_log('error', err_msg)
             return
 
-        # current or previous?
+        # TODO - ASAP : need a use case to continue
+        # FIXME - the data obtained is current or previous?
         vec_x, vec_y = graphics_view.get_data(x_min, x_max)
-        # TODO ASAP
         coeff, model_y = optimize_utilities.fit_gaussian(vec_x, vec_y)
 
-        # blabla
+        # plot the fitted data
+        graphics_view.plot_fitted_peak(vec_x, model_y)
 
         return
 
@@ -463,7 +431,7 @@ class VulcanLiveDataView(QMainWindow):
 
         # get axis
         curr_ws_name = self._myIncrementalWorkspaceList[self._myIncrementalListIndex - 1]
-        logs = helper.get_sample_log_names(curr_ws_name, smart=True)
+        logs = mantid_helper.get_sample_log_names(curr_ws_name, smart=True)
 
         self._gpPlotSetupDialog.set_axis_options(logs, reset=True)
         self._gpPlotSetupDialog.show()
@@ -575,7 +543,7 @@ class VulcanLiveDataView(QMainWindow):
         :return:
         """
         # start timer
-        self._checkStateTimer = TimerThread(self._myRefreshTimeStep, self)
+        self._checkStateTimer = TimerThread(self._myUpdateTimePeriod, self)
         self._checkStateTimer.start()
 
         self._2dUpdater = TwoDimPlotUpdateThread()
@@ -690,21 +658,21 @@ class VulcanLiveDataView(QMainWindow):
             # get workspace name
             try:
                 ws_name_i = self._myAccumulationWorkspaceList[acc_list_index]
-            except IndexError as index_err:
-                raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
-                                   ''.format(acc_list_index, len(self._myAccumulationWorkspaceList),
-                                             index_err))
-            finally:
                 # check
                 if ws_name_i is None:
                     # no more workspace (range is too big)
                     break
-                elif helper.workspace_does_exist(ws_name_i) is False:
+                elif mantid_helper.workspace_does_exist(ws_name_i) is False:
                     # this is weird!  shouldn't be removed
                     break
                 else:
                     ws_name_list.append(ws_name_i)
                     ws_index_list.append(acc_list_index)
+            except IndexError as index_err:
+                raise RuntimeError('Index {0} is out of incremental workspace range {1} due to {2}.'
+                                   ''.format(acc_list_index, len(self._myAccumulationWorkspaceList),
+                                             index_err))
+            # END-TRY-EXCEPT
         # END-FOR
 
         # reverse the order
@@ -791,9 +759,9 @@ class VulcanLiveDataView(QMainWindow):
                 prev_acc_index = acc_index
 
             # get data from memory
-            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name_i,
-                                                                         bank_id=bank_id, target_unit='dSpacing',
-                                                                         point_data=True, start_bank_id=1)
+            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name=ws_name_i,
+                                                                                bank_id=bank_id, target_unit='dSpacing',
+                                                                                point_data=True, start_bank_id=1)
             acc_data_dict[acc_index] = data_set_dict[bank_id]
         # END-FOR
 
@@ -822,9 +790,9 @@ class VulcanLiveDataView(QMainWindow):
         # get data
         data_set = dict()
         for index, ws_name in enumerate(ws_name_list):
-            data_set_dict, current_unit = helper.get_data_from_workspace(workspace_name=ws_name,
-                                                                         bank_id=bank_id, target_unit='dSpacing',
-                                                                         point_data=True, start_bank_id=1)
+            data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name=ws_name,
+                                                                                bank_id=bank_id, target_unit='dSpacing',
+                                                                                point_data=True, start_bank_id=1)
             data_set[ws_index_list[index]] = data_set_dict[bank_id]
         # END-FOR
 
@@ -1262,16 +1230,17 @@ class VulcanLiveDataView(QMainWindow):
                 continue
 
             # convert unit
-            if helper.get_workspace_unit(ws_name_i) != 'dSpacing':
-                helper.mtd_convert_units(ws_name_i, 'dSpacing')
+            if mantid_helper.get_workspace_unit(ws_name_i) != 'dSpacing':
+                mantid_helper.mtd_convert_units(ws_name_i, 'dSpacing')
             else:
                 self.write_log('information', 'Input workspace {0} has unit dSpacing.'.format(ws_name_i))
+            # END-IF-ELSE
 
             # rebin
-            helper.rebin(ws_name_i, '0.3,-0.001,3.5', preserve=False)
+            mantid_helper.rebin(ws_name_i, '0.3,-0.001,3.5', preserve=False)
 
             # reference to workspace
-            workspace_i = helper.retrieve_workspace(ws_name_i)
+            workspace_i = mantid_helper.retrieve_workspace(ws_name_i)
 
             ws_x_info = ''
             for iws in range(3):
@@ -1300,7 +1269,7 @@ class VulcanLiveDataView(QMainWindow):
                 self.ui.lineEdit_logStarTime.setText(str(east_time))
 
             # skip non-matrix workspace or workspace sounds not right
-            if not (helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
+            if not (mantid_helper.is_matrix_workspace(ws_name_i) and 3 <= workspace_i.getNumberHistograms() < 20):
                 # skip weird workspace
                 log_message = 'Workspace {0} of type {1} is not expected.\n'.format(workspace_i, type(workspace_i))
                 self.write_log('error', log_message)
@@ -1352,7 +1321,7 @@ class VulcanLiveDataView(QMainWindow):
 
         self._set_workspace_manager(max_acc_ws_number=self._myAccumulationWorkspaceNumber,
                                     accumulation_time=accumulation_time,
-                                    update_time=self._myRefreshTimeStep)
+                                    update_time=self._myUpdateTimePeriod)
 
         return
 
@@ -1437,10 +1406,9 @@ class VulcanLiveDataView(QMainWindow):
         """ Show the accumulation/refresh/update rate information
         :return:
         """
-        # TODO NOW NOW NOW : whether _myAccumulationTime is changed, this method shall be called!
-        # TODO NOW - Better documentation on 'lineEdit_accPeriod'
-        acc_time = self._myRefreshTimeStep * self._myAccumulationTime
+        acc_time = self._myAccumulationTime
         self.ui.lineEdit_accPeriod.setText('{0} sec'.format(acc_time))
+        self.ui.lineEdit_updateTime.setText('{} sec'.format(self._myUpdateTimePeriod))
 
         return
 
@@ -1462,7 +1430,7 @@ class VulcanLiveDataView(QMainWindow):
 
             # clone workspace
             accumulate_name = 'Accumulated_{0:05d}'.format(self._myAccumulationListIndex)
-            helper.clone_workspace(ws_name, accumulate_name)
+            mantid_helper.clone_workspace(ws_name, accumulate_name)
             self._inAccumulationWorkspaceName = accumulate_name
 
             # add to list
@@ -1486,7 +1454,7 @@ class VulcanLiveDataView(QMainWindow):
 
         else:
             # add to existing accumulation workspace
-            ws_in_acc = helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
+            ws_in_acc = mantid_helper.retrieve_workspace(self._inAccumulationWorkspaceName, raise_if_not_exist=True)
 
             # more check on histogram number and spectrum size
             if ws_in_acc.getNumberHistograms() != workspace_i.getNumberHistograms():
@@ -1607,7 +1575,7 @@ class VulcanLiveDataView(QMainWindow):
 
         message = ''
         for ws_name in new_ws_name_list:
-            ws_i = helper.retrieve_workspace(ws_name)
+            ws_i = mantid_helper.retrieve_workspace(ws_name)
             if ws_i is None:
                 self.write_log('error', 'In update-timer: unable to retrieve workspace {0}'.format(ws_name))
             elif ws_i.id() == 'Workspace2D' or ws_i.id() == 'EventWorkspace' and ws_i.name().startswith('output'):
