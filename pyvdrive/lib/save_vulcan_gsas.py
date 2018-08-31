@@ -3,9 +3,9 @@ import os
 import os.path
 import numpy
 import sys
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-#sys.path.append("/opt/mantidnightly/bin")
-sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
+# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+# sys.path.append("/opt/mantidnightly/bin")
+# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
 

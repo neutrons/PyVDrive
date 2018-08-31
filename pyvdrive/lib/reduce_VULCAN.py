@@ -55,7 +55,7 @@ import save_vulcan_gsas
 import vdrivehelper as helper
 
 #sys.path.append("/opt/mantidnightly/bin")
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
+#sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService

@@ -24,8 +24,8 @@ except (AttributeError, ImportError):
 
 # Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
 import socket
-if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
-    sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
+# if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
+#     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 
 import gui.ui_VdrivePlot as mainUi
 import PeakPickWindow as PeakPickWindow
