@@ -30,6 +30,15 @@ def test_main():
     cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
     command_tester.run_command(cmd)
 
+    # Test 4 - nED case - version 2 with ROI
+    cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',ROI=highangle_roi_0607.xml'
+    command_tester.run_command(cmd)
+
+    # Test 5 - nED case - version 2 with ROI
+    cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
+          'ROI=tests/data/highangle_roi_0607.xml' \
+          ',mask=tests/data/highangle_mask_test.xml'
+    command_tester.run_command(cmd)
 
     ## FIXME/TODO - Check result
 

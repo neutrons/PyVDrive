@@ -58,7 +58,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Controlling data structure on lines that are plotted on graph
         self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
-        self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
+        # self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
 
         # A status flag to show whether the current plot is for sample log or diffraction data
         self._currentPlotSampleLogs = False
@@ -129,6 +129,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # radio buttons
         self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)
+        self.ui.radioButton_chooseDiffraction.toggled.connect(self.evt_toggle_plot_options)
 
         # other
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -881,9 +882,15 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             current_run = int(current_run_str)
         else:
             current_run = current_run_str
-        ipts_number, run_number = self._dataIptsRunDict[current_run]
 
-        self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
+        ipts_number = self._iptsNumber
+
+        # try:
+        #     ipts_number, run_number = self._dataIptsRunDict[current_run]
+        # except KeyError as key_err:
+        #     raise KeyError('{}: Available keys: {}'.format(key_err, self._dataIptsRunDict.keys()))
+
+        self._vanadiumProcessDialog.set_ipts_run(ipts_number, current_run)
 
         # FWHM
         if self._vanadiumFWHM is not None:
@@ -1277,6 +1284,22 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.do_plot_diffraction_data()
 
         return
+
+    def evt_toggle_plot_options(self):
+        """
+        handling event as radioButton choose diffraction to plot or choose sample log to plot
+        :return:
+        """
+        if self.ui.radioButton_chooseDiffraction.isChecked():
+            plot_diffraction = True
+        else:
+            plot_diffraction = False
+
+        self.ui.groupBox_plotREducedData.setEnabled(plot_diffraction)
+        self.ui.groupBox_plotLog.setEnabled(not plot_diffraction)
+
+        return
+
 
     def evt_toggle_run_type(self):
         """
@@ -2022,11 +2045,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         current_run_str = str(self.ui.comboBox_runs.currentText())
         if current_run_str.isdigit():
             current_run_number = int(current_run_str)
-            ipts_number, run_number = self._dataIptsRunDict[current_run_number]
+            # ipts_number, run_number = self._dataIptsRunDict[current_run_number]
             data_key = None
         else:
             data_key = current_run_str
-            ipts_number, run_number = self._dataIptsRunDict[data_key]
+            # ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
         status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
