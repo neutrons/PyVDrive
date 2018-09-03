@@ -1322,6 +1322,31 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
     return outputs
 
 
+def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
+    """
+    load Mantid compatible masking file in XML format
+    :param data_ws_name:
+    :param mask_file_name:
+    :param mask workspace name:
+    :return:
+    """
+    datatypeutility.check_file_name(mask_file_name, check_exist=True, note='ROI XML file')
+    if not is_matrix_workspace(data_ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(data_ws_name))
+
+    if mask_ws_name is None:
+        mask_ws_name = os.path.basename(mask_file_name).split('.')[0] + '_MASK'
+
+    # load XML file: Mantid can recognize the ROI or mask file
+    # In output workspace, 1 is for being masked
+    mantidapi.LoadMask(Instrument='VULCAN',
+                       RefWorkspace=data_ws_name,
+                       InputFile=mask_file_name,
+                       OutputWorkspace=mask_ws_name)
+
+    return mask_ws_name
+
+
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
     """ Load NeXus file
     :param data_file_name:
@@ -1352,23 +1377,27 @@ def load_nexus_processed(nexus_name, workspace_name):
     return out_ws
 
 
-def load_roi_xml(ws_name, roi_file_name):
+def load_roi_xml(data_ws_name, roi_file_name, roi_ws_name=None):
     """
     load standard ROI XML file
-    :param ws_name:
+    :param data_ws_name: name of the workspace to be masked
     :param roi_file_name:
+    :param roi_ws_name: Region of interest workspace name
     :return: ROI workspace name
     """
     datatypeutility.check_file_name(roi_file_name, check_exist=True, note='ROI XML file')
-    if not is_matrix_workspace(ws_name):
-        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(ws_name))
+    if not is_matrix_workspace(data_ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(data_ws_name))
 
-    roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+    if roi_file_name is None:
+        roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+    else:
+        datatypeutility.check_string_variable('ROI workspace name', roi_ws_name)
 
     # load XML file: Mantid can recognize the ROI or mask file
     # In output workspace, 1 is for being masked
     mantidapi.LoadMask(Instrument='VULCAN',
-                       RefWorkspace=ws_name,
+                       RefWorkspace=data_ws_name,
                        InputFile=roi_file_name,
                        OutputWorkspace=roi_ws_name)
 

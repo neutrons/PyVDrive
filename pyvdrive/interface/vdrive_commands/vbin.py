@@ -87,7 +87,8 @@ class VBin(procss_vcommand.VDriveCommand):
     """
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
-                     'BinFoler', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION']
+                     'BinFolder', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION',
+                     'ROI', 'MASK']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -96,10 +97,12 @@ class VBin(procss_vcommand.VDriveCommand):
         'BANKS': 'Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.',
         'RUNV': 'Run number for vanadium file (file in instrument directory)',
         'OneBank': 'Add 2 bank data together (=1).',
+        'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)',
         'Mytofbmin': 'User defined TOF min in binning parameter',
         'Tag': '"Si/V" for instrument calibration.',
+        'ROI': 'File for Mantid made region of interest file in XML format',
+        'MASK': 'File for Mantid made mask file in XML format',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
-        'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2'
     }
 
@@ -187,6 +190,16 @@ class VBin(procss_vcommand.VDriveCommand):
             # default
             bank_group = 3
 
+        # region of interest or mask file
+        if 'ROI' in self._commandArgsDict:
+            roi_file_names = self.get_argument_as_list('ROI', str)
+        else:
+            roi_file_names = list()
+        if 'MASK' in self._commandArgsDict:
+            mask_file_names = self.get_argument_as_list('MASK', str)
+        else:
+            mask_file_names = list()
+
         # reduction algorithm version
         if 'VERSION' in self._commandArgsDict:
             reduction_alg_ver = int(self._commandArgsDict['VERSION'])
@@ -208,7 +221,9 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        binning_parameters=binning_parameters,
                                                                        align_to_vdrive_bin=use_default_binning,
                                                                        num_banks=bank_group,
-                                                                       merge_banks=merge_to_one_bank)
+                                                                       merge_banks=merge_to_one_bank,
+                                                                       roi_list=roi_file_names,
+                                                                       mask_list=mask_file_names)
 
         else:
             # reduce event data without chopping
@@ -240,7 +255,9 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                binning_parameters=binning_parameters,
                                                                merge_runs=False,
                                                                num_banks=bank_group,
-                                                               version=reduction_alg_ver)
+                                                               version=reduction_alg_ver,
+                                                               roi_list=roi_file_names,
+                                                               mask_list=mask_file_names)
 
         # END-IF-ELSE
 
@@ -300,7 +317,9 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VBIN,RUNS=152782, RUNE=153144, BANKS=7\n'
         help_str += 'New (in test):\n'
         help_str += '> VBIN,IPTS=Latest,RUNS=Latest,VERSION=2\n'
-        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5\n'
+        help_str += 'Support list of ROI and Mask\n'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,ROI=[file1.xml, file2.xml]'
 
         return help_str
 

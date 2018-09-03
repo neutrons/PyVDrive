@@ -127,7 +127,7 @@ class WorkspaceViewWidget(QWidget):
         :return:
         """
         script = script.strip()
-        command = script.split()[0]
+        command = script.split(',')[0]
 
         print '[DB...BAT] Going to execute: ', script
 
@@ -147,16 +147,14 @@ class WorkspaceViewWidget(QWidget):
             # output help
             err_msg = self.get_help_message()
         else:
-            try:
-                status, err_msg = self._myMainWindow.execute_command(script)
-            except AssertionError as ass_err:
-                status = False
-                err_msg = 'Failed to execute VDRIVE command due to %s.' % str(ass_err)
+            # Reserved VDRIVE-IDL command
+            status, err_msg = self._myMainWindow.execute_command(script)
+            # assertion error is not to be caught as it reflects coding error
 
             if status:
-                err_msg = 'VDRIVE command %s is executed successfully.\n%s.' % (command, err_msg)
+                err_msg = 'VDRIVE command {} is executed successfully ({}).'.format(command, err_msg)
             else:
-                err_msg = 'Failed to execute VDRIVE command %s due to\n%s.' % (command, err_msg)
+                err_msg = 'VDRIVE command {} is failed to execute due to {}.'.format(command, err_msg)
 
         return err_msg
 

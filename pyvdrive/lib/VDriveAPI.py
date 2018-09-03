@@ -820,6 +820,7 @@ class VDriveAPI(object):
 
             # from project
             reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
+            print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
 
@@ -1299,7 +1300,8 @@ class VDriveAPI(object):
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
                         standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False, num_banks=3,
+                        merge_runs=False, dspace=False, num_banks=3, roi_list=None,
+                        mask_list=None,
                         version=1):
         """
         Reduce a set of data
@@ -1327,6 +1329,8 @@ class VDriveAPI(object):
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
         :param version: reduction algorithm version in integer
+        :param roi_list:
+        :param mask_list:
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1359,27 +1363,34 @@ class VDriveAPI(object):
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
-                                                      is_dry_run=False)
+                                                      is_dry_run=False,
+                                                      roi_list=roi_list,
+                                                      mask_list=mask_list)
             message = message
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
-            # TODO - NowNowNow - Starting from here!
-            print ('GSAS = {}'.format(gsas))
-
-            status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
-                                                                    output_directory=output_directory,
-                                                                    d_spacing=True,
-                                                                    binning_parameters=binning_parameters,
-                                                                    convert_to_matrix=True,
-                                                                    number_banks=num_banks,
-                                                                    gsas=gsas,
-                                                                    merge_banks=merge_banks,
-                                                                    merge_runs=merge_runs)
+            run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
+                                                                              output_directory=output_directory,
+                                                                              d_spacing=True,
+                                                                              binning_parameters=binning_parameters,
+                                                                              convert_to_matrix=True,
+                                                                              number_banks=num_banks,
+                                                                              gsas=gsas,
+                                                                              merge_banks=merge_banks,
+                                                                              merge_runs=merge_runs,
+                                                                              roi_list=roi_list,
+                                                                              mask_list=mask_list)
+            status = True
+            message = ''
+            for msg in msg_list:
+                message += msg + '\n'
 
         else:
             # manual reduction: Reduce runs
             # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
+            if roi_list is not None or mask_list is not None:
+                raise RuntimeError('ROI/MASK is not supported!')
             try:
                 status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,

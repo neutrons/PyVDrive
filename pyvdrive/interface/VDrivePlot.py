@@ -22,11 +22,6 @@ try:
 except (AttributeError, ImportError):
     _fromUtf8 = lambda s: s
 
-# Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
-import socket
-# if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
-#     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
-
 import gui.ui_VdrivePlot as mainUi
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
@@ -40,10 +35,10 @@ import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
 
-
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
 import pyvdrive.lib.VDriveAPI as VdriveAPI
+from pyvdrive.lib import datatypeutility
 
 __author__ = 'wzz'
 
@@ -1119,18 +1114,8 @@ class VdriveMainWindow(QMainWindow):
         :param vdrive_command: a command (including all the arguments)
         :return:
         """
-        # check
-        assert isinstance(vdrive_command, str), 'VDRIVE command must be a string but not.' \
-                                                '' % str(type(vdrive_command))
-
-        # split
-        # need to strip the space around command
-        # vdrive_command = vdrive_command.replace(' ', '')
-
         # split the command from arguments
-        command_script = vdrive_command.split(',')
-        command = command_script[0].strip()
-        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])
+        status, err_msg = self._vdriveCommandProcessor.process_commands(vdrive_command)
 
         return status, err_msg
 

@@ -1197,6 +1197,9 @@ class ReductionManager(object):
         # some initialization operation
         self.load_vdrive_bins(default=True)
 
+        # masks and ROI
+        self._loaded_masks = dict()  # [mask/roi xml] = mask_ws_name, is_roi
+
         return
 
     @staticmethod
@@ -1221,32 +1224,6 @@ class ReductionManager(object):
 
         return params_dict
 
-    # NOTE: remove method add_reduced_workspace(); use ReductionTracker instead
-    # def add_reduced_workspace(self, run_number, out_ws_name, binning_parameters=None):
-    #     """
-    #     add a reduced workspace
-    #     :param run_number:
-    #     :param out_ws_name:
-    #     :param binning_parameters:
-    #     :return:
-    #     """
-    #     datatypeutility.check_int_variable('Run number', run_number, (1, None))
-    #     datatypeutility.check_string_variable('Reduced workspace name', out_ws_name)
-    #
-    #     # add
-    #     if run_number not in self._runFocusedWorkspaceDict:
-    #         self._runFocusedWorkspaceDict[run_number] = dict()
-    #
-    #     if binning_parameters is not None:
-    #         binning_key = str(binning_parameters)
-    #     else:
-    #         binning_key = None
-    #
-    #     self._runFocusedWorkspaceDict[run_number][binning_key] = out_ws_name
-    #
-    #     return
-
-    # TEST NOW - Goal: This method will replace chop_run() and chop_reduce_run()
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, vanadium, user_binning_parameter, vdrive_binning):
@@ -1477,6 +1454,9 @@ class ReductionManager(object):
                            [case 4] (run number, slice key)
         """
         return_list = list()
+
+        print ('[DB...BAT] Reduction track dict: {}'.format(self._reductionTrackDict.keys()))
+
         # from tracker
         for tracker_key in self._reductionTrackDict.keys():
             # get tracker with is_reduced being True
@@ -1545,17 +1525,6 @@ class ReductionManager(object):
         datatypeutility.check_int_variable('Run number', run_number, (1, None))
         if binning_params is not None:
             datatypeutility.check_string_variable('Binning parameter (string)', binning_params)
-
-        # where is this run?
-        # if run_number in self._runFocusedWorkspaceDict:
-        #     # simple reduce
-        #     print ('[DB...BAT] run-focused-workspace-dict[{}] has {}'
-        #            ''.format(run_number, self._runFocusedWorkspaceDict[run_number].keys()))
-        #     # use the first binning parameter as default
-        #     if binning_params is None:
-        #         binning_params = self._runFocusedWorkspaceDict[run_number].keys()[0]
-        #     return_ws_name = self._runFocusedWorkspaceDict[run_number][binning_params]
-        # else:
 
         # full reduction
         # get tracker
@@ -1663,7 +1632,7 @@ class ReductionManager(object):
         :param virtual_instrument_geometry:
         :param keep_raw_ws:
         :param convert_to_matrix:
-        :return:
+        :return: string as reduction message for successful reduction
         """
         def check_binning_parameter_range(x_min, x_max, ws_unit):
             """
@@ -1720,18 +1689,17 @@ class ReductionManager(object):
         self._diff_focus_params['EditInstrumentGeometry'] = virtual_instrument_geometry
 
         # align and focus
-        print ('[DB...FLAG] About to align and focus event workspace with binning {}'.format(binning_params))
-        mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
-                                                  calibration_workspace, mask_workspace, grouping_workspace,
-                                                  reduction_params_dict=self._diff_focus_params,
-                                                  convert_to_matrix=convert_to_matrix)
+        red_msg = mantid_reduction.align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
+                                                            calibration_workspace, mask_workspace, grouping_workspace,
+                                                            reduction_params_dict=self._diff_focus_params,
+                                                            convert_to_matrix=convert_to_matrix)
 
         # remove input event workspace
         if output_ws_name != event_ws_name and keep_raw_ws is False:
             # if output name is same as input. no need to do the operation
             mantid_helper.delete_workspace(event_ws_name)
 
-        return
+        return red_msg
 
     def load_vdrive_bins(self, default=False, file_name=None):
         """
@@ -1761,6 +1729,40 @@ class ReductionManager(object):
         else:
             raise RuntimeError('VDRIVE binning reference file {} is not supported. Only .dat and .h5 '
                                'are recognized and supported.'.format(file_name))
+
+        return
+
+    def mask_detectors(self, event_ws_name, mask_file_name, is_roi=False):
+        """ Mask detectors and optionally load the mask file for first time
+        :param event_ws_name:
+        :param mask_file_name:
+        :param is_roi:
+        :return:
+        """
+        # check input file
+        datatypeutility.check_file_name(mask_file_name, check_exist=True, check_writable=False,
+                                        is_dir=False, note='Mask/ROI (Mantiod) XML file')
+
+        if mask_file_name in self._loaded_masks:
+            # pre-loaded
+            mask_ws_name, is_roi = self._loaded_masks[mask_file_name]
+        else:
+            # create workspace name
+            mask_ws_name = mask_file_name.lower().split('.xml')[0].replace('/', '.')
+            # load
+            if is_roi:
+                mask_ws_name = 'roi.' + mask_ws_name
+                mantid_helper.load_roi_xml(event_ws_name, mask_file_name, mask_ws_name)
+            else:
+                mask_ws_name = 'mask.' + mask_ws_name
+                mantid_helper.load_mask_xml(event_ws_name, mask_file_name, mask_ws_name)
+
+            # record
+            self._loaded_masks[mask_file_name] = mask_ws_name, is_roi
+
+        # Mask detectors
+        mantid_helper.mask_workspace(to_mask_workspace_name=event_ws_name,
+                                     mask_workspace_name=mask_ws_name)
 
         return
 
@@ -1865,7 +1867,7 @@ class ReductionManager(object):
 
     # TODO | Code Quality - 20180713 - Find out how to reuse codes from vulcan_slice_reduce.SliceFocusVulcan
     def reduce_event_nexus(self, ipts_number, run_number, event_nexus_name, target_unit, binning_parameters,
-                           convert_to_matrix, num_banks):
+                           convert_to_matrix, num_banks, roi_list, mask_list):
         """
         reduce event workspace including load and diffraction focus
         :param run_number:
@@ -1874,12 +1876,22 @@ class ReductionManager(object):
         :param binning_parameters:
         :param convert_to_matrix:
         :param num_banks:
+        :param roi_list:
+        :param mask_list:
         :return:
         """
         # Load data
         event_ws_name = self.get_event_workspace_name(run_number=run_number)
         mantid_helper.load_nexus(event_nexus_name, event_ws_name, meta_data_only=False)
         print ('[DB...INFO] Successfully loaded {0} to {1}'.format(event_nexus_name, event_ws_name))
+
+        # Mask data
+        datatypeutility.check_list('Region of interest file list', roi_list)
+        datatypeutility.check_list('Mask file list', mask_list)
+        for roi_file_name in roi_list:
+            self.mask_detectors(event_ws_name, roi_file_name, is_roi=True)
+        for mask_file_name in mask_list:
+            self.mask_detectors(event_ws_name, mask_file_name, is_roi=False)
 
         # get start time: it is not convenient to get date/year/month from datetime64.
         # use the simple but fragile method first
@@ -1891,7 +1903,6 @@ class ReductionManager(object):
                       ''.format(run_start_time.__class__.__name__)
             print ('[RAISING ERROR] {0}'.format(err_msg))
             raise NotImplementedError(err_msg)
-        print ('[DB...BAT] run start date: {0} of type {1}'.format(run_start_date, type(run_start_date)))
 
         # check (and load as an option) calibration file
         has_loaded_cal = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
@@ -1902,27 +1913,33 @@ class ReductionManager(object):
         group_ws_name = workspaces.grouping
         mask_ws_name = workspaces.mask
 
-        # diffraction focus
-        print ('[DB...FLAG] About to diffraction focus!')
-        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
-        self.diffraction_focus_workspace(event_ws_name, event_ws_name,
-                                         binning_params=binning_parameters,
-                                         target_unit=target_unit,
-                                         calibration_workspace=calib_ws_name,
-                                         mask_workspace=mask_ws_name,
-                                         grouping_workspace=group_ws_name,
-                                         virtual_instrument_geometry=virtual_geometry_dict,
-                                         convert_to_matrix=convert_to_matrix,
-                                         keep_raw_ws=False)
-
+        # set tracker
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
+        tracker.is_reduced = False
+
+        # diffraction focus
+        virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
+        red_message = self.diffraction_focus_workspace(event_ws_name, event_ws_name,
+                                                       binning_params=binning_parameters,
+                                                       target_unit=target_unit,
+                                                       calibration_workspace=calib_ws_name,
+                                                       mask_workspace=mask_ws_name,
+                                                       grouping_workspace=group_ws_name,
+                                                       virtual_instrument_geometry=virtual_geometry_dict,
+                                                       convert_to_matrix=convert_to_matrix,
+                                                       keep_raw_ws=False)
+
         if target_unit.lower().count('d'):
             tracker.set_reduced_workspaces(vdrive_bin_ws=None, tof_ws=None, dspace_ws=event_ws_name)
         else:
             tracker.set_reduced_workspaces(vdrive_bin_ws=None, tof_ws=event_ws_name, dspace_ws=None)
+
+        # set tracker
+        tracker.is_reduced = True
+
         # END-IF
 
-        return event_ws_name
+        return event_ws_name, red_message
 
     def set_chopped_reduced_workspaces(self, run_number, slicer_key, workspace_name_list, append, compress=False):
         """

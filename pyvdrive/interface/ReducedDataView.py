@@ -23,6 +23,7 @@ except AttributeError:
 import gui.ui_ReducedDataView
 import vanadium_controller_dialog
 import pyvdrive.lib.datatypeutility
+from pyvdrive.lib import datatypeutility
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -1300,7 +1301,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-
     def evt_toggle_run_type(self):
         """
         toggle the group boxes for reduced runs
@@ -1342,19 +1342,26 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # set unit
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        # Get the data sets that are currently plot and replace them with new unit
-        existing_entries = self._currentPlotDataKeyDict.keys()
-        for entry_key in existing_entries:
-            # plot: using default x limit
-            data_key, bank_id, unit = entry_key
+        # plot
+        self.do_plot_diffraction_data()
 
-            # skip the bank that is not plotted now
-            if bank_id != self._currBank:
-                continue
-
-            self.plot_by_data_key(data_key=data_key, bank_id_list=[self._currBank], over_plot=False,
-                                  x_limit=None)
-        # END-FOR
+        # # Get the data sets that are currently plot and replace them with new unit
+        # existing_entries = self._currentPlotDataKeyDict.keys()
+        # self.do_
+        #
+        #
+        #
+        # for entry_key in existing_entries:
+        #     # plot: using default x limit
+        #     data_key, bank_id, unit = entry_key
+        #
+        #     # skip the bank that is not plotted now
+        #     if bank_id != self._currBank:
+        #         continue
+        #
+        #     self.plot_by_data_key(data_key=data_key, bank_id_list=[self._currBank], over_plot=False,
+        #                           x_limit=None)
+        # # END-FOR
 
         return
 
@@ -1959,12 +1966,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_ipts_number(self, ipts_number):
-        """
-
+        """ set IPTS number
         :param ipts_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'Set IPTS number must be an integer.'
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
 
         self._iptsNumber = ipts_number
 

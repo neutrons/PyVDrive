@@ -39,7 +39,7 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
     :param grouping_ws_name:
     :param reduction_params_dict:
     :param convert_to_matrix:
-    :return:
+    :return: string as message
     """
     # check input
     if not mantid_helper.is_event_workspace(event_ws_name):
@@ -54,6 +54,8 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
         raise RuntimeError('Input {0} is not a grouping workspace'.format(grouping_ws_name))
 
     datatypeutility.check_dict('Reduction parameter dictionary', reduction_params_dict)
+
+    reduction_message = ''
 
     # Compress events as an option
     if 'CompressEvents' in reduction_params_dict:
@@ -91,18 +93,25 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
 
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:
-        mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
-                                         PrimaryFlightPath=mantid_helper.VULCAN_L1,
-                                         SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
-                                         L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
-                                         Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
-                                         Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+        try:
+            mantidapi.EditInstrumentGeometry(Workspace=output_ws_name,
+                                             PrimaryFlightPath=mantid_helper.VULCAN_L1,
+                                             SpectrumIDs=reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
+                                             L2=reduction_params_dict['EditInstrumentGeometry']['L2'],
+                                             Polar=reduction_params_dict['EditInstrumentGeometry']['Polar'],
+                                             Azimuthal=reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+        except RuntimeError as run_err:
+            reduction_message += 'Non-critical failure on EditInstrumentGeometry: {}\n'.format(run_err)
 
     # rebin
     if binning_params is not None:
         mantid_helper.rebin(workspace_name=output_ws_name, params=binning_params, preserve=not convert_to_matrix)
 
-    return
+    # remove last \n
+    if len(reduction_message) > 0:
+        reduction_message = reduction_message[:-1]
+
+    return reduction_message
 
 
 # TODO - This method shall be refactored with align_and_focus_event_ws - FIXME

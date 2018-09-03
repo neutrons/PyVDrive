@@ -1239,7 +1239,8 @@ class ProjectManager(object):
         return reduce_all_success, message
 
     def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs):
+                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs,
+                              roi_list, mask_list):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         :param run_number_list:
         :param output_directory:
@@ -1250,12 +1251,20 @@ class ProjectManager(object):
         :param gsas: flag to reduce to GSAS file
         :param merge_banks:
         :param merge_runs:
-        :return:
+        :param roi_list:
+        :param mask_list:
+        :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
         datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
+
+        # force ROI/MASK file list to be 'list()'
+        if roi_list is None:
+            roi_list = list()
+        if mask_list is None:
+            mask_list = list()
 
         # check binning parameters
         if binning_parameters is None:
@@ -1284,9 +1293,11 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
-                                                                        unit, binning_parameters,
-                                                                        convert_to_matrix, num_banks=number_banks)
+                out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
+                                                                             unit, binning_parameters,
+                                                                             convert_to_matrix, num_banks=number_banks,
+                                                                             roi_list=roi_list,
+                                                                             mask_list=mask_list)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
                 # self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
@@ -1298,6 +1309,8 @@ class ProjectManager(object):
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
+            else:
+                error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
             # manage
 
         # END-FOR

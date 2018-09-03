@@ -1,15 +1,7 @@
 # Set up path to PyVDrive
-import sys
 import os
-import socket
-# Import PyVDRive expliclity, if it is on analysis computer
-# if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
-#     sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
 import pyvdrive.lib.VDriveAPI as VdriveAPI
-
-"""
-Base class for VDRIVE command processors
-"""
+from pyvdrive.lib import datatypeutility
 
 
 class CommandKeyError(Exception):
@@ -18,7 +10,7 @@ class CommandKeyError(Exception):
     """
     def __init__(self, error):
         """
-
+        Base class for VDRIVE command processors
         """
         super(CommandKeyError, self).__init__(error)
 
@@ -62,11 +54,6 @@ class VDriveCommand(object):
 
         return
 
-    def exec_cmd(self):
-        """ Execute VDRIVE command
-        """
-        raise NotImplementedError('Method exec_cmd must be override')
-
     def check_command_arguments(self, supported_arg_list):
         """ Check whether the command arguments are valid
         """
@@ -84,6 +71,11 @@ class VDriveCommand(object):
 
         return
 
+    def exec_cmd(self):
+        """ Execute VDRIVE command
+        """
+        raise NotImplementedError('Method exec_cmd must be override')
+
     def get_help(self):
         """
         Get help message
@@ -97,6 +89,28 @@ class VDriveCommand(object):
         :return: 2-tuple: (1) integer for IPTS (2) list of integers for run numbers
         """
         return self._iptsNumber, self._runNumberList[:]
+
+    def get_argument_as_list(self, arg_name, data_type):
+        """ The argument is pre-processed such that ',' is replaced by '~', which is rarely used in any case
+        :param arg_name:
+        :param data_type:
+        :return:
+        """
+        datatypeutility.check_string_variable('{} argument'.format(self._commandName), arg_name)
+        arg_input_value = self._commandArgsDict[arg_name]
+
+        arg_values = arg_input_value.split('~')
+        return_list = list()
+
+        for value in arg_values:
+            # string value: remove space at two ends
+            value = value.strip()
+            # convert value
+            value = data_type(value)
+            # append
+            return_list.append(value)
+
+        return return_list
 
     def parse_binning(self):
         """
