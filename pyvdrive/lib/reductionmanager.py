@@ -1227,8 +1227,7 @@ class ReductionManager(object):
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
                         tof_correction, vanadium, user_binning_parameter, vdrive_binning):
-        """
-        chop VULCAN run with reducing to GSAS file as an option
+        """ Chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
         :param run_number: Run number (serving as key for reference)
         :param raw_file_name:
@@ -1236,12 +1235,14 @@ class ReductionManager(object):
         :param split_info_name:
         :param slice_key: a general keyword to refer from the reduction tracker
         :param output_directory: string for directory or None for saving to archive
+        :param reduce_data_flag:
+        :param save_chopped_nexus:
         :param number_banks:
-        :param vanadium: vanadium run number of None for not normalizing
         :param tof_correction:
+        :param vanadium: vanadium run number of None for not normalizing
         :param user_binning_parameter: float (for user specified binning parameter) or None
-        :param vdrive_binning: flag to use vdrive binning
-        :return: 2-tuple.  (1) boolean as status  (2) error message
+        :param vdrive_binning:flag to use vdrive binning
+        :return: 2-tuple.  (boolean as status, error message)
         """
         if tof_correction:
             raise NotImplementedError('[WARNING] TOF correction is not implemented yet.')

@@ -378,7 +378,7 @@ class ProjectManager(object):
             return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
                           ''.format(run_number, run_error)
 
-        # reduce data
+        # chop and (optionally) diffraction focus the binning data
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,

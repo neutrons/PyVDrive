@@ -421,9 +421,9 @@ class VdriveChop(VDriveCommand):
             return True, 'pop'
 
         # about output
-        if 'BIN' in self._commandArgsDict:
-            output_to_gsas = True
-        else:
+        # binning to GSAS is by default
+        output_to_gsas = True
+        if 'BIN' in self._commandArgsDict and int(self._commandArgsDict['BIN']) == 0:
             output_to_gsas = False
 
         if 'OUTPUT' in self._commandArgsDict:

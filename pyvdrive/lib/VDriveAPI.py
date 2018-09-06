@@ -1871,7 +1871,7 @@ class VDriveAPI(object):
         Guarantees:
         :param run_number: run number
         :param slicer_id:
-        :param reduce_data:
+        :param reduce_data: flag to diffraction focus the sliced data
         :param vanadium:
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive

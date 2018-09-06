@@ -1152,9 +1152,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             :param ws_name_list:
             :return: a list sorted by slicing/chopping index
             """
-            # test
-            assert isinstance(ws_name_list, list), 'Workspace names {} must be given as list but not in {}' \
-                                                   ''.format(workspace_names, type(workspace_names))
+            # check
+            datatypeutility.check_list('Workspace names', ws_name_list)
 
             # get the workspace name
             index_ws_name_dict = dict()
@@ -1175,9 +1174,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if self._currSlicedRunNumber == str(self.ui.comboBox_choppedRunNumber.currentText()) and not mandatory_load:
             return
 
-        sliced_run_index = self.ui.comboBox_choppedRunNumber.currentIndex()
+        try:
+            sliced_run_index = self.ui.comboBox_choppedRunNumber.currentIndex()
 
-        run_number, slice_id = self._slicedRunsList[sliced_run_index]
+            # return if there is no chopped and reduced workspace found in memory
+            if sliced_run_index < 0:
+                return
+
+            run_number, slice_id = self._slicedRunsList[sliced_run_index]
+        except IndexError as index_err:
+            err_msg = 'Current index = {}.  Stored sliced runs list = {}: {}' \
+                      ''.format(self.ui.comboBox_choppedRunNumber.currentIndex(),
+                                self._slicedRunsList, index_err)
+            raise IndexError(err_msg)
 
         if (run_number, slice_id) in self._choppedRunDict:
             # this particular run and slicing plan, then get the previous stored value from dictionary
@@ -1344,24 +1353,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot
         self.do_plot_diffraction_data()
-
-        # # Get the data sets that are currently plot and replace them with new unit
-        # existing_entries = self._currentPlotDataKeyDict.keys()
-        # self.do_
-        #
-        #
-        #
-        # for entry_key in existing_entries:
-        #     # plot: using default x limit
-        #     data_key, bank_id, unit = entry_key
-        #
-        #     # skip the bank that is not plotted now
-        #     if bank_id != self._currBank:
-        #         continue
-        #
-        #     self.plot_by_data_key(data_key=data_key, bank_id_list=[self._currBank], over_plot=False,
-        #                           x_limit=None)
-        # # END-FOR
 
         return
 
