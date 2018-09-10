@@ -1,4 +1,5 @@
-# This is the second round of cross-correlation
+# This is the second round of cross-correlation in order to
+# cross-correlate/align 3 already-focused banks (west, east and high angle) to the same peak positions
 
 
     # peak position in d-Spacing
@@ -21,12 +22,15 @@ def second_cc():
 
 
 def apply_second_cc():
-offset_ws = mtd['vulcan_foc_cal_offsets']
-shift_offset_ws  = CloneWorkspace(InputWorkspace=offset_ws, OutputWorkspace='offset_test')
-for iws in range(0, 3234):
-    shift_offset_ws.dataY(iws)[0] *= 1+1.0938E-4
-for iws in range(6468, 24900):
-    shift_offset_ws.dataY(iws)[0] *= 1 - 1.3423E-4
+    """
+    apply the result of second round cross correlation
+    """
+    offset_ws = mtd['vulcan_foc_cal_offsets']
+    shift_offset_ws  = CloneWorkspace(InputWorkspace=offset_ws, OutputWorkspace='offset_test')
+    for iws in range(0, 3234):
+        shift_offset_ws.dataY(iws)[0] *= 1+1.0938E-4
+    for iws in range(6468, 24900):
+        shift_offset_ws.dataY(iws)[0] *= 1 - 1.3423E-4
     
         
     

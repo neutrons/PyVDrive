@@ -5,6 +5,8 @@ sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 import math
 import cross_correlation_lib as ccl
 
+# TODO - 20180910 - 
+
 
 def main(argv):
     """
@@ -127,6 +129,11 @@ def plot_difc_diff(mask=None):
 def analysize_mask():
     """
     """
+    # TODO - 20180910 - Implement!
+    
+    # 1. Load original event workspace
+
+    # 2. For each bank, sort the masked workspace from highest ban
 
 
 def analyze_result():
