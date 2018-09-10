@@ -100,8 +100,8 @@ class VBin(procss_vcommand.VDriveCommand):
         'GROUP': 'User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)',
         'Mytofbmin': 'User defined TOF min in binning parameter',
         'Tag': '"Si/V" for instrument calibration.',
-        'ROI': 'File for Mantid made region of interest file in XML format',
-        'MASK': 'File for Mantid made mask file in XML format',
+        'ROI': 'Files for Mantid made region of interest file in XML format',
+        'MASK': 'Files for Mantid made mask file in XML format',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
         'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2'
     }

@@ -11,7 +11,7 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -28,7 +28,9 @@ class VdriveChop(VDriveCommand):
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
         'DT': 'the period between two adjacent time segments',
-        'RUNV': 'vanadium run number'
+        'RUNV': 'vanadium run number',
+        'ROI': 'Files for Mantid made region of interest file in XML format',
+        'MASK': 'Files for Mantid made mask file in XML format',
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -114,7 +116,8 @@ class VdriveChop(VDriveCommand):
         return status, message
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, vanadium,
-                          output_dir, dry_run, chop_loadframe_log, chop_furnace_log):
+                          output_dir, dry_run, chop_loadframe_log, chop_furnace_log, roi_list,
+                          mask_list):
         """
         Chop data by time interval
         :param run_number:
@@ -127,6 +130,8 @@ class VdriveChop(VDriveCommand):
         :param dry_run:
         :param chop_loadframe_log:
         :param chop_furnace_log:
+        :param roi_list: list (region of interest files)
+        :param mask_list: list (mask files)
         :return:
         """
         # check inputs
@@ -176,7 +181,9 @@ class VdriveChop(VDriveCommand):
                                                       output_dir=output_dir,
                                                       number_banks=3,
                                                       export_log_type=exp_log_type,
-                                                      user_bin_parameter=None)
+                                                      user_bin_parameter=None,
+                                                      roi_list=roi_list,
+                                                      mask_list=mask_list)
 
         return status, message
 
@@ -408,6 +415,16 @@ class VdriveChop(VDriveCommand):
         else:
             pulse_time = 1
 
+        # region of interest or mask file
+        if 'ROI' in self._commandArgsDict:
+            roi_file_names = self.get_argument_as_list('ROI', str)
+        else:
+            roi_file_names = list()
+        if 'MASK' in self._commandArgsDict:
+            mask_file_names = self.get_argument_as_list('MASK', str)
+        else:
+            mask_file_names = list()
+
         # check
         if time_step and user_slice_file:
             return False, 'Only 1 option in DBIN and PICKDATA can be chosen.'
@@ -478,7 +495,9 @@ class VdriveChop(VDriveCommand):
                                                          output_dir=output_dir,
                                                          dry_run=is_dry_run,
                                                          chop_loadframe_log=chop_load_frame,
-                                                         chop_furnace_log=chop_furnace_log
+                                                         chop_furnace_log=chop_furnace_log,
+                                                         roi_list=roi_file_names,
+                                                         mask_list=mask_file_names
                                                          )
             # elif log_name is not None:
             #     # chop by log value

@@ -1865,7 +1865,7 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, export_log_type='loadframe', user_bin_parameter=None):
+                   number_banks, roi_list, mask_list, export_log_type='loadframe', user_bin_parameter=None):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1876,6 +1876,8 @@ class VDriveAPI(object):
         :param save_chopped_nexus:
         :param output_dir: None for saving to archive
         :param number_banks:
+        :param roi_list: region of interest files
+        :param mask_list: mask files
         :param export_log_type:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
@@ -1895,7 +1897,9 @@ class VDriveAPI(object):
                                                    tof_correction=False,
                                                    number_banks=number_banks,
                                                    user_bin_parameter=user_bin_parameter,
-                                                   vdrive_bin_flag=bin_for_vdrive)
+                                                   vdrive_bin_flag=bin_for_vdrive,
+                                                   roi_list=roi_list,
+                                                   mask_list=mask_list)
 
         print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 

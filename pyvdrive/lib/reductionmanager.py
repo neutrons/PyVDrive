@@ -1226,7 +1226,8 @@ class ReductionManager(object):
 
     def chop_vulcan_run(self, ipts_number, run_number, raw_file_name, split_ws_name, split_info_name, slice_key,
                         output_directory, reduce_data_flag, save_chopped_nexus, number_banks,
-                        tof_correction, vanadium, user_binning_parameter, vdrive_binning):
+                        tof_correction, vanadium, user_binning_parameter, vdrive_binning,
+                        roi_list, mask_list):
         """ Chop VULCAN run with reducing to GSAS file as an option
         :param ipts_number: IPTS number (serving as key for reference)
         :param run_number: Run number (serving as key for reference)
@@ -1344,7 +1345,9 @@ class ReductionManager(object):
             gsas_info = {'IPTS': ipts_number, 'parm file': 'vulcan.prm'}
             status, message = chop_reducer.execute_chop_reduction_v2(clear_workspaces=False,
                                                                      binning_parameters=binning_param_dict,
-                                                                     gsas_info_dict=gsas_info)
+                                                                     gsas_info_dict=gsas_info,
+                                                                     roi_list=roi_list,
+                                                                     mask_list=mask_list)
 
             # set up the reduced file names and workspaces and add to reduction tracker dictionary
             tracker.set_reduction_status(status, message, True)
@@ -1740,30 +1743,31 @@ class ReductionManager(object):
         :param is_roi:
         :return:
         """
-        # check input file
-        datatypeutility.check_file_name(mask_file_name, check_exist=True, check_writable=False,
-                                        is_dir=False, note='Mask/ROI (Mantiod) XML file')
-
-        if mask_file_name in self._loaded_masks:
-            # pre-loaded
-            mask_ws_name, is_roi = self._loaded_masks[mask_file_name]
-        else:
-            # create workspace name
-            mask_ws_name = mask_file_name.lower().split('.xml')[0].replace('/', '.')
-            # load
-            if is_roi:
-                mask_ws_name = 'roi.' + mask_ws_name
-                mantid_helper.load_roi_xml(event_ws_name, mask_file_name, mask_ws_name)
-            else:
-                mask_ws_name = 'mask.' + mask_ws_name
-                mantid_helper.load_mask_xml(event_ws_name, mask_file_name, mask_ws_name)
-
-            # record
-            self._loaded_masks[mask_file_name] = mask_ws_name, is_roi
-
-        # Mask detectors
-        mantid_helper.mask_workspace(to_mask_workspace_name=event_ws_name,
-                                     mask_workspace_name=mask_ws_name)
+        raise NotImplementedError('Method deleted... Using mantid_mask instead')
+        # # check input file
+        # datatypeutility.check_file_name(mask_file_name, check_exist=True, check_writable=False,
+        #                                 is_dir=False, note='Mask/ROI (Mantiod) XML file')
+        #
+        # if mask_file_name in self._loaded_masks:
+        #     # pre-loaded
+        #     mask_ws_name, is_roi = self._loaded_masks[mask_file_name]
+        # else:
+        #     # create workspace name
+        #     mask_ws_name = mask_file_name.lower().split('.xml')[0].replace('/', '.')
+        #     # load
+        #     if is_roi:
+        #         mask_ws_name = 'roi.' + mask_ws_name
+        #         mantid_helper.load_roi_xml(event_ws_name, mask_file_name, mask_ws_name)
+        #     else:
+        #         mask_ws_name = 'mask.' + mask_ws_name
+        #         mantid_helper.load_mask_xml(event_ws_name, mask_file_name, mask_ws_name)
+        #
+        #     # record
+        #     self._loaded_masks[mask_file_name] = mask_ws_name, is_roi
+        #
+        # # Mask detectors
+        # mantid_helper.mask_workspace(to_mask_workspace_name=event_ws_name,
+        #                              mask_workspace_name=mask_ws_name)
 
         return
 

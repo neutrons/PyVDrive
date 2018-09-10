@@ -646,9 +646,13 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return status, message
 
-    def execute_chop_reduction_v2(self, binning_parameters, gsas_info_dict, clear_workspaces=False):
-        """ chop and reduce data with the upgraded algorithm for speed
+    def execute_chop_reduction_v2(self, binning_parameters, gsas_info_dict, roi_list, mask_list,
+                                  clear_workspaces=False):
+        """ Chop and reduce data with the upgraded algorithm for speed
         :param binning_parameters:
+        :param gsas_info_dict:
+        :param roi_list:
+        :param mask_list:
         :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
         :return:
         """
@@ -677,7 +681,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                    info_ws_name=split_info_table,
                                                                    output_ws_base=output_ws_name,
                                                                    binning_parameters=binning_parameters,
-                                                                   gsas_info_dict=gsas_info_dict)
+                                                                   gsas_info_dict=gsas_info_dict,
+                                                                   roi_list=roi_list,
+                                                                   mask_list=mask_list)
                                                                    # idl_bin_file_name=idl_name,
                                                                    # east_west_binning_parameters=ew_params,
                                                                    # high_angle_binning_parameters=high_params)

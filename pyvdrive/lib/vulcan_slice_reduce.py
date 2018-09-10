@@ -22,9 +22,10 @@ import datatypeutility
 # event_file_name = '/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5'
 
 
-CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-                     7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-                     27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
+# NOTE: Calibration file shall be made more flexible
+# CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+#                      7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+#                      27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
 
 
 class SliceFocusVulcan(object):
@@ -497,9 +498,14 @@ class SliceFocusVulcan(object):
         return
 
     def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
-                                    output_ws_base, binning_parameters, gsas_info_dict):
-        """
-        slice and diffraction focus event workspace with option to write the reduced data to GSAS file
+                                    output_ws_base, binning_parameters, gsas_info_dict,
+                                    roi_list, mask_list):
+        """ Slice and diffraction focus event workspace with option to write the reduced data to GSAS file with
+        SaveGSS().
+        Each workspace is
+        1. sliced from original event workspace
+        2. diffraction focused
+        3. optionally rebinned to IDL binning and read for SaveGSS()
         :param event_file_name:
         :param event_ws_name:
         :param split_ws_name:
@@ -507,8 +513,12 @@ class SliceFocusVulcan(object):
         :param output_ws_base:
         :param binning_parameters:
         :param gsas_info_dict: keys (IPTS, 'parm file' = 'vulcan.prm')
+        :param roi_list:
+        :param mask_list:
         :return: tuple: [1] slicing information, [2] output workspace names
         """
+        import mantid_mask as mask_util
+
         # check inputs
         datatypeutility.check_dict('Binning parameters', binning_parameters)
         datatypeutility.check_dict('GSAS information', gsas_info_dict)
@@ -519,6 +529,11 @@ class SliceFocusVulcan(object):
         # Load event file
         Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
 
+        # mask detectors
+        event_ws = mask_util.mask_detectors(roi_list, mask_list)
+        if event_ws.getNumberEvents() == 0:
+            raise RuntimeError('No events after masked/not masked! Do not know how to handle')
+
         # Load diffraction calibration file
         # TODO - 20180822 - LoadDffCal shall be an option such that if 'Vulcan_cal' exists... FIXME
         try:
@@ -526,7 +541,8 @@ class SliceFocusVulcan(object):
                         Filename=self._detector_calibration_file,
                         WorkspaceName='Vulcan')
         except ValueError as val_err:
-            err_msg = 'Unable to load diffraction calibration file {} with reference to workspace {} due to {}'.format(self._detector_calibration_file, event_ws_name, val_err)
+            err_msg = 'Unable to load diffraction calibration file {} with reference to workspace {} due to {}' \
+                      ''.format(self._detector_calibration_file, event_ws_name, val_err)
             print ('[ERROR] {}'.format(err_msg))
             raise RuntimeError(err_msg)
 
@@ -649,31 +665,21 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
-        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading! FIXME
-        # TODO FIXME TODO - CONTINUE - A proper way shall be found to write to a VDRIVE GSAS
-        # TODO FIXME TODO - IDEA     - Copy over SaveVulcanGSS()
-        return
-
-        # TODO - 20180807 - Multiple threading is required to construct the output string buffer
-
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
         datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
         datatypeutility.check_string_variable('GSAS parm file name', parm_file_name)
 
         for index, ws_name in enumerate(workspace_name_list):
+            # skip empty workspace
             if len(ws_name) == 0:
                 continue
 
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
 
-            # TODO - 20180723 - Confirm that using Mantid SaveVulcanGSS can cause contention :
-            # TODO - continue   why not use SaveVulcanGSS??? Need to find:
-
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)
             if output_workspace.isHistogramData():
-
                 raise RuntimeError('Output workspace {0} of type {1} to export to {2} shall be point data '
                                    'at this stage.'
                                    ''.format(ws_name, type(output_workspace), gsas_file_name))

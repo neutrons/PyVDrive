@@ -331,7 +331,7 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, vdrive_bin_flag):
+                 user_bin_parameter, vdrive_bin_flag, roi_list, mask_list):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -351,6 +351,8 @@ class ProjectManager(object):
         :param output_directory:
         :param user_bin_parameter: None or [NOT SURE]
         :param vdrive_bin_flag: boolea to use vdrive binning flag
+        :param roi_list:
+        :param mask_list:
         :return:
         """
         # check inputs' validity
@@ -392,7 +394,9 @@ class ProjectManager(object):
                                                                        tof_correction=tof_correction,
                                                                        vanadium=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
-                                                                       vdrive_binning=vdrive_bin_flag)
+                                                                       vdrive_binning=vdrive_bin_flag,
+                                                                       roi_list=roi_list,
+                                                                       mask_list=mask_list)
 
         # process outputs
         if status:
