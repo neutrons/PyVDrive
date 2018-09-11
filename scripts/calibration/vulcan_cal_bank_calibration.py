@@ -2,31 +2,18 @@
 import os
 import sys
 import math
-import cross_correlation_lib as ccl
+import numpy
+# import cross_correlation_lib as ccl
 
 # sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 
-def main(argv):
+def check_correct_difcs(ws_name):
     """
-    main argument
-    :param argv:
+    check and correct DIFCs if necessary
+    :param ws_name:
     :return:
     """
-    # get input
-    if argv[0].count('-h') == 1:
-        print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
-        sys.exit(0)
-    else:
-        # user specified
-        nxs_file_name = argv[0]
-
-    # decide to load or not and thus group workspace
-    diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
-
-    # do cross correlation: 2 fit
-    ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
-
     # west bank
     ws = mtd['vulcan_diamond']
     cal_table_ws = mtd['vulcan_diamond_2fit_cal']
@@ -57,11 +44,39 @@ def main(argv):
         highangle_cal_vec[irow - 6468] = cal_table_ws.cell(irow, difc_col_index)
 
     mask_ws = mtd['vulcan_diamond_2fit_mask']
-    
+
     # do correction: west
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 0, 20, 1, mask_ws)
     correct_difc_to_default(east_idf_vec, east_cal_vec, cal_table_ws, 3234, 20, 1, mask_ws)
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 6468, 20, 1, mask_ws)
+
+
+def main(argv):
+    """
+    main argument
+    :param argv:
+    :return:
+    """
+    print ('Inputs are {}'.format(argv))
+    sys.exit(0)
+
+    # get input
+    if argv[0].count('-h') == 1:
+        print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
+        sys.exit(0)
+    else:
+        # user specified
+        nxs_file_name = argv[0]
+
+    # decide to load or not and thus group workspace
+    diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
+
+    # do cross correlation: 2 fit
+    ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
+
+    # check the difference between DIFCs
+    check_correct_difcs(ws_name='vulcan_diamond')
+
 
     # save to diffraction
     save_calibration()
@@ -185,17 +200,16 @@ def analyze_result():
     CreateWorkspace(DataX=cost_array[0], DataY=cost_array[1], NSpec=1, OutputWorkspace='HighAngle_Cost')
 
 
+# Default diamond runs
+Diamond_Runs = {'2017-06-01': '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
+                              'VULCAN_150178_HighResolution_Diamond.nxs',
+                '2018-08-01': '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180910/'
+                              'raw_dspace_hitogram.nxs'}
+
+
 if __name__ == '__main__':
     # main
-    if len(sys.argv) == 1:
-        # default
-        working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
-        diamond_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
-        input_argv = [diamond_file_name]
-    else:
-        input_argv = sys.argv[1:]
-
-    main(input_argv)
+    main(sys.argv)
 
 
 
