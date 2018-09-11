@@ -1,11 +1,10 @@
-# Generate VULCAN's calibration
+# Generate VULCAN's calibration from an already binned workspace in a NeXus file
 import os
 import sys
-sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 import math
 import cross_correlation_lib as ccl
 
-# TODO - 20180910 - 
+# sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 
 def main(argv):
@@ -64,10 +63,30 @@ def main(argv):
     correct_difc_to_default(east_idf_vec, east_cal_vec, cal_table_ws, 3234, 20, 1, mask_ws)
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 6468, 20, 1, mask_ws)
 
+    # save to diffraction
+    save_calibration()
+
     # save calibration file
-    SaveDiffCal(blabla)
+
 
     # plot_difc_diff(mask=mask_ws)
+
+
+def save_calibration(ref_ws_name):
+    """
+
+    :param ref_ws_name:
+    :return:
+    """
+    # Load an existing 3-bank calibration file for grouping
+    LoadDiffCal(InputWorkspace='vulcan_diamond',
+                Filename='/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5',
+                WorkspaceName='vulcan_exist')
+
+    SaveDiffCal(GroupingWorkspace='vulcan_exist_grouping',
+                Masking='')
+
+    return
 
 
 def calcualte_difc(ws, ws_index):
@@ -92,19 +111,23 @@ def calcualte_difc(ws, ws_index):
 
 
 def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, difc_tol, difc_col_index, mask_ws):
-    """
-
-    :param idf_difc_vec:
-    :param cal_difc_vec:
-    :param cal_table:
-    :param row_shift:
-    :param difc_tol:
-    :param difc_col_index:
-    :param mask_ws:
+    """ Compare the DIFC calculated from the IDF and calibration.
+    If the difference is beyond tolerance, using the IDF-calculated DIFC instead and report verbally
+    :param idf_difc_vec: DIFC calculated from the instrument geometry (engineered)
+    :param cal_difc_vec: DIFC calculated from the calibration
+    :param cal_table: calibration value table (TableWorkspace)
+    :param row_shift: starting row number the first element in DIFC vector
+    :param difc_tol: tolerance on the difference between calculated difc and calibrated difc
+    :param difc_col_index: column index of the DIFC in the table workspace
+    :param mask_ws: mask workspace
     :return:
     """
+    # difference between IDF and calibrated DIFC
     difc_diff_vec = idf_difc_vec - cal_difc_vec
+
+    # go over all the DIFCs
     num_corrected = 0
+    message = ''
     for index in range(len(difc_diff_vec)):
         if abs(difc_diff_vec[index]) > difc_tol:
             cal_table.setCell(index+row_shift, difc_col_index, idf_difc_vec[index])
@@ -113,27 +136,29 @@ def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, di
                 num_corrected += 1
             else:
                 mask_sig = 'Masked'
-            print ('{0}: ws-index = {1}, diff = {2}, {3}'
-                   ''.format(index, index+row_shift, difc_diff_vec[index], mask_sig))
+            message += '{0}: ws-index = {1}, diff = {2}...  {3}' \
+                       ''.format(index, index+row_shift, difc_diff_vec[index], mask_sig)
+        # END-IF
     # END-FOR
+    print (message)
     print ('Number of corrected DIFC = {0}'.format(num_corrected))
 
     return
 
 
-def plot_difc_diff(mask=None):
+def plot_difc_diff(idf_difc_vec, cal_difc_vec, start_index, mask_ws):
+    """
+
+    :param mask:
+    :return:
+    """
+    # TODO - 20180911 - how to remove elements in numpy array
+    # difference between IDF and calibrated DIFC
+    difc_diff_vec = idf_difc_vec - cal_difc_vec
+
+
+
     return
-
-
-
-def analysize_mask():
-    """
-    """
-    # TODO - 20180910 - Implement!
-    
-    # 1. Load original event workspace
-
-    # 2. For each bank, sort the masked workspace from highest ban
 
 
 def analyze_result():
@@ -166,11 +191,11 @@ if __name__ == '__main__':
         # default
         working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
         diamond_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
-        argv = [diamond_file_name]
+        input_argv = [diamond_file_name]
     else:
-        argv = sys.argv[1:]
+        input_argv = sys.argv[1:]
 
-    main(argv)
+    main(input_argv)
 
 
 
