@@ -1,16 +1,6 @@
 Cross-correlation calibration
 -----------------------------
 
-(Old) Workflow
-==============
-
-1. cross_correlation_analysis.py : do cross correlation, analyze the result and output calibration file
-   cross_correlation_lib.py : library for cross-correlation
-
-2. calculate_difc.py : calculate DIFC for raw and calibrated instrument
-
-3. second round cross correlation
-
 
 New Workflow
 ============
@@ -34,6 +24,25 @@ Library and User Scripts
 * cross_correlation_lib.py: main calibration library
 
 
+Algorithms
+==========
+
+Calibration: Cross-correlation
+++++++++++++++++++++++++++++++
+
+Cross correlation with 2 round of peak fitting is used.
+
+
+Correction
+++++++++++
+
+Calibrated DIFCs that are  .... ....
+
+
+
+
+
+
 Outputs
 =======
 
@@ -44,6 +53,16 @@ Outputs
   * vulcan_vz_test.h5
 
 
+
+(Old) Workflow (MantidPlot based)
+=================================
+
+1. cross_correlation_analysis.py : do cross correlation, analyze the result and output calibration file
+   cross_correlation_lib.py : library for cross-correlation
+
+2. calculate_difc.py : calculate DIFC for raw and calibrated instrument
+
+3. second round cross correlation
 
 Auxiliary Codes
 ===============

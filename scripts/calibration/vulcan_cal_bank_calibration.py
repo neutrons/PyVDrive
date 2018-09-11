@@ -3,14 +3,16 @@ import os
 import sys
 import math
 import numpy
-# import cross_correlation_lib as ccl
+import cross_correlation_lib as ccl
 
 # sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/vulcan-build/bin/')
 
 
+# 
+# TODO - 20180911 - move to lib and it is for 3 banks... rename!
 def check_correct_difcs(ws_name):
     """
-    check and correct DIFCs if necessary
+    check and correct DIFCs if necessary: it is for 3 banks
     :param ws_name:
     :return:
     """
@@ -50,43 +52,10 @@ def check_correct_difcs(ws_name):
     correct_difc_to_default(east_idf_vec, east_cal_vec, cal_table_ws, 3234, 20, 1, mask_ws)
     correct_difc_to_default(west_idf_vec, west_cal_vec, cal_table_ws, 6468, 20, 1, mask_ws)
 
-
-def main(argv):
-    """
-    main argument
-    :param argv:
-    :return:
-    """
-    print ('Inputs are {}'.format(argv))
-    sys.exit(0)
-
-    # get input
-    if argv[0].count('-h') == 1:
-        print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
-        sys.exit(0)
-    else:
-        # user specified
-        nxs_file_name = argv[0]
-
-    # decide to load or not and thus group workspace
-    diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
-
-    # do cross correlation: 2 fit
-    ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
-
-    # check the difference between DIFCs
-    check_correct_difcs(ws_name='vulcan_diamond')
+    return
 
 
-    # save to diffraction
-    save_calibration()
-
-    # save calibration file
-
-
-    # plot_difc_diff(mask=mask_ws)
-
-
+# TODO - 20180911 - move to lib and merge with another save_calibration
 def save_calibration(ref_ws_name):
     """
 
@@ -94,16 +63,19 @@ def save_calibration(ref_ws_name):
     :return:
     """
     # Load an existing 3-bank calibration file for grouping
-    LoadDiffCal(InputWorkspace='vulcan_diamond',
-                Filename='/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5',
-                WorkspaceName='vulcan_exist')
-
-    SaveDiffCal(GroupingWorkspace='vulcan_exist_grouping',
-                Masking='')
+    exist3bank = '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180530/VULCAN_calibrate_2018_04_12.h5'
+    LoadDiffCal(InputWorkspace=ref_ws_name,
+                Filename=exist3bank,
+            WorkspaceName='vulcan_old_3banks')
+    
+    SaveDiffCal(CalibrationWorkspace='',
+                GroupingWorkspace='vulcan_exist_grouping',
+                MaskWorkspace='')
 
     return
 
 
+# TODO - 20180911 - move to lib
 def calcualte_difc(ws, ws_index):
     # det_id = ws.getDetector(i).getID()
     det_pos = ws.getDetector(ws_index).getPos()
@@ -125,6 +97,7 @@ def calcualte_difc(ws, ws_index):
     return difc
 
 
+# TODO - 20180911 - move to lib
 def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, difc_tol, difc_col_index, mask_ws):
     """ Compare the DIFC calculated from the IDF and calibration.
     If the difference is beyond tolerance, using the IDF-calculated DIFC instead and report verbally
@@ -151,7 +124,7 @@ def correct_difc_to_default(idf_difc_vec, cal_difc_vec, cal_table, row_shift, di
                 num_corrected += 1
             else:
                 mask_sig = 'Masked'
-            message += '{0}: ws-index = {1}, diff = {2}...  {3}' \
+            message += '{0}: ws-index = {1}, diff = {2}...  {3}\n' \
                        ''.format(index, index+row_shift, difc_diff_vec[index], mask_sig)
         # END-IF
     # END-FOR
@@ -176,7 +149,11 @@ def plot_difc_diff(idf_difc_vec, cal_difc_vec, start_index, mask_ws):
     return
 
 
+# TODO - 20180911 - move to lib and it is for 3 banks... rename!
 def analyze_result():
+    """
+    get a cost array for plotting in MantidPlot???!
+    """
     # WEST
     calculate_model('cc_vulcan_diamond_west', 1755, 'offset_vulcan_diamond_west_FitResult')
     # plot cost list
@@ -206,12 +183,45 @@ Diamond_Runs = {'2017-06-01': '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Di
                 '2018-08-01': '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180910/'
                               'raw_dspace_hitogram.nxs'}
 
+def main(argv):
+    """
+    main argument
+    :param argv:
+    :return:
+    """
+    # get input
+    # TODO - 2018911 - Parse -h/--help, --default, --nexus
+    # if argv[0].count('-h') == 1:
+    #     print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
+    #     sys.exit(0)
+    # else:
+    #     # user specified
+    #     nxs_file_name = argv[0]
+
+    if True:
+        # TODO FIXME - This is a debugging solution
+        dates = sorted(Diamond_Runs.keys())
+        nxs_file_name = Diamond_Runs[dates[-1]]
+
+    # decide to load or not and thus group workspace
+    diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
+
+    # do cross correlation: 2 fit
+    ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
+
+    # check the difference between DIFCs
+    check_correct_difcs(ws_name='vulcan_diamond')
+
+
+    # save calibration file
+    save_calibration(ref_ws_name='vulcan_diamond')
+
+
+    # plot_difc_diff(mask=mask_ws)
+
 
 if __name__ == '__main__':
     # main
     main(sys.argv)
-
-
-
 
 

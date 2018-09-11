@@ -74,7 +74,7 @@ else:
     print ('DOING NOTHING ... QUIT!')
     sys.exit(1)
 
-# compare the masked workspace
+# compare the masked workspace with 1 fit and 2 fit
 for bank_name in bank_name_list:
     mask_1fit_ws = mask_ws_1fit_dict[bank_name]
     masked_1fit_ws_indexes = cross_correlation.get_masked_ws_indexes(mask_1fit_ws)

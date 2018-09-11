@@ -26,6 +26,7 @@ def initialize_calibration(nxs_file_name, must_load=False):
 
     return diamond_ws_name, group_ws_name
 
+# TODO - 20180911 - rename cal to calculate + Note
 def cal_2theta(workspace, ws_index):
     detpos = workspace.getDetector(ws_index).getPos()
     samplepos = workspace.getInstrument().getPos()
@@ -114,6 +115,7 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
     return offset_ws_name, mask_ws_name
 
 
+# TODO - 20180911 - better name
 def PlusMaskWorkspace(lhs_mask_name, rhs_mask_name, output_mask_name):
     """
     """
@@ -125,6 +127,7 @@ def PlusMaskWorkspace(lhs_mask_name, rhs_mask_name, output_mask_name):
     rhs_mask = mtd[rhs_mask_name]
     ohs_mask = mtd[output_mask_name]
 
+    # TODO - 20180911 - better verbal
     print ('Inputs: {0}, {1}'.format(lhs_mask_name, rhs_mask_name))
 
     mask_wsindex_list = list()
@@ -197,7 +200,7 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
 
 def cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=1, flag='1fit'):
     """
-    main cross-correlation (for VULCAN west/east/high angle)
+    main entrance cross-correlation (for VULCAN west/east/high angle)
     :param diamond_ws_name:
     :param group_ws_name:
     :param fit_time:
