@@ -10,11 +10,14 @@ do
 done
 
 # Step 1: Generate calibration files from cross correlation
-PYTHONPATH=$VULCANPATH:$PYTHONPATH python vulcan_cal_bank_calibration.py $CMDS
+# PYTHONPATH=$MANTIDPATH:$PYTHONPATH python vulcan_cal_bank_calibration.py $CMDS
 
 # # Step 2: Analyze the generated calibration file
-# PYTHONPATH=$VULCANPATH:$PYTHONPATH python generate_calibration_file.py
+PYTHONPATH=$VULCANPATH:$PYTHONPATH python vulcan_cal_evalulate_calibration.py $CMDS
 # 
 # # Step 4: Second round whole instrument calibration
 # PYTHONPATH=$VULCANPATH:$PYTHONPATH python vulcan_cal_instrument_calibration.py
 
+
+# Example:
+# ./calibrate_vulcan_detectors.sh --diamond='/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180910/raw_dspace_hitogram.nxs'

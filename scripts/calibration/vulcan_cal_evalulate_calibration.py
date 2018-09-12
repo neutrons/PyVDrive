@@ -3,6 +3,7 @@
 import sys
 import os
 from mantid.simpleapi import Load, LoadDiffCal
+from mantid.api import AnalysisDataService as mtd
 
 import lib_cross_correlation as lib
 
@@ -48,8 +49,7 @@ def parse_inputs(argv):
     arg_dict = dict()
 
     # go through each term
-    sub_arg_list = argv.split()
-    for sub_arg in sub_arg_list:
+    for sub_arg in argv:
         items = sub_arg.split('=')
         if items[0] == '--ipts':
             arg_dict['ipts'] = int(items[1])
@@ -100,21 +100,31 @@ def main(argv):
     else:
         ipts_number = input_arg_dict['ipts']
         run_number = input_arg_dict['run']
-        event_ws = load_raw_nexus(file_name=None, ipts=ipts_number, run_number=run_number)
+        event_ws = lib.load_raw_nexus(file_name=None, ipts=ipts_number, run_number=run_number)
     # END-IF
 
     # load calibration file
-    calib_ws, mask_ws, group_ws = load_calibration_file(ref_ws=event_ws, diff_cal_file=input_arg_dict['calib_file'])
+    calib_ws, mask_ws, group_ws = lib.load_calibration_file(ref_ws_name=event_ws, 
+                                                            calib_file_name=input_arg_dict['calib_file'],
+                                                            calib_ws_base_name='vulcan')
 
     # analyze the masking
-    zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws =\
-        analysize_mask(event_ws, mask_ws, output_dir=os.getcwd())
+    # zero_count_mask_ws, low_count_mask_ws, regular_count_mask_ws =\
+    #     analysize_mask(event_ws, mask_ws, output_dir=os.getcwd())
 
     # export the
+    focus_ws_name = lib.align_focus_event_ws(event_ws_name=str(event_ws), calib_ws_name=calib_ws,
+            group_ws_name=group_ws)
 
+    from matplotlib import pyplot as plt
 
+    focus_ws = mtd[focus_ws_name]
 
-
+    for bank_id in range(3):
+        vec_x = focus_ws.readX(bank_id)
+        vec_y = focus_ws.readY(bank_id)
+        plt.plot(vec_x[:len(vec_y)], vec_y)
+    plt.show()
 
 if __name__ == '__main__':
     main(sys.argv)

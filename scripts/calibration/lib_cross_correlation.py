@@ -9,6 +9,9 @@ from mantid.simpleapi import Load, LoadDiffCal, AlignDetectors, DiffractionFocus
 from mantid.simpleapi import ConvertToMatrixWorkspace, CrossCorrelate, GetDetectorOffsets
 import bisect
 import numpy
+import datetime
+# import mantid
+# print mantid
 
 
 def analyze_outputs(cross_correlation_ws_dict, getdetoffset_result_ws_dict):
@@ -484,7 +487,8 @@ def evaluate_cc_quality(data_ws_name, fit_param_table_name):
     return cost_list, bad_ws_index_list
 
 
-def export_diff_cal_h5(ref_ws_name):
+# TODO - 20180912 - Clean
+def export_diff_cal_h5(ref_ws_name, offset_ws, mask_ws, num_groups):
     """ Export diff cal to h5 format
     :param ref_ws_name:
     :return:
@@ -495,9 +499,14 @@ def export_diff_cal_h5(ref_ws_name):
                 Filename=exist3bank,
                 WorkspaceName='vulcan_old_3banks')
 
-    SaveDiffCal(CalibrationWorkspace='',
-                GroupingWorkspace='vulcan_exist_grouping',
-                MaskWorkspace='')
+    today = datetime.datetime.now()
+    for ws_name in mtd.getObjectNames():
+        print ws_name
+    offset_ws_obj = mtd['vulcan_diamond_2fit_cal']
+    SaveDiffCal(CalibrationWorkspace=offset_ws_obj,
+                GroupingWorkspace='vulcan_old_3banks_group',
+                MaskWorkspace=mask_ws,
+                Filename='VULCAN_calibrate_{}_{:02}_{:02}.h5'.format(today.year, today.month, today.day))
 
     return
 
@@ -549,10 +558,14 @@ def load_calibration_file(ref_ws_name, calib_file_name, calib_ws_base_name=None)
         calib_ws_base_name = 'vulcan'
 
     # load data file
-    LoadDiffCal(InputWorkspace=ref_ws_name,
+    r = LoadDiffCal(InputWorkspace=ref_ws_name,
                 Filename=calib_file_name, WorkspaceName=calib_ws_base_name)
 
-    return calib_ws_base_name
+    calib_ws_name = '{}_cal'.format(calib_ws_base_name)
+    mask_ws_name = '{}_mask'.format(calib_ws_base_name)
+    group_ws_name = '{}_group'.format(calib_ws_base_name)
+
+    return calib_ws_name, mask_ws_name, group_ws_name
 
 
 def load_raw_nexus(file_name=None, ipts=None, run_number=None, output_ws_name=None):
@@ -609,6 +622,28 @@ def merge_2_masks(lhs_mask_name, rhs_mask_name, output_mask_name):
     return
 
 
+def align_focus_event_ws(event_ws_name, calib_ws_name, group_ws_name):
+    """
+    overwrite the input
+    """
+
+    AlignDetectors(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
+                   CalibrationWorkspace=calib_ws_name)
+
+    DiffractionFocussing(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name,
+                         GroupingWorkspace=group_ws_name)
+
+    Rebin(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name, Params='0.5,-0.0003,3')
+
+    ConvertToMatrixWorkspace(InputWorkspace=event_ws_name, OutputWorkspace=event_ws_name)
+
+    EditInstrumentGeometry(Workspace=event_ws_name, PrimaryFlightPath=42, SpectrumIDs='1-3', L2='2,2,2',
+                           Polar='89.9284,90.0716,150.059', Azimuthal='0,0,0', DetectorIDs='1-3',
+                           InstrumentName='vulcan_3bank')
+
+    return event_ws_name
+
+
 def reduced_powder_data(ipts_number, run_number, calib_file_name, event_ws_name='vulcan_diamond',
                         focus_ws_name='vulcan_diamond_3bank'):
     """
@@ -650,11 +685,6 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
     :param calib_file_prefix:
     :return:
     """
-
-    print ('[Debug] {}'.format(ws_name))
-    print ('[Debug] {}'.format(calib_file_prefix))
-    raise NotImplementedError('Debug Stop')
-
     # combine the offset and mask workspaces
     offset_ws_name0, mask_ws_name0 = offset_mask_list[0]
     offset_ws_name = ws_name + '_offset'
@@ -692,7 +722,8 @@ def save_calibration(ws_name, offset_mask_list, group_ws_name, calib_file_prefix
                 MaskWorkspace=mask_ws_name,
                 Filename=out_file_name)
 
-    print ('Calibration file is saved as {0} from {1}, {2} and {3}'.format(out_file_name, calib_ws_name, mask_ws_name, group_ws_name))
+    print ('Calibration file is saved as {0} from {1}, {2} and {3}'
+           ''.format(out_file_name, calib_ws_name, mask_ws_name, group_ws_name))
 
     return calib_ws_name, offset_ws_name, mask_ws_name
 

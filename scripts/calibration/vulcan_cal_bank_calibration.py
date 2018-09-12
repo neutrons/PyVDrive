@@ -104,11 +104,13 @@ def main(argv):
     ccl.cross_correlate_vulcan_data(diamond_ws_name, group_ws_name, fit_time=2, flag='2fit')
 
     # check the difference between DIFCs
-    check_correct_difcs(ws_name='vulcan_diamond')
+    ccl.check_correct_difcs(ws_name='vulcan_diamond')
 
     # save calibration file
-    for num_banks in [3, 7, 27]:
-        export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws=xx, mask_ws=yy, num_groups=num_banks)
+    for num_banks in [3]:#[3, 7, 27]:
+        ccl.export_diff_cal_h5(ref_ws_name='vulcan_diamond', offset_ws='vulcan_diamond_2fit_offset,',
+                               mask_ws='vulcan_diamond_2fit_mask',
+                               num_groups=num_banks)
 
     # save difc file
     if 'difc' in input_arg_dict:
