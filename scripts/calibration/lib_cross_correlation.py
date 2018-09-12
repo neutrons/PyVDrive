@@ -236,7 +236,6 @@ def cc_calibrate(ws_name, peak_position, peak_min, peak_max, ws_index_range, ref
                        XMin=-cc_number,
                        XMax=cc_number,
                        MaxOffset=max_offset,
-                       OutputFitResult=True,
                        FitEachPeakTwice=fit_twice,
                        PeakFunction='Gaussian',  # 'PseudoVoigt', # Gaussian
                        MinimumPeakHeight=min_peak_height,  # any peak is lower than 1 shall be masked!

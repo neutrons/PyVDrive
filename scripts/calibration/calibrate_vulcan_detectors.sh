@@ -1,7 +1,7 @@
 #!/bin/sh
 # set up path
-VULCANPATH=/SNS/users/wzz/Mantid_Project/vulcan-build/bin/
-DIAMONDFILE=$CWD/VULCAN_DIAMOND.nxs
+MANTIDPATH=/home/wzz/Mantid_Project/builds/debug-master/bin:/SNS/users/wzz/Mantid_Project/vulcan-build/bin/
+echo $VULCANPATH
 
 CMDS=''
 for file in "$@"
@@ -10,7 +10,6 @@ do
 done
 
 # Step 1: Generate calibration files from cross correlation
-echo $VULCANPATH
 PYTHONPATH=$VULCANPATH:$PYTHONPATH python vulcan_cal_bank_calibration.py $CMDS
 
 # # Step 2: Analyze the generated calibration file

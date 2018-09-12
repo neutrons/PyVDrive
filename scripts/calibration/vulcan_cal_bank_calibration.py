@@ -59,29 +59,45 @@ Diamond_Runs = {'2017-06-01': '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Di
                 '2018-08-01': '/SNS/users/wzz/Projects/VULCAN/CalibrationInstrument/Calibration_20180910/'
                               'raw_dspace_hitogram.nxs'}
 
+
+def parse_inputs(arg_list):
+    """
+
+    :param arg_list:
+    :return:
+    """
+    arg_dict = dict()
+
+    for arg_i in arg_list:
+        print ('arg: {}'.format(arg_i))
+        items = arg_i.split('=')
+        arg_name = str(items[0]).strip()
+        arg_str = str(items[1]).strip()
+
+        if arg_name == '--diamond':
+            arg_dict['diamond_file'] = arg_str
+        else:
+            print ('Error: Unknown argument {}'.format(arg_name))
+    # END-FOR
+
+    return arg_dict
+
+
 def main(argv):
     """
     main argument
     :param argv:
     :return:
     """
-    # get input
-    # TODO - 2018911 - Parse -h/--help, --default, --nexus
-    # if argv[0].count('-h') == 1:
-    #     print ('Generate cross correlation from input diamond file in dSpacing with resolution -0.0003')
-    #     sys.exit(0)
-    # else:
-    #     # user specified
-    #     nxs_file_name = argv[0]
-
-    if True:
+    if False:
         # TODO FIXME - This is a debugging solution
         dates = sorted(Diamond_Runs.keys())
         nxs_file_name = Diamond_Runs[dates[-1]]
 
-    input_arg_dict = parse_inputs(argv[:1])
+    input_arg_dict = parse_inputs(argv[1:])
 
     # decide to load or not and thus group workspace
+    nxs_file_name = input_arg_dict['diamond_file']
     diamond_ws_name, group_ws_name = ccl.initialize_calibration(nxs_file_name, False)
 
     # do cross correlation: 2 fit
