@@ -2,7 +2,7 @@
 # It is to evaluate the calibration result
 import sys
 import os
-from mantid.simpleapi import Load, LoadDiffCal
+from mantid.simpleapi import Load, LoadDiffCal, SaveNexusProcessed
 from mantid.api import AnalysisDataService as mtd
 
 import lib_cross_correlation as lib
@@ -59,6 +59,8 @@ def parse_inputs(argv):
             arg_dict['event_nexus'] = str(items[1])
         elif items[0] == '--calib':
             arg_dict['calib_file'] = str(items[1])
+        elif items[0] == '--output':
+            arg_dict['output'] = str(items[1])
         else:
             print ('Argument {} is not supported'.format(items[0]))
     # END-FOR
@@ -115,6 +117,9 @@ def main(argv):
     # export the
     focus_ws_name = lib.align_focus_event_ws(event_ws_name=str(event_ws), calib_ws_name=calib_ws,
             group_ws_name=group_ws)
+    if 'output' in input_arg_dict:
+        SaveNexusProcessed(InputWorkspace=focus_ws_name, Filename=input_arg_dict['output'],
+                           Title='{} calibrated by {}'.format(str(event_ws), input_arg_dict['calib_file']))
 
     from matplotlib import pyplot as plt
 
@@ -123,7 +128,8 @@ def main(argv):
     for bank_id in range(3):
         vec_x = focus_ws.readX(bank_id)
         vec_y = focus_ws.readY(bank_id)
-        plt.plot(vec_x[:len(vec_y)], vec_y)
+        plt.plot(vec_x[:len(vec_y)], vec_y, label='bank {}'.format(bank_id+1))
+    plt.legend()
     plt.show()
 
 if __name__ == '__main__':
