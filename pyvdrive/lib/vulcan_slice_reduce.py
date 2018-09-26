@@ -421,7 +421,6 @@ class SliceFocusVulcan(object):
         # check input binning parameters
         for ws_index in range(input_ws.getNumberHistograms()):
             bank_id = ws_index + 1
-            print ('[DB...ERROR] binning parameter keys: {}'.format(binning_param_dict.keys()))
             bin_params = binning_param_dict[bank_id]
             if not isinstance(bin_params, str) and len(bin_params) % 2 == 0:
                 # odd number and cannot be binning parameters
@@ -699,6 +698,8 @@ class SliceFocusVulcan(object):
 
             # Save
             try:
+                # TODO - FIXME - 20180930 - WHY SAVED TO /tmp???
+                # print ('[DB...BAT] Save GSS to {}'.format(gsas_file_name))
                 SaveGSS(InputWorkspace=output_workspace, Filename=gsas_file_name, SplitFiles=False, Append=False,
                         Format="SLOG", MultiplyByBinWidth=False,
                         ExtendedHeader=False,
