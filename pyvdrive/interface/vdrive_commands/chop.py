@@ -2,6 +2,7 @@
 Implement VDRIVE command VCHOP
 """
 import os
+import time
 from procss_vcommand import VDriveCommand
 
 
@@ -325,6 +326,8 @@ class VdriveChop(VDriveCommand):
         :except: RuntimeError for bad command
         :return: 2-tuple, status, error message
         """
+        time0 = time.time()
+
         # Go through all the arguments
         if 'HELP' in self._commandArgsDict:
             # pop out the window
@@ -449,13 +452,17 @@ class VdriveChop(VDriveCommand):
         else:
             output_dir = None
 
-        # do chopping
-        sum_msg = ''
-        final_success = True
-
         # check inputs' validity
         if chop_period is not None and time_step is None:
             return False, 'Chopping period (DT) = {0}. Under this case, DBIN must be given.'.format(chop_period)
+
+        # record time before chopping
+        time1 = time.time()
+        duration_process_command = time1 - time0
+
+        # do chopping
+        sum_msg = 'CHOP command preparation: {} seconds\n'.format(duration_process_command)
+        final_success = True
 
         for run_number in range(run_start, run_end+1):
             # create default directory
@@ -534,8 +541,13 @@ class VdriveChop(VDriveCommand):
                 return status, message
             # END-IF-ELSE
 
+            # chop time
+            time2 = time.time()
+            duration_chop = time2 - time1
+            time1 = time.time()
+
             final_success = final_success and status
-            sum_msg += 'Run {0}: {1}\n'.format(run_number, message)
+            sum_msg += 'Run {}: duration = {}: {}\n'.format(run_number, duration_chop, message)
         # END-FOR (run_number)
 
         # TODO/THINK/ISSUE/55 - shall a signal be emit???

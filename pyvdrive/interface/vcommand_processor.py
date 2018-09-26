@@ -17,6 +17,7 @@ import vdrive_commands.vpeak
 import vdrive_commands.procss_vcommand
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
+import time
 
 
 class VdriveCommandProcessor(object):
@@ -94,7 +95,7 @@ class VdriveCommandProcessor(object):
             # END-IF
         # END-FOR
 
-        return arg_dict
+        return True, arg_dict
 
     @staticmethod
     def pre_process_idl_command(idl_command):
@@ -164,12 +165,21 @@ class VdriveCommandProcessor(object):
             return status, err_msg
 
         # process regular VDRIVE command by parsing command arguments and store them to a dictionary
-        arg_dict = self.parse_command_arguments(command, command_args)
+        status, ret_obj = self.parse_command_arguments(command, command_args)
+
+        if status:
+            arg_dict = ret_obj
+        else:
+            error_msg = ret_obj
+            return False, error_msg
 
         # call the specific command class builder
         if command == 'CHOP':
             # chop
+            chop_start_time = time.time()
             status, err_msg = self._process_chop(arg_dict)
+            chop_stop_time = time.time()
+            err_msg += '\nExecution time = {} seconds'.format(chop_stop_time - chop_start_time)
         elif command == 'VBIN' or command == 'VDRIVEBIN':
             # bin
             status, err_msg = self._process_vbin(arg_dict)

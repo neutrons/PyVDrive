@@ -32,8 +32,7 @@ class VDriveCommand(object):
         """
         assert isinstance(controller, VdriveAPI.VDriveAPI), 'Controller must be a VdriveAPI.VDriveAPI' \
                                                             'instance but not %s.' % controller.__class__.__name__
-        assert isinstance(command_args, dict), 'Argument commands dictionary cannot be a %s.' \
-                                               '' % str(type(command_args))
+        datatypeutility.check_dict('VDrive command arguments', command_args)
 
         # my name
         self._commandName = 'VDRIVE (base)'

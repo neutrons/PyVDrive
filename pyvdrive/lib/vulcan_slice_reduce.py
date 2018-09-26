@@ -23,9 +23,10 @@ import datatypeutility
 
 
 # NOTE: Calibration file shall be made more flexible
-# CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
-#                      7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
-#                      27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
+# TODO - FIXME - 20180930 - Calibration file shall be disabled and passed in
+CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
+                     7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
+                     27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
 
 
 class SliceFocusVulcan(object):
@@ -530,9 +531,10 @@ class SliceFocusVulcan(object):
         Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
 
         # mask detectors
-        event_ws = mask_util.mask_detectors(roi_list, mask_list)
-        if event_ws.getNumberEvents() == 0:
-            raise RuntimeError('No events after masked/not masked! Do not know how to handle')
+        # TODO - FIXME - 20180930 - Masking is transfered to a MaskManager class... Need to apply this!
+        # event_ws =  mask_util.mask_detectors(event_ws_name, roi_list, mask_list)
+        # if event_ws.getNumberEvents() == 0:
+        #     raise RuntimeError('No events after masked/not masked! Do not know how to handle')
 
         # Load diffraction calibration file
         # TODO - 20180822 - LoadDffCal shall be an option such that if 'Vulcan_cal' exists... FIXME
