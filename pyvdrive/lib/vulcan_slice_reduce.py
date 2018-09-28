@@ -695,7 +695,7 @@ class SliceFocusVulcan(object):
                 bank_id = output_workspace.getSpectrum(ws_index).getSpectrumNo()
                 bank_header = self.create_bank_header(bank_id, output_workspace.readX(ws_index))
                 vulcan_bank_headers.append(bank_header)
-            # END-F
+            # END-IF
 
             # Save
             try:
