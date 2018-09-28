@@ -138,9 +138,9 @@ class VdriveChop(VDriveCommand):
         # check inputs
         assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
                                             '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str) and os.path.exists(output_dir), \
-            'Directory %s must be a string (now %s) and exists.' % (str(output_dir), type(output_dir))
-
+        assert isinstance(output_dir, str), 'Directory %s must be a string (now %s).' % (str(output_dir), type(output_dir))
+        if os.path.exists(output_dir) is False:
+            raise RuntimeError('Output directory {} does note exist.'.format(output_dir))
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-%d Run %d by time with (%s, %s, %s) ' % (self._iptsNumber, run_number,

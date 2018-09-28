@@ -27,12 +27,13 @@ if sys.argv[-1] == 'pyuic':
         try:
             # check the key package to determine whether the build shall be Qt4 or Qt5
             import PyQt5
+            from qtconsole.rich_ipython_widget import RichIPythonWidget 
             from qtconsole.inprocess import QtInProcessKernelManager
             ver = 5
-            print ('Qt5 is used!')
+            print ('PyQt5 can be imported. Using pyuic5!')
         except ImportError:
             ver = 4
-            print ('Qt4 is used!')
+            print ('PyQt5 cannot be imported. Using pyuic4!')
 
         command = "pyuic%d %s -o %s" % (ver, inname, outname)
         os.system(command)
