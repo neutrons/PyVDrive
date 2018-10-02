@@ -3,13 +3,14 @@
 import math
 
 Current_Phase = 'Vulcan-X Concept Proof'
+Current_Phase = 'Vulcan-X Phase 1'
 
 Bank_Parameter_Dict = {'Vulcan-X Concept Proof': {1: (160, 128),
                                                   2: (160, 128),
                                                   3: (72, 128)},
-                       'Vulcan-X Phase 1': {1: (),
-                                            2: (),
-                                            3: ()}}
+                       'Vulcan-X Phase 1': {1: (160, 512),
+                                            2: (160, 512),
+                                            3: (72, 256)}}
 
 
 def cal_2theta(x, y, z):
@@ -132,4 +133,4 @@ def main(ws_name):
     # END-FOR
 
 
-main(ws_name='sim_c_vulcan-x_prototype')
+main(ws_name='sim_c_vulcan-x')
