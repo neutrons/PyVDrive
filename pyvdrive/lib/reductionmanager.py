@@ -1287,8 +1287,9 @@ class ReductionManager(object):
 
         # set up the calibration workspaces
         if not cal_loaded:
-            cal_file_date, cal_file_name = self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
-                                                                              num_banks=number_banks)
+            cal_file_date, cal_file_name = \
+                self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
+                                                                  num_banks=number_banks)
             cal_ws_base_name = self._calibrationFileManager.get_base_name(cal_file_name, number_banks)
         else:
             cal_file_name = None
@@ -1596,9 +1597,9 @@ class ReductionManager(object):
         :param slicer_key: if not specified, then the reduction is without chopping
         :return: a DataReductionTracker object that is just created and initialized
         """
-        # Check requirements
-        datatypeutility.check_int_variable('IPTS', ipts_number, (1, None))
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        # Check requirements: IPTS / run number == 1 is for pseudo IPTS/RUN in the case of arbitrary NeXus file
+        datatypeutility.check_int_variable('IPTS', ipts_number, (0, None))
+        datatypeutility.check_int_variable('Run number', run_number, (0, None))
 
         # Initialize a new tracker
         if slicer_key is None:

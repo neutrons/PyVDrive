@@ -50,6 +50,8 @@ class VDriveCommand(object):
         # other command variables
         self._iptsNumber = None   # IPTS
         self._runNumberList = list()   # RUN numbers
+        # alternative
+        self._raw_nexus_file_name = None
 
         return
 
@@ -252,6 +254,18 @@ class VDriveCommand(object):
 
         # set
         # self._controller.set_ipts(self._iptsNumber)
+
+        return
+
+    def set_raw_nexus(self):
+        """
+        Set raw NeXus file name
+        :return:
+        """
+        self._raw_nexus_file_name = self._commandArgsDict['NEXUS']
+        if os.path.exists(self._raw_nexus_file_name) is False:
+            raise RuntimeError('NeXus file {} does not exist.'.format(self._raw_nexus_file_name))
+        self._iptsNumber = False
 
         return
 

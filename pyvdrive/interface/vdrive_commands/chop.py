@@ -12,13 +12,13 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
         'RUNS': 'First run number',
         'RUNE': 'Last run number (if not specified, then only 1 run will be processed)',
-
+        'NEXUS': 'NeXus file name (It cannot be used with IPTS/RUNS/RUNE)',
         'DBIN': 'time step for binning interval',
         'PICKDATA': 'Name of a plain text 2-column data file for start and stop time for splitters.',
         'LOADFRAME': 'Chop LoadFrame log (MTSLoadFrame) along with',
@@ -136,9 +136,15 @@ class VdriveChop(VDriveCommand):
         :return:
         """
         # check inputs
-        assert isinstance(run_number, int), 'Run number %s must be a string but not %s.' \
-                                            '' % (str(run_number), type(run_number))
-        assert isinstance(output_dir, str), 'Directory %s must be a string (now %s).' % (str(output_dir), type(output_dir))
+        if self._raw_nexus_file_name is None:
+            assert isinstance(run_number, int), 'Run number {} must be a string but not {}.' \
+                                                ''.format(run_number, type(run_number))
+        else:
+            assert isinstance(self._raw_nexus_file_name, str), 'blabla'
+            run_number = 0
+
+        assert isinstance(output_dir, str), 'Directory {} must be a string (now {}).' \
+                                            ''.format(output_dir, type(output_dir))
         if os.path.exists(output_dir) is False:
             raise RuntimeError('Output directory {} does note exist.'.format(output_dir))
         # dry run: return input options
@@ -160,7 +166,8 @@ class VdriveChop(VDriveCommand):
 
         # generate data slicer
         status, slicer_key = self._controller.gen_data_slicer_by_time(run_number, start_time, stop_time,
-                                                                      time_interval)
+                                                                      time_interval,
+                                                                      raw_nexus_name=self._raw_nexus_file_name)
         if not status:
             error_msg = str(slicer_key)
             return False, 'Unable to generate data slicer by time due to %s.' % error_msg
@@ -184,7 +191,8 @@ class VdriveChop(VDriveCommand):
                                                       export_log_type=exp_log_type,
                                                       user_bin_parameter=None,
                                                       roi_list=roi_list,
-                                                      mask_list=mask_list)
+                                                      mask_list=mask_list,
+                                                      raw_nexus_name=self._raw_nexus_file_name)
 
         return status, message
 
@@ -333,37 +341,56 @@ class VdriveChop(VDriveCommand):
             # pop out the window
             return True, 'pop'
 
-        # parse arguments
-        self.set_ipts()
+        if 'NEXUS' in self._commandArgsDict:
+            # set NeXus file name other other IPTS/RUN NUMBER
+            self.set_raw_nexus()
+        else:
+            # parse arguments
+            self.set_ipts()
 
         # parse the scope of runs
         # run numbers
-        if 'RUNS' in self._commandArgsDict:
-            # get RUNS/RUNE from arguments
-            run_start = int(self._commandArgsDict['RUNS'])
-            if 'RUNE' in self._commandArgsDict:
-                run_end = int(self._commandArgsDict['RUNE'])
+        if self._iptsNumber:
+            # IPTS/run number
+            if 'RUNS' in self._commandArgsDict:
+                # get RUNS/RUNE from arguments
+                run_start = int(self._commandArgsDict['RUNS'])
+                if 'RUNE' in self._commandArgsDict:
+                    run_end = int(self._commandArgsDict['RUNE'])
+                else:
+                    run_end = run_start
+                self._runNumberList = range(run_start, run_end + 1)
+            elif len(self._commandArgsDict) > 0:
+                # from previously stored value
+                run_start = self._commandArgsDict[0]
+                run_end = self._commandArgsDict[-1]
+                assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
+                    'Run start %s (%s) and run end %s (%s) must be integers and run start <= run end' % (
+                        str(run_start), str(type(run_start)), str(run_end), str(type(run_end))
+                    )
             else:
-                run_end = run_start
-            self._runNumberList = range(run_start, run_end + 1)
-        elif len(self._commandArgsDict) > 0:
-            # from previously stored value
-            run_start = self._commandArgsDict[0]
-            run_end = self._commandArgsDict[-1]
-        else:
-            # not properly set up
-            raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
-        # END-IF
+                # not properly set up
+                raise RuntimeError('CHOP command requires input of argument RUNS or previously stored Run number')
+                # END-IF
 
-        # locate the runs and add the reduction project
-        run_number_list = range(run_start, run_end+1)
-        archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
-                                                                                             run_number_list)
-        if len(error_message) > 0:
-            print '[DB...BAT] Error archive key: ', archive_key 
-            return False, error_message
-        run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
-        self._controller.add_runs_to_project(run_info_list)
+            # check run start and run end range
+            if run_start > run_end:
+                raise RuntimeError('Run start {} must be less or equal to run end {}'.format(run_start, run_end))
+
+            # locate the runs and add the reduction project
+            run_number_list = range(run_start, run_end + 1)
+            archive_key, error_message = self._controller.archive_manager.scan_runs_from_archive(self._iptsNumber,
+                                                                                                 run_number_list)
+            if len(error_message) > 0:
+                print '[DB...BAT] Error archive key: ', archive_key
+                return False, error_message
+            run_info_list = self._controller.archive_manager.get_experiment_run_info(archive_key)
+            self._controller.add_runs_to_project(run_info_list)
+        else:
+            # NeXus file
+            run_start = None
+            run_end = None
+        # END-IF
 
         if 'INFO' in self._commandArgsDict:
             # get the chopping-help information
@@ -375,12 +402,6 @@ class VdriveChop(VDriveCommand):
             is_dry_run = True
         else:
             is_dry_run = False
-
-        # check input parameters
-        assert isinstance(run_start, int) and isinstance(run_end, int) and run_start <= run_end, \
-            'Run start %s (%s) and run end %s (%s) must be integers and run start <= run end' % (
-                str(run_start), str(type(run_start)), str(run_end), str(type(run_end))
-            )
 
         # vanadium run
         if 'RUNV' in self._commandArgsDict:
@@ -464,91 +485,113 @@ class VdriveChop(VDriveCommand):
         sum_msg = 'CHOP command preparation: {} seconds\n'.format(duration_process_command)
         final_success = True
 
-        for run_number in range(run_start, run_end+1):
-            # create default directory
-            if output_dir is None:
-                try:
-                    output_dir = self.create_default_chop_output_dir(run_number)
-                except OSError as os_err:
-                    final_success = False
-                    sum_msg += 'Unable to chop and reduce run %d due to %s.' % (run_number, str(os_err))
-                    continue
+        if self._iptsNumber:
+            # regular
+            for run_number in range(run_start, run_end + 1):
+                # create default directory
+                if output_dir is None:
+                    try:
+                        output_dir = self.create_default_chop_output_dir(run_number)
+                    except OSError as os_err:
+                        final_success = False
+                        sum_msg += 'Unable to chop and reduce run %d due to %s.' % (run_number, str(os_err))
+                        continue
 
-            # chop and optionally reduce
-            # TODO - FIXME - 20180727 - Use version 2.0 (multiple threading) chop and reduction
-            if chop_period is not None:
-                # chopping with OVERLAPPED period
-                # FIXME - This is NOTE implemented and tested
-                status, message = self.chop_data_by_time_period(run_number=run_number,
+                # chop and optionally reduce
+                # TODO - FIXME - 20180727 - Use version 2.0 (multiple threading) chop and reduction
+                if chop_period is not None:
+                    # chopping with OVERLAPPED period
+                    # FIXME - This is NOTE implemented and tested
+                    status, message = self.chop_data_by_time_period(run_number=run_number,
+                                                                    start_time=None,
+                                                                    stop_time=None,
+                                                                    time_interval=time_step,
+                                                                    chop_period=chop_period,
+                                                                    reduce_flag=output_to_gsas,
+                                                                    vanadium=van_run_number,
+                                                                    output_dir=output_dir,
+                                                                    dry_run=is_dry_run,
+                                                                    chop_loadframe_log=chop_load_frame,
+                                                                    chop_furnace_log=chop_furnace_log)
+
+                elif time_step is not None:
+                    # chop by time and reduce
+                    status, message = self.chop_data_by_time(run_number=run_number,
+                                                             start_time=None,
+                                                             stop_time=None,
+                                                             time_interval=time_step,
+                                                             reduce_flag=output_to_gsas,
+                                                             vanadium=van_run_number,
+                                                             output_dir=output_dir,
+                                                             dry_run=is_dry_run,
+                                                             chop_loadframe_log=chop_load_frame,
+                                                             chop_furnace_log=chop_furnace_log,
+                                                             roi_list=roi_file_names,
+                                                             mask_list=mask_file_names
+                                                             )
+                # elif log_name is not None:
+                #     # chop by log value
+                #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
+                #     status, message = self.chop_data_by_log(run_number=run_number,
+                #                                             start_time=None,
+                #                                             stop_time=None,
+                #                                             log_name=log_name,
+                #                                             log_value_stepl=delta_log_value,
+                #                                             reduce_flag=output_to_gsas,
+                #                                             output_dir=output_dir,
+                #                                             dry_run=is_dry_run)
+                elif user_slice_file is not None:
+                    # chop by user specified time splitters
+                    # TEST - Need to wait for Mantid
+                    try:
+                        slicer_list = self.parse_pick_data(user_slice_file)
+                        status, message = self.chop_data_manually(run_number=run_number,
+                                                                  slicer_list=slicer_list,
+                                                                  reduce_flag=output_to_gsas,
+                                                                  vanadium=van_run_number,
+                                                                  output_dir=output_dir,
+                                                                  dry_run=is_dry_run,
+                                                                  epoch_time=(pulse_time == 1),
+                                                                  chop_loadframe_log=chop_load_frame,
+                                                                  chop_furnace_log=chop_furnace_log)
+                    except RuntimeError as run_err:
+                        return False, 'Failed to chop: {0}'.format(run_err)
+
+                else:
+                    # do nothing but launch log window
+                    status = True
+                    message = 'pop'
+                    return status, message
+                # END-IF-ELSE
+
+                # chop time
+                time2 = time.time()
+                duration_chop = time2 - time1
+                time1 = time.time()
+
+                final_success = final_success and status
+                sum_msg += 'Run {}: duration = {}: {}\n'.format(run_number, duration_chop, message)
+            # END-FOR (run_number)
+        else:
+            # NeXus
+            if time_step is not None:
+                # chop by time and reduce
+                final_success, sum_msg = self.chop_data_by_time(run_number=-1,
                                                                 start_time=None,
                                                                 stop_time=None,
                                                                 time_interval=time_step,
-                                                                chop_period=chop_period,
                                                                 reduce_flag=output_to_gsas,
                                                                 vanadium=van_run_number,
                                                                 output_dir=output_dir,
                                                                 dry_run=is_dry_run,
                                                                 chop_loadframe_log=chop_load_frame,
-                                                                chop_furnace_log=chop_furnace_log)
-
-            elif time_step is not None:
-                # chop by time and reduce
-                status, message = self.chop_data_by_time(run_number=run_number,
-                                                         start_time=None,
-                                                         stop_time=None,
-                                                         time_interval=time_step,
-                                                         reduce_flag=output_to_gsas,
-                                                         vanadium=van_run_number,
-                                                         output_dir=output_dir,
-                                                         dry_run=is_dry_run,
-                                                         chop_loadframe_log=chop_load_frame,
-                                                         chop_furnace_log=chop_furnace_log,
-                                                         roi_list=roi_file_names,
-                                                         mask_list=mask_file_names
-                                                         )
-            # elif log_name is not None:
-            #     # chop by log value
-            #     # FIXME/TODO/ISSUE/FUTURE - shall we implement this?
-            #     status, message = self.chop_data_by_log(run_number=run_number,
-            #                                             start_time=None,
-            #                                             stop_time=None,
-            #                                             log_name=log_name,
-            #                                             log_value_stepl=delta_log_value,
-            #                                             reduce_flag=output_to_gsas,
-            #                                             output_dir=output_dir,
-            #                                             dry_run=is_dry_run)
-            elif user_slice_file is not None:
-                # chop by user specified time splitters
-                # TEST - Need to wait for Mantid
-                try:
-                    slicer_list = self.parse_pick_data(user_slice_file)
-                    status, message = self.chop_data_manually(run_number=run_number,
-                                                              slicer_list=slicer_list,
-                                                              reduce_flag=output_to_gsas,
-                                                              vanadium=van_run_number,
-                                                              output_dir=output_dir,
-                                                              dry_run=is_dry_run,
-                                                              epoch_time=(pulse_time == 1),
-                                                              chop_loadframe_log=chop_load_frame,
-                                                              chop_furnace_log=chop_furnace_log)
-                except RuntimeError as run_err:
-                    return False, 'Failed to chop: {0}'.format(run_err)
+                                                                chop_furnace_log=chop_furnace_log,
+                                                                roi_list=roi_file_names,
+                                                                mask_list=mask_file_names)
 
             else:
-                # do nothing but launch log window
-                status = True
-                message = 'pop'
-                return status, message
-            # END-IF-ELSE
-
-            # chop time
-            time2 = time.time()
-            duration_chop = time2 - time1
-            time1 = time.time()
-
-            final_success = final_success and status
-            sum_msg += 'Run {}: duration = {}: {}\n'.format(run_number, duration_chop, message)
-        # END-FOR (run_number)
+                raise RuntimeError('NeXus file only support chop time by')
+        # END-IF-ELSE
 
         # TODO/THINK/ISSUE/55 - shall a signal be emit???
         # self.reduceSignal.emit(command_args)
@@ -610,7 +653,8 @@ class VdriveChop(VDriveCommand):
 
         help_str += 'Examples:\n'
         help_str += '1. Chop run 96450 by 60 seconds:\n'
-        help_str += ' > CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1\n\n'
+        help_str += ' > CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1\n'
+        help_str += 'chop, nexus=\'/SNS/VULCAN/IPTS-19577/nexus/VULCAN_152782.nxs.h5\', dbin=10, bin=1, output=/tmp/'
 
         return help_str
 

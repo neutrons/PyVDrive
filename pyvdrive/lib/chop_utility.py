@@ -96,7 +96,7 @@ class DataChopper(object):
         :return:
         """
         # Check input's validity
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('Run number', run_number, (0, None))
         datatypeutility.check_file_name(nxs_file_name, check_exist=True, check_writable=False,
                                         is_dir=False, note='NeXus file name')
 

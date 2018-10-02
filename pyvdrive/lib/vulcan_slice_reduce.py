@@ -668,7 +668,7 @@ class SliceFocusVulcan(object):
         """
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
-        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (0, None))  # IPTS=1: pseudo IPTS for arb. NeXus
         datatypeutility.check_string_variable('GSAS parm file name', parm_file_name)
 
         for index, ws_name in enumerate(workspace_name_list):

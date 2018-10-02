@@ -382,7 +382,7 @@ class VDriveAPI(object):
 
         return status, slice_tag
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
         Generate data slicer by time
         :param run_number: run number (integer) or base file name (str)
@@ -392,10 +392,11 @@ class VDriveAPI(object):
         :return:
         """
         # check input
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        if raw_nexus_name is None:
+            datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
         # get chopper
-        chopper = self._myProject.get_chopper(run_number)
+        chopper = self._myProject.get_chopper(None, nxs_file_name=raw_nexus_name)
 
         # generate data slicer
         status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
@@ -1865,7 +1866,8 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, roi_list, mask_list, export_log_type='loadframe', user_bin_parameter=None):
+                   number_banks, roi_list, mask_list, export_log_type='loadframe', user_bin_parameter=None,
+                   raw_nexus_name=None):
         """ Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
@@ -1899,7 +1901,8 @@ class VDriveAPI(object):
                                                    user_bin_parameter=user_bin_parameter,
                                                    vdrive_bin_flag=bin_for_vdrive,
                                                    roi_list=roi_list,
-                                                   mask_list=mask_list)
+                                                   mask_list=mask_list,
+                                                   nexus_file_name=raw_nexus_name)
 
         print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 

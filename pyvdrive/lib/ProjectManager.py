@@ -331,7 +331,7 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, vdrive_bin_flag, roi_list, mask_list):
+                 user_bin_parameter, vdrive_bin_flag, roi_list, mask_list, nexus_file_name=None):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -357,7 +357,12 @@ class ProjectManager(object):
         """
         # check inputs' validity
         datatypeutility.check_string_variable('Slicer key', slicer_key)
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        if nexus_file_name is None:
+            # if Run number is specified
+            datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        else:
+            # if nexus file is given but not run number, then using a pseudo run number 0
+            run_number = 0
         if vanadium is not None:
             datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
@@ -373,12 +378,18 @@ class ProjectManager(object):
         # END-TYR
 
         # get data file path and IPTS number
-        try:
-            data_file = self.get_file_path(run_number)
-            ipts_number = self.get_ipts_number(run_number)
-        except RuntimeError as run_error:
-            return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
-                          ''.format(run_number, run_error)
+        if run_number > 0:
+            try:
+                data_file = self.get_file_path(run_number)
+                ipts_number = self.get_ipts_number(run_number)
+            except RuntimeError as run_error:
+                return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
+                              ''.format(run_number, run_error)
+        else:
+            # user providing nexus file
+            datatypeutility.check_file_name(nexus_file_name, check_exist=True, note='Event NeXus file name')
+            data_file = nexus_file_name
+            ipts_number = 0
 
         # chop and (optionally) diffraction focus the binning data
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
@@ -621,6 +632,8 @@ class ProjectManager(object):
             # create a new DataChopper associated with this run
             if nxs_file_name is None:
                 nxs_file_name = self.get_file_path(run_number)
+            if not isinstance(run_number, int) or run_number < 0:
+                run_number = 0
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
