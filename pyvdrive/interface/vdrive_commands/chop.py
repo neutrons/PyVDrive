@@ -12,7 +12,7 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
