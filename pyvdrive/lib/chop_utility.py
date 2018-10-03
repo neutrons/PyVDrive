@@ -399,7 +399,7 @@ class DataChopper(object):
         if start_time is not None:
             datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
         if stop_time is not None:
-            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E10, None))
+            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
         if start_time is not None and stop_time is not None and start_time >= stop_time:
             raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
                                ''.format(start_time, stop_time))
