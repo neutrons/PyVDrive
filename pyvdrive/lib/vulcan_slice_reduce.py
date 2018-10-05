@@ -1,7 +1,7 @@
 # This is a class to slice and focus data for parallelization (multiple threading)
 import time
-from mantid.simpleapi import Load, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder, Rebin
-from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace
+from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder
+from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
 from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
 from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace, SaveVulcanGSS
 from mantid.api import AnalysisDataService
@@ -12,7 +12,7 @@ import h5py
 import time
 import file_utilities
 import datatypeutility
-
+import mantid_mask as mask_util
 
 # chop data
 # ipts = 18522
@@ -377,7 +377,12 @@ class SliceFocusVulcan(object):
         out_ws_name, data_key = self.generate_output_workspace_name(event_file_name)
 
         # keep it as the current workspace
-        self._last_loaded_event_ws = Load(Filename=event_file_name, MetaDataOnly=False, OutputWorkspace=out_ws_name)
+        if event_file_name.endswith('.h5'):
+            self._last_loaded_event_ws = LoadEventNexus(Filename=event_file_name, MetaDataOnly=False, Precount=True,
+                                                        OutputWorkspace=out_ws_name)
+        else:
+            self._last_loaded_event_ws = Load(Filename=event_file_name, OutputWorkspace=out_ws_name)
+
         self._last_loaded_ref_id = data_key
 
         self._ws_name_dict[data_key] = out_ws_name
@@ -517,8 +522,6 @@ class SliceFocusVulcan(object):
         :param mask_list:
         :return: tuple: [1] slicing information, [2] output workspace names
         """
-        import mantid_mask as mask_util
-
         # check inputs
         datatypeutility.check_dict('Binning parameters', binning_parameters)
         datatypeutility.check_dict('GSAS information', gsas_info_dict)
@@ -527,10 +530,14 @@ class SliceFocusVulcan(object):
         t0 = time.time()
 
         # Load event file
-        Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
+        if event_file_name.endswith('.h5'):
+            LoadEventNexus(Filename=event_file_name, OutputWorkspace=event_ws_name,
+                           Precount=True)
+        else:
+            Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
 
         # mask detectors
-        # TODO - FIXME - 20180930 - Masking is transfered to a MaskManager class... Need to apply this!
+        # TODO - FIXME - 20180930 - Masking is transferred to a MaskManager class... Need to apply this!
         # event_ws =  mask_util.mask_detectors(event_ws_name, roi_list, mask_list)
         # if event_ws.getNumberEvents() == 0:
         #     raise RuntimeError('No events after masked/not masked! Do not know how to handle')
