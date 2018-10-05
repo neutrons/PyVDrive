@@ -12,7 +12,7 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -29,6 +29,8 @@ class VdriveChop(VDriveCommand):
         'DRYRUN': 'If equal to 1, then it is a dry run to check input and output.',
         'HELP': 'the Log Picker Window will be launched and set up with given RUN number.\n',
         'DT': 'the period between two adjacent time segments',
+        'STARTTIME': 'The starting time of the first slicer.  Default is the run start',
+        'STOPTIME': 'The stopping time of the last slicer. Default is the run stop',
         'RUNV': 'vanadium run number',
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
@@ -422,6 +424,15 @@ class VdriveChop(VDriveCommand):
         if chop_furnace_log and chop_load_frame:
             return False, 'Only 1 option in LOADFRAME and FURNACE can be chosen.'
 
+        if 'STARTTIME' in self._commandArgsDict:
+            start_time = float(self._commandArgsDict['STARTTIME'])
+        else:
+            start_time = 0
+        if 'STOPTIME' in self._commandArgsDict:
+            stop_time = float(self._commandArgsDict['STOPTIME'])
+        else:
+            stop_time = None
+
         if 'DBIN' in self._commandArgsDict:
             time_step = float(self._commandArgsDict['DBIN'])
         else:
@@ -517,8 +528,8 @@ class VdriveChop(VDriveCommand):
                 elif time_step is not None:
                     # chop by time and reduce
                     status, message = self.chop_data_by_time(run_number=run_number,
-                                                             start_time=None,
-                                                             stop_time=None,
+                                                             start_time=start_time,
+                                                             stop_time=stop_time,
                                                              time_interval=time_step,
                                                              reduce_flag=output_to_gsas,
                                                              vanadium=van_run_number,
@@ -577,8 +588,8 @@ class VdriveChop(VDriveCommand):
             if time_step is not None:
                 # chop by time and reduce
                 final_success, sum_msg = self.chop_data_by_time(run_number=-1,
-                                                                start_time=None,
-                                                                stop_time=None,
+                                                                start_time=start_time,
+                                                                stop_time=stop_time,
                                                                 time_interval=time_step,
                                                                 reduce_flag=output_to_gsas,
                                                                 vanadium=van_run_number,
@@ -654,7 +665,9 @@ class VdriveChop(VDriveCommand):
         help_str += 'Examples:\n'
         help_str += '1. Chop run 96450 by 60 seconds:\n'
         help_str += ' > CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1\n'
-        help_str += 'chop, nexus=\'/SNS/VULCAN/IPTS-19577/nexus/VULCAN_152782.nxs.h5\', dbin=10, bin=1, output=/tmp/'
+        help_str += '2. Chop arbitrary NeXus file with user speficied starting and stopping time.:\n'
+        help_str += 'chop, nexus=\'/SNS/VULCAN/IPTS-19577/nexus/VULCAN_152782.nxs.h5\', dbin=10, bin=1, output=/tmp/, '
+        help_str += 'StartTime=0, StopTime=3600\n'
 
         return help_str
 
