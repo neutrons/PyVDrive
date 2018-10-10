@@ -385,18 +385,24 @@ class VDriveAPI(object):
     def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
         Generate data slicer by time
-        :param run_number: run number (integer) or base file name (str)
+        if base file name is given, then run number will be ignored, even it is specified with an integer,
+        which may not make any sense.
+        :param run_number: run number (integer)
         :param start_time:
         :param end_time:
         :param time_step:
+        :param raw_nexus_name: Base file name (str)
         :return:
         """
         # check input
         if raw_nexus_name is None:
             datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
-        # get chopper
-        chopper = self._myProject.get_chopper(None, nxs_file_name=raw_nexus_name)
+        # get chopper:
+        if raw_nexus_name is not None:
+            chopper = self._myProject.get_chopper(None, nxs_file_name=raw_nexus_name)
+        else:
+            chopper = self._myProject.get_chopper(run_number, nxs_file_name=None)
 
         # generate data slicer
         status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
@@ -1303,7 +1309,7 @@ class VDriveAPI(object):
                         standard_sample_tuple=None, binning_parameters=None,
                         merge_runs=False, dspace=False, num_banks=3, roi_list=None,
                         mask_list=None,
-                        version=1):
+                        version=2):
         """
         Reduce a set of data
         Purpose:
@@ -1357,6 +1363,16 @@ class VDriveAPI(object):
         if binning_parameters is None:
             binning_parameters = [-0.001]
 
+        # check ROI list and Mask list
+        if roi_list is None:
+            roi_list = list()
+        else:
+            datatypeutility.check_list('ROI list', roi_list)
+        if mask_list is None:
+            mask_list = list()
+        else:
+            datatypeutility.check_list('Mask list', mask_list)
+
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
@@ -1390,8 +1406,9 @@ class VDriveAPI(object):
         else:
             # manual reduction: Reduce runs
             # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
-            if roi_list is not None or mask_list is not None:
-                raise RuntimeError('ROI/MASK is not supported!')
+            # TODO - 20181010 - Implement roi list and mask list
+            if len(roi_list) + len(mask_list) > 0:
+                raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
             try:
                 status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
@@ -1909,7 +1926,7 @@ class VDriveAPI(object):
         return status, message
 
     def slice_data_segment_period(self, run_number, slicer_id, chop_period, reduce_data,
-                                 vanadium, save_chopped_nexus, output_dir, export_log_type):
+                                  vanadium, save_chopped_nexus, output_dir, export_log_type):
         """
         slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
         other than time_interval value.

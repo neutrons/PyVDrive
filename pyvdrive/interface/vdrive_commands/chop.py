@@ -4,7 +4,7 @@ Implement VDRIVE command VCHOP
 import os
 import time
 from procss_vcommand import VDriveCommand
-
+from pyvdrive.lib import datatypeutility
 
 class VdriveChop(VDriveCommand):
     """
@@ -139,16 +139,15 @@ class VdriveChop(VDriveCommand):
         """
         # check inputs
         if self._raw_nexus_file_name is None:
-            assert isinstance(run_number, int), 'Run number {} must be a string but not {}.' \
-                                                ''.format(run_number, type(run_number))
+            datatypeutility.check_int_variable('Run number', run_number, (1, None))
         else:
-            assert isinstance(self._raw_nexus_file_name, str), 'blabla'
+            datatypeutility.check_file_name(self._raw_nexus_file_name, check_exist=True,
+                                            check_writable=False, is_dir=False, note='Event Nexus file')
             run_number = 0
 
-        assert isinstance(output_dir, str), 'Directory {} must be a string (now {}).' \
-                                            ''.format(output_dir, type(output_dir))
-        if os.path.exists(output_dir) is False:
-            raise RuntimeError('Output directory {} does note exist.'.format(output_dir))
+        datatypeutility.check_file_name(output_dir, check_exist=True, check_writable=True,
+                                        is_dir=True, note='Output directory')
+
         # dry run: return input options
         if dry_run:
             outputs = 'Slice IPTS-%d Run %d by time with (%s, %s, %s) ' % (self._iptsNumber, run_number,

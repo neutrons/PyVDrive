@@ -1746,7 +1746,7 @@ class ReduceVulcanData(object):
 
         # reduce and write to GSAS file ... it is reduced HERE!
         if not self._reductionSetup._autoReduceLogOnly:
-            print '[DB...BAT...BAT] Reduce data here!'
+            print '[INFO] Reduce data here (Old SNSPowderReduction Approach)!'
             return_list = self.reduce_powder_diffraction_data()
             reduction_is_successful = return_list[0]
             msg_gsas = return_list[1]

@@ -56,14 +56,6 @@ class WorkspaceViewWidget(QWidget):
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_to_console)
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
-        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_workspace)
-        # self.connect(self.ui.pushButton_toIPython, QtCore.SIGNAL('clicked()'),
-        #              self.do_write_to_console)
-        # self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
-        #              self.do_clear_canvas)
-        # self.connect(self.ui.pushButton_fitCanvas, QtCore.SIGNAL('clicked()'),
-        #              self.do_fit_canvas)
 
         return
 
@@ -107,6 +99,7 @@ class WorkspaceViewWidget(QWidget):
         write the workspace name to IPython console
         :return:
         """
+        # TODO - 20181010 - More friendly to write out ws = mtd[...]
         # get workspace name
         ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
 
@@ -128,6 +121,8 @@ class WorkspaceViewWidget(QWidget):
         """
         script = script.strip()
         command = script.split(',')[0]
+
+        # TODO 20181010 - More information to plainTextEdit_info
 
         print '[DB...BAT] Going to execute: ', script
 

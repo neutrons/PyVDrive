@@ -200,11 +200,11 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             mask_file_names = list()
 
-        # reduction algorithm version
+        # reduction algorithm version: set default to version 2 (the new one)
         if 'VERSION' in self._commandArgsDict:
             reduction_alg_ver = int(self._commandArgsDict['VERSION'])
         else:
-            reduction_alg_ver = 1
+            reduction_alg_ver = 2
 
         # scan the runs with data archive manager and add the runs to project
         if use_chop_data:

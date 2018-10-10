@@ -623,6 +623,7 @@ class ProjectManager(object):
         Get data chopper (manager) of a run number
         If the run number does not have any DataChopper associated, then create a one
         :param run_number:
+        :param nxs_file_name:
         :return: DataChopper instance
         """
         if run_number in self._chopManagerDict:
@@ -738,7 +739,7 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int) and run_number >= 0, 'blabla'
+        datatypeutility.check_int_variable('Run number', run_number, (0, None))
 
         if run_number in self._dataFileDict:
             file_path = self._dataFileDict[run_number][0]

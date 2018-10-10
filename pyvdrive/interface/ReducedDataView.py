@@ -2040,15 +2040,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # note: as it is from a signal with defined parameters types, there is no need to check
         #       the validity of parameters
         current_run_str = str(self.ui.comboBox_runs.currentText())
+
+        print ('[DB...BAT] Respond to signal to strip vanadium peaks: current run (in combo-box): {}'
+               ''.format(current_run_str))
+
         if current_run_str.isdigit():
-            current_run_number = int(current_run_str)
             # ipts_number, run_number = self._dataIptsRunDict[current_run_number]
             data_key = None
+            run_number = int(current_run_str)
         else:
             data_key = current_run_str
+            run_number = None
             # ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
+        ipts_number = self._iptsNumber
         status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
                                                                   peak_fwhm, tolerance,
                                                                   background_type, is_high_background,
