@@ -2039,8 +2039,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         #       the validity of parameters
         current_run_str = str(self.ui.comboBox_runs.currentText())
 
-        print ('[DB...BAT] Respond to signal to strip vanadium peaks: current run (in combo-box): {}'
-               ''.format(current_run_str))
+        print ('[DB...BAT] Respond to signal to strip vanadium peaks: current run (in combo-box): {}; '
+               'User specified bank list: {}'
+               ''.format(current_run_str, bank_list))
 
         if current_run_str.isdigit():
             # ipts_number, run_number = self._dataIptsRunDict[current_run_number]
@@ -2058,9 +2059,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                                   background_type, is_high_background,
                                                                   data_key)
         if status:
-            result_ws_name = ret_obj
-            # self.load_reduced_data(run_number=controller_data_key, unit=self._currUnit)
-            self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=0, unit=self._currUnit)
+            print ('[DB...BAT] from strip vanadium peaks: {}'.format(ret_obj))
+            result_ws_name = ret_obj[bank_list[0]]
+            self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=bank_list[0], unit=self._currUnit)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
