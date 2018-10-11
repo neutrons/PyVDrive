@@ -297,6 +297,7 @@ class VBin(procss_vcommand.VDriveCommand):
     def get_help(self):
         """
         get help
+        VBIN,IPTS=19577,RUNS=152782,OUTPUT='/tmp'
         :return:
         """
         help_str = 'VBIN/VDRIVEBIN: binning data (without generating log files)\n'
@@ -314,7 +315,7 @@ class VBin(procss_vcommand.VDriveCommand):
         help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
-        help_str += '> VBIN,RUNS=152782, RUNE=153144, BANKS=7\n'
+        help_str += '> VBIN,IPTS=19577, RUNS=152782, RUNE=153144, BANKS=7\n'
         help_str += 'New (in test):\n'
         help_str += '> VBIN,IPTS=Latest,RUNS=Latest,VERSION=2\n'
         help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5\n'

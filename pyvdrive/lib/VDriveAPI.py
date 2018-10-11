@@ -527,20 +527,18 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    # TODO - 20180820 - better doc and clean!
-    def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
-                         is_workspace=False):
-        """ Get reduced data
+    def get_reduced_data(self, run_id, target_unit, bank_id=None):
+        """ Get reduced data from workspace
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: A flexible input that can be (1) run number (int) (2) data key (str) (3) workspace (str)
-        :param target_unit:
-        :param ipts_number: IPTS number
-        :param search_archive: flag to allow search reduced data from archive
-        :param is_workspace:
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
-                 example dict[bank] = vec_x, vec_y, vec_e
+
+        Removed arguments: ipts_number=None, search_archive=False, is_workspace=False
+
+        :param run_id: A flexible input that can be (1) data key (str), (2) data key (tuple), (3) workspace name
+        :param target_unit: TOF, dSpacing
+        :param bank_id:
+        :return: a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
         """
         # check whether run ID is a data key or a workspace name
         if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
@@ -2116,16 +2114,30 @@ class VDriveAPI(object):
         :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
         """
         # get workspace name
-        if workspace_name is None:
+        # check whether run ID is a data key or a workspace name
+        if isinstance(workspace_name, str) and mantid_helper.workspace_does_exist(workspace_name):
+            # workspace name is workspace name
+            pass
+        elif isinstance(workspace_name, str):
+            # workspace name is run id
+            run_id = workspace_name
+            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+            print ('[DB...BAT] Strip vanadium peak: retrieve workspace {} from run ID {}'
+                   ''.format(workspace_name, run_id))
+        else:
+            assert workspace_name is None, 'workspace name {} (of type {}) must be None' \
+                                           ''.format(workspace_name, type(workspace_name))
             # get workspace (key) from IPTS number and run number
-            assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
-            assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
-            if not self._myProject.has_reduced_workspace(ipts_number, run_number):
+            datatypeutility.check_int_variable('IPTS number', ipts_number, (None, None))
+            datatypeutility.check_int_variable('Run number', run_number, (None, None))
+            # assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
+            # assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
+            if self._myProject.has_reduced_workspace(ipts_number, run_number):
+                workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
+            else:
                 error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
                                 ''.format(ipts_number, run_number)
                 return False, error_message
-
-            workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
         # END-IF
 
         # call for strip vanadium peaks

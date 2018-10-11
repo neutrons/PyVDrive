@@ -474,9 +474,12 @@ class CalibrationManager(object):
             # END-IF
         # END-FOR  
 
-        print ('[DB...BAT] calibration dict: {}'.format(self._calibration_dict.keys()))
-
-        calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
+        try:
+            calibration_file_name = self._calibration_dict[cal_date_index][num_banks]
+        except KeyError as key_err:
+            print ('[DB...BAT] calibration dict: {}.  {} with calibration date index = {}.  number banks = {}'
+                   ''.format(self._calibration_dict.keys(), year_month_date, cal_date_index, num_banks))
+            raise key_err
 
         return cal_date_index, calibration_file_name
 
@@ -595,7 +598,8 @@ class CalibrationManager(object):
         """
         # get calibration date and file name
         calib_file_date, calib_file_name = self.get_calibration_file(run_start_date, num_banks)
-        print ('[DB...BAT] ID/Date: {}; Calibration file name: {}'.format(calib_file_date, calib_file_name))
+        print ('[DB...BAT] CalibrationMananger: ID/Date: {}; Calibration file name: {}'
+               ''.format(calib_file_date, calib_file_name))
 
         # regular check with dictionary
         has_them = True
@@ -667,15 +671,14 @@ class CalibrationManager(object):
         :param bank_numbers:
         :return:
         """
+        # check whether this file has been loaded
+        if self.has_loaded(run_start_date, bank_numbers):
+            return
+
         # use run_start_date (str) to search in the calibration date time string
         cal_date_index, calibration_file_name = self.get_calibration_file(run_start_date, bank_numbers)
         print ('[DB...BAT] Located calibration file {0} with reference ID {1}'
                ''.format(calibration_file_name, cal_date_index))
-
-        # check whether this file has been loaded
-        if self.has_loaded(cal_date_index, bank_numbers):
-            return
-
         # load
         self.load_calibration_file(calibration_file_name, cal_date_index, bank_numbers, ref_workspace_name)
 

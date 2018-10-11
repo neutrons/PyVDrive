@@ -1460,13 +1460,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
-        print ('[DB...BAT] Data key = {}'.format(data_key))
+        print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'.format(data_key))
 
         data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        # convert format
+        # convert to 2 vectors
         vec_x = data_set[bank_id][0]
         vec_y = data_set[bank_id][1]
-        print ('[DB...BAT] Just retrieved: {} vs {}'.format(len(vec_x), len(vec_y)))
 
         return vec_x, vec_y
 
@@ -1551,7 +1550,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if entry_key not in self._currentPlotDataKeyDict:
             vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                              unit=self._currUnit)
-            # TODO FIXME NEXT : use a stack to manage the data stored
             self._currentPlotDataKeyDict[entry_key] = vec_x, vec_y
         else:
             # data already been loaded before
@@ -1664,7 +1662,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         assert isinstance(data_key, str) or isinstance(data_key, tuple),\
             'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
 
-        print ('[DB...BAT] Plot By Data Key = {}'.format(data_key))
+        print ('[DB...BAT] Reduction View:  Plot By Data Key = {} of Type {}'.format(data_key, type(data_key)))
 
         # plot
         for index, bank_id in enumerate(bank_id_list):
@@ -2046,7 +2044,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         if current_run_str.isdigit():
             # ipts_number, run_number = self._dataIptsRunDict[current_run_number]
-            data_key = None
+            data_key = current_run_str
             run_number = int(current_run_str)
         else:
             data_key = current_run_str
@@ -2062,7 +2060,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if status:
             result_ws_name = ret_obj
             # self.load_reduced_data(run_number=controller_data_key, unit=self._currUnit)
-            self.retrieve_loaded_reduced_data(data_key=result_ws_name, unit=self._currUnit)
+            self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=0, unit=self._currUnit)
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, err_msg)
@@ -2101,8 +2099,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # get the input workspace
         if self._iptsNumber is None:
             van_peak_removed_ws = self._lastVanPeakStripWorkspace
+            print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {}'.format(van_peak_removed_ws))
         else:
             van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
+            print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {} from {}/{}/{}'
+                   ''.format(van_peak_removed_ws, self._iptsNumber, self._currRunNumber, self._currBank))
         status, ret_obj = self._myController.smooth_diffraction_data(workspace_name=van_peak_removed_ws,
                                                                      bank_id=None,
                                                                      smoother_type=smoother_type,
@@ -2115,7 +2116,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                 self._lastVanSmoothedWorkspace = smoothed_ws_name
             else:
                 self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
-            self.retrieve_loaded_reduced_data(data_key=smoothed_ws_name)
+            self.retrieve_loaded_reduced_data(data_key=smoothed_ws_name, bank_id=0, unit='dSpacing')
         else:
             err_msg = ret_obj
             GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
