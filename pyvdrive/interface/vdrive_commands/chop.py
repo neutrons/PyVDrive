@@ -398,11 +398,14 @@ class VdriveChop(VDriveCommand):
             # TODO/ISSUE/33/ - organize some information
             pass
 
-        if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
-            # dry run
-            is_dry_run = True
-        else:
-            is_dry_run = False
+        try:
+            if 'DRYRUN' in self._commandArgsDict and int(self._commandArgsDict['DRYRUN']) == 1:
+                # dry run
+                is_dry_run = True
+            else:
+                is_dry_run = False
+        except ValueError as run_err:
+            return False, 'DRYRUN value {} cannot be recognized.'.format(self._commandArgsDict['DRYRUN'])
 
         # vanadium run
         if 'RUNV' in self._commandArgsDict:
