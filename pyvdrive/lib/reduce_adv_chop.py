@@ -673,8 +673,9 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         # set up default
 
-        runner = vulcan_slice_reduce.SliceFocusVulcan()
-        # idl_name = self._reductionSetup.get_vulcan_bin_file()
+        runner = vulcan_slice_reduce.SliceFocusVulcan(output_dir=self._reductionSetup.get_chopped_directory()[0])
+        print ('[DB...BAT] Writing GSAS to {}'.format(self._reductionSetup.get_chopped_directory()[0]))
+
         info, output_ws_names = runner.slice_focus_event_workspace(event_file_name=raw_file_name,
                                                                    event_ws_name=event_ws_name,
                                                                    split_ws_name=split_ws_name,
@@ -684,9 +685,6 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
                                                                    gsas_info_dict=gsas_info_dict,
                                                                    roi_list=roi_list,
                                                                    mask_list=mask_list)
-                                                                   # idl_bin_file_name=idl_name,
-                                                                   # east_west_binning_parameters=ew_params,
-                                                                   # high_angle_binning_parameters=high_params)
 
         self._reducedWorkspaceList.extend(output_ws_names)
 

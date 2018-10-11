@@ -1336,10 +1336,12 @@ class ReductionManager(object):
                 binning_param_dict = self._calibrationFileManager.get_vdrive_binning_reference(run_start_date)
 
             elif user_binning_parameter:
-                binning_param_dict = self.form_binning_parameters(number_banks, user_binning_parameter)
-                vs
-                binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
-                                                                 high_angle_binning_parameters)
+                # TODO - 20181010 - Make this work!
+                # binning_param_dict = self.form_binning_parameters(number_banks, user_binning_parameter)
+                # vs
+                # binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
+                #                                                  high_angle_binning_parameters)
+                raise NotImplementedError('ASAP')
             else:
                 # default binning
                 binning_param_dict = self._calibrationFileManager.get_default_binning_reference(run_start_date,
