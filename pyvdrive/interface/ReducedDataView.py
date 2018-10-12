@@ -26,6 +26,9 @@ import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
 
 
+BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
+
+
 class GeneralPurposedDataViewWindow(QMainWindow):
     """ Class for general-purposed plot window to view reduced data
     """
@@ -93,7 +96,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._mutexBankIDList = False
 
         # data structure to manage the fitting result
-        self._stripBufferDict = dict()  # key = [self._iptsNumber, self._currRunNumber, self._currBank]
+        self._stripBufferDict = dict()  # key = [run ID], i.e., [run ID (str)][bank ID (int, 1, 2, 3)] = workspace name
         self._lastVanPeakStripWorkspace = None
         self._smoothBufferDict = dict()
         self._lastVanSmoothedWorkspace = None
@@ -896,6 +899,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # FWHM
         if self._vanadiumFWHM is not None:
             self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+
+        # also set up the vanadium processors
+        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
+        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 
@@ -2022,9 +2029,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background, bank_list):
+    def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
         """
         process the signal to strip vanadium peaks
+        :param bank_group_index:
         :param peak_fwhm:
         :param tolerance:
         :param background_type:
@@ -2037,35 +2045,22 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # note: as it is from a signal with defined parameters types, there is no need to check
         #       the validity of parameters
-        current_run_str = str(self.ui.comboBox_runs.currentText())
-
-        print ('[DB...BAT] Respond to signal to strip vanadium peaks: current run (in combo-box): {}; '
-               'User specified bank list: {}'
-               ''.format(current_run_str, bank_list))
-
-        if current_run_str.isdigit():
-            # ipts_number, run_number = self._dataIptsRunDict[current_run_number]
-            data_key = current_run_str
-            run_number = int(current_run_str)
-        else:
-            data_key = current_run_str
-            run_number = None
-            # ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
-        ipts_number = self._iptsNumber
-        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
-                                                                  peak_fwhm, tolerance,
-                                                                  background_type, is_high_background,
-                                                                  data_key)
-        if status:
-            print ('[DB...BAT] from strip vanadium peaks: {}'.format(ret_obj))
-            result_ws_name = ret_obj[bank_list[0]]
-            self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=bank_list[0], unit=self._currUnit)
-        else:
-            err_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, err_msg)
-            return
+        self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
+                                                                           tolerance, background_type,
+                                                                           is_high_background)
+
+        self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=bank_list[0], unit=self._currUnit)
+
+        # if status:
+        #     print ('[DB...BAT] from strip vanadium peaks: {}'.format(ret_obj))
+        #     result_ws_name = ret_obj[bank_list[0]]
+        #     self.retrieve_loaded_reduced_data(data_key=result_ws_name, bank_id=bank_list[0], unit=self._currUnit)
+        # else:
+        #     err_msg = ret_obj
+        #     GuiUtility.pop_dialog_error(self, err_msg)
+        #     return
 
         # plot the data without vanadium peaks
         # re-plot the original data because the operation can back from final stage
@@ -2079,14 +2074,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
                                                         clear_previous=False,
                                                         color='green')
 
-        if self._iptsNumber is None:
-            self._lastVanPeakStripWorkspace = result_ws_name
-        else:
-            self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
-
         return
 
-    def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
+    def signal_smooth_vanadium(self, bank_group_index, smoother_type, param_n, param_order):
         """
         process the signal to smooth vanadium spectra
         :param smoother_type:
@@ -2098,30 +2088,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         smoother_type = str(smoother_type)
 
         # get the input workspace
-        if self._iptsNumber is None:
-            van_peak_removed_ws = self._lastVanPeakStripWorkspace
-            print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {}'.format(van_peak_removed_ws))
-        else:
-            van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
-            print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {} from {}/{}/{}'
-                   ''.format(van_peak_removed_ws, self._iptsNumber, self._currRunNumber, self._currBank))
-        status, ret_obj = self._myController.smooth_diffraction_data(workspace_name=van_peak_removed_ws,
-                                                                     bank_id=None,
-                                                                     smoother_type=smoother_type,
-                                                                     param_n=param_n,
-                                                                     param_order=param_order,
-                                                                     start_bank_id=1)
-        if status:
-            smoothed_ws_name = ret_obj
-            if self._iptsNumber is None:
-                self._lastVanSmoothedWorkspace = smoothed_ws_name
-            else:
-                self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
-            self.retrieve_loaded_reduced_data(data_key=smoothed_ws_name, bank_id=0, unit='dSpacing')
-        else:
-            err_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
-            return
+        # if self._iptsNumber is None:
+        #     van_peak_removed_ws = self._lastVanPeakStripWorkspace
+        #     print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {}'.format(van_peak_removed_ws))
+        # else:
+        #     van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
+        #     print ('[DB...BAT] Smooth vanadium: workspace (vanadium peak removed): {} from {}/{}/{}'
+        #            ''.format(van_peak_removed_ws, self._iptsNumber, self._currRunNumber, self._currBank))
+
+        self._myController.project.vanadium_processing_manager.smooth_spectra(bank_group_index, smoother_type,
+                                                                              param_n, param_order,
+                                                                              smooth_original=False)
+
+        # if status:
+        #     smoothed_ws_name = ret_obj
+        #     if self._iptsNumber is None:
+        #         self._lastVanSmoothedWorkspace = smoothed_ws_name
+        #     else:
+        #         self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
+        #     self.retrieve_loaded_reduced_data(data_key=smoothed_ws_name, bank_id=0, unit='dSpacing')
+        # else:
+        #     err_msg = ret_obj
+        #     GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
+        #     return
 
         # plot data: the unit is changed to TOF due to Mantid's behavior
         #            as a consequence of this, the vanadium spectrum with peak removed shall be re-plot in TOF space

@@ -353,6 +353,26 @@ def delete_workspace(workspace):
     return
 
 
+def extract_spectrum(input_workspace, output_workspace, workspace_index):
+    """
+    exctract a spectrum from a workspace
+    :param input_workspace: str
+    :param output_workspace: str
+    :param workspace_index: str
+    :return:
+    """
+    datatypeutility.check_string_variable('Input workspace name', input_workspace)
+    datatypeutility.check_string_variable('Output workspace name', output_workspace)
+
+    source_ws = retrieve_workspace(input_workspace, True)
+    datatypeutility.check_int_variable('Workspace index', workspace_index, (0, source_ws.getNumberHistograms()))
+
+    mantidapi.ExtractSpectra(input_workspace, WorkspaceIndexList=[workspace_index],
+                             OutputWorkspace=output_workspace)
+
+    return
+
+
 def find_peaks(diff_data, ws_index, is_high_background, background_type, peak_profile='Gaussian',
                min_peak_height=200, peak_pos_list=None):
     """

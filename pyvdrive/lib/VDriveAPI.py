@@ -595,6 +595,20 @@ class VDriveAPI(object):
     #     """
     #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
 
+    def get_reduced_workspace_name(self, run_id):
+        """
+        get reduced workspace name
+        :param run_id:
+        :return:
+        """
+        # check whether run ID is a data key or a workspace name
+        if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
+            workspace_name = run_id
+        else:
+            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+
+        return workspace_name
+
     def get_slicer(self, run_number, slicer_id):
         """
         Get the slicer (in vectors) by run number and slicer ID
@@ -1735,7 +1749,7 @@ class VDriveAPI(object):
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
             if do_shift:
                 # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
-                self._myProject.vanadium_processing_manager.apply_shift()
+                self._myProject.vanadium_processing_manager.shift_fwhm_for_wavelength()
             status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
                                                                                            output_dir=local_output)
 
@@ -2060,96 +2074,98 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def smooth_diffraction_data(self, workspace_name, bank_id=None,
-                                smoother_type='Butterworth', param_n=20, param_order=2,
-                                start_bank_id=1):
-        """
-        smooth spectra of focused diffraction data
-        :param workspace_name:
-        :param bank_id:
-        :param smoother_type:
-        :param param_n:
-        :param param_order:
-        :param start_bank_id:
-        :return:
-        """
-        try:
-            if bank_id is None:
-                # smooth all spectra
-                workspace_index = None
-            else:
-                # smooth one spectrum
-                assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
-                                                 ''.format(bank_id, type(bank_id))
-                assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
-                                                       ''.format(start_bank_id, type(start_bank_id))
+    # Migrate the call to vanadium_processing_manager.smooth_diffraction_data directly
+    # def smooth_diffraction_data(self, workspace_name, bank_id=None,
+    #                             smoother_type='Butterworth', param_n=20, param_order=2,
+    #                             start_bank_id=1):
+    #     """
+    #     smooth spectra of focused diffraction data
+    #     :param workspace_name:
+    #     :param bank_id:
+    #     :param smoother_type:
+    #     :param param_n:
+    #     :param param_order:
+    #     :param start_bank_id:
+    #     :return:
+    #     """
+    #     try:
+    #         if bank_id is None:
+    #             # smooth all spectra
+    #             workspace_index = None
+    #         else:
+    #             # smooth one spectrum
+    #             assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
+    #                                              ''.format(bank_id, type(bank_id))
+    #             assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
+    #                                                    ''.format(start_bank_id, type(start_bank_id))
+    #
+    #             workspace_index = bank_id - start_bank_id
+    #         # END-IF
+    #
+    #         smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
+    #             bank_id_list=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
+    #
+    #     except RuntimeError as run_err:
+    #         return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
+    #
+    #     return True, smoothed_ws_name
 
-                workspace_index = bank_id - start_bank_id
-            # END-IF
-
-            smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
-                bank_id_list=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
-
-        except RuntimeError as run_err:
-            return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
-
-        return True, smoothed_ws_name
-
-    def strip_vanadium_peaks(self, ipts_number, run_number, bank_list, peak_fwhm,
-                             peak_pos_tolerance, background_type, is_high_background,
-                             workspace_name):
-        """
-        strip vanadium peaks.
-        This method supports 2 type of inputs
-         (1) IPTS and run number;
-         (2) workspace name
-        :param ipts_number:
-        :param run_number:
-        :param bank_list:
-        :param peak_fwhm:
-        :param peak_pos_tolerance:
-        :param background_type:
-        :param is_high_background:
-        :param workspace_name:
-        :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
-        """
-        # get workspace name
-        # check whether run ID is a data key or a workspace name
-        if isinstance(workspace_name, str) and mantid_helper.workspace_does_exist(workspace_name):
-            # workspace name is workspace name
-            pass
-        elif isinstance(workspace_name, str):
-            # workspace name is run id
-            run_id = workspace_name
-            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
-            print ('[DB...BAT] Strip vanadium peak: retrieve workspace {} from run ID {}'
-                   ''.format(workspace_name, run_id))
-        else:
-            assert workspace_name is None, 'workspace name {} (of type {}) must be None' \
-                                           ''.format(workspace_name, type(workspace_name))
-            # get workspace (key) from IPTS number and run number
-            datatypeutility.check_int_variable('IPTS number', ipts_number, (None, None))
-            datatypeutility.check_int_variable('Run number', run_number, (None, None))
-            # assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
-            # assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
-            if self._myProject.has_reduced_workspace(ipts_number, run_number):
-                workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
-            else:
-                error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
-                                ''.format(ipts_number, run_number)
-                return False, error_message
-        # END-IF
-
-        # call for strip vanadium peaks
-        try:
-            out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
-                                                                                  background_type, is_high_background,
-                                                                                  workspace_name=workspace_name,
-                                                                                  bank_list=bank_list)
-        except RuntimeError as run_err:
-            return False, 'Unable to strip vanadium due to {0}'.format(run_err)
-
-        return True, out_ws_name
+    # Migrate the call to vanadium_processing_manager.strip_peaks directly
+    # def strip_vanadium_peaks(self, ipts_number, run_number, bank_list, peak_fwhm,
+    #                          peak_pos_tolerance, background_type, is_high_background,
+    #                          workspace_name):
+    #     """
+    #     strip vanadium peaks.
+    #     This method supports 2 type of inputs
+    #      (1) IPTS and run number;
+    #      (2) workspace name
+    #     :param ipts_number:
+    #     :param run_number:
+    #     :param bank_list:
+    #     :param peak_fwhm:
+    #     :param peak_pos_tolerance:
+    #     :param background_type:
+    #     :param is_high_background:
+    #     :param workspace_name:
+    #     :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
+    #     """
+    #     # get workspace name
+    #     # check whether run ID is a data key or a workspace name
+    #     if isinstance(workspace_name, str) and mantid_helper.workspace_does_exist(workspace_name):
+    #         # workspace name is workspace name
+    #         pass
+    #     elif isinstance(workspace_name, str):
+    #         # workspace name is run id
+    #         run_id = workspace_name
+    #         workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+    #         print ('[DB...BAT] Strip vanadium peak: retrieve workspace {} from run ID {}'
+    #                ''.format(workspace_name, run_id))
+    #     else:
+    #         assert workspace_name is None, 'workspace name {} (of type {}) must be None' \
+    #                                        ''.format(workspace_name, type(workspace_name))
+    #         # get workspace (key) from IPTS number and run number
+    #         datatypeutility.check_int_variable('IPTS number', ipts_number, (None, None))
+    #         datatypeutility.check_int_variable('Run number', run_number, (None, None))
+    #         # assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
+    #         # assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
+    #         if self._myProject.has_reduced_workspace(ipts_number, run_number):
+    #             workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
+    #         else:
+    #             error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
+    #                             ''.format(ipts_number, run_number)
+    #             return False, error_message
+    #     # END-IF
+    #
+    #     # call for strip vanadium peaks
+    #     try:
+    #         out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
+    #                                                                               background_type, is_high_background,
+    #                                                                               workspace_name=workspace_name,
+    #                                                                               bank_list=bank_list)
+    #     except RuntimeError as run_err:
+    #         return False, 'Unable to strip vanadium due to {0}'.format(run_err)
+    #
+    #     return True, out_ws_name
 
     def undo_vanadium_peak_strip(self, ipts_number=None, run_number=None):
         """
