@@ -1273,6 +1273,8 @@ class ProjectManager(object):
         :param mask_list:
         :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
+        print ('[INFO] Reduction VULCAN Version 2 is Called')
+
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
@@ -1322,8 +1324,7 @@ class ProjectManager(object):
 
                 # save to GSAS
                 if gsas:
-                    pass
-                    # TODO - 20180813 - Next: mantid_reduction.save_vulcan_gsas()
+                    mantid_reduction.save_vulcan_gsas(out_ws_name)
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))

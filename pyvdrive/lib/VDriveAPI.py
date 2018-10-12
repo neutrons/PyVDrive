@@ -1399,6 +1399,7 @@ class VDriveAPI(object):
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
+            print ('[DB...BAT] GSAS Flag = {}'.format(gsas))
             run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,

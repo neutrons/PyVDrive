@@ -639,7 +639,7 @@ class SliceFocusVulcan(object):
 
             # Save
             try:
-                print ('[DB...BAT] Save GSS to {}'.format(gsas_file_name))
+                print ('[DB...BAT] Save GSS to {} from {}'.format(gsas_file_name.format(output_workspace)))
                 SaveGSS(InputWorkspace=output_workspace, Filename=gsas_file_name, SplitFiles=False, Append=False,
                         Format="SLOG", MultiplyByBinWidth=False,
                         ExtendedHeader=False,

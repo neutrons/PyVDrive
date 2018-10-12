@@ -21,9 +21,9 @@ class VanadiumProcessControlDialog(QDialog):
     """ GUI (dialog) for process vanadium data
     """
     # Define signals
-    myStripPeakSignal = QtCore.pyqtSignal(int, float, str, bool, list)  # signal to send out
+    myStripPeakSignal = QtCore.pyqtSignal(int, int, float, str, bool)  # signal to send out
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
-    mySmoothVanadiumSignal = QtCore.pyqtSignal(str, int, int)  # signal to smooth vanadium spectra
+    mySmoothVanadiumSignal = QtCore.pyqtSignal(int, str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
     myApplyResultSignal = QtCore.pyqtSignal(str, int, int)  # signal to apply/save the smoothed vanadium
 
@@ -70,47 +70,11 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.horizontalSlider_smoothN.valueChanged.connect(self.evt_smooth_param_changed)
         self.ui.horizontalSlider_smoothOrder.valueChanged.connect(self.evt_smooth_param_changed)
 
+        self.ui.comboBox_plotBanks.currentIndexChanged.connect(self.do_plot_vanadiums)
+
         # final
         self.ui.pushButton_applyVanProcessResult.clicked.connect(self.do_save_result)
         self.ui.pushButton_quit.clicked.connect(self.do_quit)
-
-        # self.connect(self.ui.pushButton_stripVanadiumPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_strip_vanadium_peaks)
-        # self.connect(self.ui.pushButton_undoPeakStrip, QtCore.SIGNAL('clicked()'),
-        #              self.do_undo_strip)
-        # self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
-        #              self.do_restore_peak_strip_parameters)
-        # self.connect(self.ui.pushButton_savePeakStripParamAsDefaults, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_peak_strip_parameters)
-        #
-        # # tab for smoothing vanadium
-        # self.connect(self.ui.pushButton_smoothVanadium, QtCore.SIGNAL('clicked()'),
-        #              self.do_smooth_vanadium)
-        # self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
-        #              self.do_undo_smooth_vanadium)
-        # self.connect(self.ui.pushButton_setPeakStripParamToDefaults, QtCore.SIGNAL('clicked()'),
-        #              self.do_restore_smooth_vanadium_parameters)
-        # self.connect(self.ui.pushButton_saveSmoothParamAsDefaults, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_vanadium_smooth_parameters)
-        # self.connect(self.ui.pushButton_setSmoothNRange, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_smooth_n_range)
-        # self.connect(self.ui.pushButton_setSmoothOrderRange, QtCore.SIGNAL('clicked()'),
-        #              self.do_set_smooth_order_range)
-        #
-        # self.connect(self.ui.lineEdit_smoothParameterN, QtCore.SIGNAL('textChanged(QString)'),
-        #              self.evt_smooth_vanadium)
-        # self.connect(self.ui.lineEdit_smoothParameterOrder, QtCore.SIGNAL('textChanged(QString)'),
-        #              self.evt_smooth_vanadium)
-        # self.connect(self.ui.horizontalSlider_smoothN, QtCore.SIGNAL('valueChanged(int)'),
-        #              self.evt_smooth_param_changed)
-        # self.connect(self.ui.horizontalSlider_smoothOrder, QtCore.SIGNAL('valueChanged(int)'),
-        #              self.evt_smooth_param_changed)
-        #
-        # # final
-        # self.connect(self.ui.pushButton_applyVanProcessResult, QtCore.SIGNAL('clicked()'),
-        #              self.do_save_result)
-        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-        #              self.do_quit)
 
         # define signal
         self.myStripPeakSignal.connect(self._myParent.signal_strip_vanadium_peaks)
@@ -152,6 +116,25 @@ class VanadiumProcessControlDialog(QDialog):
         self.load_settings()
         self.do_restore_peak_strip_parameters()
         self.do_restore_smooth_vanadium_parameters()
+
+        # check box
+        self.ui.checkBox_isHighBackground.setChecked(True)
+
+        return
+
+    def do_plot_vanadiums(self):
+        """
+
+        :return:
+        """
+        bank_id = int(str(self.ui.comboBox_plotBanks.currentText()))
+        if self.ui.tabWidget.currentIndex() == 0:
+            plot_smoothed = False
+        else:
+            plot_smoothed = True
+
+        run_id = str(self.ui.lineEdit_runNumber.text())
+        self._myParent.plot_1d_vanadium(run_id, bank_id, is_smoothed_data=plot_smoothed)
 
         return
 
@@ -278,11 +261,25 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
+    def _get_banks_group(self):
+        # append the banks
+        bank_group = str(self.ui.comboBox_banks.currentText())
+        if bank_group.count('East') > 0:
+            bank_group_index = 90
+        elif bank_group.count('High') > 0:
+            bank_group_index = 150
+        else:
+            raise NotImplementedError('Bank group {} is not supported.'.format(bank_group))
+
+        return bank_group_index
+
     def do_smooth_vanadium(self):
         """
         smooth vanadium data
         :return:
         """
+        bank_group_index = self._get_banks_group()
+
         # get smoothing parameter
         try:
             smoother_type = str(self.ui.comboBox_smoothFilterTiype.currentText())
@@ -293,7 +290,7 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         # emit signal
-        self.mySmoothVanadiumSignal.emit(smoother_type, smoother_n, smoother_order)
+        self.mySmoothVanadiumSignal.emit(bank_group_index, smoother_type, smoother_n, smoother_order)
 
         return
 
@@ -311,19 +308,19 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         # append the banks
-        bank_list = list()
-        if self.ui.checkBox_90degBank.isChecked():
-            bank_list.extend([1, 2])
-        if self.ui.checkBox_highAngleBank.isChecked():
-            bank_list.append(3)
-        if len(bank_list) == 0:
-            gutil.pop_dialog_information(self, 'Neither West/East nor High angle bank is selected.')
-            return
+        # bank_group = str(self.ui.comboBox_banks.currentText())
+        # if bank_group.count('East') > 0:
+        #     bank_group_index = 90
+        # elif bank_group.count('High') > 0:
+        #     bank_group_index = 150
+        # else:
+        #     raise NotImplementedError('Bank group {} is not supported.'.format(bank_group))
+        bank_group_index = self._get_banks_group()
 
         background_type = str(self.ui.comboBox_vanPeakBackgroundType.currentText())
         is_high_background = self.ui.checkBox_isHighBackground.isChecked()
 
-        self.myStripPeakSignal.emit(peak_fwhm, fit_tolerance, background_type, is_high_background, bank_list)
+        self.myStripPeakSignal.emit(bank_group_index, peak_fwhm, fit_tolerance, background_type, is_high_background)
 
         return
 
@@ -382,6 +379,9 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
+    def get_run_id(self):
+        return str(self.ui.lineEdit_runNumber.text())
+
     def load_settings(self):
         """
         Load QSettings from previous saved file
@@ -415,14 +415,11 @@ class VanadiumProcessControlDialog(QDialog):
 
         return
 
-    def set_ipts_run(self, ipts_number, run_number):
-        """
-        set IPTS number and run number
-        :param ipts_number:
+    def set_run_number(self, run_number):
+        """ set run number
         :param run_number:
         :return:
         """
-        self.ui.lineEdit_iptsNumber.setText(str(ipts_number))
         self.ui.lineEdit_runNumber.setText(str(run_number))
 
         return

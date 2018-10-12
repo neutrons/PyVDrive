@@ -2095,7 +2095,7 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
         # push all the Y values to positive integer
         smooth_ws = ADS.retrieve(input_workspace)
         if workspace_index is None:
-            workspace_index_list = range(smooth_ws.getNumberHistogram())
+            workspace_index_list = range(smooth_ws.getNumberHistograms())
         else:
             workspace_index_list = [workspace_index]
 
@@ -2171,7 +2171,10 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
         # before striping: EventWorkspace
         output_ws_dict = dict()
         for bank_id in bank_list:
-            output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
+            if len(bank_list) > 1:
+                output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
+            else:
+                output_ws_name_i = output_ws_name
             mantidapi.StripVanadiumPeaks(InputWorkspace=input_ws_name,
                                          OutputWorkspace=output_ws_name_i,
                                          FWHM=fwhm,
@@ -2182,7 +2185,6 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
                                          )
             output_ws_dict[bank_id] = output_ws_name_i
             # After strip: Workspace2D
-
         # END-FOR
 
     except RuntimeError as run_err:
