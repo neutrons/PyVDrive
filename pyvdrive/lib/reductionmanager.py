@@ -29,7 +29,7 @@ class CalibrationManager(object):
         self._calibration_dict = None
 
         # binning
-        self._vdrive_bin_ref_file_dict = None
+        self._vdrive_bin_ref_file_dict = dict()  # [date (standard)][num banks] = file name
         self._vdrive_binning_ref_dict = dict()   # [date, num_banks] ...
         self._default_tof_bins_dict = None   # [cal_date, num_banks]
 
@@ -135,16 +135,17 @@ class CalibrationManager(object):
         ned_2017_setup = '/SNS/VULCAN/shared/CALIBRATION/2017_8_11_CAL/vdrive_3bank_bin.h5'
         ned_2018_setup = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')
 
-        self._vdrive_bin_ref_file_dict = dict()
-        self._vdrive_bin_ref_file_dict['2010-01-01'] = pre_ned_setup
-        self._vdrive_bin_ref_file_dict['2017-06-01'] = ned_2017_setup
-        self._vdrive_bin_ref_file_dict['2018-05-31'] = ned_2018_setup
+        self._vdrive_bin_ref_file_dict['2010-01-01'] = {2: pre_ned_setup}
+        self._vdrive_bin_ref_file_dict['2017-06-01'] = {3: ned_2017_setup}
+        self._vdrive_bin_ref_file_dict['2018-05-31'] = {3: ned_2018_setup}
 
         # parse the files and create bins: better to choose the latest and with 3 banks
         dates_list = sorted(self._vdrive_bin_ref_file_dict.keys())
         cal_date = dates_list[-1]
-        idl_vdrive_bin_file = self._vdrive_bin_ref_file_dict[cal_date]
-        print ('[DB...BAT] About to loading VDRIVE GSAS Binning Template {} valid from {}'
+        idl_vdrive_bin_file = self._vdrive_bin_ref_file_dict[cal_date][3]
+
+        #
+        print ('[Calibration Initialization] Loading VDRIVE GSAS Binning Template {} valid from {}'
                ''.format(idl_vdrive_bin_file, cal_date))
         self._vdrive_binning_ref_dict[cal_date, 3] = \
             mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks=3,
@@ -193,160 +194,34 @@ class CalibrationManager(object):
         """
         return sorted(self._calibration_dict.keys())
 
-    def create_vulcan_gsas_bins(self, num_banks, h5_bin_file_name=None, binning_parameters=None):
-        raise NotImplementedError('Method disabled')
+    def create_vulcan_idl_bins(self, cal_index_date, num_banks):
+        """
 
-    # NOTE (20181014) SaveVulcanGSS() won't be used considering the use case of Vanadium
-    # def create_vulcan_gsas_bins(self, num_banks, h5_bin_file_name=None, binning_parameters=None):
-    #     """ Create a TableWorkspace with binning information for SaveVulcanGSS()
-    #     Modified from "reduceVulcan.create_bin_table":
-    #     :param num_banks:
-    #     :param h5_bin_file_name:
-    #     :param binning_parameters:
-    #     :return:
-    #     """
-    #     def generate_binning_table(table_name):
-    #         """
-    #         generate an EMPTY binning TableWorkspace
-    #         :param table_name:
-    #         :return:
-    #         """
-    #         column_definitions = [('str', 'indexes'),
-    #                               ('str', 'params')]
-    #
-    #         bin_table = mantid_helper.create_table_workspace(table_ws_name=table_name,
-    #                                                          column_def_list=column_definitions)
-    #
-    #         return bin_table
-    #     # END-DEF:
-    #
-    #     def extrapolate_last_bin(bins):
-    #         """
-    #         :param bins:
-    #         :return:
-    #         """
-    #         datatypeutility.check_numpy_arrays('TOF bins', [bins], dimension=1, check_same_shape=False)
-    #         delta_bin = (bins[-1] - bins[-2]) / bins[-2]
-    #         next_bin = bins[-1] * (1 + delta_bin)
-    #
-    #         return next_bin
-    #     # END-DEF:
-    #
-    #     # check inputs
-    #     datatypeutility.check_int_variable('Number of banks', num_banks, (1, 10000))
-    #
-    #     if (h5_bin_file_name is not None) and (binning_parameters is not None):
-    #         # define too much!
-    #         raise NotImplementedError('It is not allowed to specify both h5_bin_file and binning parameter')
-    #     elif h5_bin_file_name is not None:
-    #         # VDRIVE binning table
-    #         datatypeutility.check_file_name(h5_bin_file_name, check_exist=True, is_dir=False,
-    #                                         note='VDRIVE binning template file')
-    #
-    #         valid_from_date = mantid_reduction.get_valid_from_date_from_calibration(h5_bin_file_name)
-    #         bin_table_name = 'VULCAN_Binning_Table_{0}Banks_{}'.format(num_banks, valid_from_date)
-    #
-    #         if mantid_helper.workspace_does_exist(bin_table_name):
-    #             return
-    #     elif binning_parameters:
-    #         # User defined binnign table
-    #         assert isinstance(binning_parameters, list) or isinstance(binning_parameters, tuple), \
-    #             'Binning parameters {} must be either tuple of list but not {}' \
-    #             ''.format(binning_parameters, type(binning_parameters))
-    #         if num_banks > 2 and len(binning_parameters) != 2:
-    #             raise RuntimeError('In east/west/high resolution bank mode, it is required for 2 binning '
-    #                                'parameters for normal and high resolution serving method to '
-    #                                'save as GSAS file')
-    #
-    #         bin_table_name = ''
-    #
-    #
-    #     else:
-    #         raise NotImplementedError('Either VDRIVE template binning or user binning parameter shall be specified')
-    #
-    #     # check whether this table workspace does exist
-    #
-    #
-    #
-    #
-    #     if binning_parameters:
-    #         # using user-specified binning parameters
-    #         # NOTE/FIXME/TODO - This will be broken when east/west/high resolution changes
-    #
-    #
-    #         # if AnalysisDataService.doesExist(bin_table_name) is False:  FIXME how to avoid duplicate operation?
-    #         bin_table_ws = generate_binning_table(bin_table_name)
-    #         east_west_binning_parameters, high_angle_binning_parameters = binning_parameters
-    #
-    #         if num_banks == 3:
-    #             # west(1), east(1), high(1)
-    #             bin_table_ws.addRow(['0, 1', '{0}'.format(east_west_binning_parameters)])
-    #             bin_table_ws.addRow(['2', '{0}'.format(high_angle_binning_parameters)])
-    #         elif num_banks == 7:
-    #             # west (3), east (3), high (1)
-    #             bin_table_ws.addRow(['0-5', '{0}'.format(east_west_binning_parameters)])
-    #             bin_table_ws.addRow(['6', '{0}'.format(high_angle_binning_parameters)])
-    #         elif num_banks == 27:
-    #             # west (3), east (3), high (1)
-    #             bin_table_ws.addRow(['0-17', '{0}'.format(east_west_binning_parameters)])
-    #             bin_table_ws.addRow(['18-26', '{0}'.format(high_angle_binning_parameters)])
-    #         else:
-    #             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-    #
-    #     else:
-    #         # use explicitly defined bins and thus matrix workspace is required
-    #         # import h5 file
-    #         base_table_name = os.path.basename(h5_bin_file_name).split('.')[0]
-    #
-    #         # load vdrive bin file to 2 different workspaces
-    #         bin_file = h5py.File(h5_bin_file_name, 'r')
-    #         low_bins = bin_file['west_east_bank'][:]
-    #         high_bins = bin_file['high_angle_bank'][:]
-    #         bin_file.close()
-    #
-    #         # append last value for both east/west bin and high angle bin
-    #         low_bins = numpy.append(low_bins, extrapolate_last_bin(low_bins))
-    #         high_bins = numpy.append(high_bins, extrapolate_last_bin(high_bins))
-    #
-    #         # TODO - 20180813 - Need a unique name!
-    #         low_bin_ws_name = '{0}_LowResBin'.format(base_table_name)
-    #         high_bin_ws_name = '{0}_HighResBin'.format(base_table_name)
-    #         if not mantid_helper.workspace_does_exist(low_bin_ws_name):
-    #             mantid_helper.create_workspace_2d(vec_x=low_bins, vec_y=low_bins, vec_e=low_bins,
-    #                                               output_ws_name=low_bin_ws_name)
-    #             # mantidsimple.CreateWorkspace(low_bins, low_bins, NSpec=1, OutputWorkspace=)
-    #         if not mantid_helper.workspace_does_exist(high_bin_ws_name):
-    #             mantid_helper.create_workspace_2d(vec_x=high_bins, vec_y=high_bins, vec_e=high_bins,
-    #                                               output_ws_name=high_bin_ws_name)
-    #             # mantidsimple.CreateWorkspace(high_bins, high_bins, NSpec=1, OutputWorkspace=high_bin_ws_name)
-    #
-    #         # create binning table name
-    #         bin_table_name = self.vdrive_binning_ref_ws_name(h5_bin_file_name)
-    #
-    #         # no need to create this workspace again and again
-    #         if mantid_helper.workspace_does_exist(bin_table_name):
-    #             return bin_table_name
-    #
-    #         # create binning table
-    #         ref_bin_table = generate_binning_table(bin_table_name)
-    #
-    #         if num_banks == 3:
-    #             # west(1), east(1), high(1)
-    #             ref_bin_table.addRow(['0, 1', '{0}: {1}'.format(low_bin_ws_name, 0)])
-    #             ref_bin_table.addRow(['2', '{0}: {1}'.format(high_bin_ws_name, 0)])
-    #         elif num_banks == 7:
-    #             # west (3), east (3), high (1)
-    #             ref_bin_table.addRow(['0-5', '{0}: {1}'.format(low_bin_ws_name, 0)])
-    #             ref_bin_table.addRow(['6', '{0}: {1}'.format(high_bin_ws_name, 0)])
-    #         elif num_banks == 27:
-    #             # west (3), east (3), high (1)
-    #             ref_bin_table.addRow(['0-17', '{0}: {1}'.format(low_bin_ws_name, 0)])
-    #             ref_bin_table.addRow(['18-26', '{0}: {1}'.format(high_bin_ws_name, 0)])
-    #         else:
-    #             raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-    #     # END-IF-ELSE
-    #
-    #     return bin_table_name
+        :param cal_index_date:
+        :param num_banks:
+        :return:
+        """
+        # TODO - NowNow - Doc & Check
+        ref_template_name = self._vdrive_bin_ref_file_dict[cal_index_date][num_banks]
+
+        if cal_index_date not in self._vdrive_binning_ref_dict:
+            self._vdrive_binning_ref_dict[cal_index_date] = dict()
+
+        self._vdrive_binning_ref_dict[cal_index_date][num_banks] = \
+            mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks, ref_template_name)
+
+    def is_idl_ref_bins_loaded(self, cal_index_date, num_banks):
+        # TODO - NOWNOW - Doc & Check
+        if cal_index_date not in self._vdrive_binning_ref_dict:
+            return False
+
+        if num_banks not in self._vdrive_binning_ref_dict[cal_index_date]:
+            return False
+
+        return True
+
+    def get_vulcan_idl_bins(self, cal_index_date, num_banks):
+        return self._vdrive_binning_ref_dict[cal_index_date][num_banks]
 
     @staticmethod
     def get_base_name(file_name, num_banks):
@@ -360,6 +235,38 @@ class CalibrationManager(object):
         base_name = os.path.basename(file_name).split('.')[0] + '{0}banks'.format(num_banks)
 
         return base_name
+
+    def get_calibration_index(self, year_month_date):
+        """
+        Get the calibration index defined in CalibrationManager for computational efficiency
+        :param year_month_date: an experimental run's run start time/date
+        :return: Date index of the calibration suite.  String as YYYY-MM-DD
+        """
+        datatypeutility.check_string_variable('YYYY-MM-DD string', year_month_date)
+
+        # search the previous date
+        # check format first
+        if len(year_month_date) != 10 or year_month_date.count('-') != 2:
+            raise RuntimeError('Year-Month-Date string must be of format YYYY-MM-DD but not {0}'
+                               ''.format(year_month_date))
+
+        # search the list
+        date_list = sorted(self._calibration_dict.keys())
+        if year_month_date < date_list[0]:
+            raise RuntimeError('Input year-month-date {0} is too early comparing to {1}'
+                               ''.format(year_month_date, date_list[0]))
+
+        # do a brute force search (as there are only very few of them)
+        cal_date_index = None
+        for i_date in range(len(date_list)-1, -1, -1):
+            print ('[DB...BAT] Calibration Date: {}'.format(date_list[i_date]))
+            if year_month_date > date_list[i_date]:
+                cal_date_index = date_list[i_date]
+                break
+            # END-IF
+        # END-FOR
+
+        return cal_date_index
 
     def get_calibration_file(self, year_month_date, num_banks):
         """
@@ -594,7 +501,6 @@ class CalibrationManager(object):
         calib_ws_collection.calibration = outputs.OutputCalWorkspace.name()
         calib_ws_collection.mask = outputs.OutputMaskWorkspace.name()
         calib_ws_collection.grouping = outputs.OutputGroupingWorkspace.name()
-        print ('[DB...BAT] Output: {}'.format(calib_ws_collection))
 
         # add to loaded calibration file container
         if cal_date_index not in self._loaded_calibration_file_dict:
@@ -1615,7 +1521,9 @@ class ReductionManager(object):
         datatypeutility.check_dict('Virtual (focused) instrument geometry', virtual_instrument_geometry)
 
         # check about binning
+        bin_param_dict = None
         if use_idl_bin:
+            bin_param_dict = binning_params
             if target_unit == 'TOF':
                 binning_params = '5000, -0.01, 30000'
             else:
@@ -1654,9 +1562,8 @@ class ReductionManager(object):
 
         if use_idl_bin:
             num_banks = mantid_helper.retrieve_workspace(output_ws_name).getNumberHistograms()
-            bin_param_dict = mantid_reduction.VulcanBinningHelper.create_idl_bins(num_banks=num_banks,
-                                                                                  h5_bin_file_name=self._)
-            mantid_reduction.VulcanBinningHelper.rebin_workspace(output_ws_name, bin_param_dict)
+            mantid_reduction.VulcanBinningHelper.rebin_workspace(output_ws_name, bin_param_dict,
+                                                                 output_ws_name=output_ws_name)
 
         # remove input event workspace
         if output_ws_name != event_ws_name and keep_raw_ws is False:
@@ -1667,36 +1574,6 @@ class ReductionManager(object):
 
     def load_vdrive_bins(self, default=False, file_name=None):
         raise NotImplementedError('Method disabled')
-    # def load_vdrive_bins(self, default=False, file_name=None):
-    #     """
-    #     load VDRIVE reference binning file
-    #     :param default: True to load most recent file
-    #     :param file_name:
-    #     :return:
-    #     """
-    #     # get file name
-    #     if default:
-    #         most_recent = self._calibrationFileManager.calibration_dates[-1]
-    #         file_name = self._calibrationFileManager.get_vdrive_bin_template_file(most_recent)
-    #     else:
-    #         datatypeutility.check_file_name(file_name, check_exist=True, note='VDRive binning reference file')
-    #
-    #     # name
-    #     ref_bin_ws_name = self._calibrationFileManager.vdrive_binning_ref_ws_name(file_name)
-    #     if file_name.endswith('.dat'):
-    #         # NeXus file format
-    #         status, ret_obj = mantid_helper.load_nexus(file_name, ref_bin_ws_name, meta_data_only=False)
-    #         if not status:
-    #             raise RuntimeError('Unable to load VDRIVE reference binning file {} due to {}'
-    #                                ''.format(file_name, ret_obj))
-    #     elif file_name.endswith('.h5'):
-    #         # load to binning table
-    #         self._calibrationFileManager.create_vulcan_gsas_bins(num_banks=3, h5_bin_file_name=file_name)
-    #     else:
-    #         raise RuntimeError('VDRIVE binning reference file {} is not supported. Only .dat and .h5 '
-    #                            'are recognized and supported.'.format(file_name))
-    #
-    #     return
 
     def mask_detectors(self, event_ws_name, mask_file_name, is_roi=False):
         """ Mask detectors and optionally load the mask file for first time
@@ -1881,7 +1758,13 @@ class ReductionManager(object):
         calib_ws_name = workspaces.calibration
         group_ws_name = workspaces.grouping
         mask_ws_name = workspaces.mask
-        idl_bin_ws_name_dict = workspaces.vdrive_bins_dict
+
+        # check reference binning
+        # TODO - 20181015 - Need to consider user specified binning later
+        cal_index_date = self._calibrationFileManager.get_calibration_index(run_start_date)
+        if not self._calibrationFileManager.is_idl_ref_bins_loaded(cal_index_date, num_banks):
+            self._calibrationFileManager.create_vulcan_idl_bins(cal_index_date, num_banks)
+        idl_bin_ref_vector_dict = self._calibrationFileManager.get_vulcan_idl_bins(cal_index_date, num_banks)
 
         # set tracker
         tracker = self.init_tracker(ipts_number=ipts_number, run_number=run_number, slicer_key=None)
@@ -1889,6 +1772,12 @@ class ReductionManager(object):
 
         # diffraction focus
         virtual_geometry_dict = self._calibrationFileManager.get_focused_instrument_parameters(num_banks)
+
+        if use_idl_bin:
+            binning_parameters = idl_bin_ref_vector_dict
+        else:
+            binning_parameters = user_bin_ref_vector_dict
+
         red_message = self.diffraction_focus_workspace(event_ws_name, event_ws_name,
                                                        binning_params=binning_parameters,
                                                        use_idl_bin=use_idl_bin,
@@ -1979,7 +1868,7 @@ class ReductionManager(object):
 
 class DetectorCalibrationWorkspaces(object):
     """
-    a simple workspace for detector instrument calibration workspaces
+    A simple workspace for detector instrument calibration workspaces
     """
     def __init__(self):
         """
@@ -1988,6 +1877,7 @@ class DetectorCalibrationWorkspaces(object):
         self.calibration = None
         self.mask = None
         self.grouping = None
+        self.vdrive_bins_dict = None    # for VDRIVE-GSAS binnings
 
     def __str__(self):
         """

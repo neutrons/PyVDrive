@@ -3,7 +3,7 @@ Mantid reduction scripts
 """
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService
-from mantid.simpleapi import ExtractSpectra, RenameWorkspace, Rebin, ConvertToPointData, ConjoinWorkspaces
+from mantid.simpleapi import ExtractSpectra, RenameWorkspace, Rebin, ConvertToPointData, ConjoinWorkspaces, SaveGSS
 import numpy
 import os
 import datatypeutility
@@ -136,37 +136,6 @@ class VulcanBinningHelper(object):
 
         return binning_parameter_dict
 
-    # @staticmethod
-    # def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
-    #     """
-    #     create binning parameters
-    #     :param num_banks:
-    #     :param east_west_binning_parameters:
-    #     :param high_angle_binning_parameters:
-    #     :return:
-    #     """
-    #     binning_parameter_dict = dict()
-    #     if num_banks == 3:
-    #         # west(1), east(1), high(1)
-    #         for bank_id in range(1, 3):
-    #             binning_parameter_dict[bank_id] = east_west_binning_parameters
-    #         binning_parameter_dict[3] = high_angle_binning_parameters
-    #     elif num_banks == 7:
-    #         # west (3), east (3), high (1)
-    #         for bank_id in range(1, 7):
-    #             binning_parameter_dict[bank_id] = east_west_binning_parameters
-    #         binning_parameter_dict[7] = high_angle_binning_parameters
-    #     elif num_banks == 27:
-    #         # west (9), east (9), high (9)
-    #         for bank_id in range(1, 19):
-    #             binning_parameter_dict[bank_id] = east_west_binning_parameters
-    #         for bank_id in range(19, 28):
-    #             binning_parameter_dict[bank_id] = high_angle_binning_parameters
-    #     else:
-    #         raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-    #
-    #     return binning_parameter_dict
-
     @staticmethod
     def rebin_workspace(input_ws, binning_param_dict, output_ws_name):
         """
@@ -178,6 +147,8 @@ class VulcanBinningHelper(object):
         :param output_ws_name:
         :return:
         """
+        print ('[DB...BAT] {} is re-binned to {} with {}'.format(input_ws, output_ws_name, binning_param_dict))
+
         # check
         datatypeutility.check_dict('Binning parameters', binning_param_dict)
         datatypeutility.check_string_variable('Output workspace name', output_ws_name)
@@ -352,28 +323,45 @@ class VulcanGSASHelper(object):
         return vulcan_gsas_header
 
     @staticmethod
-    def save_vulcan_gsas(workspace_name):
+    def save_vulcan_gsas(workspace_name, output_directory, ipts_number, run_number, parm_file_name):
         """
         save a workspace to VULCAN GSAS file name
         :param workspace_name:
         :return:
         """
-        # TODO TODO - 20180813 - Passing IDL-VDRIVE binning file shall be in the setup phase of PyVDRive
-        # self._reductionSetup.get_vulcan_bin_file(),
-        # mantidsimple.SaveVulcanGSS(InputWorkspace=reduced_workspace,
-        #                            BinningTable=bin_table_name,
-        #                            OutputWorkspace=reduced_workspace,
-        #                            GSSFilename=gsas_file_name,
-        #                            IPTS=self._reductionSetup.get_ipts_number(),
-        #                            GSSParmFileName=gsas_iparm_file_name)
-        #
-        # reduce_VULCAN.py: def create_bin_table
-        #     h5_bin_file_name = os.path.join(base_calib_dir, '2018_6_1_CAL/vdrive_3bank_bin.h5')]
-        #
-        #     bin_table_name = create_bin_table(reduced_workspace, not_align_idl,
-        #
-        # self._reductionSetup.get_vulcan_bin_file(),
-        # (east_west_binning_parameters, high_angle_binning_parameters))
+        # TODO TODO - 20180813 - Doc & Check
+
+        input_ws = AnalysisDataService.retrieve(workspace_name)
+        if input_ws.isHistogramData():
+            raise RuntimeError('Output workspace {0} of type {1} to export to {2} shall be point data '
+                               'at this stage.'
+                               ''.format(workspace_name, type(input_ws), workspace_name))
+
+        # construct the headers
+        gsas_file_name = os.path.join(output_directory, '{}.gda'.format(run_number))
+
+        vulcan_gsas_header = VulcanGSASHelper.create_vulcan_gsas_header(input_ws, gsas_file_name, ipts_number,
+                                                                        parm_file_name)
+
+        vulcan_bank_headers = list()
+        for ws_index in range(input_ws.getNumberHistograms()):
+            bank_id = input_ws.getSpectrum(ws_index).getSpectrumNo()
+            bank_header = VulcanGSASHelper.create_bank_header(bank_id, input_ws.readX(ws_index))
+            vulcan_bank_headers.append(bank_header)
+        # END-IF
+
+        # Save
+        try:
+            print ('[DB...BAT] Save GSS to {} from {}'.format(gsas_file_name, format(input_ws)))
+            SaveGSS(InputWorkspace=input_ws, Filename=gsas_file_name, SplitFiles=False, Append=False,
+                    Format="SLOG", MultiplyByBinWidth=False,
+                    ExtendedHeader=False,
+                    UserSpecifiedGSASHeader=vulcan_gsas_header,
+                    UserSpecifiedBankHeader=vulcan_bank_headers,
+                    UseSpectrumNumberAsBankID=True,
+                    SLOGXYEPrecision=[1, 1, 2])
+        except RuntimeError as run_err:
+            raise RuntimeError('Failed to call SaveGSS() due to {0}'.format(run_err))
 
         return
 

@@ -674,6 +674,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # set up default
 
         runner = vulcan_slice_reduce.SliceFocusVulcan(output_dir=self._reductionSetup.get_chopped_directory()[0])
+
         print ('[DB...BAT] Writing GSAS to {}'.format(self._reductionSetup.get_chopped_directory()[0]))
 
         info, output_ws_names = runner.slice_focus_event_workspace(event_file_name=raw_file_name,

@@ -1327,7 +1327,8 @@ class ProjectManager(object):
 
                 # save to GSAS
                 if gsas:
-                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(out_ws_name, output_directory)
+                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(out_ws_name, output_directory, ipts_number,
+                                                                       run_number, 'vulcan.prm')
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))

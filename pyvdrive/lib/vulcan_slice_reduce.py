@@ -3,7 +3,8 @@ import time
 from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder
 from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
 from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
-from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace, SaveVulcanGSS
+from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace
+from mantid.simpleapi import EditInstrumentGeometry
 from mantid.api import AnalysisDataService
 import threading
 import numpy
@@ -13,6 +14,8 @@ import time
 import file_utilities
 import datatypeutility
 import mantid_mask as mask_util
+import mantid_reduction
+import mantid_helper
 
 # chop data
 # ipts = 18522
@@ -67,6 +70,9 @@ class SliceFocusVulcan(object):
         self._group_ws_name = '{0}_group'.format(self._diff_base_name)
         self._mask_ws_name = '{0}_mask'.format(self._diff_base_name)
 
+        self._focus_instrument_dict = dict()
+        self._init_focused_instruments()
+
         # multiple threading variables
         self._number_threads = num_threads
 
@@ -89,7 +95,7 @@ class SliceFocusVulcan(object):
         :param vec_x:
         :return:
         """
-        raise NotImplementedError('Moved to mantid_reduction')
+        raise NotImplementedError('create_bank_header() Moved to mantid_reduction')
         # tof_min = vec_x[0]
         # tof_max = vec_x[-1]
         # delta_tof = (vec_x[1] - tof_min) / tof_min  # deltaT/T
@@ -111,7 +117,7 @@ class SliceFocusVulcan(object):
         :param high_angle_binning_parameters:
         :return:
         """
-        raise NotImplementedError('Moved to mantid_reduction')
+        raise NotImplementedError('(create_nature_bins) Moved to mantid_reduction')
         #
         # binning_parameter_dict = dict()
         # if num_banks == 3:
@@ -146,7 +152,7 @@ class SliceFocusVulcan(object):
         :param parm_file_name:
         :return:
         """
-        raise NotImplementedError('Moved to mantid_reduction')
+        raise NotImplementedError('create_vulcan_gsas_header() Moved to mantid_reduction')
 
         # # Get necessary information including title, run start, duration and etc.
         # title = workspace.getTitle()
@@ -233,6 +239,53 @@ class SliceFocusVulcan(object):
 
         return
 
+    def _init_focused_instruments(self):
+        """
+        set up the dictionary for the instrument geometry after focusing
+        each detector (virtual) will have 3 value as L2, polar (2theta) and azimuthal (phi)
+        and the angles are in unit as degree
+        :return:
+        """
+        # TODO - FIXME - 20181030 - There shall be 1 and only 1 place to define focused geometry in PyVDRive!
+        # TODO                      Now it is diverted.  Grep L1 and _init_focused_instrument (same copy diffrent place)
+        self._focus_instrument_dict['L1'] = 43.753999999999998
+
+        # L2, Polar and Azimuthal
+        self._focus_instrument_dict['L2'] = dict()
+        self._focus_instrument_dict['Polar'] = dict()
+        self._focus_instrument_dict['Azimuthal'] = dict()
+        self._focus_instrument_dict['SpectrumIDs'] = dict()
+
+        # east_bank = [2.0, 90., 0.]
+        # west_bank = [2.0, -90., 0.]
+        # high_angle_bank = [2.0, 155., 0.]
+
+        # 2 bank
+        self._focus_instrument_dict['L2'][2] = [2., 2.]
+        self._focus_instrument_dict['Polar'][2] = [-90.,  90]
+        self._focus_instrument_dict['Azimuthal'][2] = [0., 0.]
+        self._focus_instrument_dict['SpectrumIDs'][2] = [1, 2]
+
+        # 3 bank
+        self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
+        self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
+        self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
+
+        # 7 bank
+        self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][7] = None
+        self._focus_instrument_dict['Azimuthal'][7] = None
+        self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
+
+        # 27 banks
+        self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][27] = None
+        self._focus_instrument_dict['Azimuthal'][27] = None
+        self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
+
+        return
+
     def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
         """ Do diffraction focus on a list workspaces and also convert them to IDL GSAS
         This is the main execution body to be executed in multi-threading environment
@@ -240,9 +293,6 @@ class SliceFocusVulcan(object):
         :param binning_parameter_dict: dictionary for binning parameters. it is used for convert binning to VDRIVE-IDL
         :return:
         """
-        import mantid_reduction
-        import mantid_helper
-
         datatypeutility.check_list('Workspace names', ws_name_list)
         datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
 
@@ -259,12 +309,13 @@ class SliceFocusVulcan(object):
             # convert unit to TOF
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
             # edit instrument
+            num_banks = 3
             EditInstrumentGeometry(Workspace=ws_name,
-                                   PrimaryFlightPath=mantid_helper.VULCAN_L1,
-                                   SpectrumIDs=self.reduction_params_dict['EditInstrumentGeometry']['SpectrumIDs'],
-                                   L2=self.reduction_params_dict['EditInstrumentGeometry']['L2'],
-                                   Polar=self.reduction_params_dict['EditInstrumentGeometry']['Polar'],
-                                   Azimuthal=self.reduction_params_dict['EditInstrumentGeometry']['Azimuthal'])
+                                   PrimaryFlightPath=self._focus_instrument_dict['L1'],
+                                   SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'][num_banks],
+                                   L2=self._focus_instrument_dict['L2'][num_banks],
+                                   Polar=self._focus_instrument_dict['Polar'][num_banks],
+                                   Azimuthal=self._focus_instrument_dict['Azimuthal'][num_banks])
             # convert VULCAN binning
             # self.rebin_workspace(input_ws=ws_name, binning_param_dict=binning_parameter_dict,
             #                      output_ws_name=ws_name)
@@ -361,7 +412,7 @@ class SliceFocusVulcan(object):
         :param output_ws_name:
         :return:
         """
-        raise NotImplementedError('Moved to mantid_reduction')
+        raise NotImplementedError('rebin_workspace() Moved to mantid_reduction')
         # # check
         # datatypeutility.check_dict('Binning parameters', binning_param_dict)
         # datatypeutility.check_string_variable('Output workspace name', output_ws_name)
@@ -611,6 +662,7 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
+        # TODO - 20181030 - Consider to merge with mantid_reduction....save_vulcan_gsas
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
         datatypeutility.check_int_variable('IPTS number', ipts_number, (0, None))  # IPTS=1: pseudo IPTS for arb. NeXus
@@ -631,13 +683,16 @@ class SliceFocusVulcan(object):
                                    ''.format(ws_name, type(output_workspace), gsas_file_name))
 
             # construct the headers
-            vulcan_gsas_header = self.create_vulcan_gsas_header(output_workspace, gsas_file_name, ipts_number,
-                                                                parm_file_name)
+            vulcan_gsas_header = mantid_reduction.VulcanGSASHelper.create_vulcan_gsas_header(output_workspace,
+                                                                                             gsas_file_name,
+                                                                                             ipts_number,
+                                                                                             parm_file_name)
 
             vulcan_bank_headers = list()
             for ws_index in range(output_workspace.getNumberHistograms()):
                 bank_id = output_workspace.getSpectrum(ws_index).getSpectrumNo()
-                bank_header = self.create_bank_header(bank_id, output_workspace.readX(ws_index))
+                bank_header = mantid_reduction.VulcanGSASHelper.create_bank_header(bank_id,
+                                                                                   output_workspace.readX(ws_index))
                 vulcan_bank_headers.append(bank_header)
             # END-IF
 

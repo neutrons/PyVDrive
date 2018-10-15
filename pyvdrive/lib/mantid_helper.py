@@ -910,8 +910,12 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     current_unit = get_workspace_unit(workspace_name)
     if current_unit != target_unit and target_unit is not None:
         # convert unit if the specified target unit is different
-        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
-                               Target=target_unit)
+        try:
+            mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
+                                   Target=target_unit)
+        except RuntimeError as run_err:
+            raise RuntimeError('Convert units of workspace {} to {} failed due to {}'
+                               ''.format(workspace_name, target_unit, run_err))
         current_unit = target_unit
         use_temp = True
     # END-IF
