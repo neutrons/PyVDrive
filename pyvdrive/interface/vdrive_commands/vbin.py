@@ -88,7 +88,7 @@ class VBin(procss_vcommand.VDriveCommand):
     SupportedArgs = ['IPTS', 'RUN', 'CHOPRUN', 'RUNE', 'RUNS', 'BANKS', 'BINW', 'SKIPXML', 'FOCUS_EW',
                      'RUNV', 'IParm', 'FullProf', 'NoGSAS', 'PlotFlag', 'ONEBANK', 'NoMask', 'TAG',
                      'BinFolder', 'Mytofbmax', 'Mytofbmin', 'OUTPUT', 'GROUP', 'VERSION',
-                     'ROI', 'MASK']
+                     'ROI', 'MASK', 'VDRIVEBIN']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -103,7 +103,9 @@ class VBin(procss_vcommand.VDriveCommand):
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
         'OUTPUT': 'User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin',
-        'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2'
+        'VERSION': 'User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2',
+        'BINW': 'Binning parameter, i.e., log bin step',
+        'VDRIVEBIN': 'Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True'
     }
 
     def __init__(self, controller, command_args):
@@ -200,6 +202,16 @@ class VBin(procss_vcommand.VDriveCommand):
         else:
             mask_file_names = list()
 
+        # binning parameters
+        if 'VDRIVEBIN' in self._commandArgsDict:
+            try:
+                use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
+            except ValueError:
+                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
+        else:
+            use_idl_bin = True
+        # END-OF (VDRIVE-BIN)
+
         # reduction algorithm version: set default to version 2 (the new one)
         if 'VERSION' in self._commandArgsDict:
             reduction_alg_ver = int(self._commandArgsDict['VERSION'])
@@ -219,6 +231,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                        output_directory=output_dir,
                                                                        vanadium=(van_run is not None),
                                                                        binning_parameters=binning_parameters,
+                                                                       use_idl_bin=use_idl_bin,
                                                                        align_to_vdrive_bin=use_default_binning,
                                                                        num_banks=bank_group,
                                                                        merge_banks=merge_to_one_bank,
@@ -253,6 +266,7 @@ class VBin(procss_vcommand.VDriveCommand):
                                                                vanadium=(van_run is not None),
                                                                standard_sample_tuple=standard_tuple,
                                                                binning_parameters=binning_parameters,
+                                                               use_idl_bin=use_idl_bin,
                                                                merge_runs=False,
                                                                num_banks=bank_group,
                                                                version=reduction_alg_ver,

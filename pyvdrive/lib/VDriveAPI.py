@@ -1261,7 +1261,7 @@ class VDriveAPI(object):
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
-                                binning_parameters, align_to_vdrive_bin,
+                                binning_parameters, use_idl_bin, align_to_vdrive_bin,
                                 merge_banks, gsas=True, num_banks=3):
         """ reduce a set of chopped data
         :param ipts_number:
@@ -1270,6 +1270,8 @@ class VDriveAPI(object):
         :param output_directory:
         :param vanadium:
         :param binning_parameters:
+        :param use_idl_bin: flag to use IDL-VDRIVE binning from a pre-defined data file with calibration files
+                            It will override binning parameters
         :param align_to_vdrive_bin:
         :param merge_banks:
         :param gsas:
@@ -1303,22 +1305,35 @@ class VDriveAPI(object):
         # END-IF
 
         # reduce
-        try:
-            status, error_message = self._myProject.reduce_nexus_files(raw_file_list, output_directory, vanadium, gsas,
-                                                                       binning_parameters, merge_banks,
-                                                                       align_to_vdrive_bin,
-                                                                       vanadium_tuple=None,
-                                                                       standard_sample_tuple=None,
-                                                                       num_banks=num_banks)
-        except AssertionError as assert_err:
-            raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
+        sum_status = True
+        sum_message = ''
 
-        return status, error_message
+        vanadium_tuple = False
+        standard_sample_tuple = False
+        for nexus_file_name in raw_file_list:
+            status, sub_message = \
+                self._myProject.reduction_manager.reduce_event_nexus_ver1(ipts_number=None, run_number=None,
+                                                                          event_file=nexus_file_name,
+                                                                          output_directory=output_directory,
+                                                                          merge_banks=merge_banks,
+                                                                          vanadium=vanadium,
+                                                                          vanadium_tuple=vanadium_tuple,
+                                                                          gsas=gsas,
+                                                                          standard_sample_tuple=standard_sample_tuple,
+                                                                          binning_parameters=binning_parameters,
+                                                                          use_idl_bin=use_idl_bin,
+                                                                          num_banks=num_banks)
+            if not status:
+                sum_status = False
+                sum_message += '{0}\n'.format(sum_message)
+        # END-FOR
+
+        return sum_status, sum_message
 
     def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
-                        standard_sample_tuple=None, binning_parameters=None,
+                        standard_sample_tuple=None, binning_parameters=None, use_idl_bin=True,
                         merge_runs=False, dspace=False, num_banks=3, roi_list=None,
                         mask_list=None,
                         version=2):
@@ -1344,6 +1359,7 @@ class VDriveAPI(object):
         :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
+        :param use_idl_bin: Use IDL-VDRIVE binning parameters.  It overrides binning_parameters if True
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
@@ -1404,6 +1420,7 @@ class VDriveAPI(object):
                                                                               output_directory=output_directory,
                                                                               d_spacing=True,
                                                                               binning_parameters=binning_parameters,
+                                                                              use_idl_bin=use_idl_bin,
                                                                               convert_to_matrix=True,
                                                                               number_banks=num_banks,
                                                                               gsas=gsas,

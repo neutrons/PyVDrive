@@ -147,9 +147,8 @@ class VanadiumProcessingManager(object):
 
     def process_vanadium(self, peak_fwhm=None, peak_pos_tol=0.01, background_type='Quadratic',
                          is_high_background=True, smoother_filter_type='Butterworth',
-                         param_n=20, param_order=2, save=True, output_dir=None):
-        """
-        Process vanadium run including strip vanadium peaks and smooth
+                         param_n=20, param_order=2, save=True, output_dir=None, write_to_gsas=True):
+        """ Process vanadium run including strip vanadium peaks and smooth
         :param peak_fwhm:
         :param peak_pos_tol:
         :param background_type:
@@ -157,20 +156,30 @@ class VanadiumProcessingManager(object):
         :param smoother_filter_type:
         :param param_n:
         :param param_order:
-        :param save: flag to save the processed vanadium
+        :param save:  flag to save the processed vanadium
+        :param output_dir:
+        :param write_to_gsas:
         :return:
         """
+        import mantid_reduction
         # strip vanadium peaks
         if peak_fwhm is None:
             peak_fwhm = self._default_fwhm
-        out_ws_1 = self.strip_peaks(peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
-                                    background_type=background_type,
-                                    is_high_background=is_high_background)
-        assert isinstance(out_ws_1, str), 'Output must be a string'
+
+        # strip peaks
+        for bank_group_name in bank_group_dict.keys():
+            self.strip_peaks(bank_group_index=bank_group_name,
+                             peak_fwhm=peak_fwhm, pos_tolerance=peak_pos_tol,
+                             background_type=background_type,
+                             is_high_background=is_high_background)
+
+        if write_to_gsas:
+            mantid_reduction.VulcanBinningHelper.rebin_workspace()
 
         # smooth vanadium spectra
-        out_ws_2 = self.smooth_spectra(bank_id_list=None, smoother_type=smoother_filter_type,
-                                       param_n=param_n, param_order=param_order)
+        for bank_group_name in bank_group_dict.keys():
+            self.smooth_spectra(bank_group_index=None, smoother_type=smoother_filter_type,
+                            param_n=param_n, param_order=param_order)
         assert isinstance(out_ws_2, str), 'Output must be a string'
 
         # save
@@ -292,6 +301,8 @@ class VanadiumProcessingManager(object):
         :param param_order:
         :return: output workspace name
         """
+        import mantid_reduction
+
         datatypeutility.check_int_variable('Banks group index (90 or 150 degrees)', bank_group_index, (-180, 180))
 
         for bank_id in sorted(self._bank_group_dict[bank_group_index]):
@@ -307,6 +318,16 @@ class VanadiumProcessingManager(object):
             out_ws_name = input_ws_name + '_Smoothed'
 
             # smooth vanadium spectra
+            input_ws = mantid_helper.retrieve_workspace(input_ws_name)
+            ws_unit = input_ws.getAxis(0).getUnit().unitID()
+            print ('[DB...BAT] Input workspace {} to smooth has unit {}'
+                   ''.format(input_ws_name, ws_unit))
+
+            # rebin to final TOF binning
+            if ws_unit != 'TOF':
+                mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws_name, binning_param_dict=xxx,
+                                                                     output_ws_name=input_ws_name)
+
             mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
                                           output_workspace=out_ws_name,
                                           smooth_filter=smoother_type,
@@ -322,6 +343,7 @@ class VanadiumProcessingManager(object):
     def strip_peaks(self, bank_group_index, peak_fwhm, pos_tolerance, background_type, is_high_background):
         """
         strip vanadium peaks
+        Note: result is stored in _striped_peaks_ws_dict
         :param bank_group_index: 90/150
         :param peak_fwhm:
         :param pos_tolerance:
