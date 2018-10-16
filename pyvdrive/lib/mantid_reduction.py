@@ -147,7 +147,7 @@ class VulcanBinningHelper(object):
         :param output_ws_name:
         :return:
         """
-        print ('[DB...BAT] {} is re-binned to {} with {}'.format(input_ws, output_ws_name, binning_param_dict))
+        print ('[DB...BAT] <020910> {} is re-binned to {} with {}'.format(input_ws, output_ws_name, binning_param_dict))
 
         # check
         datatypeutility.check_dict('Binning parameters', binning_param_dict)
@@ -156,6 +156,8 @@ class VulcanBinningHelper(object):
         # check input workspace
         if isinstance(input_ws, str):
             input_ws = AnalysisDataService.retrieve(input_ws)
+
+        print ('[DB...BAT] binning dictionary keys: {}\n{}'.format(binning_param_dict.keys(), binning_param_dict))
 
         # check input binning parameters
         for ws_index in range(input_ws.getNumberHistograms()):
@@ -168,8 +170,9 @@ class VulcanBinningHelper(object):
             elif isinstance(bin_params, str) and bin_params.count(',') % 2 == 1:
                 raise RuntimeError('Binning parameter {0} (as a string) cannot be accepted.'
                                    ''.format(bin_params))
+        # END-FOR
 
-        # rebin input workspace
+        # rebin input workspace: extract each single spectrum, rebinning and combine them back
         processed_single_spec_ws_list = list()
         for ws_index in range(input_ws.getNumberHistograms()):
             # rebin on each

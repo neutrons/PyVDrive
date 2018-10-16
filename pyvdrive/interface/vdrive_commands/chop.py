@@ -12,7 +12,8 @@ class VdriveChop(VDriveCommand):
     """
     # TODO/ISSUE/NOWNOW - Implement DT and RUNV
     SupportedArgs = ['IPTS', 'HELP', 'RUNS', 'RUNE', 'DBIN', 'LOADFRAME', 'FURNACE', 'BIN', 'PICKDATA', 'OUTPUT',
-                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME']
+                     'DRYRUN', 'PULSETIME', 'DT', 'RUNV', 'INFO', 'ROI', 'MASK', 'NEXUS', 'STARTTIME', 'STOPTIME',
+                     'VDRIVEBIN', 'NUMBANKS', 'SAVECHOPPED2NEXUS']
 
     ArgsDocDict = {
         'IPTS': 'IPTS number',
@@ -34,6 +35,10 @@ class VdriveChop(VDriveCommand):
         'RUNV': 'vanadium run number',
         'ROI': 'Files for Mantid made region of interest file in XML format',
         'MASK': 'Files for Mantid made mask file in XML format',
+        'VDRIVEBIN': 'If equal to 1, using VDRIVE GSAS binning template to re-bin and output to GSAS.  Default is 3',
+        'NUMBANKS': 'Number of banks in the output GSAS file',
+        'SAVECHOPPED2NEXUS': 'If equal to 1, then the chopped and reduced workspace will be save to a NeXus file. '
+                             'Default is 0 (as False)'
     }
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
@@ -120,7 +125,7 @@ class VdriveChop(VDriveCommand):
 
     def chop_data_by_time(self, run_number, start_time, stop_time, time_interval, reduce_flag, vanadium,
                           output_dir, dry_run, chop_loadframe_log, chop_furnace_log, roi_list,
-                          mask_list):
+                          mask_list, use_idl_bin, num_banks, save_to_nexus):
         """
         Chop data by time interval
         :param run_number:
@@ -135,6 +140,7 @@ class VdriveChop(VDriveCommand):
         :param chop_furnace_log:
         :param roi_list: list (region of interest files)
         :param mask_list: list (mask files)
+        :param use_idl_bin: use VDRIVE GSAS binning as a template
         :return:
         """
         # check inputs
@@ -182,15 +188,13 @@ class VdriveChop(VDriveCommand):
             exp_log_type = None
 
         # chop
-        # TODO FIXME - 20180806 - Number of banks shall be given from console
-        # TODO FIXME - 20180806 - Save chopped nexus shall be specified by user
-        # TODO FIXME - 20180821 - use_bin_parameter shall be parsed from suer
         status, message = self._controller.slice_data(run_number, slicer_key, reduce_data=reduce_flag,
-                                                      vanadium=vanadium, save_chopped_nexus=False,
+                                                      vanadium=vanadium, save_chopped_nexus=save_to_nexus,
                                                       output_dir=output_dir,
-                                                      number_banks=3,
+                                                      number_banks=num_banks,
                                                       export_log_type=exp_log_type,
                                                       user_bin_parameter=None,
+                                                      use_idl_bin=use_idl_bin,
                                                       roi_list=roi_list,
                                                       mask_list=mask_list,
                                                       raw_nexus_name=self._raw_nexus_file_name)
@@ -462,6 +466,37 @@ class VdriveChop(VDriveCommand):
         else:
             mask_file_names = list()
 
+        # binning parameters
+        use_idl_bin = True
+        if 'VDRIVEBIN' in self._commandArgsDict:
+            try:
+                use_idl_bin = int(self._commandArgsDict['VDRIVEBIN']) > 0
+            except ValueError:
+                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
+        else:
+            use_idl_bin = True
+        # END-OF (VDRIVE-BIN)
+
+        # number of banks in output GSAS file
+        num_banks = 3
+        if 'NUMBANKS' in self._commandArgsDict:
+            try:
+                num_banks = int(self._commandArgsDict['VDRIVEBIN'])
+                if num_banks <= 0:
+                    return False, 'Number of banks ({}) cannot be zero or negative.'.format(num_banks)
+            except ValueError:
+                return False, 'VDRIVEBIN {} must be an integer '.format(self._commandArgsDict['VDRIVEBIN'])
+        # END-OF (NUMBANKS)
+
+        save_to_nexus = False
+        if 'SAVECHOPPED2NEXUS' in self._commandArgsDict:
+            try:
+                save_to_nexus = int(self._commandArgsDict['VDRIVEBIN']) > 0
+            except ValueError:
+                return False, 'SAVECHOPPED2NEXUS {} must be an integer' \
+                              ''.format(self._commandArgsDict['SAVECHOPPED2NEXUS'])
+        # END-OF (SAVECHOPPED2NEXUS)
+
         # check
         if time_step and user_slice_file:
             return False, 'Only 1 option in DBIN and PICKDATA can be chosen.'
@@ -511,7 +546,6 @@ class VdriveChop(VDriveCommand):
                         continue
 
                 # chop and optionally reduce
-                # TODO - FIXME - 20180727 - Use version 2.0 (multiple threading) chop and reduction
                 if chop_period is not None:
                     # chopping with OVERLAPPED period
                     # FIXME - This is NOTE implemented and tested
@@ -540,7 +574,10 @@ class VdriveChop(VDriveCommand):
                                                              chop_loadframe_log=chop_load_frame,
                                                              chop_furnace_log=chop_furnace_log,
                                                              roi_list=roi_file_names,
-                                                             mask_list=mask_file_names
+                                                             mask_list=mask_file_names,
+                                                             use_idl_bin=use_idl_bin,
+                                                             num_banks=num_banks,
+                                                             save_to_nexus=save_to_nexus
                                                              )
                 # elif log_name is not None:
                 #     # chop by log value

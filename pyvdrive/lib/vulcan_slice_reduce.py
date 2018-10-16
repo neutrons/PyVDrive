@@ -96,17 +96,6 @@ class SliceFocusVulcan(object):
         :return:
         """
         raise NotImplementedError('create_bank_header() Moved to mantid_reduction')
-        # tof_min = vec_x[0]
-        # tof_max = vec_x[-1]
-        # delta_tof = (vec_x[1] - tof_min) / tof_min  # deltaT/T
-        # data_size = len(vec_x)
-        #
-        # bank_header = 'BANK {0} {1} {2} {3} {4} {5:.1f} {6:.7f} 0 FXYE' \
-        #               ''.format(bank_id, data_size, data_size, 'SLOG', tof_min, tof_max, delta_tof)
-        #
-        # bank_header = '{0:80s}'.format(bank_header)
-        #
-        # return bank_header
 
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
@@ -118,28 +107,6 @@ class SliceFocusVulcan(object):
         :return:
         """
         raise NotImplementedError('(create_nature_bins) Moved to mantid_reduction')
-        #
-        # binning_parameter_dict = dict()
-        # if num_banks == 3:
-        #     # west(1), east(1), high(1)
-        #     for bank_id in range(1, 3):
-        #         binning_parameter_dict[bank_id] = east_west_binning_parameters
-        #     binning_parameter_dict[3] = high_angle_binning_parameters
-        # elif num_banks == 7:
-        #     # west (3), east (3), high (1)
-        #     for bank_id in range(1, 7):
-        #         binning_parameter_dict[bank_id] = east_west_binning_parameters
-        #     binning_parameter_dict[7] = high_angle_binning_parameters
-        # elif num_banks == 27:
-        #     # west (9), east (9), high (9)
-        #     for bank_id in range(1, 19):
-        #         binning_parameter_dict[bank_id] = east_west_binning_parameters
-        #     for bank_id in range(19, 28):
-        #         binning_parameter_dict[bank_id] = high_angle_binning_parameters
-        # else:
-        #     raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-        #
-        # return binning_parameter_dict
 
     @staticmethod
     def create_vulcan_gsas_header(workspace, gsas_file_name, ipts, parm_file_name):
@@ -153,56 +120,6 @@ class SliceFocusVulcan(object):
         :return:
         """
         raise NotImplementedError('create_vulcan_gsas_header() Moved to mantid_reduction')
-
-        # # Get necessary information including title, run start, duration and etc.
-        # title = workspace.getTitle()
-        #
-        # # Get run object for sample log information
-        # run = workspace.getRun()
-        #
-        # # Get information on start/stop
-        # if run.hasProperty("run_start") and run.hasProperty("duration"):
-        #     # have run start and duration information
-        #     duration = float(run.getProperty("duration").value)
-        #
-        #     # property run_start and duration exist
-        #     utctime = numpy.datetime64(run.getProperty('run_start').value)
-        #     time0 = numpy.datetime64("1990-01-01T00:00:00")
-        #     total_nanosecond_start = int((utctime - time0) / numpy.timedelta64(1, 'ns'))
-        #     total_nanosecond_stop = total_nanosecond_start + int(duration*1.0E9)
-        #
-        # else:
-        #     # not both property is found
-        #     total_nanosecond_start = 0
-        #     total_nanosecond_stop = 0
-        # # END-IF
-        #
-        # # self.log().debug("Start = %d, Stop = %d" % (total_nanosecond_start, total_nanosecond_stop))
-        #
-        # # Construct new header
-        # vulcan_gsas_header = list()
-        #
-        # if len(title) > 80:
-        #     title = title[0:80]
-        # vulcan_gsas_header.append("%-80s" % title)
-        #
-        # vulcan_gsas_header.append("%-80s" % ("Instrument parameter file: %s" % parm_file_name))
-        #
-        # vulcan_gsas_header.append("%-80s" % ("#IPTS: %s" % str(ipts)))
-        #
-        # vulcan_gsas_header.append("%-80s" % "#binned by: Mantid")
-        #
-        # vulcan_gsas_header.append("%-80s" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name)))
-        #
-        # vulcan_gsas_header.append("%-80s" % ("#GSAS IPARM file: %s" % parm_file_name))
-        #
-        # vulcan_gsas_header.append("%-80s" % ("#Pulsestart:    %d" % total_nanosecond_start))
-        #
-        # vulcan_gsas_header.append("%-80s" % ("#Pulsestop:     %d" % total_nanosecond_stop))
-        #
-        # vulcan_gsas_header.append('{0:80s}'.format('#'))
-        #
-        # return vulcan_gsas_header
 
     def diffraction_focus(self, ref_id, binning, apply_det_efficiency):
         """
@@ -286,7 +203,7 @@ class SliceFocusVulcan(object):
 
         return
 
-    def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
+    def focus_workspace_list(self, ws_name_list, gsas_ws_name_list, binning_parameter_dict):
         """ Do diffraction focus on a list workspaces and also convert them to IDL GSAS
         This is the main execution body to be executed in multi-threading environment
         :param ws_name_list:
@@ -295,10 +212,17 @@ class SliceFocusVulcan(object):
         """
         datatypeutility.check_list('Workspace names', ws_name_list)
         datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
+        datatypeutility.check_list('(Output) GSAS workspace name list', gsas_ws_name_list)
+        if len(ws_name_list) != len(gsas_ws_name_list):
+            raise RuntimeError('Input workspace names {} have different number than output GSAS workspace names {}'
+                               ''.format(ws_name_list, gsas_ws_name_list))
 
-        for ws_name in ws_name_list:
+        for index in range(len(ws_name_list)):
             # check input
+            ws_name = ws_name_list[index]
+            gsas_ws_name = gsas_ws_name_list[index]
             datatypeutility.check_string_variable('Workspace name', ws_name)
+            datatypeutility.check_string_variable('Output GSAS workspace name', gsas_ws_name)
             # skip empty workspace name that might be returned from FilterEvents
             if len(ws_name) == 0:
                 continue
@@ -316,12 +240,10 @@ class SliceFocusVulcan(object):
                                    L2=self._focus_instrument_dict['L2'][num_banks],
                                    Polar=self._focus_instrument_dict['Polar'][num_banks],
                                    Azimuthal=self._focus_instrument_dict['Azimuthal'][num_banks])
-            # convert VULCAN binning
-            # self.rebin_workspace(input_ws=ws_name, binning_param_dict=binning_parameter_dict,
-            #                      output_ws_name=ws_name)
+            # convert VULCAN binning: to a different workspace that will be discarded after SaveVulcanGSS
             mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
                                                                  binning_param_dict=binning_parameter_dict,
-                                                                 output_ws_name=ws_name)
+                                                                 output_ws_name=gsas_ws_name)
         # END-FOR
 
         return
@@ -582,6 +504,17 @@ class SliceFocusVulcan(object):
 
         t2 = time.time()
 
+        # construct output GSAS names
+        gsas_names = list()
+        for index in range(len(output_names)):
+            out_ws_name = output_names[index]
+            if len(out_ws_name) == 0:
+                gsas_name = ''
+            else:
+                gsas_name = out_ws_name + '_RaggedGSAS'
+            gsas_names.append(gsas_name)
+        # END-FOR
+
         # Now start to use multi-threading to diffraction focus the sliced event data
         num_outputs = len(output_names)
         number_ws_per_thread = int(num_outputs / self._number_threads)
@@ -599,8 +532,10 @@ class SliceFocusVulcan(object):
                                       num_outputs)
             # call method self.focus_workspace_list() in multiple threading
             # Note: Tread(target=[method name], args=(method argument 0, method argument 1, ...,)
+            workspace_name_list = output_names[start_sliced_ws_index:end_sliced_ws_index]
+            gsas_workspace_name_list = gsas_names[start_sliced_ws_index:end_sliced_ws_index]
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
-                                                      args=(output_names[start_sliced_ws_index:end_sliced_ws_index],
+                                                      args=(workspace_name_list, gsas_workspace_name_list,
                                                             binning_parameters,))
             thread_pool[thread_id].start()
             print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
@@ -621,7 +556,7 @@ class SliceFocusVulcan(object):
         t3 = time.time()
 
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
-        self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
+        self.write_to_gsas(gsas_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
 
         tf = time.time()
 
@@ -706,6 +641,7 @@ class SliceFocusVulcan(object):
                         UserSpecifiedBankHeader=vulcan_bank_headers,
                         UseSpectrumNumberAsBankID=True,
                         SLOGXYEPrecision=[1, 1, 2])
+                mantid_helper.delete_workspace(output_workspace)
             except RuntimeError as run_err:
                 raise RuntimeError('Failed to call SaveGSS() due to {0}'.format(run_err))
 

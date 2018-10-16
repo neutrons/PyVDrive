@@ -1913,31 +1913,30 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, roi_list, mask_list, export_log_type='loadframe', user_bin_parameter=None,
-                   raw_nexus_name=None):
-        """ Slice data (corresponding to a run) by either log value or time.
+                   number_banks, roi_list, mask_list, export_log_type='loadframe',
+                   user_bin_parameter=None, use_idl_bin=True, raw_nexus_name=None):
+        """
+        Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
-        :param run_number: run number
+        :param run_number:
         :param slicer_id:
         :param reduce_data: flag to diffraction focus the sliced data
         :param vanadium:
         :param save_chopped_nexus:
-        :param output_dir: None for saving to archive
+        :param output_dir:  None for saving to archive
         :param number_banks:
         :param roi_list: region of interest files
         :param mask_list: mask files
         :param export_log_type:
+        :param user_bin_parameter: Use VDRIVE-GSAS binning boundaries as template for GSAS output
+        :param use_idl_bin:
+        :param raw_nexus_name:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
+        # TODO/ISSUE/NOWNOW 20181018 - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
         # TODO FIXME - 20180806 - TOF correction shall be specified by user
-
-        if output_dir is not None and user_bin_parameter is not None:
-            bin_for_vdrive = True
-        else:
-            bin_for_vdrive = False
 
         status, message = self._myProject.chop_run(run_number, slicer_id,
                                                    reduce_flag=reduce_data, vanadium=vanadium,
@@ -1946,7 +1945,7 @@ class VDriveAPI(object):
                                                    tof_correction=False,
                                                    number_banks=number_banks,
                                                    user_bin_parameter=user_bin_parameter,
-                                                   vdrive_bin_flag=bin_for_vdrive,
+                                                   use_idl_bin=use_idl_bin,
                                                    roi_list=roi_list,
                                                    mask_list=mask_list,
                                                    nexus_file_name=raw_nexus_name)

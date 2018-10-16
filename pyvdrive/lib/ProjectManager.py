@@ -331,7 +331,7 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, vdrive_bin_flag, roi_list, mask_list, nexus_file_name=None):
+                 user_bin_parameter, use_idl_bin, roi_list, mask_list, nexus_file_name=None):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -350,7 +350,7 @@ class ProjectManager(object):
         :param number_banks:
         :param output_directory:
         :param user_bin_parameter: None or [NOT SURE]
-        :param vdrive_bin_flag: boolea to use vdrive binning flag
+        :param use_idl_bin: True or False
         :param roi_list:
         :param mask_list:
         :return:
@@ -405,7 +405,7 @@ class ProjectManager(object):
                                                                        tof_correction=tof_correction,
                                                                        vanadium=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
-                                                                       vdrive_binning=vdrive_bin_flag,
+                                                                       vdrive_binning=use_idl_bin,
                                                                        roi_list=roi_list,
                                                                        mask_list=mask_list)
 
@@ -1316,19 +1316,22 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
-                                                                             unit, binning_parameters, use_idl_bin,
-                                                                             convert_to_matrix, num_banks=number_banks,
-                                                                             roi_list=roi_list,
-                                                                             mask_list=mask_list)
+                out_ws_name, gsas_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number,
+                                                                                           raw_file_name,
+                                                                                           unit, binning_parameters,
+                                                                                           use_idl_bin,
+                                                                                           convert_to_matrix,
+                                                                                           num_banks=number_banks,
+                                                                                           roi_list=roi_list,
+                                                                                           mask_list=mask_list)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
-                # self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
-
                 # save to GSAS
                 if gsas:
-                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(out_ws_name, output_directory, ipts_number,
+                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(gsas_ws_name, output_directory, ipts_number,
                                                                        run_number, 'vulcan.prm')
+                # remove GSAS workspace because it won't be used anymore
+                mantid_helper.delete_workspace(gsas_ws_name)
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
