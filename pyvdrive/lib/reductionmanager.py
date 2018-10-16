@@ -400,48 +400,8 @@ class CalibrationManager(object):
 
         return calib_ws_collection
 
-    # def get_vdrive_bin_template_file(self, run_date):
-    #     """
-    #     find the VDRIVE binning reference file by run start date (YYYY-MM-DD)
-    #     :param run_date:
-    #     :return: None or reference file name
-    #     """
-    #     datatypeutility.check_string_variable('Run start date in format YYYY-MM-DD', run_date)
-    #
-    #     ref_date_index = sorted(self._vdrive_bin_ref_file_dict.keys())
-    #     start_date_index = None
-    #     for index in range(len(ref_date_index)-1, -1, -1):
-    #         if run_date > ref_date_index[index]:
-    #             start_date_index = ref_date_index[index]
-    #             break
-    #     # END-FOR
-    #
-    #     if start_date_index is None:
-    #         # not found
-    #         err_msg = 'Run start date {} is before all VDRIVE reference file date {}'.format(run_date, ref_date_index)
-    #         print ('[ERROR CAUSING CRASH] {0}'.format(err_msg))
-    #         raise RuntimeError(err_msg)
-    #     # END-IF
-    #
-    #     return self._vdrive_bin_ref_file_dict[start_date_index]
-
-    # def get_vdrive_refernece_binnings(self, start_date_index, num_banks):
-    #     """
-    #     :param start_date_index:
-    #     :param num_banks:
-    #     :return:
-    #     """
-    #     # check inputs
-    #     datatypeutility.check_string_variable('Start date index', start_date_index)
-    #     datatypeutility.check_int_variable('Number of banks', num_banks, (1, 1000))
-    #
-    #     try:
-    #         ref_dict = self._vdrive_binning_ref_dict[start_date_index][num_banks]
-    #     except KeyError as key_err:
-    #         raise RuntimeError('VDRIVE GSAS binning reference binning dictionary {} has not key [{}][{}]. FYI {}'
-    #                            ''.format(self._vdrive_binning_ref_dict, start_date_index, num_banks, key_err))
-    #
-    #     return ref_dict
+    def get_last_gsas_bin_ref(self):
+        return self._last_ref_dict
 
     def get_vulcan_idl_bins(self, cal_index_date, num_banks):
         """ Get the reference binning (dictionary of vectors) for VDRIVE GSAS file
@@ -459,6 +419,8 @@ class CalibrationManager(object):
         except KeyError as key_err:
             raise RuntimeError('VDRIVE GSAS binning reference binning dictionary {} has not key [{}][{}]. FYI {}'
                                ''.format(self._vdrive_binning_ref_dict, cal_index_date, num_banks, key_err))
+
+        self._last_ref_dict = ref_dict
 
         return ref_dict
 
@@ -1076,6 +1038,11 @@ class ReductionManager(object):
 
         return
 
+    @property
+    def calibration_manager(self):
+        # TODO - ...
+        return self._calibrationFileManager
+
     @staticmethod
     def _init_vulcan_diff_focus_params():
         """
@@ -1598,9 +1565,12 @@ class ReductionManager(object):
                                                             convert_to_matrix=convert_to_matrix)
 
         if use_idl_bin:
-            num_banks = mantid_helper.retrieve_workspace(output_ws_name).getNumberHistograms()
+            # num_banks = mantid_helper.retrieve_workspace(output_ws_name).getNumberHistograms()
             mantid_reduction.VulcanBinningHelper.rebin_workspace(output_ws_name, bin_param_dict,
                                                                  output_ws_name=gsas_ws_name)
+            # rebin the original workspace for plotting
+            mantid_helper.rebin(output_ws_name, '-0.001', preserve=True)
+        # END-IF
 
         # remove input event workspace
         if output_ws_name != event_ws_name and keep_raw_ws is False:

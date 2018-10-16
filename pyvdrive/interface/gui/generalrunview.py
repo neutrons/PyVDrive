@@ -103,7 +103,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         return line_id
 
-    def plot_diffraction_data(self, vec_xy_set, unit, run_id, bank_id, over_plot, label, chop_tag=None):
+    def plot_diffraction_data(self, vec_xy_set, unit, run_id, bank_id, over_plot, label, line_color=None,
+                              chop_tag=None):
         """
         plot diffraction data with proper unit... 1D
         :param vec_xy_set:
@@ -130,7 +131,8 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
             self.reset_1d_plots()
 
         # color & marker
-        line_color = self._get_next_diffraction_color(bank_id)
+        if line_color is None:
+            line_color = self._get_next_diffraction_color(bank_id)
         line_marker = self._get_diffraction_marker(bank_id)
 
         if chop_tag is not None:
@@ -139,7 +141,7 @@ class GeneralRunView(mplgraphicsview.MplGraphicsView):
 
         # plot 1D diffraction data
         self._currLineID = self.plot_1d_data(vec_x, vec_y, x_unit=unit, label=line_label,
-                                             line_color=line_color, marker=line_marker)
+                                             line_color=line_color, marker=line_marker,)
         self._onCanvasIDList.append(self._currLineID)
 
         # re-scale

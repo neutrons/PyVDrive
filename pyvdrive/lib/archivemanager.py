@@ -489,6 +489,8 @@ class DataArchiveManager(object):
         :return:
         """
 
+        return
+
     @staticmethod
     def get_smoothed_vanadium(ipts_number, van_run_number, check_exist=True):
         """

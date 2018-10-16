@@ -1828,20 +1828,20 @@ class VDriveAPI(object):
 
         return
 
-    def save_processed_vanadium(self, van_info_tuple, output_file_name):
-        """
-        save the processed vanadium to a GSAS file
-        :param van_info_tuple:
-        :param output_file_name:
-        :return: 2-tuple (boolean, str)
-        """
-        assert isinstance(output_file_name, str), 'Output file name must be a string'
-        assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
-                                                  ''.format(van_info_tuple, type(van_info_tuple))
-
-        return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
-                                                                                 to_archive=False,
-                                                                                 out_file_name=output_file_name)
+    # def save_processed_vanadium(self, van_info_tuple, output_file_name):
+    #     """
+    #     save the processed vanadium to a GSAS file
+    #     :param van_info_tuple:
+    #     :param output_file_name:
+    #     :return: 2-tuple (boolean, str)
+    #     """
+    #     assert isinstance(output_file_name, str), 'Output file name must be a string'
+    #     assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
+    #                                               ''.format(van_info_tuple, type(van_info_tuple))
+    #
+    #     return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
+    #                                                                              to_archive=False,
+    #                                                                              out_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session

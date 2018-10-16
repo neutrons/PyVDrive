@@ -4,13 +4,14 @@ import shutil
 import mantid_helper
 import datatypeutility
 from reduce_VULCAN import align_bins
+import mantid_reduction
 
 
 class VanadiumProcessingManager(object):
     """
     Controller of the workflow to process vanadium data for calibration purpose
     """
-    def __init__(self, parent):
+    def __init__(self, parent, calibration_manager):
         """
         initialization
         :param parent:
@@ -33,6 +34,10 @@ class VanadiumProcessingManager(object):
         self._smoothed_ws_dict = dict()  # [bank id (1, 2, 3)] = ws names
 
         self._default_fwhm = 7
+
+        # final output binning
+        self._calibration_manager = calibration_manager
+        self._tof_bin_dict = dict()
 
         return
 
@@ -68,6 +73,10 @@ class VanadiumProcessingManager(object):
         """
         return self._striped_peaks_ws_dict
 
+    def get_raw_vanadium(self):
+        # TODO
+        return self._source_single_bank_ws_dict
+
     def get_smoothed_vanadium(self):
         """
         get the vanadium workspace (name) that has peaks striped and smoothed
@@ -82,6 +91,11 @@ class VanadiumProcessingManager(object):
         :param bank_group_dict:
         :return:
         """
+        # TODO - 20181030 - Need to add this to configuration
+        bin_param_dict = {1: (0.5, -0.001, 3.0),
+                          2: (0.5, -0.001, 3.0),
+                          3: (0.3, -0.0003, 3.0)}
+
         # check inputs
         if not mantid_helper.workspace_does_exist(workspace_name):
             raise RuntimeError('Raw matrix workspace {0} does not exist.'.format(workspace_name))
@@ -100,12 +114,25 @@ class VanadiumProcessingManager(object):
         # prepare source single bank
         source_ws = mantid_helper.retrieve_workspace(workspace_name, True)
         for bank_id in range(1, source_ws.getNumberHistograms()+1):
-            single_spec_ws_name = self._source_workspace_name + '_Bank{}'.format(bank_id)
+            single_spec_ws_name = self._source_workspace_name + '_VBank{}'.format(bank_id)
+            # extract spectrum
             mantid_helper.extract_spectrum(input_workspace=self._source_workspace_name,
                                            output_workspace=single_spec_ws_name,
                                            workspace_index=bank_id-1)
+
+            # check
+            temp_ws = mantid_helper.retrieve_workspace(single_spec_ws_name)
+            assert temp_ws.getAxis(0).getUnit().unitID() == 'dSpacing', 'Input shall be in unit dSpacing'
+            mantid_helper.rebin(single_spec_ws_name, bin_param_dict[bank_id], preserve=False)
+
             self._source_single_bank_ws_dict[bank_id] = single_spec_ws_name
         # END-FOR
+
+        # output bins
+        tof_binning_dict = self._calibration_manager.get_last_gsas_bin_ref()
+        for bank_id in [1, 2, 3]:
+            self._tof_bin_dict[bank_id] = {1: tof_binning_dict[bank_id]}
+            print (self._tof_bin_dict[bank_id])
 
         # default FWHM
         self._default_fwhm = 7  # non-shift case
@@ -200,6 +227,16 @@ class VanadiumProcessingManager(object):
 
         return status, message
 
+    def save_to_gsas(self, run_number, gsas_file_name):
+        """
+
+        :param run_number:
+        :param gsas_file_name:
+        :return:
+        """
+        # use run number to check against current one
+        # blabla
+
     def save_vanadium_to_file(self, vanadium_tuple=None,
                               to_archive=True, out_file_name=None):
         """
@@ -211,6 +248,8 @@ class VanadiumProcessingManager(object):
         :param out_file_name: if not None, then output locally
         :return: tuple (boolean, str): status, error message
         """
+
+
         # check inputs
         if vanadium_tuple is None:
             # use the class variables of this instance
@@ -301,8 +340,6 @@ class VanadiumProcessingManager(object):
         :param param_order:
         :return: output workspace name
         """
-        import mantid_reduction
-
         datatypeutility.check_int_variable('Banks group index (90 or 150 degrees)', bank_group_index, (-180, 180))
 
         for bank_id in sorted(self._bank_group_dict[bank_group_index]):
@@ -318,16 +355,6 @@ class VanadiumProcessingManager(object):
             out_ws_name = input_ws_name + '_Smoothed'
 
             # smooth vanadium spectra
-            input_ws = mantid_helper.retrieve_workspace(input_ws_name)
-            ws_unit = input_ws.getAxis(0).getUnit().unitID()
-            print ('[DB...BAT] Input workspace {} to smooth has unit {}'
-                   ''.format(input_ws_name, ws_unit))
-
-            # rebin to final TOF binning
-            if ws_unit != 'TOF':
-                mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws_name, binning_param_dict=xxx,
-                                                                     output_ws_name=input_ws_name)
-
             mantid_helper.smooth_vanadium(input_workspace=input_ws_name,
                                           output_workspace=out_ws_name,
                                           smooth_filter=smoother_type,
@@ -335,6 +362,21 @@ class VanadiumProcessingManager(object):
                                           param_n=param_n,
                                           param_order=param_order,
                                           push_to_positive=True)
+
+            input_ws = mantid_helper.retrieve_workspace(input_ws_name)
+            # NOTE: upon this point the workspace is dSpacing
+            ws_unit = input_ws.getAxis(0).getUnit().unitID()
+            # print ('[DB...BAT] Input workspace {} to smooth has unit {}'
+            #        ''.format(input_ws_name, ws_unit))
+
+            # rebin to final TOF binning
+            if ws_unit != 'TOF':
+                mantid_helper.mtd_convert_units(input_ws_name, 'TOF')
+
+            # rebin
+            mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws_name,
+                                                                 binning_param_dict=self._tof_bin_dict[bank_id],
+                                                                 output_ws_name=input_ws_name)
             self._smoothed_ws_dict[bank_id] = out_ws_name
         # END-FOR
 
@@ -353,11 +395,6 @@ class VanadiumProcessingManager(object):
         """
         # check input
         datatypeutility.check_int_variable('Banks group index (90 degree or 150 degree)', bank_group_index, (-180, 180))
-
-        input_ws = mantid_helper.retrieve_workspace(self._source_workspace_name)
-        if input_ws.id().lower().count('event') == 1:
-            raise RuntimeError('{} cannot be an EventWorkspace ({})'.format(self._source_workspace_name,
-                                                                            input_ws.id()))
 
         for bank_id in sorted(self._bank_group_dict[bank_group_index]):
             input_ws_name = self._source_single_bank_ws_dict[bank_id]

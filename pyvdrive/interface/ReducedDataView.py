@@ -1585,21 +1585,31 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.comboBox_unit.setCurrentIndex(1)
 
         # plot original run
-        raw_van_key = run_id, bank_id, self._currUnit
-        if raw_van_key in self._currentPlotDataKeyDict:
-            # data already been loaded before
-            vec_x, vec_y = self._currentPlotDataKeyDict[raw_van_key]
+        # raw_van_key = run_id, bank_id, self._currUnit
+        # if raw_van_key in self._currentPlotDataKeyDict:
+        #     # data already been loaded before
+        #     vec_x, vec_y = self._currentPlotDataKeyDict[raw_van_key]
+        # else:
+        #     vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=run_id, bank_id=bank_id,
+        #                                                      unit=self._currUnit)
+        #     self._currentPlotDataKeyDict[raw_van_key] = vec_x, vec_y
+
+        if is_smoothed_data:
+            plot_unit = 'TOF'
         else:
-            vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=run_id, bank_id=bank_id,
-                                                             unit=self._currUnit)
-            self._currentPlotDataKeyDict[raw_van_key] = vec_x, vec_y
+            plot_unit = 'dSpacing'
+
+        # get the original raw data
+        ws_name = self._myController.project.vanadium_processing_manager.get_raw_vanadium()[bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
 
         # plot
         self._raw_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                                                    unit=self._currUnit,
+                                                                                    unit=plot_unit,
                                                                                     over_plot=False,
                                                                                     run_id=run_id, bank_id=bank_id,
                                                                                     chop_tag=None,
+                                                                                    line_color='black',
                                                                                     label='Raw vanadium {}'
                                                                                           ''.format(run_id))
 
@@ -1607,13 +1617,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[bank_id]
         else:
             ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[bank_id]
-        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=self._currUnit)
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
         # plot vanadium
         self._strip_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
-                                                                                      unit=self._currUnit,
+                                                                                      unit=plot_unit,
                                                                                       over_plot=True,
                                                                                       run_id=run_id, bank_id=bank_id,
                                                                                       chop_tag=None,
+                                                                                      line_color='red',
                                                                                       label='Peak striped vanadium {}'
                                                                                             ''.format(run_id))
 
@@ -2054,7 +2065,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
+    def signal_save_processed_vanadium(self, output_file_name, run_number):
         """
         save GSAS file from GUI
         :param output_file_name:
@@ -2062,20 +2073,20 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param run_number:
         :return:
         """
-        van_info_tuple = (self._lastVanSmoothedWorkspace, ipts_number, run_number)
         # convert string
         output_file_name = str(output_file_name)
 
-        status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
-                                                                           output_file_name=output_file_name)
-        if not status:
-            GuiUtility.pop_dialog_error(self, error_message)
+        self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
+
+        # status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+        #                                                                    output_file_name=output_file_name)
+        # if not status:
+        #     GuiUtility.pop_dialog_error(self, error_message)
 
         return
 
     def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
-        """
-        process the signal to strip vanadium peaks
+        """ Process the signal to strip vanadium peaks
         :param bank_group_index:
         :param peak_fwhm: integer
         :param tolerance:

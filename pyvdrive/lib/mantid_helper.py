@@ -2105,7 +2105,7 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
 
         for ws_index in workspace_index_list:
             vec_y = smooth_ws.dataY(ws_index)
-            for i_y in vec_y:
+            for i_y in range(len(vec_y)):
                 vec_y[i_y] = max(1, int(vec_y[i_y] + 1))
         # END-FOR
     # END-IF

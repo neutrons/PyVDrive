@@ -36,7 +36,8 @@ class ProjectManager(object):
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
         # vanadium processing manager
-        self._processVanadiumManager = vanadium_utility.VanadiumProcessingManager(self)
+        self._processVanadiumManager = \
+            vanadium_utility.VanadiumProcessingManager(self, self._reductionManager.calibration_manager)
 
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS

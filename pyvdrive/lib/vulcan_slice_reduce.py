@@ -244,6 +244,10 @@ class SliceFocusVulcan(object):
             mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
                                                                  binning_param_dict=binning_parameter_dict,
                                                                  output_ws_name=gsas_ws_name)
+            # rebin the original workspace for plotting: upon this point, unit is TOF
+            # temp_ws = mantid_helper.retrieve_workspace(ws_name)
+            # print ('[DB...BAT] FINAL UNIT: {}'.format(temp_ws.getAxis(0).getUnit().unitID()))
+            mantid_helper.rebin(ws_name, '3000., -0.001., 70000.', preserve=False)
         # END-FOR
 
         return

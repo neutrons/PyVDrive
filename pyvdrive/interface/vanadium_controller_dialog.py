@@ -25,7 +25,7 @@ class VanadiumProcessControlDialog(QDialog):
     myUndoStripPeakSignal = QtCore.pyqtSignal()  # signal to undo the peak strip
     mySmoothVanadiumSignal = QtCore.pyqtSignal(int, str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
-    myApplyResultSignal = QtCore.pyqtSignal(str, int, int)  # signal to apply/save the smoothed vanadium
+    myApplyResultSignal = QtCore.pyqtSignal(str, int)  # signal to apply/save the smoothed vanadium
 
     def __init__(self, parent):
         """ Set up main window
@@ -195,7 +195,6 @@ class VanadiumProcessControlDialog(QDialog):
         """
         # get IPTS number and run number
         try:
-            ipts_number = gutil.parse_integer(self.ui.lineEdit_iptsNumber, allow_blank=False)
             run_number = gutil.parse_integer(self.ui.lineEdit_runNumber, allow_blank=False)
         except RuntimeError as run_err:
             gutil.pop_dialog_error(self, 'IPTS and run number must be specified in order to save for GSAS.')
@@ -212,7 +211,7 @@ class VanadiumProcessControlDialog(QDialog):
         if len(van_file_name) == 0:
             return
 
-        self.myApplyResultSignal.emit(van_file_name, ipts_number, run_number)
+        self.myApplyResultSignal.emit(van_file_name, run_number)
 
         return
 
