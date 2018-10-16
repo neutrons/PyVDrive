@@ -152,8 +152,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
         # menu
-        self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
-        self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
+        # TODO - 20181030 - Add Back!
+        # self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
+        # self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
 
         # widgets to load reduced data
 
