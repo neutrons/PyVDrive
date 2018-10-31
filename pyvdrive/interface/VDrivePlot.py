@@ -22,7 +22,11 @@ try:
 except (AttributeError, ImportError):
     _fromUtf8 = lambda s: s
 
-import gui.ui_VdrivePlot as mainUi
+from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
+from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
+from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
+from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView
@@ -62,8 +66,8 @@ class VdriveMainWindow(QMainWindow):
         # Setup main window
         QMainWindow.__init__(self, parent)
         self.setWindowTitle('VDrivePlot (Beta)')
-        self.ui = mainUi.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("VdrivePlot.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # Define status variables
         # new work flow
@@ -260,6 +264,59 @@ class VdriveMainWindow(QMainWindow):
 
         # VDRIVE command
         self._vdriveCommandProcessor = VdriveCommandProcessor(self, self._myWorkflow)
+
+        return
+
+    def _promote_widgets(self):
+        treeView_iptsRun_layout = QVBoxLayout()
+        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        self.ui.treeView_iptsRun = VdriveRunManagerTree(self)
+        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+
+        treeView_runFiles_layout = QVBoxLayout()
+        self.ui.frame_treeView_runFiles.setLayout(treeView_runFiles_layout)
+        self.ui.treeView_runFiles = FileSystemTreeView(self)
+        treeView_runFiles_layout.addWidget(self.ui.treeView_runFiles)
+
+        tableWidget_selectedRuns_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_selectedRuns.setLayout(tableWidget_selectedRuns_layout)
+        self.ui.tableWidget_selectedRuns = VdriveRunTableWidget(self)
+        tableWidget_selectedRuns_layout.addWidget(self.ui.tableWidget_selectedRuns)
+
+        tableWidget_timeSegment_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_timeSegment.setLayout(tableWidget_timeSegment_layout)
+        self.ui.tableWidget_timeSegment = TimeSegmentsTable(self)
+        tableWidget_timeSegment_layout.addWidget(self.ui.tableWidget_timeSegment)
+
+        graphicsView_snapView2_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView2.setLayout(graphicsView_snapView2_layout)
+        self.ui.graphicsView_snapView2 = MplGraphicsView(self)
+        graphicsView_snapView2_layout.addWidget(self.ui.graphicsView_snapView2)
+
+        graphicsView_snapView3_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView3.setLayout(graphicsView_snapView3_layout)
+        self.ui.graphicsView_snapView3 = MplGraphicsView(self)
+        graphicsView_snapView3_layout.addWidget(self.ui.graphicsView_snapView3)
+
+        graphicsView_snapView6_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView6.setLayout(graphicsView_snapView6_layout)
+        self.ui.graphicsView_snapView6 = MplGraphicsView(self)
+        graphicsView_snapView6_layout.addWidget(self.ui.graphicsView_snapView6)
+
+        graphicsView_snapView5_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView5.setLayout(graphicsView_snapView5_layout)
+        self.ui.graphicsView_snapView5 = MplGraphicsView(self)
+        graphicsView_snapView5_layout.addWidget(self.ui.graphicsView_snapView5)
+
+        graphicsView_snapView4_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView4.setLayout(graphicsView_snapView4_layout)
+        self.ui.graphicsView_snapView4 = MplGraphicsView(self)
+        graphicsView_snapView4_layout.addWidget(self.ui.graphicsView_snapView4)
+
+        graphicsView_snapView1_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView1.setLayout(graphicsView_snapView1_layout)
+        self.ui.graphicsView_snapView1 = MplGraphicsView(self)
+        graphicsView_snapView1_layout.addWidget(self.ui.graphicsView_snapView1)
 
         return
 

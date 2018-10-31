@@ -4,7 +4,7 @@ except ImportError:
     from PyQt4.QtGui import QMainWindow
 
 
-import gui.ui_ExperimentRecord as ui_ExperimentRecord
+from pyvdrive.interface.gui.vdrivetablewidgets import ExperimentRecordTable
 
 
 class VulcanExperimentRecordView(QMainWindow):
@@ -18,10 +18,18 @@ class VulcanExperimentRecordView(QMainWindow):
         """
         super(VulcanExperimentRecordView, self).__init__(parent)
 
-        self.ui = ui_ExperimentRecord.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("ExperimentRecord.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         self.ui.tableWidget_recordsInfoTable.setup()
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_recordsInfoTable_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_recordsInfoTable.setLayout(tableWidget_recordsInfoTable_layout)
+        self.ui.tableWidget_recordsInfoTable = ExperimentRecordTable(self)
+        tableWidget_recordsInfoTable_layout.addWidget(self.ui.tableWidget_recordsInfoTable)
 
         return
 

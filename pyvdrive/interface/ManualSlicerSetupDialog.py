@@ -7,7 +7,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_ManualSlicerTable
+from pyvdrive.interface.gui.vdrivetablewidgets import DataSlicerSegmentTable
 import gui.GuiUtility as GuiUtil
 
 
@@ -26,8 +26,8 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
         super(ManualSlicerSetupTableDialog, self).__init__(parent)
         self._myParent = parent
 
-        self.ui = gui.ui_ManualSlicerTable.Ui_Dialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui("ManualSlicerTable.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         self._init_widgets()
 
@@ -74,6 +74,14 @@ class ManualSlicerSetupTableDialog(QtGui.QDialog):
 
         # define handler to signals
         # TODO/ISSUE/NEXT - Implement this
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_segments_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_segments.setLayout(tableWidget_segments_layout)
+        self.ui.tableWidget_segments = DataSlicerSegmentTable(self)
+        tableWidget_segments_layout.addWidget(self.ui.tableWidget_segments)
 
         return
 

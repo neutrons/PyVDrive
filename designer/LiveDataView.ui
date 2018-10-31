@@ -212,10 +212,10 @@
     <item>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <widget class="SingleBankView" name="graphicsView_currentViewB1"/>
+<widget class="QFrame" name="frame_graphicsView_currentViewB1"/>
       </item>
       <item row="4" column="0">
-       <widget class="Live2DView" name="graphicsView_2DBank1"/>
+<widget class="QFrame" name="frame_graphicsView_2DBank1"/>
       </item>
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout">
@@ -269,10 +269,10 @@
        </layout>
       </item>
       <item row="4" column="1">
-       <widget class="Live2DView" name="graphicsView_2DBank2"/>
+<widget class="QFrame" name="frame_graphicsView_2DBank2"/>
       </item>
       <item row="4" column="2">
-       <widget class="Live2DView" name="graphicsView_2DBank3"/>
+<widget class="QFrame" name="frame_graphicsView_2DBank3"/>
       </item>
       <item row="3" column="2">
        <widget class="QCheckBox" name="checkBox_normByVanadium">
@@ -287,7 +287,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="SingleBankView" name="graphicsView_currentViewB2"/>
+<widget class="QFrame" name="frame_graphicsView_currentViewB2"/>
       </item>
       <item row="5" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_7">
@@ -389,7 +389,7 @@
        </layout>
       </item>
       <item row="0" column="2">
-       <widget class="SingleBankView" name="graphicsView_currentViewB3"/>
+<widget class="QFrame" name="frame_graphicsView_currentViewB3"/>
       </item>
       <item row="1" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -561,7 +561,7 @@
    <widget class="QWidget" name="dockWidgetContents_2">
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="GeneralPurpose1DView" name="graphicsView_comparison">
+<widget class="QFrame" name="frame_graphicsView_comparison">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>

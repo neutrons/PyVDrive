@@ -19,7 +19,7 @@ except AttributeError:
         return s
         
 import gui.GuiUtility as gutil
-import gui.ui_LogSnapView as ui_LogSnapView
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 
 
 class DialogLogSnapView(QDialog):
@@ -36,8 +36,8 @@ class DialogLogSnapView(QDialog):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui_LogSnapView.Ui_Dialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui("LogSnapView.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # Event handling
         self.ui.pushButton_apply.clicked.connect(self.do_apply_change)
@@ -55,6 +55,14 @@ class DialogLogSnapView(QDialog):
         self._myWorkflowController = None
         self._horizontalIndicatorList = None
         self._verticalIndicatorList = [None, None]
+
+        return
+
+    def _promote_widgets(self):
+        graphicsView_main_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
+        self.ui.graphicsView_main = MplGraphicsView(self)
+        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
 
         return
 

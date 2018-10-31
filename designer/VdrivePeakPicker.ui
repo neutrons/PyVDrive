@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="SinglePeakFitManageTree" name="treeView_iptsRun">
+<widget class="QFrame" name="frame_treeView_iptsRun">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -495,7 +495,7 @@
        </layout>
       </item>
       <item>
-       <widget class="DiffractionPlotView" name="graphicsView_main"/>
+<widget class="QFrame" name="frame_graphicsView_main"/>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox">
@@ -1246,7 +1246,7 @@
       </layout>
      </item>
      <item>
-      <widget class="PeakParameterTable" name="tableWidget_peakParameter">
+<widget class="QFrame" name="frame_tableWidget_peakParameter">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>

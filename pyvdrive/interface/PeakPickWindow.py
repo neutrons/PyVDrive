@@ -21,10 +21,14 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-import gui.ui_VdrivePeakPicker as VdrivePeakPicker
+from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
+from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
+from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
 import gui.diffractionplotview as dv
 import GroupPeakDialog
-import gui.ui_PeakWidthSetup as widthSetupWindow
+from pyvdrive.interface.gui.diffractionplotview import DiffractionPlotView
+from pyvdrive.interface.gui.vdrivetablewidgets import PeakParameterTable
+from pyvdrive.interface.gui.vdrivetreewidgets import SinglePeakFitManageTree
 
 # Set up path to PyVDrive
 import socket
@@ -58,8 +62,8 @@ class PeakWidthSetupDialog(QDialog):
         # Initialize
         QDialog.__init__(self, parent)
 
-        self.ui = widthSetupWindow.Ui_Dialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui("PeakWidthSetup.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # Define event handlers
         self.ui.pushButton_cancel.clicked.connect(self.do_quit)
@@ -72,6 +76,24 @@ class PeakWidthSetupDialog(QDialog):
 
         # Class variables
         self._peakWidth = None
+
+        return
+
+    def _promote_widgets(self):
+        treeView_iptsRun_layout = QVBoxLayout()
+        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
+        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+
+        graphicsView_main_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
+        self.ui.graphicsView_main = DiffractionPlotView(self)
+        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
+
+        tableWidget_peakParameter_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_peakParameter.setLayout(tableWidget_peakParameter_layout)
+        self.ui.tableWidget_peakParameter = PeakParameterTable(self)
+        tableWidget_peakParameter_layout.addWidget(self.ui.tableWidget_peakParameter)
 
         return
 
@@ -377,8 +399,8 @@ class PeakPickerWindow(QMainWindow):
         self._groupPeakDialog = None
 
         # set up UI
-        self.ui = VdrivePeakPicker.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("VdrivePeakPicker.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # Define event handling methods
         # phase set up
@@ -544,6 +566,24 @@ class PeakPickerWindow(QMainWindow):
 
         # data directory
         self._dataDirectory = None
+
+        return
+
+    def _promote_widgets(self):
+        treeView_iptsRun_layout = QVBoxLayout()
+        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        self.ui.treeView_iptsRun = SinglePeakFitManageTree(self)
+        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+
+        graphicsView_main_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
+        self.ui.graphicsView_main = DiffractionPlotView(self)
+        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
+
+        tableWidget_peakParameter_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_peakParameter.setLayout(tableWidget_peakParameter_layout)
+        self.ui.tableWidget_peakParameter = PeakParameterTable(self)
+        tableWidget_peakParameter_layout.addWidget(self.ui.tableWidget_peakParameter)
 
         return
 

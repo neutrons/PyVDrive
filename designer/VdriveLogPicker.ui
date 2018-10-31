@@ -211,7 +211,7 @@
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
-          <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
+<widget class="QFrame" name="frame_treeView_iptsRun">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -882,7 +882,7 @@
        </layout>
       </item>
       <item>
-       <widget class="LogGraphicsView" name="graphicsView_main"/>
+<widget class="QFrame" name="frame_graphicsView_main"/>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_3">

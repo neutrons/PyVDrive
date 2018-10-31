@@ -11,7 +11,9 @@ import numpy
 
 from LiveDataChildWindows import SampleLogPlotSetupDialog
 from LiveDataChildWindows import LiveViewSetupDialog
-import gui.ui_LiveDataView as ui_LiveDataView
+from pyvdrive.interface.gui.livedatagraphicswidgets import SingleBankView
+from pyvdrive.interface.gui.livedatagraphicswidgets import GeneralPurpose1DView
+from pyvdrive.interface.gui.livedatagraphicswidgets import Live2DView
 import pyvdrive.lib.LiveDataDriver as ld
 import pyvdrive.lib.optimize_utilities as optimize_utilities
 from pyvdrive.lib import mantid_helper
@@ -124,8 +126,8 @@ class VulcanLiveDataView(QMainWindow):
         self._liveStartTimeStamp = None  # shall be of time numpy.datetime64
 
         # start UI
-        self.ui = ui_LiveDataView.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("LiveDataView.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # initialize widgets
         self._init_widgets()
@@ -193,6 +195,44 @@ class VulcanLiveDataView(QMainWindow):
         self._update2DCounter = 0
         #
         self.show_refresh_info()
+
+        return
+
+    def _promote_widgets(self):
+        graphicsView_currentViewB1_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_currentViewB1.setLayout(graphicsView_currentViewB1_layout)
+        self.ui.graphicsView_currentViewB1 = SingleBankView(self)
+        graphicsView_currentViewB1_layout.addWidget(self.ui.graphicsView_currentViewB1)
+
+        graphicsView_2DBank1_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_2DBank1.setLayout(graphicsView_2DBank1_layout)
+        self.ui.graphicsView_2DBank1 = Live2DView(self)
+        graphicsView_2DBank1_layout.addWidget(self.ui.graphicsView_2DBank1)
+
+        graphicsView_2DBank2_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_2DBank2.setLayout(graphicsView_2DBank2_layout)
+        self.ui.graphicsView_2DBank2 = Live2DView(self)
+        graphicsView_2DBank2_layout.addWidget(self.ui.graphicsView_2DBank2)
+
+        graphicsView_2DBank3_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_2DBank3.setLayout(graphicsView_2DBank3_layout)
+        self.ui.graphicsView_2DBank3 = Live2DView(self)
+        graphicsView_2DBank3_layout.addWidget(self.ui.graphicsView_2DBank3)
+
+        graphicsView_currentViewB2_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_currentViewB2.setLayout(graphicsView_currentViewB2_layout)
+        self.ui.graphicsView_currentViewB2 = SingleBankView(self)
+        graphicsView_currentViewB2_layout.addWidget(self.ui.graphicsView_currentViewB2)
+
+        graphicsView_currentViewB3_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_currentViewB3.setLayout(graphicsView_currentViewB3_layout)
+        self.ui.graphicsView_currentViewB3 = SingleBankView(self)
+        graphicsView_currentViewB3_layout.addWidget(self.ui.graphicsView_currentViewB3)
+
+        graphicsView_comparison_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_comparison.setLayout(graphicsView_comparison_layout)
+        self.ui.graphicsView_comparison = GeneralPurpose1DView(self)
+        graphicsView_comparison_layout.addWidget(self.ui.graphicsView_comparison)
 
         return
 

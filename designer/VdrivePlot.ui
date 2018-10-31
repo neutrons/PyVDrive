@@ -41,7 +41,7 @@
        </widget>
       </item>
       <item>
-       <widget class="VdriveRunManagerTree" name="treeView_iptsRun">
+<widget class="QFrame" name="frame_treeView_iptsRun">
         <property name="sizePolicy">
          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -60,7 +60,7 @@
        </widget>
       </item>
       <item>
-       <widget class="FileSystemTreeView" name="treeView_runFiles">
+<widget class="QFrame" name="frame_treeView_runFiles">
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Model: File browser mode, default is the shared folder but allowed to go up directory&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;example: /SNS/VULCAN/IPTS-14114/shared&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
@@ -251,7 +251,7 @@
           </layout>
          </item>
          <item>
-          <widget class="VdriveRunTableWidget" name="tableWidget_selectedRuns"/>
+<widget class="QFrame" name="frame_tableWidget_selectedRuns"/>
          </item>
          <item>
           <layout class="QGridLayout" name="gridLayout_25">
@@ -626,7 +626,7 @@
                </widget>
               </item>
               <item>
-               <widget class="TimeSegmentsTable" name="tableWidget_timeSegment"/>
+<widget class="QFrame" name="frame_tableWidget_timeSegment"/>
               </item>
               <item>
                <spacer name="verticalSpacer_4">
@@ -1921,7 +1921,7 @@
            </layout>
           </item>
           <item row="1" column="1">
-           <widget class="MplGraphicsView" name="graphicsView_snapView2">
+<widget class="QFrame" name="frame_graphicsView_snapView2">
             <property name="minimumSize">
              <size>
               <width>250</width>
@@ -1931,7 +1931,7 @@
            </widget>
           </item>
           <item row="3" column="0">
-           <widget class="MplGraphicsView" name="graphicsView_snapView3">
+<widget class="QFrame" name="frame_graphicsView_snapView3">
             <property name="minimumSize">
              <size>
               <width>250</width>
@@ -1941,7 +1941,7 @@
            </widget>
           </item>
           <item row="5" column="1">
-           <widget class="MplGraphicsView" name="graphicsView_snapView6"/>
+<widget class="QFrame" name="frame_graphicsView_snapView6"/>
           </item>
           <item row="4" column="1">
            <layout class="QHBoxLayout" name="horizontalLayout_32">
@@ -1964,7 +1964,7 @@
            </layout>
           </item>
           <item row="5" column="0">
-           <widget class="MplGraphicsView" name="graphicsView_snapView5"/>
+<widget class="QFrame" name="frame_graphicsView_snapView5"/>
           </item>
           <item row="4" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -1981,7 +1981,7 @@
            </layout>
           </item>
           <item row="3" column="1">
-           <widget class="MplGraphicsView" name="graphicsView_snapView4">
+<widget class="QFrame" name="frame_graphicsView_snapView4">
             <property name="minimumSize">
              <size>
               <width>250</width>
@@ -2022,7 +2022,7 @@
            </layout>
           </item>
           <item row="1" column="0">
-           <widget class="MplGraphicsView" name="graphicsView_snapView1">
+<widget class="QFrame" name="frame_graphicsView_snapView1">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>

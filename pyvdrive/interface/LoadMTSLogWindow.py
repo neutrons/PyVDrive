@@ -11,7 +11,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_loadVulcanMTSLogFile as LoadUI
+from pyvdrive.interface.gui.vdrivetablewidgets import MTSFormatTable
 import gui.GuiUtility as GUtil
 
 __author__ = 'wzz'
@@ -42,8 +42,8 @@ class LoadMTSLogFileWindow(QMainWindow):
         self._myParent = parent
 
         # set up widgets from ui file
-        self.ui = LoadUI.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("loadVulcanMTSLogFile.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # initialize values of widgets
         self._init_widgets()
@@ -99,6 +99,14 @@ class LoadMTSLogFileWindow(QMainWindow):
 
         # summary
         self._summaryDict = None
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_preview_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_preview.setLayout(tableWidget_preview_layout)
+        self.ui.tableWidget_preview = MTSFormatTable(self)
+        tableWidget_preview_layout.addWidget(self.ui.tableWidget_preview)
 
         return
 

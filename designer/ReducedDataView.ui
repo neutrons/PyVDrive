@@ -826,7 +826,7 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="GeneralRunView" name="graphicsView_mainPlot">
+<widget class="QFrame" name="frame_graphicsView_mainPlot">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>

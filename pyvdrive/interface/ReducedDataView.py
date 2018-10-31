@@ -20,7 +20,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_ReducedDataView
+from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import vanadium_controller_dialog
 import pyvdrive.lib.datatypeutility
 from pyvdrive.lib import datatypeutility
@@ -40,8 +40,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         super(GeneralPurposedDataViewWindow, self).__init__(parent)
 
         # set up UI
-        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui("ReducedDataView.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # initialize widgets
         self._init_widgets()
@@ -160,6 +160,14 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # sub window
         self._vanadiumProcessDialog = None
+
+        return
+
+    def _promote_widgets(self):
+        graphicsView_mainPlot_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_mainPlot.setLayout(graphicsView_mainPlot_layout)
+        self.ui.graphicsView_mainPlot = GeneralRunView(self)
+        graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
 
         return
 
