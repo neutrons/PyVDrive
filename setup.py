@@ -3,44 +3,74 @@ import sys
 import os
 import re
 import versioneer  # https://github.com/warner/python-versioneer
-
+from shutil import copyfile
 from setuptools import setup, find_packages
 
 if sys.argv[-1] == 'pyuic':
+    # indir = 'designer'
+    # outdir = 'pyvdrive/interface/gui'
+    # files = os.listdir(indir)
+    # files = [os.path.join('designer', item) for item in files]
+    # files = [item for item in files if item.endswith('.ui')]
+    # 
+    # print (files)
+
+    # done = 0
+    # for inname in files:
+    #     base_inname = os.path.basename(inname)
+    #     outname = 'ui_' + base_inname.replace('.ui', '.py')
+    #     outname = os.path.join(outdir, outname)
+    #     if os.path.exists(outname):
+    #         if os.stat(inname).st_mtime < os.stat(outname).st_mtime:
+    #             continue
+    #     print("Converting '%s' to '%s'" % (inname, outname))
+    #     try:
+    #         # check the key package to determine whether the build shall be Qt4 or Qt5
+    #         import PyQt5
+    #         from qtconsole.rich_ipython_widget import RichIPythonWidget 
+    #         from qtconsole.inprocess import QtInProcessKernelManager
+    #         ver = 5
+    #         print ('PyQt5 can be imported. Using pyuic5!')
+    #     except ImportError:
+    #         ver = 4
+    #         print ('PyQt5 cannot be imported. Using pyuic4!')
+
+    #     command = "pyuic%d %s -o %s" % (ver, inname, outname)
+    #     os.system(command)
+    #     done += 1
+    # if not done:
+    #     print("Did not convert any '.ui' files")
+    # sys.exit(0)
+
+    # copy UI files in designer to builds
     indir = 'designer'
-    outdir = 'pyvdrive/interface/gui'
+    outdir = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
     files = os.listdir(indir)
-    files = [os.path.join('designer', item) for item in files]
+    # UI file only
     files = [item for item in files if item.endswith('.ui')]
-    
-    print (files)
+    # add directory
+    files = [os.path.join(indir, item) for item in files]
 
     done = 0
-    for inname in files:
-        base_inname = os.path.basename(inname)
-        outname = 'ui_' + base_inname.replace('.ui', '.py')
-        outname = os.path.join(outdir, outname)
-        if os.path.exists(outname):
-            if os.stat(inname).st_mtime < os.stat(outname).st_mtime:
-                continue
-        print("Converting '%s' to '%s'" % (inname, outname))
-        try:
-            # check the key package to determine whether the build shall be Qt4 or Qt5
-            import PyQt5
-            from qtconsole.rich_ipython_widget import RichIPythonWidget 
-            from qtconsole.inprocess import QtInProcessKernelManager
-            ver = 5
-            print ('PyQt5 can be imported. Using pyuic5!')
-        except ImportError:
-            ver = 4
-            print ('PyQt5 cannot be imported. Using pyuic4!')
+    for ui_name in files:
+        # target name
+        base_ui_name = os.path.basename(ui_name)
+        dest_ui_name = os.path.join(outdir, base_ui_name)
+        # need to copy?
+        if os.path.exists(dest_ui_name) and os.stat(ui_name).st_mtime < os.stat(dest_ui_name).st_mtime:
+            continue
+        # copy UI file to target
+        copyfile(ui_name, dest_ui_name)
+        print("Copied '%s' to '%s'" % (ui_name, dest_ui_name))
 
-        command = "pyuic%d %s -o %s" % (ver, inname, outname)
-        os.system(command)
         done += 1
+    # END-FOR
+
     if not done:
-        print("Did not convert any '.ui' files")
+        print("No new '.ui' files found and copied")
+
     sys.exit(0)
+
 
 
 ###################################################################
