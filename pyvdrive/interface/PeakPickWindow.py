@@ -175,8 +175,9 @@ class PhaseWidgets(object):
         for type_tup in UnitCellList:
             self._cellTypeList.append(type_tup[0])
 
-        parent.connect(combo_box_type, QtCore.SIGNAL('currentIndexChanged(int)'),
-                       self.event_space_group_changed)
+        combo_box_type.currentIndexChanged.connect(self.event_space_group_changed)
+        # parent.connect(combo_box_type, QtCore.SIGNAL('currentIndexChanged(int)'),
+        #                self.event_space_group_changed)
 
         return
 
