@@ -8,10 +8,12 @@ try:
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
-    from PyQt5.QtGui import QCursor, QVBoxLayout
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.QtGui import QCursor
     from PyQt5.uic import loadUi as load_ui
     is_qt_4 = False
 except ImportError as import_e:
+    print ('Import error: {}'.format(import_e))
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor, QVBoxLayout

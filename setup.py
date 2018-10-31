@@ -44,7 +44,10 @@ if sys.argv[-1] == 'pyuic':
 
     # copy UI files in designer to builds
     indir = 'designer'
-    outdir = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
+    if os.path.exists('build/lib.linux-x86_64-2.7'):
+        outdir = 'build/lib.linux-x86_64-2.7/pyvdrive/interface/gui'
+    else:
+        outdir = 'build/lib/pyvdrive/interface/gui'
     files = os.listdir(indir)
     # UI file only
     files = [item for item in files if item.endswith('.ui')]
