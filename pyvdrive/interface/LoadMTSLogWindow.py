@@ -1,9 +1,13 @@
 import os
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QFileDialog, QMainWindow
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QFileDialog, QMainWindow
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -42,8 +46,9 @@ class LoadMTSLogFileWindow(QMainWindow):
         self._myParent = parent
 
         # set up widgets from ui file
-        self.ui = load_ui("loadVulcanMTSLogFile.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/loadVulcanMTSLogFile.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize values of widgets
         self._init_widgets()

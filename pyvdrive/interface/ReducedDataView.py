@@ -8,9 +8,13 @@
 import os
 try:
     from PyQt5.QtWidgets import QMainWindow, QFileDialog
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5 import QtCore
 except ImportError:
     from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
 
@@ -40,8 +44,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         super(GeneralPurposedDataViewWindow, self).__init__(parent)
 
         # set up UI
-        self.ui = load_ui("ReducedDataView.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/ReducedDataView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize widgets
         self._init_widgets()

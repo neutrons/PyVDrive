@@ -1,9 +1,13 @@
 from datetime import datetime
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow, QLineEdit
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow, QLineEdit
 import random
 import time
@@ -126,8 +130,9 @@ class VulcanLiveDataView(QMainWindow):
         self._liveStartTimeStamp = None  # shall be of time numpy.datetime64
 
         # start UI
-        self.ui = load_ui("LiveDataView.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/LiveDataView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize widgets
         self._init_widgets()

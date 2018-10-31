@@ -7,9 +7,13 @@ import sys
 
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QApplication
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QApplication
 
 try:
@@ -36,8 +40,9 @@ class DialogLogSnapView(QDialog):
         self._myParent = parent
 
         # set up UI
-        self.ui = load_ui("LogSnapView.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/LogSnapView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Event handling
         self.ui.pushButton_apply.clicked.connect(self.do_apply_change)

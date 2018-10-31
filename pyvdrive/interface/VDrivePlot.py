@@ -8,12 +8,15 @@ try:
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
-    from PyQt5.QtGui import QCursor
+    from PyQt5.QtGui import QCursor, QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     is_qt_4 = False
 except ImportError as import_e:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
-    from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor
+    from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor, QVBoxLayout
+
+    from PyQt4.uic import loadUi as load_ui
     is_qt_4 = True
 
 # include this try/except block to remap QString needed when using IPython
@@ -66,8 +69,9 @@ class VdriveMainWindow(QMainWindow):
         # Setup main window
         QMainWindow.__init__(self, parent)
         self.setWindowTitle('VDrivePlot (Beta)')
-        self.ui = load_ui("VdrivePlot.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/VdrivePlot.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Define status variables
         # new work flow

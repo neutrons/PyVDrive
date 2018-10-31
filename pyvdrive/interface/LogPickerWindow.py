@@ -7,9 +7,13 @@ import os
 import numpy
 try:
     from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow, QButtonGroup, QFileDialog
 except ImportError:
     from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog
 
 try:
@@ -51,8 +55,9 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockSwitchSliceMethod = False
 
         # set up UI
-        self.ui = load_ui("VdriveLogPicker.ui", baseinstance=self)
-        self = self._promote_widgets()
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Set up widgets
         self._init_widgets_setup()
