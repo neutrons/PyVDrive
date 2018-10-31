@@ -8,9 +8,19 @@ import sys
 import os
 import numpy
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+try:
+    from PyQt5 import QtCore, QtGui, QtWidgets
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
+    from PyQt5.QtCore import *
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtGui import *
+except ImportError:
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
 
 import matplotlib
 import matplotlib.pyplot
@@ -22,7 +32,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_GPPlot as ui_GPPlot
+
 
 
 class Window_GPPlot(QMainWindow):
@@ -39,8 +49,8 @@ class Window_GPPlot(QMainWindow):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui_GPPlot.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # Event handling
         # push buttons 

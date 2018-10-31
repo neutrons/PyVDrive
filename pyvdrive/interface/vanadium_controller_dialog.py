@@ -2,9 +2,13 @@
 import os
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
 # include this try/except block to remap QString needed when using IPython
@@ -14,7 +18,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 import gui.GuiUtility as gutil
-import gui.ui_ProcessVanadiumDialog as van_ui
+
 
 
 class VanadiumProcessControlDialog(QDialog):
@@ -44,8 +48,8 @@ class VanadiumProcessControlDialog(QDialog):
         self._slidersMutex = False  # mutex for sliders
 
         # setup UI
-        self.ui = van_ui.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # initialize the widgets' initial value
         self._init_widgets()

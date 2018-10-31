@@ -1,9 +1,11 @@
 try:
-
     from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
 except ImportError:
     from PyQt4.QtGui import QMainWindow
-import gui.ui_GroupPeakDialog
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
 
 
 class GroupPeakDialog(QMainWindow):
@@ -23,8 +25,8 @@ class GroupPeakDialog(QMainWindow):
         self._parentWindow = parent
 
         # set up UI
-        self.ui = gui.ui_GroupPeakDialog.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # init set up of widgets
         self.ui.radioButton_highIntensity.setChecked(True)
@@ -32,19 +34,8 @@ class GroupPeakDialog(QMainWindow):
 
         # line event handlers
         self.ui.pushButton_groupPeaks.clicked.connect(self.do_group_peaks)
-
         self.ui.pushButton_addPeakReturn.clicked.connect(self.do_add_peak_return)
-
         self.ui.pushButton_cancel.clicked.connect(self.do_cancel_return)
-
-        # self.connect(self.ui.pushButton_groupPeaks, QtCore.SIGNAL('clicked()'),
-        #              self.do_group_peaks)
-        #
-        # self.connect(self.ui.pushButton_addPeakReturn, QtCore.SIGNAL('clicked()'),
-        #              self.do_add_peak_return)
-        #
-        # self.connect(self.ui.pushButton_cancel, QtCore.SIGNAL('clicked()'),
-        #              self.do_cancel_return)
 
         return
 

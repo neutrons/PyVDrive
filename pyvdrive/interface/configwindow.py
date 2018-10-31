@@ -1,11 +1,15 @@
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow
 
-import gui.ui_ConfigWindow as ui_ConfigWindow
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -24,8 +28,8 @@ class ConfigWindow(QMainWindow):
         """
         QMainWindow.__init__(self)
 
-        self.ui = ui_ConfigWindow.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # Define event handling
         self.connect(self.ui.pushButton_applyIPTS, QtCore.SIGNAL('clicked()'),

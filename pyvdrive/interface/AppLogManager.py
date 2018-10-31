@@ -4,9 +4,13 @@
 
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMessageBox
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMessageBox
 
 
@@ -16,7 +20,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_AppLog as ui_AppLog
+
 
 class MyAppLogDialog(QWidget):
     """
@@ -32,8 +36,8 @@ class MyAppLogDialog(QWidget):
         self._myParent = parent
 
         # Set up widget
-        self.ui = ui_AppLog.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # Set up initial text
         self._myContent = "Welcome!\n\nHi, Dude!\n\n"
