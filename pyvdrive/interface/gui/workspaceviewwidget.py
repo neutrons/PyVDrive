@@ -53,7 +53,9 @@ class WorkspaceViewWidget(QWidget):
 
         # define event handling methods
         self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
-        self.ui.pushButton_toIPython.clicked.connect(self.do_write_to_console)
+        self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
+        # self.ui.pushButton_toIPythonMtd
+        # self.ui.pushButton_toIPythonAssign
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
 
@@ -94,7 +96,7 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
-    def do_write_to_console(self):
+    def do_write_workspace_name(self):
         """
         write the workspace name to IPython console
         :return:

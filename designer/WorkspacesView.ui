@@ -102,7 +102,21 @@
                   <item>
                    <widget class="QPushButton" name="pushButton_toIPython">
                     <property name="text">
-                     <string>To IPython</string>
+                     <string>To IPython (Name)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButton_toIPythonMtd">
+                    <property name="text">
+                     <string>To IPython (mtd)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButton_toIPythonAssign">
+                    <property name="text">
+                     <string>To IPython (assign)</string>
                     </property>
                    </widget>
                   </item>
