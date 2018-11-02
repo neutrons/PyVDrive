@@ -81,7 +81,7 @@
                </attribute>
                <layout class="QGridLayout" name="gridLayout_6">
                 <item row="0" column="0">
-                 <widget class="WorkspaceTableWidget" name="tableWidget_dataStructure">
+                 <widget class="QFrame" name="frame_tableWidget_dataStructure">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>0</horstretch>
@@ -150,7 +150,7 @@
                </attribute>
                <layout class="QVBoxLayout" name="verticalLayout_3">
                 <item>
-                 <widget class="WorkspaceGraphicView" name="graphicsView_general">
+                 <widget class="QFrame" name="frame_graphicsView_general">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>0</horstretch>
@@ -169,7 +169,7 @@
                   <property name="autoFillBackground">
                    <bool>true</bool>
                   </property>
-                  <property name="interactive">
+                  <property name="interactive" stdset="0">
                    <bool>false</bool>
                   </property>
                  </widget>
@@ -227,7 +227,7 @@
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <widget class="MantidIPythonWidget" name="widget_ipython" native="true">
+       <widget class="QFrame" name="frame_widget_ipython">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -241,24 +241,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>MantidIPythonWidget</class>
-   <extends>QWidget</extends>
-   <header>mantidipythonwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>WorkspaceTableWidget</class>
-   <extends>QTableWidget</extends>
-   <header>workspaceviewwidget.h</header>
-  </customwidget>
-  <customwidget>
-   <class>WorkspaceGraphicView</class>
-   <extends>QGraphicsView</extends>
-   <header>workspaceviewwidget.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

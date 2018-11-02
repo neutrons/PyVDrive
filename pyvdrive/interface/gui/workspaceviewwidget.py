@@ -8,16 +8,24 @@ from mantidipythonwidget import MantidIPythonWidget
 try:
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QWidget
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QWidget
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
 
 from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
 import ndav_widgets.CustomizedTreeView as baseTree
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceTableWidget
+# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceGraphicView
 
 from mantid.api import AnalysisDataService
 import mantid.simpleapi
+import os
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -35,8 +43,6 @@ class WorkspaceViewWidget(QWidget):
     def __init__(self, parent=None):
         """ Init
         """
-        import ui_WorkspacesView as ui_WorkspacesView
-
         # call base
         QWidget.__init__(self)
 
@@ -45,8 +51,9 @@ class WorkspaceViewWidget(QWidget):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui_WorkspacesView.Ui_Form()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "WorkspacesView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         self.ui.tableWidget_dataStructure.setup()
         self.ui.widget_ipython.set_main_application(self)
@@ -58,6 +65,24 @@ class WorkspaceViewWidget(QWidget):
         # self.ui.pushButton_toIPythonAssign
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_dataStructure_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_dataStructure.setLayout(tableWidget_dataStructure_layout)
+        self.ui.tableWidget_dataStructure = WorkspaceTableWidget(self)
+        tableWidget_dataStructure_layout.addWidget(self.ui.tableWidget_dataStructure)
+
+        graphicsView_general_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_general.setLayout(graphicsView_general_layout)
+        self.ui.graphicsView_general = WorkspaceGraphicView(self)
+        graphicsView_general_layout.addWidget(self.ui.graphicsView_general)
+
+        widget_ipython_layout = QVBoxLayout()
+        self.ui.frame_widget_ipython.setLayout(widget_ipython_layout)
+        self.ui.widget_ipython = MantidIPythonWidget(self)
+        widget_ipython_layout.addWidget(self.ui.widget_ipython)
 
         return
 
