@@ -35,8 +35,6 @@ class VdriveView(VDriveCommand):
                 'to the file name',
         'SHOW': 'Launch the reduced-data viewer'
     }
-    # TODO - 20180807 - Implement this 'SHOW'
-
 
     def __init__(self, controller, command_args, ipts_number=None, run_number_list=None):
         """

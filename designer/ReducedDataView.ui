@@ -100,41 +100,8 @@
              </item>
              <item>
               <layout class="QGridLayout" name="gridLayout_3">
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_6">
-                 <property name="maximumSize">
-                  <size>
-                   <width>60</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>IPTS</string>
-                 </property>
-                </widget>
-               </item>
                <item row="0" column="2">
                 <widget class="QLineEdit" name="lineEdit_iptsNumber">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="2">
-                <widget class="QLineEdit" name="lineEdit_run">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -166,6 +133,24 @@
                  </property>
                 </widget>
                </item>
+               <item row="0" column="1">
+                <widget class="QLabel" name="label_6">
+                 <property name="maximumSize">
+                  <size>
+                   <width>60</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>IPTS</string>
+                 </property>
+                </widget>
+               </item>
                <item row="0" column="0">
                 <spacer name="horizontalSpacer_2">
                  <property name="orientation">
@@ -182,6 +167,21 @@
                  </property>
                 </spacer>
                </item>
+               <item row="1" column="2">
+                <widget class="QLineEdit" name="lineEdit_run">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                  </font>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </item>
              <item>
@@ -194,7 +194,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>GSAS File HDD</string>
+                <string>GSAS/Processed NeXus File HDD</string>
                </property>
               </widget>
              </item>
@@ -826,53 +826,18 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-<widget class="QFrame" name="frame_graphicsView_mainPlot">
+             <widget class="QFrame" name="frame_graphicsView_mainPlot">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <zorder>lineEdit_run</zorder>
              </widget>
             </item>
             <item>
              <layout class="QGridLayout" name="gridLayout_2">
-              <item row="1" column="5">
-               <widget class="QLineEdit" name="lineEdit_2"/>
-              </item>
-              <item row="0" column="9">
-               <widget class="QPushButton" name="pushButton_normByCurrent">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Normalize By Current</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="7">
-               <spacer name="horizontalSpacer_5">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="0" column="4">
-               <widget class="QLineEdit" name="lineEdit_minX">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="5">
                <widget class="QLineEdit" name="lineEdit_maxX">
                 <property name="sizePolicy">
@@ -881,22 +846,18 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-               </widget>
-              </item>
-              <item row="0" column="6">
-               <widget class="QPushButton" name="pushButton_apply_x_range">
-                <property name="text">
-                 <string>Apply</string>
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>16777215</height>
+                 </size>
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
-               <widget class="QLabel" name="label_4">
+              <item row="1" column="6">
+               <widget class="QPushButton" name="pushButton_apply_y_range">
                 <property name="text">
-                 <string>Y-Axis</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <string>Set</string>
                 </property>
                </widget>
               </item>
@@ -913,46 +874,26 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="6">
-               <widget class="QPushButton" name="pushButton_apply_y_range">
-                <property name="text">
-                 <string>Apply</string>
+              <item row="0" column="4">
+               <widget class="QLineEdit" name="lineEdit_minX">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>16777215</height>
+                 </size>
                 </property>
                </widget>
               </item>
-              <item row="0" column="3">
-               <widget class="QLabel" name="label_2">
-                <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
-                </property>
+              <item row="0" column="10">
+               <widget class="QPushButton" name="pushButton_rebin">
                 <property name="text">
-                 <string>Range</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="4">
-               <widget class="QLineEdit" name="lineEdit"/>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label">
-                <property name="text">
-                 <string>X-Axis</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="9">
-               <widget class="QPushButton" name="pushButton_normByVanadium">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Try to find vanadium run in /SNS/VULCAN/IPTS-14094/shared/Instrument&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Normalize By Vanadium</string>
+                 <string>Rebin</string>
                 </property>
                </widget>
               </item>
@@ -974,6 +915,102 @@
                  </property>
                 </item>
                </widget>
+              </item>
+              <item row="1" column="10">
+               <widget class="QPushButton" name="pushButton_normByVanadium">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Try to find vanadium run in /SNS/VULCAN/IPTS-14094/shared/Instrument&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Normalize By Vanadium</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="5">
+               <widget class="QLineEdit" name="lineEdit_2">
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Y-Axis</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>X-Axis</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="4">
+               <widget class="QLineEdit" name="lineEdit">
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="8">
+               <widget class="QPushButton" name="pushButton_normByCurrent">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Normalize by proton charge&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Normalize By Current</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLabel" name="label_2">
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Range</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="6">
+               <widget class="QPushButton" name="pushButton_apply_x_range">
+                <property name="text">
+                 <string>Set</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="7">
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="0" column="8">
+               <widget class="QLineEdit" name="lineEdit_binParams"/>
               </item>
              </layout>
             </item>
@@ -999,13 +1036,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>GeneralRunView</class>
-   <extends>QGraphicsView</extends>
-   <header>generalrunview.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

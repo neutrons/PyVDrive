@@ -157,7 +157,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
         # menu
-        # TODO - 20181030 - Add Back!
+        # TODO - 20181102 - Add Back!
+        # lineEdit_binParams, lineEdit_binParams
+
+
         # self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
         # self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
 
@@ -169,6 +172,10 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def _promote_widgets(self):
+        """
+        promote widgets
+        :return:
+        """
         graphicsView_mainPlot_layout = QVBoxLayout()
         self.ui.frame_graphicsView_mainPlot.setLayout(graphicsView_mainPlot_layout)
         self.ui.graphicsView_mainPlot = GeneralRunView(self)
@@ -250,6 +257,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         browse GSAS file or chopped GSAS files via local HDD
         :return:
         """
+        # TODO - 20181103 - also deal with do_load_preprocessed_nexus
         # get setup
         # is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
         default_dir = self._myController.get_working_dir()

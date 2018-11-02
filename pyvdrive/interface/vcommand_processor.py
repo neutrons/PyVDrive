@@ -291,7 +291,6 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
-    # TestMe - 20180730 - Refactored
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -317,13 +316,15 @@ class VdriveCommandProcessor(object):
 
         # viewing: with simple launch, IPTS is not ncessary
         ipts_number = processor.get_ipts_number()
-        if ipts_number is not None:
-            view_window.set_ipts_number()
-        else:
-            # no IPTS: user wants to load everthing in memory
+
+        # no IPTS: user wants to load everything in memory
+        if ipts_number is None:
             return True, ''
 
+        # set IPTS
+        view_window.set_ipts_number(ipts_number)
         view_window.set_x_range(processor.x_min, processor.x_max)
+        print ('[DB...BAT] Processor.Unit = {}'.format(processor.unit))
         view_window.set_unit(processor.unit)
 
         # find out whether the runs to plot are in memory or need to load from HDD/archive/previously reduced

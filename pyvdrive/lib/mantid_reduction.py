@@ -147,8 +147,6 @@ class VulcanBinningHelper(object):
         :param output_ws_name:
         :return:
         """
-        print ('[DB...BAT] <020910> {} is re-binned to {} with {}'.format(input_ws, output_ws_name, binning_param_dict))
-
         # check
         datatypeutility.check_dict('Binning parameters', binning_param_dict)
         datatypeutility.check_string_variable('Output workspace name', output_ws_name)
@@ -425,21 +423,14 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
 
     reduction_message = ''
 
-    # Compress events as an option
-    if 'CompressEvents' in reduction_params_dict:
-        compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
-        mantidapi.CompressEvents(InputWorkspace=event_ws_name,
-                                 OutputWorkspace=output_ws_name,
-                                 Tolerance=compress_events_tolerance)
-
-    # Mask detectors
-    mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
-                                 mask_workspace_name=mask_ws_name)
-
     # Align detector
     mantidapi.AlignDetectors(InputWorkspace=event_ws_name,
                              OutputWorkspace=output_ws_name,
                              CalibrationWorkspace=diff_cal_ws_name)
+
+    # Mask detectors
+    mantid_helper.mask_workspace(to_mask_workspace_name=output_ws_name,
+                                 mask_workspace_name=mask_ws_name)
 
     # Sort events
     mantidapi.SortEvents(InputWorkspace=output_ws_name,
@@ -450,14 +441,17 @@ def align_and_focus_event_ws(event_ws_name, output_ws_name, binning_params,
                                    OutputWorkspace=output_ws_name,
                                    GroupingWorkspace=grouping_ws_name,
                                    PreserveEvents=True)
-
-    # current_ws = mantid_helper.retrieve_workspace(output_ws_name)
-    # print ('[DB...BAt] workspace 29*3 unit = {0}'.format(current_ws.getAxis(0).getUnit().unitID()))
-    # print ('[DB...BAT] workspace 28*4 type = {0}'.format(type(current_ws)))
-
     # Sort again!
     mantidapi.SortEvents(InputWorkspace=output_ws_name,
                          SortBy='X Value')
+
+    # Compress events as an option
+    if 'CompressEvents' in reduction_params_dict:
+        compress_events_tolerance = reduction_params_dict['CompressEvents']['Tolerance']
+        print ('[DB...BAT] User-specified compress tolerance = {}'.format(compress_events_tolerance))
+        mantidapi.CompressEvents(InputWorkspace=output_ws_name,
+                                 OutputWorkspace=output_ws_name,
+                                 Tolerance=1.E-5)
 
     # Edit instrument as an option
     if 'EditInstrumentGeometry' in reduction_params_dict:

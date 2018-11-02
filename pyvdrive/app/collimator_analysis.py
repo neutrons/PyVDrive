@@ -12,6 +12,7 @@
 #
 # Output: 2theta-summed counts (or normalized intensity)
 
+# TODO - 20181101 - First priority!
 
 class Collimator(object):
     """

@@ -20,7 +20,6 @@ except AttributeError:
 import gui.GuiUtility as gutil
 
 
-
 class VanadiumProcessControlDialog(QDialog):
     """ GUI (dialog) for process vanadium data
     """
@@ -48,7 +47,7 @@ class VanadiumProcessControlDialog(QDialog):
         self._slidersMutex = False  # mutex for sliders
 
         # setup UI
-        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/ProcessVanadiumDialog.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
 
         # initialize the widgets' initial value
@@ -60,6 +59,10 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.pushButton_undoPeakStrip.clicked.connect(self.do_undo_strip)
         self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
         self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
+
+        # TODO - 20181103 - Implement: self.ui.pushButton_showVPeaks: add indicators for vanadium peaks (theory)
+        # TODO - 20181103 - Implement: self.ui.comboBox_banks  currentIndexChange: re-plot
+        # TODO - 20181103 - Implement: pushButton_nDecrease and etc.
 
         # tab for smoothing vanadium
         self.ui.pushButton_smoothVanadium.clicked.connect(self.do_smooth_vanadium)

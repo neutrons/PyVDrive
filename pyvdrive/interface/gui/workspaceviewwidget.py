@@ -61,6 +61,7 @@ class WorkspaceViewWidget(QWidget):
         # define event handling methods
         self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
+        # TODO - 20181101 - Implement the next 2
         # self.ui.pushButton_toIPythonMtd
         # self.ui.pushButton_toIPythonAssign
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
@@ -69,6 +70,9 @@ class WorkspaceViewWidget(QWidget):
         return
 
     def _promote_widgets(self):
+        """ promote widgets
+        :return:
+        """
         tableWidget_dataStructure_layout = QVBoxLayout()
         self.ui.frame_tableWidget_dataStructure.setLayout(tableWidget_dataStructure_layout)
         self.ui.tableWidget_dataStructure = WorkspaceTableWidget(self)
