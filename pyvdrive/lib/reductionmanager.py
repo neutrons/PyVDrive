@@ -282,7 +282,7 @@ class CalibrationManager(object):
     def get_calibration_file(self, year_month_date, num_banks):
         """
         get the calibration file by date and number of banks
-        :param year_month_date:
+        :param year_month_date: Time stamp of the run to look for calibration file
         :param num_banks:
         :return: calibration file date, calibration file name
         """

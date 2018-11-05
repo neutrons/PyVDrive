@@ -1017,24 +1017,35 @@ def get_detectors_in_roi(mask_ws_name):
     return det_id_list
 
 
-def get_ipts_number(ws_name):
+def get_ipts_number(input):
     """
     get IPTS number from a standard EventWorkspace
-    :param ws_name:
+    :param input: run number or string
     :return:
     """
-    workspace = retrieve_workspace(ws_name)
-    if not workspace.run().hasProperty('Filename'):
-        return None
+    if isinstance(input, str):
+        # workspace name
+        ws_name = input
+        workspace = retrieve_workspace(ws_name)
+        if not workspace.run().hasProperty('Filename'):
+            return None
 
-    # get file name
-    file_name = workspace.run().getProperty('Filename').value
+        # get file name
+        file_name = workspace.run().getProperty('Filename').value
 
-    status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
-    if status:
-        ipts_number = ret_obj
+        status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
+        if status:
+            ipts_number = ret_obj
+        else:
+            ipts_number = None
+    elif isinstance(input, int):
+        # run number
+        run_number = input
+        ipts_number = mantidapi.GetIPTS(Instrument='VULCAN', RunNumber=run_number)
     else:
-        ipts_number = None
+        # not supported
+        raise TypeError('Input {} of type {} is either a workspace name (str) nor a run number (int)'
+                        ''.format(input, type(input)))
 
     return ipts_number
 

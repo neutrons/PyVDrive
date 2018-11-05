@@ -3,8 +3,40 @@
 ####
 import os
 import math
+import numpy
 import mantid_helper
 import datatypeutility
+
+
+START_PIXEL_ID = {1: {1: 0, 2: 1, 3: 2},
+                  'X1': {},
+                  'X2': {}}
+
+
+def convert_pixels_to_workspace_indexes_v1(pixel_id_list):
+    """
+    convert pixel IDs to workspace indexes
+    :param pixel_id_list:
+    :return:
+    """
+    # check inputs
+    datatypeutility.check_list('Pixel IDs', pixel_id_list)
+
+    start_pixel_id = START_PIXEL_ID[1]
+
+    # convert to sorted array
+    pixel_id_list.sort()
+    pixel_id_vec = numpy.array(pixel_id_list)
+
+    # separate array ... TODO - 20181105 - Think of a good numpy algorithm to do it efficiently
+    bank_id = 3
+    if pixel_id_vec[0] < start_pixel_id[bank_id]:
+        raise RuntimeError('Contact developer to extend method convert_pixels_to_workspace_indexes_v1() to '
+                           'whole instrument')
+
+    ws_index_vec = pixel_id_vec - start_pixel_id[pixel_id_vec]
+
+    return ws_index_vec
 
 
 def export_vanadium_intensity_to_file(van_nexus_file, gsas_van_int_file):
