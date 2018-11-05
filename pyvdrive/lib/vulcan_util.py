@@ -8,7 +8,7 @@ import mantid_helper
 import datatypeutility
 
 
-START_PIXEL_ID = {1: {1: 0, 2: 1, 3: 2},
+START_PIXEL_ID = {1: {1: 0, 2: 1, 3: (6468, 62500)},
                   'X1': {},
                   'X2': {}}
 
@@ -30,11 +30,11 @@ def convert_pixels_to_workspace_indexes_v1(pixel_id_list):
 
     # separate array ... TODO - 20181105 - Think of a good numpy algorithm to do it efficiently
     bank_id = 3
-    if pixel_id_vec[0] < start_pixel_id[bank_id]:
+    if pixel_id_vec[0] < start_pixel_id[bank_id][0]:
         raise RuntimeError('Contact developer to extend method convert_pixels_to_workspace_indexes_v1() to '
                            'whole instrument')
 
-    ws_index_vec = pixel_id_vec - start_pixel_id[pixel_id_vec]
+    ws_index_vec = pixel_id_vec - start_pixel_id[bank_id][1]
 
     return ws_index_vec
 

@@ -14,7 +14,7 @@ class TddReductionProject(unittest.TestCase):
         basepath = '/SNS/VULCAN/'
         self.project.setBaseDataPath(basepath)
         basepath2 = self.project.getBaseDataPath()
-        self.assertbasepath, basepath2)
+        assert(basepath, basepath2)
 
         return
 

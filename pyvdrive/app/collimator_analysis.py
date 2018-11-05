@@ -33,7 +33,7 @@ class Collimator(object):
     def help(self):
         print ("This is the the one")
 
-    def execute_scan_rotating_collimator(self, run_number_list, pixels, to_focus_spectra):
+    def execute_scan_rotating_collimator(self, ipts_number, run_number_list, pixels, to_focus_spectra):
         """ 
         :param run_number_list:
         :param pixels:
@@ -45,12 +45,14 @@ class Collimator(object):
 
         calib_manager = reductionmanager.CalibrationManager()
 
+        data_set = dict()
 
         # load run numbers
         for run_number in run_number_list:
             # locate original nexus file
-            ipts_number = mantid_helper.get_ipts_number(run_number)
-            event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}_events.nxs.h5'.format(ipts_number, run_number)
+            if ipts_number is None:
+                ipts_number = mantid_helper.get_ipts_number(run_number)
+            event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
 
             # load data from file
             ws_name_i = 'VULCAN_{}_events'.format(run_number)
@@ -58,29 +60,50 @@ class Collimator(object):
                                      meta_data_only=False)
 
             # align
-            calib_manager.get_calibration_file(year_month_date=run_start_date, num_banks=3)
-            calib_manager.load_calibration_file(calibration_file_name=cal_file)
-            mantid_reduction.align_instrument(matrix_ws=ws_name_i)
+            run_start_date = calib_manager.check_creation_date(event_file_name)
+            has_loaded_cal = calib_manager.has_loaded(run_start_date, 3)
+            if not has_loaded_cal:
+                calib_manager.search_load_calibration_file(run_start_date, 3, ws_name_i)
+            workspaces = calib_manager.get_loaded_calibration_workspaces(run_start_date, 3)
+            calib_ws_name = workspaces.calibration
+            # group_ws_name = workspaces.grouping
+            # mask_ws_name = workspaces.mask
+
+            # align and output to dSpacing
+            mantid_reduction.align_instrument(ws_name_i, calib_ws_name)
 
             # focus or not
             out_name_i = ws_name_i + '_partial'
             workspace_index_vec = vulcan_util.convert_pixels_to_workspace_indexes_v1(pixel_id_list=pixels)
             if to_focus_spectra:
                 # focus:
-                mantid_helper.mtd_convert_units(ws_name_i, target_unit='dSpacing')
-                mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i, workspace_index_list=pixels)
+                # mantid_helper.mtd_convert_units(ws_name_i, target_unit='dSpacing')
+                mantid_helper.rebin(ws_name_i, '-0.1', preserve=True)
+                mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i,
+                                          workspace_index_list=workspace_index_vec)
                 mantid_helper.mtd_convert_units(out_name_i, target_unit='TOF')
                 mantid_helper.rebin(out_name_i, '-0.0003', preserve=True)
             else:
                 # sum spectra: rebin
+                mantid_helper.mtd_convert_units(ws_name_i, target_unit='TOF')
                 mantid_helper.rebin(ws_name_i, '-0.0003', preserve=True)
-                mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i, workspace_index_list=pixels)
+                mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i,
+                                          workspace_index_list=workspace_index_vec)
+            # END-IF
 
+            # get workspace
+            out_ws = mantid_helper.retrieve_workspace(out_name_i, True)
+            data_set[run_number] = out_ws.readX(0), out_ws.readY(0)
         # END-FOR
 
-        return
+        self._data_set = data_set
 
-    def execute_calculate_2theta_intensity(self, run_number_list):
+        return data_set
+
+    def get_output_data(self):
+        return self._data_set
+
+    def execute_calculate_2theta_intensity(self, ipts_number, run_number_list):
         """
         sum events' counts along tube, convert tube center to 2theta
         :return:
@@ -107,6 +130,8 @@ class Collimator(object):
 
         # END-FOR
 
+        self._data_set = counts_vector
+
         return counts_vector
 
     @staticmethod
@@ -116,7 +141,13 @@ class Collimator(object):
         :param ws_name:
         :return:
         """
+        high_angle_bank_start_index = 6468
+
         event_ws = mantid_helper.retrieve_workspace(ws_name, raise_if_not_exist=True)
+
+        source_pos = event_ws.getInstrument().getSource().getPos()
+        sample_pos = event_ws.getInstrument().getSample().getPos()
+        k_in = sample_pos - source_pos
 
         # form output array
         counts_array = numpy.ndarray(shape=(8*9, 2), dtype='float')
@@ -132,8 +163,10 @@ class Collimator(object):
 
             # calculate two theta angle
             center_ws_index = (ws_index_0 + ws_index_f) / 2
-            center_det = event_ws.getDetector(center_ws_index).getPos()
-            twotheta = blabla()
+            det_pos = event_ws.getDetector(center_ws_index).getPos()
+            k_out = det_pos - sample_pos
+
+            twotheta = k_out.angle(k_in) * 180. / numpy.pi
 
             counts_array[det_col_index][0] = twotheta
             counts_array[det_col_index][1] = counts_i
@@ -154,7 +187,7 @@ def convert_integer(int_sr):
     except ValueError:
         raise ValueError('String {} cannot be converted to integer'.format(int_sr))
 
-    return int_sr
+    return int_r
 
 
 def convert_integer_range(int_range_str):
@@ -275,7 +308,7 @@ def parse_pixels_file(file_name):
     return pixel_id_list
 
 
-def scan_rotating_collimator(runs, pixels, to_focus):
+def scan_rotating_collimator(ipts, runs, pixels, to_focus):
     """
     scan collimator in rotation.
     :param runs: file name containing run numbers
@@ -299,11 +332,16 @@ def scan_rotating_collimator(runs, pixels, to_focus):
 
     try:
         collimator = Collimator()
-        collimator.execute_scan_rotating_collimator(run_number_list, pixel_list, to_focus_spectra=to_focus)
+        collimator.execute_scan_rotating_collimator(ipts, run_number_list, pixel_list, to_focus_spectra=to_focus)
     except RuntimeError as run_err:
         return False, 'Execution error: {}'.format(run_err)
 
     return True, collimator
+
+
+# TODO - FIXME - ASAP - 20181105 - Implement this as task 2
+def scan_detector_column(blabla):
+    return
 
 
 def main(argv):
