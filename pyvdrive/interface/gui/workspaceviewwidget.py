@@ -61,9 +61,8 @@ class WorkspaceViewWidget(QWidget):
         # define event handling methods
         self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
-        # TODO - 20181101 - Implement the next 2
-        # self.ui.pushButton_toIPythonMtd
-        # self.ui.pushButton_toIPythonAssign
+        self.ui.pushButton_toIPythonMtd.clicked.connect(self.do_write_workspace_instance)
+        self.ui.pushButton_toIPythonAssign.connect(self.do_assign_workspace)
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
 
@@ -125,12 +124,29 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
+    def do_assign_workspace(self):
+        """
+        write the workspace name to IPython console with assign the workspace instance to a variable
+        :return:
+        """
+        # get workspace name
+        ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+
+        # output string
+        ipython_str = ''
+        for ws_name in ws_name_list:
+            ipython_str += '"ws_ = mtd[{0}]" '.format(ws_name)
+
+        # export the ipython
+        self.ui.widget_ipython.write_command(ipython_str)
+
+        return
+
     def do_write_workspace_name(self):
         """
         write the workspace name to IPython console
         :return:
         """
-        # TODO - 20181010 - More friendly to write out ws = mtd[...]
         # get workspace name
         ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
 
@@ -138,6 +154,24 @@ class WorkspaceViewWidget(QWidget):
         ipython_str = ''
         for ws_name in ws_name_list:
             ipython_str += '"{0}"    '.format(ws_name)
+
+        # export the ipython
+        self.ui.widget_ipython.write_command(ipython_str)
+
+        return
+
+    def do_write_workspace_instance(self):
+        """
+        write the workspace name to IPython console
+        :return:
+        """
+        # get workspace name
+        ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+
+        # output string
+        ipython_str = ''
+        for ws_name in ws_name_list:
+            ipython_str += '"mtd[{0}]" '.format(ws_name)
 
         # export the ipython
         self.ui.widget_ipython.write_command(ipython_str)

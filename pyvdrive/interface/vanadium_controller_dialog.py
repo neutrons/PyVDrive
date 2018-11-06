@@ -29,6 +29,7 @@ class VanadiumProcessControlDialog(QDialog):
     mySmoothVanadiumSignal = QtCore.pyqtSignal(int, str, int, int)  # signal to smooth vanadium spectra
     myUndoSmoothVanadium = QtCore.pyqtSignal()  # signal to undo vanadium peak smooth to raw data
     myApplyResultSignal = QtCore.pyqtSignal(str, int)  # signal to apply/save the smoothed vanadium
+    myShowVPeaksSignal = QtCore.pyqtSignal(bool, name='ShowVanPeaks')
 
     def __init__(self, parent):
         """ Set up main window
@@ -46,6 +47,12 @@ class VanadiumProcessControlDialog(QDialog):
         # mutex
         self._slidersMutex = False  # mutex for sliders
 
+        # class variables
+        self._min_smooth_n = None
+        self._max_smooth_n = None
+        self._min_smooth_order = None
+        self._max_smooth_order = None
+
         # setup UI
         ui_path = os.path.join(os.path.dirname(__file__), "gui/ProcessVanadiumDialog.ui")
         self.ui = load_ui(ui_path, baseinstance=self)
@@ -60,9 +67,13 @@ class VanadiumProcessControlDialog(QDialog):
         self.ui.pushButton_setPeakStripParamToDefaults.clicked.connect(self.do_restore_peak_strip_parameters)
         self.ui.pushButton_savePeakStripParamAsDefaults.clicked.connect(self.do_save_peak_strip_parameters)
 
-        # TODO - 20181103 - Implement: self.ui.pushButton_showVPeaks: add indicators for vanadium peaks (theory)
+        self.ui.pushButton_showVPeaks.clicked.connect(self.do_show_vanadium_peaks)
+        self.ui.pushButton_nDecrease.clicked.connect(self.do_decrease_smooth_n)
+        self.ui.pushButton_nIncrease.clicked.connect(self.do_increase_smooth_n)
+        self.ui.pushButton_orderDecrease.clicked.connect(self.do_decrease_smooth_order)
+        self.ui.pushButton_orderIncrease.clicked.connect(self.do_increase_smooth_order)
+
         # TODO - 20181103 - Implement: self.ui.comboBox_banks  currentIndexChange: re-plot
-        # TODO - 20181103 - Implement: pushButton_nDecrease and etc.
 
         # tab for smoothing vanadium
         self.ui.pushButton_smoothVanadium.clicked.connect(self.do_smooth_vanadium)
@@ -89,6 +100,7 @@ class VanadiumProcessControlDialog(QDialog):
         self.mySmoothVanadiumSignal.connect(self._myParent.signal_smooth_vanadium)
         self.myUndoSmoothVanadium.connect(self._myParent.signal_smooth_vanadium)
         self.myApplyResultSignal.connect(self._myParent.signal_save_processed_vanadium)
+        self.myShowVPeaksSignal.connect(self._myParent.event_show_hide_v_peaks)
 
         return
 
@@ -111,7 +123,11 @@ class VanadiumProcessControlDialog(QDialog):
 
         # set range of the sliders
         self.ui.horizontalSlider_smoothN.setRange(0, 50)
+        self._min_smooth_n = 0
+        self._max_smooth_n = 50
         self.ui.horizontalSlider_smoothOrder.setRange(0, 40)
+        self._min_smooth_order = 0
+        self._max_smooth_order = 40
 
         # initial value
         # self.ui.lineEdit_vanPeakFWHM.setText('7')
@@ -126,6 +142,62 @@ class VanadiumProcessControlDialog(QDialog):
 
         # check box
         self.ui.checkBox_isHighBackground.setChecked(True)
+
+        return
+
+    def do_increase_smooth_n(self):
+        """
+        increase the n value of smooth parameter by 1
+        :return:
+        """
+        curr_value = self.ui.horizontalSlider_smoothN.value()
+
+        # stop at maximum
+        if curr_value == self._max_smooth_n:
+            return
+        self.ui.horizontalSlider_smoothN.setValue(curr_value + 1)
+
+        return
+
+    def do_decrease_smooth_n(self):
+        """
+        decrease the n value of smooth parameter by 1
+        :return:
+        """
+        curr_value = self.ui.horizontalSlider_smoothN.value()
+
+        # stop at maximum
+        if curr_value == self._min_smooth_n:
+            return
+        self.ui.horizontalSlider_smoothN.setValue(curr_value - 1)
+
+        return
+
+    def do_increase_smooth_order(self):
+        """
+        increase the order's value of smooth parameter by 1
+        :return:
+        """
+        curr_value = self.ui.horizontalSlider_smoothOrder.value()
+
+        # stop at maximum
+        if curr_value == self._max_smooth_order:
+            return
+        self.ui.horizontalSlider_smoothOrder.setValue(curr_value + 1)
+
+        return
+
+    def do_decrease_smooth_order(self):
+        """
+        decrease the order's value of smooth parameter by 1
+        :return:
+        """
+        curr_value = self.ui.horizontalSlider_smoothOrder.value()
+
+        # stop at maximum
+        if curr_value == self._min_smooth_order:
+            return
+        self.ui.horizontalSlider_smoothOrder.setValue(curr_value - 1)
 
         return
 
@@ -247,6 +319,8 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         self.ui.horizontalSlider_smoothN.setRange(min_value, max_value)
+        self._min_smooth_n = min_value
+        self._max_smooth_n = max_value
 
         return
 
@@ -264,6 +338,8 @@ class VanadiumProcessControlDialog(QDialog):
             return
 
         self.ui.horizontalSlider_smoothOrder.setRange(min_value, max_value)
+        self._min_smooth_order = min_value
+        self._max_smooth_order = max_value
 
         return
 
@@ -278,6 +354,24 @@ class VanadiumProcessControlDialog(QDialog):
             raise NotImplementedError('Bank group {} is not supported.'.format(bank_group))
 
         return bank_group_index
+
+    def do_show_vanadium_peaks(self):
+        """ show or hide vanadium peaks in d-spacing on main canvas
+        i.e., add indicators for vanadium peaks (theory)
+        :return:
+        """
+        # check whether it shall show or hide
+        button_state = str(self.ui.pushButton_showVPeaks.text())
+        if button_state.lower().count('show'):
+            # show
+            self.myShowVPeaksSignal.emit(True)
+            self.ui.pushButton_showVPeaks.setText('Hide V Peaks')
+        else:
+            # hide
+            self.myShowVPeaksSignal.emit(False)
+            self.ui.pushButton_showVPeaks.setText('Show V Peaks')
+
+        return
 
     def do_smooth_vanadium(self):
         """

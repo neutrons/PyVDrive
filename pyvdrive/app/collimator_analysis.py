@@ -339,9 +339,27 @@ def scan_rotating_collimator(ipts, runs, pixels, to_focus):
     return True, collimator
 
 
-# TODO - FIXME - ASAP - 20181105 - Implement this as task 2
-def scan_detector_column(blabla):
-    return
+def scan_detector_column(ipts, base_run, target_run):
+    """
+    integrate the counts along column of (high angle) detector
+    :param ipts:
+    :param base_run:
+    :param target_run:
+    :return:
+    """
+    try:
+        datatypeutility.check_int_variable('Base run number', base_run, (1, None))
+        datatypeutility.check_int_variable('Target run number', target_run, (1, None))
+    except AssertionError as ass_err:
+        return False, 'Input arguments error: {}'.format(ass_err)
+
+    try:
+        collimator = Collimator
+        collimator.execute_calculate_2theta_intensity(ipts, [base_run, target_run])
+    except RuntimeError as run_err:
+        return False, 'Execution error: {}'.format(run_err)
+
+    return True, collimator
 
 
 def main(argv):
