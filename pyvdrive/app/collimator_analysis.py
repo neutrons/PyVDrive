@@ -18,16 +18,17 @@ from pyvdrive.lib import mantid_reduction
 from pyvdrive.lib import reductionmanager
 from pyvdrive.lib import vulcan_util
 
-# TODO - 20181101 - First priority!
 
 class Collimator(object):
-    """
-
+    """ Collimator analysis
     """
     def __init__(self):
+        """ initi
         """
+        self._data_set = None
+        self._proton_charges = list()
+        self._run_numbers = None
 
-        """
         return
 
     def help(self):
@@ -46,6 +47,8 @@ class Collimator(object):
         calib_manager = reductionmanager.CalibrationManager()
 
         data_set = dict()
+
+        self._run_numbers = run_number_list[:]
 
         # load run numbers
         for run_number in run_number_list:
@@ -82,14 +85,17 @@ class Collimator(object):
                 mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i,
                                           workspace_index_list=workspace_index_vec)
                 mantid_helper.mtd_convert_units(out_name_i, target_unit='TOF')
-                mantid_helper.rebin(out_name_i, '-0.0003', preserve=True)
+                mantid_helper.rebin(out_name_i, '3000, -0.0003, 70000', preserve=True)
             else:
                 # sum spectra: rebin
                 mantid_helper.mtd_convert_units(ws_name_i, target_unit='TOF')
-                mantid_helper.rebin(ws_name_i, '-0.0003', preserve=True)
+                mantid_helper.rebin(ws_name_i, '3000, -0.0003, 70000', preserve=True)
                 mantid_helper.sum_spectra(ws_name_i, output_workspace=out_name_i,
                                           workspace_index_list=workspace_index_vec)
             # END-IF
+
+            # convert to point data
+            mantid_helper.convert_to_point_data(out_name_i)
 
             # get workspace
             out_ws = mantid_helper.retrieve_workspace(out_name_i, True)
@@ -103,37 +109,32 @@ class Collimator(object):
     def get_output_data(self):
         return self._data_set
 
-    def execute_calculate_2theta_intensity(self, ipts_number, run_number_list):
+    def execute_calculate_2theta_intensity(self, ipts_number, run_number):
         """
         sum events' counts along tube, convert tube center to 2theta
         :return:
         """
-        datatypeutility.check_list('Run numbers', run_number_list)
+        # locate original nexus file
+        if ipts_number is None:
+            ipts_number = mantid_helper.get_ipts_number(run_number)
+        event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
 
-        # load run numbers
-        num_runs = len(run_number_list)
-        counts_vector = numpy.ndarray(shape=(num_runs, 72, 2), dtype='float')
+        # load data from file
+        ws_name_i = 'VULCAN_{}_events'.format(run_number)
+        mantid_helper.load_nexus(data_file_name=event_file_name, output_ws_name=ws_name_i,
+                                 meta_data_only=False)
 
-        for index, run_number in enumerate(run_number_list):
-            # locate original nexus file
-            if ipts_number is None:
-                ipts_number = mantid_helper.get_ipts_number(run_number)
-            event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
+        # now count the events per column on high angle detector
+        counts_vec = self._count_events_by_det_column(ws_name_i)
+        self._data_set = counts_vec
 
-            # load data from file
-            ws_name_i = 'VULCAN_{}_events'.format(run_number)
-            mantid_helper.load_nexus(data_file_name=event_file_name, output_ws_name=ws_name_i,
-                                     meta_data_only=False)
+        # get proton charges
+        event_ws = mantid_helper.retrieve_workspace(ws_name_i)
+        plog = event_ws.run().getProperty('proton_charge')
+        pcharges = plog.value.sum()
+        self._proton_charges = [pcharges]
 
-            # now count the events per column on high angle detector
-            counts_vec_i = self._count_events_by_det_column(ws_name_i)
-            counts_vector[index] = counts_vec_i
-
-        # END-FOR
-
-        self._data_set = counts_vector
-
-        return counts_vector
+        return counts_vec
 
     @staticmethod
     def _count_events_by_det_column(ws_name):
@@ -174,6 +175,47 @@ class Collimator(object):
         # END-FOR
 
         return counts_array
+
+    def save_to_ascii(self, file_name):
+        """
+        :param file_name:
+        :return:
+        """
+        if self._data_set is None:
+            raise RuntimeError('No data has been calculated yet')
+
+        if isinstance(self._data_set, dict):
+            wbuf = '# TOF      '
+            for run_number in self._run_numbers:
+                wbuf += '{:10d}'.format(run_number)
+            wbuf += '\n'
+
+            template_set = self._data_set[self._run_numbers[0]]
+            num_pt = template_set[0].shape[0]
+
+            for ipt in range(num_pt):
+                wbuf += '{:.2f}    '.format(template_set[0][ipt])
+                for run_number in self._run_numbers:
+                    wbuf += '{:.2f}    '.format(self._data_set[run_number][1][ipt])
+                wbuf += '\n'
+            # END-FOR
+
+            print (wbuf)
+
+        elif isinstance(self._data_set, numpy.ndarray) and len(self._data_set.shape) == 2:
+            wbuf = '# proton = {}\n'.format(self._proton_charges[0])
+            num_pt = self._data_set.shape[0]
+            for index in range(num_pt-1, -1, -1):
+                wbuf += '{:.5f}    {}\n'.format(self._data_set[index][0], self._data_set[index][1])
+        else:
+            raise RuntimeError('Data set of type {} is not recognized'.format(self._data_set))
+        # END-IF
+
+        ofile = open(file_name, 'w')
+        ofile.write(wbuf)
+        ofile.close()
+
+        return
 
 
 # definition of external files
@@ -340,7 +382,7 @@ def scan_rotating_collimator(ipts, runs, pixels, to_focus):
     return True, collimator
 
 
-def scan_detector_column(ipts, base_run, target_run):
+def scan_detector_column(ipts, run_number):
     """
     integrate the counts along column of (high angle) detector
     :param ipts:
@@ -349,14 +391,13 @@ def scan_detector_column(ipts, base_run, target_run):
     :return:
     """
     try:
-        datatypeutility.check_int_variable('Base run number', base_run, (1, None))
-        datatypeutility.check_int_variable('Target run number', target_run, (1, None))
+        datatypeutility.check_int_variable('Run Number', run_number, (1, None))
     except AssertionError as ass_err:
         return False, 'Input arguments error: {}'.format(ass_err)
 
     try:
         collimator = Collimator()
-        collimator.execute_calculate_2theta_intensity(ipts, [base_run, target_run])
+        collimator.execute_calculate_2theta_intensity(ipts, run_number)
     except RuntimeError as run_err:
         return False, 'Execution error: {}'.format(run_err)
 

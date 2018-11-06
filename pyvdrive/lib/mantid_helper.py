@@ -107,6 +107,18 @@ def clone_workspace(srs_ws_name, target_ws_name):
     return output_ws
 
 
+def convert_to_point_data(ws_name):
+    """
+
+    :param ws_name:
+    :return:
+    """
+    mantidapi.ConvertToPointData(InputWorkspace=ws_name,
+                                 OutputWorkspace=ws_name)
+
+    return
+
+
 def convert_to_non_overlap_splitters_bf(split_ws_name):
     """
     convert a Table splitters workspace containing overlapped time segment

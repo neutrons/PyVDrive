@@ -583,7 +583,8 @@ class DataArchiveManager(object):
 
         # form IPTS
         ipts_dir = os.path.join(self._archiveRootDirectory, 'IPTS-%d' % ipts_number)
-        assert os.path.exists(ipts_dir), 'IPTS dir %s does not exist.' % ipts_dir
+        if not os.path.exists(ipts_dir):
+            raise RuntimeError('IPTS dir {} does not exist for IPTS = {}'.format(ipts_dir, ipts_number))
 
         # archive key:
         archive_key = ipts_number

@@ -135,7 +135,7 @@ class WorkspaceViewWidget(QWidget):
         # output string
         ipython_str = ''
         for ws_name in ws_name_list:
-            ipython_str += '"ws_ = mtd[{0}]" '.format(ws_name)
+            ipython_str += 'ws_ = mtd["{0}"] '.format(ws_name)
 
         # export the ipython
         self.ui.widget_ipython.write_command(ipython_str)
@@ -171,7 +171,7 @@ class WorkspaceViewWidget(QWidget):
         # output string
         ipython_str = ''
         for ws_name in ws_name_list:
-            ipython_str += '"mtd[{0}]" '.format(ws_name)
+            ipython_str += 'mtd["{0}"] '.format(ws_name)
 
         # export the ipython
         self.ui.widget_ipython.write_command(ipython_str)
