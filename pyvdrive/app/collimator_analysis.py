@@ -116,8 +116,9 @@ class Collimator(object):
 
         for index, run_number in enumerate(run_number_list):
             # locate original nexus file
-            ipts_number = mantid_helper.get_ipts_number(run_number)
-            event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}_events.nxs.h5'.format(ipts_number, run_number)
+            if ipts_number is None:
+                ipts_number = mantid_helper.get_ipts_number(run_number)
+            event_file_name = '/SNS/VULCAN/IPTS-{}/nexus/VULCAN_{}.nxs.h5'.format(ipts_number, run_number)
 
             # load data from file
             ws_name_i = 'VULCAN_{}_events'.format(run_number)
@@ -354,7 +355,7 @@ def scan_detector_column(ipts, base_run, target_run):
         return False, 'Input arguments error: {}'.format(ass_err)
 
     try:
-        collimator = Collimator
+        collimator = Collimator()
         collimator.execute_calculate_2theta_intensity(ipts, [base_run, target_run])
     except RuntimeError as run_err:
         return False, 'Execution error: {}'.format(run_err)

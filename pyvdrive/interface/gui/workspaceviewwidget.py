@@ -62,7 +62,7 @@ class WorkspaceViewWidget(QWidget):
         self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
         self.ui.pushButton_toIPythonMtd.clicked.connect(self.do_write_workspace_instance)
-        self.ui.pushButton_toIPythonAssign.connect(self.do_assign_workspace)
+        self.ui.pushButton_toIPythonAssign.clicked.connect(self.do_assign_workspace)
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
 
@@ -262,9 +262,12 @@ class WorkspaceViewWidget(QWidget):
         :return:
         """
         command = script.strip().split(',')[0].strip()
-        print '[DB...Test Reserved] command = ', command, 'is reserved command'
 
-        return command in self.Reserved_Command_List
+        is_reserved = command in self.Reserved_Command_List
+        if is_reserved:
+            print ('[DB...INFO] command: {} is reserved'.format(command))
+
+        return is_reserved
 
     def plot(self, script):
         """
