@@ -2,12 +2,146 @@ from datetime import datetime
 import os
 import os.path
 import numpy
-import sys
-# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-# sys.path.append("/opt/mantidnightly/bin")
-# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
+
+
+class SaveVulcanGSS(object):
+    """
+    class to save VULCAN GSAS
+    mostly it is used as static
+    """
+    def __init__(self, bin_params_set):
+        """
+        initialization
+        :param bin_params_set: an iterator on tuple as [list of bank IDs], [binning parameter list]
+        """
+
+
+        return
+
+    def _create_binning_parameters(self):
+        """
+        for Mantid Rebin
+        :return:
+        """
+        # Create a complicated bin parameter
+        params = []
+        dx = None
+        for ibin in range(len(vec_ref_tof) - 1):
+            x0 = vec_ref_tof[ibin]
+            xf = vec_ref_tof[ibin + 1]
+            dx = xf - x0
+            params.append(x0)
+            params.append(dx)
+
+        return bin_params
+
+    def _write_slog_bank_gsas(self, ws_name, bank_id):
+        """
+        1. X: format to VDRIVE tradition (refer to ...)
+        2. Y: native value
+        3. Z: balbla
+        :param ws_name:
+        :param bank_id:
+        :return:
+        """
+        """
+          // check inputs
+  if (xye_precision.size() != 3)
+    throw std::runtime_error(
+        "SLOG XYE precisions are not given in a 3-item vector.");
+
+  const auto &xVals = histo.binEdges();
+  const auto &xPoints = histo.points();
+  const auto &yVals = histo.y();
+  const auto &eVals = histo.e();
+  const size_t datasize = yVals.size();
+
+  const double bc1 = xVals.front();        // minimum TOF in microseconds
+  const double bc2 = *(xPoints.end() - 1); // maximum TOF (in microseconds?)
+  const double bc3 = (*(xVals.begin() + 1) - bc1) / bc1; // deltaT/T
+
+  if (bc1 <= 0.) {
+    throw std::runtime_error(
+        "Cannot write out logarithmic data starting at zero or less");
+  }
+  if (isConstantDelta(xVals)) {
+    g_log.error() << "Constant delta - T binning : " << xVals.front() << ", "
+                  << *(xVals.begin() + 1) << ", " << *(xVals.begin() + 2)
+                  << "... " << std::endl;
+    throw std::runtime_error("While writing SLOG format : Found constant "
+                             "delta - T binning for bank " +
+                             std::to_string(bank));
+  }
+
+  g_log.debug() << "SaveGSS(): Min TOF = " << bc1 << '\n';
+
+  // Write bank header
+  if (m_overwrite_std_bank_header) {
+    // write user header only!
+    out << std::fixed << std::setw(80)
+        << m_user_specified_bank_headers[ws_index] << "\n";
+  } else {
+    // write general bank header part
+    writeBankHeader(out, "SLOG", bank, datasize);
+    // write the SLOG specific type
+    out << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc1
+        << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc2
+        << std::fixed << " " << std::setprecision(7) << std::setw(10) << bc3
+        << std::fixed << " 0 FXYE\n";
+  }
+
+  std::vector<std::unique_ptr<std::stringstream>> outLines;
+  outLines.resize(datasize);
+
+  PARALLEL_FOR_NO_WSP_CHECK()
+  for (int64_t i = 0; i < static_cast<int64_t>(datasize); i++) {
+    outLines[i] = makeStringStream();
+    auto &outLine = *outLines[i];
+    const double binWidth = xVals[i + 1] - xVals[i];
+    const double yValue{MultiplyByBinWidth ? yVals[i] * binWidth : yVals[i]};
+    const double eValue{
+        fixErrorValue(MultiplyByBinWidth ? eVals[i] * binWidth : eVals[i])};
+
+    // FIXME - Next step is to make the precision to be flexible from user
+    // inputs
+    outLine << "  " << std::fixed << std::setprecision(xye_precision[0])
+            << std::setw(20) << xPoints[i] << "  " << std::fixed
+            << std::setprecision(xye_precision[1]) << std::setw(20) << yValue
+            << "  " << std::fixed << std::setprecision(xye_precision[2])
+            << std::setw(20) << eValue << std::setw(12) << " "
+            << "\n"; // let it flush its own buffer
+  }
+
+  for (const auto &outLine : outLines) {
+    out << outLine->rdbuf();
+  }
+
+
+        """
+
+    def save(self, diff_ws_name, file_name=None):
+        """
+
+        :param diff_ws_name: diffraction workspace name
+        :param file_name: output file name. None as not output
+        :return: string as the file content
+        """
+        # 1. convert to Histogram Data
+
+        for bank_set_index in range(num_bank_sets):
+            # 2. Rebin to these banks' parameters (output = Histogram)
+            tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=True)
+
+            # 3. Create output
+            for bank_id in bank_set_i:
+                gsas_section_i = self._write_bank_gsas(bank_id)
+
+            # 4.
+        # END-FOR
+
+        return
 
 
 def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
