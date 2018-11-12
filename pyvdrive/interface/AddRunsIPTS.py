@@ -6,9 +6,13 @@ import datetime
 
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
 try:
@@ -18,7 +22,7 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as gutil
-import gui.ui_DialogAddRunsIPTS as dlgrun
+
 
 
 class AddRunsByIPTSDialog(QDialog):
@@ -40,8 +44,8 @@ class AddRunsByIPTSDialog(QDialog):
         self.quit = False
 
         # Set up widgets
-        self.ui = dlgrun.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # Initialize widgets
         self._init_widgets()

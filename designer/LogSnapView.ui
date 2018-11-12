@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="MplGraphicsView" name="graphicsView_main"/>
+<widget class="QFrame" name="frame_graphicsView_main"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">

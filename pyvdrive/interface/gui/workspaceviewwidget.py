@@ -8,16 +8,24 @@ from mantidipythonwidget import MantidIPythonWidget
 try:
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QWidget
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
 except ImportError:
     from PyQt4 import QtCore
     from PyQt4.QtGui import QWidget
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
 
 from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
 import ndav_widgets.CustomizedTreeView as baseTree
+from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
+# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceTableWidget
+# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceGraphicView
 
 from mantid.api import AnalysisDataService
 import mantid.simpleapi
+import os
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -35,8 +43,6 @@ class WorkspaceViewWidget(QWidget):
     def __init__(self, parent=None):
         """ Init
         """
-        import ui_WorkspacesView as ui_WorkspacesView
-
         # call base
         QWidget.__init__(self)
 
@@ -45,25 +51,41 @@ class WorkspaceViewWidget(QWidget):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui_WorkspacesView.Ui_Form()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "WorkspacesView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         self.ui.tableWidget_dataStructure.setup()
         self.ui.widget_ipython.set_main_application(self)
 
         # define event handling methods
         self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
-        self.ui.pushButton_toIPython.clicked.connect(self.do_write_to_console)
+        self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
+        self.ui.pushButton_toIPythonMtd.clicked.connect(self.do_write_workspace_instance)
+        self.ui.pushButton_toIPythonAssign.clicked.connect(self.do_assign_workspace)
         self.ui.pushButton_clear.clicked.connect(self.do_clear_canvas)
         self.ui.pushButton_fitCanvas.clicked.connect(self.do_fit_canvas)
-        # self.connect(self.ui.pushButton_plot, QtCore.SIGNAL('clicked()'),
-        #              self.do_plot_workspace)
-        # self.connect(self.ui.pushButton_toIPython, QtCore.SIGNAL('clicked()'),
-        #              self.do_write_to_console)
-        # self.connect(self.ui.pushButton_clear, QtCore.SIGNAL('clicked()'),
-        #              self.do_clear_canvas)
-        # self.connect(self.ui.pushButton_fitCanvas, QtCore.SIGNAL('clicked()'),
-        #              self.do_fit_canvas)
+
+        return
+
+    def _promote_widgets(self):
+        """ promote widgets
+        :return:
+        """
+        tableWidget_dataStructure_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_dataStructure.setLayout(tableWidget_dataStructure_layout)
+        self.ui.tableWidget_dataStructure = WorkspaceTableWidget(self)
+        tableWidget_dataStructure_layout.addWidget(self.ui.tableWidget_dataStructure)
+
+        graphicsView_general_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_general.setLayout(graphicsView_general_layout)
+        self.ui.graphicsView_general = WorkspaceGraphicView(self)
+        graphicsView_general_layout.addWidget(self.ui.graphicsView_general)
+
+        widget_ipython_layout = QVBoxLayout()
+        self.ui.frame_widget_ipython.setLayout(widget_ipython_layout)
+        self.ui.widget_ipython = MantidIPythonWidget(self)
+        widget_ipython_layout.addWidget(self.ui.widget_ipython)
 
         return
 
@@ -102,7 +124,25 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
-    def do_write_to_console(self):
+    def do_assign_workspace(self):
+        """
+        write the workspace name to IPython console with assign the workspace instance to a variable
+        :return:
+        """
+        # get workspace name
+        ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+
+        # output string
+        ipython_str = ''
+        for ws_name in ws_name_list:
+            ipython_str += 'ws_ = mtd["{0}"] '.format(ws_name)
+
+        # export the ipython
+        self.ui.widget_ipython.write_command(ipython_str)
+
+        return
+
+    def do_write_workspace_name(self):
         """
         write the workspace name to IPython console
         :return:
@@ -120,6 +160,24 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
+    def do_write_workspace_instance(self):
+        """
+        write the workspace name to IPython console
+        :return:
+        """
+        # get workspace name
+        ws_name_list = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+
+        # output string
+        ipython_str = ''
+        for ws_name in ws_name_list:
+            ipython_str += 'mtd["{0}"] '.format(ws_name)
+
+        # export the ipython
+        self.ui.widget_ipython.write_command(ipython_str)
+
+        return
+
     def execute_reserved_command(self, script):
         """
         override execute?
@@ -127,7 +185,9 @@ class WorkspaceViewWidget(QWidget):
         :return:
         """
         script = script.strip()
-        command = script.split()[0]
+        command = script.split(',')[0]
+
+        # TODO 20181010 - More information to plainTextEdit_info
 
         print '[DB...BAT] Going to execute: ', script
 
@@ -147,16 +207,14 @@ class WorkspaceViewWidget(QWidget):
             # output help
             err_msg = self.get_help_message()
         else:
-            try:
-                status, err_msg = self._myMainWindow.execute_command(script)
-            except AssertionError as ass_err:
-                status = False
-                err_msg = 'Failed to execute VDRIVE command due to %s.' % str(ass_err)
+            # Reserved VDRIVE-IDL command
+            status, err_msg = self._myMainWindow.execute_command(script)
+            # assertion error is not to be caught as it reflects coding error
 
             if status:
-                err_msg = 'VDRIVE command %s is executed successfully.\n%s.' % (command, err_msg)
+                err_msg = 'VDRIVE command {} is executed successfully ({}).'.format(command, err_msg)
             else:
-                err_msg = 'Failed to execute VDRIVE command %s due to\n%s.' % (command, err_msg)
+                err_msg = 'VDRIVE command {} is failed to execute due to {}.'.format(command, err_msg)
 
         return err_msg
 
@@ -204,9 +262,12 @@ class WorkspaceViewWidget(QWidget):
         :return:
         """
         command = script.strip().split(',')[0].strip()
-        print '[DB...Test Reserved] command = ', command, 'is reserved command'
 
-        return command in self.Reserved_Command_List
+        is_reserved = command in self.Reserved_Command_List
+        if is_reserved:
+            print ('[DB...INFO] command: {} is reserved'.format(command))
+
+        return is_reserved
 
     def plot(self, script):
         """

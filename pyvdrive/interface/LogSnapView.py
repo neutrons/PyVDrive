@@ -7,9 +7,13 @@ import sys
 
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QApplication
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QApplication
 
 try:
@@ -19,7 +23,7 @@ except AttributeError:
         return s
         
 import gui.GuiUtility as gutil
-import gui.ui_LogSnapView as ui_LogSnapView
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
 
 
 class DialogLogSnapView(QDialog):
@@ -36,8 +40,9 @@ class DialogLogSnapView(QDialog):
         self._myParent = parent
 
         # set up UI
-        self.ui = ui_LogSnapView.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/LogSnapView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Event handling
         self.ui.pushButton_apply.clicked.connect(self.do_apply_change)
@@ -55,6 +60,14 @@ class DialogLogSnapView(QDialog):
         self._myWorkflowController = None
         self._horizontalIndicatorList = None
         self._verticalIndicatorList = [None, None]
+
+        return
+
+    def _promote_widgets(self):
+        graphicsView_main_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
+        self.ui.graphicsView_main = MplGraphicsView(self)
+        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
 
         return
 

@@ -3,9 +3,13 @@ import os
 
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 
 try:
@@ -14,7 +18,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_ChopDialog
+
 import gui.GuiUtility as GuiUtility
 
 
@@ -31,8 +35,8 @@ class QuickChopDialog(QDialog):
         super(QuickChopDialog, self).__init__(parent)
 
         # init UI
-        self.ui = gui.ui_ChopDialog.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # set up the default value of the widgets
         self.ui.lineEdit_runNumber.setText(str(run_number))

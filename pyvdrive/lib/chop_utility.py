@@ -96,7 +96,7 @@ class DataChopper(object):
         :return:
         """
         # Check input's validity
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        datatypeutility.check_int_variable('Run number', run_number, (0, None))
         datatypeutility.check_file_name(nxs_file_name, check_exist=True, check_writable=False,
                                         is_dir=False, note='NeXus file name')
 
@@ -396,9 +396,13 @@ class DataChopper(object):
         # self._mtdWorkspaceName
 
         # Check inputs
-        assert isinstance(start_time, float) or start_time is None
-        assert isinstance(stop_time, float) or stop_time is None
-        assert isinstance(time_step, float) or time_step is None
+        if start_time is not None:
+            datatypeutility.check_float_variable('Event filters starting time', start_time, (0., None))
+        if stop_time is not None:
+            datatypeutility.check_float_variable('Event filtering stopping time', stop_time, (1.E-10, None))
+        if start_time is not None and stop_time is not None and start_time >= stop_time:
+            raise RuntimeError('User specified event filters starting time {} is after stopping time {}'
+                               ''.format(start_time, stop_time))
 
         if start_time is None and stop_time is None and time_step is None:
             raise RuntimeError('It is not allowed to give all 3 Nones. Generate events filter by time '

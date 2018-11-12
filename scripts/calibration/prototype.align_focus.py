@@ -1,3 +1,5 @@
+# MantidPlot based: Align and focus with generated calibration file
+
 import sys
 
 new_calib_file = '/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/vulcan_2fit_v3.h5'

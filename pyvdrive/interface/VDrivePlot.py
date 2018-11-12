@@ -8,12 +8,17 @@ try:
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
     from PyQt5.QtWidgets import QFileDialog, QRadioButton, QMenu, QAction
+    from PyQt5.QtWidgets import QVBoxLayout
     from PyQt5.QtGui import QCursor
+    from PyQt5.uic import loadUi as load_ui
     is_qt_4 = False
 except ImportError as import_e:
+    print ('Import error: {}'.format(import_e))
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QMainWindow, QWidget, QGridLayout, QSizePolicy, QLabel, QMenuBar, QStatusBar, QToolBar
-    from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor
+    from PyQt4.QtGui import QFileDialog, QRadioButton, QMenu, QAction, QCursor, QVBoxLayout
+
+    from PyQt4.uic import loadUi as load_ui
     is_qt_4 = True
 
 # include this try/except block to remap QString needed when using IPython
@@ -22,12 +27,11 @@ try:
 except (AttributeError, ImportError):
     _fromUtf8 = lambda s: s
 
-# Set up path to PyVDrive: if it is on analysis computer, then import from wzz explicitly
-import socket
-if socket.gethostname().count('analysis-') > 0 or os.path.exists('/home/wzz') is False:
-    sys.path.append('/SNS/users/wzz/local/lib/python/site-packages/')
-
-import gui.ui_VdrivePlot as mainUi
+from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
+from pyvdrive.interface.gui.mplgraphicsview import MplGraphicsView
+from pyvdrive.interface.gui.vdrivetreewidgets import FileSystemTreeView
+from pyvdrive.interface.gui.vdrivetablewidgets import VdriveRunTableWidget
+from pyvdrive.interface.gui.vdrivetablewidgets import TimeSegmentsTable
 import PeakPickWindow as PeakPickWindow
 import snapgraphicsview as SnapGView
 import ReducedDataView as DataView
@@ -40,10 +44,10 @@ import VDrivePlotDataBinning as ReductionUtil
 import configwindow
 import config
 
-
 """ import PyVDrive library """
 import pyvdrive as PyVDrive
 import pyvdrive.lib.VDriveAPI as VdriveAPI
+from pyvdrive.lib import datatypeutility
 
 __author__ = 'wzz'
 
@@ -67,8 +71,9 @@ class VdriveMainWindow(QMainWindow):
         # Setup main window
         QMainWindow.__init__(self, parent)
         self.setWindowTitle('VDrivePlot (Beta)')
-        self.ui = mainUi.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/VdrivePlot.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Define status variables
         # new work flow
@@ -265,6 +270,59 @@ class VdriveMainWindow(QMainWindow):
 
         # VDRIVE command
         self._vdriveCommandProcessor = VdriveCommandProcessor(self, self._myWorkflow)
+
+        return
+
+    def _promote_widgets(self):
+        treeView_iptsRun_layout = QVBoxLayout()
+        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        self.ui.treeView_iptsRun = VdriveRunManagerTree(self)
+        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+
+        treeView_runFiles_layout = QVBoxLayout()
+        self.ui.frame_treeView_runFiles.setLayout(treeView_runFiles_layout)
+        self.ui.treeView_runFiles = FileSystemTreeView(self)
+        treeView_runFiles_layout.addWidget(self.ui.treeView_runFiles)
+
+        tableWidget_selectedRuns_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_selectedRuns.setLayout(tableWidget_selectedRuns_layout)
+        self.ui.tableWidget_selectedRuns = VdriveRunTableWidget(self)
+        tableWidget_selectedRuns_layout.addWidget(self.ui.tableWidget_selectedRuns)
+
+        tableWidget_timeSegment_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_timeSegment.setLayout(tableWidget_timeSegment_layout)
+        self.ui.tableWidget_timeSegment = TimeSegmentsTable(self)
+        tableWidget_timeSegment_layout.addWidget(self.ui.tableWidget_timeSegment)
+
+        graphicsView_snapView2_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView2.setLayout(graphicsView_snapView2_layout)
+        self.ui.graphicsView_snapView2 = MplGraphicsView(self)
+        graphicsView_snapView2_layout.addWidget(self.ui.graphicsView_snapView2)
+
+        graphicsView_snapView3_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView3.setLayout(graphicsView_snapView3_layout)
+        self.ui.graphicsView_snapView3 = MplGraphicsView(self)
+        graphicsView_snapView3_layout.addWidget(self.ui.graphicsView_snapView3)
+
+        graphicsView_snapView6_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView6.setLayout(graphicsView_snapView6_layout)
+        self.ui.graphicsView_snapView6 = MplGraphicsView(self)
+        graphicsView_snapView6_layout.addWidget(self.ui.graphicsView_snapView6)
+
+        graphicsView_snapView5_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView5.setLayout(graphicsView_snapView5_layout)
+        self.ui.graphicsView_snapView5 = MplGraphicsView(self)
+        graphicsView_snapView5_layout.addWidget(self.ui.graphicsView_snapView5)
+
+        graphicsView_snapView4_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView4.setLayout(graphicsView_snapView4_layout)
+        self.ui.graphicsView_snapView4 = MplGraphicsView(self)
+        graphicsView_snapView4_layout.addWidget(self.ui.graphicsView_snapView4)
+
+        graphicsView_snapView1_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_snapView1.setLayout(graphicsView_snapView1_layout)
+        self.ui.graphicsView_snapView1 = MplGraphicsView(self)
+        graphicsView_snapView1_layout.addWidget(self.ui.graphicsView_snapView1)
 
         return
 
@@ -1119,18 +1177,8 @@ class VdriveMainWindow(QMainWindow):
         :param vdrive_command: a command (including all the arguments)
         :return:
         """
-        # check
-        assert isinstance(vdrive_command, str), 'VDRIVE command must be a string but not.' \
-                                                '' % str(type(vdrive_command))
-
-        # split
-        # need to strip the space around command
-        # vdrive_command = vdrive_command.replace(' ', '')
-
         # split the command from arguments
-        command_script = vdrive_command.split(',')
-        command = command_script[0].strip()
-        status, err_msg = self._vdriveCommandProcessor.process_commands(command, command_script[1:])
+        status, err_msg = self._vdriveCommandProcessor.process_commands(vdrive_command)
 
         return status, err_msg
 

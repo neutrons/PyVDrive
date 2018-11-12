@@ -1,10 +1,14 @@
 try:
     from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
 except ImportError:
     from PyQt4.QtGui import QMainWindow
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
 
 
-import gui.ui_ExperimentRecord as ui_ExperimentRecord
+from pyvdrive.interface.gui.vdrivetablewidgets import ExperimentRecordTable
 
 
 class VulcanExperimentRecordView(QMainWindow):
@@ -18,10 +22,19 @@ class VulcanExperimentRecordView(QMainWindow):
         """
         super(VulcanExperimentRecordView, self).__init__(parent)
 
-        self.ui = ui_ExperimentRecord.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/ExperimentRecord.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         self.ui.tableWidget_recordsInfoTable.setup()
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_recordsInfoTable_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_recordsInfoTable.setLayout(tableWidget_recordsInfoTable_layout)
+        self.ui.tableWidget_recordsInfoTable = ExperimentRecordTable(self)
+        tableWidget_recordsInfoTable_layout.addWidget(self.ui.tableWidget_recordsInfoTable)
 
         return
 

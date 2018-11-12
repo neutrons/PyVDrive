@@ -36,7 +36,8 @@ class ProjectManager(object):
         # dictionary to manage data chopping
         self._chopManagerDict = dict()   # key: run number, value: SampleLogHelper.SampleLogManager()
         # vanadium processing manager
-        self._processVanadiumManager = vanadium_utility.VanadiumProcessingManager(self)
+        self._processVanadiumManager = \
+            vanadium_utility.VanadiumProcessingManager(self, self._reductionManager.calibration_manager)
 
         # definition of dictionaries
         # dictionary for the information of run number, file name and IPTS
@@ -331,7 +332,7 @@ class ProjectManager(object):
 
     def chop_run(self, run_number, slicer_key, reduce_flag, vanadium, save_chopped_nexus,
                  number_banks, tof_correction, output_directory,
-                 user_bin_parameter, vdrive_bin_flag):
+                 user_bin_parameter, use_idl_bin, roi_list, mask_list, nexus_file_name=None):
         """
         Chop a run (Nexus) with pre-defined splitters workspace and optionally reduce the
         split workspaces to GSAS
@@ -350,12 +351,19 @@ class ProjectManager(object):
         :param number_banks:
         :param output_directory:
         :param user_bin_parameter: None or [NOT SURE]
-        :param vdrive_bin_flag: boolea to use vdrive binning flag
+        :param use_idl_bin: True or False
+        :param roi_list:
+        :param mask_list:
         :return:
         """
         # check inputs' validity
         datatypeutility.check_string_variable('Slicer key', slicer_key)
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        if nexus_file_name is None:
+            # if Run number is specified
+            datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        else:
+            # if nexus file is given but not run number, then using a pseudo run number 0
+            run_number = 0
         if vanadium is not None:
             datatypeutility.check_int_variable('Vanadium run number', vanadium, (1, None))
 
@@ -371,14 +379,20 @@ class ProjectManager(object):
         # END-TYR
 
         # get data file path and IPTS number
-        try:
-            data_file = self.get_file_path(run_number)
-            ipts_number = self.get_ipts_number(run_number)
-        except RuntimeError as run_error:
-            return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
-                          ''.format(run_number, run_error)
+        if run_number > 0:
+            try:
+                data_file = self.get_file_path(run_number)
+                ipts_number = self.get_ipts_number(run_number)
+            except RuntimeError as run_error:
+                return False, 'Unable to get data file path and IPTS number of run {0} due to {1}.' \
+                              ''.format(run_number, run_error)
+        else:
+            # user providing nexus file
+            datatypeutility.check_file_name(nexus_file_name, check_exist=True, note='Event NeXus file name')
+            data_file = nexus_file_name
+            ipts_number = 0
 
-        # reduce data
+        # chop and (optionally) diffraction focus the binning data
         status, error_message = self._reductionManager.chop_vulcan_run(ipts_number=ipts_number,
                                                                        run_number=run_number,
                                                                        raw_file_name=data_file,
@@ -392,7 +406,9 @@ class ProjectManager(object):
                                                                        tof_correction=tof_correction,
                                                                        vanadium=vanadium,
                                                                        user_binning_parameter=user_bin_parameter,
-                                                                       vdrive_binning=vdrive_bin_flag)
+                                                                       vdrive_binning=use_idl_bin,
+                                                                       roi_list=roi_list,
+                                                                       mask_list=mask_list)
 
         # process outputs
         if status:
@@ -608,6 +624,7 @@ class ProjectManager(object):
         Get data chopper (manager) of a run number
         If the run number does not have any DataChopper associated, then create a one
         :param run_number:
+        :param nxs_file_name:
         :return: DataChopper instance
         """
         if run_number in self._chopManagerDict:
@@ -617,6 +634,8 @@ class ProjectManager(object):
             # create a new DataChopper associated with this run
             if nxs_file_name is None:
                 nxs_file_name = self.get_file_path(run_number)
+            if not isinstance(run_number, int) or run_number < 0:
+                run_number = 0
             run_chopper = DataChopper(run_number, nxs_file_name)
 
             # register chopper
@@ -721,7 +740,7 @@ class ProjectManager(object):
         :param run_number:
         :return:
         """
-        assert isinstance(run_number, int) and run_number >= 0, 'blabla'
+        datatypeutility.check_int_variable('Run number', run_number, (0, None))
 
         if run_number in self._dataFileDict:
             file_path = self._dataFileDict[run_number][0]
@@ -1061,48 +1080,51 @@ class ProjectManager(object):
         """
         return self._reductionManager
 
-    def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters,
-                           merge_banks,
-                           align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None,
-                           num_banks=3):
-        """
-        Reduce a list of NeXus files
-        This could be similar to reduce runs
-        :param raw_file_list:
-        :param output_directory:
-        :param vanadium:
-        :param gsas:
-        :param binning_parameters:
-        :param align_to_vdrive_bin:
-        :param vanadium_tuple:
-        :param standard_sample_tuple:
-        :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
-        :return:
-        """
-        # check inputs
-        assert isinstance(raw_file_list, list), 'Raw files {0} must be given by a list but not a {1}.' \
-                                                ''.format(raw_file_list, type(raw_file_list))
-
-        sum_status = True
-        sum_message = ''
-
-        for nexus_file_name in raw_file_list:
-            status, sub_message = self._reductionManager.process_vulcan_ipts_run(ipts_number=None, run_number=None,
-                                                                                 event_file=nexus_file_name,
-                                                                                 output_directory=output_directory,
-                                                                                 merge_banks=merge_banks,
-                                                                                 vanadium=vanadium,
-                                                                                 vanadium_tuple=vanadium_tuple,
-                                                                                 gsas=gsas,
-                                                                                 standard_sample_tuple=standard_sample_tuple,
-                                                                                 binning_parameters=binning_parameters,
-                                                                                 num_banks=num_banks)
-            if not status:
-                sum_status = False
-                sum_message += '{0}\n'.format(sum_message)
-        # END-FOR
-
-        return sum_status, sum_message
+    # NOTE : reduce_nexus_files() is merged into VDriveAPI.reduced_chopped_data_set
+    # def reduce_nexus_files(self, raw_file_list, output_directory, vanadium, gsas, binning_parameters, use_idl_bin,
+    #                        merge_banks, align_to_vdrive_bin, vanadium_tuple=None, standard_sample_tuple=None,
+    #                        num_banks=3):
+    #     """
+    #     Reduce a list of NeXus files
+    #     This could be similar to reduce runs
+    #     :param raw_file_list:
+    #     :param output_directory:
+    #     :param vanadium:
+    #     :param gsas:
+    #     :param binning_parameters:
+    #     :param use_idl_bin: bool as the flag to use IDL-VDRIVE bins. It will override binning parameters
+    #     :param align_to_vdrive_bin:
+    #     :param vanadium_tuple:
+    #     :param standard_sample_tuple:
+    #     :param num_banks:  number of banks focused to.  Now only 3, 7 and 27 are allowed.
+    #     :return:
+    #     """
+    #     # check inputs
+    #     datatypeutility.check_list('Raw Nexus files', raw_file_list)
+    #
+    #     # prepare
+    #     sum_status = True
+    #     sum_message = ''
+    #
+    #     for nexus_file_name in raw_file_list:
+    #         status, sub_message = \
+    #             self._reductionManager.process_vulcan_ipts_run(ipts_number=None, run_number=None,
+    #                                                            event_file=nexus_file_name,
+    #                                                            output_directory=output_directory,
+    #                                                            merge_banks=merge_banks,
+    #                                                            vanadium=vanadium,
+    #                                                            vanadium_tuple=vanadium_tuple,
+    #                                                            gsas=gsas,
+    #                                                            standard_sample_tuple=standard_sample_tuple,
+    #                                                            binning_parameters=binning_parameters,
+    #                                                            use_idl_bin=use_idl_bin,
+    #                                                            num_banks=num_banks)
+    #         if not status:
+    #             sum_status = False
+    #             sum_message += '{0}\n'.format(sum_message)
+    #     # END-FOR
+    #
+    #     return sum_status, sum_message
 
     def reduce_runs(self, run_number_list, output_directory, background,
                     vanadium, gsas, fullprof, record_file,
@@ -1181,7 +1203,7 @@ class ProjectManager(object):
 
                 # reduce
                 print '[INFO] (Version 1) Reduce IPTS {0} Run {1}'.format(ipts_number, run_number)
-                r_tup = self._reductionManager.process_vulcan_ipts_run(ipts_number, run_number,
+                r_tup = self._reductionManager.reduce_event_nexus_ver1(ipts_number, run_number,
                                                                        full_event_file_path,
                                                                        output_directory,
                                                                        vanadium=vanadium, vanadium_tuple=vanadium_tuple,
@@ -1238,8 +1260,9 @@ class ProjectManager(object):
 
         return reduce_all_success, message
 
-    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters,
-                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs):
+    def reduce_vulcan_runs_v2(self, run_number_list, output_directory, d_spacing, binning_parameters, use_idl_bin,
+                              convert_to_matrix, number_banks, gsas, merge_banks, merge_runs,
+                              roi_list, mask_list):
         """ reduce runs in a simplied way! (it can be thought be the version 2.0!)
         :param run_number_list:
         :param output_directory:
@@ -1250,12 +1273,22 @@ class ProjectManager(object):
         :param gsas: flag to reduce to GSAS file
         :param merge_banks:
         :param merge_runs:
-        :return:
+        :param roi_list:
+        :param mask_list:
+        :return: 2-tuple: list (run number), list (error message for each run reduced)
         """
+        print ('[INFO] Reduction VULCAN Version 2 is Called')
+
         # check inputs
         datatypeutility.check_list('Run numbers', run_number_list)
         datatypeutility.check_file_name(output_directory, check_exist=True, is_dir=True)
         datatypeutility.check_bool_variable('Flag for output unit in dSpacing', d_spacing)
+
+        # force ROI/MASK file list to be 'list()'
+        if roi_list is None:
+            roi_list = list()
+        if mask_list is None:
+            mask_list = list()
 
         # check binning parameters
         if binning_parameters is None:
@@ -1284,20 +1317,27 @@ class ProjectManager(object):
                 unit = 'TOF'
 
             try:
-                out_ws_name = self._reductionManager.reduce_event_nexus(ipts_number, run_number, raw_file_name,
-                                                                        unit, binning_parameters,
-                                                                        convert_to_matrix, num_banks=number_banks)
+                out_ws_name, gsas_ws_name, msg = self._reductionManager.reduce_event_nexus(ipts_number, run_number,
+                                                                                           raw_file_name,
+                                                                                           unit, binning_parameters,
+                                                                                           use_idl_bin,
+                                                                                           convert_to_matrix,
+                                                                                           num_banks=number_banks,
+                                                                                           roi_list=roi_list,
+                                                                                           mask_list=mask_list)
 
                 reduced_run_numbers.append((run_number, out_ws_name))
-                # self._reductionManager.add_reduced_workspace(run_number, out_ws_name, binning_parameters)
-
                 # save to GSAS
                 if gsas:
-                    pass
-                    # TODO - 20180813 - Next: mantid_reduction.save_vulcan_gsas()
+                    mantid_reduction.VulcanGSASHelper.save_vulcan_gsas(gsas_ws_name, output_directory, ipts_number,
+                                                                       run_number, 'vulcan.prm')
+                # remove GSAS workspace because it won't be used anymore
+                mantid_helper.delete_workspace(gsas_ws_name)
 
             except RuntimeError as run_error:
                 error_messages.append('Failed to reduce run {0} due to {1}'.format(run_number, run_error))
+            else:
+                error_messages.append('[INFO] For {}: {}'.format(run_number, msg))
             # manage
 
         # END-FOR

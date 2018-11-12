@@ -1,9 +1,13 @@
 import os
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QFileDialog, QMainWindow
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QFileDialog, QMainWindow
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -11,7 +15,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-import gui.ui_loadVulcanMTSLogFile as LoadUI
+from pyvdrive.interface.gui.vdrivetablewidgets import MTSFormatTable
 import gui.GuiUtility as GUtil
 
 __author__ = 'wzz'
@@ -42,8 +46,9 @@ class LoadMTSLogFileWindow(QMainWindow):
         self._myParent = parent
 
         # set up widgets from ui file
-        self.ui = LoadUI.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/loadVulcanMTSLogFile.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize values of widgets
         self._init_widgets()
@@ -99,6 +104,14 @@ class LoadMTSLogFileWindow(QMainWindow):
 
         # summary
         self._summaryDict = None
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_preview_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_preview.setLayout(tableWidget_preview_layout)
+        self.ui.tableWidget_preview = MTSFormatTable(self)
+        tableWidget_preview_layout.addWidget(self.ui.tableWidget_preview)
 
         return
 

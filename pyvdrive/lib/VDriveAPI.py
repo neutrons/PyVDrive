@@ -382,20 +382,27 @@ class VDriveAPI(object):
 
         return status, slice_tag
 
-    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step):
+    def gen_data_slicer_by_time(self, run_number, start_time, end_time, time_step, raw_nexus_name=None):
         """
         Generate data slicer by time
-        :param run_number: run number (integer) or base file name (str)
+        if base file name is given, then run number will be ignored, even it is specified with an integer,
+        which may not make any sense.
+        :param run_number: run number (integer)
         :param start_time:
         :param end_time:
         :param time_step:
+        :param raw_nexus_name: Base file name (str)
         :return:
         """
         # check input
-        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+        if raw_nexus_name is None:
+            datatypeutility.check_int_variable('Run number', run_number, (1, None))
 
-        # get chopper
-        chopper = self._myProject.get_chopper(run_number)
+        # get chopper:
+        if raw_nexus_name is not None:
+            chopper = self._myProject.get_chopper(None, nxs_file_name=raw_nexus_name)
+        else:
+            chopper = self._myProject.get_chopper(run_number, nxs_file_name=None)
 
         # generate data slicer
         status, slicer_key = chopper.set_time_slicer(start_time=start_time, time_step=time_step, stop_time=end_time)
@@ -520,20 +527,18 @@ class VDriveAPI(object):
 
         return data_found, ret_obj
 
-    # TODO - 20180820 - better doc and clean!
-    def get_reduced_data(self, run_id, target_unit, bank_id=None,  ipts_number=None, search_archive=False,
-                         is_workspace=False):
-        """ Get reduced data
+    def get_reduced_data(self, run_id, target_unit, bank_id=None):
+        """ Get reduced data from workspace
         Purpose: Get all data from a reduced run, either from run number or data key
         Requirements: run ID is either integer or data key.  target unit must be TOF, dSpacing or ...
         Guarantees: returned with 3 numpy arrays, x, y and e
-        :param run_id: A flexible input that can be (1) run number (int) (2) data key (str) (3) workspace (str)
-        :param target_unit:
-        :param ipts_number: IPTS number
-        :param search_archive: flag to allow search reduced data from archive
-        :param is_workspace:
-        :return: dictionary: key = spectrum number, value = 3-tuple (vec_x, vec_y, vec_e)
-                 example dict[bank] = vec_x, vec_y, vec_e
+
+        Removed arguments: ipts_number=None, search_archive=False, is_workspace=False
+
+        :param run_id: A flexible input that can be (1) data key (str), (2) data key (tuple), (3) workspace name
+        :param target_unit: TOF, dSpacing
+        :param bank_id:
+        :return: a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
         """
         # check whether run ID is a data key or a workspace name
         if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
@@ -589,6 +594,20 @@ class VDriveAPI(object):
     #     :return: list of strings?
     #     """
     #     return self._myProject.reduction_manager.get_reduced_runs(with_ipts)
+
+    def get_reduced_workspace_name(self, run_id):
+        """
+        get reduced workspace name
+        :param run_id:
+        :return:
+        """
+        # check whether run ID is a data key or a workspace name
+        if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
+            workspace_name = run_id
+        else:
+            workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+
+        return workspace_name
 
     def get_slicer(self, run_number, slicer_id):
         """
@@ -820,6 +839,7 @@ class VDriveAPI(object):
 
             # from project
             reduced_runs_list = self._myProject.reduction_manager.get_reduced_runs(chopped=False)
+            print ('[DB...BAT] API: In-Memory reduced single-runs: {}'.format(reduced_runs_list))
 
         # END-IF-ELSE
 
@@ -1241,7 +1261,7 @@ class VDriveAPI(object):
 
     def reduce_chopped_data_set(self, ipts_number, run_number, chop_child_list, raw_data_directory,
                                 output_directory, vanadium,
-                                binning_parameters, align_to_vdrive_bin,
+                                binning_parameters, use_idl_bin, align_to_vdrive_bin,
                                 merge_banks, gsas=True, num_banks=3):
         """ reduce a set of chopped data
         :param ipts_number:
@@ -1250,6 +1270,8 @@ class VDriveAPI(object):
         :param output_directory:
         :param vanadium:
         :param binning_parameters:
+        :param use_idl_bin: flag to use IDL-VDRIVE binning from a pre-defined data file with calibration files
+                            It will override binning parameters
         :param align_to_vdrive_bin:
         :param merge_banks:
         :param gsas:
@@ -1283,24 +1305,38 @@ class VDriveAPI(object):
         # END-IF
 
         # reduce
-        try:
-            status, error_message = self._myProject.reduce_nexus_files(raw_file_list, output_directory, vanadium, gsas,
-                                                                       binning_parameters, merge_banks,
-                                                                       align_to_vdrive_bin,
-                                                                       vanadium_tuple=None,
-                                                                       standard_sample_tuple=None,
-                                                                       num_banks=num_banks)
-        except AssertionError as assert_err:
-            raise AssertionError('Failed to reduce raw files {0} due to {1}.'.format(raw_file_list, assert_err))
+        sum_status = True
+        sum_message = ''
 
-        return status, error_message
+        vanadium_tuple = False
+        standard_sample_tuple = False
+        for nexus_file_name in raw_file_list:
+            status, sub_message = \
+                self._myProject.reduction_manager.reduce_event_nexus_ver1(ipts_number=None, run_number=None,
+                                                                          event_file=nexus_file_name,
+                                                                          output_directory=output_directory,
+                                                                          merge_banks=merge_banks,
+                                                                          vanadium=vanadium,
+                                                                          vanadium_tuple=vanadium_tuple,
+                                                                          gsas=gsas,
+                                                                          standard_sample_tuple=standard_sample_tuple,
+                                                                          binning_parameters=binning_parameters,
+                                                                          use_idl_bin=use_idl_bin,
+                                                                          num_banks=num_banks)
+            if not status:
+                sum_status = False
+                sum_message += '{0}\n'.format(sum_message)
+        # END-FOR
+
+        return sum_status, sum_message
 
     def reduce_data_set(self, auto_reduce, output_directory, merge_banks,
                         background=False, vanadium=False,
                         record=False, logs=False, gsas=True, output_to_fullprof=False,
-                        standard_sample_tuple=None, binning_parameters=None,
-                        merge_runs=False, dspace=False, num_banks=3,
-                        version=1):
+                        standard_sample_tuple=None, binning_parameters=None, use_idl_bin=True,
+                        merge_runs=False, dspace=False, num_banks=3, roi_list=None,
+                        mask_list=None,
+                        version=2):
         """
         Reduce a set of data
         Purpose:
@@ -1323,10 +1359,13 @@ class VDriveAPI(object):
         :param output_to_fullprof: boolean flag tro produces Fullprof files from reduced runs
         :param standard_sample_tuple: If specified, then it should process the VULCAN standard sample as #57.
         :param binning_parameters: None for default and otherwise using user specified
+        :param use_idl_bin: Use IDL-VDRIVE binning parameters.  It overrides binning_parameters if True
         :param merge_runs: If true, then merge the run together by calling SNSPowderReduction
         :param dspace: If true, then data will reduced to workspace in dSpacing and exported with unit dSpacing
         :param num_banks: number of banks focused to.  Now only 3, 7 and 27 are allowed; Also a special grouping file
         :param version: reduction algorithm version in integer
+        :param roi_list:
+        :param mask_list:
         :return: 2-tuple (boolean, object)
         """
         # Check requirements
@@ -1352,6 +1391,16 @@ class VDriveAPI(object):
         if binning_parameters is None:
             binning_parameters = [-0.001]
 
+        # check ROI list and Mask list
+        if roi_list is None:
+            roi_list = list()
+        else:
+            datatypeutility.check_list('ROI list', roi_list)
+        if mask_list is None:
+            mask_list = list()
+        else:
+            datatypeutility.check_list('Mask list', mask_list)
+
         # Reduce data set
         if auto_reduce:
             # auto reduction: auto reduction script does not work with vanadium normalization
@@ -1359,27 +1408,37 @@ class VDriveAPI(object):
             status, message = self.reduce_auto_script(ipts_number=ipts_number,
                                                       run_numbers=runs_to_reduce,
                                                       output_dir=output_directory,
-                                                      is_dry_run=False)
+                                                      is_dry_run=False,
+                                                      roi_list=roi_list,
+                                                      mask_list=mask_list)
             message = message
 
         elif dspace or version == 2:
             # user version 2 reduction algorithm
-            # TODO - NowNowNow - Starting from here!
-            print ('GSAS = {}'.format(gsas))
-
-            status, message = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
-                                                                    output_directory=output_directory,
-                                                                    d_spacing=True,
-                                                                    binning_parameters=binning_parameters,
-                                                                    convert_to_matrix=True,
-                                                                    number_banks=num_banks,
-                                                                    gsas=gsas,
-                                                                    merge_banks=merge_banks,
-                                                                    merge_runs=merge_runs)
+            print ('[DB...BAT] GSAS Flag = {}'.format(gsas))
+            run_number_list, msg_list = self._myProject.reduce_vulcan_runs_v2(run_number_list=runs_to_reduce,
+                                                                              output_directory=output_directory,
+                                                                              d_spacing=True,
+                                                                              binning_parameters=binning_parameters,
+                                                                              use_idl_bin=use_idl_bin,
+                                                                              convert_to_matrix=True,
+                                                                              number_banks=num_banks,
+                                                                              gsas=gsas,
+                                                                              merge_banks=merge_banks,
+                                                                              merge_runs=merge_runs,
+                                                                              roi_list=roi_list,
+                                                                              mask_list=mask_list)
+            status = True
+            message = ''
+            for msg in msg_list:
+                message += msg + '\n'
 
         else:
             # manual reduction: Reduce runs
             # print '[INFO] Reduce Runs: {0}. Merge banks = {1}'.format(runs_to_reduce, merge_banks)
+            # TODO - 20181010 - Implement roi list and mask list
+            if len(roi_list) + len(mask_list) > 0:
+                raise RuntimeError('ROI/MASK is not supported! ROI: {}, MASK: {}'.format(roi_list, mask_list))
             try:
                 status, message = self._myProject.reduce_runs(run_number_list=runs_to_reduce,
                                                               output_directory=output_directory,
@@ -1708,7 +1767,7 @@ class VDriveAPI(object):
             self._myProject.vanadium_processing_manager.init_session(van_ws_key, ipts_number, run_number)
             if do_shift:
                 # shift is to use a different wavelength.  To Mantid, it is good to use FWHM = 2
-                self._myProject.vanadium_processing_manager.apply_shift()
+                self._myProject.vanadium_processing_manager.shift_fwhm_for_wavelength()
             status, message = self._myProject.vanadium_processing_manager.process_vanadium(save=not one_bank,
                                                                                            output_dir=local_output)
 
@@ -1769,20 +1828,20 @@ class VDriveAPI(object):
 
         return
 
-    def save_processed_vanadium(self, van_info_tuple, output_file_name):
-        """
-        save the processed vanadium to a GSAS file
-        :param van_info_tuple:
-        :param output_file_name:
-        :return: 2-tuple (boolean, str)
-        """
-        assert isinstance(output_file_name, str), 'Output file name must be a string'
-        assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
-                                                  ''.format(van_info_tuple, type(van_info_tuple))
-
-        return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
-                                                                                 to_archive=False,
-                                                                                 out_file_name=output_file_name)
+    # def save_processed_vanadium(self, van_info_tuple, output_file_name):
+    #     """
+    #     save the processed vanadium to a GSAS file
+    #     :param van_info_tuple:
+    #     :param output_file_name:
+    #     :return: 2-tuple (boolean, str)
+    #     """
+    #     assert isinstance(output_file_name, str), 'Output file name must be a string'
+    #     assert isinstance(van_info_tuple, tuple), 'Vanadium information {0} must be a tuple but not a {1}.' \
+    #                                               ''.format(van_info_tuple, type(van_info_tuple))
+    #
+    #     return self._myProject.vanadium_processing_manager.save_vanadium_to_file(vanadium_tuple=van_info_tuple,
+    #                                                                              to_archive=False,
+    #                                                                              out_file_name=output_file_name)
 
     def save_session(self, out_file_name=None):
         """ Save current session
@@ -1854,28 +1913,30 @@ class VDriveAPI(object):
         return
 
     def slice_data(self, run_number, slicer_id, reduce_data, vanadium, save_chopped_nexus, output_dir,
-                   number_banks, export_log_type='loadframe', user_bin_parameter=None):
-        """ Slice data (corresponding to a run) by either log value or time.
+                   number_banks, roi_list, mask_list, export_log_type='loadframe',
+                   user_bin_parameter=None, use_idl_bin=True, raw_nexus_name=None):
+        """
+        Slice data (corresponding to a run) by either log value or time.
         Requirements: slicer/splitters has already been set up for this run.
         Guarantees:
-        :param run_number: run number
+        :param run_number:
         :param slicer_id:
-        :param reduce_data:
+        :param reduce_data: flag to diffraction focus the sliced data
         :param vanadium:
         :param save_chopped_nexus:
-        :param output_dir: None for saving to archive
+        :param output_dir:  None for saving to archive
         :param number_banks:
+        :param roi_list: region of interest files
+        :param mask_list: mask files
         :param export_log_type:
+        :param user_bin_parameter: Use VDRIVE-GSAS binning boundaries as template for GSAS output
+        :param use_idl_bin:
+        :param raw_nexus_name:
         :return: 2-tuple (boolean, object): True/(list of ws names); False/error message
         """
-        # TODO/ISSUE/NOWNOW - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
+        # TODO/ISSUE/NOWNOW 20181018 - put export_log_type ('loadframe') to chop_run; the adv_vulcan_chop support it!
         # chop data
         # TODO FIXME - 20180806 - TOF correction shall be specified by user
-
-        if output_dir is not None and user_bin_parameter is not None:
-            bin_for_vdrive = True
-        else:
-            bin_for_vdrive = False
 
         status, message = self._myProject.chop_run(run_number, slicer_id,
                                                    reduce_flag=reduce_data, vanadium=vanadium,
@@ -1884,14 +1945,17 @@ class VDriveAPI(object):
                                                    tof_correction=False,
                                                    number_banks=number_banks,
                                                    user_bin_parameter=user_bin_parameter,
-                                                   vdrive_bin_flag=bin_for_vdrive)
+                                                   use_idl_bin=use_idl_bin,
+                                                   roi_list=roi_list,
+                                                   mask_list=mask_list,
+                                                   nexus_file_name=raw_nexus_name)
 
         print ('[INFO] Sliced data.  Status = {}, Message: {}'.format(status, message))
 
         return status, message
 
     def slice_data_segment_period(self, run_number, slicer_id, chop_period, reduce_data,
-                                 vanadium, save_chopped_nexus, output_dir, export_log_type):
+                                  vanadium, save_chopped_nexus, output_dir, export_log_type):
         """
         slice/chop data with chopping period, i.e.,any two adjacent time segments will have a certain distance (in time)
         other than time_interval value.
@@ -2027,82 +2091,98 @@ class VDriveAPI(object):
 
         return True, ''
 
-    def smooth_diffraction_data(self, workspace_name, bank_id=None,
-                                smoother_type='Butterworth', param_n=20, param_order=2,
-                                start_bank_id=1):
-        """
-        smooth spectra of focused diffraction data
-        :param workspace_name:
-        :param bank_id:
-        :param smoother_type:
-        :param param_n:
-        :param param_order:
-        :param start_bank_id:
-        :return:
-        """
-        try:
-            if bank_id is None:
-                # smooth all spectra
-                workspace_index = None
-            else:
-                # smooth one spectrum
-                assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
-                                                 ''.format(bank_id, type(bank_id))
-                assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
-                                                       ''.format(start_bank_id, type(start_bank_id))
+    # Migrate the call to vanadium_processing_manager.smooth_diffraction_data directly
+    # def smooth_diffraction_data(self, workspace_name, bank_id=None,
+    #                             smoother_type='Butterworth', param_n=20, param_order=2,
+    #                             start_bank_id=1):
+    #     """
+    #     smooth spectra of focused diffraction data
+    #     :param workspace_name:
+    #     :param bank_id:
+    #     :param smoother_type:
+    #     :param param_n:
+    #     :param param_order:
+    #     :param start_bank_id:
+    #     :return:
+    #     """
+    #     try:
+    #         if bank_id is None:
+    #             # smooth all spectra
+    #             workspace_index = None
+    #         else:
+    #             # smooth one spectrum
+    #             assert isinstance(bank_id, int), 'Bank ID {0} must be an integer but not {1}.' \
+    #                                              ''.format(bank_id, type(bank_id))
+    #             assert isinstance(start_bank_id, int), 'Starting bank ID {0} must be an integer but not a {1}.' \
+    #                                                    ''.format(start_bank_id, type(start_bank_id))
+    #
+    #             workspace_index = bank_id - start_bank_id
+    #         # END-IF
+    #
+    #         smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
+    #             bank_id_list=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
+    #
+    #     except RuntimeError as run_err:
+    #         return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
+    #
+    #     return True, smoothed_ws_name
 
-                workspace_index = bank_id - start_bank_id
-            # END-IF
-
-            smoothed_ws_name = self._myProject.vanadium_processing_manager.smooth_spectra(
-                bank_id_list=None, smoother_type=smoother_type, param_n=param_n, param_order=param_order)
-
-        except RuntimeError as run_err:
-            return False, 'Unable to smooth workspace {0} due to {1}.'.format(workspace_name, run_err)
-
-        return True, smoothed_ws_name
-
-    def strip_vanadium_peaks(self, ipts_number, run_number, bank_list, peak_fwhm,
-                             peak_pos_tolerance, background_type, is_high_background,
-                             workspace_name):
-        """
-        strip vanadium peaks.
-        This method supports 2 type of inputs
-         (1) IPTS and run number;
-         (2) workspace name
-        :param ipts_number:
-        :param run_number:
-        :param bank_list:
-        :param peak_fwhm:
-        :param peak_pos_tolerance:
-        :param background_type:
-        :param is_high_background:
-        :param workspace_name:
-        :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
-        """
-        # get workspace name
-        if workspace_name is None:
-            # get workspace (key) from IPTS number and run number
-            assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
-            assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
-            if not self._myProject.has_reduced_workspace(ipts_number, run_number):
-                error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
-                                ''.format(ipts_number, run_number)
-                return False, error_message
-
-            workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
-        # END-IF
-
-        # call for strip vanadium peaks
-        try:
-            out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
-                                                                                  background_type, is_high_background,
-                                                                                  workspace_name=workspace_name,
-                                                                                  bank_list=bank_list)
-        except RuntimeError as run_err:
-            return False, 'Unable to strip vanadium due to {0}'.format(run_err)
-
-        return True, out_ws_name
+    # Migrate the call to vanadium_processing_manager.strip_peaks directly
+    # def strip_vanadium_peaks(self, ipts_number, run_number, bank_list, peak_fwhm,
+    #                          peak_pos_tolerance, background_type, is_high_background,
+    #                          workspace_name):
+    #     """
+    #     strip vanadium peaks.
+    #     This method supports 2 type of inputs
+    #      (1) IPTS and run number;
+    #      (2) workspace name
+    #     :param ipts_number:
+    #     :param run_number:
+    #     :param bank_list:
+    #     :param peak_fwhm:
+    #     :param peak_pos_tolerance:
+    #     :param background_type:
+    #     :param is_high_background:
+    #     :param workspace_name:
+    #     :return:  (boolean, string): True (successful), output workspace name; False (failed), error message
+    #     """
+    #     # get workspace name
+    #     # check whether run ID is a data key or a workspace name
+    #     if isinstance(workspace_name, str) and mantid_helper.workspace_does_exist(workspace_name):
+    #         # workspace name is workspace name
+    #         pass
+    #     elif isinstance(workspace_name, str):
+    #         # workspace name is run id
+    #         run_id = workspace_name
+    #         workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
+    #         print ('[DB...BAT] Strip vanadium peak: retrieve workspace {} from run ID {}'
+    #                ''.format(workspace_name, run_id))
+    #     else:
+    #         assert workspace_name is None, 'workspace name {} (of type {}) must be None' \
+    #                                        ''.format(workspace_name, type(workspace_name))
+    #         # get workspace (key) from IPTS number and run number
+    #         datatypeutility.check_int_variable('IPTS number', ipts_number, (None, None))
+    #         datatypeutility.check_int_variable('Run number', run_number, (None, None))
+    #         # assert isinstance(ipts_number, int), 'Without data key specified, IPTS number must be an integer.'
+    #         # assert isinstance(run_number, int), 'Without data key specified, run number must be an integer.'
+    #         if self._myProject.has_reduced_workspace(ipts_number, run_number):
+    #             workspace_name = self._myProject.get_reduced_workspace(ipts_number, run_number)
+    #         else:
+    #             error_message = 'Unable to find reduced workspace for IPTS {0} Run {1} without data key.' \
+    #                             ''.format(ipts_number, run_number)
+    #             return False, error_message
+    #     # END-IF
+    #
+    #     # call for strip vanadium peaks
+    #     try:
+    #         out_ws_name = self._myProject.vanadium_processing_manager.strip_peaks(peak_fwhm, peak_pos_tolerance,
+    #                                                                               background_type, is_high_background,
+    #                                                                               workspace_name=workspace_name,
+    #                                                                               bank_list=bank_list)
+    #     except RuntimeError as run_err:
+    #         return False, 'Unable to strip vanadium due to {0}'.format(run_err)
+    #
+    #     return True, out_ws_name
 
     def undo_vanadium_peak_strip(self, ipts_number=None, run_number=None):
         """

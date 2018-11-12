@@ -16,6 +16,8 @@ import vdrive_commands.view
 import vdrive_commands.vpeak
 import vdrive_commands.procss_vcommand
 import pyvdrive.lib.datatypeutility
+from pyvdrive.lib import datatypeutility
+import time
 
 
 class VdriveCommandProcessor(object):
@@ -53,11 +55,12 @@ class VdriveCommandProcessor(object):
 
     @staticmethod
     def parse_command_arguments(command, command_args):
-        """
-        parse command arguments and store to a dictionary, whose key is argument key and
-        value is argument value
-        a valid argument is in format as: key=value
-        and two arguments are separated by a comma ','
+        """ Parse command arguments and store to a dictionary, whose key is argument key and
+        value is argument value.
+        Rules:
+        1. a valid argument is in format as: key=value.
+        2. two arguments are separated by a comma ','.
+        3. list is supported by using '~' other than ','
         :param command:
         :param command_args:
         :return:
@@ -79,7 +82,7 @@ class VdriveCommandProcessor(object):
                     print '[WARNING] Argument ITPS is not supported. Auto correct it to IPTS.'
                     command_arg = 'IPTS'
 
-                # process argument value. replace all the ', "
+                # process argument value: remove ' and "
                 arg_value = items[1]
                 arg_value = arg_value.replace('\'', '')
                 arg_value = arg_value.replace('"', '')
@@ -88,37 +91,73 @@ class VdriveCommandProcessor(object):
                 arg_dict[command_arg] = arg_value
             else:
                 err_msg = 'command %s %d-th term <%s> is not valid. Must have a = sign!' % (command, index, term)
-                print '[DB...ERROR] ', err_msg
                 return False, err_msg
             # END-IF
         # END-FOR
 
-        return arg_dict
+        return True, arg_dict
 
-    def process_commands(self, command, command_args):
-        """
-        Process commands string
-        :param command:
-        :param command_args: arguments of a command, excluding command
+    @staticmethod
+    def pre_process_idl_command(idl_command):
+        """ Pre-process IDL command such that
+        1. list bracket [] will be identified and string inside will have ',' replaced by '~'
+        2. list bracket []'s sequence will checked
+        :param idl_command:
         :return:
         """
-        print '[DB...COMMAND PROCESSOR] Command = %s; Arguments = %s' % (command, str(command_args))
+        datatypeutility.check_string_variable('IDL command', idl_command)
 
-        # check command (type, whether it is supported)
-        assert isinstance(command, str), 'Command %s must be a string but not %s.' \
-                                         '' % (str(command),  str(type(command)))
+        # check equal of bracket
+        if idl_command.count(']') != idl_command.count('['):
+            raise RuntimeError('Found unpaired list bracket [ and ] in {}'.format(idl_command))
+
+        # replace
+        num_bracket = idl_command.count(']')
+        for bracket_index in range(num_bracket):
+            left_index = idl_command.index('[')
+            right_index = idl_command.index(']')
+            if left_index > right_index:
+                raise RuntimeError('In ILD command {}, list bracket\' order is reversed.'.format(idl_command))
+
+            list_str = idl_command[left_index+1:right_index]
+            list_str = list_str.replace(',', '~')
+
+            # construct new command
+            idl_command = idl_command[:left_index] + list_str + idl_command[right_index+1:]
+        # END-FOR
+
+        return idl_command
+
+    def process_commands(self, vdrive_command):
+        """ Process commands string. The work include
+        1. pre-process list special such as arg=[a,b,c],
+        2. separate command from arguments
+        3. ...
+        :param vdrive_command:
+        :return:
+        """
+        # check
+        datatypeutility.check_string_variable('VDRIVE (IDL) command', vdrive_command, None)
+
+        # pre-process in order to  accept list in bracket [...]
+        vdrive_command_pp = self.pre_process_idl_command(vdrive_command)
+
+        # split
+        command_script = vdrive_command_pp.split(',')
+        command = command_script[0].strip()
+        command_args = command_script[1:]
+
+        print '[INFO-IDL] Parse input IDL command: {} to {}\n\tArguments = {}' \
+              ''.format(vdrive_command, vdrive_command_pp, command)
 
         # support command case insensitive
         raw_command = command
         command = command.upper()
 
-        # check command's validity
+        # check input command whether it is recognized
         if command not in self._commandList:
             return False, 'Command %s is not in supported command list: %s' \
                           '' % (raw_command, str(self._commandList))
-
-        # command body
-        assert isinstance(command_args, list)
 
         # process special command VDRIVE (for help)
         if command == 'VDRIVE':
@@ -126,12 +165,21 @@ class VdriveCommandProcessor(object):
             return status, err_msg
 
         # process regular VDRIVE command by parsing command arguments and store them to a dictionary
-        arg_dict = self.parse_command_arguments(command, command_args)
+        status, ret_obj = self.parse_command_arguments(command, command_args)
+
+        if status:
+            arg_dict = ret_obj
+        else:
+            error_msg = ret_obj
+            return False, error_msg
 
         # call the specific command class builder
         if command == 'CHOP':
             # chop
+            chop_start_time = time.time()
             status, err_msg = self._process_chop(arg_dict)
+            chop_stop_time = time.time()
+            err_msg += '\nExecution time = {} seconds'.format(chop_stop_time - chop_start_time)
         elif command == 'VBIN' or command == 'VDRIVEBIN':
             # bin
             status, err_msg = self._process_vbin(arg_dict)
@@ -243,7 +291,6 @@ class VdriveCommandProcessor(object):
 
         return status, message
 
-    # TestMe - 20180730 - Refactored
     def _process_view(self, arg_dict):
         """
         process command VIEW or VDRIVEVIEW
@@ -264,11 +311,20 @@ class VdriveCommandProcessor(object):
             # this is for help
             return status, message
 
-        # viewing
+        # launch
         view_window = self._mainWindow.do_launch_reduced_data_viewer()
-        view_window.set_ipts_number(processor.get_ipts_number())
 
+        # viewing: with simple launch, IPTS is not ncessary
+        ipts_number = processor.get_ipts_number()
+
+        # no IPTS: user wants to load everything in memory
+        if ipts_number is None:
+            return True, ''
+
+        # set IPTS
+        view_window.set_ipts_number(ipts_number)
         view_window.set_x_range(processor.x_min, processor.x_max)
+        print ('[DB...BAT] Processor.Unit = {}'.format(processor.unit))
         view_window.set_unit(processor.unit)
 
         # find out whether the runs to plot are in memory or need to load from HDD/archive/previously reduced
@@ -329,16 +385,19 @@ class VdriveCommandProcessor(object):
                 view_window.add_reduced_run(self, data_key, bank_id_list=bank_id_list, plot_new=False)
             # END-FOR
 
-            # plot
-            if processor.is_1_d:
-                # 1-D image
-                view_window.set_canvas_type(dimension=1)
-                view_window.do_plot_diffraction_data()
-            else:
-                # 2-D image or 3-D image for multiple runs
-                view_window.set_canvas_type(dimension=2)
-                view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
-            # END-IF-ELSE
+            # plot 1D as default
+            view_window.set_canvas_type(dimension=1)
+            view_window.do_plot_diffraction_data()
+
+            # if processor.is_1_d:
+            #     # 1-D image
+            #     view_window.set_canvas_type(dimension=1)
+            #     view_window.do_plot_diffraction_data()
+            # else:
+            #     # 2-D image or 3-D image for multiple runs
+            #     view_window.set_canvas_type(dimension=2)
+            #     view_window.plot_multiple_runs_2d(bank_id=1, bank_id_from_1=True)
+            # # END-IF-ELSE
         # END-IF-ELSE (chopped or single run)
 
         # write out the peak parameters
@@ -433,7 +492,11 @@ class VdriveCommandProcessor(object):
             message = command_processor.get_help()
             status = True
         else:
-            status, message = command_processor.exec_cmd()
+            try:
+                status, message = command_processor.exec_cmd()
+            except RuntimeError as run_err:
+                status = False
+                message = 'Unable to execute VDRIVE command due to {}'.format(run_err)
 
         return status, message
 

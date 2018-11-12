@@ -107,6 +107,18 @@ def clone_workspace(srs_ws_name, target_ws_name):
     return output_ws
 
 
+def convert_to_point_data(ws_name):
+    """
+
+    :param ws_name:
+    :return:
+    """
+    mantidapi.ConvertToPointData(InputWorkspace=ws_name,
+                                 OutputWorkspace=ws_name)
+
+    return
+
+
 def convert_to_non_overlap_splitters_bf(split_ws_name):
     """
     convert a Table splitters workspace containing overlapped time segment
@@ -349,6 +361,26 @@ def delete_workspace(workspace):
     :return:
     """
     mantidapi.DeleteWorkspace(Workspace=workspace)
+
+    return
+
+
+def extract_spectrum(input_workspace, output_workspace, workspace_index):
+    """
+    exctract a spectrum from a workspace
+    :param input_workspace: str
+    :param output_workspace: str
+    :param workspace_index: str
+    :return:
+    """
+    datatypeutility.check_string_variable('Input workspace name', input_workspace)
+    datatypeutility.check_string_variable('Output workspace name', output_workspace)
+
+    source_ws = retrieve_workspace(input_workspace, True)
+    datatypeutility.check_int_variable('Workspace index', workspace_index, (0, source_ws.getNumberHistograms()))
+
+    mantidapi.ExtractSpectra(input_workspace, WorkspaceIndexList=[workspace_index],
+                             OutputWorkspace=output_workspace)
 
     return
 
@@ -890,8 +922,12 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
     current_unit = get_workspace_unit(workspace_name)
     if current_unit != target_unit and target_unit is not None:
         # convert unit if the specified target unit is different
-        mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
-                               Target=target_unit)
+        try:
+            mantidapi.ConvertUnits(InputWorkspace=workspace_name, OutputWorkspace=temp_ws_name,
+                                   Target=target_unit)
+        except RuntimeError as run_err:
+            raise RuntimeError('Convert units of workspace {} to {} failed due to {}'
+                               ''.format(workspace_name, target_unit, run_err))
         current_unit = target_unit
         use_temp = True
     # END-IF
@@ -993,24 +1029,35 @@ def get_detectors_in_roi(mask_ws_name):
     return det_id_list
 
 
-def get_ipts_number(ws_name):
+def get_ipts_number(input):
     """
     get IPTS number from a standard EventWorkspace
-    :param ws_name:
+    :param input: run number or string
     :return:
     """
-    workspace = retrieve_workspace(ws_name)
-    if not workspace.run().hasProperty('Filename'):
-        return None
+    if isinstance(input, str):
+        # workspace name
+        ws_name = input
+        workspace = retrieve_workspace(ws_name)
+        if not workspace.run().hasProperty('Filename'):
+            return None
 
-    # get file name
-    file_name = workspace.run().getProperty('Filename').value
+        # get file name
+        file_name = workspace.run().getProperty('Filename').value
 
-    status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
-    if status:
-        ipts_number = ret_obj
+        status, ret_obj = vdrivehelper.get_ipts_number_from_dir(ipts_dir=file_name)
+        if status:
+            ipts_number = ret_obj
+        else:
+            ipts_number = None
+    elif isinstance(input, int):
+        # run number
+        run_number = input
+        ipts_number = mantidapi.GetIPTS(Instrument='VULCAN', RunNumber=run_number)
     else:
-        ipts_number = None
+        # not supported
+        raise TypeError('Input {} of type {} is either a workspace name (str) nor a run number (int)'
+                        ''.format(input, type(input)))
 
     return ipts_number
 
@@ -1322,6 +1369,31 @@ def load_calibration_file(calib_file_name, output_name, ref_ws_name):
     return outputs
 
 
+def load_mask_xml(data_ws_name, mask_file_name, mask_ws_name=None):
+    """
+    load Mantid compatible masking file in XML format
+    :param data_ws_name:
+    :param mask_file_name:
+    :param mask workspace name:
+    :return:
+    """
+    datatypeutility.check_file_name(mask_file_name, check_exist=True, note='ROI XML file')
+    if not is_matrix_workspace(data_ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(data_ws_name))
+
+    if mask_ws_name is None:
+        mask_ws_name = os.path.basename(mask_file_name).split('.')[0] + '_MASK'
+
+    # load XML file: Mantid can recognize the ROI or mask file
+    # In output workspace, 1 is for being masked
+    mantidapi.LoadMask(Instrument='VULCAN',
+                       RefWorkspace=data_ws_name,
+                       InputFile=mask_file_name,
+                       OutputWorkspace=mask_ws_name)
+
+    return mask_ws_name
+
+
 def load_nexus(data_file_name, output_ws_name, meta_data_only):
     """ Load NeXus file
     :param data_file_name:
@@ -1352,23 +1424,27 @@ def load_nexus_processed(nexus_name, workspace_name):
     return out_ws
 
 
-def load_roi_xml(ws_name, roi_file_name):
+def load_roi_xml(data_ws_name, roi_file_name, roi_ws_name=None):
     """
     load standard ROI XML file
-    :param ws_name:
+    :param data_ws_name: name of the workspace to be masked
     :param roi_file_name:
+    :param roi_ws_name: Region of interest workspace name
     :return: ROI workspace name
     """
     datatypeutility.check_file_name(roi_file_name, check_exist=True, note='ROI XML file')
-    if not is_matrix_workspace(ws_name):
-        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(ws_name))
+    if not is_matrix_workspace(data_ws_name):
+        raise RuntimeError('Workspace {0} is not a MatrixWorkspace in ADS.'.format(data_ws_name))
 
-    roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+    if roi_file_name is None:
+        roi_ws_name = os.path.basename(roi_file_name).split('.')[0] + '_ROI'
+    else:
+        datatypeutility.check_string_variable('ROI workspace name', roi_ws_name)
 
     # load XML file: Mantid can recognize the ROI or mask file
     # In output workspace, 1 is for being masked
     mantidapi.LoadMask(Instrument='VULCAN',
-                       RefWorkspace=ws_name,
+                       RefWorkspace=data_ws_name,
                        InputFile=roi_file_name,
                        OutputWorkspace=roi_ws_name)
 
@@ -2046,13 +2122,13 @@ def smooth_vanadium(input_workspace, output_workspace=None, workspace_index=None
         # push all the Y values to positive integer
         smooth_ws = ADS.retrieve(input_workspace)
         if workspace_index is None:
-            workspace_index_list = range(smooth_ws.getNumberHistogram())
+            workspace_index_list = range(smooth_ws.getNumberHistograms())
         else:
             workspace_index_list = [workspace_index]
 
         for ws_index in workspace_index_list:
             vec_y = smooth_ws.dataY(ws_index)
-            for i_y in vec_y:
+            for i_y in range(len(vec_y)):
                 vec_y[i_y] = max(1, int(vec_y[i_y] + 1))
         # END-FOR
     # END-IF
@@ -2122,7 +2198,10 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
         # before striping: EventWorkspace
         output_ws_dict = dict()
         for bank_id in bank_list:
-            output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
+            if len(bank_list) > 1:
+                output_ws_name_i = output_ws_name + '__bank_{0}'.format(bank_id)
+            else:
+                output_ws_name_i = output_ws_name
             mantidapi.StripVanadiumPeaks(InputWorkspace=input_ws_name,
                                          OutputWorkspace=output_ws_name_i,
                                          FWHM=fwhm,
@@ -2133,7 +2212,6 @@ def strip_vanadium_peaks(input_ws_name, output_ws_name=None,
                                          )
             output_ws_dict[bank_id] = output_ws_name_i
             # After strip: Workspace2D
-
         # END-FOR
 
     except RuntimeError as run_err:

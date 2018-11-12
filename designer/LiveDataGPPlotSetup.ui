@@ -23,7 +23,7 @@
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="LogSelectorTable" name="tableWidget_sampleLogs">
+<widget class="QFrame" name="frame_tableWidget_sampleLogs">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;quot;Main Axis&amp;quot; Column: Checked to plot on left (main) axis; Unchecked to plot on right axis&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -235,7 +235,7 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="LivePlotYAxisTable" name="tableWidget_plotYAxis">
+<widget class="QFrame" name="frame_tableWidget_plotYAxis">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
            <horstretch>0</horstretch>

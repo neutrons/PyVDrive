@@ -1,5 +1,5 @@
-# This is the main cross correlation code
-# TODO FIXME NOW3 Implement
+# This is the main cross correlation code. It is supposed to run with inside MantidPlot
+# 
 import mantid
 import cross_correlation_lib as cross_correlation
 import os
@@ -7,12 +7,11 @@ import os
 # Analyze the result from cross-correlation
 # (This is intended to be used with Mantid or IPython Notebook)
 
-# prepare
+# Step 1: Prepare: load, rebin, convert units from the raw event NeXus data
 if 0:
     # 2017 Startup
     working_dir = '/SNS/users/wzz/Projects/VULCAN/nED_Calibration/Diamond_NeXus/'
     nxs_file_name = os.path.join(working_dir, 'VULCAN_150178_HighResolution_Diamond.nxs')
-
 if 0:
     # 2018 Summer
     nxs_file_name = '/SNS/VULCAN/IPTS-21356/nexus/VULCAN_161364.nxs.h5'
@@ -23,16 +22,30 @@ if 0:
     ConvertToMatrixWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond_matrix')
     SaveNexusProcessed(InputWorkspace='vulcan_diamond_matrix',
             Filename='/SNS/users/wzz/Projects/VULCAN/20180411_Calibration/VULCAN_Diamond_Matrix.nxs', Title='Diamond for instrument geometry calibration')
+if 0:
+    # 2018 August
+    nxs_file_name = '/SNS/VULCAN/IPTS-21356/nexus/VULCAN_164960.nxs.h5'
+    # load data and convert units and rebin
+    # Load(Filename='/SNS/VULCAN/IPTS-21356/nexus/VULCAN_161364.nxs.h5', OutputWorkspace='vulcan_diamond')
+    # ConvertUnits(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Target='dSpacing')
+    Rebin(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond', Params='0.5,-0.0003,3')
+    # Convert to matrix workspace to save memory
+    ConvertToMatrixWorkspace(InputWorkspace='vulcan_diamond', OutputWorkspace='vulcan_diamond_matrix')
+    # 
+    SaveNexusProcessed(InputWorkspace='vulcan_diamond_matrix',
+            Filename='/SNS/VULCAN/shared/CALIBRATION/2018_9_10_CAL/calibration_data/VULCAN_Diamond_Matrix.nxs', Title='Diamond for instrument geometry calibration')
 
-if 1:
+    
+# Step 2: Prepare for the workspace name and etc
+if True:
     nxs_file_name = '/SNS/users/wzz/Projects/VULCAN/Calibration_20180530/VULCAN_161364_diamond.nxs'
-        
+    nxs_file_name = '/SNS/VULCAN/shared/CALIBRATION/2018_9_10_CAL/calibration_data/VULCAN_Diamond_Matrix.nxs'
 
-# decide to load or not and thus group workspace
-diamond_ws_name, group_ws_name = cross_correlation.initialize_calibration(nxs_file_name, False)
+    # decide to load or not and thus group workspace
+    diamond_ws_name, group_ws_name = cross_correlation.initialize_calibration(nxs_file_name, False)
 
 
-if False:
+if True:
     # 3 bank: west, east, high angle
 
     # do cross-correlation with 1 fit
@@ -45,7 +58,7 @@ if False:
 
     bank_name_list = ['west', 'east', 'high angle']
 
-elif True:
+elif Flase:
     # 2 bank: west/east, high angle
     # do cross-correlation with 1 fit
     calib_ws_1fit_dict, mask_ws_1fit_dict =\
@@ -61,7 +74,7 @@ else:
     print ('DOING NOTHING ... QUIT!')
     sys.exit(1)
 
-# compare the masked workspace
+# compare the masked workspace with 1 fit and 2 fit
 for bank_name in bank_name_list:
     mask_1fit_ws = mask_ws_1fit_dict[bank_name]
     masked_1fit_ws_indexes = cross_correlation.get_masked_ws_indexes(mask_1fit_ws)

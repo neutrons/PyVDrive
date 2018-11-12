@@ -11,8 +11,9 @@ done
 MANTIDLOCALPATH=/home/wzz/Mantid_Project/builds/debug-master/bin/
 MANTIDMACPATH=/Users/wzz/MantidBuild/debug-stable/bin/
 MANTIDSNSDEBUGPATH=/SNS/users/wzz/Mantid_Project/builds/debug/bin/
+MANTIDSNSDEBUGPATH=/opt/Mantid/bin/
 MANTIDPATH=$MANTIDMACPATH:$MANTIDLOCALPATH:$MANTIDSNSDEBUGPATH
 PYTHONPATH=$MANTIDPATH:$PYTHONPATH
 echo $PYTHONPATH
 
-PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/Lava.py $CMDS
+PYTHONPATH=build/lib:build/lib.linux-x86_64-2.7:$PYTHONPATH build/scripts-2.7/Lava.py $CMDS

@@ -7,9 +7,13 @@ import os
 import numpy
 try:
     from PyQt5 import QtCore as QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow, QButtonGroup, QFileDialog
 except ImportError:
     from PyQt4 import QtCore as QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow, QButtonGroup, QFileDialog
 
 try:
@@ -19,7 +23,8 @@ except AttributeError:
         return s
 
 import gui.GuiUtility as GuiUtility
-import gui.ui_VdriveLogPicker as VdriveLogPicker
+from pyvdrive.interface.gui.vdrivetreewidgets import VdriveRunManagerTree
+from pyvdrive.interface.gui.samplelogview import LogGraphicsView
 import LoadMTSLogWindow
 import QuickChopDialog
 
@@ -50,8 +55,9 @@ class WindowLogPicker(QMainWindow):
         self._mutexLockSwitchSliceMethod = False
 
         # set up UI
-        self.ui = VdriveLogPicker.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/VdriveLogPicker.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # Set up widgets
         self._init_widgets_setup()
@@ -247,6 +253,19 @@ class WindowLogPicker(QMainWindow):
         # Reference to slicers that have been set up
         self._currSlicerKey = None
         self._slicerKeyList = list()
+
+        return
+
+    def _promote_widgets(self):
+        treeView_iptsRun_layout = QVBoxLayout()
+        self.ui.frame_treeView_iptsRun.setLayout(treeView_iptsRun_layout)
+        self.ui.treeView_iptsRun = VdriveRunManagerTree(self)
+        treeView_iptsRun_layout.addWidget(self.ui.treeView_iptsRun)
+
+        graphicsView_main_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_main.setLayout(graphicsView_main_layout)
+        self.ui.graphicsView_main = LogGraphicsView(self)
+        graphicsView_main_layout.addWidget(self.ui.graphicsView_main)
 
         return
 

@@ -8,9 +8,13 @@
 import os
 try:
     from PyQt5.QtWidgets import QMainWindow, QFileDialog
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5 import QtCore
 except ImportError:
     from PyQt4.QtGui import QMainWindow, QFileDialog
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4 import QtCore
 import gui.GuiUtility as GuiUtility
 
@@ -20,9 +24,13 @@ except AttributeError:
     def _fromUtf8(s):
         return s
         
-import gui.ui_ReducedDataView
+from pyvdrive.interface.gui.generalrunview import GeneralRunView
 import vanadium_controller_dialog
 import pyvdrive.lib.datatypeutility
+from pyvdrive.lib import datatypeutility
+
+
+BANK_GROUP_DICT = {90: [1, 2], 150: [3]}
 
 
 class GeneralPurposedDataViewWindow(QMainWindow):
@@ -36,8 +44,9 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         super(GeneralPurposedDataViewWindow, self).__init__(parent)
 
         # set up UI
-        self.ui = gui.ui_ReducedDataView.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/ReducedDataView.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # initialize widgets
         self._init_widgets()
@@ -58,7 +67,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # Controlling data structure on lines that are plotted on graph
         self._currentPlotDataKeyDict = dict()  # (UI-key): tuple (data key, bank ID, unit); value: value = vec x, vec y
-        self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
+        # self._dataIptsRunDict = dict()  # key: workspace/run number, value: 2-tuple, IPTS/run number
 
         # A status flag to show whether the current plot is for sample log or diffraction data
         self._currentPlotSampleLogs = False
@@ -92,7 +101,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self._mutexBankIDList = False
 
         # data structure to manage the fitting result
-        self._stripBufferDict = dict()  # key = [self._iptsNumber, self._currRunNumber, self._currBank]
+        self._stripBufferDict = dict()  # key = [run ID], i.e., [run ID (str)][bank ID (int, 1, 2, 3)] = workspace name
         self._lastVanPeakStripWorkspace = None
         self._smoothBufferDict = dict()
         self._lastVanSmoothedWorkspace = None
@@ -129,6 +138,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # radio buttons
         self.ui.radioButton_chooseSingleRun.toggled.connect(self.evt_toggle_run_type)
+        self.ui.radioButton_chooseDiffraction.toggled.connect(self.evt_toggle_plot_options)
 
         # other
         self.ui.pushButton_clearCanvas.clicked.connect(self.do_clear_canvas)
@@ -147,13 +157,29 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.pushButton_launchVanProcessDialog.clicked.connect(self.do_launch_vanadium_dialog)
 
         # menu
-        self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
-        self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
+        # TODO - 20181102 - Add Back!
+        # lineEdit_binParams, lineEdit_binParams
+
+
+        # self.ui.actionOpen_Preprocessed_NeXus.triggered.connect(self.do_load_preprocessed_nexus)
+        # self.ui.actionRefresh_Runs_In_Mmemory.triggered.connect(self.do_refresh_existing_runs)
 
         # widgets to load reduced data
 
         # sub window
         self._vanadiumProcessDialog = None
+
+        return
+
+    def _promote_widgets(self):
+        """
+        promote widgets
+        :return:
+        """
+        graphicsView_mainPlot_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_mainPlot.setLayout(graphicsView_mainPlot_layout)
+        self.ui.graphicsView_mainPlot = GeneralRunView(self)
+        graphicsView_mainPlot_layout.addWidget(self.ui.graphicsView_mainPlot)
 
         return
 
@@ -231,6 +257,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         browse GSAS file or chopped GSAS files via local HDD
         :return:
         """
+        # TODO - 20181103 - also deal with do_load_preprocessed_nexus
         # get setup
         # is_chopped_data = self.ui.checkBox_loadChoppedAny.isChecked()
         default_dir = self._myController.get_working_dir()
@@ -881,13 +908,16 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             current_run = int(current_run_str)
         else:
             current_run = current_run_str
-        ipts_number, run_number = self._dataIptsRunDict[current_run]
 
-        self._vanadiumProcessDialog.set_ipts_run(ipts_number, run_number)
+        self._vanadiumProcessDialog.set_run_number(current_run)
 
         # FWHM
         if self._vanadiumFWHM is not None:
             self._vanadiumProcessDialog.set_peak_fwhm(self._vanadiumFWHM)
+
+        # also set up the vanadium processors
+        workspace_name = self._myController.get_reduced_workspace_name(current_run_str)
+        self._myController.project.vanadium_processing_manager.init_session(workspace_name, BANK_GROUP_DICT)
 
         return
 
@@ -1144,9 +1174,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
             :param ws_name_list:
             :return: a list sorted by slicing/chopping index
             """
-            # test
-            assert isinstance(ws_name_list, list), 'Workspace names {} must be given as list but not in {}' \
-                                                   ''.format(workspace_names, type(workspace_names))
+            # check
+            datatypeutility.check_list('Workspace names', ws_name_list)
 
             # get the workspace name
             index_ws_name_dict = dict()
@@ -1167,9 +1196,19 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if self._currSlicedRunNumber == str(self.ui.comboBox_choppedRunNumber.currentText()) and not mandatory_load:
             return
 
-        sliced_run_index = self.ui.comboBox_choppedRunNumber.currentIndex()
+        try:
+            sliced_run_index = self.ui.comboBox_choppedRunNumber.currentIndex()
 
-        run_number, slice_id = self._slicedRunsList[sliced_run_index]
+            # return if there is no chopped and reduced workspace found in memory
+            if sliced_run_index < 0:
+                return
+
+            run_number, slice_id = self._slicedRunsList[sliced_run_index]
+        except IndexError as index_err:
+            err_msg = 'Current index = {}.  Stored sliced runs list = {}: {}' \
+                      ''.format(self.ui.comboBox_choppedRunNumber.currentIndex(),
+                                self._slicedRunsList, index_err)
+            raise IndexError(err_msg)
 
         if (run_number, slice_id) in self._choppedRunDict:
             # this particular run and slicing plan, then get the previous stored value from dictionary
@@ -1265,6 +1304,25 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
+    def event_show_hide_v_peaks(self, show_v_peaks):
+        """
+        handling event that show or hide vanadium peaks on the figure
+        :return:
+        """
+        datatypeutility.check_bool_variable('Flag to indicate show or hide vanadium peaks', show_v_peaks)
+
+        # TODO - 20181110 - Implement!
+        if True:
+            GuiUtility.pop_dialog_error(self, 'Not Implemented Yet for Showing Vanadium Peaks')
+            return
+
+        if show_v_peaks:
+            self.ui.graphicsView_mainPlot.add_indicators(vanadium_peaks)
+        else:
+            self.ui.graphicsView_mainPlot.hide_indicators()
+
+        return
+
     def evt_select_new_run_number(self):
         """ Event handling the case that a new run number is selected in combobox_run
         :return:
@@ -1275,6 +1333,21 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         # plot diffraction data same as
         self.do_plot_diffraction_data()
+
+        return
+
+    def evt_toggle_plot_options(self):
+        """
+        handling event as radioButton choose diffraction to plot or choose sample log to plot
+        :return:
+        """
+        if self.ui.radioButton_chooseDiffraction.isChecked():
+            plot_diffraction = True
+        else:
+            plot_diffraction = False
+
+        self.ui.groupBox_plotREducedData.setEnabled(plot_diffraction)
+        self.ui.groupBox_plotLog.setEnabled(not plot_diffraction)
 
         return
 
@@ -1319,19 +1392,8 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # set unit
         self._currUnit = str(self.ui.comboBox_unit.currentText())
 
-        # Get the data sets that are currently plot and replace them with new unit
-        existing_entries = self._currentPlotDataKeyDict.keys()
-        for entry_key in existing_entries:
-            # plot: using default x limit
-            data_key, bank_id, unit = entry_key
-
-            # skip the bank that is not plotted now
-            if bank_id != self._currBank:
-                continue
-
-            self.plot_by_data_key(data_key=data_key, bank_id_list=[self._currBank], over_plot=False,
-                                  x_limit=None)
-        # END-FOR
+        # plot
+        self.do_plot_diffraction_data()
 
         return
 
@@ -1439,13 +1501,12 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param unit:
         :return:
         """
-        print ('[DB...BAT] Data key = {}'.format(data_key))
+        print ('[DB...BAT] ReductionDataView: About to retrieve data from API with Data key = {}'.format(data_key))
 
         data_set = self._myController.get_reduced_data(run_id=data_key, target_unit=unit, bank_id=bank_id)
-        # convert format
+        # convert to 2 vectors
         vec_x = data_set[bank_id][0]
         vec_y = data_set[bank_id][1]
-        print ('[DB...BAT] Just retrieved: {} vs {}'.format(len(vec_x), len(vec_y)))
 
         return vec_x, vec_y
 
@@ -1530,7 +1591,6 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         if entry_key not in self._currentPlotDataKeyDict:
             vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=data_key, bank_id=bank_id,
                                                              unit=self._currUnit)
-            # TODO FIXME NEXT : use a stack to manage the data stored
             self._currentPlotDataKeyDict[entry_key] = vec_x, vec_y
         else:
             # data already been loaded before
@@ -1548,6 +1608,68 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         self.ui.graphicsView_mainPlot.auto_rescale()
 
         return line_id
+
+    def plot_1d_vanadium(self, run_id, bank_id, is_smoothed_data=False):
+        """
+
+        :param run_id:
+        :param bank_id:
+        :return:
+        """
+        # check input
+        datatypeutility.check_string_variable('Run ID', run_id)
+        datatypeutility.check_int_variable('Bank ID', bank_id, (1, 100))
+
+        # clear previous image
+        self.ui.graphicsView_mainPlot.clear_all_lines()
+        # change unit
+        self.ui.comboBox_unit.setCurrentIndex(1)
+
+        # plot original run
+        # raw_van_key = run_id, bank_id, self._currUnit
+        # if raw_van_key in self._currentPlotDataKeyDict:
+        #     # data already been loaded before
+        #     vec_x, vec_y = self._currentPlotDataKeyDict[raw_van_key]
+        # else:
+        #     vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=run_id, bank_id=bank_id,
+        #                                                      unit=self._currUnit)
+        #     self._currentPlotDataKeyDict[raw_van_key] = vec_x, vec_y
+
+        if is_smoothed_data:
+            plot_unit = 'TOF'
+        else:
+            plot_unit = 'dSpacing'
+
+        # get the original raw data
+        ws_name = self._myController.project.vanadium_processing_manager.get_raw_vanadium()[bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+
+        # plot
+        self._raw_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                                                    unit=plot_unit,
+                                                                                    over_plot=False,
+                                                                                    run_id=run_id, bank_id=bank_id,
+                                                                                    chop_tag=None,
+                                                                                    line_color='black',
+                                                                                    label='Raw vanadium {}'
+                                                                                          ''.format(run_id))
+
+        if is_smoothed_data:
+            ws_name = self._myController.project.vanadium_processing_manager.get_smoothed_vanadium()[bank_id]
+        else:
+            ws_name = self._myController.project.vanadium_processing_manager.get_peak_striped_vanadium()[bank_id]
+        vec_x, vec_y = self.retrieve_loaded_reduced_data(data_key=ws_name, bank_id=1, unit=plot_unit)
+        # plot vanadium
+        self._strip_van_plot_id = self.ui.graphicsView_mainPlot.plot_diffraction_data((vec_x, vec_y),
+                                                                                      unit=plot_unit,
+                                                                                      over_plot=True,
+                                                                                      run_id=run_id, bank_id=bank_id,
+                                                                                      chop_tag=None,
+                                                                                      line_color='red',
+                                                                                      label='Peak striped vanadium {}'
+                                                                                            ''.format(run_id))
+
+        return
 
     def plot_chopped_data_2d(self, run_number, chop_sequence, bank_id, bank_id_from_1=True, chopped_data_dir=None,
                              vanadium_run_number=None, proton_charge_normalization=False):
@@ -1643,7 +1765,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         assert isinstance(data_key, str) or isinstance(data_key, tuple),\
             'Data key {0} must be a string or a tuple (for chopped) but not a {1}.'.format(data_key, str(data_key))
 
-        print ('[DB...BAT] Plot By Data Key = {}'.format(data_key))
+        print ('[DB...BAT] Reduction View:  Plot By Data Key = {} of Type {}'.format(data_key, type(data_key)))
 
         # plot
         for index, bank_id in enumerate(bank_id_list):
@@ -1936,12 +2058,11 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         return
 
     def set_ipts_number(self, ipts_number):
-        """
-
+        """ set IPTS number
         :param ipts_number:
         :return:
         """
-        assert isinstance(ipts_number, int), 'Set IPTS number must be an integer.'
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
 
         self._iptsNumber = ipts_number
 
@@ -1985,7 +2106,7 @@ class GeneralPurposedDataViewWindow(QMainWindow):
 
         return
 
-    def signal_save_processed_vanadium(self, output_file_name, ipts_number, run_number):
+    def signal_save_processed_vanadium(self, output_file_name, run_number):
         """
         save GSAS file from GUI
         :param output_file_name:
@@ -1993,75 +2114,47 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         :param run_number:
         :return:
         """
-        van_info_tuple = (self._lastVanSmoothedWorkspace, ipts_number, run_number)
         # convert string
         output_file_name = str(output_file_name)
 
-        status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
-                                                                           output_file_name=output_file_name)
-        if not status:
-            GuiUtility.pop_dialog_error(self, error_message)
+        self._myController.project.vanadium_processing_manager.save_to_gsas(run_number, output_file_name)
+
+        # status, error_message = self._myController.save_processed_vanadium(van_info_tuple=None,
+        #                                                                    output_file_name=output_file_name)
+        # if not status:
+        #     GuiUtility.pop_dialog_error(self, error_message)
 
         return
 
-    def signal_strip_vanadium_peaks(self, peak_fwhm, tolerance, background_type, is_high_background, bank_list):
-        """
-        process the signal to strip vanadium peaks
-        :param peak_fwhm:
+    def signal_strip_vanadium_peaks(self, bank_group_index, peak_fwhm, tolerance, background_type, is_high_background):
+        """ Process the signal to strip vanadium peaks
+        :param bank_group_index:
+        :param peak_fwhm: integer
         :param tolerance:
         :param background_type:
         :param is_high_background:
-        :param bank_list:
         :return:
         """
+        # check inputs
+        datatypeutility.check_int_variable('FWHM', peak_fwhm, (1, None))
+
         # from signal, the string is of type unicode.
         background_type = str(background_type)
 
         # note: as it is from a signal with defined parameters types, there is no need to check
         #       the validity of parameters
-        current_run_str = str(self.ui.comboBox_runs.currentText())
-        if current_run_str.isdigit():
-            current_run_number = int(current_run_str)
-            ipts_number, run_number = self._dataIptsRunDict[current_run_number]
-            data_key = None
-        else:
-            data_key = current_run_str
-            ipts_number, run_number = self._dataIptsRunDict[data_key]
 
         # strip vanadium peaks
-        status, ret_obj = self._myController.strip_vanadium_peaks(ipts_number, run_number, bank_list,
-                                                                  peak_fwhm, tolerance,
-                                                                  background_type, is_high_background,
-                                                                  data_key)
-        if status:
-            result_ws_name = ret_obj
-            # self.load_reduced_data(run_number=controller_data_key, unit=self._currUnit)
-            self.retrieve_loaded_reduced_data(data_key=result_ws_name, unit=self._currUnit)
-        else:
-            err_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, err_msg)
-            return
+        self._myController.project.vanadium_processing_manager.strip_peaks(bank_group_index, peak_fwhm,
+                                                                           tolerance, background_type,
+                                                                           is_high_background)
 
-        # plot the data without vanadium peaks
-        # re-plot the original data because the operation can back from final stage
-        # TODO/FIXME/NOW - what if data_key is None??? VDrivePlot version
-        self.plot_1d_diffraction(data_key=data_key, bank_id=self._currBank,
-                                 label='blabla raw label', title='blabla raw title', clear_previous=True,
-                                 color='black')
-
-        self._vanStripPlotID = self.plot_1d_diffraction(data_key=result_ws_name, bank_id=self._currBank,
-                                                        label='Vanadium peaks striped', title='blabla strip title',
-                                                        clear_previous=False,
-                                                        color='green')
-
-        if self._iptsNumber is None:
-            self._lastVanPeakStripWorkspace = result_ws_name
-        else:
-            self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = result_ws_name
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0])
 
         return
 
-    def signal_smooth_vanadium(self, smoother_type, param_n, param_order):
+    def signal_smooth_vanadium(self, bank_group_index, smoother_type, param_n, param_order):
         """
         process the signal to smooth vanadium spectra
         :param smoother_type:
@@ -2072,44 +2165,13 @@ class GeneralPurposedDataViewWindow(QMainWindow):
         # convert smooth_type to string from unicode
         smoother_type = str(smoother_type)
 
-        # get the input workspace
-        if self._iptsNumber is None:
-            van_peak_removed_ws = self._lastVanPeakStripWorkspace
-        else:
-            van_peak_removed_ws = self._stripBufferDict[self._iptsNumber, self._currRunNumber, self._currBank]
-        status, ret_obj = self._myController.smooth_diffraction_data(workspace_name=van_peak_removed_ws,
-                                                                     bank_id=None,
-                                                                     smoother_type=smoother_type,
-                                                                     param_n=param_n,
-                                                                     param_order=param_order,
-                                                                     start_bank_id=1)
-        if status:
-            smoothed_ws_name = ret_obj
-            if self._iptsNumber is None:
-                self._lastVanSmoothedWorkspace = smoothed_ws_name
-            else:
-                self._smoothBufferDict[self._iptsNumber, self._currRunNumber, self._currBank] = smoothed_ws_name
-            self.retrieve_loaded_reduced_data(data_key=smoothed_ws_name)
-        else:
-            err_msg = ret_obj
-            GuiUtility.pop_dialog_error(self, 'Unable to smooth data due to {0}.'.format(err_msg))
-            return
+        self._myController.project.vanadium_processing_manager.smooth_spectra(bank_group_index, smoother_type,
+                                                                              param_n, param_order,
+                                                                              smooth_original=False)
 
-        # plot data: the unit is changed to TOF due to Mantid's behavior
-        #            as a consequence of this, the vanadium spectrum with peak removed shall be re-plot in TOF space
-        # # TODO/NOW/ - a better name
-        # label_no_peak = 'blabla no peak'
-        # self.plot_1d_diffraction(data_key=van_peak_removed_ws, bank_id=self._currBank,
-        #                          title=label_no_peak,
-        #                          label=label_no_peak,
-        #                          clear_previous=True,
-        #                          color='black')
+        self.plot_1d_vanadium(run_id=self._vanadiumProcessDialog.get_run_id(),
+                              bank_id=BANK_GROUP_DICT[bank_group_index][0], is_smoothed_data=True)
 
-        label = '{3}: Smoothed by {0} with parameters ({1}, {2})' \
-                ''.format(smoother_type, param_n, param_order, smoothed_ws_name)
-        self.plot_1d_diffraction(data_key=smoothed_ws_name, bank_id=self._currBank,
-                                 label=label, title=label,
-                                 clear_previous=False, color='red')
 
         return
 

@@ -1,9 +1,10 @@
 # This is a class to slice and focus data for parallelization (multiple threading)
 import time
-from mantid.simpleapi import Load, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder, Rebin
-from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace
+from mantid.simpleapi import Load, LoadEventNexus, GenerateEventsFilter, FilterEvents, LoadDiffCal, AlignAndFocusPowder
+from mantid.simpleapi import AlignDetectors, ConvertUnits, RenameWorkspace, ExtractSpectra, CloneWorkspace, Rebin
 from mantid.simpleapi import ConvertToPointData, ConjoinWorkspaces, SaveGSS, Multiply, CreateWorkspace
-from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace, SaveVulcanGSS
+from mantid.simpleapi import DiffractionFocussing, CreateEmptyTableWorkspace, CreateWorkspace
+from mantid.simpleapi import EditInstrumentGeometry
 from mantid.api import AnalysisDataService
 import threading
 import numpy
@@ -12,7 +13,9 @@ import h5py
 import time
 import file_utilities
 import datatypeutility
-
+import mantid_mask as mask_util
+import mantid_reduction
+import mantid_helper
 
 # chop data
 # ipts = 18522
@@ -22,6 +25,8 @@ import datatypeutility
 # event_file_name = '/SNS/VULCAN/IPTS-19577/nexus/VULCAN_155771.nxs.h5'
 
 
+# NOTE: Calibration file shall be made more flexible
+# TODO - FIXME - 20180930 - Calibration file shall be disabled and passed in
 CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12.h5',
                      7: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_7bank.h5',
                      27: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_calibrate_2018_04_12_27bank.h5'}
@@ -30,7 +35,7 @@ CALIBRATION_FILES = {3: '/SNS/VULCAN/shared/CALIBRATION/2018_4_11_CAL/VULCAN_cal
 class SliceFocusVulcan(object):
     """ Class to handle the slice and focus on vulcan data
     """
-    def __init__(self, number_banks=3, num_threads=24):
+    def __init__(self, number_banks=3, num_threads=24, output_dir=None):
         """
         initialization
         :param number_banks:
@@ -50,6 +55,10 @@ class SliceFocusVulcan(object):
 
         # other directories
         self._output_dir = '/tmp/'
+        if output_dir is not None:
+            datatypeutility.check_file_name(output_dir, True, True, True, 'Output directory for generated GSAS')
+            self._output_dir = output_dir
+
         self._ws_name_dict = dict()
         self._last_loaded_event_ws = None
         self._last_loaded_ref_id = ''
@@ -60,6 +69,9 @@ class SliceFocusVulcan(object):
         self._diff_cal_ws_name = '{0}_cal'.format(self._diff_base_name)
         self._group_ws_name = '{0}_group'.format(self._diff_base_name)
         self._mask_ws_name = '{0}_mask'.format(self._diff_base_name)
+
+        self._focus_instrument_dict = dict()
+        self._init_focused_instruments()
 
         # multiple threading variables
         self._number_threads = num_threads
@@ -83,86 +95,7 @@ class SliceFocusVulcan(object):
         :param vec_x:
         :return:
         """
-        tof_min = vec_x[0]
-        tof_max = vec_x[-1]
-        delta_tof = (vec_x[1] - tof_min) / tof_min  # deltaT/T
-        data_size = len(vec_x)
-
-        bank_header = 'BANK {0} {1} {2} {3} {4} {5:.1f} {6:.7f} 0 FXYE' \
-                      ''.format(bank_id, data_size, data_size, 'SLOG', tof_min, tof_max, delta_tof)
-
-        bank_header = '{0:80s}'.format(bank_header)
-
-        return bank_header
-
-    # @staticmethod
-    # def create_idl_bins(num_banks, h5_bin_file_name):
-    #     """
-    #     create a Mantid to VDRIVE-IDL mapping binning
-    #     :param num_banks:
-    #     :param h5_bin_file_name:
-    #     :return:
-    #     """
-    #     def process_bins_to_binning_params(bins_vector):
-    #         """
-    #         convert a list of bin boundaries to x1, dx, x2, dx, ... style
-    #         :param bins_vector:
-    #         :return:
-    #         """
-    #         assert isinstance(bins_vector, numpy.ndarray)
-    #         assert len(bins_vector.shape) == 1
-
-    #         delta_tof_vec = bins_vector[1:] - bins_vector[:-1]
-
-    #         bin_param = numpy.empty((bins_vector.size + delta_tof_vec.size), dtype=bins_vector.dtype)
-    #         bin_param[0::2] = bins_vector
-    #         bin_param[1::2] = delta_tof_vec
-
-    #         # extrapolate_last_bin
-    #         delta_bin = (bins_vector[-1] - bins_vector[-2]) / bins_vector[-2]
-    #         next_x = bins_vector[-1] * (1 + delta_bin)
-
-    #         # append last value for both east/west bin and high angle bin
-    #         numpy.append(bin_param, delta_bin)
-    #         numpy.append(bin_param, next_x)
-
-    #         return bin_param
-
-    #     # use explicitly defined bins and thus matrix workspace is required
-    #     # import h5 file
-    #     # load vdrive bin file to 2 different workspaces
-    #     bin_file = h5py.File(h5_bin_file_name, 'r')
-    #     west_east_bins = bin_file['west_east_bank'][:]
-    #     high_angle_bins = bin_file['high_angle_bank'][:]
-    #     bin_file.close()
-
-    #     # convert a list of bin boundaries to x1, dx, x2, dx, ... style
-    #     west_east_bin_params = process_bins_to_binning_params(west_east_bins)
-    #     high_angle_bin_params = process_bins_to_binning_params(high_angle_bins)
-
-    #     binning_parameter_dict = dict()
-    #     if num_banks == 3:
-    #         # west(1), east(1), high(1)
-    #         # west(1), east(1), high(1)
-    #         for bank_id in range(1, 3):
-    #             binning_parameter_dict[bank_id] = west_east_bin_params
-    #         binning_parameter_dict[3] = high_angle_bin_params
-    #     elif num_banks == 7:
-    #         # west (3), east (3), high (1)
-    #         for bank_id in range(1, 7):
-    #             binning_parameter_dict[bank_id] = west_east_bin_params
-    #         binning_parameter_dict[7] = high_angle_bin_params
-    #     elif num_banks == 27:
-    #         # west (9), east (9), high (9)
-    #         for bank_id in range(1, 19):
-    #             binning_parameter_dict[bank_id] = west_east_bin_params
-    #         for bank_id in range(19, 28):
-    #             binning_parameter_dict[bank_id] = high_angle_bin_params
-    #     else:
-    #         raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-    #     # END-IF-ELSE
-
-    #     return binning_parameter_dict
+        raise NotImplementedError('create_bank_header() Moved to mantid_reduction')
 
     @staticmethod
     def create_nature_bins(num_banks, east_west_binning_parameters, high_angle_binning_parameters):
@@ -173,27 +106,7 @@ class SliceFocusVulcan(object):
         :param high_angle_binning_parameters:
         :return:
         """
-        binning_parameter_dict = dict()
-        if num_banks == 3:
-            # west(1), east(1), high(1)
-            for bank_id in range(1, 3):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            binning_parameter_dict[3] = high_angle_binning_parameters
-        elif num_banks == 7:
-            # west (3), east (3), high (1)
-            for bank_id in range(1, 7):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            binning_parameter_dict[7] = high_angle_binning_parameters
-        elif num_banks == 27:
-            # west (9), east (9), high (9)
-            for bank_id in range(1, 19):
-                binning_parameter_dict[bank_id] = east_west_binning_parameters
-            for bank_id in range(19, 28):
-                binning_parameter_dict[bank_id] = high_angle_binning_parameters
-        else:
-            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
-
-        return binning_parameter_dict
+        raise NotImplementedError('(create_nature_bins) Moved to mantid_reduction')
 
     @staticmethod
     def create_vulcan_gsas_header(workspace, gsas_file_name, ipts, parm_file_name):
@@ -206,62 +119,7 @@ class SliceFocusVulcan(object):
         :param parm_file_name:
         :return:
         """
-        # Get necessary information including title, run start, duration and etc.
-        title = workspace.getTitle()
-
-        # Get run object for sample log information
-        run = workspace.getRun()
-
-        # Get information on start/stop
-        if run.hasProperty("run_start") and run.hasProperty("duration"):
-            # have run start and duration information
-            # run_start = run.getProperty("run_start").value
-            duration = float(run.getProperty("duration").value)
-
-            # separate second and sub-seconds
-            # run_start_seconds = run_start.split(".")[0]
-            # run_start_sub_seconds = run_start.split(".")[1]
-            # self.log().warning('Run start {0} is split to {1} and {2}'.format(run_start, run_start_seconds,
-            #                                                                   run_start_sub_seconds))
-
-            # property run_start and duration exist
-            utctime = numpy.datetime64(run.getProperty('run_start').value)
-            time0 = numpy.datetime64("1990-01-01T00:00:00")
-            total_nanosecond_start = int((utctime - time0) / numpy.timedelta64(1, 'ns'))
-            total_nanosecond_stop = total_nanosecond_start + int(duration*1.0E9)
-
-        else:
-            # not both property is found
-            total_nanosecond_start = 0
-            total_nanosecond_stop = 0
-        # END-IF
-
-        # self.log().debug("Start = %d, Stop = %d" % (total_nanosecond_start, total_nanosecond_stop))
-
-        # Construct new header
-        vulcan_gsas_header = list()
-
-        if len(title) > 80:
-            title = title[0:80]
-        vulcan_gsas_header.append("%-80s" % title)
-
-        vulcan_gsas_header.append("%-80s" % ("Instrument parameter file: %s" % parm_file_name))
-
-        vulcan_gsas_header.append("%-80s" % ("#IPTS: %s" % str(ipts)))
-
-        vulcan_gsas_header.append("%-80s" % "#binned by: Mantid")
-
-        vulcan_gsas_header.append("%-80s" % ("#GSAS file name: %s" % os.path.basename(gsas_file_name)))
-
-        vulcan_gsas_header.append("%-80s" % ("#GSAS IPARM file: %s" % parm_file_name))
-
-        vulcan_gsas_header.append("%-80s" % ("#Pulsestart:    %d" % total_nanosecond_start))
-
-        vulcan_gsas_header.append("%-80s" % ("#Pulsestop:     %d" % total_nanosecond_stop))
-
-        vulcan_gsas_header.append('{0:80s}'.format('#'))
-
-        return vulcan_gsas_header
+        raise NotImplementedError('create_vulcan_gsas_header() Moved to mantid_reduction')
 
     def diffraction_focus(self, ref_id, binning, apply_det_efficiency):
         """
@@ -298,19 +156,73 @@ class SliceFocusVulcan(object):
 
         return
 
-    def focus_workspace_list(self, ws_name_list, binning_parameter_dict):
+    def _init_focused_instruments(self):
         """
-        do diffraction focus on a list workspaces and also convert them to IDL GSAS
+        set up the dictionary for the instrument geometry after focusing
+        each detector (virtual) will have 3 value as L2, polar (2theta) and azimuthal (phi)
+        and the angles are in unit as degree
+        :return:
+        """
+        # TODO - FIXME - 20181030 - There shall be 1 and only 1 place to define focused geometry in PyVDRive!
+        # TODO                      Now it is diverted.  Grep L1 and _init_focused_instrument (same copy diffrent place)
+        self._focus_instrument_dict['L1'] = 43.753999999999998
+
+        # L2, Polar and Azimuthal
+        self._focus_instrument_dict['L2'] = dict()
+        self._focus_instrument_dict['Polar'] = dict()
+        self._focus_instrument_dict['Azimuthal'] = dict()
+        self._focus_instrument_dict['SpectrumIDs'] = dict()
+
+        # east_bank = [2.0, 90., 0.]
+        # west_bank = [2.0, -90., 0.]
+        # high_angle_bank = [2.0, 155., 0.]
+
+        # 2 bank
+        self._focus_instrument_dict['L2'][2] = [2., 2.]
+        self._focus_instrument_dict['Polar'][2] = [-90.,  90]
+        self._focus_instrument_dict['Azimuthal'][2] = [0., 0.]
+        self._focus_instrument_dict['SpectrumIDs'][2] = [1, 2]
+
+        # 3 bank
+        self._focus_instrument_dict['L2'][3] = [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][3] = [-90, 90., 155]
+        self._focus_instrument_dict['Azimuthal'][3] = [0., 0, 0.]
+        self._focus_instrument_dict['SpectrumIDs'][3] = [1, 2, 3]
+
+        # 7 bank
+        self._focus_instrument_dict['L2'][7] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][7] = None
+        self._focus_instrument_dict['Azimuthal'][7] = None
+        self._focus_instrument_dict['SpectrumIDs'][7] = range(1, 8)
+
+        # 27 banks
+        self._focus_instrument_dict['L2'][27] = None  # [2., 2., 2.]
+        self._focus_instrument_dict['Polar'][27] = None
+        self._focus_instrument_dict['Azimuthal'][27] = None
+        self._focus_instrument_dict['SpectrumIDs'][27] = range(1, 28)
+
+        return
+
+    def focus_workspace_list(self, ws_name_list, gsas_ws_name_list, binning_parameter_dict):
+        """ Do diffraction focus on a list workspaces and also convert them to IDL GSAS
+        This is the main execution body to be executed in multi-threading environment
         :param ws_name_list:
         :param binning_parameter_dict: dictionary for binning parameters. it is used for convert binning to VDRIVE-IDL
         :return:
         """
         datatypeutility.check_list('Workspace names', ws_name_list)
         datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
+        datatypeutility.check_list('(Output) GSAS workspace name list', gsas_ws_name_list)
+        if len(ws_name_list) != len(gsas_ws_name_list):
+            raise RuntimeError('Input workspace names {} have different number than output GSAS workspace names {}'
+                               ''.format(ws_name_list, gsas_ws_name_list))
 
-        for ws_name in ws_name_list:
+        for index in range(len(ws_name_list)):
             # check input
+            ws_name = ws_name_list[index]
+            gsas_ws_name = gsas_ws_name_list[index]
             datatypeutility.check_string_variable('Workspace name', ws_name)
+            datatypeutility.check_string_variable('Output GSAS workspace name', gsas_ws_name)
             # skip empty workspace name that might be returned from FilterEvents
             if len(ws_name) == 0:
                 continue
@@ -320,9 +232,20 @@ class SliceFocusVulcan(object):
             DiffractionFocussing(InputWorkspace=ws_name, OutputWorkspace=ws_name, GroupingWorkspace='vulcan_group')
             # convert unit to TOF
             ConvertUnits(InputWorkspace=ws_name, OutputWorkspace=ws_name, Target='TOF', ConvertFromPointData=False)
-            # convert VULCAN binning
-            self.rebin_workspace(input_ws=ws_name, binning_param_dict=binning_parameter_dict,
-                                 output_ws_name=ws_name)
+            # edit instrument
+            num_banks = 3
+            EditInstrumentGeometry(Workspace=ws_name,
+                                   PrimaryFlightPath=self._focus_instrument_dict['L1'],
+                                   SpectrumIDs=self._focus_instrument_dict['SpectrumIDs'][num_banks],
+                                   L2=self._focus_instrument_dict['L2'][num_banks],
+                                   Polar=self._focus_instrument_dict['Polar'][num_banks],
+                                   Azimuthal=self._focus_instrument_dict['Azimuthal'][num_banks])
+            # convert VULCAN binning: to a different workspace that will be discarded after SaveVulcanGSS
+            mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
+                                                                 binning_param_dict=binning_parameter_dict,
+                                                                 output_ws_name=gsas_ws_name)
+            # rebin the original workspace that won't be deleted and kept for visualization
+            mantid_helper.rebin(ws_name, '3000., -0.001, 70000.', preserve=True)
         # END-FOR
 
         return
@@ -375,7 +298,12 @@ class SliceFocusVulcan(object):
         out_ws_name, data_key = self.generate_output_workspace_name(event_file_name)
 
         # keep it as the current workspace
-        self._last_loaded_event_ws = Load(Filename=event_file_name, MetaDataOnly=False, OutputWorkspace=out_ws_name)
+        if event_file_name.endswith('.h5'):
+            self._last_loaded_event_ws = LoadEventNexus(Filename=event_file_name, MetaDataOnly=False, Precount=True,
+                                                        OutputWorkspace=out_ws_name)
+        else:
+            self._last_loaded_event_ws = Load(Filename=event_file_name, OutputWorkspace=out_ws_name)
+
         self._last_loaded_ref_id = data_key
 
         self._ws_name_dict[data_key] = out_ws_name
@@ -408,76 +336,76 @@ class SliceFocusVulcan(object):
         :param output_ws_name:
         :return:
         """
-        # check
-        datatypeutility.check_dict('Binning parameters', binning_param_dict)
-        datatypeutility.check_string_variable('Output workspace name', output_ws_name)
-
-        # check input workspace
-        if isinstance(input_ws, str):
-            input_ws = AnalysisDataService.retrieve(input_ws)
-
-        # check input binning parameters
-        for ws_index in range(input_ws.getNumberHistograms()):
-            bank_id = ws_index + 1
-            print ('[DB...ERROR] binning parameter keys: {}'.format(binning_param_dict.keys()))
-            bin_params = binning_param_dict[bank_id]
-            if not isinstance(bin_params, str) and len(bin_params) % 2 == 0:
-                # odd number and cannot be binning parameters
-                raise RuntimeError('Binning parameter {0} of type {1} with size {2} cannot be accepted.'
-                                   ''.format(bin_params, type(bin_params), len(bin_params)))
-            elif isinstance(bin_params, str) and bin_params.count(',') % 2 == 1:
-                raise RuntimeError('Binning parameter {0} (as a string) cannot be accepted.'
-                                   ''.format(bin_params))
-
-        # rebin input workspace
-        processed_single_spec_ws_list = list()
-        for ws_index in range(input_ws.getNumberHistograms()):
-            # rebin on each
-            temp_out_name = output_ws_name + '_x_' + str(ws_index)
-            processed_single_spec_ws_list.append(temp_out_name)
-            # extract a spectrum out
-            ExtractSpectra(input_ws, WorkspaceIndexList=[ws_index], OutputWorkspace=temp_out_name)
-            # get binning parameter
-            bin_params = binning_param_dict[ws_index + 1]  # bank ID
-            Rebin(InputWorkspace=temp_out_name, OutputWorkspace=temp_out_name,
-                  Params=bin_params, PreserveEvents=True)
-            rebinned_ws = AnalysisDataService.retrieve(temp_out_name)
-            print ('[WARNING] Rebinnd workspace Size(x) = {0}, Size(y) = {1}'.format(len(rebinned_ws.readX(0)),
-                                                                                     len(rebinned_ws.readY(0))))
-
-            # Upon this point, the workspace is still HistogramData.
-            # Check whether it is necessary to reset the X-values to reference TOF from VDRIVE
-            temp_out_ws = AnalysisDataService.retrieve(temp_out_name)
-            if len(bin_params) == 2 * len(temp_out_ws.readX(0)) - 1:
-                reset_bins = True
-            else:
-                reset_bins = False
-
-            # convert to point data
-            ConvertToPointData(InputWorkspace=temp_out_name, OutputWorkspace=temp_out_name)
-            # align the bin boundaries if necessary
-            temp_out_ws = AnalysisDataService.retrieve(temp_out_name)
-
-            if reset_bins:
-                # good to align:
-                for tof_i in range(len(temp_out_ws.readX(0))):
-                    temp_out_ws.dataX(0)[tof_i] = int(bin_params[2 * tof_i] * 10) / 10.
-                # END-FOR (tof-i)
-            # END-IF (align)
-        # END-FOR
-
-        # merge together
-        RenameWorkspace(InputWorkspace=processed_single_spec_ws_list[0],
-                        OutputWorkspace=output_ws_name)
-        for ws_index in range(1, len(processed_single_spec_ws_list)):
-            ConjoinWorkspaces(InputWorkspace1=output_ws_name,
-                              InputWorkspace2=processed_single_spec_ws_list[ws_index])
-        # END-FOR
-        output_workspace = AnalysisDataService.retrieve(output_ws_name)
-
-        # END-IF-ELSE
-
-        return output_workspace
+        raise NotImplementedError('rebin_workspace() Moved to mantid_reduction')
+        # # check
+        # datatypeutility.check_dict('Binning parameters', binning_param_dict)
+        # datatypeutility.check_string_variable('Output workspace name', output_ws_name)
+        #
+        # # check input workspace
+        # if isinstance(input_ws, str):
+        #     input_ws = AnalysisDataService.retrieve(input_ws)
+        #
+        # # check input binning parameters
+        # for ws_index in range(input_ws.getNumberHistograms()):
+        #     bank_id = ws_index + 1
+        #     bin_params = binning_param_dict[bank_id]
+        #     if not isinstance(bin_params, str) and len(bin_params) % 2 == 0:
+        #         # odd number and cannot be binning parameters
+        #         raise RuntimeError('Binning parameter {0} of type {1} with size {2} cannot be accepted.'
+        #                            ''.format(bin_params, type(bin_params), len(bin_params)))
+        #     elif isinstance(bin_params, str) and bin_params.count(',') % 2 == 1:
+        #         raise RuntimeError('Binning parameter {0} (as a string) cannot be accepted.'
+        #                            ''.format(bin_params))
+        #
+        # # rebin input workspace
+        # processed_single_spec_ws_list = list()
+        # for ws_index in range(input_ws.getNumberHistograms()):
+        #     # rebin on each
+        #     temp_out_name = output_ws_name + '_x_' + str(ws_index)
+        #     processed_single_spec_ws_list.append(temp_out_name)
+        #     # extract a spectrum out
+        #     ExtractSpectra(input_ws, WorkspaceIndexList=[ws_index], OutputWorkspace=temp_out_name)
+        #     # get binning parameter
+        #     bin_params = binning_param_dict[ws_index + 1]  # bank ID
+        #     Rebin(InputWorkspace=temp_out_name, OutputWorkspace=temp_out_name,
+        #           Params=bin_params, PreserveEvents=True)
+        #     rebinned_ws = AnalysisDataService.retrieve(temp_out_name)
+        #     print ('[WARNING] Rebinnd workspace Size(x) = {0}, Size(y) = {1}'.format(len(rebinned_ws.readX(0)),
+        #                                                                              len(rebinned_ws.readY(0))))
+        #
+        #     # Upon this point, the workspace is still HistogramData.
+        #     # Check whether it is necessary to reset the X-values to reference TOF from VDRIVE
+        #     temp_out_ws = AnalysisDataService.retrieve(temp_out_name)
+        #     if len(bin_params) == 2 * len(temp_out_ws.readX(0)) - 1:
+        #         reset_bins = True
+        #     else:
+        #         reset_bins = False
+        #
+        #     # convert to point data
+        #     ConvertToPointData(InputWorkspace=temp_out_name, OutputWorkspace=temp_out_name)
+        #     # align the bin boundaries if necessary
+        #     temp_out_ws = AnalysisDataService.retrieve(temp_out_name)
+        #
+        #     if reset_bins:
+        #         # good to align:
+        #         for tof_i in range(len(temp_out_ws.readX(0))):
+        #             temp_out_ws.dataX(0)[tof_i] = int(bin_params[2 * tof_i] * 10) / 10.
+        #         # END-FOR (tof-i)
+        #     # END-IF (align)
+        # # END-FOR
+        #
+        # # merge together
+        # RenameWorkspace(InputWorkspace=processed_single_spec_ws_list[0],
+        #                 OutputWorkspace=output_ws_name)
+        # for ws_index in range(1, len(processed_single_spec_ws_list)):
+        #     ConjoinWorkspaces(InputWorkspace1=output_ws_name,
+        #                       InputWorkspace2=processed_single_spec_ws_list[ws_index])
+        # # END-FOR
+        # output_workspace = AnalysisDataService.retrieve(output_ws_name)
+        #
+        # # END-IF-ELSE
+        #
+        # return output_workspace
 
     def save_nexus(self, ws_ref_id, output_file_name):
         """
@@ -497,9 +425,14 @@ class SliceFocusVulcan(object):
         return
 
     def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
-                                    output_ws_base, binning_parameters, gsas_info_dict):
-        """
-        slice and diffraction focus event workspace with option to write the reduced data to GSAS file
+                                    output_ws_base, binning_parameters, gsas_info_dict,
+                                    roi_list, mask_list):
+        """ Slice and diffraction focus event workspace with option to write the reduced data to GSAS file with
+        SaveGSS().
+        Each workspace is
+        1. sliced from original event workspace
+        2. diffraction focused
+        3. optionally rebinned to IDL binning and read for SaveGSS()
         :param event_file_name:
         :param event_ws_name:
         :param split_ws_name:
@@ -507,6 +440,8 @@ class SliceFocusVulcan(object):
         :param output_ws_base:
         :param binning_parameters:
         :param gsas_info_dict: keys (IPTS, 'parm file' = 'vulcan.prm')
+        :param roi_list:
+        :param mask_list:
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
@@ -517,7 +452,17 @@ class SliceFocusVulcan(object):
         t0 = time.time()
 
         # Load event file
-        Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
+        if event_file_name.endswith('.h5'):
+            LoadEventNexus(Filename=event_file_name, OutputWorkspace=event_ws_name,
+                           Precount=True)
+        else:
+            Load(Filename=event_file_name, OutputWorkspace=event_ws_name)
+
+        # mask detectors
+        # TODO - FIXME - 20180930 - Masking is transferred to a MaskManager class... Need to apply this!
+        # event_ws =  mask_util.mask_detectors(event_ws_name, roi_list, mask_list)
+        # if event_ws.getNumberEvents() == 0:
+        #     raise RuntimeError('No events after masked/not masked! Do not know how to handle')
 
         # Load diffraction calibration file
         # TODO - 20180822 - LoadDffCal shall be an option such that if 'Vulcan_cal' exists... FIXME
@@ -526,7 +471,8 @@ class SliceFocusVulcan(object):
                         Filename=self._detector_calibration_file,
                         WorkspaceName='Vulcan')
         except ValueError as val_err:
-            err_msg = 'Unable to load diffraction calibration file {} with reference to workspace {} due to {}'.format(self._detector_calibration_file, event_ws_name, val_err)
+            err_msg = 'Unable to load diffraction calibration file {} with reference to workspace {} due to {}' \
+                      ''.format(self._detector_calibration_file, event_ws_name, val_err)
             print ('[ERROR] {}'.format(err_msg))
             raise RuntimeError(err_msg)
 
@@ -560,14 +506,16 @@ class SliceFocusVulcan(object):
 
         t2 = time.time()
 
-        # process binning parameters FIXME removed to reduced_adv_chop.py to make it a standard. Delete after testing
-        # if idl_bin_file_name is not None:
-        #     print ('[DB...INFO] Create IDL Bins')
-        #     binning_parameter_dict = self.create_idl_bins(self._number_banks, idl_bin_file_name)
-        # else:
-        #     print ('[DB...INFO] Create Native Bins')
-        #     binning_parameter_dict = self.create_nature_bins(self._number_banks, east_west_binning_parameters,
-        #                                                      high_angle_binning_parameters)
+        # construct output GSAS names
+        gsas_names = list()
+        for index in range(len(output_names)):
+            out_ws_name = output_names[index]
+            if len(out_ws_name) == 0:
+                gsas_name = ''
+            else:
+                gsas_name = out_ws_name + '_RaggedGSAS'
+            gsas_names.append(gsas_name)
+        # END-FOR
 
         # Now start to use multi-threading to diffraction focus the sliced event data
         num_outputs = len(output_names)
@@ -584,9 +532,12 @@ class SliceFocusVulcan(object):
             start_sliced_ws_index = end_sliced_ws_index
             end_sliced_ws_index = min(start_sliced_ws_index + number_ws_per_thread + int(thread_id < extra),
                                       num_outputs)
+            # call method self.focus_workspace_list() in multiple threading
             # Note: Tread(target=[method name], args=(method argument 0, method argument 1, ...,)
+            workspace_name_list = output_names[start_sliced_ws_index:end_sliced_ws_index]
+            gsas_workspace_name_list = gsas_names[start_sliced_ws_index:end_sliced_ws_index]
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
-                                                      args=(output_names[start_sliced_ws_index:end_sliced_ws_index],
+                                                      args=(workspace_name_list, gsas_workspace_name_list,
                                                             binning_parameters,))
             thread_pool[thread_id].start()
             print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
@@ -606,9 +557,8 @@ class SliceFocusVulcan(object):
 
         t3 = time.time()
 
-        # write all the processed workspaces to GSAS
-        # TODO - 20180820 - IPTS number and parm_file_name shall be passed
-        self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
+        # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
+        self.write_to_gsas(gsas_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
 
         tf = time.time()
 
@@ -649,48 +599,43 @@ class SliceFocusVulcan(object):
         :param workspace_name_list:
         :return:
         """
-        # TODO FIXME TODO - 20180807 - This is a test case for multiple threading! FIXME
-        # TODO FIXME TODO - CONTINUE - A proper way shall be found to write to a VDRIVE GSAS
-        # TODO FIXME TODO - IDEA     - Copy over SaveVulcanGSS()
-        return
-
-        # TODO - 20180807 - Multiple threading is required to construct the output string buffer
-
+        # TODO - 20181030 - Consider to merge with mantid_reduction....save_vulcan_gsas
         # check inputs
         datatypeutility.check_list('Workspace name list', workspace_name_list)
-        datatypeutility.check_int_variable('IPTS number', ipts_number, (1, None))
+        datatypeutility.check_int_variable('IPTS number', ipts_number, (0, None))  # IPTS=1: pseudo IPTS for arb. NeXus
         datatypeutility.check_string_variable('GSAS parm file name', parm_file_name)
 
         for index, ws_name in enumerate(workspace_name_list):
+            # skip empty workspace
             if len(ws_name) == 0:
                 continue
 
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index))
 
-            # TODO - 20180723 - Confirm that using Mantid SaveVulcanGSS can cause contention :
-            # TODO - continue   why not use SaveVulcanGSS??? Need to find:
-
             # check that workspace shall be point data
             output_workspace = AnalysisDataService.retrieve(ws_name)
             if output_workspace.isHistogramData():
-
                 raise RuntimeError('Output workspace {0} of type {1} to export to {2} shall be point data '
                                    'at this stage.'
                                    ''.format(ws_name, type(output_workspace), gsas_file_name))
 
             # construct the headers
-            vulcan_gsas_header = self.create_vulcan_gsas_header(output_workspace, gsas_file_name, ipts_number,
-                                                                parm_file_name)
+            vulcan_gsas_header = mantid_reduction.VulcanGSASHelper.create_vulcan_gsas_header(output_workspace,
+                                                                                             gsas_file_name,
+                                                                                             ipts_number,
+                                                                                             parm_file_name)
 
             vulcan_bank_headers = list()
             for ws_index in range(output_workspace.getNumberHistograms()):
                 bank_id = output_workspace.getSpectrum(ws_index).getSpectrumNo()
-                bank_header = self.create_bank_header(bank_id, output_workspace.readX(ws_index))
+                bank_header = mantid_reduction.VulcanGSASHelper.create_bank_header(bank_id,
+                                                                                   output_workspace.readX(ws_index))
                 vulcan_bank_headers.append(bank_header)
-            # END-F
+            # END-IF
 
             # Save
             try:
+                print ('[DB...BAT] Save GSS to {} from {}'.format(gsas_file_name, format(output_workspace)))
                 SaveGSS(InputWorkspace=output_workspace, Filename=gsas_file_name, SplitFiles=False, Append=False,
                         Format="SLOG", MultiplyByBinWidth=False,
                         ExtendedHeader=False,
@@ -698,6 +643,7 @@ class SliceFocusVulcan(object):
                         UserSpecifiedBankHeader=vulcan_bank_headers,
                         UseSpectrumNumberAsBankID=True,
                         SLOGXYEPrecision=[1, 1, 2])
+                mantid_helper.delete_workspace(output_workspace)
             except RuntimeError as run_err:
                 raise RuntimeError('Failed to call SaveGSS() due to {0}'.format(run_err))
 

@@ -6,11 +6,13 @@ import os
 try:
     from PyQt5 import QtCore as QtCore
     from PyQt5.QtWidgets import QDialog, QApplication
+    from PyQt5.uic import loadUi as load_ui
 except ImportError:
     from PyQt4 import QtCore as QtCore
     from PyQt4.QtGui import QDialog, QApplication
+    from PyQt4.uic import loadUi as load_ui
 
-from pyvdrive.interface.gui import ui_LaunchManager
+# from pyvdrive.interface.gui import ui_LaunchManager
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
 import pyvdrive.interface.LiveDataView
 import pyvdrive.interface.PeakPickWindow as PeakPickWindow
@@ -18,15 +20,15 @@ import pyvdrive.interface.ExperimentRecordView as ev
 
 #  Script used to start the VDrive reduction GUI from MantidPlot
 
-# a fix to iPython console
-home_dir = os.path.expanduser('~')
-if home_dir.startswith('/home/wzz') is False:
-    # Mac debug build
-    sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
-    # Analysis cluster build
-    # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-    # sys.path.append('/opt/mantidnightly/bin')
-    sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
+# # a fix to iPython console
+# home_dir = os.path.expanduser('~')
+# if home_dir.startswith('/home/wzz') is False:
+#     # Mac debug build
+#     sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
+#     # Analysis cluster build
+#     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+#     # sys.path.append('/opt/mantidnightly/bin')
+#     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
 
 
 class LauncherManager(QDialog):
@@ -39,9 +41,18 @@ class LauncherManager(QDialog):
         """
         super(LauncherManager, self).__init__(None)
 
-        # set up UI
-        self.ui = ui_LaunchManager.Ui_Dialog_Launcher()
-        self.ui.setupUi(self)
+        # set up UI: it is tricky
+        script_dir = os.path.dirname(__file__)
+        dir_names = os.listdir('{}/..'.format(script_dir))
+        lib_dir = None
+        for dir_name in dir_names:
+            if dir_name.startswith('lib'):
+                lib_dir = dir_name
+        ui_dir = os.path.join(script_dir, '../{}/pyvdrive/interface/gui'.format(lib_dir))
+        # print ('UI dir = {}. Exist = {}'.format(ui_dir, os.path.exists(ui_dir)))
+        ui_path = os.path.join(ui_dir, 'LaunchManager.ui')
+        # print ('UI     = {}. Exist = {}'.format(ui_path, os.path.exists(ui_path)))
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # init widgets
         self.ui.checkBox_keepOpen.setChecked(True)
@@ -53,19 +64,6 @@ class LauncherManager(QDialog):
         self.ui.pushButton_peakProcessing.clicked.connect(self.do_launch_peak_picker)
         self.ui.pushButton_reducedDataViewer.clicked.connect(self.do_launch_viewer)
         self.ui.pushButton_terminal.clicked.connect(self.do_launch_terminal)
-
-        # self.connect(self.ui.pushButton_quit, QtCore.SIGNAL('clicked()'),
-        #              self.do_exit)
-        # self.connect(self.ui.pushButton_vdrivePlot, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_vdrive)
-        # self.connect(self.ui.pushButton_choppingHelper, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_chopper)
-        # self.connect(self.ui.pushButton_peakProcessing, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_peak_picker)
-        # self.connect(self.ui.pushButton_reducedDataViewer, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_viewer)
-        # self.connect(self.ui.pushButton_terminal, QtCore.SIGNAL('clicked()'),
-        #              self.do_launch_terminal)
 
         # initialize main window (may not be shown though)
         self._mainReducerWindow = VdriveMainWindow()  # the main ui class in this file is called MainWindow

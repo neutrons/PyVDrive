@@ -1,12 +1,18 @@
 try:
     from PyQt5 import QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QDialog, QFileDialog
 except ImportError:
     from PyQt4 import QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QDialog, QFileDialog
 import gui.GuiUtility as GuiUtility
-import gui.ui_LiveDataGPPlotSetup as dialog_ui
-import gui.ui_LiveDataViewSetup as SetupDialogUi
+from pyvdrive.interface.gui.LiveDataWidgets import LogSelectorTable
+from pyvdrive.interface.gui.LiveDataWidgets import LivePlotYAxisTable
+from pyvdrive.interface.gui.LiveDataWidgets import LogSelectorTable
+from pyvdrive.interface.gui.LiveDataWidgets import LivePlotYAxisTable
 
 
 class LiveViewSetupDialog(QDialog):
@@ -25,8 +31,8 @@ class LiveViewSetupDialog(QDialog):
         self._myParent = parent
 
         # UI
-        self.ui = SetupDialogUi.Ui_Dialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui("LiveDataViewSetup.ui", baseinstance=self)
+        self = self._promote_widgets()
 
         # initialize some widget
         self.ui.radioButton_plotAcc.setChecked(True)
@@ -45,6 +51,19 @@ class LiveViewSetupDialog(QDialog):
 
         # set up every in last step
         self.toggle_options()
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_sampleLogs_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_sampleLogs.setLayout(tableWidget_sampleLogs_layout)
+        self.ui.tableWidget_sampleLogs = LogSelectorTable(self)
+        tableWidget_sampleLogs_layout.addWidget(self.ui.tableWidget_sampleLogs)
+
+        tableWidget_plotYAxis_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_plotYAxis.setLayout(tableWidget_plotYAxis_layout)
+        self.ui.tableWidget_plotYAxis = LivePlotYAxisTable(self)
+        tableWidget_plotYAxis_layout.addWidget(self.ui.tableWidget_plotYAxis)
 
         return
 
@@ -167,8 +186,9 @@ class SampleLogPlotSetupDialog(QDialog):
         """
         super(SampleLogPlotSetupDialog, self).__init__(parent)
 
-        self.ui = dialog_ui.Ui_Dialog()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/LiveDataGPPlotSetup.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
+        self._promote_widgets()
 
         # init widget
         self._init_widgets()
@@ -215,6 +235,19 @@ class SampleLogPlotSetupDialog(QDialog):
 
         # keep a copy of sample logs added
         self._sampleLogsList = list()
+
+        return
+
+    def _promote_widgets(self):
+        tableWidget_sampleLogs_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_sampleLogs.setLayout(tableWidget_sampleLogs_layout)
+        self.ui.tableWidget_sampleLogs = LogSelectorTable(self)
+        tableWidget_sampleLogs_layout.addWidget(self.ui.tableWidget_sampleLogs)
+
+        tableWidget_plotYAxis_layout = QVBoxLayout()
+        self.ui.frame_tableWidget_plotYAxis.setLayout(tableWidget_plotYAxis_layout)
+        self.ui.tableWidget_plotYAxis = LivePlotYAxisTable(self)
+        tableWidget_plotYAxis_layout.addWidget(self.ui.tableWidget_plotYAxis)
 
         return
 

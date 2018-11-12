@@ -55,7 +55,7 @@ import save_vulcan_gsas
 import vdrivehelper as helper
 
 #sys.path.append("/opt/mantidnightly/bin")
-sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
+#sys.path.append('/SNS/users/wzz/Mantid_Project/builds/debug/bin')
 import mantid.simpleapi as mantidsimple
 import mantid
 from mantid.api import AnalysisDataService
@@ -1746,7 +1746,7 @@ class ReduceVulcanData(object):
 
         # reduce and write to GSAS file ... it is reduced HERE!
         if not self._reductionSetup._autoReduceLogOnly:
-            print '[DB...BAT...BAT] Reduce data here!'
+            print '[INFO] Reduce data here (Old SNSPowderReduction Approach)!'
             return_list = self.reduce_powder_diffraction_data()
             reduction_is_successful = return_list[0]
             msg_gsas = return_list[1]

@@ -4,9 +4,13 @@
 import sys
 try:
     from PyQt5 import QtGui, QtCore
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.uic import loadUi as load_ui
     from PyQt5.QtWidgets import QMainWindow
 except ImportError:
     from PyQt4 import QtGui, QtCore
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.uic import loadUi as load_ui
     from PyQt4.QtGui import QMainWindow
 
 try:
@@ -15,7 +19,7 @@ except AttributeError:
     _fromUtf8 = lambda s: s
 
 import gui.GuiUtility as gutil
-import gui.ui_FinalSelectRunToReduce as gui
+
 
 
 class FinalSelectRunToReduceDialog(QMainWindow):
@@ -30,8 +34,8 @@ class FinalSelectRunToReduceDialog(QMainWindow):
         """
         # Init & set up GUI
         QMainWindow.__init__(self, parent)
-        self.ui = gui.Ui_MainWindow()
-        self.ui.setupUi(self)
+        ui_path = os.path.join(os.path.dirname(__file__), "gui/import.ui")
+        self.ui = load_ui(ui_path, baseinstance=self)
 
         # Set up class variable
         self._myParent = parent

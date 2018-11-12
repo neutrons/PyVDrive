@@ -5,20 +5,21 @@ import sys
 import os
 
 home_dir = os.path.expanduser('~')
-# NOTE: This is the entry point to define the path to Mantid
-if home_dir.startswith('/SNS/'):
-    # analysis
-    sys.path.insert(1, '/opt/mantidnightly/bin/')
-elif home_dir.startswith('/home/wzz') is False:
-    # Mac debug build
-    sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
-    # Analysis cluster build
-    # No need: auto set sys.path.append('/opt/mantidnightly/bin/')
-    sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/builds/debug/bin')
-    # print ('system path: {0}'.format(sys.path))
-    # Personal VULCAN build
-    sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-    # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+# # NOTE: This is the entry point to define the path to Mantid
+# if home_dir.startswith('/SNS/'):
+#     # analysis
+#     # sys.path.insert(1, '/opt/mantid313/bin/')
+#     sys.path.insert(1, '/opt/mantidnightly/bin/')
+# elif home_dir.startswith('/home/wzz') is False:
+#     # Mac debug build
+#     sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
+#     # Analysis cluster build
+#     # No need: auto set sys.path.append('/opt/mantidnightly/bin/')
+#     sys.path.insert(1, '/SNS/users/wzz/Mantid_Project/builds/debug/bin')
+#     # print ('system path: {0}'.format(sys.path))
+#     # Personal VULCAN build
+#     sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
+#     # sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
 # ....
 
 # IPython monkey patches the  pygments.lexer.RegexLexer.get_tokens_unprocessed method
