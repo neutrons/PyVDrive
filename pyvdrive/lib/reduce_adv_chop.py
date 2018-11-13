@@ -2,6 +2,7 @@
 # It is split from ReduceVulcanData in reduce_Vulcan.py
 import os
 import math
+import pandas as pd
 
 import mantid.simpleapi as mantidsimple
 from mantid.api import AnalysisDataService, ITableWorkspace, MatrixWorkspace
@@ -674,6 +675,8 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         # set up default
 
         runner = vulcan_slice_reduce.SliceFocusVulcan(output_dir=self._reductionSetup.get_chopped_directory()[0])
+        run_number = self._reductionSetup.get_run_number()
+        runner.set_run_number(run_number)
 
         print ('[DB...BAT] Writing GSAS to {}'.format(self._reductionSetup.get_chopped_directory()[0]))
 
@@ -858,6 +861,179 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
+    # @staticmethod
+    # def export_chopped_logs(i_ws, property_name_list, header_list,
+    #                         run_start_time,
+    #                         workspace_i, start_series_dict,
+    #                         mean_series_dict, end_series_dict):
+    #     """
+    #     Export sample logs to a set of dictionaries
+    #     :param i_ws:
+    #     :param property_name_list:
+    #     :param header_list:
+    #     :param run_start_time: Kernel.DateAndTime type
+    #     :param workspace_i:
+    #     :param start_series_dict:
+    #     :param mean_series_dict:
+    #     :param end_series_dict:
+    #     :return:
+    #     """
+    #     assert isinstance(run_start_time, DateAndTime), 'Run start time {0} must be a Mantid.Kernel.DateAndTime ' \
+    #                                                     'instance but not a {1}'.format(run_start_time,
+    #                                                                                     type(run_start_time))
+    #
+    #     # check: log "run_start" should be the same for workspaces split from the same EventWorkspace.
+    #     run_start_i = DateAndTime(workspace_i.run().getProperty('run_start').value)
+    #     assert run_start_time == run_start_i, '{0}-th workspace\'s "run_start {1}" should be same as others\'s start ' \
+    #                                           'time {2}'.format(i_ws, run_start_i, run_start_time)
+    #
+    #     # get difference in REAL starting time (proton_charge[0])
+    #     try:
+    #         real_start_time_i = workspace_i.run().getProperty('proton_charge').firstTime()
+    #     except IndexError:
+    #         print '[ERROR] Workspace {0} has proton charge with zero entry.'.format(workspace_i)
+    #         return
+    #
+    #     time_stamp = real_start_time_i.total_nanoseconds()
+    #     # time (step) in seconds
+    #     diff_time = (real_start_time_i - run_start_time).total_nanoseconds() * 1.E-9
+    #
+    #     for entry in header_list:
+    #         mts_name, log_name = entry
+    #         pd_index = float(i_ws + 1)
+    #         if len(log_name) > 0 and log_name in property_name_list:
+    #             # regular log
+    #             try:
+    #                 sample_log = workspace_i.run().getProperty(log_name).value
+    #             except RuntimeError as run_err:
+    #                 print '[ERROR] Exporting chopped logs: {0}'.format(run_err)
+    #                 start_series_dict[mts_name].set_value(pd_index, 0.)
+    #                 mean_series_dict[mts_name].set_value(pd_index, 0.)
+    #                 end_series_dict[mts_name].set_value(pd_index, 0.)
+    #                 continue
+    #
+    #             if len(sample_log) > 0:
+    #                 start_value = sample_log[0]
+    #                 mean_value = sample_log.mean()
+    #                 end_value = sample_log[-1]
+    #             else:
+    #                 # TODO/DEBUG/ERROR/ASAP: CHOP,IPTS=14430,RUNS=77149,HELP=1
+    #                 # loadframe.MPTIndex for 0-th workspace VULCAN_77149_0 due to index 0 is out of bounds for
+    #                 # axis 0 with size 0
+    #                 error_message = '[ERROR] Unable to export "loadframe" log {3} for {0}-th workspace {1} ' \
+    #                                 'due to {2}'.format(i_ws, workspace_i.name(), 'index error', log_name)
+    #                 print error_message
+    #                 start_value = 0.
+    #                 mean_value = 0.
+    #                 end_value = 0.
+    #         elif mts_name == 'TimeStamp':
+    #             # time stamp
+    #             start_value = mean_value = end_value = float(time_stamp)
+    #         elif mts_name == 'Time [sec]':
+    #             # time step
+    #             start_value = mean_value = end_value = diff_time
+    #         elif len(log_name) > 0:
+    #             # sample log does not exist in NeXus file. warned before. ignore!
+    #             start_value = mean_value = end_value = 0.
+    #         else:
+    #             # unknown
+    #             print '[ERROR] MTS log name %s is cannot be found.' % mts_name
+    #             start_value = mean_value = end_value = 0.
+    #         # END-IF-ELSE
+    #
+    #         start_series_dict[mts_name].set_value(pd_index, start_value)
+    #         mean_series_dict[mts_name].set_value(pd_index, mean_value)
+    #         end_series_dict[mts_name].set_value(pd_index, end_value)
+    #
+    #     # END-FOR (entry)
+    #
+    #     return
+
+    def get_sub_splitters(self, split_start_index, split_stop_index, run_start_ns):
+        """
+        chop splitters workspace to sub one
+        :param split_start_index:
+        :param split_stop_index:
+        :param run_start_ns: run start (epoch time) in nanoseconds
+        :return:
+        """
+        # get splitting workspace
+        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
+        split_ws = AnalysisDataService.retrieve(split_ws_name)
+        sub_split_ws_name = split_ws.name() + '_{0}'.format(split_start_index)
+
+        # split
+        if isinstance(split_ws, SplittersWorkspace):
+            # splitters workspace
+            # TODO/TEST - Need to verify
+            mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
+            sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
+            sub_split_ws.addColumn('float', 'start')
+            sub_split_ws.addColumn('float', 'stop')
+            sub_split_ws.addColumn('str', 'index')
+
+            num_rows = split_ws.rowCount()
+            for i_row in range(split_start_index, min(split_stop_index, num_rows)):
+                start_time = (split_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
+                stop_time = (split_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
+                target = str(split_ws.cell(i_row, 2))
+                sub_split_ws.addRow([start_time, stop_time, target])
+
+                print '[DB...BAT] Convert Splitters {0} to {1}.'.format(i_row, [start_time, stop_time, target])
+            # END-FOR
+
+        elif isinstance(split_ws, MatrixWorkspace):
+            # Matrix workspace
+            # TODO/TEST - Need to test
+            vec_x = split_ws.readX(0)[split_start_index:split_stop_index+1]
+            vec_y = split_ws.readY(0)[split_start_index:split_stop_index]
+            vec_e = split_ws.readE(0)[split_start_index:split_stop_index]
+
+            mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
+                                         OutputWorkspace=sub_split_ws_name)
+
+        elif isinstance(split_ws, ITableWorkspace):
+            # Table workspace
+            # TODO/TEST - Need to verify
+            mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
+            sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
+            sub_split_ws.addColumn('float', 'start')
+            sub_split_ws.addColumn('float', 'stop')
+            sub_split_ws.addColumn('str', 'index')
+
+            num_rows = split_ws.rowCount()
+            for i_row in range(split_start_index, min(split_stop_index, num_rows)):
+                start_time = split_ws.cell(i_row, 0)
+                stop_time = split_ws.cell(i_row, 1)
+                target = split_ws.cell(i_row, 2)
+                sub_split_ws.addRow([start_time, stop_time, target])
+
+        else:
+            # unsupported format
+            raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
+
+        return sub_split_ws_name
+# END-DEF-CLASS
+
+
+class WriteSlicedLogs(object):
+    """
+    An algorithm class to write a set of sliced/chopped workspaces' sample logs to an AUTORECORD.txt like file
+    """
+    def __init__(self, chopped_data_dir, run_number):
+        """
+        initialization
+        :param run_number: self._reductionSetup.get_run_number()
+        """
+        datatypeutility.check_file_name(chopped_data_dir, check_writable=True, is_dir=True,
+                                        note='Directory to store sliced log records')
+        datatypeutility.check_int_variable('Run number', run_number, (1, None))
+
+        self._choppedDataDirectory = chopped_data_dir
+        self._run_number = run_number
+
+        return
+
     @staticmethod
     def export_chopped_logs(i_ws, property_name_list, header_list,
                             run_start_time,
@@ -946,70 +1122,114 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return
 
-    def get_sub_splitters(self, split_start_index, split_stop_index, run_start_ns):
+    def generate_sliced_logs(self, ws_name_list, log_type, append=False):
         """
-        chop splitters workspace to sub one
-        :param split_start_index:
-        :param split_stop_index:
-        :param run_start_ns: run start (epoch time) in nanoseconds
+        generate sliced logs
+        :param ws_name_list:
+        :param log_type: either loadframe or furnace
+        :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
-        # get splitting workspace
-        split_ws_name, info_ws_name = self._reductionSetup.get_splitters(throw_not_set=True)
-        split_ws = AnalysisDataService.retrieve(split_ws_name)
-        sub_split_ws_name = split_ws.name() + '_{0}'.format(split_start_index)
+        # check inputs
+        datatypeutility.check_list('Sliced workspace names', ws_name_list)
+        if len(ws_name_list) == 0:
+            raise RuntimeError('Workspace names (in list) cannot be empty.')
 
-        # split
-        if isinstance(split_ws, SplittersWorkspace):
-            # splitters workspace
-            # TODO/TEST - Need to verify
-            mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
-            sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
-            sub_split_ws.addColumn('float', 'start')
-            sub_split_ws.addColumn('float', 'stop')
-            sub_split_ws.addColumn('str', 'index')
+        if log_type != 'loadframe' and log_type != 'furnace':
+            raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
+                               'It must be either furnace or loadframe'.format(log_type, type(log_type)))
 
-            num_rows = split_ws.rowCount()
-            for i_row in range(split_start_index, min(split_stop_index, num_rows)):
-                start_time = (split_ws.cell(i_row, 0) - run_start_ns) * 1.E-9
-                stop_time = (split_ws.cell(i_row, 1) - run_start_ns) * 1.E-9
-                target = str(split_ws.cell(i_row, 2))
-                sub_split_ws.addRow([start_time, stop_time, target])
+        # get workspaces and properties
+        ws_name_list.sort()
 
-                print '[DB...BAT] Convert Splitters {0} to {1}.'.format(i_row, [start_time, stop_time, target])
-            # END-FOR
+        # get the properties' names list
+        ws_name = ws_name_list[0]
+        workspace = AnalysisDataService.retrieve(ws_name)
+        property_name_list = list()
+        for sample_log in workspace.run().getProperties():
+            p_name = sample_log.name
+            property_name_list.append(p_name)
+        property_name_list.sort()
+        run_start = DateAndTime(workspace.run().getProperty('run_start').value)  # Kernel.DateAndtime
 
-        elif isinstance(split_ws, MatrixWorkspace):
-            # Matrix workspace
-            # TODO/TEST - Need to test
-            vec_x = split_ws.readX(0)[split_start_index:split_stop_index+1]
-            vec_y = split_ws.readY(0)[split_start_index:split_stop_index]
-            vec_e = split_ws.readE(0)[split_start_index:split_stop_index]
+        # start value
+        start_file_name = os.path.join(self._choppedDataDirectory,
+                                       '{0}sampleenv_chopped_start.txt'.format(self._run_number))
+        mean_file_name = os.path.join(self._choppedDataDirectory,
+                                      '{0}sampleenv_chopped_mean.txt'.format(self._run_number))
+        end_file_name = os.path.join(self._choppedDataDirectory,
+                                     '{0}sampleenv_chopped_end.txt'.format(self._run_number))
 
-            mantidsimple.CreateWorkspace(DataX=vec_x, DataY=vec_y, DataE=vec_e, NSpec=1,
-                                         OutputWorkspace=sub_split_ws_name)
+        # output
+        # create Pandas series dictionary
+        start_series_dict = dict()
+        mean_series_dict = dict()
+        end_series_dict = dict()
+        mts_columns = list()
 
-        elif isinstance(split_ws, ITableWorkspace):
-            # Table workspace
-            # TODO/TEST - Need to verify
-            mantidsimple.CreateEmptyTableWorkspace(OutputWorkspace=sub_split_ws_name)
-            sub_split_ws = AnalysisDataService.retrieve(sub_split_ws_name)
-            sub_split_ws.addColumn('float', 'start')
-            sub_split_ws.addColumn('float', 'stop')
-            sub_split_ws.addColumn('str', 'index')
-
-            num_rows = split_ws.rowCount()
-            for i_row in range(split_start_index, min(split_stop_index, num_rows)):
-                start_time = split_ws.cell(i_row, 0)
-                stop_time = split_ws.cell(i_row, 1)
-                target = split_ws.cell(i_row, 2)
-                sub_split_ws.addRow([start_time, stop_time, target])
-
+        # set up correct header list
+        if log_type == 'loadframe':
+            # load frame
+            header_list = reduce_VULCAN.MTS_Header_List
         else:
-            # unsupported format
-            raise RuntimeError('Splitting workspace of type {0} is not supported.'.format(split_ws))
+            # furnace
+            header_list = reduce_VULCAN.Furnace_Header_List
 
-        return sub_split_ws_name
+        # initialize the data structure for output
+        for entry in reduce_VULCAN.MTS_Header_List:
+            pd_series = pd.Series()
+            mts_name, log_name = entry
+            start_series_dict[mts_name] = pd_series
+            mean_series_dict[mts_name] = pd_series
+            end_series_dict[mts_name] = pd_series
+            mts_columns.append(mts_name)
+
+            if log_name not in property_name_list:
+                print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
+        # END-FOR
+
+        for i_ws, ws_name in enumerate(ws_name_list):
+            # get workspace
+            workspace_i = AnalysisDataService.retrieve(ws_name)
+            self.export_chopped_logs(i_ws=i_ws,
+                                     run_start_time=run_start,
+                                     property_name_list=property_name_list,
+                                     header_list=header_list,
+                                     workspace_i=workspace_i,
+                                     start_series_dict=start_series_dict,
+                                     mean_series_dict=mean_series_dict,
+                                     end_series_dict=end_series_dict)
+        # END-FOR (workspace)
+
+        # export to csv file
+        # start file
+        pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
+        if append and os.path.exists(start_file_name):
+            with open(start_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+
+        # mean file
+        pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
+        if os.path.exists(mean_file_name) and append:
+            with open(mean_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+
+        # end file
+        pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
+        if os.path.exists(end_file_name) and append:
+            with open(end_file_name, 'a') as f:
+                pd_data_frame.to_csv(f, header=False)
+        else:
+            pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+
+        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+                                                                          end_file_name)
+
+        return
 
 
 # TODO/ISSUE/NOW - Generalize this method with same method in reduce_adv_chop.py

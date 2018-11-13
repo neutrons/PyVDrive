@@ -59,6 +59,9 @@ class SliceFocusVulcan(object):
             datatypeutility.check_file_name(output_dir, True, True, True, 'Output directory for generated GSAS')
             self._output_dir = output_dir
 
+        # run number (current or coming)
+        self._run_number = 0
+
         self._ws_name_dict = dict()
         self._last_loaded_event_ws = None
         self._last_loaded_ref_id = ''
@@ -424,6 +427,14 @@ class SliceFocusVulcan(object):
 
         return
 
+    def set_run_number(self, run_number):
+        """
+        set the run number associated with current/next event file to slice
+        :param run_number:
+        :return:
+        """
+        self._run_number = run_number
+
     def slice_focus_event_workspace(self, event_file_name, event_ws_name, split_ws_name, info_ws_name,
                                     output_ws_base, binning_parameters, gsas_info_dict,
                                     roi_list, mask_list):
@@ -447,6 +458,11 @@ class SliceFocusVulcan(object):
         # check inputs
         datatypeutility.check_dict('Binning parameters', binning_parameters)
         datatypeutility.check_dict('GSAS information', gsas_info_dict)
+
+        # get to understand binning parameters!
+        for key in binning_parameters.keys():
+            print binning_parameters[key]
+        raise NotImplemented('Binning parameters debugging!')
 
         # starting time
         t0 = time.time()
@@ -560,6 +576,8 @@ class SliceFocusVulcan(object):
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
         self.write_to_gsas(gsas_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
 
+        # write to logs
+        self.write_log_records(gsas_names, log_type='load_frame')
         tf = time.time()
 
         # processing time output
@@ -591,7 +609,39 @@ class SliceFocusVulcan(object):
 
         # NOTE: this method shall create a thread but return without thread returns
 
+    def write_log_records(self, workspace_name_list, log_type='load_frame'):
+        """
+        write to all log workspaces
+        :return:
+        """
+        import reduce_adv_chop
+
+        log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=self._output_dir, run_number=self._run_number)
+
+        log_writer.generate_sliced_logs(workspace_name_list, log_type)
+
+        return
+
     def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
+        """
+        write to GSAS
+        :param workspace_name_list:
+        :param ipts_number:
+        :param parm_file_name:
+        :return:
+        """
+        import save_vulcan_gsas
+
+        gsas_writer = save_vulcan_gsas.SaveVulcanGSS(self._ref_tof_set)
+
+        for index_ws, ws_name in enumerate(workspace_name_list):
+            gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws))
+            gsas_writer.save(diff_ws_name=ws_name, gsas_file_name=gsas_file_name, ipts_number=ipts_number,
+                             gsas_param_file_name=parm_file_name)
+
+        return
+
+    def write_to_gsas_old(self, workspace_name_list, ipts_number, parm_file_name):
         """
         Write all the workspaces to GSAS file sequentially
         :param parm_file_name

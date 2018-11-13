@@ -11,137 +11,133 @@ class SaveVulcanGSS(object):
     class to save VULCAN GSAS
     mostly it is used as static
     """
-    def __init__(self, bin_params_set):
+    def __init__(self, tof_vector_set):
         """
         initialization
-        :param bin_params_set: an iterator on tuple as [list of bank IDs], [binning parameter list]
+        :param tof_vector_set: an iterator on tuple as [list of bank IDs], [reference TOF vector]
         """
+        # set up binning parameters
+        self._bin_params_set = list()
 
+        for bank_id_list, tof_vector in tof_vector_set:
+            bin_params = self._create_binning_parameters(tof_vector)
+            assert isinstance(bank_id_list, list), 'Bank IDs {} must be given in list but not in {}' \
+                                                   ''.format(bank_id_list, type(bank_id_list))
+            if len(bank_id_list) == 0:
+                raise RuntimeError('Bank ID list in given TOF vector set has zero size')
+
+            # set value
+            self._bin_params_set.append((bank_id_list[:], bin_params, tof_vector[:]))
+        # END-FOR
 
         return
 
-    def _create_binning_parameters(self):
+    @staticmethod
+    def _create_binning_parameters(tof_vector):
         """
         for Mantid Rebin
         :return:
         """
         # Create a complicated bin parameter
-        params = []
-        dx = None
-        for ibin in range(len(vec_ref_tof) - 1):
-            x0 = vec_ref_tof[ibin]
-            xf = vec_ref_tof[ibin + 1]
+        bin_params = list()
+        xf = None
+        for ibin in range(len(tof_vector) - 1):
+            x0 = tof_vector[ibin]
+            xf = tof_vector[ibin + 1]
             dx = xf - x0
-            params.append(x0)
-            params.append(dx)
+            bin_params.append(x0)
+            bin_params.append(dx)
+        # END-FOR
+
+        # last bin
+        if xf is None:
+            raise RuntimeError('It is impossible to have Xf without value set')
+        bin_params.append(xf)
 
         return bin_params
 
-    def _write_slog_bank_gsas(self, ws_name, bank_id):
+    @staticmethod
+    def _write_slog_bank_gsas(ws_name, bank_id, vulcan_tof_vector):
         """
         1. X: format to VDRIVE tradition (refer to ...)
         2. Y: native value
-        3. Z: balbla
+        3. Z: error bar
         :param ws_name:
         :param bank_id:
         :return:
         """
-        """
-          // check inputs
-  if (xye_precision.size() != 3)
-    throw std::runtime_error(
-        "SLOG XYE precisions are not given in a 3-item vector.");
+        # get workspace
+        diff_ws = ADS.retrieve(ws_name)
+        vec_x = vulcan_tof_vector
+        vec_y = diff_ws.readY(bank_id - 1)
+        vec_e = diff_ws.readE(bank_id - 1)
+        data_size = len(vec_y)
 
-  const auto &xVals = histo.binEdges();
-  const auto &xPoints = histo.points();
-  const auto &yVals = histo.y();
-  const auto &eVals = histo.e();
-  const size_t datasize = yVals.size();
+        bank_buffer = ''
 
-  const double bc1 = xVals.front();        // minimum TOF in microseconds
-  const double bc2 = *(xPoints.end() - 1); // maximum TOF (in microseconds?)
-  const double bc3 = (*(xVals.begin() + 1) - bc1) / bc1; // deltaT/T
+        # bank header: min TOF, max TOF, delta TOF
+        bc1 = '%.0f' % (vec_x[0])
+        bc2 = '%.0f' % (vec_x[-1])
+        bc3 = (vec_x[1] - vec_x[0])/vec_x[0]
+        # check
+        if bc1 < 0:
+            raise RuntimeError('Cannot write out logarithmic data starting at zero or less')
 
-  if (bc1 <= 0.) {
-    throw std::runtime_error(
-        "Cannot write out logarithmic data starting at zero or less");
-  }
-  if (isConstantDelta(xVals)) {
-    g_log.error() << "Constant delta - T binning : " << xVals.front() << ", "
-                  << *(xVals.begin() + 1) << ", " << *(xVals.begin() + 2)
-                  << "... " << std::endl;
-    throw std::runtime_error("While writing SLOG format : Found constant "
-                             "delta - T binning for bank " +
-                             std::to_string(bank));
-  }
+        bank_header = 'BANK%d  %d  %d  %s  %-10s%-10s%-10s' % (bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
+        bank_buffer += '%-80s\n' % bank_header
 
-  g_log.debug() << "SaveGSS(): Min TOF = " << bc1 << '\n';
+        # write lines: not multiplied by bin width
+        for index in range(data_size):
+            x_i = '%.1f' % vec_x[index]
+            y_i = '%.1f' % vec_y[index]
+            e_i = '%.1f' % vec_e[index]
+            data_line_i = '%-8s%-20s%-20s%-20s' % ('', x_i, y_i, e_i)
+            bank_buffer += '%-80s' % data_line_i
+        # END-FOR
 
-  // Write bank header
-  if (m_overwrite_std_bank_header) {
-    // write user header only!
-    out << std::fixed << std::setw(80)
-        << m_user_specified_bank_headers[ws_index] << "\n";
-  } else {
-    // write general bank header part
-    writeBankHeader(out, "SLOG", bank, datasize);
-    // write the SLOG specific type
-    out << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc1
-        << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc2
-        << std::fixed << " " << std::setprecision(7) << std::setw(10) << bc3
-        << std::fixed << " 0 FXYE\n";
-  }
+        return bank_buffer
 
-  std::vector<std::unique_ptr<std::stringstream>> outLines;
-  outLines.resize(datasize);
-
-  PARALLEL_FOR_NO_WSP_CHECK()
-  for (int64_t i = 0; i < static_cast<int64_t>(datasize); i++) {
-    outLines[i] = makeStringStream();
-    auto &outLine = *outLines[i];
-    const double binWidth = xVals[i + 1] - xVals[i];
-    const double yValue{MultiplyByBinWidth ? yVals[i] * binWidth : yVals[i]};
-    const double eValue{
-        fixErrorValue(MultiplyByBinWidth ? eVals[i] * binWidth : eVals[i])};
-
-    // FIXME - Next step is to make the precision to be flexible from user
-    // inputs
-    outLine << "  " << std::fixed << std::setprecision(xye_precision[0])
-            << std::setw(20) << xPoints[i] << "  " << std::fixed
-            << std::setprecision(xye_precision[1]) << std::setw(20) << yValue
-            << "  " << std::fixed << std::setprecision(xye_precision[2])
-            << std::setw(20) << eValue << std::setw(12) << " "
-            << "\n"; // let it flush its own buffer
-  }
-
-  for (const auto &outLine : outLines) {
-    out << outLine->rdbuf();
-  }
-
-
-        """
-
-    def save(self, diff_ws_name, file_name=None):
+    def save(self, diff_ws_name, gsas_file_name, ipts_number, gsas_param_file_name, write_to_file=True):
         """
 
         :param diff_ws_name: diffraction workspace name
         :param file_name: output file name. None as not output
         :return: string as the file content
         """
-        # 1. convert to Histogram Data
+        diff_ws = ADS.retrieve(diff_ws_name)
+
+        # convert to Histogram Data
+        if not diff_ws.isHistogramData():
+            api.ConvertToHistogram(diff_ws_name, diff_ws_name)
+
+        # rebin and then write output
+        gsas_buffer_dict = dict()
+        num_bank_sets = len(self._bin_params_set)
 
         for bank_set_index in range(num_bank_sets):
-            # 2. Rebin to these banks' parameters (output = Histogram)
-            tempws = api.Rebin(InputWorkspace=input_ws, Params=params, PreserveEvents=True)
+            # get value
+            bank_id_list, bin_params, tof_vector = self._bin_params_set[bank_set_index]
 
-            # 3. Create output
-            for bank_id in bank_set_i:
-                gsas_section_i = self._write_bank_gsas(bank_id)
+            # Rebin to these banks' parameters (output = Histogram)
+            api.Rebin(InputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
 
-            # 4.
+            # Create output
+            for bank_id in bank_id_list:
+                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector)
+                gsas_buffer_dict[bank_id] = gsas_section_i
         # END-FOR
 
-        return
+        # header
+        gsas_header = generate_vulcan_gda_header(diff_ws_name, gsas_file_name, ipts_number, gsas_param_file_name)
+
+        # form to a big string
+        gsas_buffer = gsas_header
+        for bank_id in sorted(gsas_buffer_dict.keys()):
+            gsas_buffer += gsas_buffer_dict[bank_id]
+
+        return gsas_buffer
+
+# END-DEF-CLASS
 
 
 def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
