@@ -39,6 +39,65 @@ class VulcanBinningHelper(object):
     @staticmethod
     def create_idl_bins(num_banks, h5_bin_file_name):
         """
+        Create a dictionary with list of IDL-VDRIVE TOF
+        :param num_banks:
+        :param h5_bin_file_name:
+        :return:
+        """
+        # use explicitly defined bins and thus matrix workspace is required
+        # import h5 file
+        # load vdrive bin file to 2 different workspaces
+        bin_file = h5py.File(h5_bin_file_name, 'r')
+        west_east_bins = bin_file['west_east_bank'][:]
+        high_angle_bins = bin_file['high_angle_bank'][:]
+        bin_file.close()
+
+        # convert a list of bin boundaries to x1, dx, x2, dx, ... style
+        west_east_bin_params = west_east_bins
+        high_angle_bin_params = high_angle_bins
+
+        binning_parameter_dict = dict()
+        bank_tof_sets = list()
+        if num_banks == 3:
+            # west(1), east(1), high(1)
+            # west(1), east(1), high(1)
+            for bank_id in range(1, 3):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[3] = high_angle_bin_params
+
+            bank_tof_sets.append(([1, 2], west_east_bins))
+            bank_tof_sets.append(([3], high_angle_bins))
+
+        elif num_banks == 7:
+            # west (3), east (3), high (1)
+            for bank_id in range(1, 7):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            binning_parameter_dict[7] = high_angle_bin_params
+
+            bank_tof_sets.append((range(1, 7), west_east_bins))
+            bank_tof_sets.append(([7], high_angle_bins))
+
+        elif num_banks == 27:
+            # west (9), east (9), high (9)
+            for bank_id in range(1, 19):
+                binning_parameter_dict[bank_id] = west_east_bin_params
+            for bank_id in range(19, 28):
+                binning_parameter_dict[bank_id] = high_angle_bin_params
+
+            bank_tof_sets.append((range(1, 19), west_east_bins))
+            bank_tof_sets.append((range(19, 28), high_angle_bins))
+
+        else:
+            raise RuntimeError('{0} spectra workspace is not supported!'.format(num_banks))
+        # END-IF-ELSE
+
+        # return binning_parameter_dict
+
+        return bank_tof_sets
+
+    @staticmethod
+    def create_idl_bins_2(num_banks, h5_bin_file_name):
+        """
         create a Mantid to VDRIVE-IDL mapping binning
         :param num_banks:
         :param h5_bin_file_name:

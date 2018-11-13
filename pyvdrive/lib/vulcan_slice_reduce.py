@@ -214,7 +214,7 @@ class SliceFocusVulcan(object):
         :return:
         """
         datatypeutility.check_list('Workspace names', ws_name_list)
-        datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
+        # datatypeutility.check_dict('Binning parameters dict', binning_parameter_dict)
         datatypeutility.check_list('(Output) GSAS workspace name list', gsas_ws_name_list)
         if len(ws_name_list) != len(gsas_ws_name_list):
             raise RuntimeError('Input workspace names {} have different number than output GSAS workspace names {}'
@@ -223,7 +223,11 @@ class SliceFocusVulcan(object):
         for index in range(len(ws_name_list)):
             # check input
             ws_name = ws_name_list[index]
-            gsas_ws_name = gsas_ws_name_list[index]
+            if False:
+                gsas_ws_name = gsas_ws_name_list[index]
+            else:
+                gsas_ws_name_list[index] = ws_name
+                gsas_ws_name = ws_name
             datatypeutility.check_string_variable('Workspace name', ws_name)
             datatypeutility.check_string_variable('Output GSAS workspace name', gsas_ws_name)
             # skip empty workspace name that might be returned from FilterEvents
@@ -244,11 +248,13 @@ class SliceFocusVulcan(object):
                                    Polar=self._focus_instrument_dict['Polar'][num_banks],
                                    Azimuthal=self._focus_instrument_dict['Azimuthal'][num_banks])
             # convert VULCAN binning: to a different workspace that will be discarded after SaveVulcanGSS
-            mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
-                                                                 binning_param_dict=binning_parameter_dict,
-                                                                 output_ws_name=gsas_ws_name)
-            # rebin the original workspace that won't be deleted and kept for visualization
-            mantid_helper.rebin(ws_name, '3000., -0.001, 70000.', preserve=True)
+            if False:
+                # test to disable this
+                mantid_reduction.VulcanBinningHelper.rebin_workspace(input_ws=ws_name,
+                                                                     binning_param_dict=binning_parameter_dict,
+                                                                     output_ws_name=gsas_ws_name)
+                # rebin the original workspace that won't be deleted and kept for visualization
+                mantid_helper.rebin(ws_name, '3000., -0.001, 70000.', preserve=True)
         # END-FOR
 
         return
@@ -456,13 +462,8 @@ class SliceFocusVulcan(object):
         :return: tuple: [1] slicing information, [2] output workspace names
         """
         # check inputs
-        datatypeutility.check_dict('Binning parameters', binning_parameters)
+        datatypeutility.check_list('Binning parameters', binning_parameters)
         datatypeutility.check_dict('GSAS information', gsas_info_dict)
-
-        # get to understand binning parameters!
-        for key in binning_parameters.keys():
-            print binning_parameters[key]
-        raise NotImplemented('Binning parameters debugging!')
 
         # starting time
         t0 = time.time()
@@ -550,10 +551,10 @@ class SliceFocusVulcan(object):
                                       num_outputs)
             # call method self.focus_workspace_list() in multiple threading
             # Note: Tread(target=[method name], args=(method argument 0, method argument 1, ...,)
-            workspace_name_list = output_names[start_sliced_ws_index:end_sliced_ws_index]
+            workspace_names_i = output_names[start_sliced_ws_index:end_sliced_ws_index]
             gsas_workspace_name_list = gsas_names[start_sliced_ws_index:end_sliced_ws_index]
             thread_pool[thread_id] = threading.Thread(target=self.focus_workspace_list,
-                                                      args=(workspace_name_list, gsas_workspace_name_list,
+                                                      args=(workspace_names_i, gsas_workspace_name_list,
                                                             binning_parameters,))
             thread_pool[thread_id].start()
             print ('[DB] thread {0}: [{1}: {2}) ---> {3} workspaces'.
@@ -574,10 +575,11 @@ class SliceFocusVulcan(object):
         t3 = time.time()
 
         # write all the processed workspaces to GSAS:  IPTS number and parm_file_name shall be passed
-        self.write_to_gsas(gsas_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'])
+        self.write_to_gsas(output_names, ipts_number=gsas_info_dict['IPTS'], parm_file_name=gsas_info_dict['parm file'],
+                           ref_tof_sets=binning_parameters)
 
         # write to logs
-        self.write_log_records(gsas_names, log_type='load_frame')
+        self.write_log_records(output_names, log_type='loadframe')
         tf = time.time()
 
         # processing time output
@@ -609,12 +611,14 @@ class SliceFocusVulcan(object):
 
         # NOTE: this method shall create a thread but return without thread returns
 
-    def write_log_records(self, workspace_name_list, log_type='load_frame'):
+    def write_log_records(self, workspace_name_list, log_type='loadframe'):
         """
         write to all log workspaces
         :return:
         """
         import reduce_adv_chop
+
+        print ('[DB...BAT...CRITICAL: Tending to write logs for {}'.format(workspace_name_list))
 
         log_writer = reduce_adv_chop.WriteSlicedLogs(chopped_data_dir=self._output_dir, run_number=self._run_number)
 
@@ -622,7 +626,7 @@ class SliceFocusVulcan(object):
 
         return
 
-    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name):
+    def write_to_gsas(self, workspace_name_list, ipts_number, parm_file_name, ref_tof_sets):
         """
         write to GSAS
         :param workspace_name_list:
@@ -632,9 +636,13 @@ class SliceFocusVulcan(object):
         """
         import save_vulcan_gsas
 
-        gsas_writer = save_vulcan_gsas.SaveVulcanGSS(self._ref_tof_set)
+        gsas_writer = save_vulcan_gsas.SaveVulcanGSS(ref_tof_sets)
+
+        print ('[DB...BAT] Write GSAS (Ver2) for {}'.format(workspace_name_list))
 
         for index_ws, ws_name in enumerate(workspace_name_list):
+            if ws_name == '':
+                continue
             gsas_file_name = os.path.join(self._output_dir, '{0}.gda'.format(index_ws))
             gsas_writer.save(diff_ws_name=ws_name, gsas_file_name=gsas_file_name, ipts_number=ipts_number,
                              gsas_param_file_name=parm_file_name)

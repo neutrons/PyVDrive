@@ -54,6 +54,11 @@ class SaveVulcanGSS(object):
             raise RuntimeError('It is impossible to have Xf without value set')
         bin_params.append(xf)
 
+        # extend bin
+        const_delta_t = dx / x0
+        dx = const_delta_t * xf
+        bin_params.extend([dx, xf + dx])
+
         return bin_params
 
     @staticmethod
@@ -76,23 +81,23 @@ class SaveVulcanGSS(object):
         bank_buffer = ''
 
         # bank header: min TOF, max TOF, delta TOF
-        bc1 = '%.0f' % (vec_x[0])
-        bc2 = '%.0f' % (vec_x[-1])
-        bc3 = (vec_x[1] - vec_x[0])/vec_x[0]
+        bc1 = '%.1f' % (vec_x[0])
+        bc2 = '%.1f' % (vec_x[-1])
+        bc3 = '%.7f' % ((vec_x[1] - vec_x[0])/vec_x[0])
         # check
         if bc1 < 0:
             raise RuntimeError('Cannot write out logarithmic data starting at zero or less')
 
-        bank_header = 'BANK%d  %d  %d  %s  %-10s%-10s%-10s' % (bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
+        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
         bank_buffer += '%-80s\n' % bank_header
 
         # write lines: not multiplied by bin width
         for index in range(data_size):
             x_i = '%.1f' % vec_x[index]
             y_i = '%.1f' % vec_y[index]
-            e_i = '%.1f' % vec_e[index]
-            data_line_i = '%-8s%-20s%-20s%-20s' % ('', x_i, y_i, e_i)
-            bank_buffer += '%-80s' % data_line_i
+            e_i = '%.2f' % vec_e[index]
+            data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+            bank_buffer += '%-80s\n' % data_line_i
         # END-FOR
 
         return bank_buffer
@@ -119,7 +124,7 @@ class SaveVulcanGSS(object):
             bank_id_list, bin_params, tof_vector = self._bin_params_set[bank_set_index]
 
             # Rebin to these banks' parameters (output = Histogram)
-            api.Rebin(InputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
+            api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
 
             # Create output
             for bank_id in bank_id_list:
@@ -128,12 +133,18 @@ class SaveVulcanGSS(object):
         # END-FOR
 
         # header
-        gsas_header = generate_vulcan_gda_header(diff_ws_name, gsas_file_name, ipts_number, gsas_param_file_name)
+        diff_ws = ADS.retrieve(diff_ws_name)
+        gsas_header = generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
 
         # form to a big string
         gsas_buffer = gsas_header
         for bank_id in sorted(gsas_buffer_dict.keys()):
             gsas_buffer += gsas_buffer_dict[bank_id]
+
+        if write_to_file:
+            g_file = open(gsas_file_name, 'w')
+            g_file.write(gsas_buffer)
+            g_file.close()
 
         return gsas_buffer
 

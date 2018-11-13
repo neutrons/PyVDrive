@@ -657,7 +657,7 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
         :param clear_workspaces: flag to delete output workspaces as they have been written to GSAS
         :return:
         """
-        datatypeutility.check_dict('Binning parameters', binning_parameters)
+        datatypeutility.check_list('Binning parameters', binning_parameters)
 
         # create output directory and set instance variable _choppedDataDirectory
         self.create_chop_dir()
@@ -751,115 +751,115 @@ class AdvancedChopReduce(reduce_VULCAN.ReduceVulcanData):
 
         return len(target_set)
 
-    def generate_sliced_logs(self, ws_name_list, log_type, append=False):
-        """
-        generate sliced logs
-        :param ws_name_list:
-        :param log_type: either loadframe or furnace
-        :param append: if true and if the file to output exists, then just append the new content at the end
-        :return:
-        """
-        import pandas as pd
-        # check inputs
-        assert isinstance(ws_name_list, list) and len(ws_name_list) > 0,\
-            'Workspace name list {0} must be a non-empty list, but not a {1}.'.format(ws_name_list, type(ws_name_list))
-        assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
-
-        if log_type != 'loadframe' and log_type != 'furnace':
-            raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
-                               'It must be either furnace or loadframe'.format(log_type, type(log_type)))
-
-        # get workspaces and properties
-        ws_name_list.sort()
-
-        # get the properties' names list
-        ws_name = ws_name_list[0]
-        workspace = AnalysisDataService.retrieve(ws_name)
-        property_name_list = list()
-        for sample_log in workspace.run().getProperties():
-            p_name = sample_log.name
-            property_name_list.append(p_name)
-        property_name_list.sort()
-        run_start = DateAndTime(workspace.run().getProperty('run_start').value)  # Kernel.DateAndtime
-
-        # start value
-        start_file_name = os.path.join(self._choppedDataDirectory,
-                                       '{0}sampleenv_chopped_start.txt'.format(self._reductionSetup.get_run_number()))
-        mean_file_name = os.path.join(self._choppedDataDirectory,
-                                      '{0}sampleenv_chopped_mean.txt'.format(self._reductionSetup.get_run_number()))
-        end_file_name = os.path.join(self._choppedDataDirectory,
-                                     '{0}sampleenv_chopped_end.txt'.format(self._reductionSetup.get_run_number()))
-
-        # output
-        # create Pandas series dictionary
-        start_series_dict = dict()
-        mean_series_dict = dict()
-        end_series_dict = dict()
-        mts_columns = list()
-
-        # set up correct header list
-        if log_type == 'loadframe':
-            # load frame
-            header_list = reduce_VULCAN.MTS_Header_List
-        else:
-            # furnace
-            header_list = reduce_VULCAN.Furnace_Header_List
-
-        # initialize the data structure for output
-        for entry in reduce_VULCAN.MTS_Header_List:
-            pd_series = pd.Series()
-            mts_name, log_name = entry
-            start_series_dict[mts_name] = pd_series
-            mean_series_dict[mts_name] = pd_series
-            end_series_dict[mts_name] = pd_series
-            mts_columns.append(mts_name)
-
-            if log_name not in property_name_list:
-                print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
-        # END-FOR
-
-        for i_ws, ws_name in enumerate(ws_name_list):
-            # get workspace
-            workspace_i = AnalysisDataService.retrieve(ws_name)
-            self.export_chopped_logs(i_ws=i_ws,
-                                     run_start_time=run_start,
-                                     property_name_list=property_name_list,
-                                     header_list=header_list,
-                                     workspace_i=workspace_i,
-                                     start_series_dict=start_series_dict,
-                                     mean_series_dict=mean_series_dict,
-                                     end_series_dict=end_series_dict)
-        # END-FOR (workspace)
-
-        # export to csv file
-        # start file
-        pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
-        if append and os.path.exists(start_file_name):
-            with open(start_file_name, 'a') as f:
-                pd_data_frame.to_csv(f, header=False)
-        else:
-            pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
-
-        # mean file
-        pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
-        if os.path.exists(mean_file_name) and append:
-            with open(mean_file_name, 'a') as f:
-                pd_data_frame.to_csv(f, header=False)
-        else:
-            pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
-
-        # end file
-        pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
-        if os.path.exists(end_file_name) and append:
-            with open(end_file_name, 'a') as f:
-                pd_data_frame.to_csv(f, header=False)
-        else:
-            pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
-
-        print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
-                                                                          end_file_name)
-
-        return
+    # def generate_sliced_logs(self, ws_name_list, log_type, append=False):
+    #     """
+    #     generate sliced logs
+    #     :param ws_name_list:
+    #     :param log_type: either loadframe or furnace
+    #     :param append: if true and if the file to output exists, then just append the new content at the end
+    #     :return:
+    #     """
+    #     import pandas as pd
+    #     # check inputs
+    #     assert isinstance(ws_name_list, list) and len(ws_name_list) > 0,\
+    #         'Workspace name list {0} must be a non-empty list, but not a {1}.'.format(ws_name_list, type(ws_name_list))
+    #     assert self._choppedDataDirectory is not None, 'Chopped data directory cannot be None.'
+    #
+    #     if log_type != 'loadframe' and log_type != 'furnace':
+    #         raise RuntimeError('Exported sample log type {0} of type {1} is not supported.'
+    #                            'It must be either furnace or loadframe'.format(log_type, type(log_type)))
+    #
+    #     # get workspaces and properties
+    #     ws_name_list.sort()
+    #
+    #     # get the properties' names list
+    #     ws_name = ws_name_list[0]
+    #     workspace = AnalysisDataService.retrieve(ws_name)
+    #     property_name_list = list()
+    #     for sample_log in workspace.run().getProperties():
+    #         p_name = sample_log.name
+    #         property_name_list.append(p_name)
+    #     property_name_list.sort()
+    #     run_start = DateAndTime(workspace.run().getProperty('run_start').value)  # Kernel.DateAndtime
+    #
+    #     # start value
+    #     start_file_name = os.path.join(self._choppedDataDirectory,
+    #                                    '{0}sampleenv_chopped_start.txt'.format(self._reductionSetup.get_run_number()))
+    #     mean_file_name = os.path.join(self._choppedDataDirectory,
+    #                                   '{0}sampleenv_chopped_mean.txt'.format(self._reductionSetup.get_run_number()))
+    #     end_file_name = os.path.join(self._choppedDataDirectory,
+    #                                  '{0}sampleenv_chopped_end.txt'.format(self._reductionSetup.get_run_number()))
+    #
+    #     # output
+    #     # create Pandas series dictionary
+    #     start_series_dict = dict()
+    #     mean_series_dict = dict()
+    #     end_series_dict = dict()
+    #     mts_columns = list()
+    #
+    #     # set up correct header list
+    #     if log_type == 'loadframe':
+    #         # load frame
+    #         header_list = reduce_VULCAN.MTS_Header_List
+    #     else:
+    #         # furnace
+    #         header_list = reduce_VULCAN.Furnace_Header_List
+    #
+    #     # initialize the data structure for output
+    #     for entry in reduce_VULCAN.MTS_Header_List:
+    #         pd_series = pd.Series()
+    #         mts_name, log_name = entry
+    #         start_series_dict[mts_name] = pd_series
+    #         mean_series_dict[mts_name] = pd_series
+    #         end_series_dict[mts_name] = pd_series
+    #         mts_columns.append(mts_name)
+    #
+    #         if log_name not in property_name_list:
+    #             print '[WARNING] Log {0} is not a sample log in NeXus.'.format(log_name)
+    #     # END-FOR
+    #
+    #     for i_ws, ws_name in enumerate(ws_name_list):
+    #         # get workspace
+    #         workspace_i = AnalysisDataService.retrieve(ws_name)
+    #         self.export_chopped_logs(i_ws=i_ws,
+    #                                  run_start_time=run_start,
+    #                                  property_name_list=property_name_list,
+    #                                  header_list=header_list,
+    #                                  workspace_i=workspace_i,
+    #                                  start_series_dict=start_series_dict,
+    #                                  mean_series_dict=mean_series_dict,
+    #                                  end_series_dict=end_series_dict)
+    #     # END-FOR (workspace)
+    #
+    #     # export to csv file
+    #     # start file
+    #     pd_data_frame = pd.DataFrame(start_series_dict, columns=mts_columns)
+    #     if append and os.path.exists(start_file_name):
+    #         with open(start_file_name, 'a') as f:
+    #             pd_data_frame.to_csv(f, header=False)
+    #     else:
+    #         pd_data_frame.to_csv(start_file_name, sep='\t', float_format='%.5f')
+    #
+    #     # mean file
+    #     pd_data_frame = pd.DataFrame(mean_series_dict, columns=mts_columns)
+    #     if os.path.exists(mean_file_name) and append:
+    #         with open(mean_file_name, 'a') as f:
+    #             pd_data_frame.to_csv(f, header=False)
+    #     else:
+    #         pd_data_frame.to_csv(mean_file_name, sep='\t', float_format='%.5f')
+    #
+    #     # end file
+    #     pd_data_frame = pd.DataFrame(end_series_dict, columns=mts_columns)
+    #     if os.path.exists(end_file_name) and append:
+    #         with open(end_file_name, 'a') as f:
+    #             pd_data_frame.to_csv(f, header=False)
+    #     else:
+    #         pd_data_frame.to_csv(end_file_name, sep='\t', float_format='%.5f')
+    #
+    #     print '[INFO] Chopped log files are written to %s, %s and %s.' % (start_file_name, mean_file_name,
+    #                                                                       end_file_name)
+    #
+    #     return
 
     # @staticmethod
     # def export_chopped_logs(i_ws, property_name_list, header_list,
@@ -1130,6 +1130,8 @@ class WriteSlicedLogs(object):
         :param append: if true and if the file to output exists, then just append the new content at the end
         :return:
         """
+        print ('[DB...BAT...CHECK] generate_sliced_logs()')
+
         # check inputs
         datatypeutility.check_list('Sliced workspace names', ws_name_list)
         if len(ws_name_list) == 0:
@@ -1144,6 +1146,8 @@ class WriteSlicedLogs(object):
 
         # get the properties' names list
         ws_name = ws_name_list[0]
+        if ws_name == '':
+            ws_name = ws_name_list[1]
         workspace = AnalysisDataService.retrieve(ws_name)
         property_name_list = list()
         for sample_log in workspace.run().getProperties():
@@ -1159,6 +1163,8 @@ class WriteSlicedLogs(object):
                                       '{0}sampleenv_chopped_mean.txt'.format(self._run_number))
         end_file_name = os.path.join(self._choppedDataDirectory,
                                      '{0}sampleenv_chopped_end.txt'.format(self._run_number))
+
+        print (start_file_name, mean_file_name, end_file_name)
 
         # output
         # create Pandas series dictionary
@@ -1190,6 +1196,8 @@ class WriteSlicedLogs(object):
 
         for i_ws, ws_name in enumerate(ws_name_list):
             # get workspace
+            if ws_name == '':
+                continue
             workspace_i = AnalysisDataService.retrieve(ws_name)
             self.export_chopped_logs(i_ws=i_ws,
                                      run_start_time=run_start,
