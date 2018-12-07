@@ -1,0 +1,48 @@
+Alias
+=====
+
+VBIN OR VDRIVEBIN
+
+Arguments
+=========
+
+Mandatory arguments
+-------------------
+
+ * IPTS
+ * RUNS or CHOPRUN
+
+Optional arguments
+==================
+
+ * RUNE
+ * RUNV
+ * TAG
+   - TAG='V':
+      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium*
+      * sample logs are written to *.../Vanadium/VRecord.txt*
+   - TAG='Si':
+      * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si*
+      * sample logs are written to *.../Si/SiRecord.txt*
+ * Mytofbmin
+ * Mytofbmax
+
+Coming soon
+===========
+
+ * OneBank
+ * Bin Size and Bin Range
+
+
+Examples (Benchmark)
+--------------------
+
+**These are pre-nED examples.  They are too old.**
+
+ * VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099
+ * VBIN,IPTS=14094,RUNS=96450,RUNE=96451
+ * VBIN,IPTS=14094,RUNS=96450,RUNV=95542
+ * VBIN,ITPS=16062,RUNS=98237,TAG='V', OUTPUT='/tmp'
+ * vbin, ipts=17414, choprun=109021, runs=1, rune=99 
+
+

@@ -1,11 +1,20 @@
 #!/bin/sh
 python setup.py pyuic
 python setup.py build
+
 if [ $1 ]; then
     CMD=$1
 else
-    CMD=''
+    CMD=
+    echo "1: peak fit, 2: texture, 3: strain stress, 4: manual reduction"
 fi
+
+if [ "$1" = "1" ]
+then 
+	echo "Test peak fitting module"
+        PYTHONPATH=build/lib:$PYTHONPATH build/scripts-2.7/peakfitgui_test.py
+fi
+
 
 # Core Test
 PYTHONPATH=build/lib:$PYTHONPATH $CMD tests/development/collimator.py
