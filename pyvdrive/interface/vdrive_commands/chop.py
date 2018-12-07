@@ -712,8 +712,11 @@ class VdriveChop(VDriveCommand):
 
     @staticmethod
     def parse_pick_data(file_name):
-        """
-
+        """ Parse an ascii file for slicer setup
+        Format:
+          start_time0  stop_time0
+          start_time1  stop_time1
+          ...          ...
         :exception: RuntimeError for unabling to import the file
         :param file_name:
         :return:

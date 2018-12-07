@@ -2,12 +2,153 @@ from datetime import datetime
 import os
 import os.path
 import numpy
-import sys
-# sys.path.append('/SNS/users/wzz/Mantid_Project/builds/build-vulcan/bin')
-# sys.path.append("/opt/mantidnightly/bin")
-# sys.path.append('/Users/wzz/MantidBuild/debug-stable/bin')
 import mantid.simpleapi as api
 from mantid.api import AnalysisDataService as ADS
+
+
+class SaveVulcanGSS(object):
+    """
+    class to save VULCAN GSAS
+    mostly it is used as static
+    """
+    def __init__(self, tof_vector_set):
+        """
+        initialization
+        :param tof_vector_set: an iterator on tuple as [list of bank IDs], [reference TOF vector]
+        """
+        # set up binning parameters
+        self._bin_params_set = list()
+
+        for bank_id_list, tof_vector in tof_vector_set:
+            bin_params = self._create_binning_parameters(tof_vector)
+            assert isinstance(bank_id_list, list), 'Bank IDs {} must be given in list but not in {}' \
+                                                   ''.format(bank_id_list, type(bank_id_list))
+            if len(bank_id_list) == 0:
+                raise RuntimeError('Bank ID list in given TOF vector set has zero size')
+
+            # set value
+            self._bin_params_set.append((bank_id_list[:], bin_params, tof_vector[:]))
+        # END-FOR
+
+        return
+
+    @staticmethod
+    def _create_binning_parameters(tof_vector):
+        """
+        for Mantid Rebin
+        :return:
+        """
+        # Create a complicated bin parameter
+        bin_params = list()
+        xf = None
+        for ibin in range(len(tof_vector) - 1):
+            x0 = tof_vector[ibin]
+            xf = tof_vector[ibin + 1]
+            dx = xf - x0
+            bin_params.append(x0)
+            bin_params.append(dx)
+        # END-FOR
+
+        # last bin
+        if xf is None:
+            raise RuntimeError('It is impossible to have Xf without value set')
+        bin_params.append(xf)
+
+        # extend bin
+        const_delta_t = dx / x0
+        dx = const_delta_t * xf
+        bin_params.extend([dx, xf + dx])
+
+        return bin_params
+
+    @staticmethod
+    def _write_slog_bank_gsas(ws_name, bank_id, vulcan_tof_vector):
+        """
+        1. X: format to VDRIVE tradition (refer to ...)
+        2. Y: native value
+        3. Z: error bar
+        :param ws_name:
+        :param bank_id:
+        :return:
+        """
+        # get workspace
+        diff_ws = ADS.retrieve(ws_name)
+        vec_x = vulcan_tof_vector
+        vec_y = diff_ws.readY(bank_id - 1)
+        vec_e = diff_ws.readE(bank_id - 1)
+        data_size = len(vec_y)
+
+        bank_buffer = ''
+
+        # bank header: min TOF, max TOF, delta TOF
+        bc1 = '%.1f' % (vec_x[0])
+        bc2 = '%.1f' % (vec_x[-1])
+        bc3 = '%.7f' % ((vec_x[1] - vec_x[0])/vec_x[0])
+        # check
+        if bc1 < 0:
+            raise RuntimeError('Cannot write out logarithmic data starting at zero or less')
+
+        bank_header = 'BANK %d %d %d %s %s %s %s 0 FXYE' % (bank_id, data_size, data_size, 'SLOG', bc1, bc2, bc3)
+        bank_buffer += '%-80s\n' % bank_header
+
+        # write lines: not multiplied by bin width
+        for index in range(data_size):
+            x_i = '%.1f' % vec_x[index]
+            y_i = '%.1f' % vec_y[index]
+            e_i = '%.2f' % vec_e[index]
+            data_line_i = '%12s%12s%12s' % (x_i, y_i, e_i)
+            bank_buffer += '%-80s\n' % data_line_i
+        # END-FOR
+
+        return bank_buffer
+
+    def save(self, diff_ws_name, gsas_file_name, ipts_number, gsas_param_file_name, write_to_file=True):
+        """
+
+        :param diff_ws_name: diffraction workspace name
+        :param file_name: output file name. None as not output
+        :return: string as the file content
+        """
+        diff_ws = ADS.retrieve(diff_ws_name)
+
+        # convert to Histogram Data
+        if not diff_ws.isHistogramData():
+            api.ConvertToHistogram(diff_ws_name, diff_ws_name)
+
+        # rebin and then write output
+        gsas_buffer_dict = dict()
+        num_bank_sets = len(self._bin_params_set)
+
+        for bank_set_index in range(num_bank_sets):
+            # get value
+            bank_id_list, bin_params, tof_vector = self._bin_params_set[bank_set_index]
+
+            # Rebin to these banks' parameters (output = Histogram)
+            api.Rebin(InputWorkspace=diff_ws_name, OutputWorkspace=diff_ws_name, Params=bin_params, PreserveEvents=True)
+
+            # Create output
+            for bank_id in bank_id_list:
+                gsas_section_i = self._write_slog_bank_gsas(diff_ws_name, bank_id, tof_vector)
+                gsas_buffer_dict[bank_id] = gsas_section_i
+        # END-FOR
+
+        # header
+        diff_ws = ADS.retrieve(diff_ws_name)
+        gsas_header = generate_vulcan_gda_header(diff_ws, gsas_file_name, ipts_number, gsas_param_file_name)
+
+        # form to a big string
+        gsas_buffer = gsas_header
+        for bank_id in sorted(gsas_buffer_dict.keys()):
+            gsas_buffer += gsas_buffer_dict[bank_id]
+
+        if write_to_file:
+            g_file = open(gsas_file_name, 'w')
+            g_file.write(gsas_buffer)
+            g_file.close()
+
+        return gsas_buffer
+
+# END-DEF-CLASS
 
 
 def align_to_vdrive_bin(input_ws, vec_ref_tof, output_ws_name):
