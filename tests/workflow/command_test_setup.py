@@ -48,6 +48,19 @@ class PyVdriveCommandTestEnvironment(object):
         :param vdrive_command:
         :return:
         """
-
         print ('Run {0}'.format(vdrive_command))
         self._main_window.execute_command(vdrive_command)
+
+        return
+# END-DEF-CLASS
+
+
+def create_test_dir(test_dir):
+    """ create directory for testing
+    """
+    assert isinstance(test_dir, str), 'Directory for testing result shall be a string.'
+
+    if not os.path.exists(test_dir):
+        os.mkdir(test_dir)
+
+    return

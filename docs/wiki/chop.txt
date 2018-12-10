@@ -1,0 +1,59 @@
+Alias
+=====
+
+CHOP
+
+Arguments
+=========
+
+Mandatory arguments
+-------------------
+
+  * IPTS: IPTS number
+  * RUNS: First run number
+  * dbin or loadframe
+  * OUTPUT:
+
+Optional arguments
+------------------
+
+  * RUNE: Last run number (if not specified, then only 1 run will be processed)
+  * dbin: time step for binning interval
+  * loadframe: chop load frame data
+  * DRYRUN: if equal to 1, then it is a dry run to check input and output
+  * HELP: the Log Picker Window will be launched and set up with given RUN number
+  * bin: focus the chopped data and exported to gsas format.
+
+Examples/Benchmarks
+===================
+
+For each release, the following commands shall work correctly.
+
+  * CHOP, IPTS=14094, RUNS=96450, dbin=60,loadframe=1,bin=1,DRYRUN=1
+
+  * CHOP,IPTS=17263,RUNS=112811,DBIN=300,FURNACE=1,OUTPUT=/home/wzz/Projects/workspaces/VDrive/beta_test
+
+    Chop the original event file by time with 300 seconds step.  The chopped data are saved to NeXus format.
+
+  * CHOP,IPTS=17263,RUNS=112604,DBIN=150,FURNACE=1,BIN=1,OUTPUT=/home/wzz/Projects/workspaces/VDrive/beta_test/IPTS-17263/shared"
+
+  * chop, ipts=17566, runs=136841, dbin=60, loadframe=1 
+
+    chop, ipts=17566, runs=136841, dbin=60, loadframe=1, output=/tmp/
+
+  * chop,ipts=19435,runs=147049,dbin=660,bin=1,loadframe=1,runv=136773
+
+  * chop,ipts=19435,runs=147028,dbin=2,bin=1,loadframe=1,runv=136773
+
+  * chop, ipts=17414, runs=109021, dbin=1200, dt=600, loadframe=1
+
+  * chop, ipts=17414, runs=133243, bin=1, loadframe=1, pickdata='/SNS/VULCAN/IPTS-17414/shared/pickdata/pickdata_1HWQAGE.txt', pulsetime=1  
+
+ * CHOP,IPTS=13183,RUNS=68607,PICKDATA="/SNS/VULCAN/IPTS-13183/shared/variablechop_serration_2nd series_4.txt",BIN=1,LOADFRAME=1,PULSETIME=1,output=/home/wzz/Projects/workspaces/VDrive/beta_test/IPTS-13183/shared
+
+In progress
+-----------
+ 
+
+
+
