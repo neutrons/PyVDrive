@@ -12,44 +12,68 @@ except ImportError:
 import command_test_setup
 
 
+def test_ned_simple(tester):
+    """
+
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/ver2'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "VBIN,IPTS=21356,RUNS=161972,version=2,output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    print ('Command {} has been executed.'.format(idl_command))
+
+    return
+
+
 def test_main():
     """
     test main
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    # Test 1 - pre-nED
-    # FIXME - pre-nED case does not work
-    preNed_cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
+    test_ned_simple(command_tester)
 
-    # Test 2 - nED case - version 1
-    cmd = 'VBIN,IPTS=21356,RUNS=161972,output=\'/tmp/ver1\''
+
+    #
+    # # Test 1 - pre-nED
+    # # FIXME - pre-nED case does not work
+    # preNed_cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
+    #
+    # # Test 2 - nED case - version 1
+    # cmd = 'VBIN,IPTS=21356,RUNS=161972,output=\'/tmp/ver1\''
+    # # command_tester.run_command(cmd)
+    #
+    # # Test 3 - nED case - version 2
+    # cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
+    # # command_tester.run_command(cmd)
+    #
+    # # Test 4 - nED case - version 2 with ROI
+    # # VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output='/tmp/ver2',ROI=[tests/data/highangle_roi_0607.xml]
+    # cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
+    #       'ROI=[tests/data/highangle_roi_0607.xml]'
     # command_tester.run_command(cmd)
-
-    # Test 3 - nED case - version 2
-    cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
-    # command_tester.run_command(cmd)
-
-    # Test 4 - nED case - version 2 with ROI
-    # VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output='/tmp/ver2',ROI=[tests/data/highangle_roi_0607.xml]
-    cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
-          'ROI=[tests/data/highangle_roi_0607.xml]'
-    command_tester.run_command(cmd)
-
-    # Test 5 - nED case - version 2 with ROI
-    cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
-          'ROI=tests/data/highangle_roi_0607.xml' \
-          ',mask=tests/data/highangle_mask_test.xml'
-    # command_tester.run_command(cmd)
-
-    ## FIXME/TODO - Check result
-
-    ## FIXME error message:
-    #cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
-    #cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
-
-    #print ('Current working dir: {0}'.format(os.getcwd()))
-    #cmd = "vbin, ipts=?????, runs=?????, grouping=l2_group_cal.h5"
+    #
+    # # Test 5 - nED case - version 2 with ROI
+    # cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
+    #       'ROI=tests/data/highangle_roi_0607.xml' \
+    #       ',mask=tests/data/highangle_mask_test.xml'
+    # # command_tester.run_command(cmd)
+    #
+    # ## FIXME/TODO - Check result
+    #
+    # ## FIXME error message:
+    # #cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
+    # #cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
+    #
+    # #print ('Current working dir: {0}'.format(os.getcwd()))
+    # #cmd = "vbin, ipts=?????, runs=?????, grouping=l2_group_cal.h5"
 
     return command_tester.main_window
 

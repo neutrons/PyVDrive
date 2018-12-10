@@ -143,13 +143,13 @@ if __name__ == "__main__":
     scripts = ['scripts/Lava.py', 'scripts/reduction/integrate_single_crystal_peaks.py',
                'scripts/single_crystal/chop_single_crystal_run.py',
                'scripts/single_crystal/focus_single_crystal_run.py']
-    test_scripts = ["tests/workflow/chop_reduce_command_test.py", "tests/workflow/command_test_setup.py",
-                    'tests/workflow/vbin_test.py',
-                    'tests/unit/vulcan_slice_reduce_test.py',
-                    'tests/workflow/reduction_view_test.py',
-                    'tests/workflow/vbin_test.py',
+    test_scripts = ["tests/workflow/command_test_setup.py",
+                    'tests/workflow/idl_vbin_test.py',
+                    "tests/workflow/idl_chop_test.py",
+                    'tests/workflow/idl_view_test.py',
+                    # 'tests/workflow/idl_merge_test.py',
                     'tests/workflow/idl_info_test.py',
-                    'tests/workflow/idl_view_test.py']
+                    'tests/unit/vulcan_slice_reduce_test.py']
     scripts.extend(test_scripts)
 
     setup(

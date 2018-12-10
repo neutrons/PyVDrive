@@ -20,6 +20,14 @@ Optional arguments
   * Shift     : the chopper center is shift to large lambda aggressively.
   * OUTPUT    : the directory where the smooth vanadium gsas file will be saved other than default.
 
+  * RUNV      : Run number for vanadium file (file in instrument directory)
+  * VIEWER    : Launch General Plot Viewer
+  * NSMOOTH   : the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.
+  * ONEBANK   : Add 2 bank data together (=1).
+  * SHIFT     : the chopper center is shift to large lambda aggressively.
+  * OUTPUT    : the directory where the smooth vanadium gsas file will be saved other than default.
+  
+
 Results
 -------
 

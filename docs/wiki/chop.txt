@@ -24,8 +24,43 @@ Optional arguments
   * HELP: the Log Picker Window will be launched and set up with given RUN number
   * bin: focus the chopped data and exported to gsas format.
 
+
+  * IPTS      : IPTS number
+  * HELP      : the Log Picker Window will be launched and set up with given RUN number.
+
+  * RUNS      : First run number
+  * RUNE      : Last run number (if not specified, then only 1 run will be processed)
+  * DBIN      : time step for binning interval
+  * LOADFRAME : Chop LoadFrame log (MTSLoadFrame) along with
+  * FURNACE   : Chop Furnace log (MTSFurnace) along with
+  * BIN       : If bin=1, chopped data will be reduced to GSAS files
+  * PICKDATA  : Name of a plain text 2-column data file for start and stop time for splitters.
+  * OUTPUT    : If specified, then the chopped files will be saved to the directory. Otherwise, these files will be saved to /SNS/VULCAN/IPTS-????/shared.
+  * DRYRUN    : If equal to 1, then it is a dry run to check input and output.
+  * PULSETIME : 
+  * DT        : the period between two adjacent time segments
+  * RUNV      : vanadium run number
+  * INFO      : 
+  * ROI       : Files for Mantid made region of interest file in XML format
+  * MASK      : Files for Mantid made mask file in XML format
+  * NEXUS     : NeXus file name (It cannot be used with IPTS/RUNS/RUNE)
+  * STARTTIME : The starting time of the first slicer.  Default is the run start
+  * STOPTIME  : The stopping time of the last slicer. Default is the run stop
+  * VDRIVEBIN : If equal to 1, using VDRIVE GSAS binning template to re-bin and output to GSAS.  Default is 3
+  * NUMBANKS  : Number of banks in the output GSAS file
+  * SAVECHOPPED2NEXUS: If equal to 1, then the chopped and reduced workspace will be save to a NeXus file. Default is 0 (as False)
+  
+
 Examples/Benchmarks
 ===================
+
+**Pre-Vulcan-X (3-bank, nED)**
+
+/SNS/VULCAN/IPTS-20280/nexus/VULCAN_169173.nxs.h5
+
+
+
+**Pre-nED (2-bank)**
 
 For each release, the following commands shall work correctly.
 

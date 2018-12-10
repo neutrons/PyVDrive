@@ -26,6 +26,33 @@ Optional arguments
       * sample logs are written to *.../Si/SiRecord.txt*
  * Mytofbmin
  * Mytofbmax
+ * IPTS      : IPTS number
+ * RUN       : 
+ * CHOPRUN   : 
+ * RUNE      : First run number
+ * RUNS      : Last run number
+ * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
+ * BINW      : Binning parameter, i.e., log bin step
+ * SKIPXML   : 
+ * FOCUS_EW  : 
+ * RUNV      : Run number for vanadium file (file in instrument directory)
+ * IParm     : 
+ * FullProf  : 
+ * NoGSAS    : 
+ * PlotFlag  : 
+ * ONEBANK   : 
+ * NoMask    : 
+ * TAG       : 
+ * BinFolder : 
+ * Mytofbmax : 
+ * Mytofbmin : User defined TOF min in binning parameter
+ * OUTPUT    : User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin
+ * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
+ * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2
+ * ROI       : Files for Mantid made region of interest file in XML format
+ * MASK      : Files for Mantid made mask file in XML format
+ * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
+ 
 
 Coming soon
 ===========
@@ -36,6 +63,11 @@ Coming soon
 
 Examples (Benchmark)
 --------------------
+
+**Pre-Vulcan-X examples (3-banks nED)**
+
+/SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5
+
 
 **These are pre-nED examples.  They are too old.**
 

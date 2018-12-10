@@ -1,8 +1,10 @@
 # Set up the testing environment for PyVDrive commands
 import os
 import sys
+import shutil
 from pyvdrive.interface import vcommand_processor
 from pyvdrive.interface.VDrivePlot import VdriveMainWindow
+import time
 home_dir = os.path.expanduser('~')
 # NOTE: This is the entry point to define the path to Mantid
 if home_dir.startswith('/SNS/'):
@@ -48,19 +50,32 @@ class PyVdriveCommandTestEnvironment(object):
         :param vdrive_command:
         :return:
         """
-        print ('Run {0}'.format(vdrive_command))
-        self._main_window.execute_command(vdrive_command)
+        start_time = time.time()
+        status, err_msg = self._command_process.process_commands(vdrive_command)
+        # self._main_window.execute_command(vdrive_command)
+        stop_time = time.time()
+
+        if status:
+            print ('Test {0}\nExecution (wall) time = {}'.format(vdrive_command, stop_time-start_time))
+        else:
+            print ('Test Failed: {}\nFailure cause: {}'.format(vdrive_command, err_msg))
 
         return
 # END-DEF-CLASS
 
 
-def create_test_dir(test_dir):
+def set_test_dir(test_dir):
     """ create directory for testing
     """
     assert isinstance(test_dir, str), 'Directory for testing result shall be a string.'
 
-    if not os.path.exists(test_dir):
-        os.mkdir(test_dir)
+    # clean old ones
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir)
+
+    # create new
+    os.mkdir(test_dir)
+
+    print ('Set up {} for testing'.format(test_dir))
 
     return

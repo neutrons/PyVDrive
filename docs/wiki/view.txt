@@ -1,3 +1,17 @@
+
+  IPTS      : IPTS number
+  RUNS      : First run number
+  RUNE      : Last run number (if not specified, then only 1 run will be processed)
+  CHOPRUN   : Run number of the chopped run.
+  RUNV      : Vanadium run number for calibration
+  MINV      : Minimum X value to plot
+  MAXV      : Maximum X value to plot
+  NORM      : Do normalize to the reduced data
+  DIR       : User specified directory to find the reduced data (including those being chopped)
+  SHOW      : Launch the reduced-data viewer
+  PEAK      : Integrate peak and output value. PEAK=1: output to console. Otherwise, output to the file name
+
+
 Examples (Benchmark)
 --------------------
 
