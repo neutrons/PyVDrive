@@ -13,21 +13,99 @@ import command_test_setup
 
 
 def test_ned_simple(tester):
-    """
-
+    """ Test the mode simple reduction case for data collected by nED
     :param tester:
     :return:
     """
     # test directory
-    test_dir = '/tmp/ver2'
+    test_dir = '/tmp/vbin_ned_simple'
     command_test_setup.set_test_dir(test_dir)
 
     # run command
-    idl_command = "VBIN,IPTS=21356,RUNS=161972,version=2,output=\'{}\'".format(test_dir)
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,version=2,output=\'{}\'".format(test_dir)
     tester.run_command(idl_command)
 
     # output summary
-    print ('Command {} has been executed.'.format(idl_command))
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_standard(tester):
+    """
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_tag'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,tag='Si',output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_user_bin(tester):
+    """ Test with min TOF, max TOF and binW
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_binw'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,version=2, binw=0.002, Mytofbmin=6000.," \
+                  "Mytofmax=32500., output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_multi_banks(tester):
+    """ Test with multiple banks (besides 3)
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_binw'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = "VBIN,IPTS=20280,RUNS=169186,version=2, banks=27, output=\'{}\'".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_mask(tester):
+    """
+    Test binning with mask
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_mask'
+    command_test_setup.set_test_dir(test_dir)
+
+    idl_command = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'{}\',' \
+                  'mask=[tests/data/highangle_roi_0607.xml]'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
 
     return
 
@@ -39,6 +117,9 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     test_ned_simple(command_tester)
+    test_ned_standard(command_tester)
+
+
 
 
     #
@@ -47,21 +128,21 @@ def test_main():
     # preNed_cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
     #
     # # Test 2 - nED case - version 1
-    # cmd = 'VBIN,IPTS=21356,RUNS=161972,output=\'/tmp/ver1\''
+    # cmd = 'VBIN,IPTS=20280,RUNS=169186,output=\'/tmp/ver1\''
     # # command_tester.run_command(cmd)
     #
     # # Test 3 - nED case - version 2
-    # cmd = 'VBIN,IPTS=21356,RUNS=161972,version=2,output=\'/tmp/ver2\''
+    # cmd = 'VBIN,IPTS=20280,RUNS=169186,version=2,output=\'/tmp/ver2\''
     # # command_tester.run_command(cmd)
     #
     # # Test 4 - nED case - version 2 with ROI
-    # # VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output='/tmp/ver2',ROI=[tests/data/highangle_roi_0607.xml]
-    # cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
+    # # VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output='/tmp/ver2',ROI=[tests/data/highangle_roi_0607.xml]
+    # cmd = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
     #       'ROI=[tests/data/highangle_roi_0607.xml]'
     # command_tester.run_command(cmd)
     #
     # # Test 5 - nED case - version 2 with ROI
-    # cmd = 'VBIN,IPTS=21356,RUNS=161972,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
+    # cmd = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
     #       'ROI=tests/data/highangle_roi_0607.xml' \
     #       ',mask=tests/data/highangle_mask_test.xml'
     # # command_tester.run_command(cmd)

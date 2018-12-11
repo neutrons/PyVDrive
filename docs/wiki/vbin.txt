@@ -15,8 +15,9 @@ Mandatory arguments
 Optional arguments
 ==================
 
- * RUNE
- * RUNV
+ * CHOPRUN   : Run number for reduce chopped run
+ * RUNE      : First run number
+ * RUNS      : Last run number
  * TAG
    - TAG='V':
       * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Vanadium*
@@ -24,34 +25,26 @@ Optional arguments
    - TAG='Si':
       * reduced data copied to */SNS/VULCAN/shared/Calibrationfiles/Instrument/Standard/Si*
       * sample logs are written to *.../Si/SiRecord.txt*
- * Mytofbmin
- * Mytofbmax
- * IPTS      : IPTS number
- * RUN       : 
- * CHOPRUN   : 
- * RUNE      : First run number
- * RUNS      : Last run number
- * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
+ * Mytofbmin : User defined TOF min in binning parameter
+ * Mytofbmax : User defined TOF max in binning parameter
  * BINW      : Binning parameter, i.e., log bin step
+ * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
  * SKIPXML   : 
  * FOCUS_EW  : 
  * RUNV      : Run number for vanadium file (file in instrument directory)
- * IParm     : 
+ * IParm     : User specified IPARM file
  * FullProf  : 
- * NoGSAS    : 
+ * NoGSAS    : Flag for not output GSAS file
  * PlotFlag  : 
- * ONEBANK   : 
+ * ONEBANK   : Merge all the pixels to 1 bank
  * NoMask    : 
- * TAG       : 
  * BinFolder : 
- * Mytofbmax : 
- * Mytofbmin : User defined TOF min in binning parameter
  * OUTPUT    : User specified output directory. Default will be under /SNS/VULCAN/IPTS-???/shared/bin
  * GROUP     : User specified a special group file other than usual 3/7/27 banks. (It cannot be used with BANKS)
- * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2
  * ROI       : Files for Mantid made region of interest file in XML format
  * MASK      : Files for Mantid made mask file in XML format
  * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
+ * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2 (default)
  
 
 Coming soon
@@ -66,7 +59,15 @@ Examples (Benchmark)
 
 **Pre-Vulcan-X examples (3-banks nED)**
 
-/SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5
+NeXus file /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5 is used for testing
+
+ - Simple binning: VBIN,IPTS=20280,RUNS=169186
+ - Multiple run binning: VBIN,IPTS=20280,RUNS=169186, RUNE=169188
+ - Binning for standard (Si, V): VBIN,IPTS=20280,RUNS=169186,tag='Si'
+ - Binning with user defined TOF range and bin size: VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
+ - Separate pixels into various banks: VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
+ - Binning with mask: 
+
 
 
 **These are pre-nED examples.  They are too old.**

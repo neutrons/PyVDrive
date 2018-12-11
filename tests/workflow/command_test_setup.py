@@ -42,6 +42,10 @@ class PyVdriveCommandTestEnvironment(object):
 
     @property
     def main_window(self):
+        """
+        return the main window's handler
+        :return:
+        """
         return self._main_window
 
     def run_command(self, vdrive_command):
@@ -61,6 +65,31 @@ class PyVdriveCommandTestEnvironment(object):
             print ('Test Failed: {}\nFailure cause: {}'.format(vdrive_command, err_msg))
 
         return
+
+    @staticmethod
+    def show_output_files(output_dir):
+        """
+        list the output files in pretty mode
+        :param output_dir:
+        :return:
+        """
+        pretty = ''
+
+        if os.path.exists(output_dir):
+            file_names = os.listdir(output_dir)
+            for index, file_name in enumerate(sorted(file_names)):
+                pretty += '%-30s' % file_name
+                if (index + 1) % 3 == 0:
+                    pretty += '\n'
+            # END-FOR
+        else:
+            pretty += 'Directory {} does not exist'.format(output_dir)
+
+        print (pretty)
+
+        return
+
+
 # END-DEF-CLASS
 
 
