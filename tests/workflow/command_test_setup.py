@@ -60,7 +60,7 @@ class PyVdriveCommandTestEnvironment(object):
         stop_time = time.time()
 
         if status:
-            print ('Test {0}\nExecution (wall) time = {}'.format(vdrive_command, stop_time-start_time))
+            print ('Test {}\nExecution (wall) time = {}'.format(vdrive_command, stop_time-start_time))
         else:
             print ('Test Failed: {}\nFailure cause: {}'.format(vdrive_command, err_msg))
 

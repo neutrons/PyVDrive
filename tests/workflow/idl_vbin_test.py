@@ -118,9 +118,8 @@ def test_main():
 
     test_ned_simple(command_tester)
     test_ned_standard(command_tester)
-
-
-
+    test_ned_user_bin(command_tester)
+    test_ned_multi_banks(command_tester)
 
     #
     # # Test 1 - pre-nED

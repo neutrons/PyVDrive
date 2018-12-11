@@ -1525,9 +1525,10 @@ class ReductionManager(object):
         datatypeutility.check_dict('Virtual (focused) instrument geometry', virtual_instrument_geometry)
 
         # check about binning
-        bin_param_dict = None
+        input_params = None
         if use_idl_bin:
-            bin_param_dict = binning_params
+            input_params = binning_params
+            # now using uniform binning parameters for align and focus
             if target_unit == 'TOF':
                 binning_params = '5000, -0.01, 30000'
             else:
@@ -1564,7 +1565,21 @@ class ReductionManager(object):
                                                             reduction_params_dict=self._diff_focus_params,
                                                             convert_to_matrix=convert_to_matrix)
 
+        # TODO - FIXME - 20181211 - Need to align with new GSAS output in PyVDrive for this step!
         if use_idl_bin:
+            # construct binning parameter dictionary
+            assert input_params
+
+            if isinstance(input_params, dict):
+                bin_param_dict = input_params
+            elif isinstance(input_params, list):
+                bin_param_dict = dict()
+                for bank_ids, binning in input_params:
+                    for bank_id in bank_ids:
+                        bin_param_dict[bank_id] = binning
+            else:
+                raise RuntimeError('Input parameters must be either dictionary or list')
+
             # num_banks = mantid_helper.retrieve_workspace(output_ws_name).getNumberHistograms()
             mantid_reduction.VulcanBinningHelper.rebin_workspace(output_ws_name, bin_param_dict,
                                                                  output_ws_name=gsas_ws_name)
