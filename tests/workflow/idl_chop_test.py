@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # Test the chop and reduce command
 import sys
+import os
 try:
     import qtconsole.inprocess
     from PyQt5.QtWidgets import QApplication
@@ -9,7 +10,23 @@ except ImportError:
 
 # create main application
 import command_test_setup
-from command_test_setup import create_test_dir
+
+
+def create_slice_segment_file(test_dir):
+    """
+    create a slice segment file on the fly
+    :param test_dir:
+    :return:
+    """
+    file_name = os.path.join(test_dir, 'slice_segment.txt')
+
+    segment = ''
+
+    segment_file = open(file_name, 'w')
+    segment_file.write(segment)
+    segment_file.close()
+
+    return file_name
 
 
 def test_pre_ned(command_tester):
@@ -21,15 +38,42 @@ def test_pre_ned(command_tester):
 
     return
 
-def test_ned_12_hour(command_tester):
+
+def test_ned_12_hour(tester):
     """
     """
     # nED 12 hour run for performance test
-    test_dir = '/tmp/choptest2/'
-    create_test_dir(test_dir)
-    
-    chop_cmd02 = "CHOP, IPTS=19290, RUNS=156378, dbin=60,loadframe=1,bin=1,DRYRUN=0, output={}".format(test_dir)
-    command_tester.run_command(chop_cmd01)
+    test_dir = '/tmp/chop_test_12hour/'
+    tester.set_test_dir(test_dir)
+
+    idl_command = "CHOP, IPTS=19290, RUNS=156378, dbin=60,loadframe=1,bin=1,DRYRUN=0, output={}".format(test_dir)
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_ned_12_hour_segment_file(tester):
+    """
+    Test chop a 12 hour run by segment file
+    :param tester:
+    :return:
+    """
+    # set up the testing diretory
+    test_dir = '/tmp/pyvdrive_chop_12h_segfile'
+    tester.set_test_dir(test_dir)
+
+    # get the sample segment file
+    segment_file_name = create_slice_segment_file(test_dir)
+
+    # run VDRIVE command
+    command = "CHOP,  IPTS=20280, RUNS=169173, DBIN=300, PICKDATA={}, OUTPUT='{}".format(segment_file_name, test_dir)
+    tester.run_command(command)
+
+    # show summary
+    tester.show_output_files(test_dir)
 
     return
 
@@ -51,9 +95,10 @@ def test_last(command_tester):
     chop_cmd04 = "CHOP, IPTS=19577, RUNS=155771, dbin=60,loadframe=1,bin=1,DRYRUN=0, output='{}'".format(test_dir)
     command_tester.run_command(chop_cmd04)
 
+
 def test_main():
     """
-    test main
+    test main for command CHOP
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 

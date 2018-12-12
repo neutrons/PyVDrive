@@ -12,6 +12,21 @@ except ImportError:
 import command_test_setup
 
 
+def create_run_file(file_name):
+    """
+    create a run file on the fly for testing
+    :param file_name:
+    :return:
+    """
+    file_str = '12345, 12356\n13456\t12343\n12345'
+
+    run_file = open(file_name, 'w')
+    run_file.write(file_str)
+    run_file.close()
+
+    return
+
+
 def test_ned_simple(tester):
     """
 
@@ -22,14 +37,14 @@ def test_ned_simple(tester):
     test_dir = '/tmp/merge/simple'
     command_test_setup.set_test_dir(test_dir)
 
-    run_file_name =
+    run_file_name = os.path.join(test_dir, 'pyvdrive_merge_test.txt')
 
     # run command
     idl_command = "MERGE,IPTS=21356,RUNFILE='{}',output=\'{}\'".format(run_file_name, test_dir)
     tester.run_command(idl_command)
 
     # output summary
-    print ('Command {} has been executed.'.format(idl_command))
+    tester.show_output_files(test_dir)
 
     return
 
