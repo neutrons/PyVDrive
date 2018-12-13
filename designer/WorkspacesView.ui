@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1333</width>
-    <height>770</height>
+    <width>1437</width>
+    <height>895</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,7 +39,31 @@
           <widget class="QWidget" name="dockWidgetContents_5">
            <layout class="QGridLayout" name="gridLayout_4">
             <item row="0" column="0">
-             <widget class="QPlainTextEdit" name="plainTextEdit_info"/>
+             <widget class="QTabWidget" name="tabWidget_logging">
+              <property name="currentIndex">
+               <number>0</number>
+              </property>
+              <widget class="QWidget" name="tab_3">
+               <attribute name="title">
+                <string>Latest</string>
+               </attribute>
+               <layout class="QGridLayout" name="gridLayout_8">
+                <item row="0" column="0">
+                 <widget class="QPlainTextEdit" name="plainTextEdit_info"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tab_4">
+               <attribute name="title">
+                <string>History</string>
+               </attribute>
+               <layout class="QGridLayout" name="gridLayout_7">
+                <item row="0" column="0">
+                 <widget class="QPlainTextEdit" name="plainTextEdit_loggingHistory"/>
+                </item>
+               </layout>
+              </widget>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -71,7 +95,7 @@
           <widget class="QWidget" name="dockWidgetContents_4">
            <layout class="QGridLayout" name="gridLayout_5">
             <item row="0" column="0">
-             <widget class="QTabWidget" name="tabWidget">
+             <widget class="QTabWidget" name="tabWidget_table_view">
               <property name="currentIndex">
                <number>0</number>
               </property>

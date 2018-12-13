@@ -179,44 +179,49 @@ class WorkspaceViewWidget(QWidget):
         return
 
     def execute_reserved_command(self, script):
-        """
-        override execute?
+        """ Execute command!
         :param script:
         :return:
         """
         script = script.strip()
         command = script.split(',')[0]
 
-        # TODO 20181010 - More information to plainTextEdit_info
-
-        print '[DB...BAT] Going to execute: ', script
+        print '[INFO] Executing reserved command: {}'.format(script)
 
         if command == 'plot':
-            print 'run: ', script
-            err_msg = self.plot(script)
+            exec_message = self.plot(script)
 
         elif command == 'refresh':
-            err_msg = self.refresh_workspaces()
+            exec_message = self.refresh_workspaces()
 
         elif command == 'exit':
             self._myParent.close()
             # self.close()
-            err_msg = None
+            exec_message = None
 
         elif command == 'vhelp' or command == 'what':
             # output help
-            err_msg = self.get_help_message()
+            exec_message = self.get_help_message()
+
         else:
             # Reserved VDRIVE-IDL command
-            status, err_msg = self._myMainWindow.execute_command(script)
+            status, cmd_msg = self._myMainWindow.execute_command(script)
             # assertion error is not to be caught as it reflects coding error
 
             if status:
-                err_msg = 'VDRIVE command {} is executed successfully ({}).'.format(command, err_msg)
+                exec_message = 'VDRIVE command {} is executed successfully ({}).'.format(command, cmd_msg)
             else:
-                err_msg = 'VDRIVE command {} is failed to execute due to {}.'.format(command, err_msg)
+                exec_message = 'VDRIVE command {} is failed to execute due to {}.'.format(command, cmd_msg)
 
-        return err_msg
+        # ENDIF
+
+        # TODO - 20181214 - More information to plainTextEdit_info - Refs #138
+        # TODO            - update both plain text editors
+        # TODO            - Use color and font to notify general information, warning and error
+        self.ui.plainTextEdit_info.appendPlainText(exec_message)
+        self.ui.plainTextEdit_loggingHistory.appendPlainText(exec_message)
+
+        return exec_message
 
     @staticmethod
     def get_command_help(command):
@@ -275,6 +280,7 @@ class WorkspaceViewWidget(QWidget):
         :param script:
         :return:
         """
+        # TODO - 20181215 - clean this section
         terms = script.split()
 
         if len(terms) == 1:
@@ -302,7 +308,7 @@ class WorkspaceViewWidget(QWidget):
         :param diff_set:
         :return:
         """
-        # TODO/NOW/ISSUE/51 - Implement!
+        # TODO/NOW/ISSUE/51 - 20181214 - Implement!
 
         return
 
@@ -384,7 +390,13 @@ class WorkspaceGraphicView(MplGraphicsView):
         :param workspace_name:
         :return:
         """
-        # FIXME - This is a dirty shortcut because it is not suppose to access AnalysisDataService at this level
+        # TODO - 20181214 - New requests:
+        # TODO           1. Better label including X-unit, Legend (bank, # bins) and title (workspace name)
+        # TODO           2. Use auto color
+        # TODO           3. Use over-plot to compare
+        # TODO           4. Change tab: ui.tabWidget_table_view
+        # FIXME   -      This is a dirty shortcut because it is not suppose to access AnalysisDataService at this level
+
         ws = AnalysisDataService.retrieve(workspace_name)
         mantid.simpleapi.ConvertToPointData(InputWorkspace=ws, OutputWorkspace='temp_ws')
         point_ws = AnalysisDataService.retrieve('temp_ws')

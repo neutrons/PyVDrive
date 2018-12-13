@@ -152,10 +152,12 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         # main application is workspace viewer
         is_reserved = False
-        # print '[DB...] Now test reserved command for %s' % script
         if self._mainApplication.is_reserved_command(script):
+            # reserved command: main application executes the command and return the message
             is_reserved = True
+            # call main app/parent to execute the reserved command ***
             exec_message = self._mainApplication.execute_reserved_command(script)
+            # create a fake command for IPython console (a do-nothing string)
             script_transformed = script[:]
             script_transformed = script_transformed.replace('"', "'")
             source = '\"Run: %s\"' % script_transformed
@@ -165,9 +167,11 @@ class MantidIPythonWidget(RichIPythonWidget):
         # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
+        # result message
         if is_reserved:
             self._append_plain_text('\n%s\n' % exec_message)
 
+        # update workspaces for inline workspace operation
         if self._mainApplication is not None:
             post_workspace_names = set(mtd.getObjectNames())
             diff_set = post_workspace_names - prev_workspace_names
