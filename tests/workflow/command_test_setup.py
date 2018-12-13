@@ -31,6 +31,7 @@ class PyVdriveCommandTestEnvironment(object):
         initialization
         """
         self._main_window = VdriveMainWindow(None)
+        self._command_process_window = self._main_window.menu_workspaces_view()
 
         self._command_history = list()
 
@@ -46,7 +47,7 @@ class PyVdriveCommandTestEnvironment(object):
         return the main window's handler
         :return:
         """
-        return self._main_window
+        return self._command_process_window # self._main_window
 
     def run_command(self, vdrive_command):
         """
