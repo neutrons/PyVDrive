@@ -110,6 +110,48 @@ def test_ned_mask(tester):
     return
 
 
+def test_multiple_masks(tester):
+    """
+    Testing multiple masks
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_mask'
+    command_test_setup.set_test_dir(test_dir)
+
+    idl_command = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'{}\',' \
+                  'mask=[tests/data/highangle_roi_0607.xml]'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_multiple_roi(tester):
+    """
+    Testing multiple region of interest
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/vbin_ned_roi'
+    command_test_setup.set_test_dir(test_dir)
+
+    idl_command = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'{}\',' \
+                  'mask=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
 def test_main():
     """
     test main
@@ -120,40 +162,8 @@ def test_main():
     test_ned_standard(command_tester)
     test_ned_user_bin(command_tester)
     test_ned_multi_banks(command_tester)
-
-    #
-    # # Test 1 - pre-nED
-    # # FIXME - pre-nED case does not work
-    # preNed_cmd = "VBIN,IPTS=14094,RUNS=96450, output='/home/wzz/Temp'"
-    #
-    # # Test 2 - nED case - version 1
-    # cmd = 'VBIN,IPTS=20280,RUNS=169186,output=\'/tmp/ver1\''
-    # # command_tester.run_command(cmd)
-    #
-    # # Test 3 - nED case - version 2
-    # cmd = 'VBIN,IPTS=20280,RUNS=169186,version=2,output=\'/tmp/ver2\''
-    # # command_tester.run_command(cmd)
-    #
-    # # Test 4 - nED case - version 2 with ROI
-    # # VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output='/tmp/ver2',ROI=[tests/data/highangle_roi_0607.xml]
-    # cmd = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
-    #       'ROI=[tests/data/highangle_roi_0607.xml]'
-    # command_tester.run_command(cmd)
-    #
-    # # Test 5 - nED case - version 2 with ROI
-    # cmd = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'/tmp/ver2\',' \
-    #       'ROI=tests/data/highangle_roi_0607.xml' \
-    #       ',mask=tests/data/highangle_mask_test.xml'
-    # # command_tester.run_command(cmd)
-    #
-    # ## FIXME/TODO - Check result
-    #
-    # ## FIXME error message:
-    # #cmd = "vbin, ipts=?????, runs=?????, version=2, output='/tmp/ver2'"
-    # #cmd = "vbin, ipts=?????, runs=?????, version=1, output='/tmp/ver1/"
-    #
-    # #print ('Current working dir: {0}'.format(os.getcwd()))
-    # #cmd = "vbin, ipts=?????, runs=?????, grouping=l2_group_cal.h5"
+    test_ned_mask()
+    test_ned_roi()
 
     return command_tester.main_window
 

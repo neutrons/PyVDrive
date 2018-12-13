@@ -33,7 +33,7 @@ Optional arguments
  * FOCUS_EW  : 
  * RUNV      : Run number for vanadium file (file in instrument directory)
  * IParm     : User specified IPARM file
- * FullProf  : 
+ * FullProf  : Flag to write the reduced data to Fullprof format
  * NoGSAS    : Flag for not output GSAS file
  * PlotFlag  : 
  * ONEBANK   : Merge all the pixels to 1 bank
@@ -66,8 +66,10 @@ NeXus file /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5 is used for testing
  - Binning for standard (Si, V): VBIN,IPTS=20280,RUNS=169186,tag='Si'
  - Binning with user defined TOF range and bin size: VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
  - Separate pixels into various banks: VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
- - Binning with mask: 
-
+ - Binning with mask: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml]
+ - Binning with multiple mask: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
+ - Binning with region of interest: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml]
+ - Binning with multiple region of interest: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
 
 
 **These are pre-nED examples.  They are too old.**
