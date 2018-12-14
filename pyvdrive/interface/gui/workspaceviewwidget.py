@@ -4,7 +4,7 @@
 #
 ########################################################################
 from mantidipythonwidget import MantidIPythonWidget
-
+import time
 try:
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QWidget
@@ -189,7 +189,7 @@ class WorkspaceViewWidget(QWidget):
         print '[INFO] Executing reserved command: {}'.format(script)
 
         if command == 'plot':
-            exec_message = self.plot(script)
+            exec_message = self.exec_command_plot(script)
 
         elif command == 'refresh':
             exec_message = self.refresh_workspaces()
@@ -215,11 +215,9 @@ class WorkspaceViewWidget(QWidget):
 
         # ENDIF
 
-        # TODO - 20181214 - More information to plainTextEdit_info - Refs #138
-        # TODO            - update both plain text editors
-        # TODO            - Use color and font to notify general information, warning and error
-        self.ui.plainTextEdit_info.appendPlainText(exec_message)
-        self.ui.plainTextEdit_loggingHistory.appendPlainText(exec_message)
+        # Write to both plain text edit
+        self.write_message(exec_message, True)
+        self.write_message(exec_message, False)
 
         return exec_message
 
@@ -274,25 +272,32 @@ class WorkspaceViewWidget(QWidget):
 
         return is_reserved
 
-    def plot(self, script):
-        """
-
+    def exec_command_plot(self, script):
+        """ execute command plot
+        Use cases
+        1. plot(workspace=abcd, bank=1)
+        2. plot()
+        3. plot: help function
         :param script:
         :return:
         """
-        # TODO - 20181215 - clean this section
+        # TODO-In-Progress - 20181215 - clean this section
         terms = script.split()
 
         if len(terms) == 1:
-            # no given option, plot selected workspace
-            return 'Not implemented yet'
+            # no given option, it provides help information (man page)
+            return_message = 'Reserved command to plot workspace(s)\n'
+            return_message += 'Example:  plot(workspace=abcd, bank=1)\n'
+            return_message += 'Example:  plot()       plot all banks from selected workspace  in the table'
 
         elif terms[1] == 'clear':
             # clear canvas
+            # TODO - 20181213 - Create a new reserved command
             self.ui.graphicsView_general.clear_all_lines()
 
         else:
-            # plot workspace
+            # parse the command and plot diffraction data
+            # TODO - 20181213 - continued from here
             for i_term in range(1, len(terms)):
                 ws_name = terms[i_term]
                 try:
@@ -351,6 +356,25 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
+    def write_message(self, message_body, is_history_view=False):
+        """
+        write a message to the plain text edit
+        :param message_body:
+        :param is_history_view:
+        :return:
+        """
+        cur_time = time.time()
+
+        text = '{}:\n{}\n'.format(cur_time, message_body)
+
+        if is_history_view:
+            self.ui.plainTextEdit_loggingHistory.appendPlainText(text)
+        else:
+            self.ui.plainTextEdit_info.clear()
+            self.ui.plainTextEdit_info.append(text)
+
+        return
+
 
 class PlotControlTreeWidget(baseTree.CustomizedTreeView):
     """
@@ -371,12 +395,15 @@ class WorkspaceGraphicView(MplGraphicsView):
     """
 
     """
+    BankColorDict = {1: 'black', 2: 'red', 3: 'blue'}
+
     def __init__(self, parent):
         """
-
         :param parent:
         """
         MplGraphicsView.__init__(self, None)
+
+        self._parent = parent
 
         # class variable
         self._rangeX = (0, 1.)
@@ -384,27 +411,81 @@ class WorkspaceGraphicView(MplGraphicsView):
 
         return
 
-    def plot_workspace(self, workspace_name):
-        """
-
+    def plot_workspace(self, workspace_name, unit=None, bank_id=None):
+        """ Plot a workspace
         :param workspace_name:
+        :param unit:
+        :param bank_id:
         :return:
         """
-        # TODO - 20181214 - New requests:
+        # TODO - 20181214 - New requests: - ToTest
         # TODO           1. Better label including X-unit, Legend (bank, # bins) and title (workspace name)
         # TODO           2. Use auto color
         # TODO           3. Use over-plot to compare
         # TODO           4. Change tab: ui.tabWidget_table_view
         # FIXME   -      This is a dirty shortcut because it is not suppose to access AnalysisDataService at this level
 
-        ws = AnalysisDataService.retrieve(workspace_name)
-        mantid.simpleapi.ConvertToPointData(InputWorkspace=ws, OutputWorkspace='temp_ws')
-        point_ws = AnalysisDataService.retrieve('temp_ws')
+        # form bank IDs
+        if bank_id is None:
+            bank_id_list = self._parent.controller.get_bank_ids(workspace_name)
 
-        # get X and Y
-        vec_x = point_ws.readX(0)
-        vec_y = point_ws.readY(0)
+        else:
+            bank_id_list = [bank_id]
 
+        # unit
+        if unit is None:
+            unit = self._parent.controller.get_workspace_unit(workspace_name)
+        # set unit
+        self.set_x_label(unit)
+
+        for bank_id in sorted(bank_id_list):
+            # get data
+            data_set = self._parent.controller.get_diff_data(workspace_name, bank_id, unit)
+            vec_x = data_set[0]
+            vec_y = data_set[1]
+            # plot
+            num_bins = len(vec_y)
+            data_label = '{}: bank {} {}'.format(workspace_name, bank_id, num_bins)
+            self.plot_1d_data(vec_x, vec_y, bank_id, data_label)
+            self._update_data_range(vec_x, vec_y)
+        # END-FOR
+
+        # # ws = AnalysisDataService.retrieve(workspace_name)
+        # # mantid.simpleapi.ConvertToPointData(InputWorkspace=ws, OutputWorkspace='temp_ws')
+        # # point_ws = AnalysisDataService.retrieve('temp_ws')
+        #
+        # # get X and Y
+        # vec_x = point_ws.readX(0)
+        # vec_y = point_ws.readY(0)
+        #
+        #
+        #
+
+        return
+
+    def plot_1d_data(self, vec_x, vec_y, bank_id, data_label):
+        """
+
+        :param vec_x:
+        :param vec_y:
+        :param bank_id:
+        :param data_label:
+        :return:
+        """
+        line_color = WorkspaceGraphicView.BankColorDict[bank_id]
+
+        # TODO - 20181215 - Shall the reference to line be handled somewhere?
+        self.add_plot_1d(vec_x, vec_y, color=line_color, label=data_label)
+
+        return
+
+    def _update_data_range(self, vec_x, vec_y):
+        """
+        udpate the min and max of the data that is plot on figure now
+        :param vec_x:
+        :param vec_y:
+        :return:
+        """
         # get X and Y's range
         min_x = min(self._rangeX[0], vec_x[0])
         max_x = max(self._rangeX[1], vec_x[-1])
@@ -414,9 +495,6 @@ class WorkspaceGraphicView(MplGraphicsView):
 
         self._rangeX = (min_x, max_x)
         self._rangeY = (min_y, max_y)
-
-        # plot
-        self.add_plot_1d(vec_x, vec_y)
 
         return
 

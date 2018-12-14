@@ -116,6 +116,7 @@ def main(argv):
         _app = QApplication(sys.argv)
     return _app
 
+
 if __name__ == '__main__':
     # Main application
     print ('Test PyVDrive-Commands')
