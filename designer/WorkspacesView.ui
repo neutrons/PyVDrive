@@ -53,6 +53,16 @@
                 </item>
                </layout>
               </widget>
+              <widget class="QWidget" name="tab_error">
+               <attribute name="title">
+                <string>Error</string>
+               </attribute>
+               <layout class="QGridLayout" name="gridLayout_9">
+                <item row="0" column="0">
+                 <widget class="QPlainTextEdit" name="plainTextEdit_error"/>
+                </item>
+               </layout>
+              </widget>
               <widget class="QWidget" name="tab_4">
                <attribute name="title">
                 <string>History</string>

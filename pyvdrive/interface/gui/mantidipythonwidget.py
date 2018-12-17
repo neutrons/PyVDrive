@@ -167,8 +167,10 @@ class MantidIPythonWidget(RichIPythonWidget):
         # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
-        # result message
+        # result message: append plain text to the console
         if is_reserved:
+            #
+            print ('[DB...BAT] Append Plain Text To Console: {}'.format(exec_message))
             self._append_plain_text('\n%s\n' % exec_message)
 
         # update workspaces for inline workspace operation
@@ -198,6 +200,22 @@ class MantidIPythonWidget(RichIPythonWidget):
 
         return
 
+    def append_string_in_console(self, input_str):
+        """
+
+        :param input_str:
+        :return:
+        """
+        # TODO - NIGHT - Clean
+        # check
+        assert isinstance(input_str, str), 'blabla'
+
+        # set
+        curr_input = self.input_buffer
+        self.input_buffer = '{} {}'.format(curr_input, input_str)
+
+        return
+
     def write_command(self, command):
         """
         Write a command to the iPython console
@@ -207,8 +225,9 @@ class MantidIPythonWidget(RichIPythonWidget):
         Returns:
             None
         """
+        # TODO - NIGHT - Clean
         # check
-        assert isinstance(command, str)
+        assert isinstance(command, str), 'blabla'
 
         # set
         self._store_edits()

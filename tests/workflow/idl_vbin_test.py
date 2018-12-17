@@ -159,11 +159,11 @@ def test_main():
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
     test_ned_simple(command_tester)
-    test_ned_standard(command_tester)
-    test_ned_user_bin(command_tester)
-    test_ned_multi_banks(command_tester)
-    test_ned_mask()
-    test_ned_roi()
+    # test_ned_standard(command_tester)
+    # test_ned_user_bin(command_tester)
+    # test_ned_multi_banks(command_tester)
+    # test_ned_mask()
+    # test_ned_roi()
 
     return command_tester.main_window
 
