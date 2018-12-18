@@ -326,15 +326,20 @@ class VBin(procss_vcommand.VDriveCommand):
 
         # examples
         help_str += 'Examples:\n'
+
+        help_str += 'nED (Pre-Vulcan-X)\n'
+        help_str += "> VBIN,IPTS=20280,RUNS=169186, output='/tmp/'"
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,VERSION=2\n'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5\n'
+        help_str += 'Support list of ROI and Mask\n'
+        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,ROI=[file1.xml, file2.xml]\n'
+
+        help_str += '\n'
+        help_str += 'Examples (Pre-nED)\n'
         help_str += '> VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNE=96451\n'
         help_str += '> VBIN,IPTS=14094,RUNS=96450,RUNV=95542\n'
         help_str += '> VBIN,IPTS=19577, RUNS=152782, RUNE=153144, BANKS=7\n'
-        help_str += 'New (in test):\n'
-        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,VERSION=2\n'
-        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,GROUP="~/Projects/VULCAN/PoleFigure/l2_group_cal.h5\n'
-        help_str += 'Support list of ROI and Mask\n'
-        help_str += '> VBIN,IPTS=Latest,RUNS=Latest,ROI=[file1.xml, file2.xml]'
 
         return help_str
 

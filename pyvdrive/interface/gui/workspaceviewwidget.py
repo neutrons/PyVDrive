@@ -59,7 +59,7 @@ class WorkspaceViewWidget(QWidget):
         self.ui.widget_ipython.set_main_application(self)
 
         # define event handling methods
-        self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
+        # TODO - FUTURE - self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
         self.ui.pushButton_toIPythonMtd.clicked.connect(self.do_write_workspace_instance)
         self.ui.pushButton_toIPythonAssign.clicked.connect(self.do_assign_workspace)
@@ -392,6 +392,9 @@ class WorkspaceViewWidget(QWidget):
                 return_message = '[Error] {}'.format(run_err)
         # END-IF-ELSE
 
+        # switch to plot tab
+        self.ui.tabWidget_table_view.setCurrentIndex(1)
+
         return status, return_message
 
     def process_workspace_change(self, diff_set):
@@ -439,6 +442,9 @@ class WorkspaceViewWidget(QWidget):
                 error_message += 'Unable to add %s to table due to %s.\n' % (ws_name, str(ex))
         # END-FOR
 
+        # switch to table tab
+        self.ui.tabWidget_table_view.setCurrentIndex(0)
+
         if len(error_message) == 0:
             return True, ''
 
@@ -481,12 +487,13 @@ class WorkspaceViewWidget(QWidget):
         if is_history_view:
             self.ui.plainTextEdit_loggingHistory.appendPlainText(text)
         else:
-            self.ui.plainTextEdit_info.clear()
             assert isinstance(is_cmd_success, bool)
             if is_cmd_success:
+                self.ui.plainTextEdit_info.clear()
                 self.ui.plainTextEdit_info.appendPlainText(text)
-                self.ui.tabWidget_logging.setCurrentIndex(2)
+                self.ui.tabWidget_logging.setCurrentIndex(0)
             else:
+                self.ui.plainTextEdit_error.clear()
                 self.ui.plainTextEdit_error.appendPlainText(text)
                 self.ui.tabWidget_logging.setCurrentIndex(1)
         # END-IF

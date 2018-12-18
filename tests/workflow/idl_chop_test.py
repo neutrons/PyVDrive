@@ -12,6 +12,16 @@ except ImportError:
 import command_test_setup
 
 
+def test_chop_simple(test_dir):
+    """
+    /SNS/VULCAN/IPTS-20717/nexus/VULCAN_170464.nxs.h5
+    :param test_dir:
+    :return:
+    """
+    cmd = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1, output="/tmp"'
+    # TODO - NIGHT - Finish this one!
+
+
 def create_slice_segment_file(test_dir):
     """
     create a slice segment file on the fly
@@ -39,7 +49,7 @@ def test_pre_ned(command_tester):
     return
 
 
-def test_ned_12_hour(tester):
+def performance_test_ned_12_hour(tester):
     """
     """
     # nED 12 hour run for performance test
