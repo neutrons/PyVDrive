@@ -877,6 +877,7 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (1) a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
              (2) unit of the returned data
     """
+    # TODO - NIGHT - Use the new verification methods!
     # check requirements by asserting
     assert isinstance(workspace_name, str), 'Workspace name {} must be a string but not a {}' \
                                             ''.format(workspace_name, type(workspace_name))

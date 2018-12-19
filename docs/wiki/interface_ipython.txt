@@ -1,0 +1,46 @@
+## Brief Description
+
+The IPython/VDRIVE-command console UI is the main GUI of PyVDrive to reduced VULCAN data. 
+
+## How to launch
+
+On SNS's analysis cluster, 
+1. launch a terminal
+2. execute
+   ```
+   > vulcan.pyvdrive
+   ```
+3. then this UI will be launched.
+
+## Detailed features
+
+This UI is composed of three parts.
+* IPython console at the bottom
+* Logging information at top left
+* Workspace information table and plotting canvas at top right
+
+### IPython console
+
+It is extended from a standard IPython console.  Such that
+* It supports regular Python script.
+* It supports VDRIVE's IDL commands including VBIN, CHOP, VPEAK, MERGE and VIEW.
+* It supports several customized commands including _plot_, _vhelp_ (for command line help), _clear_ and _exit_.
+
+### Logging information
+
+It contains 3 tabs.
+* General information logging: for successful non-python commands from IPython console. Old message is cleared when new message is written to it.
+* Error message logging: for failed non-python commands from IPython console.  Old error message is cleared when new message is written to it.
+* Logging history: any message written to either _General information logging_ or _Error message logging_ will be appended to it and be kept.
+
+### Workspace information table
+
+It shows information for all the workspaces in Mantid's Analysis Data Service.  This is designed for power users and developers.
+
+### Matplotlib canvas
+
+Workspace data can be plot on this canvas with command _plot_.
+
+## Example (Coming Soon)
+
+![Test image](https://github.com/neutrons/PyVDrive/blob/master/docs/source/images/mantid_bin_vs_vdrive_bin.png)

@@ -1,0 +1,41 @@
+Alias
+=====
+
+VPEAK
+
+Arguments
+=========
+
+Mandatory arguments
+-------------------
+
+  * RUNV      : Run number for vanadium file (file in instrument directory)
+
+Optional arguments
+------------------
+
+  * HELP      : Launch General Plot Viewer
+  * Nsmooth   : the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.
+  * OneBank   : Add 2 bank data together (=1).
+  * Shift     : the chopper center is shift to large lambda aggressively.
+  * OUTPUT    : the directory where the smooth vanadium gsas file will be saved other than default.
+
+  * RUNV      : Run number for vanadium file (file in instrument directory)
+  * VIEWER    : Launch General Plot Viewer
+  * NSMOOTH   : the number of points to be used in the boxcar smoothing algorithm, the bigger the smoother.
+  * ONEBANK   : Add 2 bank data together (=1).
+  * SHIFT     : the chopper center is shift to large lambda aggressively.
+  * OUTPUT    : the directory where the smooth vanadium gsas file will be saved other than default.
+  
+
+Results
+-------
+
+  * By default the peak-stripped and smoothed vanadium data in GSAS format will be written to */SNS/VULCAN/shared/Calibration/Instrument/Vanadium/* and the GSAS file name should be *12345-s.gda*, where 12345 is the run number of the vanadium run.
+
+Examples (Benchmark)
+--------------------
+
+ * VPEAK,ITPS=16062,RUNV=98237,SHIFT=1, output='/tmp'
+
+

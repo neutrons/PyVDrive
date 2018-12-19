@@ -4,6 +4,7 @@
 #
 ########################################################################
 from mantidipythonwidget import MantidIPythonWidget
+import datetime
 
 try:
     from PyQt5 import QtCore
@@ -20,9 +21,6 @@ from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
 import ndav_widgets.CustomizedTreeView as baseTree
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
-# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceTableWidget
-# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceGraphicView
-
 from mantid.api import AnalysisDataService
 import mantid.simpleapi
 import os
@@ -38,7 +36,7 @@ class WorkspaceViewWidget(QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
-    Reserved_Command_List = ['plot', 'refresh', 'exit', 'vhelp', 'what']
+    Reserved_Command_List = ['plot', 'refresh', 'clear', 'exit', 'vhelp', 'what']
 
     def __init__(self, parent=None):
         """ Init
@@ -59,7 +57,7 @@ class WorkspaceViewWidget(QWidget):
         self.ui.widget_ipython.set_main_application(self)
 
         # define event handling methods
-        self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
+        # TODO - FUTURE - self.ui.pushButton_plot.clicked.connect(self.do_plot_workspace)
         self.ui.pushButton_toIPython.clicked.connect(self.do_write_workspace_name)
         self.ui.pushButton_toIPythonMtd.clicked.connect(self.do_write_workspace_instance)
         self.ui.pushButton_toIPythonAssign.clicked.connect(self.do_assign_workspace)
@@ -119,8 +117,31 @@ class WorkspaceViewWidget(QWidget):
         # controller = self._myMainWindow.get_controller()
 
         for workspace_name in selected_workspace_name_list:
-            # data_set = controller.get_data_from_workspace(workspace_name)
             self.ui.graphicsView_general.plot_workspace(workspace_name)
+
+        return
+
+    def plot_diff_workspace(self, ws_name, bank_id):
+        """ plot diffraction data from a workspace
+        :param ws_name:
+        :param bank_id:
+        :return:
+        """
+        # get the data from main application
+        controller = self._myMainWindow.get_controller()
+
+        # use bank but not workspace index
+        status, ret_obj = controller.get_data_from_workspace(ws_name, bank_id, target_unit=None, starting_bank_id=1)
+        if not status:
+            err_msg = str(ret_obj)
+            return False, err_msg
+
+        # being good
+        data_set_dict, curr_unit = ret_obj
+
+        for bank_id in data_set_dict:
+            data_set = data_set_dict[bank_id]
+            self.ui.graphicsView_general.plot_diffraction_data(data_set, ws_name, bank_id, curr_unit)
 
         return
 
@@ -156,7 +177,7 @@ class WorkspaceViewWidget(QWidget):
             ipython_str += '"{0}"    '.format(ws_name)
 
         # export the ipython
-        self.ui.widget_ipython.write_command(ipython_str)
+        self.ui.widget_ipython.append_string_in_console(ipython_str)
 
         return
 
@@ -174,49 +195,58 @@ class WorkspaceViewWidget(QWidget):
             ipython_str += 'mtd["{0}"] '.format(ws_name)
 
         # export the ipython
-        self.ui.widget_ipython.write_command(ipython_str)
+        self.ui.widget_ipython.append_string_in_console(ipython_str)
 
         return
 
     def execute_reserved_command(self, script):
-        """
-        override execute?
+        """ Execute command!
         :param script:
         :return:
         """
         script = script.strip()
+        # get command name
         command = script.split(',')[0]
 
-        # TODO 20181010 - More information to plainTextEdit_info
+        print '[INFO] Executing reserved command: {}'.format(script)
 
-        print '[DB...BAT] Going to execute: ', script
-
-        if command == 'plot':
-            print 'run: ', script
-            err_msg = self.plot(script)
+        if command.startswith('plot'):
+            status, exec_message = self.exec_command_plot(script)
 
         elif command == 'refresh':
-            err_msg = self.refresh_workspaces()
+            status, exec_message = self.exec_command_refresh()
+
+        elif command == 'clear':
+            status, exec_message = self.exec_command_clear(script)
 
         elif command == 'exit':
             self._myParent.close()
             # self.close()
-            err_msg = None
+            exec_message = None
+            status = True
 
         elif command == 'vhelp' or command == 'what':
             # output help
-            err_msg = self.get_help_message()
+            exec_message = self.get_help_message()
+            status = True
+
         else:
             # Reserved VDRIVE-IDL command
-            status, err_msg = self._myMainWindow.execute_command(script)
+            status, cmd_msg = self._myMainWindow.execute_command(script)
             # assertion error is not to be caught as it reflects coding error
 
             if status:
-                err_msg = 'VDRIVE command {} is executed successfully ({}).'.format(command, err_msg)
+                exec_message = 'VDRIVE command {} is executed successfully ({}).'.format(command, cmd_msg)
             else:
-                err_msg = 'VDRIVE command {} is failed to execute due to {}.'.format(command, err_msg)
+                exec_message = 'VDRIVE command {} is failed to execute due to {}.'.format(command, cmd_msg)
 
-        return err_msg
+        # ENDIF
+
+        # Write to both plain text edit
+        self.write_message(exec_message, False, status)
+        self.write_message(exec_message, is_history_view=True)
+
+        return exec_message
 
     @staticmethod
     def get_command_help(command):
@@ -238,6 +268,10 @@ class WorkspaceViewWidget(QWidget):
             # output help
             help_str = 'Get help.'
 
+        elif command == 'clear':
+            # clear canvas
+            help_str = 'Clear canvas'
+
         else:
             help_str = 'Reserved VDRIVE command.  Run> %s' % command
 
@@ -256,59 +290,124 @@ class WorkspaceViewWidget(QWidget):
         return message
 
     def is_reserved_command(self, script):
-        """
-
+        """ check a command is reserved or not
         :param script:
         :return:
         """
+        # command can be IDL-like or Python-like
         command = script.strip().split(',')[0].strip()
+        if command.count('('):
+            command = script.split('(')[0].strip()
 
         is_reserved = command in self.Reserved_Command_List
-        if is_reserved:
-            print ('[DB...INFO] command: {} is reserved'.format(command))
+        # if is_reserved:
+        #     print ('[DB...INFO] command: {} is reserved'.format(command))
 
         return is_reserved
 
-    def plot(self, script):
-        """
-
+    def exec_command_clear(self, script):
+        """ Execute command 'clear' to clear the current image
         :param script:
         :return:
         """
-        terms = script.split()
+        if not script.startswith('clear'):
+            raise RuntimeError('Script {} shall starts with clear'.format(script))
 
-        if len(terms) == 1:
-            # no given option, plot selected workspace
-            return 'Not implemented yet'
+        # clear
+        self.ui.graphicsView_general.clear_all_lines()
 
-        elif terms[1] == 'clear':
-            # clear canvas
-            self.ui.graphicsView_general.clear_all_lines()
+        return True, ''
 
+    def exec_command_plot(self, script):
+        """ execute command plot
+        Use cases
+        1. plot(workspace=abcd, bank=1)
+        2. plot()
+        3. plot: help function
+        :param script:
+        :return:
+        """
+        script = script.strip()
+
+        if script == 'plot':
+            # no given option, it provides help information (man page)
+            return_message = 'Reserved command to plot workspace(s)\n'
+            return_message += 'Example 1:  plot(workspace_name, bank_id)\n'
+            return_message += 'Example 2:  plot(workspace_name) plot all banks from selected workspace  in the table\n'
+            return_message += 'Example 3:  plot(bank_id): plot selected workspace with bank ID'
+            status = True
         else:
-            # plot workspace
-            for i_term in range(1, len(terms)):
-                ws_name = terms[i_term]
-                try:
-                    self.ui.graphicsView_general.plot_workspace(ws_name)
-                except KeyError as key_err:
-                    return str(key_err)
+            # do something else
+            plot_args = script[4:]
+            plot_args = plot_args.strip()
+            if plot_args.startswith('('):
+                plot_args = plot_args[1:]
+            if plot_args.endswith(')'):
+                plot_args = plot_args[:-1]
 
-        return ''
+            # split to terms
+            arg_terms = plot_args.split(',')
+            if len(arg_terms) == 2:
+                # Example 1:  plot(workspace_name, bank_id)
+                ws_name = arg_terms[0].replace('\'', '').strip()
+                ws_name = ws_name.replace('"', '').strip()
+                try:
+                    bank_id = int(arg_terms[1].strip())
+                except ValueError:
+                    return False, 'Bank ID {} must be an integer'.format(arg_terms[1])
+            elif len(arg_terms) == 1:
+                # Example 2 or 3
+                value = arg_terms[0].strip()
+                if value.count('\'') or value.count('"'):
+                    # with ' or ", must be workspace
+                    ws_name = value.replace('\'', '').replace('"', '').strip()
+                    bank_id = None
+                else:
+                    # without ', then must be a bank ID
+                    try:
+                        bank_id = int(arg_terms[0].strip())
+                    except ValueError:
+                        return False, 'Bank ID {} must be an integer'.format(arg_terms[0])
+                    ws_names = self.ui.tableWidget_dataStructure.get_selected_workspaces()
+                    if len(ws_names) != 1:
+                        return False, 'With only bank ID specified, there must be 1 and only 1 workspace ' \
+                                      'selected in table'
+                    else:
+                        ws_name = ws_names[0]
+            else:
+                # too many
+                return False, 'More than 2 arguments is not supported for command plot'
+
+            if not AnalysisDataService.doesExist(ws_name):
+                return False, 'Workspace {} ({}) does not exist.'.format(ws_name, type(ws_name))
+
+            try:
+                self.plot_diff_workspace(ws_name, bank_id)
+                status = True
+                return_message = '[DB...BAT] Processed arguments: {}'.format(plot_args)
+            except RuntimeError as run_err:
+                status = False
+                return_message = '[Error] {}'.format(run_err)
+        # END-IF-ELSE
+
+        # switch to plot tab
+        self.ui.tabWidget_table_view.setCurrentIndex(1)
+
+        return status, return_message
 
     def process_workspace_change(self, diff_set):
-        """
-
+        """ process the changed workspace
         :param diff_set:
         :return:
         """
-        # TODO/NOW/ISSUE/51 - Implement!
+        print ('Workspace set differece: {}'.format(diff_set))
+
+        # TODO/NOW/ISSUE/51 - 20181214 - Implement!
 
         return
 
-    def refresh_workspaces(self):
-        """
-
+    def exec_command_refresh(self):
+        """ Refresh workspace in the memory
         :return:
         """
         workspace_names = AnalysisDataService.getObjectNames()
@@ -317,12 +416,36 @@ class WorkspaceViewWidget(QWidget):
         error_message = ''
         for ws_name in workspace_names:
             try:
-                self.ui.tableWidget_dataStructure.add_workspace(ws_name)
+                # get workspace and its type
+                workspace = AnalysisDataService.retrieve(ws_name)
+                ws_type = workspace.id()
+                # find out workspace information
+                ws_info = ''
+                if ws_type == 'EventWorkspace':
+                    num_events = workspace.getNumberEvents()
+                    num_hist = workspace.getNumberHistograms()
+                    num_bins = len(workspace.readY(0))
+                    ws_info = '{}/{}/{}'.format(num_events, num_hist, num_bins)
+                elif ws_type == 'Workspace2D':
+                    num_hist = workspace.getNumberHistograms()
+                    num_bins = len(workspace.readY(0))
+                    ws_info = '{}/{}'.format(num_hist, num_bins)
+                elif ws_type == 'TableWorkspace':
+                    num_rows = workspace.rowCount()
+                    num_cols = workspace.columnCount()
+                    ws_info = '{}/{}'.format(num_rows, num_cols)
+                self.ui.tableWidget_dataStructure.add_workspace(ws_name, ws_type, ws_info)
             except Exception as ex:
                 error_message += 'Unable to add %s to table due to %s.\n' % (ws_name, str(ex))
         # END-FOR
 
-        return error_message
+        # switch to table tab
+        self.ui.tabWidget_table_view.setCurrentIndex(0)
+
+        if len(error_message) == 0:
+            return True, ''
+
+        return False, error_message
 
     def set_main_window(self, main_window):
         """
@@ -345,18 +468,29 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
-
-class PlotControlTreeWidget(baseTree.CustomizedTreeView):
-    """
-
-    """
-    def __init__(self, parent):
+    def write_message(self, message_body, is_history_view=False, is_cmd_success=None):
         """
-        Initialization
-        :param parent:
+        write a message to the plain text edit
+        :param message_body:
+        :param is_history_view:
+        :param is_cmd_success: True then write as info log; otherwise write as error log
+        :return:
         """
-        self._myParent = parent
-        baseTree.CustomizedTreeView.__init__(self, None)
+        text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
+
+        if is_history_view:
+            self.ui.plainTextEdit_loggingHistory.appendPlainText(text)
+        else:
+            assert isinstance(is_cmd_success, bool)
+            if is_cmd_success:
+                self.ui.plainTextEdit_info.clear()
+                self.ui.plainTextEdit_info.appendPlainText(text)
+                self.ui.tabWidget_logging.setCurrentIndex(0)
+            else:
+                self.ui.plainTextEdit_error.clear()
+                self.ui.plainTextEdit_error.appendPlainText(text)
+                self.ui.tabWidget_logging.setCurrentIndex(1)
+        # END-IF
 
         return
 
@@ -365,12 +499,15 @@ class WorkspaceGraphicView(MplGraphicsView):
     """
 
     """
+    BankColorDict = {1: 'black', 2: 'red', 3: 'blue'}
+
     def __init__(self, parent):
         """
-
         :param parent:
         """
         MplGraphicsView.__init__(self, None)
+
+        self._parent = parent
 
         # class variable
         self._rangeX = (0, 1.)
@@ -378,21 +515,90 @@ class WorkspaceGraphicView(MplGraphicsView):
 
         return
 
-    def plot_workspace(self, workspace_name):
+    def plot_diffraction_data(self, data_set, ws_name, bank_id, curr_unit):
         """
-
-        :param workspace_name:
+        Plot diffraction data
+        :param data_set:
+        :param ws_name:
+        :param bank_id:
+        :param curr_unit:
         :return:
         """
-        # FIXME - This is a dirty shortcut because it is not suppose to access AnalysisDataService at this level
-        ws = AnalysisDataService.retrieve(workspace_name)
-        mantid.simpleapi.ConvertToPointData(InputWorkspace=ws, OutputWorkspace='temp_ws')
-        point_ws = AnalysisDataService.retrieve('temp_ws')
+        # set X-axis
+        self.canvas().set_xy_label(side='x', text=curr_unit, font_size=16)
 
-        # get X and Y
-        vec_x = point_ws.readX(0)
-        vec_y = point_ws.readY(0)
+        # get data
+        vec_x = data_set[0]
+        vec_y = data_set[1]
 
+        # plot
+        num_bins = len(vec_y)
+        data_label = '{}: bank {} {}'.format(ws_name, bank_id, num_bins)
+        self.plot_1d_data(vec_x, vec_y, bank_id, data_label)
+        self._update_data_range(vec_x, vec_y)
+
+        return
+
+    def plot_workspace(self, workspace_name, unit=None, bank_id=None):
+        """ Plot a workspace
+        Features
+        # 1. Better label including X-unit, Legend (bank, # bins) and title (workspace name)
+        # 2. Use auto color
+        # 3. Allow over-plot to compare
+        :param workspace_name:
+        :param unit:
+        :param bank_id:
+        :return:
+        """
+        # form bank IDs
+        if bank_id is None:
+            bank_id_list = self._parent.controller.get_bank_ids(workspace_name)
+
+        else:
+            bank_id_list = [bank_id]
+
+        # unit
+        if unit is None:
+            unit = self._parent.controller.get_workspace_unit(workspace_name)
+        # set unit
+        self.canvas().set_xy_label(side='x', text='unit', font_size=16)
+
+        for bank_id in sorted(bank_id_list):
+            # get data
+            data_set = self._parent.controller.get_diff_data(workspace_name, bank_id, unit)
+            vec_x = data_set[0]
+            vec_y = data_set[1]
+            # plot
+            num_bins = len(vec_y)
+            data_label = '{}: bank {} {}'.format(workspace_name, bank_id, num_bins)
+            self.plot_1d_data(vec_x, vec_y, bank_id, data_label)
+            self._update_data_range(vec_x, vec_y)
+        # END-FOR
+
+        return
+
+    def plot_1d_data(self, vec_x, vec_y, bank_id, data_label):
+        """ plot 1D data
+        :param vec_x:
+        :param vec_y:
+        :param bank_id:
+        :param data_label:
+        :return:
+        """
+        line_color = WorkspaceGraphicView.BankColorDict[bank_id]
+
+        # TODO - FUTURE - Shall the reference to line be handled somewhere?
+        self.add_plot_1d(vec_x, vec_y, color=line_color, label=data_label)
+
+        return
+
+    def _update_data_range(self, vec_x, vec_y):
+        """
+        update the min and max of the data that is plot on figure now
+        :param vec_x:
+        :param vec_y:
+        :return:
+        """
         # get X and Y's range
         min_x = min(self._rangeX[0], vec_x[0])
         max_x = max(self._rangeX[1], vec_x[-1])
@@ -402,9 +608,6 @@ class WorkspaceGraphicView(MplGraphicsView):
 
         self._rangeX = (min_x, max_x)
         self._rangeY = (min_y, max_y)
-
-        # plot
-        self.add_plot_1d(vec_x, vec_y)
 
         return
 
@@ -451,6 +654,8 @@ class WorkspaceTableWidget(baseTable.NTableWidget):
     Table Widget for workspaces
     """
     SetupList = [('Workspace', 'str'),
+                 ('Type', 'str'),
+                 ('Size', 'str'),
                  ('', 'checkbox')]
 
     def __init__(self, parent):
@@ -465,13 +670,14 @@ class WorkspaceTableWidget(baseTable.NTableWidget):
         self.setColumnWidth(0, 360)
         return
 
-    def add_workspace(self, ws_name):
-        """
-
+    def add_workspace(self, ws_name, ws_type='', size_info=''):
+        """ add a workspace
         :param ws_name:
+        :param ws_type:
+        :param size_info:
         :return:
         """
-        self.append_row([ws_name, False])
+        self.append_row([ws_name, ws_type, size_info, False])
 
         return
 

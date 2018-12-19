@@ -394,7 +394,7 @@ class VdriveMainWindow(QMainWindow):
 
         self._myChildWindows.append(self._workspaceView)
 
-        return
+        return self._workspaceView
 
     # TODO/FIXME - Replace homemade by QSettings: Issue XXX
     def save_settings(self):

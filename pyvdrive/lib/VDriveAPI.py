@@ -537,9 +537,10 @@ class VDriveAPI(object):
 
         :param run_id: A flexible input that can be (1) data key (str), (2) data key (tuple), (3) workspace name
         :param target_unit: TOF, dSpacing
-        :param bank_id:
+        :param bank_id: Bank ID (from 1) or None (for all banks)
         :return: a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
         """
+        # TEST - Modified on 181217 - Not Tested
         # check whether run ID is a data key or a workspace name
         if isinstance(run_id, str) and mantid_helper.workspace_does_exist(run_id):
             workspace_name = run_id
@@ -547,12 +548,13 @@ class VDriveAPI(object):
             workspace_name = self._myProject.get_workspace_name_by_data_key(run_id)
 
         # get data
-        data_set_dict, current_unit = mantid_helper.get_data_from_workspace(workspace_name, target_unit=target_unit,
-                                                                            bank_id=bank_id)
-        # check
-        if current_unit != target_unit:
-            raise NotImplementedError('Target unit {0} does not match reduced unit {1}.'
-                                      ''.format(target_unit, current_unit))
+        status, ret_obj = self.get_data_from_workspace(workspace_name, bank_id=bank_id, target_unit=target_unit,
+                                                       starting_bank_id=1)
+
+        if not status:
+            raise RuntimeError('Failed get_reduced_data(): {}'.format(ret_obj))
+
+        data_set_dict, curr_unit = ret_obj
 
         return data_set_dict
 
@@ -664,12 +666,12 @@ class VDriveAPI(object):
         return binned_dir
 
     @staticmethod
-    def get_data_from_workspace(workspace_name, bank_id=None, target_unit='dSpacing', starting_bank_id=1):
+    def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, starting_bank_id=1):
         """
         get data from a workspace
         :param workspace_name:
         :param bank_id:
-        :param target_unit:
+        :param target_unit: None for using current unit
         :param starting_bank_id: lowest bank ID
         :return: 2-tuple as (boolean, returned object); boolean as status of executing the method
                  if status is False, returned object is a string for error message
@@ -677,7 +679,6 @@ class VDriveAPI(object):
                  if status is True and Bank ID is not None: returned object is a dictionary with the specified bank ID.
                  The value of each entry is a tuple with vector X, vector Y and vector Z all in numpy.array
         """
-        # TODO/ISSUE/NEXT - Merge this method with get_reduced_data
         try:
             data_set_dict, curr_unit = mantid_helper.get_data_from_workspace(workspace_name,
                                                                              bank_id=bank_id,

@@ -3,6 +3,7 @@ import types
 import inspect
 import sys
 import os
+from os import path
 
 home_dir = os.path.expanduser('~')
 # # NOTE: This is the entry point to define the path to Mantid
@@ -48,22 +49,19 @@ except ImportError:
 
 
 def our_run_code(self, code_obj, result=None):
-    """ Method with which we replace the run_code method of IPython's InteractiveShell class.
+    """
+    Method with which we replace the run_code method of IPython's InteractiveShell class.
         It calls the original method (renamed to ipython_run_code) on a separate thread
         so that we can avoid locking up the whole of MantidPlot while a command runs.
-        Parameters
-        ----------
-        code_obj : code object
+    :param self:
+    :param code_obj: code object
           A compiled code object, to be executed
-        result : ExecutionResult, optional
+    :param result: ExecutionResult, optional
           An object to store exceptions that occur during execution.
-        Returns
-        -------
-        False : Always, as it doesn't seem to matter.
+    :return: False : Always, as it doesn't seem to matter.
     """
-
     t = threading.Thread()
-    #ipython 3.0 introduces a third argument named result
+    # ipython 3.0 introduces a third argument named result
     nargs = len(inspect.getargspec(self.ipython_run_code).args)
     if (nargs == 3):
         t = threading.Thread(target=self.ipython_run_code, args=[code_obj,result])
@@ -93,13 +91,12 @@ class MantidIPythonWidget(RichIPythonWidget):
         kernel.gui = 'qt4'
 
         # Figure out the full path to the mantidplotrc.py file and then %run it
-        from os import path
-        mantidplotpath = path.split(path.dirname(__file__))[0] # It's the directory above this one
-        print '[....]  mantid plot path: ', mantidplotpath
+        mantidplotpath = path.split(path.dirname(__file__))[0]  # It's the directory above this one
+        # print '[....]  mantid plot path: ', mantidplotpath
         mantidplotrc = path.join(mantidplotpath, 'mantidplotrc.py')
         shell = kernel.shell
         shell.run_line_magic('run', mantidplotrc)
-        print '[DB...BAUnderstand]: shell run: ', mantidplotrc
+        # print '[DB...BAUnderstand]: shell run: ', mantidplotrc
 
         # These 3 lines replace the run_code method of IPython's InteractiveShell class (of which the
         # shell variable is a derived instance) with our method defined above. The original method
@@ -119,17 +116,13 @@ class MantidIPythonWidget(RichIPythonWidget):
         return
 
     def execute(self, source=None, hidden=False, interactive=False):
-        """
-        Override super's execute() in order to emit customized signals to main application
+        """ Override super's execute() in order to emit customized signals to main application
+        Any input starting with (1) reserved command, or (2) "Run, or (3) 'Run will be treated as reserved commands
         Parameters
-        ----------
-        source
-        hidden
-        interactive
-
-        Returns
-        -------
-
+        :param source:
+        :param hidden:
+        :param interactive:
+        :return:
         """
         # record previous information: commened out for more test
         if self._mainApplication is not None:
@@ -151,11 +144,13 @@ class MantidIPythonWidget(RichIPythonWidget):
             script = script.split('Run: ')[1]
 
         # main application is workspace viewer
-        is_reserved = False
-        # print '[DB...] Now test reserved command for %s' % script
+        is_reserved_command = False
         if self._mainApplication.is_reserved_command(script):
-            is_reserved = True
+            # reserved command: main application executes the command and return the message
+            is_reserved_command = True
+            # call main app/parent to execute the reserved command ***
             exec_message = self._mainApplication.execute_reserved_command(script)
+            # create a fake command for IPython console (a do-nothing string)
             script_transformed = script[:]
             script_transformed = script_transformed.replace('"', "'")
             source = '\"Run: %s\"' % script_transformed
@@ -165,9 +160,13 @@ class MantidIPythonWidget(RichIPythonWidget):
         # call base class to execute
         super(RichIPythonWidget, self).execute(source, hidden, interactive)
 
-        if is_reserved:
+        # result message: append plain text to the console
+        if is_reserved_command:
+            #
+            print ('[DB...BAT] Append Plain Text To Console: {}'.format(exec_message))
             self._append_plain_text('\n%s\n' % exec_message)
 
+        # update workspaces for inline workspace operation
         if self._mainApplication is not None:
             post_workspace_names = set(mtd.getObjectNames())
             diff_set = post_workspace_names - prev_workspace_names
@@ -176,38 +175,47 @@ class MantidIPythonWidget(RichIPythonWidget):
         return
 
     def set_main_application(self, main_app):
-        """
-        Set the main application to the iPython widget to call
-        Parameters
-        ----------
-        main_app :: main FastGR application
-
-        Returns
-        -------
-        None
+        """ Set the main application to the iPython widget to call
+        :param main_app: main UI application calling this widget
+        :return:
         """
         # check
-        assert main_app is not None
+        assert main_app is not None, 'Main App cannot be None'
 
         # set
         self._mainApplication = main_app
 
         return
 
-    def write_command(self, command):
-        """
-        Write a command to the iPython console
-        Args:
-            command: string for a python command
-
-        Returns:
-            None
+    def append_string_in_console(self, input_str):
+        """ append a string to the IPython console
+        :param input_str:
+        :return:
         """
         # check
-        assert isinstance(command, str)
+        assert isinstance(input_str, str), 'Input {} must be a string but not of type {}' \
+                                           ''.format(input_str, type(input_str))
 
-        # set
+        # get the current input_buffer and attach the new string after current input buffer
+        curr_input = self.input_buffer
+        self.input_buffer = '{} {}'.format(curr_input, input_str)
+
+        return
+
+    def write_command(self, command):
+        """
+        write a command to the IPython console
+        :param command: string for a python command
+        :return: None
+        """
+        # check
+        assert isinstance(command, str), 'Command {} must be a string but not of type {}' \
+                                         ''.format(command, type(command))
+
+        # store the current edits
         self._store_edits()
+
+        # write command to console
         self.input_buffer = command
 
         return

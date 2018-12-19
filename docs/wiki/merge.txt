@@ -1,0 +1,36 @@
+Alias
+=====
+
+VMERGE
+
+Arguments
+=========
+
+Mandatory arguments
+-------------------
+
+  * IPTS: IPTS number
+  * RUNFILE: Name of the file containing runs to merge
+
+
+Optional arguments
+------------------
+
+  * CHOPRUN: ... ...
+
+
+Run file format
+===============
+
+It must be an ASCII file containing a list of run numbers.
+It can be flexible such that the run numbers can be written in arbitrary number of lines separated by space, tab or line return.
+
+
+Examples (Benchmark)
+====================
+
+Example 1
+---------
+
+ * Run file: 
+ * Command:
