@@ -12,16 +12,6 @@ except ImportError:
 import command_test_setup
 
 
-def test_chop_simple(test_dir):
-    """
-    /SNS/VULCAN/IPTS-20717/nexus/VULCAN_170464.nxs.h5
-    :param test_dir:
-    :return:
-    """
-    cmd = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1, output="/tmp"'
-    # TODO - NIGHT - Finish this one!
-
-
 def create_slice_segment_file(test_dir):
     """
     create a slice segment file on the fly
@@ -37,6 +27,52 @@ def create_slice_segment_file(test_dir):
     segment_file.close()
 
     return file_name
+
+
+def test_chop_simple(tester):
+    """
+    /SNS/VULCAN/IPTS-20717/nexus/VULCAN_170464.nxs.h5
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/chop_simple'
+    command_test_setup.set_test_dir(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464, dbin=300, loadframe=1, output="{}"'.format(test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
+
+
+def test_chop_segment_file(tester):
+    """
+
+    :param tester:
+    :return:
+    """
+    # test directory
+    test_dir = '/tmp/chop_segment_file'
+    command_test_setup.set_test_dir(test_dir)
+
+    # create file
+    seg_fie_name = create_slice_segment_file(test_dir)
+
+    # run command
+    idl_command = 'chop, ipts=20717, runs=170464,  PICKDATA={}, loadframe=1, output="{}"' \
+                  ''.format(seg_fie_name, test_dir)
+
+    tester.run_command(idl_command)
+
+    # output summary
+    tester.show_output_files(test_dir)
+
+    return
 
 
 def test_pre_ned(command_tester):
@@ -108,11 +144,16 @@ def test_last(command_tester):
 
 def test_main():
     """
-    test main for command CHOP
+    test main
     """
     command_tester = command_test_setup.PyVdriveCommandTestEnvironment()
 
-    test_ned_12_hour(command_tester) 
+    test_chop_simple(command_tester)
+    # test_ned_standard(command_tester)
+    # test_ned_user_bin(command_tester)
+    # test_ned_multi_banks(command_tester)
+    # test_ned_mask()
+    # test_ned_roi()
 
     return command_tester.main_window
 
@@ -138,6 +179,7 @@ if __name__ == '__main__':
     # I cannot close it!  test_window.close()
 
     app.exec_()
+
 
 
 

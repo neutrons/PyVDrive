@@ -8,9 +8,8 @@ import mantid.dataobjects
 import mantid.geometry
 import mantid.simpleapi as mantidapi
 from mantid.api import AnalysisDataService as ADS
-import datatypeutility
-
 import vdrivehelper
+import datatypeutility
 
 from reduce_VULCAN import align_bins
 
@@ -877,17 +876,12 @@ def get_data_from_workspace(workspace_name, bank_id=None, target_unit=None, poin
              (1) a dictionary of 3-array-tuples (x, y, e). KEY = bank ID
              (2) unit of the returned data
     """
-    # TODO - NIGHT - Use the new verification methods!
     # check requirements by asserting
-    assert isinstance(workspace_name, str), 'Workspace name {} must be a string but not a {}' \
-                                            ''.format(workspace_name, type(workspace_name))
-    assert isinstance(point_data, bool), 'Point-data flag {} must be a bool but not a {}' \
-                                         ''.format(point_data, type(point_data))
-    assert isinstance(target_unit, str) or target_unit is None,\
-        'Target {0} unit must be a string {0} or None but not a {1}'.format(target_unit, type(target_unit))
-    assert isinstance(start_bank_id, int) and start_bank_id >= 0,\
-        'Start-Bank-ID {0} must be a non-negetive integer but not {1}.' \
-        ''.format(start_bank_id, type(start_bank_id))
+    datatypeutility.check_string_variable('Workspace name', workspace_name, None)
+    datatypeutility.check_bool_variable('Point data flag', point_data)
+    if target_unit is not None:
+        datatypeutility.check_string_variable('Target unit (can be None)', target_unit, None)
+    datatypeutility.check_int_variable('Starting bank ID (min Bank ID value)', start_bank_id, (0, None))
 
     if workspace_does_exist(workspace_name) is False:
         raise RuntimeError('Workspace %s does not exist.' % workspace_name)
