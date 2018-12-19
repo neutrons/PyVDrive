@@ -4,7 +4,8 @@
 #
 ########################################################################
 from mantidipythonwidget import MantidIPythonWidget
-import time
+import datetime
+
 try:
     from PyQt5 import QtCore
     from PyQt5.QtWidgets import QWidget
@@ -20,9 +21,6 @@ from mplgraphicsview import MplGraphicsView
 import ndav_widgets.NTableWidget as baseTable
 import ndav_widgets.CustomizedTreeView as baseTree
 from pyvdrive.interface.gui.mantidipythonwidget import MantidIPythonWidget
-# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceTableWidget
-# from pyvdrive.interface.gui.workspaceviewwidget import WorkspaceGraphicView
-
 from mantid.api import AnalysisDataService
 import mantid.simpleapi
 import os
@@ -38,7 +36,7 @@ class WorkspaceViewWidget(QWidget):
     """ Class for general-purposed plot window
     """
     # reserved command
-    Reserved_Command_List = ['plot', 'refresh', 'exit', 'vhelp', 'what']
+    Reserved_Command_List = ['plot', 'refresh', 'clear', 'exit', 'vhelp', 'what']
 
     def __init__(self, parent=None):
         """ Init
@@ -119,14 +117,12 @@ class WorkspaceViewWidget(QWidget):
         # controller = self._myMainWindow.get_controller()
 
         for workspace_name in selected_workspace_name_list:
-            # data_set = controller.get_data_from_workspace(workspace_name)
             self.ui.graphicsView_general.plot_workspace(workspace_name)
 
         return
 
     def plot_diff_workspace(self, ws_name, bank_id):
-        """
-        ?????
+        """ plot diffraction data from a workspace
         :param ws_name:
         :param bank_id:
         :return:
@@ -220,6 +216,9 @@ class WorkspaceViewWidget(QWidget):
         elif command == 'refresh':
             status, exec_message = self.exec_command_refresh()
 
+        elif command == 'clear':
+            status, exec_message = self.exec_command_clear(script)
+
         elif command == 'exit':
             self._myParent.close()
             # self.close()
@@ -269,6 +268,10 @@ class WorkspaceViewWidget(QWidget):
             # output help
             help_str = 'Get help.'
 
+        elif command == 'clear':
+            # clear canvas
+            help_str = 'Clear canvas'
+
         else:
             help_str = 'Reserved VDRIVE command.  Run> %s' % command
 
@@ -303,19 +306,17 @@ class WorkspaceViewWidget(QWidget):
         return is_reserved
 
     def exec_command_clear(self, script):
-        """
-
+        """ Execute command 'clear' to clear the current image
         :param script:
         :return:
         """
-        # TODO - NIGHT - Make it better looking
-        if terms[1] == 'clear':
-            # clear canvas
-            # TODO - 20181213 - Create a new reserved command
-            self.ui.graphicsView_general.clear_all_lines()
-            return_message = ''
+        if not script.startswith('clear'):
+            raise RuntimeError('Script {} shall starts with clear'.format(script))
 
-        return return_message
+        # clear
+        self.ui.graphicsView_general.clear_all_lines()
+
+        return True, ''
 
     def exec_command_plot(self, script):
         """ execute command plot
@@ -326,7 +327,6 @@ class WorkspaceViewWidget(QWidget):
         :param script:
         :return:
         """
-        # TODO-In-Progress - 20181215 - clean this section
         script = script.strip()
 
         if script == 'plot':
@@ -339,13 +339,11 @@ class WorkspaceViewWidget(QWidget):
         else:
             # do something else
             plot_args = script[4:]
-            print ('[DB...BAT] arguments: {}'.format(plot_args))
             plot_args = plot_args.strip()
             if plot_args.startswith('('):
                 plot_args = plot_args[1:]
             if plot_args.endswith(')'):
                 plot_args = plot_args[:-1]
-            print ('[DB...BAT] Processed arguments: {}'.format(plot_args))
 
             # split to terms
             arg_terms = plot_args.split(',')
@@ -398,8 +396,7 @@ class WorkspaceViewWidget(QWidget):
         return status, return_message
 
     def process_workspace_change(self, diff_set):
-        """
-
+        """ process the changed workspace
         :param diff_set:
         :return:
         """
@@ -476,12 +473,9 @@ class WorkspaceViewWidget(QWidget):
         write a message to the plain text edit
         :param message_body:
         :param is_history_view:
+        :param is_cmd_success: True then write as info log; otherwise write as error log
         :return:
         """
-        # TODO - NIGHT - clean!
-        import datetime
-        cur_time = time.time()
-
         text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
 
         if is_history_view:
@@ -497,21 +491,6 @@ class WorkspaceViewWidget(QWidget):
                 self.ui.plainTextEdit_error.appendPlainText(text)
                 self.ui.tabWidget_logging.setCurrentIndex(1)
         # END-IF
-
-        return
-
-
-class PlotControlTreeWidget(baseTree.CustomizedTreeView):
-    """
-
-    """
-    def __init__(self, parent):
-        """
-        Initialization
-        :param parent:
-        """
-        self._myParent = parent
-        baseTree.CustomizedTreeView.__init__(self, None)
 
         return
 
@@ -538,7 +517,7 @@ class WorkspaceGraphicView(MplGraphicsView):
 
     def plot_diffraction_data(self, data_set, ws_name, bank_id, curr_unit):
         """
-        ????
+        Plot diffraction data
         :param data_set:
         :param ws_name:
         :param bank_id:
@@ -562,18 +541,15 @@ class WorkspaceGraphicView(MplGraphicsView):
 
     def plot_workspace(self, workspace_name, unit=None, bank_id=None):
         """ Plot a workspace
+        Features
+        # 1. Better label including X-unit, Legend (bank, # bins) and title (workspace name)
+        # 2. Use auto color
+        # 3. Allow over-plot to compare
         :param workspace_name:
         :param unit:
         :param bank_id:
         :return:
         """
-        # TODO - 20181214 - New requests: - ToTest
-        # TODO           1. Better label including X-unit, Legend (bank, # bins) and title (workspace name)
-        # TODO           2. Use auto color
-        # TODO           3. Use over-plot to compare
-        # TODO           4. Change tab: ui.tabWidget_table_view
-        # FIXME   -      This is a dirty shortcut because it is not suppose to access AnalysisDataService at this level
-
         # form bank IDs
         if bank_id is None:
             bank_id_list = self._parent.controller.get_bank_ids(workspace_name)
@@ -599,22 +575,10 @@ class WorkspaceGraphicView(MplGraphicsView):
             self._update_data_range(vec_x, vec_y)
         # END-FOR
 
-        # # ws = AnalysisDataService.retrieve(workspace_name)
-        # # mantid.simpleapi.ConvertToPointData(InputWorkspace=ws, OutputWorkspace='temp_ws')
-        # # point_ws = AnalysisDataService.retrieve('temp_ws')
-        #
-        # # get X and Y
-        # vec_x = point_ws.readX(0)
-        # vec_y = point_ws.readY(0)
-        #
-        #
-        #
-
         return
 
     def plot_1d_data(self, vec_x, vec_y, bank_id, data_label):
-        """
-
+        """ plot 1D data
         :param vec_x:
         :param vec_y:
         :param bank_id:
@@ -623,14 +587,14 @@ class WorkspaceGraphicView(MplGraphicsView):
         """
         line_color = WorkspaceGraphicView.BankColorDict[bank_id]
 
-        # TODO - 20181215 - Shall the reference to line be handled somewhere?
+        # TODO - FUTURE - Shall the reference to line be handled somewhere?
         self.add_plot_1d(vec_x, vec_y, color=line_color, label=data_label)
 
         return
 
     def _update_data_range(self, vec_x, vec_y):
         """
-        udpate the min and max of the data that is plot on figure now
+        update the min and max of the data that is plot on figure now
         :param vec_x:
         :param vec_y:
         :return:
