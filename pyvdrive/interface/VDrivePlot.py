@@ -388,6 +388,22 @@ class VdriveMainWindow(QMainWindow):
 
                 return
 
+            def write_general_message(self, message):
+                """
+                TODO - NIGHT - doc
+                :param message:
+                :return:
+                """
+                self.widget.write_general_message(message, clear_info_edit=False)
+
+            def write_failure_message(self, message):
+                """
+                TODO - NIGHT - doc
+                :param message:
+                :return:
+                """
+                self.widget.write_failure_message(message, clear_error_edit=False)
+
         self._workspaceView = WorkspacesView(self)
         self._workspaceView.widget.set_main_window(self)
         self._workspaceView.show()

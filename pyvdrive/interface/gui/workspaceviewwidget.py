@@ -494,6 +494,38 @@ class WorkspaceViewWidget(QWidget):
 
         return
 
+    def write_general_message(self, message_body, clear_info_edit=True):
+        """
+        TODO - NIGHT - Doc
+        :param message_body:
+        :param clear_info_edit:
+        :return:
+        """
+        if clear_info_edit:
+            self.ui.plainTextEdit_info.clear()
+
+        text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
+        self.ui.plainTextEdit_info.appendPlainText(text)
+        self.ui.plainTextEdit_loggingHistory.appendPlainText(text)
+
+        return
+
+    def write_failure_message(self, message_body, clear_error_edit=True):
+        """
+        TODO - NIGHT - Doc
+        :param message_body:
+        :param clear_error_edit:
+        :return:
+        """
+        if clear_error_edit:
+            self.ui.plainTextEdit_error.clear()
+
+        text = '{}:\n{}\n'.format(datetime.datetime.now(), message_body)
+        self.ui.plainTextEdit_error.appendPlainText(text)
+        self.ui.plainTextEdit_loggingHistory.appendPlainText('[ERROR] {}'.format(text))
+
+        return
+
 
 class WorkspaceGraphicView(MplGraphicsView):
     """

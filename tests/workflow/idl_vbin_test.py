@@ -99,9 +99,9 @@ def test_ned_mask(tester):
     test_dir = '/tmp/vbin_ned_mask'
     command_test_setup.set_test_dir(test_dir)
 
-    idl_command = 'VBIN,IPTS=20280,RUNS=169186,RUNE=161976,version=2,output=\'{}\',' \
+    # this shall be a failed command
+    idl_command = 'VBIN,IPTS=20281,RUNS=169186,RUNE=161976,version=2,output=\'{}\',' \
                   'mask=[tests/data/highangle_roi_0607.xml]'.format(test_dir)
-
     tester.run_command(idl_command)
 
     # output summary
@@ -162,7 +162,7 @@ def test_main():
     # test_ned_standard(command_tester)
     # test_ned_user_bin(command_tester)
     # test_ned_multi_banks(command_tester)
-    # test_ned_mask()
+    test_ned_mask(command_tester)
     # test_ned_roi()
 
     return command_tester.main_window

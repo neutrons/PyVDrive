@@ -424,14 +424,14 @@ class CalibrationManager(object):
 
         return ref_dict
 
-    def has_loaded(self, run_start_date, num_banks, check_workspaces=False):
+    def has_loaded(self, run_start_date, num_banks, search_unregistered_workspaces=False):
         """ check whether a run's corresponding calibration file has been loaded
         If check_workspace is True, then check the real workspaces if they are not in the dictionary;
         If the workspaces are there, then add the calibration files to the dictionary
         :param run_start_date:
         :param num_banks:
-        :param check_workspaces: if True, then check the workspace names instead of dictionary.
-        :return:
+        :param search_unregistered_workspaces: if True, then check the workspace names instead of dictionary.
+        :return: 2-tuple (bool: has loaded to workspace?, calibration workspace collection instance)
         """
         # get calibration date and file name
         calib_file_date, calib_file_name = self.get_calibration_file(run_start_date, num_banks)
@@ -445,22 +445,26 @@ class CalibrationManager(object):
         elif num_banks not in self._loaded_calibration_file_dict[calib_file_date]:
             has_them = False
 
-        if not has_them and check_workspaces:
-            # check with workspace name
+        # search for unregistered
+        if has_them:
+            calib_ws_collection = self._loaded_calibration_file_dict[calib_file_date][num_banks]
+
+        elif search_unregistered_workspaces:
+            # search un-registered calibration workspace by workspace names
             base_ws_name = self.get_base_name(calib_file_name, num_banks)
             has_all = True
             has_some = False
             for sub_ws_name in ['calib', 'mask', 'grouping']:
-                ws_name = '{}_{}'.format(base_ws_name, sub_ws_name)
-                if mantid_helper.workspace_does_exist(ws_name) is False:
+                ws_name_i = '{}_{}'.format(base_ws_name, sub_ws_name)
+                if mantid_helper.workspace_does_exist(ws_name_i) is False:
                     has_all = False
                 else:
                     has_some = True
             # END-FOR
 
             if has_all != has_some:
-                raise RuntimeError('Some calibration workspace existed but not all!')
-            if has_all:
+                raise RuntimeError('Problematic case: Some calibration workspace existed but not all!')
+            elif has_all:
                 # add to dictionary
                 has_them = True
                 if calib_file_date not in self._loaded_calibration_file_dict:
@@ -470,11 +474,16 @@ class CalibrationManager(object):
                 calib_ws_collection.mask = '{}_{}'.format(base_ws_name, 'mask')
                 calib_ws_collection.grouping = '{}_{}'.format(base_ws_name, 'grouping')
                 self._loaded_calibration_file_dict[calib_file_date][num_banks] = calib_ws_collection
-
+            else:
+                # has none
+                calib_ws_collection = None
             # END-IF
+        else:
+            # no there
+            calib_ws_collection = None
         # END-IF-NOT
 
-        return has_them
+        return has_them, calib_ws_collection
 
     def load_calibration_file(self, calibration_file_name, cal_date_index, num_banks, ref_ws_name):
         """ load calibration file
@@ -508,7 +517,7 @@ class CalibrationManager(object):
         :return:
         """
         # check whether this file has been loaded
-        if self.has_loaded(run_start_date, bank_numbers):
+        if self.has_loaded(run_start_date, bank_numbers)[0]:
             return
 
         # use run_start_date (str) to search in the calibration date time string
@@ -1123,29 +1132,45 @@ class ReductionManager(object):
 
         # use run number to check against with calibration manager
         run_start_date = self._calibrationFileManager.check_creation_date(raw_file_name)
-        cal_loaded = self._calibrationFileManager.has_loaded(run_start_date=run_start_date, num_banks=number_banks,
-                                                             check_workspaces=True)
+        cal_loaded, cal_ws_collection = self._calibrationFileManager.has_loaded(run_start_date=run_start_date,
+                                                                                num_banks=number_banks,
+                                                                                search_unregistered_workspaces=True)
 
-        # set up the calibration workspaces
-        if not cal_loaded:
+        if cal_loaded:
+            # set the calibration workspace to reduction set up
+            reduction_setup.set_calibration_workspaces(cal_ws_collection.calibration,
+                                                       cal_ws_collection.grouping,
+                                                       cal_ws_collection.mask)
+        else:
+            # get the calibration file and load
+            # TODO - 2019010 - This shall be in another method out of chop?
             cal_file_date, cal_file_name = \
                 self._calibrationFileManager.get_calibration_file(year_month_date=run_start_date,
                                                                   num_banks=number_banks)
+            print ('[DB...BAT] Calibration file to load: {} @ {}'.format(cal_file_name, cal_file_date))
             cal_ws_base_name = self._calibrationFileManager.get_base_name(cal_file_name, number_banks)
-        else:
-            cal_file_name = None
-            cal_ws_base_name = None
-
-        if not cal_loaded:
-            assert cal_ws_base_name is not None, 'Impossible to have None cal base name'
             reduction_setup.set_calibration_file(calib_file_name=cal_file_name,
                                                  base_ws_name=cal_ws_base_name)
-        else:
-            # TODO FIXME - 20180820 - This is not correct!
-            reduction_setup.set_calibration_workspaces(self._calibrationFileManager.get_caibration_workspaces())
-        # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
-        #                                               cal_file_name=cal_file_name,
-        #                                               base_ws_name=cal_ws_base_name)
+        # END-IF-ELSE
+
+        # # set up the calibration workspaces
+        # if not cal_loaded:
+        #     # get calibration file
+        #
+        # else:
+        #     cal_file_name = None
+        #     cal_ws_base_name = None
+        #
+        # if not cal_loaded:
+        #     # load calibration file
+        #     assert cal_ws_base_name is not None, 'Impossible to have None cal base name'
+        #
+        # else:
+        #     # TODO FIXME - 20180820 - This is not correct!
+        #
+        # # reduction_setup.set_default_calibration_files(num_focused_banks=number_banks,
+        # #                                               cal_file_name=cal_file_name,
+        # #                                               base_ws_name=cal_ws_base_name)
 
         # initialize tracker
         tracker = self.init_tracker(ipts_number, run_number, slice_key)
@@ -1773,10 +1798,10 @@ class ReductionManager(object):
             raise NotImplementedError(err_msg)
 
         # check (and load as an option) calibration file
-        has_loaded_cal = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
+        has_loaded_cal, workspaces = self._calibrationFileManager.has_loaded(run_start_date, num_banks)
         if not has_loaded_cal:
             self._calibrationFileManager.search_load_calibration_file(run_start_date, num_banks, event_ws_name)
-        workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
+            workspaces = self._calibrationFileManager.get_loaded_calibration_workspaces(run_start_date, num_banks)
         calib_ws_name = workspaces.calibration
         group_ws_name = workspaces.grouping
         mask_ws_name = workspaces.mask
