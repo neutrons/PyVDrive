@@ -1,19 +1,17 @@
-Alias
-=====
+### Alias
 
 VBIN OR VDRIVEBIN
 
-Arguments
-=========
+## Arguments
 
-Mandatory arguments
--------------------
+### Mandatory arguments
+
 
  * IPTS
  * RUNS or CHOPRUN
 
-Optional arguments
-==================
+### Optional arguments
+
 
  * CHOPRUN   : Run number for reduce chopped run
  * RUNE      : First run number
@@ -29,8 +27,6 @@ Optional arguments
  * Mytofbmax : User defined TOF max in binning parameter
  * BINW      : Binning parameter, i.e., log bin step
  * BANKS     : Number of banks in output GSAS file.  Allowed values are 3, 7 and 27.  Default is 3.
- * SKIPXML   : 
- * FOCUS_EW  : 
  * RUNV      : Run number for vanadium file (file in instrument directory)
  * IParm     : User specified IPARM file
  * FullProf  : Flag to write the reduced data to Fullprof format
@@ -45,25 +41,35 @@ Optional arguments
  * MASK      : Files for Mantid made mask file in XML format
  * VDRIVEBIN : Bin boundaries will be adapted to (IDL) VDRIVE.  By default, it is 1 as True
  * VERSION   : User specified version of reduction algorithm.  Mantid conventional = 1, PyVDrive simplified = 2 (default)
- 
 
-Coming soon
-===========
-
+### Planned
+ * SKIPXML   : 
+ * FOCUS_EW  : 
  * OneBank
  * Bin Size and Bin Range
 
 
-Examples (Benchmark)
---------------------
 
-**Pre-Vulcan-X examples (3-banks nED)**
+## Examples (Benchmark)
+
+
+### Pre-Vulcan-X examples (3-banks nED)
 
 NeXus file /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5 is used for testing
 
- - Simple binning: VBIN,IPTS=20280,RUNS=169186
+ - Simple binning:
+   ```
+   VBIN,IPTS=20280,RUNS=169186
+   ```
+   * Output directory: 
+   * Output file:
+
  - Multiple run binning: VBIN,IPTS=20280,RUNS=169186, RUNE=169188
- - Binning for standard (Si, V): VBIN,IPTS=20280,RUNS=169186,tag='Si'
+
+ - Binning for standard (Si, V): 
+   ```
+   VBIN,IPTS=20280,RUNS=169186,tag='Si'
+   ```
  - Binning with user defined TOF range and bin size: VBIN,IPTS=20280,RUNS=169186,binw=0.002, Mytofbmin=6000., Mytofmax=32500.
  - Separate pixels into various banks: VBIN,IPTS=20280,RUNS=169186,version=2, banks=27
  - Binning with mask: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, mask=[tests/data/highangle_roi_0607.xml]
@@ -72,7 +78,9 @@ NeXus file /SNS/VULCAN/IPTS-20280/nexus/VULCAN_169186.nxs.h5 is used for testing
  - Binning with multiple region of interest: VBIN,IPTS=20280,RUNS=169186,RUNE=161976, roi=[tests/data/highangle_roi_0607.xml, tests/data/highangle_roi_0608.xml]
 
 
-**These are pre-nED examples.  They are too old.**
+### Pre-nED examples
+
+They are too old.
 
  * VDRIVEBIN, IPTS=1000, RUNS=2000, RUNE=2099
  * VBIN,IPTS=14094,RUNS=96450,RUNE=96451
